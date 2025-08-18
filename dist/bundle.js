@@ -14885,7 +14885,7 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "v1.1.0"; //"v0.6.3";
+GameConstants.VERSION = "Alpha v1.2.0"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
@@ -24985,7 +24985,7 @@ Weapon.itemName = "weapon";
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.environmentData = exports.enemyMinimumDepth = exports.Environment = exports.enemyClassToId = void 0;
+exports.environmentData = exports.NullProp = exports.enemyMinimumDepth = exports.Environment = exports.enemyClassToId = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
@@ -25054,6 +25054,13 @@ exports.Environment = Environment;
 // Import the enemy minimum depth from level.ts
 var level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
 Object.defineProperty(exports, "enemyMinimumDepth", ({ enumerable: true, get: function () { return level_1.enemyMinimumDepth; } }));
+// A do-nothing prop used to control spawn density without placing anything
+class NullProp {
+    static add() {
+        // intentionally empty
+    }
+}
+exports.NullProp = NullProp;
 const environmentData = {
     [environmentTypes_1.EnvType.DUNGEON]: {
         props: [
@@ -25108,6 +25115,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
+            { class: NullProp, weight: 1 },
             { class: coalResource_1.CoalResource, weight: 1 },
             { class: goldResource_1.GoldResource, weight: 0.1 },
             { class: emeraldResource_1.EmeraldResource, weight: 0.05 },
@@ -25140,6 +25148,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.FOREST]: {
         props: [
+            { class: NullProp, weight: 2 },
             { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [1] },
             { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [0] },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
@@ -25167,6 +25176,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.DESERT]: {
         props: [
+            { class: NullProp, weight: 2 },
             { class: barrel_1.Barrel, weight: 8 },
             { class: tombStone_1.TombStone, weight: 5, additionalParams: [1] },
             { class: tombStone_1.TombStone, weight: 2, additionalParams: [0] },
@@ -25194,6 +25204,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.GLACIER]: {
         props: [
+            { class: NullProp, weight: 2 },
             { class: block_1.Block, weight: 20 },
             { class: crate_1.Crate, weight: 5 },
             { class: rockResource_1.Rock, weight: 0.6 },
@@ -25228,6 +25239,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.CASTLE]: {
         props: [
+            { class: NullProp, weight: 1 },
             { class: crate_1.Crate, weight: 10 },
             { class: barrel_1.Barrel, weight: 8 },
             { class: tombStone_1.TombStone, weight: 4, additionalParams: [1] },
@@ -25261,16 +25273,74 @@ const environmentData = {
         ],
     },
     [environmentTypes_1.EnvType.DARK_CASTLE]: {
-        props: [],
-        enemies: [],
+        props: [
+            { class: NullProp, weight: 2 },
+            { class: crate_1.Crate, weight: 6 },
+            { class: barrel_1.Barrel, weight: 4 },
+            { class: chest_1.Chest, weight: 0.15 },
+            { class: decoBlock_1.DecoBlock, weight: 2 },
+        ],
+        enemies: [
+            // Chess-themed defenders
+            { class: rookEnemy_1.RookEnemy, weight: 1.2, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 1.2, minDepth: 1 },
+            { class: knightEnemy_1.KnightEnemy, weight: 1.6, minDepth: 1 },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.35, minDepth: 2 },
+            // Court mages
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.35, minDepth: 2 },
+            // Elite guards and constructs
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.15,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+        ],
     },
     [environmentTypes_1.EnvType.PLACEHOLDER]: {
-        props: [],
+        props: [{ class: NullProp, weight: 1 }],
         enemies: [],
     },
     [environmentTypes_1.EnvType.MAGMA_CAVE]: {
-        props: [],
-        enemies: [],
+        props: [
+            { class: NullProp, weight: 10 },
+            // Keep sparse and harsh
+            { class: chest_1.Chest, weight: 0.05 },
+        ],
+        enemies: [
+            // Only high-level, late-game threats
+            // Depth 1 enemies
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+            { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
+            { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
+            // Depth 2 enemies
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.1, minDepth: 2 },
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.3,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            {
+                class: bigSkullEnemy_1.BigSkullEnemy,
+                weight: 0.35,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.5, minDepth: 2 },
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.9, minDepth: 2 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.25, minDepth: 2 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 0.5, minDepth: 2 },
+        ],
     },
 };
 exports.environmentData = environmentData;
@@ -35278,6 +35348,17 @@ class RoomBuilder {
                 directions.push(room_1.WallDirection.EAST);
             return directions;
         };
+        this.countWallNeighbors = (wall) => {
+            let count = 0;
+            for (let xx = wall.x - 1; xx <= wall.x + 1; xx++) {
+                for (let yy = wall.y - 1; yy <= wall.y + 1; yy++) {
+                    if (this.room.roomArray[xx]?.[yy] instanceof wall_1.Wall &&
+                        !(xx === wall.x && yy === wall.y))
+                        count++;
+                }
+            }
+            return count;
+        };
         this.room = room;
         this.buildEmptyRoom();
     }
@@ -35295,6 +35376,10 @@ class RoomBuilder {
         }
     }
     addWallBlocks(rand) {
+        this.addWallBlocksStandard(rand);
+    }
+    // Original behavior moved here; used by addWallBlocks
+    addWallBlocksStandard(rand) {
         let numBlocks = game_1.Game.randTable([0, 0, 1, 1, 2, 2, 2, 2, 3], rand);
         if (this.room.width > 8 && rand() > 0.5)
             numBlocks *= 4;
@@ -35303,17 +35388,6 @@ class RoomBuilder {
             let blockH = Math.min(blockW + game_1.Game.rand(-2, 2, rand), this.room.height - 4);
             let x = game_1.Game.rand(this.room.roomX + 2, this.room.roomX + this.room.width - blockW - 2, rand);
             let y = game_1.Game.rand(this.room.roomY + 2, this.room.roomY + this.room.height - blockH - 2, rand);
-            let neighborCount = (wall) => {
-                let count = 0;
-                for (let xx = wall.x - 1; xx <= wall.x + 1; xx++) {
-                    for (let yy = wall.y - 1; yy <= wall.y + 1; yy++) {
-                        if (this.room.roomArray[xx]?.[yy] instanceof wall_1.Wall &&
-                            !(xx === wall.x && yy === wall.y))
-                            count++;
-                    }
-                }
-                return count;
-            };
             for (let xx = x; xx < x + blockW; xx++) {
                 for (let yy = y; yy < y + blockH; yy++) {
                     let w = new wall_1.Wall(this.room, xx, yy);
@@ -35322,7 +35396,55 @@ class RoomBuilder {
                 }
             }
             this.room.innerWalls.forEach((wall) => {
-                if (neighborCount(wall) <= 1) {
+                if (this.countWallNeighbors(wall) <= 1) {
+                    this.room.removeWall(wall.x, wall.y);
+                    this.room.roomArray[wall.x][wall.y] = new floor_1.Floor(this.room, wall.x, wall.y);
+                    this.room.innerWalls = this.room.innerWalls.filter((w) => w !== wall);
+                }
+            });
+        }
+    }
+    // Variation: creates smaller, jagged clusters with carved gaps; same placement constraints
+    addWallBlocksVariant(rand) {
+        let numBlocks = game_1.Game.randTable([2, 2, 3, 3, 4, 5], rand);
+        if (this.room.width > 10 && rand() > 0.5)
+            numBlocks += 2;
+        for (let i = 0; i < numBlocks; i++) {
+            // Favor smaller widths/heights to form jagged shapes
+            let baseW = game_1.Game.randTable([1, 2, 2, 2, 3, 3], rand);
+            let blockW = Math.min(Math.max(1, baseW), this.room.width - 4);
+            let blockH = Math.min(Math.max(1, baseW + game_1.Game.rand(-1, 1, rand)), this.room.height - 4);
+            let x = game_1.Game.rand(this.room.roomX + 2, this.room.roomX + this.room.width - blockW - 2, rand);
+            let y = game_1.Game.rand(this.room.roomY + 2, this.room.roomY + this.room.height - blockH - 2, rand);
+            // Place a ragged block by skipping some interior cells randomly
+            for (let xx = x; xx < x + blockW; xx++) {
+                for (let yy = y; yy < y + blockH; yy++) {
+                    // Keep edges of the block more solid, randomize interior
+                    const isEdge = xx === x ||
+                        yy === y ||
+                        xx === x + blockW - 1 ||
+                        yy === y + blockH - 1;
+                    if (isEdge || rand() > 0.35) {
+                        let w = new wall_1.Wall(this.room, xx, yy);
+                        this.room.roomArray[xx][yy] = w;
+                        this.room.innerWalls.push(w);
+                    }
+                }
+            }
+            // Carve 1-2 holes to ensure flow through clusters
+            const holes = game_1.Game.randTable([0, 1, 1, 2], rand);
+            for (let h = 0; h < holes; h++) {
+                const hx = game_1.Game.rand(x + 1, Math.max(x + 1, x + blockW - 2), rand);
+                const hy = game_1.Game.rand(y + 1, Math.max(y + 1, y + blockH - 2), rand);
+                if (this.room.roomArray[hx]?.[hy] instanceof wall_1.Wall) {
+                    this.room.removeWall(hx, hy);
+                    this.room.roomArray[hx][hy] = new floor_1.Floor(this.room, hx, hy);
+                    this.room.innerWalls = this.room.innerWalls.filter((w) => !(w.x === hx && w.y === hy));
+                }
+            }
+            // Prune more aggressively to avoid single spurs and self-locking
+            this.room.innerWalls.forEach((wall) => {
+                if (this.countWallNeighbors(wall) <= 2) {
                     this.room.removeWall(wall.x, wall.y);
                     this.room.roomArray[wall.x][wall.y] = new floor_1.Floor(this.room, wall.x, wall.y);
                     this.room.innerWalls = this.room.innerWalls.filter((w) => w !== wall);
@@ -35785,6 +35907,7 @@ class Populator {
                 break;
             const { x, y } = position;
             const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
+            // NullProp or any entry without an add simply consumes a slot
             if (selectedProp && selectedProp.class && selectedProp.class.add) {
                 const args = selectedProp.additionalParams || [];
                 selectedProp.class.add(room, room.game, x, y, ...args);
@@ -36446,7 +36569,8 @@ class Populator {
                 if (factor < 12)
                     this.addChasms(room, rand);
                 if (room.depth < 5) {
-                    this.addPools(room, rand);
+                    if (factor < 12)
+                        this.addPools(room, rand);
                 }
                 else {
                     this.addMagmaPools(room, rand);
@@ -37417,6 +37541,7 @@ exports.Button = Button;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chasm = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 class Chasm extends tile_1.Tile {
     constructor(room, x, y, leftEdge, rightEdge, topEdge, bottomEdge) {
@@ -37428,9 +37553,41 @@ class Chasm extends tile_1.Tile {
             return true;
         };
         this.draw = (delta) => {
-            if (this.topEdge)
-                game_1.Game.drawTile(22, 0, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
-            game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            const ts = gameConstants_1.GameConstants.TILESIZE;
+            const tilesHigh = this.topEdge ? 2 : 1;
+            // Prepare/reuse offscreen buffer with correct size
+            if (!this._buffer ||
+                this._buffer.width !== ts ||
+                this._buffer.height !== tilesHigh * ts) {
+                this._buffer = document.createElement("canvas");
+                this._buffer.width = ts;
+                this._buffer.height = tilesHigh * ts;
+            }
+            const offCtx = this._buffer.getContext("2d");
+            offCtx.clearRect(0, 0, this._buffer.width, this._buffer.height);
+            // Temporarily redirect Game.ctx to offscreen to reuse Game.drawTile
+            const mainCtx = game_1.Game.ctx;
+            const prevComp = offCtx.globalCompositeOperation;
+            game_1.Game.ctx = offCtx;
+            // 1) Mask
+            offCtx.globalCompositeOperation = "source-over";
+            game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, 0, 0, 1, 1, this.room.shadeColor, this.shadeAmount());
+            // 2) Fill clipped by mask
+            offCtx.globalCompositeOperation = "source-in";
+            game_1.Game.drawTile(1, this.skin, 1, 1, 0, 0, 1, 1, this.room.shadeColor, this.shadeAmount());
+            // 3) Background behind both (only for top edge variant which spans 2 tiles)
+            if (this.topEdge) {
+                offCtx.globalCompositeOperation = "destination-over";
+                game_1.Game.drawTile(22, 0, 1, 2, 0, 0, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            // Restore Game.ctx
+            game_1.Game.ctx = mainCtx;
+            offCtx.globalCompositeOperation = prevComp;
+            // Blit to main canvas at world position
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.drawImage(this._buffer, this.x * ts, this.y * ts);
+            game_1.Game.ctx.restore();
         };
         this.tileX = this.skin === 1 ? 24 : 20;
         this.tileY = 1;

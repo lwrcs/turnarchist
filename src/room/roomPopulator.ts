@@ -234,7 +234,7 @@ export class Populator {
       if (position === null) break;
       const { x, y } = position;
       const selectedProp = Utils.randTableWeighted(envData.props);
-
+      // NullProp or any entry without an add simply consumes a slot
       if (selectedProp && selectedProp.class && selectedProp.class.add) {
         const args = selectedProp.additionalParams || [];
         selectedProp.class.add(room, room.game, x, y, ...args);
@@ -264,7 +264,6 @@ export class Populator {
 
     for (const { x, y } of positions) {
       const selectedProp = Utils.randTableWeighted(envData.props);
-
       if (selectedProp && selectedProp.class && selectedProp.class.add) {
         const args = selectedProp.additionalParams || [];
         selectedProp.class.add(room, room.game, x, y, ...args);
@@ -1385,7 +1384,7 @@ export class Populator {
 
         if (factor < 12) this.addChasms(room, rand);
         if (room.depth < 5) {
-          this.addPools(room, rand);
+          if (factor < 12) this.addPools(room, rand);
         } else {
           this.addMagmaPools(room, rand);
         }

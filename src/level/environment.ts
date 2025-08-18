@@ -96,6 +96,13 @@ interface EnvironmentData {
   enemies: EnemyInfo[];
 }
 
+// A do-nothing prop used to control spawn density without placing anything
+export class NullProp {
+  static add(): void {
+    // intentionally empty
+  }
+}
+
 const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.DUNGEON]: {
     props: [
@@ -152,6 +159,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.CAVE]: {
     props: [
+      { class: NullProp, weight: 1 },
       { class: CoalResource, weight: 1 },
       { class: GoldResource, weight: 0.1 },
       { class: EmeraldResource, weight: 0.05 },
@@ -186,6 +194,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.FOREST]: {
     props: [
+      { class: NullProp, weight: 2 },
       { class: TombStone, weight: 0.035, additionalParams: [1] },
       { class: TombStone, weight: 0.035, additionalParams: [0] },
       { class: Pumpkin, weight: 0.05 },
@@ -215,6 +224,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.DESERT]: {
     props: [
+      { class: NullProp, weight: 2 },
       { class: Barrel, weight: 8 },
       { class: TombStone, weight: 5, additionalParams: [1] },
       { class: TombStone, weight: 2, additionalParams: [0] },
@@ -244,6 +254,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.GLACIER]: {
     props: [
+      { class: NullProp, weight: 2 },
       { class: Block, weight: 20 },
       { class: Crate, weight: 5 },
       { class: Rock, weight: 0.6 },
@@ -280,6 +291,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.CASTLE]: {
     props: [
+      { class: NullProp, weight: 1 },
       { class: Crate, weight: 10 },
       { class: Barrel, weight: 8 },
       { class: TombStone, weight: 4, additionalParams: [1] },
@@ -315,16 +327,77 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     ],
   },
   [EnvType.DARK_CASTLE]: {
-    props: [],
-    enemies: [],
+    props: [
+      { class: NullProp, weight: 2 },
+      { class: Crate, weight: 6 },
+      { class: Barrel, weight: 4 },
+      { class: Chest, weight: 0.15 },
+      { class: DecoBlock, weight: 2 },
+    ],
+    enemies: [
+      // Chess-themed defenders
+      { class: RookEnemy, weight: 1.2, minDepth: 1 },
+      { class: BishopEnemy, weight: 1.2, minDepth: 1 },
+      { class: KnightEnemy, weight: 1.6, minDepth: 1 },
+      { class: QueenEnemy, weight: 0.35, minDepth: 2 },
+
+      // Court mages
+      { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
+      { class: FireWizardEnemy, weight: 0.35, minDepth: 2 },
+
+      // Elite guards and constructs
+      {
+        class: BigKnightEnemy,
+        weight: 0.15,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
+      { class: ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+    ],
   },
   [EnvType.PLACEHOLDER]: {
-    props: [],
+    props: [{ class: NullProp, weight: 1 }],
     enemies: [],
   },
   [EnvType.MAGMA_CAVE]: {
-    props: [],
-    enemies: [],
+    props: [
+      { class: NullProp, weight: 10 },
+      // Keep sparse and harsh
+      { class: Chest, weight: 0.05 },
+    ],
+    enemies: [
+      // Only high-level, late-game threats
+      // Depth 1 enemies
+      { class: ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+      { class: BishopEnemy, weight: 0.6, minDepth: 1 },
+      { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+      { class: KnightEnemy, weight: 0.7, minDepth: 1 },
+      { class: RookEnemy, weight: 0.6, minDepth: 1 },
+
+      // Depth 2 enemies
+      { class: ArmoredSkullEnemy, weight: 1.1, minDepth: 2 },
+      {
+        class: BigKnightEnemy,
+        weight: 0.3,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
+      {
+        class: BigSkullEnemy,
+        weight: 0.35,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
+      { class: BishopEnemy, weight: 0.5, minDepth: 2 },
+      { class: ChargeEnemy, weight: 0.5, minDepth: 2 },
+      { class: FireWizardEnemy, weight: 0.9, minDepth: 2 },
+      { class: MummyEnemy, weight: 1.0, minDepth: 2 },
+      { class: QueenEnemy, weight: 0.25, minDepth: 2 },
+      { class: SpiderEnemy, weight: 0.5, minDepth: 2 },
+    ],
   },
 };
 

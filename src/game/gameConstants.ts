@@ -42,7 +42,7 @@ import { GoldRing } from "../item/jewelry/goldRing";
 import { FishingRod } from "../item/tool/fishingRod";
 
 export class GameConstants {
-  static readonly VERSION = "v1.1.0"; //"v0.6.3";
+  static readonly VERSION = "Alpha v1.2.0"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
   static isIOS = false;

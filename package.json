@@ -1,7 +1,7 @@
 {
-  "name": "witch-game",
-  "version": "1.0.1",
-  "description": "",
+  "name": "Turnarchist",
+  "version": "1.2.0",
+  "description": "A turn-based roguelike dungeon crawler",
   "main": "index.js",
   "scripts": {
     "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\""
