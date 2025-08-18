@@ -40,6 +40,7 @@ import { ArmoredSkullEnemy } from "../entity/enemy/armoredSkullEnemy";
 import { FireWizardEnemy } from "../entity/enemy/fireWizard";
 import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
+import { ObsidianResource } from "../entity/resource/obsidianResource";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -362,7 +363,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.MAGMA_CAVE]: {
     props: [
-      { class: NullProp, weight: 10 },
+      { class: NullProp, weight: 1 },
+      { class: ObsidianResource, weight: 0.5 },
       // Keep sparse and harsh
       { class: Chest, weight: 0.05 },
     ],

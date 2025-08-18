@@ -7,6 +7,7 @@ import { DownLadder } from "./downLadder";
 import { Sound } from "../sound/sound";
 import { Lockable, LockType } from "./lockable";
 import { Passageway } from "./passageway";
+import { Shadow } from "../drawable/shadow";
 
 export class UpLadder extends Passageway {
   linkedRoom: Room;
@@ -164,7 +165,7 @@ export class UpLadder extends Passageway {
         1,
         2,
         this.room.shadeColor,
-        this.shadeAmount(),
+        this.shadeAmount(0, -1, false),
       );
     }
     Game.drawTile(
@@ -179,6 +180,7 @@ export class UpLadder extends Passageway {
       this.room.shadeColor,
       this.shadeAmount(),
     );
+    Shadow.draw(this.x, this.y + 0.25);
   };
 
   drawAboveShading = (delta: number) => {

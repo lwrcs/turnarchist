@@ -144,6 +144,7 @@ import { Decoration } from "../tile/decorations/decoration";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { EnemyShield } from "../projectile/enemyShield";
+import { ObsidianResource } from "../entity/resource/obsidianResource";
 
 export class HitWarningState {
   x: number;
@@ -179,6 +180,7 @@ export class ProjectileState {
   wizardState: number;
   wizardParentID: number;
   wizardParentGID?: string;
+  state: number;
   // enemy shields are not persisted anymore
 
   constructor(projectile: Projectile, game: Game) {
@@ -200,6 +202,7 @@ export class ProjectileState {
         projectile.parent,
       );
       this.wizardParentGID = (projectile.parent as any).globalId;
+      this.state = projectile.state;
     }
   }
 }
@@ -214,14 +217,30 @@ let loadProjectile = (ps: ProjectileState, game: Game): Projectile => {
     return p;
   }
   if (ps.type === ProjectileType.WIZARD) {
-    let wizardRoom =
+    const wizardRoom =
       (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
-    let wizard = ps.wizardParentGID
-      ? (wizardRoom.entities.find(
-          (e) => (e as any).globalId === ps.wizardParentGID,
-        ) as EnergyWizardEnemy)
-      : (wizardRoom.entities[ps.wizardParentID] as EnergyWizardEnemy);
-    let p = new WizardFireball(wizard, ps.x, ps.y);
+
+    // Try to resolve parent by globalId first (best effort), then fall back to index
+    let wizardCandidate: WizardEnemy | undefined = undefined;
+    if (ps.wizardParentGID) {
+      const byGid = wizardRoom.entities.find(
+        (e) => (e as any).globalId === ps.wizardParentGID,
+      );
+      if (byGid && byGid instanceof WizardEnemy) wizardCandidate = byGid;
+    }
+
+    if (!wizardCandidate) {
+      const byIndex = wizardRoom.entities[ps.wizardParentID];
+      if (byIndex && byIndex instanceof WizardEnemy)
+        wizardCandidate = byIndex as WizardEnemy;
+    }
+
+    if (!wizardCandidate) {
+      // Parent could not be resolved; skip loading this projectile safely
+      return undefined as unknown as Projectile;
+    }
+
+    const p = new WizardFireball(wizardCandidate, ps.x, ps.y);
     p.state = ps.wizardState;
     return p;
   }
@@ -274,6 +293,7 @@ export enum EnemyType {
   ROCK,
   MUSHROOMS,
   WARDEN,
+  OBSIDIAN,
 }
 
 export class EnemyState {
@@ -516,6 +536,7 @@ export class EnemyState {
     if (enemy instanceof Rock) this.type = EnemyType.ROCK;
     if (enemy instanceof Mushrooms) this.type = EnemyType.MUSHROOMS;
     if (enemy instanceof WardenEnemy) this.type = EnemyType.WARDEN;
+    if (enemy instanceof ObsidianResource) this.type = EnemyType.OBSIDIAN;
   }
 }
 
@@ -689,6 +710,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   if (es.type === EnemyType.ROCK) enemy = new Rock(room, game, es.x, es.y);
   if (es.type === EnemyType.MUSHROOMS)
     enemy = new Mushrooms(room, game, es.x, es.y);
+  if (es.type === EnemyType.OBSIDIAN)
+    enemy = new ObsidianResource(room, game, es.x, es.y);
 
   if (!enemy) {
     console.error(
@@ -725,6 +748,15 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   }
   if (es.hasDrop) enemy.drop = loadItem(es.drop, game);
   enemy.alertTicks = es.alertTicks;
+  // Restore wizard-specific state so they don't immediately attack on load
+  try {
+    if (enemy instanceof WizardEnemy) {
+      (enemy as WizardEnemy).ticks = (es as any).ticks ?? 0;
+      (enemy as WizardEnemy).state =
+        (es as any).wizardState ?? (enemy as WizardEnemy).state;
+      (enemy as WizardEnemy).seenPlayer = (es as any).seenPlayer ?? false;
+    }
+  } catch {}
 
   return enemy;
 };
@@ -1114,6 +1146,7 @@ export class ItemState {
     if (item instanceof WeaponPoison) this.type = ItemType.WEAPON_POISON; // Maps to existing WEAPON_POISON
     if (item instanceof WeaponFragments) this.type = ItemType.WEAPON_FRAGMENTS; // Maps to existing WEAPON_FRAGMENTS
     if (item instanceof BluePotion) this.type = ItemType.BLUE_POTION; // Maps to existing BLUE_POTION
+    if (item instanceof Hammer) this.type = ItemType.HAMMER;
 
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
@@ -1211,7 +1244,7 @@ let loadItem = (
   if (i.type === ItemType.WEAPON_POISON)
     item = new WeaponPoison(room, i.x, i.y);
   if (i.type === ItemType.WEAPON_BLOOD) item = new WeaponBlood(room, i.x, i.y);
-
+  if (i.type === ItemType.HAMMER) item = new Hammer(room, i.x, i.y);
   if (!item) {
     console.error(
       "Unknown item type:",

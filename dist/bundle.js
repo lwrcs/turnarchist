@@ -12499,6 +12499,40 @@ exports.GoldResource = GoldResource;
 
 /***/ }),
 
+/***/ "./src/entity/resource/obsidianResource.ts":
+/*!*************************************************!*\
+  !*** ./src/entity/resource/obsidianResource.ts ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObsidianResource = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class ObsidianResource extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.room = room;
+        this.health = 2;
+        this.tileX = 8;
+        this.tileY = 4;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "obsidian";
+        if (random_1.Random.rand() < 0.2) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        //this.drops.push(new Stone(this.room, this.x, this.y));
+    }
+}
+exports.ObsidianResource = ObsidianResource;
+
+
+/***/ }),
+
 /***/ "./src/entity/resource/resource.ts":
 /*!*****************************************!*\
   !*** ./src/entity/resource/resource.ts ***!
@@ -15241,6 +15275,7 @@ const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
+const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -15278,6 +15313,7 @@ class ProjectileState {
             this.roomGID = projectile.parent.room?.globalId;
             this.wizardParentID = projectile.parent.room.entities.indexOf(projectile.parent);
             this.wizardParentGID = projectile.parent.globalId;
+            this.state = projectile.state;
         }
     }
 }
@@ -15291,11 +15327,24 @@ let loadProjectile = (ps, game) => {
         return p;
     }
     if (ps.type === ProjectileType.WIZARD) {
-        let wizardRoom = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
-        let wizard = ps.wizardParentGID
-            ? wizardRoom.entities.find((e) => e.globalId === ps.wizardParentGID)
-            : wizardRoom.entities[ps.wizardParentID];
-        let p = new wizardFireball_1.WizardFireball(wizard, ps.x, ps.y);
+        const wizardRoom = (ps.roomGID && game.roomsById?.get(ps.roomGID)) || game.rooms[ps.roomID];
+        // Try to resolve parent by globalId first (best effort), then fall back to index
+        let wizardCandidate = undefined;
+        if (ps.wizardParentGID) {
+            const byGid = wizardRoom.entities.find((e) => e.globalId === ps.wizardParentGID);
+            if (byGid && byGid instanceof wizardEnemy_1.WizardEnemy)
+                wizardCandidate = byGid;
+        }
+        if (!wizardCandidate) {
+            const byIndex = wizardRoom.entities[ps.wizardParentID];
+            if (byIndex && byIndex instanceof wizardEnemy_1.WizardEnemy)
+                wizardCandidate = byIndex;
+        }
+        if (!wizardCandidate) {
+            // Parent could not be resolved; skip loading this projectile safely
+            return undefined;
+        }
+        const p = new wizardFireball_1.WizardFireball(wizardCandidate, ps.x, ps.y);
         p.state = ps.wizardState;
         return p;
     }
@@ -15348,6 +15397,7 @@ var EnemyType;
     EnemyType[EnemyType["ROCK"] = 43] = "ROCK";
     EnemyType[EnemyType["MUSHROOMS"] = 44] = "MUSHROOMS";
     EnemyType[EnemyType["WARDEN"] = 45] = "WARDEN";
+    EnemyType[EnemyType["OBSIDIAN"] = 46] = "OBSIDIAN";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -15558,6 +15608,8 @@ class EnemyState {
             this.type = EnemyType.MUSHROOMS;
         if (enemy instanceof wardenEnemy_1.WardenEnemy)
             this.type = EnemyType.WARDEN;
+        if (enemy instanceof obsidianResource_1.ObsidianResource)
+            this.type = EnemyType.OBSIDIAN;
     }
 }
 exports.EnemyState = EnemyState;
@@ -15740,6 +15792,8 @@ let loadEnemy = (es, game) => {
         enemy = new rockResource_1.Rock(room, game, es.x, es.y);
     if (es.type === EnemyType.MUSHROOMS)
         enemy = new mushrooms_1.Mushrooms(room, game, es.x, es.y);
+    if (es.type === EnemyType.OBSIDIAN)
+        enemy = new obsidianResource_1.ObsidianResource(room, game, es.x, es.y);
     if (!enemy) {
         console.error("Unknown enemy type:", es.type, "EnemyType enum value:", EnemyType[es.type], "Falling back to barrel");
         enemy = new barrel_1.Barrel(room, game, es.x, es.y);
@@ -15770,6 +15824,16 @@ let loadEnemy = (es, game) => {
     if (es.hasDrop)
         enemy.drop = loadItem(es.drop, game);
     enemy.alertTicks = es.alertTicks;
+    // Restore wizard-specific state so they don't immediately attack on load
+    try {
+        if (enemy instanceof wizardEnemy_1.WizardEnemy) {
+            enemy.ticks = es.ticks ?? 0;
+            enemy.state =
+                es.wizardState ?? enemy.state;
+            enemy.seenPlayer = es.seenPlayer ?? false;
+        }
+    }
+    catch { }
     return enemy;
 };
 class RoomState {
@@ -16167,6 +16231,8 @@ class ItemState {
             this.type = ItemType.WEAPON_FRAGMENTS; // Maps to existing WEAPON_FRAGMENTS
         if (item instanceof bluePotion_1.BluePotion)
             this.type = ItemType.BLUE_POTION; // Maps to existing BLUE_POTION
+        if (item instanceof hammer_1.Hammer)
+            this.type = ItemType.HAMMER;
         this.equipped = item instanceof equippable_1.Equippable && item.equipped;
         this.x = item.x;
         this.y = item.y;
@@ -16302,6 +16368,8 @@ let loadItem = (i, game, player, targetRoom) => {
         item = new weaponPoison_1.WeaponPoison(room, i.x, i.y);
     if (i.type === ItemType.WEAPON_BLOOD)
         item = new weaponBlood_1.WeaponBlood(room, i.x, i.y);
+    if (i.type === ItemType.HAMMER)
+        item = new hammer_1.Hammer(room, i.x, i.y);
     if (!item) {
         console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
         item = new coal_1.Coal(room, i.x, i.y);
@@ -25024,6 +25092,7 @@ const armoredSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredSkull
 const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -25306,7 +25375,8 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.MAGMA_CAVE]: {
         props: [
-            { class: NullProp, weight: 10 },
+            { class: NullProp, weight: 1 },
+            { class: obsidianResource_1.ObsidianResource, weight: 0.5 },
             // Keep sparse and harsh
             { class: chest_1.Chest, weight: 0.05 },
         ],
@@ -26052,10 +26122,11 @@ class LevelGenerator {
             if (!overlapValidation.isValid) {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
-            let envType = environmentTypes_1.EnvType.DUNGEON;
-            if (depth > 4) {
-                envType = environmentTypes_1.EnvType.MAGMA_CAVE;
-            }
+            let mainEnvType = depth > 4 ? environmentTypes_1.EnvType.MAGMA_CAVE : environmentTypes_1.EnvType.DUNGEON;
+            let envType = environment ?? mainEnvType;
+            // if (depth > 4) {
+            //   envType = EnvType.MAGMA_CAVE;
+            // }
             // Check for overlaps
             // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code
             //   console.warn("There are overlapping partitions.");
@@ -38825,6 +38896,7 @@ const downLadder_1 = __webpack_require__(/*! ./downLadder */ "./src/tile/downLad
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const lockable_1 = __webpack_require__(/*! ./lockable */ "./src/tile/lockable.ts");
 const passageway_1 = __webpack_require__(/*! ./passageway */ "./src/tile/passageway.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 class UpLadder extends passageway_1.Passageway {
     constructor(room, game, x, y, lockType = lockable_1.LockType.NONE) {
         super(room, game, x, y);
@@ -38915,9 +38987,10 @@ class UpLadder extends passageway_1.Passageway {
                 game_1.Game.drawTile(xx, yy, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount(0, -1, false));
             }
             else {
-                game_1.Game.drawTile(xx, yy + 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(xx, yy + 0, 1, 2, this.x, this.y - 1, 1, 2, this.room.shadeColor, this.shadeAmount(0, -1, false));
             }
             game_1.Game.drawTile(xx, yy + 1, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            shadow_1.Shadow.draw(this.x, this.y + 0.25);
         };
         this.drawAboveShading = (delta) => {
             // Update lockable animation

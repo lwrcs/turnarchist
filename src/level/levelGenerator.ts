@@ -250,11 +250,11 @@ export class LevelGenerator {
         `Overlap validation failed: ${overlapValidation.errorMessage}`,
       );
     }
-
-    let envType = EnvType.DUNGEON;
-    if (depth > 4) {
-      envType = EnvType.MAGMA_CAVE;
-    }
+    let mainEnvType = depth > 4 ? EnvType.MAGMA_CAVE : EnvType.DUNGEON;
+    let envType = environment ?? mainEnvType;
+    // if (depth > 4) {
+    //   envType = EnvType.MAGMA_CAVE;
+    // }
 
     // Check for overlaps
     // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code
