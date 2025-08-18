@@ -25983,6 +25983,9 @@ class LevelGenerator {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
             let envType = environmentTypes_1.EnvType.DUNGEON;
+            if (depth > 4) {
+                envType = environmentTypes_1.EnvType.MAGMA_CAVE;
+            }
             // Check for overlaps
             // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code
             //   console.warn("There are overlapping partitions.");
@@ -35389,6 +35392,7 @@ const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource *
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
+const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/magmaPool.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -35978,6 +35982,9 @@ class Populator {
     addChasms(room, rand) {
         this.addRectangularTileArea(room, rand, chasm_1.Chasm);
     }
+    addMagmaPools(room, rand) {
+        this.addRectangularTileArea(room, rand, magmaPool_1.MagmaPool);
+    }
     addPools(room, rand) {
         this.addRectangularTileArea(room, rand, pool_1.Pool);
     }
@@ -36438,8 +36445,12 @@ class Populator {
                     room.builder.addWallBlocks(rand);
                 if (factor < 12)
                     this.addChasms(room, rand);
-                if (factor < 16)
+                if (room.depth < 5) {
                     this.addPools(room, rand);
+                }
+                else {
+                    this.addMagmaPools(room, rand);
+                }
                 this.addTorchesByArea(room);
                 if (factor > 15)
                     this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
@@ -38235,6 +38246,60 @@ class Lockable {
     }
 }
 exports.Lockable = Lockable;
+
+
+/***/ }),
+
+/***/ "./src/tile/magmaPool.ts":
+/*!*******************************!*\
+  !*** ./src/tile/magmaPool.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MagmaPool = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+class MagmaPool extends tile_1.Tile {
+    constructor(room, x, y, leftEdge, rightEdge, topEdge, bottomEdge) {
+        super(room, x, y);
+        this.interact = () => {
+            this.room.game.pushMessage("You jump into the pool.");
+        };
+        this.isSolid = () => {
+            return true;
+        };
+        this.canCrushEnemy = () => {
+            return true;
+        };
+        this.draw = (delta) => {
+            game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            if (this.topEdge)
+                game_1.Game.drawTile(22, 3, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+        this.tileX = 24;
+        this.tileY = 4;
+        if (leftEdge)
+            this.tileX--;
+        else if (rightEdge)
+            this.tileX++;
+        if (topEdge)
+            this.tileY--;
+        else if (bottomEdge)
+            this.tileY++;
+        this.topEdge = topEdge;
+        const lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 0.5, [200, 50, 0], 3);
+        this.room.lightSources.push(lightSource);
+        this.hasBloom = true;
+        this.bloomColor = "#641900";
+        this.bloomAlpha = 1;
+    }
+}
+exports.MagmaPool = MagmaPool;
 
 
 /***/ }),

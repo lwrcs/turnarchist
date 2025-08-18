@@ -73,6 +73,7 @@ import { CoalResource } from "../entity/resource/coalResource";
 import { GoldResource } from "../entity/resource/goldResource";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { Pool } from "../tile/pool";
+import { MagmaPool } from "../tile/magmaPool";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -489,9 +490,12 @@ export class Populator {
       }
     }
   }
-
   private addChasms(room: Room, rand: () => number) {
     this.addRectangularTileArea(room, rand, Chasm);
+  }
+
+  private addMagmaPools(room: Room, rand: () => number) {
+    this.addRectangularTileArea(room, rand, MagmaPool);
   }
 
   private addPools(room: Room, rand: () => number) {
@@ -1380,7 +1384,11 @@ export class Populator {
         if (factor < 20) room.builder.addWallBlocks(rand);
 
         if (factor < 12) this.addChasms(room, rand);
-        if (factor < 16) this.addPools(room, rand);
+        if (room.depth < 5) {
+          this.addPools(room, rand);
+        } else {
+          this.addMagmaPools(room, rand);
+        }
 
         this.addTorchesByArea(room);
         if (factor > 15)
