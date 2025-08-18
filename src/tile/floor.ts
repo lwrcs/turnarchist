@@ -2,6 +2,7 @@ import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
 import { Room } from "../room/room";
 import { Random } from "../utility/random";
+import { LightSource } from "../lighting/lightSource";
 
 export class Floor extends Tile {
   // all are in grid units
@@ -27,6 +28,26 @@ export class Floor extends Tile {
         [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
         Random.rand,
       );
+    if (this.skin == SkinType.DESERT)
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Random.rand,
+      );
+    if (this.skin == SkinType.MAGMA_CAVE) {
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Random.rand,
+      );
+      if (
+        this.variation === 8 ||
+        this.variation === 9 ||
+        this.variation === 10
+      ) {
+        this.hasBloom = true;
+        this.bloomAlpha = 1;
+        this.bloomColor = "#641900";
+      }
+    }
   }
 
   draw = (delta: number) => {

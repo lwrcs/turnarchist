@@ -122,6 +122,10 @@ export class Wall extends Tile {
         GameConstants.SMOOTH_LIGHTING
       )
         return;
+      const shadeAmount = GameConstants.SMOOTH_LIGHTING
+        ? this.shadeAmount()
+        : this.room.softVis[this.x][this.y + 1];
+
       Game.drawTile(
         0,
         this.skin,
@@ -132,7 +136,7 @@ export class Wall extends Tile {
         1,
         1,
         this.room.shadeColor,
-        this.shadeAmount(), //this.room.softVis[this.x][this.y + 1],
+        shadeAmount,
       );
     }
 

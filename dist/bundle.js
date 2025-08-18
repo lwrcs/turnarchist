@@ -3275,9 +3275,12 @@ var EnvType;
     EnvType[EnvType["DUNGEON"] = 0] = "DUNGEON";
     EnvType[EnvType["CAVE"] = 1] = "CAVE";
     EnvType[EnvType["FOREST"] = 2] = "FOREST";
-    EnvType[EnvType["SWAMP"] = 3] = "SWAMP";
+    EnvType[EnvType["CASTLE"] = 3] = "CASTLE";
     EnvType[EnvType["GLACIER"] = 4] = "GLACIER";
-    EnvType[EnvType["CASTLE"] = 5] = "CASTLE";
+    EnvType[EnvType["DARK_CASTLE"] = 5] = "DARK_CASTLE";
+    EnvType[EnvType["PLACEHOLDER"] = 6] = "PLACEHOLDER";
+    EnvType[EnvType["DESERT"] = 7] = "DESERT";
+    EnvType[EnvType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
 })(EnvType = exports.EnvType || (exports.EnvType = {}));
 
 
@@ -25162,7 +25165,7 @@ const environmentData = {
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
         ],
     },
-    [environmentTypes_1.EnvType.SWAMP]: {
+    [environmentTypes_1.EnvType.DESERT]: {
         props: [
             { class: barrel_1.Barrel, weight: 8 },
             { class: tombStone_1.TombStone, weight: 5, additionalParams: [1] },
@@ -25256,6 +25259,18 @@ const environmentData = {
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.4, minDepth: 2 }, // War beasts
         ],
+    },
+    [environmentTypes_1.EnvType.DARK_CASTLE]: {
+        props: [],
+        enemies: [],
+    },
+    [environmentTypes_1.EnvType.PLACEHOLDER]: {
+        props: [],
+        enemies: [],
+    },
+    [environmentTypes_1.EnvType.MAGMA_CAVE]: {
+        props: [],
+        enemies: [],
     },
 };
 exports.environmentData = environmentData;
@@ -25967,7 +25982,7 @@ class LevelGenerator {
             if (!overlapValidation.isValid) {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
-            let envType = environment;
+            let envType = environmentTypes_1.EnvType.DUNGEON;
             // Check for overlaps
             // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code
             //   console.warn("There are overlapping partitions.");
@@ -37936,6 +37951,18 @@ class Floor extends tile_1.Tile {
         if (this.skin == tile_1.SkinType.FOREST)
             //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
             this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
+        if (this.skin == tile_1.SkinType.DESERT)
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
+        if (this.skin == tile_1.SkinType.MAGMA_CAVE) {
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12], random_1.Random.rand);
+            if (this.variation === 8 ||
+                this.variation === 9 ||
+                this.variation === 10) {
+                this.hasBloom = true;
+                this.bloomAlpha = 1;
+                this.bloomColor = "#641900";
+            }
+        }
     }
 }
 exports.Floor = Floor;
@@ -38280,6 +38307,7 @@ class Pool extends tile_1.Tile {
             return true;
         };
         this.draw = (delta) => {
+            game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             if (this.topEdge)
                 game_1.Game.drawTile(22, 3, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
             game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
@@ -38476,7 +38504,10 @@ var SkinType;
     SkinType[SkinType["FOREST"] = 2] = "FOREST";
     SkinType[SkinType["CASTLE"] = 3] = "CASTLE";
     SkinType[SkinType["GLACIER"] = 4] = "GLACIER";
-    SkinType[SkinType["SWAMP"] = 5] = "SWAMP";
+    SkinType[SkinType["DARK_CASTLE"] = 5] = "DARK_CASTLE";
+    SkinType[SkinType["PLACEHOLDER"] = 6] = "PLACEHOLDER";
+    SkinType[SkinType["DESERT"] = 7] = "DESERT";
+    SkinType[SkinType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y) {
@@ -38768,7 +38799,10 @@ class Wall extends tile_1.Tile {
                     !isDrawnFirst &&
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING)
                     return;
-                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+                const shadeAmount = gameConstants_1.GameConstants.SMOOTH_LIGHTING
+                    ? this.shadeAmount()
+                    : this.room.softVis[this.x][this.y + 1];
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, shadeAmount);
             }
             game_1.Game.drawTile(2 + this.tileXOffset, this.skin, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
         };

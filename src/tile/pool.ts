@@ -47,6 +47,18 @@ export class Pool extends Tile {
   };
 
   draw = (delta: number) => {
+    Game.drawTile(
+      1,
+      this.skin,
+      1,
+      1,
+      this.x,
+      this.y,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
     if (this.topEdge)
       Game.drawTile(
         22,

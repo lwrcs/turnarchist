@@ -251,7 +251,7 @@ export class LevelGenerator {
       );
     }
 
-    let envType = environment;
+    let envType = EnvType.DUNGEON;
 
     // Check for overlaps
     // if (this.partitionGenerator.checkOverlaps(partitions)) { // This line is removed as per the new_code

@@ -213,7 +213,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
     ],
   },
-  [EnvType.SWAMP]: {
+  [EnvType.DESERT]: {
     props: [
       { class: Barrel, weight: 8 },
       { class: TombStone, weight: 5, additionalParams: [1] },
@@ -313,6 +313,18 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: FireWizardEnemy, weight: 0.1, minDepth: 2 }, // Battle mages
       { class: ChargeEnemy, weight: 0.4, minDepth: 2 }, // War beasts
     ],
+  },
+  [EnvType.DARK_CASTLE]: {
+    props: [],
+    enemies: [],
+  },
+  [EnvType.PLACEHOLDER]: {
+    props: [],
+    enemies: [],
+  },
+  [EnvType.MAGMA_CAVE]: {
+    props: [],
+    enemies: [],
   },
 };
 
