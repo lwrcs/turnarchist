@@ -1383,11 +1383,9 @@ export class Populator {
         if (factor < 20) room.builder.addWallBlocks(rand);
 
         if (factor < 12) this.addChasms(room, rand);
-        if (room.depth < 5) {
-          if (factor < 12) this.addPools(room, rand);
-        } else {
-          this.addMagmaPools(room, rand);
-        }
+
+        if (factor < 12) this.addPools(room, rand);
+        if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
 
         this.addTorchesByArea(room);
         if (factor > 15)

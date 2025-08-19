@@ -26123,7 +26123,7 @@ class LevelGenerator {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
             let mainEnvType = depth > 4 ? environmentTypes_1.EnvType.MAGMA_CAVE : environmentTypes_1.EnvType.DUNGEON;
-            let envType = environment ?? mainEnvType;
+            let envType = !isSidePath ? mainEnvType : environment;
             // if (depth > 4) {
             //   envType = EnvType.MAGMA_CAVE;
             // }
@@ -36639,13 +36639,10 @@ class Populator {
                     room.builder.addWallBlocks(rand);
                 if (factor < 12)
                     this.addChasms(room, rand);
-                if (room.depth < 5) {
-                    if (factor < 12)
-                        this.addPools(room, rand);
-                }
-                else {
+                if (factor < 12)
+                    this.addPools(room, rand);
+                if (factor < 12 && room.depth > 5)
                     this.addMagmaPools(room, rand);
-                }
                 this.addTorchesByArea(room);
                 if (factor > 15)
                     this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);

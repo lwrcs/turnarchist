@@ -251,7 +251,7 @@ export class LevelGenerator {
       );
     }
     let mainEnvType = depth > 4 ? EnvType.MAGMA_CAVE : EnvType.DUNGEON;
-    let envType = environment ?? mainEnvType;
+    let envType = !isSidePath ? mainEnvType : environment;
     // if (depth > 4) {
     //   envType = EnvType.MAGMA_CAVE;
     // }
