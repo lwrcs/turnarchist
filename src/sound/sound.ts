@@ -29,7 +29,7 @@ export class Sound {
   static potSmashSounds: Array<Howl>;
   static keyPickupSound: Howl;
   static magicSound: Howl;
-  static wooshSound: Howl;
+  static wooshSounds: Array<Howl>;
   static initialized: boolean = false;
   static audioMuted: boolean = true;
   static bombSounds: Array<Howl>;
@@ -51,6 +51,7 @@ export class Sound {
   static fishingCastSounds: Array<Howl>;
   static fishingReelSound: Howl;
   static fishingCatchSounds: Array<Howl>;
+  static crushSounds: Array<Howl>;
 
   static currentlyPlaying: Set<number> = new Set();
 
@@ -261,10 +262,10 @@ export class Sound {
         false,
         3,
       );
-      Sound.wooshSound = createHowl(
-        "res/SFX/attacks/woosh1.mp3",
+      Sound.wooshSounds = createHowlArray(
+        "res/SFX/attacks/woosh",
+        [1, 2],
         0.2,
-        false,
         3,
       );
 
@@ -316,6 +317,12 @@ export class Sound {
         "res/SFX/attacks/squish1.mp3",
         0.75,
         false,
+        2,
+      );
+      Sound.crushSounds = createHowlArray(
+        "res/SFX/attacks/crush",
+        [1, 2],
+        0.4,
         2,
       );
       // Mining sounds
@@ -696,7 +703,8 @@ export class Sound {
   static playMagic = () => {
     if (Sound.audioMuted) return;
     this.playWithReverb(Sound.magicSound, Sound.PRIORITY.COMBAT);
-    this.playWithReverb(Sound.wooshSound, Sound.PRIORITY.COMBAT);
+    let f = Sound.wooshSounds[0];
+    this.playWithReverb(f, Sound.PRIORITY.COMBAT);
   };
 
   static playSlice = () => {
@@ -783,6 +791,17 @@ export class Sound {
       () => this.playWithReverb(f, Sound.PRIORITY.INTERACTIONS),
       100,
     );
+  };
+
+  static playCrush = () => {
+    if (Sound.audioMuted) return;
+    let w = Sound.wooshSounds[1];
+    let f = Sound.crushSounds[1];
+    this.playWithReverb(w, Sound.PRIORITY.COMBAT);
+    this.delayPlay(() => {
+      this.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    }, 200);
+    this.playWithReverb(w, Sound.PRIORITY.COMBAT);
   };
 
   static delayPlay = (method: () => void, delay: number) => {

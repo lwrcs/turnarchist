@@ -96,6 +96,7 @@ export class PlayerMovement {
   }
 
   canMove(): boolean {
+    if (this.player.busyAnimating) return false;
     if (this.inventoryClosedRecently()) return false;
 
     // Only block movement during computer turn if slow inputs setting is enabled
@@ -125,6 +126,7 @@ export class PlayerMovement {
   }
 
   canQueue(): boolean {
+    if (this.player.busyAnimating) return false;
     if (this.inventoryClosedRecently()) return false;
     const now = Date.now();
     let cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;

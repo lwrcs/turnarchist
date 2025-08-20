@@ -16,6 +16,10 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { Pickaxe } from "../../item/tool/pickaxe";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
+import { BeamEffect } from "../../projectile/beamEffect";
+import { ZombieEnemy } from "./zombieEnemy";
+import { CrusherEnemy } from "./crusherEnemy";
+import { LightSource } from "../../lighting/lightSource";
 
 export class WardenEnemy extends Enemy {
   frame: number;
@@ -28,6 +32,9 @@ export class WardenEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 21;
   static tileY: number = 0;
+  crusherPositions: { x: number; y: number }[] = [];
+  crusherCount: number = 0;
+  crushers: CrusherEnemy[] = [];
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
@@ -53,6 +60,22 @@ export class WardenEnemy extends Enemy {
     this.drawYOffset = 1.5;
     this.alertRange = 10;
     this.orthogonalAttack = true;
+    this.crusherPositions = [];
+    this.crusherCount = 0;
+    this.crushers = [];
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      3,
+      [255, 10, 10],
+      3,
+    );
+    this.addLightSource(this.lightSource);
+    this.hasBloom = true;
+    this.bloomColor = "#ff0a0a";
+    this.bloomAlpha = 1;
+
+    this.room.updateLighting();
 
     if (drop) this.drop = drop;
     const dropAmount = Math.floor(Random.rand() * 3) + 2;
@@ -65,7 +88,134 @@ export class WardenEnemy extends Enemy {
     return 2;
   };
 
+  createCrusherBlocks = (crusherPositions: { x: number; y: number }[]) => {
+    for (const position of crusherPositions) {
+      const crusher = new CrusherEnemy(
+        this.room,
+        this.game,
+        position.x,
+        position.y,
+      );
+      this.room.entities.push(crusher);
+      this.crusherCount++;
+      this.crushers.push(crusher);
+    }
+  };
+
+  createCrusherChains = () => {
+    for (const crusher of this.crushers) {
+      let beam = new BeamEffect(crusher.x, crusher.y, this.x, this.y, crusher);
+      beam.compositeOperation = "source-over";
+      beam.color = "#800000"; //dark red
+      beam.turbulence = 0.4;
+      beam.gravity = 0.5;
+      beam.iterations = 1;
+      beam.segments = 100;
+      beam.angleChange = 0.001;
+      beam.springDamping = 0.01;
+      beam.drawableY = this.drawableY - 0.1;
+      this.room.projectiles.push(beam);
+    }
+  };
+
+  getCrusherPositions = () => {
+    return [
+      { x: this.x - 1, y: this.y },
+      { x: this.x + 1, y: this.y },
+    ];
+  };
+
+  setCrusherDrawableY = () => {
+    for (const crusher of this.crushers) {
+      if (this.y > crusher.y) {
+        this.drawableY = this.drawableY - 0.1;
+      } else {
+        crusher.drawableY = this.drawableY - 0.1;
+      }
+    }
+  };
+
+  initializeCrushers = () => {
+    // Seed default positions on first run
+    if (this.crusherPositions.length === 0) {
+      this.crusherPositions = this.getCrusherPositions();
+    }
+    // Create crushers if not yet created for all positions
+    if (this.crusherPositions.length > this.crusherCount) {
+      this.createCrusherBlocks(this.crusherPositions);
+      this.createCrusherChains();
+    }
+  };
+
+  removeCrusherChains = () => {
+    for (let beam of this.room.projectiles) {
+      if (beam instanceof BeamEffect) {
+        if (
+          beam.parent instanceof CrusherEnemy &&
+          this.crushers.includes(beam.parent as CrusherEnemy) &&
+          beam.parent.dead
+        ) {
+          this.room.projectiles = this.room.projectiles.filter(
+            (b) => b !== beam,
+          );
+        }
+      }
+    }
+  };
+
+  uniqueKillBehavior = () => {
+    for (let beam of this.room.projectiles) {
+      if (beam instanceof BeamEffect) {
+        if (beam.parent instanceof CrusherEnemy) {
+          this.room.projectiles = this.room.projectiles.filter(
+            (b) => b !== beam,
+          );
+        }
+      }
+    }
+    for (const crusher of this.crushers) {
+      if (!crusher.dead) {
+        crusher.kill();
+      }
+    }
+    this.removeLightSource(this.lightSource);
+  };
+
+  updateCrusherChains = (delta: number) => {
+    for (let beam of this.room.projectiles) {
+      if (beam instanceof BeamEffect) {
+        if (!beam.parent) continue;
+        beam.setTarget(
+          this.x - this.drawX,
+          this.y - this.drawY - 0.5,
+          (beam.parent as any).x - (beam.parent as any).drawX,
+          (beam.parent as any).y -
+            (beam.parent as any).drawY -
+            1.25 +
+            (beam.parent as any).softAnimateY,
+        );
+        beam.drawableY = this.drawableY - 0.1;
+
+        switch (Math.floor(this.frame)) {
+          case 0:
+            beam.color = "#800000"; //dark red
+            break;
+          case 1:
+            beam.color = "#ff0000"; //medium red
+            break;
+          case 2:
+            beam.color = "#ff0000"; //light red
+            break;
+          case 3:
+            beam.color = "#800000"; //dark red
+            break;
+        }
+      }
+    }
+  };
+
   behavior = () => {
+    this.initializeCrushers();
     this.lastX = this.x;
     this.lastY = this.y;
 
@@ -216,7 +366,13 @@ export class WardenEnemy extends Enemy {
           }
         }
       }
+
+      if (this.lightSource) {
+        this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+      }
     }
+
+    this.removeCrusherChains();
   };
 
   drawTopLayer = (delta: number) => {
@@ -232,26 +388,13 @@ export class WardenEnemy extends Enemy {
     );
   };
 
-  dropLoot = () => {
-    let dropOffsets = [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 0, y: 1 },
-      { x: 1, y: 1 },
-    ];
-    for (let i = 0; i < this.drops.length; i++) {
-      this.drops[i].level = this.room;
-      this.drops[i].x = this.x + dropOffsets[i].x;
-      this.drops[i].y = this.y + dropOffsets[i].y;
-      this.room.items.push(this.drops[i]);
-    }
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     //this.updateShadeColor(delta);
     Game.ctx.globalAlpha = this.alpha;
     this.updateDrawXY(delta);
+    this.setCrusherDrawableY();
+    this.updateCrusherChains(delta);
     this.frame += 0.1 * delta;
     if (this.frame >= 4) this.frame = 0;
     if (this.hasShadow) this.drawShadow(delta);

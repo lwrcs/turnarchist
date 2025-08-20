@@ -3299,6 +3299,8 @@ exports.Drawable = void 0;
 class Drawable {
     constructor() {
         this.drawableY = 0;
+        // When true, this drawable should be rendered above the Player
+        this.shouldDrawAbovePlayer = false;
         this.draw = (delta) => { };
         this.hasBloom = false;
         this.bloomColor = "#FFFFFF";
@@ -5776,6 +5778,315 @@ exports.CrabEnemy = CrabEnemy;
 CrabEnemy.difficulty = 1;
 CrabEnemy.tileX = 8;
 CrabEnemy.tileY = 4;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/crusherEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/crusherEnemy.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CrusherEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+class CrusherEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.animateY = 0;
+        this.softAnimateY = 0;
+        this.hit = () => {
+            return 0.5;
+        };
+        // Allow crushers to move onto a player's tile
+        this.tryMove = (x, y, collide = true) => {
+            const entityCollide = (entity) => {
+                if (entity.x >= x + this.w || entity.x + entity.w <= x)
+                    return false;
+                if (entity.y >= y + this.h || entity.y + entity.h <= y)
+                    return false;
+                return true;
+            };
+            // Keep collisions with other entities unless disabled
+            for (const e of this.room.entities) {
+                if (e !== this && entityCollide(e) && collide) {
+                    return;
+                }
+            }
+            // DIFFERENCE from base: do NOT block moving into players
+            // (crushers can overlap players to crush them)
+            const tiles = [];
+            for (let xx = 0; xx < this.w; xx++) {
+                for (let yy = 0; yy < this.h; yy++) {
+                    const targetTile = this.room.roomArray[x + xx][y + yy];
+                    if (targetTile &&
+                        !targetTile.isSolid() &&
+                        !(targetTile instanceof door_1.Door) &&
+                        !(targetTile instanceof downLadder_1.DownLadder)) {
+                        tiles.push(targetTile);
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
+            for (let tile of tiles) {
+                tile.onCollideEnemy(this);
+            }
+            this.x = x;
+            this.y = y;
+        };
+        this.tryCrush = () => {
+            let flag = false;
+            for (const i in this.game.players) {
+                const p = this.game.players[i];
+                if (this.game.rooms[p.levelID] === this.room &&
+                    p.x === this.x &&
+                    p.y === this.y) {
+                    p.hurt(this.hit(), this.name, 400);
+                    this.drawX += 0.5 * (this.x - p.x);
+                    this.drawY += 0.5 * (this.y - p.y);
+                    if (p === this.game.players[this.game.localPlayerID]) {
+                        //this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                        //this.animateCrush();
+                    }
+                    flag = true;
+                }
+            }
+            return flag;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    disablePositions.push({ x: e.x, y: e.y });
+                                }
+                            }
+                            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                    if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        // don't walk on active spiketraps
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            this.target =
+                                this.getAverageLuminance() > 0 // 0.8
+                                    ? this.targetPlayer
+                                    : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
+                                        .darkest;
+                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            if (moves.length > 0) {
+                                this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                this.setDrawXY(oldX, oldY);
+                                if (this.x > oldX)
+                                    this.direction = game_1.Direction.RIGHT;
+                                else if (this.x < oldX)
+                                    this.direction = game_1.Direction.LEFT;
+                                else if (this.y > oldY)
+                                    this.direction = game_1.Direction.DOWN;
+                                else if (this.y < oldY)
+                                    this.direction = game_1.Direction.UP;
+                                // If we ended up overlapping a player after moving, crush immediately
+                                const crushed = this.tryCrush();
+                                if (crushed)
+                                    this.animateCrush();
+                                //if (crushed) this.ticks++;
+                                this.animateCrush();
+                            }
+                            else {
+                                const crushed = this.tryCrush();
+                                if (crushed)
+                                    this.animateCrush();
+                                //if (crushed) this.ticks++;
+                                this.animateCrush();
+                                if (crushed)
+                                    this.makeHitWarnings();
+                            }
+                            this.rumbling = false;
+                        }
+                        else {
+                            this.rumbling = true;
+                            /*
+                            if (
+                              (this.target.x === this.targetPlayer.x &&
+                                this.target.y === this.targetPlayer.y) ||
+                              Utils.distance(
+                                this.targetPlayer.x,
+                                this.targetPlayer.y,
+                                this.x,
+                                this.y,
+                              ) <= 2
+                            )
+                              */ {
+                                // Only attack when stationary: if overlapping the player now, crush them
+                                const crushed = this.tryCrush();
+                                if (crushed)
+                                    this.animateCrush();
+                                //this.animateCrush();
+                                this.makeHitWarnings();
+                            }
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        /*
+                                        if (
+                                          (this.target.x === this.targetPlayer.x &&
+                                            this.target.y === this.targetPlayer.y) ||
+                                          Utils.distance(
+                                            this.targetPlayer.x,
+                                            this.targetPlayer.y,
+                                            this.x,
+                                            this.y,
+                                          ) <= 2
+                                        ) */ {
+                                            //this.makeHitWarnings();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                this.makeHitWarning();
+            }
+        };
+        this.makeHitWarning = () => {
+            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.room.game, this.x, this.y, this.x - 1, this.y - 1, false, false));
+        };
+        this.animateCrush = () => {
+            this.animateY = -1;
+            setTimeout(() => {
+                this.animateY = 3;
+                sound_1.Sound.playCrush();
+                setTimeout(() => {
+                    this.game.shakeScreen(2 * this.x, 2 * this.y, true);
+                }, 100);
+                setTimeout(() => {
+                    this.animateY = 0;
+                }, 500);
+            }, 150);
+        };
+        this.updateAnimateY = (delta) => {
+            const diff = this.animateY - this.softAnimateY;
+            if (diff > 0.001) {
+                this.softAnimateY = this.softAnimateY + diff * 0.2 * delta;
+            }
+            else if (diff < -0.001) {
+                this.softAnimateY = this.softAnimateY + diff * 0.2 * delta;
+            }
+            else {
+                this.softAnimateY = this.animateY;
+            }
+            if (this.softAnimateY > 1.25) {
+                this.softAnimateY = 1.25;
+            }
+        };
+        this.draw = (delta) => {
+            this.drawableY = this.y + 0.1;
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.updateAnimateY(delta);
+                let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
+                let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                if (this.crushed) {
+                    this.crushAnim(delta);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 3;
+        this.tileY = 4;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "crusher";
+        this.orthogonalAttack = true;
+        this.imageParticleX = 3;
+        this.imageParticleY = 24;
+        //if (drop) this.drop = drop;
+        this.drawYOffset = 2.5;
+        this.shouldDrawAbovePlayer = true;
+        this.collidable = false;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+    get alertText() {
+        return `New Enemy Spotted: Crab 
+    Health: ${this.health}
+    Attack Pattern: Omnidirectional
+    Moves every other turn`;
+    }
+}
+exports.CrusherEnemy = CrusherEnemy;
+CrusherEnemy.difficulty = 1;
+CrusherEnemy.tileX = 8;
+CrusherEnemy.tileY = 4;
 
 
 /***/ }),
@@ -9142,13 +9453,123 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const crusherEnemy_1 = __webpack_require__(/*! ./crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class WardenEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
+        this.crusherPositions = [];
+        this.crusherCount = 0;
+        this.crushers = [];
         this.hit = () => {
             return 2;
         };
+        this.createCrusherBlocks = (crusherPositions) => {
+            for (const position of crusherPositions) {
+                const crusher = new crusherEnemy_1.CrusherEnemy(this.room, this.game, position.x, position.y);
+                this.room.entities.push(crusher);
+                this.crusherCount++;
+                this.crushers.push(crusher);
+            }
+        };
+        this.createCrusherChains = () => {
+            for (const crusher of this.crushers) {
+                let beam = new beamEffect_1.BeamEffect(crusher.x, crusher.y, this.x, this.y, crusher);
+                beam.compositeOperation = "source-over";
+                beam.color = "#800000"; //dark red
+                beam.turbulence = 0.4;
+                beam.gravity = 0.5;
+                beam.iterations = 1;
+                beam.segments = 100;
+                beam.angleChange = 0.001;
+                beam.springDamping = 0.01;
+                beam.drawableY = this.drawableY - 0.1;
+                this.room.projectiles.push(beam);
+            }
+        };
+        this.getCrusherPositions = () => {
+            return [
+                { x: this.x - 1, y: this.y },
+                { x: this.x + 1, y: this.y },
+            ];
+        };
+        this.setCrusherDrawableY = () => {
+            for (const crusher of this.crushers) {
+                if (this.y > crusher.y) {
+                    this.drawableY = this.drawableY - 0.1;
+                }
+                else {
+                    crusher.drawableY = this.drawableY - 0.1;
+                }
+            }
+        };
+        this.initializeCrushers = () => {
+            // Seed default positions on first run
+            if (this.crusherPositions.length === 0) {
+                this.crusherPositions = this.getCrusherPositions();
+            }
+            // Create crushers if not yet created for all positions
+            if (this.crusherPositions.length > this.crusherCount) {
+                this.createCrusherBlocks(this.crusherPositions);
+                this.createCrusherChains();
+            }
+        };
+        this.removeCrusherChains = () => {
+            for (let beam of this.room.projectiles) {
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (beam.parent instanceof crusherEnemy_1.CrusherEnemy &&
+                        this.crushers.includes(beam.parent) &&
+                        beam.parent.dead) {
+                        this.room.projectiles = this.room.projectiles.filter((b) => b !== beam);
+                    }
+                }
+            }
+        };
+        this.uniqueKillBehavior = () => {
+            for (let beam of this.room.projectiles) {
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (beam.parent instanceof crusherEnemy_1.CrusherEnemy) {
+                        this.room.projectiles = this.room.projectiles.filter((b) => b !== beam);
+                    }
+                }
+            }
+            for (const crusher of this.crushers) {
+                if (!crusher.dead) {
+                    crusher.kill();
+                }
+            }
+            this.removeLightSource(this.lightSource);
+        };
+        this.updateCrusherChains = (delta) => {
+            for (let beam of this.room.projectiles) {
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (!beam.parent)
+                        continue;
+                    beam.setTarget(this.x - this.drawX, this.y - this.drawY - 0.5, beam.parent.x - beam.parent.drawX, beam.parent.y -
+                        beam.parent.drawY -
+                        1.25 +
+                        beam.parent.softAnimateY);
+                    beam.drawableY = this.drawableY - 0.1;
+                    switch (Math.floor(this.frame)) {
+                        case 0:
+                            beam.color = "#800000"; //dark red
+                            break;
+                        case 1:
+                            beam.color = "#ff0000"; //medium red
+                            break;
+                        case 2:
+                            beam.color = "#ff0000"; //light red
+                            break;
+                        case 3:
+                            beam.color = "#800000"; //dark red
+                            break;
+                    }
+                }
+            }
+        };
         this.behavior = () => {
+            this.initializeCrushers();
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
@@ -9279,25 +9700,15 @@ class WardenEnemy extends enemy_1.Enemy {
                         }
                     }
                 }
+                if (this.lightSource) {
+                    this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+                }
             }
+            this.removeCrusherChains();
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
-        };
-        this.dropLoot = () => {
-            let dropOffsets = [
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-                { x: 0, y: 1 },
-                { x: 1, y: 1 },
-            ];
-            for (let i = 0; i < this.drops.length; i++) {
-                this.drops[i].level = this.room;
-                this.drops[i].x = this.x + dropOffsets[i].x;
-                this.drops[i].y = this.y + dropOffsets[i].y;
-                this.room.items.push(this.drops[i]);
-            }
         };
         this.draw = (delta) => {
             if (this.dead)
@@ -9305,6 +9716,8 @@ class WardenEnemy extends enemy_1.Enemy {
             //this.updateShadeColor(delta);
             game_1.Game.ctx.globalAlpha = this.alpha;
             this.updateDrawXY(delta);
+            this.setCrusherDrawableY();
+            this.updateCrusherChains(delta);
             this.frame += 0.1 * delta;
             if (this.frame >= 4)
                 this.frame = 0;
@@ -9341,6 +9754,15 @@ class WardenEnemy extends enemy_1.Enemy {
         this.drawYOffset = 1.5;
         this.alertRange = 10;
         this.orthogonalAttack = true;
+        this.crusherPositions = [];
+        this.crusherCount = 0;
+        this.crushers = [];
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 3, [255, 10, 10], 3);
+        this.addLightSource(this.lightSource);
+        this.hasBloom = true;
+        this.bloomColor = "#ff0a0a";
+        this.bloomAlpha = 1;
+        this.room.updateLighting();
         if (drop)
             this.drop = drop;
         const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
@@ -9854,6 +10276,7 @@ class Entity extends drawable_1.Drawable {
         this.armored = false;
         this.justHurt = false;
         this.stunned = false;
+        this.collidable = true;
         this.hoverText = () => {
             return this.name;
         };
@@ -10645,8 +11068,9 @@ class Entity extends drawable_1.Drawable {
         this.makeHitWarnings = (hx = this.x, hy = this.y) => {
             if (this.unconscious)
                 return;
-            const cullFactor = 0.45;
             const player = this.getPlayer();
+            const isPlayerOnTile = player.x === hx && player.y === hy;
+            const cullFactor = isPlayerOnTile ? 0 : 0.45;
             const orthogonal = this.orthogonalAttack;
             const diagonal = this.diagonalAttack;
             const forwardOnly = this.forwardOnlyAttack;
@@ -29645,6 +30069,8 @@ class Player extends drawable_1.Drawable {
             return 1;
         };
         this.tryCollide = (other, newX, newY) => {
+            if (other.collidable === false)
+                return false;
             if (newX >= other.x + other.w || newX + this.w <= other.x)
                 return false;
             if (newY >= other.y + other.h || newY + this.h <= other.y)
@@ -29665,16 +30091,27 @@ class Player extends drawable_1.Drawable {
             }
             if (this.dead)
                 return;
-            //for (let i = 0; i < 2; i++) //no idea why we would loop this...
-            if (this.inventory.hasWeapon() &&
-                !this.inventory.getWeapon().weaponMove(x, y)) {
-                //for (let h of this.game.levels[this.levelID].hitwarnings) {
-                //if (newMove instanceof HitWarning)
-                return;
-                //}
+            let collide = false;
+            for (let e of this.getRoom().entities) {
+                if (e.collidable === true) {
+                    if (e.x === x && e.y === y) {
+                        collide = true;
+                        break;
+                    }
+                }
             }
-            else if (!this.inventory.hasWeapon()) {
-                this.game.pushMessage("No weapon equipped.");
+            //for (let i = 0; i < 2; i++) //no idea why we would loop this...
+            if (collide === true) {
+                if (this.inventory.hasWeapon() &&
+                    !this.inventory.getWeapon().weaponMove(x, y)) {
+                    //for (let h of this.game.levels[this.levelID].hitwarnings) {
+                    //if (newMove instanceof HitWarning)
+                    return;
+                    //}
+                }
+                else if (!this.inventory.hasWeapon()) {
+                    this.game.pushMessage("No weapon equipped.");
+                }
             }
             for (let e of this.getRoom().entities) {
                 e.lastX = e.x;
@@ -29825,11 +30262,15 @@ class Player extends drawable_1.Drawable {
             this.lastX = x;
             this.lastY = y;
         };
-        this.hurt = (damage, enemy) => {
+        this.hurt = (damage, enemy, delay = 0) => {
             // Play hurt sound if in current room
             if (this.getRoom() === this.game.room) {
-                sound_1.Sound.hurt();
-                sound_1.Sound.playGrunt();
+                setTimeout(() => {
+                    sound_1.Sound.hurt();
+                    sound_1.Sound.playGrunt();
+                    this.renderer.flash();
+                    this.renderer.hurt();
+                }, delay);
             }
             // Handle armor damage
             if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
@@ -29840,14 +30281,12 @@ class Player extends drawable_1.Drawable {
             // Update player state
             this.lastHitBy = enemy;
             this.healthBar.hurt();
-            this.renderer.flash();
             this.enemyHurtMessage(damage, enemy);
             // Apply damage if no shield
             if (!this.hurtShield) {
                 this.health -= damage;
             }
             this.hurtShield = false;
-            this.renderer.hurt();
             // Check for death
             if (this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
                 this.dead = true;
@@ -30769,6 +31208,8 @@ class PlayerMovement {
         return timeSinceDragEnd < 10 || timeSinceClose < 10;
     }
     canMove() {
+        if (this.player.busyAnimating)
+            return false;
         if (this.inventoryClosedRecently())
             return false;
         // Only block movement during computer turn if slow inputs setting is enabled
@@ -30790,6 +31231,8 @@ class PlayerMovement {
         return false;
     }
     canQueue() {
+        if (this.player.busyAnimating)
+            return false;
         if (this.inventoryClosedRecently())
             return false;
         const now = Date.now();
@@ -32366,6 +32809,7 @@ const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
+const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -32398,6 +32842,7 @@ var EnemyType;
     EnemyType["tree"] = "tree";
     EnemyType["tombStone"] = "tombstone";
     EnemyType["warden"] = "warden";
+    EnemyType["crusher"] = "crusher";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -32429,6 +32874,7 @@ exports.EnemyTypeMap = {
     [EnemyType.tree]: tree_1.Tree,
     [EnemyType.tombStone]: tombStone_1.TombStone,
     [EnemyType.warden]: wardenEnemy_1.WardenEnemy,
+    [EnemyType.crusher]: crusherEnemy_1.CrusherEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -33928,6 +34374,16 @@ class Room {
                     return 1;
                 }
                 if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
+                    const aAbove = a.shouldDrawAbovePlayer === true;
+                    const bAbove = b.shouldDrawAbovePlayer === true;
+                    // Special-case: when tied in Y, draw flagged objects above players
+                    if (a instanceof player_1.Player && bAbove) {
+                        return -1; // player before flagged -> flagged drawn later
+                    }
+                    else if (b instanceof player_1.Player && aAbove) {
+                        return 1; // flagged after player
+                    }
+                    // Default near-equal behavior
                     if (a instanceof player_1.Player) {
                         return 1;
                     }
@@ -37177,7 +37633,7 @@ Sound.loadSounds = async () => {
         Sound.gruntSounds = createHowlArray("res/SFX/attacks/grunt", [1], 0.35, 1);
         // Single sounds
         Sound.enemySpawnSound = createHowl("res/SFX/attacks/enemyspawn.mp3", 0.7, false, 3);
-        Sound.wooshSound = createHowl("res/SFX/attacks/woosh1.mp3", 0.2, false, 3);
+        Sound.wooshSounds = createHowlArray("res/SFX/attacks/woosh", [1, 2], 0.2, 3);
         // Interaction sounds
         Sound.chestSounds = createHowlArray("res/SFX/chest/chest", [1, 2, 3], 0.5, 3);
         Sound.coinPickupSounds = createHowlArray("res/SFX/items/coins", [1, 2, 3, 4], 1.0, 5);
@@ -37188,6 +37644,7 @@ Sound.loadSounds = async () => {
         Sound.lockedSound = createHowl("res/SFX/door/locked1.mp3", 0.75, false, 2);
         Sound.woodSound = createHowl("res/SFX/objects/woodHit1.mp3", 1.25, false, 2);
         Sound.squishSound = createHowl("res/SFX/attacks/squish1.mp3", 0.75, false, 2);
+        Sound.crushSounds = createHowlArray("res/SFX/attacks/crush", [1, 2], 0.4, 2);
         // Mining sounds
         Sound.miningSounds = createHowlArray("res/SFX/resources/Pickaxe", [1, 2, 3, 4], 0.3, 3);
         Sound.breakRockSound = createHowl("res/SFX/resources/rockbreak.mp3", 1.0, false, 2);
@@ -37424,7 +37881,8 @@ Sound.playMagic = () => {
     if (Sound.audioMuted)
         return;
     _a.playWithReverb(Sound.magicSound, Sound.PRIORITY.COMBAT);
-    _a.playWithReverb(Sound.wooshSound, Sound.PRIORITY.COMBAT);
+    let f = Sound.wooshSounds[0];
+    _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
 };
 Sound.playSlice = () => {
     if (Sound.audioMuted)
@@ -37505,6 +37963,17 @@ Sound.playFishingCatch = () => {
         return;
     let f = game_1.Game.randTable(Sound.fishingCatchSounds, random_1.Random.rand);
     _a.delayPlay(() => _a.playWithReverb(f, Sound.PRIORITY.INTERACTIONS), 100);
+};
+Sound.playCrush = () => {
+    if (Sound.audioMuted)
+        return;
+    let w = Sound.wooshSounds[1];
+    let f = Sound.crushSounds[1];
+    _a.playWithReverb(w, Sound.PRIORITY.COMBAT);
+    _a.delayPlay(() => {
+        _a.playWithReverb(f, Sound.PRIORITY.COMBAT);
+    }, 200);
+    _a.playWithReverb(w, Sound.PRIORITY.COMBAT);
 };
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);

@@ -1,5 +1,7 @@
 export class Drawable {
   drawableY = 0;
+  // When true, this drawable should be rendered above the Player
+  shouldDrawAbovePlayer: boolean = false;
 
   draw = (delta: number) => {};
 

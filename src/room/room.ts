@@ -95,6 +95,7 @@ import { Utils } from "../utility/utils";
 import { Tree } from "../entity/object/tree";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
+import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
 
 // #endregion
 
@@ -128,6 +129,7 @@ export enum EnemyType {
   tree = "tree",
   tombStone = "tombstone",
   warden = "warden",
+  crusher = "crusher",
   // Add other enemy types here
 }
 
@@ -160,6 +162,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.tree]: Tree,
   [EnemyType.tombStone]: TombStone,
   [EnemyType.warden]: WardenEnemy,
+  [EnemyType.crusher]: CrusherEnemy,
   // Add other enemy mappings here
 };
 
@@ -2806,6 +2809,15 @@ export class Room {
         return 1;
       }
       if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
+        const aAbove = (a as any).shouldDrawAbovePlayer === true;
+        const bAbove = (b as any).shouldDrawAbovePlayer === true;
+        // Special-case: when tied in Y, draw flagged objects above players
+        if (a instanceof Player && bAbove) {
+          return -1; // player before flagged -> flagged drawn later
+        } else if (b instanceof Player && aAbove) {
+          return 1; // flagged after player
+        }
+        // Default near-equal behavior
         if (a instanceof Player) {
           return 1;
         } else if (b instanceof Player) {

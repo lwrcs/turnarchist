@@ -148,6 +148,7 @@ export class Entity extends Drawable {
   armored: boolean = false;
   justHurt: boolean = false;
   stunned: boolean = false;
+  collidable: boolean = true;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -1296,8 +1297,10 @@ export class Entity extends Drawable {
 
   makeHitWarnings = (hx: number = this.x, hy: number = this.y) => {
     if (this.unconscious) return;
-    const cullFactor = 0.45;
     const player: Player = this.getPlayer();
+    const isPlayerOnTile = player.x === hx && player.y === hy;
+    const cullFactor = isPlayerOnTile ? 0 : 0.45;
+
     const orthogonal = this.orthogonalAttack;
     const diagonal = this.diagonalAttack;
     const forwardOnly = this.forwardOnlyAttack;

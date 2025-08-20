@@ -581,6 +581,7 @@ export class Player extends Drawable {
   };
 
   tryCollide = (other: any, newX: number, newY: number) => {
+    if (other.collidable === false) return false;
     if (newX >= other.x + other.w || newX + this.w <= other.x) return false;
     if (newY >= other.y + other.h || newY + this.h <= other.y) return false;
     return true;
@@ -602,19 +603,31 @@ export class Player extends Drawable {
     }
     if (this.dead) return;
 
-    //for (let i = 0; i < 2; i++) //no idea why we would loop this...
-    if (
-      this.inventory.hasWeapon() &&
-      !this.inventory.getWeapon().weaponMove(x, y)
-    ) {
-      //for (let h of this.game.levels[this.levelID].hitwarnings) {
-      //if (newMove instanceof HitWarning)
-      return;
-      //}
-    } else if (!this.inventory.hasWeapon()) {
-      this.game.pushMessage("No weapon equipped.");
+    let collide = false;
+
+    for (let e of this.getRoom().entities) {
+      if (e.collidable === true) {
+        if (e.x === x && e.y === y) {
+          collide = true;
+          break;
+        }
+      }
     }
 
+    //for (let i = 0; i < 2; i++) //no idea why we would loop this...
+    if (collide === true) {
+      if (
+        this.inventory.hasWeapon() &&
+        !this.inventory.getWeapon().weaponMove(x, y)
+      ) {
+        //for (let h of this.game.levels[this.levelID].hitwarnings) {
+        //if (newMove instanceof HitWarning)
+        return;
+        //}
+      } else if (!this.inventory.hasWeapon()) {
+        this.game.pushMessage("No weapon equipped.");
+      }
+    }
     for (let e of this.getRoom().entities) {
       e.lastX = e.x;
       e.lastY = e.y;
@@ -772,11 +785,15 @@ export class Player extends Drawable {
     this.lastY = y;
   };
 
-  hurt = (damage: number, enemy: string) => {
+  hurt = (damage: number, enemy: string, delay: number = 0) => {
     // Play hurt sound if in current room
     if (this.getRoom() === this.game.room) {
-      Sound.hurt();
-      Sound.playGrunt();
+      setTimeout(() => {
+        Sound.hurt();
+        Sound.playGrunt();
+        this.renderer.flash();
+        this.renderer.hurt();
+      }, delay);
     }
 
     // Handle armor damage
@@ -789,7 +806,6 @@ export class Player extends Drawable {
     // Update player state
     this.lastHitBy = enemy;
     this.healthBar.hurt();
-    this.renderer.flash();
     this.enemyHurtMessage(damage, enemy);
 
     // Apply damage if no shield
@@ -797,7 +813,6 @@ export class Player extends Drawable {
       this.health -= damage;
     }
     this.hurtShield = false;
-    this.renderer.hurt();
 
     // Check for death
     if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
