@@ -45,6 +45,7 @@ export class CrusherEnemy extends Enemy {
     this.drawYOffset = 2.5;
     this.shouldDrawAbovePlayer = true;
     this.collidable = false;
+    this.destroyable = false;
 
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
@@ -198,18 +199,20 @@ export class CrusherEnemy extends Enemy {
 
               // If we ended up overlapping a player after moving, crush immediately
               const crushed = this.tryCrush();
-              if (crushed) this.animateCrush();
+              this.animateCrush();
               //if (crushed) this.ticks++;
 
               this.animateCrush();
             } else {
               const crushed = this.tryCrush();
-              if (crushed) this.animateCrush();
+              //if (crushed) this.animateCrush();
               //if (crushed) this.ticks++;
 
               this.animateCrush();
-              if (crushed) this.makeHitWarnings();
+              //if (crushed) this.makeHitWarnings();
             }
+
+            this.makeHitWarning();
 
             this.rumbling = false;
           } else {
@@ -227,11 +230,9 @@ export class CrusherEnemy extends Enemy {
             )
               */ {
               // Only attack when stationary: if overlapping the player now, crush them
-              const crushed = this.tryCrush();
-              if (crushed) this.animateCrush();
-              //this.animateCrush();
 
               this.makeHitWarnings();
+              this.makeHitWarning();
             }
           }
         }

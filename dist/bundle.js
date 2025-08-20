@@ -5927,20 +5927,18 @@ class CrusherEnemy extends enemy_1.Enemy {
                                     this.direction = game_1.Direction.UP;
                                 // If we ended up overlapping a player after moving, crush immediately
                                 const crushed = this.tryCrush();
-                                if (crushed)
-                                    this.animateCrush();
+                                this.animateCrush();
                                 //if (crushed) this.ticks++;
                                 this.animateCrush();
                             }
                             else {
                                 const crushed = this.tryCrush();
-                                if (crushed)
-                                    this.animateCrush();
+                                //if (crushed) this.animateCrush();
                                 //if (crushed) this.ticks++;
                                 this.animateCrush();
-                                if (crushed)
-                                    this.makeHitWarnings();
+                                //if (crushed) this.makeHitWarnings();
                             }
+                            this.makeHitWarning();
                             this.rumbling = false;
                         }
                         else {
@@ -5958,11 +5956,8 @@ class CrusherEnemy extends enemy_1.Enemy {
                             )
                               */ {
                                 // Only attack when stationary: if overlapping the player now, crush them
-                                const crushed = this.tryCrush();
-                                if (crushed)
-                                    this.animateCrush();
-                                //this.animateCrush();
                                 this.makeHitWarnings();
+                                this.makeHitWarning();
                             }
                         }
                     }
@@ -6074,6 +6069,7 @@ class CrusherEnemy extends enemy_1.Enemy {
         this.drawYOffset = 2.5;
         this.shouldDrawAbovePlayer = true;
         this.collidable = false;
+        this.destroyable = false;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     get alertText() {
@@ -9757,7 +9753,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.crusherPositions = [];
         this.crusherCount = 0;
         this.crushers = [];
-        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 3, [255, 10, 10], 3);
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 10, [255, 10, 10], 1.5);
         this.addLightSource(this.lightSource);
         this.hasBloom = true;
         this.bloomColor = "#ff0a0a";
@@ -15700,6 +15696,7 @@ const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator 
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
 const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
+const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -15822,6 +15819,7 @@ var EnemyType;
     EnemyType[EnemyType["MUSHROOMS"] = 44] = "MUSHROOMS";
     EnemyType[EnemyType["WARDEN"] = 45] = "WARDEN";
     EnemyType[EnemyType["OBSIDIAN"] = 46] = "OBSIDIAN";
+    EnemyType[EnemyType["CRUSHER"] = 47] = "CRUSHER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -16034,6 +16032,8 @@ class EnemyState {
             this.type = EnemyType.WARDEN;
         if (enemy instanceof obsidianResource_1.ObsidianResource)
             this.type = EnemyType.OBSIDIAN;
+        if (enemy instanceof crusherEnemy_1.CrusherEnemy)
+            this.type = EnemyType.CRUSHER;
     }
 }
 exports.EnemyState = EnemyState;
@@ -16182,6 +16182,8 @@ let loadEnemy = (es, game) => {
         enemy = new occultistEnemy_1.OccultistEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.WARDEN)
         enemy = new wardenEnemy_1.WardenEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.CRUSHER)
+        enemy = new crusherEnemy_1.CrusherEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.QUEEN)
         enemy = new queenEnemy_1.QueenEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.ROOK)
@@ -24938,6 +24940,7 @@ class Spellbook extends weapon_1.Weapon {
             inventory.addItem(new spellbookPage_1.SpellbookPage(this.level, inventoryX, inventoryY, numFragments));
         };
         this.weaponMove = (newX, newY) => {
+            //if (!this.checkForCollidables(newX, newY)) return true;
             this.getTargets();
             let direction = this.wielder.direction;
             let flag = false;
@@ -25278,6 +25281,14 @@ class Weapon extends equippable_1.Equippable {
                 this.wielder.inventory.weapon = null;
             this.wielder = null;
             this.equipped = false;
+        };
+        this.checkForCollidables = (x, y) => {
+            for (const e of this.getEntitiesAt(x, y)) {
+                if (e.collidable === true) {
+                    return true;
+                }
+            }
+            return false;
         };
         this.weaponMove = (newX, newY) => {
             if (this.checkForPushables(newX, newY))
@@ -30101,18 +30112,18 @@ class Player extends drawable_1.Drawable {
                 }
             }
             //for (let i = 0; i < 2; i++) //no idea why we would loop this...
-            if (collide === true) {
-                if (this.inventory.hasWeapon() &&
-                    !this.inventory.getWeapon().weaponMove(x, y)) {
-                    //for (let h of this.game.levels[this.levelID].hitwarnings) {
-                    //if (newMove instanceof HitWarning)
-                    return;
-                    //}
-                }
-                else if (!this.inventory.hasWeapon()) {
-                    this.game.pushMessage("No weapon equipped.");
-                }
+            // if (collide === true) {
+            if (this.inventory.hasWeapon() &&
+                !this.inventory.getWeapon().weaponMove(x, y)) {
+                //for (let h of this.game.levels[this.levelID].hitwarnings) {
+                //if (newMove instanceof HitWarning)
+                return;
+                //}
             }
+            else if (!this.inventory.hasWeapon()) {
+                this.game.pushMessage("No weapon equipped.");
+            }
+            //}
             for (let e of this.getRoom().entities) {
                 e.lastX = e.x;
                 e.lastY = e.y;
@@ -36042,6 +36053,7 @@ const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource *
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
 const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/magmaPool.ts");
+const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -36939,8 +36951,13 @@ class Populator {
             bosses.push("occultist");
             bosses = bosses.filter((b) => b !== "queen");
         }
+        if (depth > 4) {
+            bosses.push("warden");
+            bosses = bosses.filter((b) => b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist");
+        }
         const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
-        const position = boss.startsWith("big")
+        console.log("bosses", bosses, "boss", boss);
+        const position = boss.startsWith("big") || boss === "warden"
             ? room.getBigRandomEmptyPosition(tiles)
             : room.getRandomEmptyPosition(tiles);
         if (position === null)
@@ -36982,6 +36999,11 @@ class Populator {
                     "tool",
                 ];
                 bigZombie.dropChance = 1;
+                break;
+            case "warden":
+                const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
+                warden.dropTable = ["weapon", "equipment"];
+                warden.dropChance = 1;
                 break;
         }
     }

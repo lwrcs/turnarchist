@@ -145,6 +145,7 @@ import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { EnemyShield } from "../projectile/enemyShield";
 import { ObsidianResource } from "../entity/resource/obsidianResource";
+import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
 
 export class HitWarningState {
   x: number;
@@ -294,6 +295,7 @@ export enum EnemyType {
   MUSHROOMS,
   WARDEN,
   OBSIDIAN,
+  CRUSHER,
 }
 
 export class EnemyState {
@@ -537,6 +539,7 @@ export class EnemyState {
     if (enemy instanceof Mushrooms) this.type = EnemyType.MUSHROOMS;
     if (enemy instanceof WardenEnemy) this.type = EnemyType.WARDEN;
     if (enemy instanceof ObsidianResource) this.type = EnemyType.OBSIDIAN;
+    if (enemy instanceof CrusherEnemy) this.type = EnemyType.CRUSHER;
   }
 }
 
@@ -682,7 +685,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new OccultistEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.WARDEN)
     enemy = new WardenEnemy(room, game, es.x, es.y);
-
+  if (es.type === EnemyType.CRUSHER)
+    enemy = new CrusherEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.QUEEN)
     enemy = new QueenEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.ROOK) enemy = new RookEnemy(room, game, es.x, es.y);

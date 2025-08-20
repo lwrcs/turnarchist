@@ -615,19 +615,19 @@ export class Player extends Drawable {
     }
 
     //for (let i = 0; i < 2; i++) //no idea why we would loop this...
-    if (collide === true) {
-      if (
-        this.inventory.hasWeapon() &&
-        !this.inventory.getWeapon().weaponMove(x, y)
-      ) {
-        //for (let h of this.game.levels[this.levelID].hitwarnings) {
-        //if (newMove instanceof HitWarning)
-        return;
-        //}
-      } else if (!this.inventory.hasWeapon()) {
-        this.game.pushMessage("No weapon equipped.");
-      }
+    // if (collide === true) {
+    if (
+      this.inventory.hasWeapon() &&
+      !this.inventory.getWeapon().weaponMove(x, y)
+    ) {
+      //for (let h of this.game.levels[this.levelID].hitwarnings) {
+      //if (newMove instanceof HitWarning)
+      return;
+      //}
+    } else if (!this.inventory.hasWeapon()) {
+      this.game.pushMessage("No weapon equipped.");
     }
+    //}
     for (let e of this.getRoom().entities) {
       e.lastX = e.x;
       e.lastY = e.y;

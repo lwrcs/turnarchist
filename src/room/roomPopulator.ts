@@ -74,6 +74,7 @@ import { GoldResource } from "../entity/resource/goldResource";
 import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { Pool } from "../tile/pool";
 import { MagmaPool } from "../tile/magmaPool";
+import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -904,15 +905,26 @@ export class Populator {
     }
 
     let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
+
     if (depth > 0) {
       bosses.push("occultist");
       bosses = bosses.filter((b) => b !== "queen");
     }
-    const boss = Game.randTable(bosses, Random.rand);
+    if (depth > 4) {
+      bosses.push("warden");
+      bosses = bosses.filter(
+        (b) =>
+          b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist",
+      );
+    }
 
-    const position = boss.startsWith("big")
-      ? room.getBigRandomEmptyPosition(tiles)
-      : room.getRandomEmptyPosition(tiles);
+    const boss = Game.randTable(bosses, Random.rand);
+    console.log("bosses", bosses, "boss", boss);
+
+    const position =
+      boss.startsWith("big") || boss === "warden"
+        ? room.getBigRandomEmptyPosition(tiles)
+        : room.getRandomEmptyPosition(tiles);
     if (position === null) return;
     const { x, y } = position;
 
@@ -954,6 +966,11 @@ export class Populator {
           "tool",
         ];
         bigZombie.dropChance = 1;
+        break;
+      case "warden":
+        const warden = WardenEnemy.add(room, room.game, x, y);
+        warden.dropTable = ["weapon", "equipment"];
+        warden.dropChance = 1;
         break;
     }
   }

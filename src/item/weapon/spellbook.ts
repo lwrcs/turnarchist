@@ -72,6 +72,8 @@ export class Spellbook extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
+    //if (!this.checkForCollidables(newX, newY)) return true;
+
     this.getTargets();
     let direction = this.wielder.direction;
     let flag = false;

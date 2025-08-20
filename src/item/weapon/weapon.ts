@@ -129,6 +129,15 @@ export abstract class Weapon extends Equippable {
     this.equipped = false;
   };
 
+  checkForCollidables = (x: number, y: number): boolean => {
+    for (const e of this.getEntitiesAt(x, y)) {
+      if (e.collidable === true) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   weaponMove = (newX: number, newY: number): boolean => {
     if (this.checkForPushables(newX, newY)) return true;
 

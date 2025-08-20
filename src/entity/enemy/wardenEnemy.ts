@@ -66,9 +66,9 @@ export class WardenEnemy extends Enemy {
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
-      3,
+      10,
       [255, 10, 10],
-      3,
+      1.5,
     );
     this.addLightSource(this.lightSource);
     this.hasBloom = true;
