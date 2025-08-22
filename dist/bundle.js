@@ -17756,9 +17756,9 @@ GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spa
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
-GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.05; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
-GameplaySettings.MAX_ENEMY_DENSITY = 0.3; // Maximum enemy density cap
+GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
 
 
@@ -31561,13 +31561,16 @@ class PlayerRenderer {
             gameConstants_1.GameConstants.ANIMATION_SPEED = this.motionSpeed;
         };
         this.updateHitXY = (delta) => {
-            const hitX = this.hitX - this.hitX * 0.3 * delta;
-            const hitY = this.hitY - this.hitY * 0.3 * delta;
-            this.hitX = Math.min(Math.max(hitX, -1), 1);
-            this.hitY = Math.min(Math.max(hitY, -1), 1);
-            if (Math.abs(hitX) < 0.01)
+            // Use exponential decay like updateDrawXY for stable behavior with variable frame rates
+            this.hitX *= 0.7 ** delta;
+            this.hitY *= 0.7 ** delta;
+            // Clamp values to prevent extreme behavior
+            this.hitX = Math.min(Math.max(this.hitX, -1), 1);
+            this.hitY = Math.min(Math.max(this.hitY, -1), 1);
+            // Snap to zero when values get very small
+            if (Math.abs(this.hitX) < 0.01)
                 this.hitX = 0;
-            if (Math.abs(hitY) < 0.01)
+            if (Math.abs(this.hitY) < 0.01)
                 this.hitY = 0;
         };
         this.doneMoving = () => {

@@ -365,12 +365,17 @@ export class PlayerRenderer {
   };
 
   updateHitXY = (delta: number) => {
-    const hitX = this.hitX - this.hitX * 0.3 * delta;
-    const hitY = this.hitY - this.hitY * 0.3 * delta;
-    this.hitX = Math.min(Math.max(hitX, -1), 1);
-    this.hitY = Math.min(Math.max(hitY, -1), 1);
-    if (Math.abs(hitX) < 0.01) this.hitX = 0;
-    if (Math.abs(hitY) < 0.01) this.hitY = 0;
+    // Use exponential decay like updateDrawXY for stable behavior with variable frame rates
+    this.hitX *= 0.7 ** delta;
+    this.hitY *= 0.7 ** delta;
+
+    // Clamp values to prevent extreme behavior
+    this.hitX = Math.min(Math.max(this.hitX, -1), 1);
+    this.hitY = Math.min(Math.max(this.hitY, -1), 1);
+
+    // Snap to zero when values get very small
+    if (Math.abs(this.hitX) < 0.01) this.hitX = 0;
+    if (Math.abs(this.hitY) < 0.01) this.hitY = 0;
   };
 
   doneMoving = (): boolean => {

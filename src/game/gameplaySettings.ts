@@ -27,8 +27,8 @@ export class GameplaySettings {
   static readonly OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 
   // Enemy Density Settings
-  static readonly ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.05; // Multiplied by (depth + 2) for base density
+  static readonly ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
   static readonly ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
-  static readonly MAX_ENEMY_DENSITY = 0.3; // Maximum enemy density cap
+  static readonly MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
   static readonly FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
 }
