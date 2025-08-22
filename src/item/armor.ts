@@ -3,12 +3,13 @@ import { LevelConstants } from "../level/levelConstants";
 import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 import { GameConstants } from "../game/gameConstants";
+import { Weapon } from "./weapon/weapon";
 
 export class Armor extends Equippable {
   health: number;
   rechargeTurnCounter: number;
   readonly RECHARGE_TURNS = 25;
-  static itemName = "armor";
+  static itemName = "occult shield";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -16,17 +17,18 @@ export class Armor extends Equippable {
     this.rechargeTurnCounter = -1;
     this.tileX = 5;
     this.tileY = 0;
-    this.name = "armor";
+    this.name = "occult shield";
   }
 
   coEquippable = (other: Equippable): boolean => {
     if (other instanceof Armor) return false;
+    if (other instanceof Weapon && (other as Weapon).twoHanded) return false;
     return true;
   };
 
   getDescription = (): string => {
     return (
-      "ENCHANTED ARMOR\nA magic suit of armor. Absorbs one hit and regenerates after " +
+      "ENCHANTED SHIELD\nAn occult shield. Absorbs one hit and regenerates after " +
       this.RECHARGE_TURNS +
       " turns."
     );
@@ -35,8 +37,11 @@ export class Armor extends Equippable {
   tickInInventory = () => {
     if (this.rechargeTurnCounter > 0) {
       this.rechargeTurnCounter--;
+      this.cooldown = this.rechargeTurnCounter;
+
       if (this.rechargeTurnCounter === 0) {
         this.rechargeTurnCounter = -1;
+        this.cooldown = this.rechargeTurnCounter;
         this.health = 1;
       }
     }
@@ -46,6 +51,7 @@ export class Armor extends Equippable {
     if (this.health <= 0) return;
     this.health -= Math.max(damage, 1);
     this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
+    this.cooldown = this.rechargeTurnCounter;
   };
 
   drawGUI = (

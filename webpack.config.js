@@ -14,9 +14,13 @@ module.exports = {
   module: {
     rules: [
       // all files with a `.ts` or `.tsx` extension will be handled by `ts-loader`
-      { test: /\.tsx?$/, use: { loader: "ts-loader", options: {} }, exclude: /node_modules/ },
+      {
+        test: /\.tsx?$/,
+        use: { loader: "ts-loader", options: {} },
+        exclude: /node_modules/,
+      },
     ],
   },
-  devtool: 'source-map',
-  mode: 'development',
+  devtool: "source-map",
+  mode: "development",
 };

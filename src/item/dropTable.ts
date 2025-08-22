@@ -34,6 +34,8 @@ import { Hourglass } from "./usable/hourglass";
 import { ScytheHandle } from "./weapon/scytheHandle";
 import { ScytheBlade } from "./weapon/scytheBlade";
 import { FishingRod } from "./tool/fishingRod";
+import { ShieldRightFragment } from "./weapon/shieldRightFragment";
+import { ShieldLeftFragment } from "./weapon/shieldLeftFragment";
 
 interface Drop {
   itemType: string;
@@ -55,6 +57,8 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 
   scytheblade: ScytheBlade,
   scythehandle: ScytheHandle,
+  shieldleftfragment: ShieldLeftFragment,
+  shieldrightfragment: ShieldRightFragment,
 
   armor: Armor,
 
@@ -135,6 +139,18 @@ export class DropTable {
       itemType: "scythehandle",
       dropRate: 10,
       category: ["reaper"],
+      unique: true,
+    },
+    {
+      itemType: "shieldleftfragment",
+      dropRate: 10,
+      category: ["occultist"],
+      unique: true,
+    },
+    {
+      itemType: "shieldrightfragment",
+      dropRate: 10,
+      category: ["occultist"],
       unique: true,
     },
 

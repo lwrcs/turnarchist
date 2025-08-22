@@ -9,6 +9,7 @@ import { WeaponFragments } from "../usable/weaponFragments";
 import { Enemy } from "../../entity/enemy/enemy";
 import { AttackAnimation } from "../../particle/attackAnimation";
 import { Direction } from "../../game";
+import { Armor } from "../armor";
 
 interface WeaponStatus {
   poison: boolean;
@@ -27,6 +28,7 @@ export abstract class Weapon extends Equippable {
   hitDelay: number;
   cooldown: number;
   cooldownMax: number;
+  twoHanded: boolean;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -43,6 +45,7 @@ export abstract class Weapon extends Equippable {
     this.name = this.constructor.prototype.itemName;
     this.cooldown = 0;
     this.cooldownMax = 0;
+    this.twoHanded = false;
   }
 
   break = () => {
@@ -60,6 +63,7 @@ export abstract class Weapon extends Equippable {
 
   coEquippable = (other: Equippable): boolean => {
     if (other instanceof Weapon) return false;
+    if (other instanceof Armor && this.twoHanded) return false;
     return true;
   };
 
@@ -88,7 +92,7 @@ export abstract class Weapon extends Equippable {
           ? `Your weapon poisons the ${enemy.name}`
           : `Your cursed weapon draws blood from the ${enemy.name}`;
 
-        this.game.pushMessage(message);
+        //this.game.pushMessage(message);
 
         //if (this.statusApplicationCount >= 10) this.clearStatus();
       }

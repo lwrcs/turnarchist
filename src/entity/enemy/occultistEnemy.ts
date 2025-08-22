@@ -10,6 +10,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Lighting } from "../../lighting/lighting";
 import { Entity } from "../entity";
 import { Random } from "../../utility/random";
+import { GameplaySettings } from "../../game/gameplaySettings";
 
 export class OccultistEnemy extends Enemy {
   ticks: number;
@@ -50,7 +51,10 @@ export class OccultistEnemy extends Enemy {
     this.bloomColor = "#2E0854";
     this.bloomAlpha = 1;
     this.softBloomAlpha = 0;
-    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    this.dropChance = 1;
+    this.getDrop(["occultist"], false);
+    this.pushable = false;
+    this.chainPushable = false;
   }
 
   hit = (): number => {
@@ -80,6 +84,7 @@ export class OccultistEnemy extends Enemy {
       if (this.ticks % 2 === 0) {
         this.shieldEnemies(enemiesToShield);
         this.updateShieldedEnemies();
+        this.runAway();
       }
     }
 
@@ -88,7 +93,6 @@ export class OccultistEnemy extends Enemy {
     } else {
       this.shadeColor = "#000000";
     }
-    this.runAway();
     if (this.lightSource) {
       this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
     }
@@ -125,7 +129,7 @@ export class OccultistEnemy extends Enemy {
   };
 
   enemyShieldCandidates = () => {
-    return this.room.entities.filter(
+    const uncappedCandidates = this.room.entities.filter(
       (entity) =>
         entity instanceof Enemy &&
         Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
@@ -134,6 +138,7 @@ export class OccultistEnemy extends Enemy {
         entity !== this &&
         !entity.shieldedBefore,
     );
+    return uncappedCandidates.slice(0, GameplaySettings.MAX_OCCULTIST_SHIELDS);
   };
 
   unshieldEnemies = () => {

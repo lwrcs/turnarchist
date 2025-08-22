@@ -22,6 +22,7 @@ export class Greataxe extends Weapon {
     this.durability = 25;
     this.durabilityMax = 25;
     this.useCost = 5;
+    this.twoHanded = true;
   }
 
   hitSound = () => {

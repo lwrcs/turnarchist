@@ -221,6 +221,7 @@ export class Game {
   cameraY: number;
   justTransitioned: boolean = false;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
+  lastDroppedShieldPiece: "left" | "right" | null = null;
 
   tip: string = Tips.getRandomTip();
   private currentLevelGenerator: LevelImageGenerator | null = null;

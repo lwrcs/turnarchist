@@ -7852,6 +7852,7 @@ const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/ut
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class OccultistEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -7876,6 +7877,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                 if (this.ticks % 2 === 0) {
                     this.shieldEnemies(enemiesToShield);
                     this.updateShieldedEnemies();
+                    this.runAway();
                 }
             }
             if (this.shieldedEnemies.length > 0) {
@@ -7884,7 +7886,6 @@ class OccultistEnemy extends enemy_1.Enemy {
             else {
                 this.shadeColor = "#000000";
             }
-            this.runAway();
             if (this.lightSource) {
                 this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
             }
@@ -7915,12 +7916,13 @@ class OccultistEnemy extends enemy_1.Enemy {
             }
         };
         this.enemyShieldCandidates = () => {
-            return this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
+            const uncappedCandidates = this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
                 utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
                 !entity.shielded &&
                 !entity.dead &&
                 entity !== this &&
                 !entity.shieldedBefore);
+            return uncappedCandidates.slice(0, gameplaySettings_1.GameplaySettings.MAX_OCCULTIST_SHIELDS);
         };
         this.unshieldEnemies = () => {
             if (this.shieldedEnemies.length > 0) {
@@ -8033,7 +8035,10 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.bloomColor = "#2E0854";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+        this.dropChance = 1;
+        this.getDrop(["occultist"], false);
+        this.pushable = false;
+        this.chainPushable = false;
     }
 }
 exports.OccultistEnemy = OccultistEnemy;
@@ -13322,6 +13327,7 @@ class Game {
         this.ellipsisStartTime = 0;
         this.justTransitioned = false;
         this.lastDroppedScythePiece = null;
+        this.lastDroppedShieldPiece = null;
         this.tip = tips_1.Tips.getRandomTip();
         this.currentLevelGenerator = null;
         this.focusTimeout = null;
@@ -15697,6 +15703,8 @@ const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
 const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
 const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
+const shieldLeftFragment_1 = __webpack_require__(/*! ../item/weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
+const shieldRightFragment_1 = __webpack_require__(/*! ../item/weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -16545,6 +16553,8 @@ var ItemType;
     ItemType[ItemType["SLINGSHOT"] = 50] = "SLINGSHOT";
     ItemType[ItemType["SPELLBOOK_PAGE"] = 51] = "SPELLBOOK_PAGE";
     ItemType[ItemType["SWORD"] = 52] = "SWORD";
+    ItemType[ItemType["SHIELD_LEFT_FRAGMENT"] = 53] = "SHIELD_LEFT_FRAGMENT";
+    ItemType[ItemType["SHIELD_RIGHT_FRAGMENT"] = 54] = "SHIELD_RIGHT_FRAGMENT";
 })(ItemType = exports.ItemType || (exports.ItemType = {}));
 class ItemState {
     constructor(item, game) {
@@ -16659,6 +16669,10 @@ class ItemState {
             this.type = ItemType.BLUE_POTION; // Maps to existing BLUE_POTION
         if (item instanceof hammer_1.Hammer)
             this.type = ItemType.HAMMER;
+        if (item instanceof shieldLeftFragment_1.ShieldLeftFragment)
+            this.type = ItemType.SHIELD_LEFT_FRAGMENT;
+        if (item instanceof shieldRightFragment_1.ShieldRightFragment)
+            this.type = ItemType.SHIELD_RIGHT_FRAGMENT;
         this.equipped = item instanceof equippable_1.Equippable && item.equipped;
         this.x = item.x;
         this.y = item.y;
@@ -16796,6 +16810,10 @@ let loadItem = (i, game, player, targetRoom) => {
         item = new weaponBlood_1.WeaponBlood(room, i.x, i.y);
     if (i.type === ItemType.HAMMER)
         item = new hammer_1.Hammer(room, i.x, i.y);
+    if (i.type === ItemType.SHIELD_LEFT_FRAGMENT)
+        item = new shieldLeftFragment_1.ShieldLeftFragment(room, i.x, i.y);
+    if (i.type === ItemType.SHIELD_RIGHT_FRAGMENT)
+        item = new shieldRightFragment_1.ShieldRightFragment(room, i.x, i.y);
     if (!item) {
         console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
         item = new coal_1.Coal(room, i.x, i.y);
@@ -17021,6 +17039,8 @@ const loadLevel = (level, levelState) => {
 };
 class GameState {
     constructor() {
+        this.lastDroppedScythePiece = null;
+        this.lastDroppedShieldPiece = null;
         this.seed = 0;
         this.randomState = 0;
         this.players = {};
@@ -17044,6 +17064,8 @@ const createGameState = (game) => {
         // Save basic game properties
         gs.seed = game.levelgen.seed;
         gs.randomState = random_1.Random.state;
+        gs.lastDroppedScythePiece = game.lastDroppedScythePiece;
+        gs.lastDroppedShieldPiece = game.lastDroppedShieldPiece;
         // Save level state
         if (game.level) {
             gs.level = new LevelState(game.level);
@@ -17760,6 +17782,7 @@ GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth 
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
+GameplaySettings.MAX_OCCULTIST_SHIELDS = 10; // Maximum number of shields an occultist can have
 
 
 /***/ }),
@@ -21653,6 +21676,7 @@ exports.Armor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/item/weapon/weapon.ts");
 class Armor extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -21660,18 +21684,22 @@ class Armor extends equippable_1.Equippable {
         this.coEquippable = (other) => {
             if (other instanceof Armor)
                 return false;
+            if (other instanceof weapon_1.Weapon && other.twoHanded)
+                return false;
             return true;
         };
         this.getDescription = () => {
-            return ("ENCHANTED ARMOR\nA magic suit of armor. Absorbs one hit and regenerates after " +
+            return ("ENCHANTED SHIELD\nAn occult shield. Absorbs one hit and regenerates after " +
                 this.RECHARGE_TURNS +
                 " turns.");
         };
         this.tickInInventory = () => {
             if (this.rechargeTurnCounter > 0) {
                 this.rechargeTurnCounter--;
+                this.cooldown = this.rechargeTurnCounter;
                 if (this.rechargeTurnCounter === 0) {
                     this.rechargeTurnCounter = -1;
+                    this.cooldown = this.rechargeTurnCounter;
                     this.health = 1;
                 }
             }
@@ -21681,6 +21709,7 @@ class Armor extends equippable_1.Equippable {
                 return;
             this.health -= Math.max(damage, 1);
             this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
+            this.cooldown = this.rechargeTurnCounter;
         };
         this.drawGUI = (delta, playerMaxHealth, quickbarStartX) => {
             // Get the quickbar's left edge position (same as in playerRenderer)
@@ -21703,11 +21732,11 @@ class Armor extends equippable_1.Equippable {
         this.rechargeTurnCounter = -1;
         this.tileX = 5;
         this.tileY = 0;
-        this.name = "armor";
+        this.name = "occult shield";
     }
 }
 exports.Armor = Armor;
-Armor.itemName = "armor";
+Armor.itemName = "occult shield";
 
 
 /***/ }),
@@ -21918,6 +21947,8 @@ const hourglass_1 = __webpack_require__(/*! ./usable/hourglass */ "./src/item/us
 const scytheHandle_1 = __webpack_require__(/*! ./weapon/scytheHandle */ "./src/item/weapon/scytheHandle.ts");
 const scytheBlade_1 = __webpack_require__(/*! ./weapon/scytheBlade */ "./src/item/weapon/scytheBlade.ts");
 const fishingRod_1 = __webpack_require__(/*! ./tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const shieldRightFragment_1 = __webpack_require__(/*! ./weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
+const shieldLeftFragment_1 = __webpack_require__(/*! ./weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -21929,6 +21960,8 @@ exports.ItemTypeMap = {
     fishingrod: fishingRod_1.FishingRod,
     scytheblade: scytheBlade_1.ScytheBlade,
     scythehandle: scytheHandle_1.ScytheHandle,
+    shieldleftfragment: shieldLeftFragment_1.ShieldLeftFragment,
+    shieldrightfragment: shieldRightFragment_1.ShieldRightFragment,
     armor: armor_1.Armor,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
@@ -22003,6 +22036,18 @@ DropTable.drops = [
         itemType: "scythehandle",
         dropRate: 10,
         category: ["reaper"],
+        unique: true,
+    },
+    {
+        itemType: "shieldleftfragment",
+        dropRate: 10,
+        category: ["occultist"],
+        unique: true,
+    },
+    {
+        itemType: "shieldrightfragment",
+        dropRate: 10,
+        category: ["occultist"],
         unique: true,
     },
     // Equipment
@@ -24312,6 +24357,7 @@ class Greataxe extends weapon_1.Weapon {
         this.durability = 25;
         this.durabilityMax = 25;
         this.useCost = 5;
+        this.twoHanded = true;
     }
 }
 exports.Greataxe = Greataxe;
@@ -24427,6 +24473,7 @@ class Scythe extends weapon_1.Weapon {
         this.offsetY = 0;
         this.iconOffset = 0.2;
         this.degradeable = false;
+        this.twoHanded = true;
     }
 }
 exports.Scythe = Scythe;
@@ -24535,6 +24582,112 @@ class ScytheHandle extends usable_1.Usable {
 }
 exports.ScytheHandle = ScytheHandle;
 ScytheHandle.itemName = "scythe handle";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/shieldLeftFragment.ts":
+/*!***********************************************!*\
+  !*** ./src/item/weapon/shieldLeftFragment.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ShieldLeftFragment = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const shieldRightFragment_1 = __webpack_require__(/*! ./shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
+const armor_1 = __webpack_require__(/*! ../armor */ "./src/item/armor.ts");
+class ShieldLeftFragment extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedShieldPiece === "left") {
+                this.level.game.lastDroppedShieldPiece = null;
+                this.level.items.push(new shieldRightFragment_1.ShieldRightFragment(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedShieldPiece === null) {
+                this.level.game.lastDroppedScythePiece = "blade";
+            }
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof shieldRightFragment_1.ShieldRightFragment) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the shield fragments into a shield.");
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const shield = new armor_1.Armor(room, player.x, player.y);
+                player.inventory.addItem(shield);
+            }
+        };
+        this.tileX = 1;
+        this.tileY = 2;
+        this.stackable = false;
+        this.name = ShieldLeftFragment.itemName;
+        this.description =
+            "The left fragment of a shield. Find the right fragment to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.ShieldLeftFragment = ShieldLeftFragment;
+ShieldLeftFragment.itemName = "left shield fragment";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/shieldRightFragment.ts":
+/*!************************************************!*\
+  !*** ./src/item/weapon/shieldRightFragment.ts ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ShieldRightFragment = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const shieldLeftFragment_1 = __webpack_require__(/*! ./shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
+const armor_1 = __webpack_require__(/*! ../armor */ "./src/item/armor.ts");
+class ShieldRightFragment extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedShieldPiece === "right") {
+                this.level.game.lastDroppedShieldPiece = null;
+                this.level.items.push(new shieldLeftFragment_1.ShieldLeftFragment(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedShieldPiece === null) {
+                this.level.game.lastDroppedShieldPiece = "right";
+            }
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof shieldLeftFragment_1.ShieldLeftFragment) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the shield fragments into a shield.");
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const shield = new armor_1.Armor(room, player.x, player.y);
+                player.inventory.addItem(shield);
+            }
+        };
+        this.tileX = 2;
+        this.tileY = 2;
+        this.stackable = false;
+        this.name = ShieldRightFragment.itemName;
+        this.description =
+            "The right fragment of a shield. Find the left fragment to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.ShieldRightFragment = ShieldRightFragment;
+ShieldRightFragment.itemName = "right shield fragment";
 
 
 /***/ }),
@@ -25210,6 +25363,7 @@ const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./s
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const armor_1 = __webpack_require__(/*! ../armor */ "./src/item/armor.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
@@ -25227,6 +25381,8 @@ class Weapon extends equippable_1.Equippable {
         };
         this.coEquippable = (other) => {
             if (other instanceof Weapon)
+                return false;
+            if (other instanceof armor_1.Armor && this.twoHanded)
                 return false;
             return true;
         };
@@ -25252,7 +25408,7 @@ class Weapon extends equippable_1.Equippable {
                     const message = this.status.poison
                         ? `Your weapon poisons the ${enemy.name}`
                         : `Your cursed weapon draws blood from the ${enemy.name}`;
-                    this.game.pushMessage(message);
+                    //this.game.pushMessage(message);
                     //if (this.statusApplicationCount >= 10) this.clearStatus();
                 }
             }
@@ -25389,6 +25545,7 @@ class Weapon extends equippable_1.Equippable {
         this.name = this.constructor.prototype.itemName;
         this.cooldown = 0;
         this.cooldownMax = 0;
+        this.twoHanded = false;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {

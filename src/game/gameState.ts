@@ -146,6 +146,8 @@ import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { EnemyShield } from "../projectile/enemyShield";
 import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
+import { ShieldLeftFragment } from "../item/weapon/shieldLeftFragment";
+import { ShieldRightFragment } from "../item/weapon/shieldRightFragment";
 
 export class HitWarningState {
   x: number;
@@ -1076,6 +1078,8 @@ export enum ItemType {
   SLINGSHOT,
   SPELLBOOK_PAGE,
   SWORD,
+  SHIELD_LEFT_FRAGMENT,
+  SHIELD_RIGHT_FRAGMENT,
 }
 
 export class ItemState {
@@ -1151,7 +1155,10 @@ export class ItemState {
     if (item instanceof WeaponFragments) this.type = ItemType.WEAPON_FRAGMENTS; // Maps to existing WEAPON_FRAGMENTS
     if (item instanceof BluePotion) this.type = ItemType.BLUE_POTION; // Maps to existing BLUE_POTION
     if (item instanceof Hammer) this.type = ItemType.HAMMER;
-
+    if (item instanceof ShieldLeftFragment)
+      this.type = ItemType.SHIELD_LEFT_FRAGMENT;
+    if (item instanceof ShieldRightFragment)
+      this.type = ItemType.SHIELD_RIGHT_FRAGMENT;
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
     this.y = item.y;
@@ -1249,6 +1256,10 @@ let loadItem = (
     item = new WeaponPoison(room, i.x, i.y);
   if (i.type === ItemType.WEAPON_BLOOD) item = new WeaponBlood(room, i.x, i.y);
   if (i.type === ItemType.HAMMER) item = new Hammer(room, i.x, i.y);
+  if (i.type === ItemType.SHIELD_LEFT_FRAGMENT)
+    item = new ShieldLeftFragment(room, i.x, i.y);
+  if (i.type === ItemType.SHIELD_RIGHT_FRAGMENT)
+    item = new ShieldRightFragment(room, i.x, i.y);
   if (!item) {
     console.error(
       "Unknown item type:",
@@ -1545,6 +1556,8 @@ export class GameState {
   roomGIDs?: string[];
   currentPathId?: string;
   sidepathMeta?: Array<{ pathId: string; rooms: number }>;
+  lastDroppedScythePiece: "handle" | "blade" | null = null;
+  lastDroppedShieldPiece: "left" | "right" | null = null;
 
   constructor() {
     this.seed = 0;
@@ -1571,6 +1584,8 @@ export const createGameState = (game: Game): GameState => {
     // Save basic game properties
     gs.seed = game.levelgen.seed;
     gs.randomState = Random.state;
+    gs.lastDroppedScythePiece = game.lastDroppedScythePiece;
+    gs.lastDroppedShieldPiece = game.lastDroppedShieldPiece;
 
     // Save level state
     if (game.level) {
