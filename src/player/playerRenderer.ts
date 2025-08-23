@@ -10,6 +10,7 @@ import { Spellbook } from "../item/weapon/spellbook";
 import { Player } from "./player";
 import { HoverText } from "../gui/hoverText";
 import { Shadow } from "../drawable/shadow";
+import { safeRecordGameStats } from "../api";
 
 export class PlayerRenderer {
   private player: Player;
@@ -507,7 +508,8 @@ export class PlayerRenderer {
       );
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      const enemies = statsTracker.getStats().enemies;
+      const gameStats = statsTracker.getStats();
+      const enemies = gameStats.enemies;
       // Count the occurrences of each enemy
       const enemyCounts = enemies.reduce(
         (acc, enemy) => {
@@ -574,6 +576,36 @@ export class PlayerRenderer {
         GameConstants.WIDTH / 2 - restartTextWidth / 2,
         startY,
       );
+
+      if (!this.player.game.hasRecordedStats) {
+        // The default value for `lastHitBy` is "enemy", so we compare to that to determine if
+        // the player was killed by an enemy
+        const killedByEnemyCreature = this.player.lastHitBy !== "enemy";
+        const gameDurationMs = Date.now() - this.player.game.gameStartTimeMs;
+        const inventoryItems = this.player.inventory.items
+          .filter((item) => item?.name && item?.stackCount)
+          .map((item) => ({
+            name: item.name,
+            stackSize: item.stackCount,
+          }));
+
+        // Report game stats to Turnarchist backend server
+        safeRecordGameStats({
+          killedBy: killedByEnemyCreature ? null : this.player.lastHitBy,
+          enemiesKilled: enemies,
+          damageDone: gameStats.damageDone,
+          damageTaken: gameStats.damageTaken,
+          depthReached: diedInRoom.depth,
+          turnsPassed: gameStats.turnsPassed,
+          coinsCollected: gameStats.coinsCollected,
+          itemsCollected: gameStats.itemsCollected,
+          xp: gameStats.xp,
+          level: gameStats.level,
+          gameDurationMs,
+          inventory: inventoryItems,
+        });
+        this.player.game.hasRecordedStats = true;
+      }
     }
     PostProcessor.draw(delta);
     if (this.hurting) this.drawHurt(delta);

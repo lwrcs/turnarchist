@@ -183,6 +183,8 @@ export class Game {
   chatTextBox: TextBox;
   previousFrameTimestamp: number;
   player: Player;
+  gameStartTimeMs: number;
+  hasRecordedStats: boolean = false;
 
   static inputReceived = false;
 
@@ -528,6 +530,12 @@ export class Game {
     this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
+    this.hasRecordedStats = false;
+
+    // In some cases, this starts the timer when a player views the start menu rather than when
+    // the gameplay starts. This field is only used for analytics, so approximate timing is acceptable.
+    this.gameStartTimeMs = Date.now();
+
     // Reset path context to main for a fresh world
     (this as any).currentPathId = "main";
     // Attempt auto-load from cookies/localStorage if a save exists
@@ -551,6 +559,7 @@ export class Game {
     gs.seed = seed ?? (Math.random() * 4294967296) >>> 0;
     gs.randomState = gs.seed;
     loadGameState(this, [this.localPlayerID], gs, true);
+
     try {
       const { loadSettings } = require("./game/settingsPersistence");
       loadSettings(this);

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1755937379582,
+      "tag": "0000_tearful_agent_zero",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755937389599,
+      "tag": "0001_secret_snowbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1755937394556,
+      "tag": "0002_certain_groot",
+      "breakpoints": true
+    }
+  ]
+}

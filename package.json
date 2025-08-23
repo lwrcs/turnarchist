@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "agent-base": "^6.0.2",
+    "axios": "^1.11.0",
     "brace-expansion": "^2.0.1",
     "combined-stream": "^1.0.8",
     "core-util-is": "^1.0.3",

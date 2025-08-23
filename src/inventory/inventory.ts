@@ -17,6 +17,7 @@ import { Menu } from "../gui/menu";
 import { XPCounter } from "../gui/xpCounter";
 import { FishingRod } from "../item/tool/fishingRod";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { Spear } from "../item/weapon/spear";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
