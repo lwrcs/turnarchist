@@ -19,6 +19,14 @@ module.exports = {
         use: { loader: "ts-loader", options: {} },
         exclude: /node_modules/,
       },
+      // emit PNG files with content hashing for cache busting
+      {
+        test: /\.png$/,
+        type: "asset/resource",
+        generator: {
+          filename: "assets/[name].[contenthash][ext]",
+        },
+      },
     ],
   },
   devtool: "source-map",

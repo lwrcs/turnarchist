@@ -4,7 +4,8 @@
   "description": "A turn-based roguelike dungeon crawler",
   "main": "index.js",
   "scripts": {
-    "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\""
+    "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\"",
+    "build": "webpack --mode production"
   },
   "repository": {
     "type": "git",

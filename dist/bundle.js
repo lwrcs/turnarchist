@@ -13221,6 +13221,12 @@ const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ ".
 const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/game/replayManager.ts");
+const tilesetUrl = __webpack_require__(/*! ../res/tileset.png */ "./res/tileset.png");
+const objsetUrl = __webpack_require__(/*! ../res/objset.png */ "./res/objset.png");
+const mobsetUrl = __webpack_require__(/*! ../res/mobset.png */ "./res/mobset.png");
+const itemsetUrl = __webpack_require__(/*! ../res/itemset.png */ "./res/itemset.png");
+const fxsetUrl = __webpack_require__(/*! ../res/fxset.png */ "./res/fxset.png");
+const fontUrl = __webpack_require__(/*! ../res/font.png */ "./res/font.png");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -14675,32 +14681,32 @@ class Game {
             Game.tileset.onload = () => {
                 resourcesLoaded++;
             };
-            Game.tileset.src = "res/tileset.png";
+            Game.tileset.src = tilesetUrl;
             Game.objset = new Image();
             Game.objset.onload = () => {
                 resourcesLoaded++;
             };
-            Game.objset.src = "res/objset.png";
+            Game.objset.src = objsetUrl;
             Game.mobset = new Image();
             Game.mobset.onload = () => {
                 resourcesLoaded++;
             };
-            Game.mobset.src = "res/mobset.png";
+            Game.mobset.src = mobsetUrl;
             Game.itemset = new Image();
             Game.itemset.onload = () => {
                 resourcesLoaded++;
             };
-            Game.itemset.src = "res/itemset.png";
+            Game.itemset.src = itemsetUrl;
             Game.fxset = new Image();
             Game.fxset.onload = () => {
                 resourcesLoaded++;
             };
-            Game.fxset.src = "res/fxset.png";
+            Game.fxset.src = fxsetUrl;
             Game.fontsheet = new Image();
             Game.fontsheet.onload = () => {
                 resourcesLoaded++;
             };
-            Game.fontsheet.src = "res/font.png";
+            Game.fontsheet.src = fontUrl;
             this.levelState = LevelState.LEVEL_GENERATION;
             // Initialize camera properties
             this.cameraX = 0;
@@ -15362,8 +15368,8 @@ GameConstants.MIN_SCALE = 1;
 GameConstants.smoothScaling = false;
 GameConstants.SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
 GameConstants.HOLD_THRESH = 250; // milliseconds
-GameConstants.KEY_REPEAT_TIME = 300; // millseconds
-GameConstants.SWIPE_HOLD_REPEAT_TIME = 300;
+GameConstants.KEY_REPEAT_TIME = 250; // millseconds
+GameConstants.SWIPE_HOLD_REPEAT_TIME = 200;
 GameConstants.SWIPE_HOLD_INITIAL_DELAY = 10;
 GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
@@ -40740,6 +40746,72 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 };
 
 
+/***/ }),
+
+/***/ "./res/font.png":
+/*!**********************!*\
+  !*** ./res/font.png ***!
+  \**********************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/font.716c780490ffd235a0ed.png";
+
+/***/ }),
+
+/***/ "./res/fxset.png":
+/*!***********************!*\
+  !*** ./res/fxset.png ***!
+  \***********************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/fxset.ee6498dd08da4789aead.png";
+
+/***/ }),
+
+/***/ "./res/itemset.png":
+/*!*************************!*\
+  !*** ./res/itemset.png ***!
+  \*************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.png";
+
+/***/ }),
+
+/***/ "./res/mobset.png":
+/*!************************!*\
+  !*** ./res/mobset.png ***!
+  \************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/mobset.26aa7eba2580ed2ea50f.png";
+
+/***/ }),
+
+/***/ "./res/objset.png":
+/*!************************!*\
+  !*** ./res/objset.png ***!
+  \************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png";
+
+/***/ }),
+
+/***/ "./res/tileset.png":
+/*!*************************!*\
+  !*** ./res/tileset.png ***!
+  \*************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "assets/tileset.dada2d6925da4179a148.png";
+
 /***/ })
 
 /******/ 	});
@@ -40779,6 +40851,11 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 				if (typeof window === 'object') return window;
 /******/ 			}
 /******/ 		})();
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/publicPath */
+/******/ 	(() => {
+/******/ 		__webpack_require__.p = "/dist/";
 /******/ 	})();
 /******/ 	
 /************************************************************************/
