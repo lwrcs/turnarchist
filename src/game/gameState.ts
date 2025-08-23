@@ -1671,6 +1671,8 @@ export const loadGameState = (
   newWorld: boolean,
 ) => {
   try {
+    // game.loadedFromSaveFile = true;
+
     // Clear existing rooms
 
     game.rooms = []; // Use standard array syntax

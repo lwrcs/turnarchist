@@ -1,16 +1,7 @@
 import { databaseClient, PgClient } from "../index";
 import { gameStatsTable } from "../schema";
 import { GameStatsData, GameStatsEntity } from "./types";
-import {
-  desc,
-  getTableColumns,
-  lt,
-  sql,
-  count,
-  and,
-  or,
-  eq,
-} from "drizzle-orm";
+import { desc, getTableColumns, lt, count, and, or, eq } from "drizzle-orm";
 import { extractFirstOrThrow } from ".";
 
 const createGameStats = async (
@@ -27,6 +18,12 @@ const createGameStats = async (
     level,
     gameDurationMs,
     inventory,
+    deviceType,
+    sidePathsEntered,
+    weaponChoice,
+    gameState,
+    gameVersion,
+    loadedFromSaveFile,
   }: GameStatsData,
   client: PgClient = databaseClient,
 ): Promise<GameStatsEntity> => {
@@ -45,6 +42,12 @@ const createGameStats = async (
       level,
       gameDurationMs,
       inventory,
+      deviceType,
+      sidePathsEntered,
+      weaponChoice,
+      gameState,
+      gameVersion,
+      loadedFromSaveFile,
     })
     .returning(getTableColumns(gameStatsTable));
 

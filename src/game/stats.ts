@@ -1,3 +1,4 @@
+import { EnvType, getEnvTypeName } from "../constants/environmentTypes";
 import { globalEventBus } from "../event/eventBus";
 import { AppEvents, EventPayloads, EVENTS } from "../event/events";
 
@@ -9,25 +10,33 @@ interface Stats {
   coinsCollected: number;
   itemsCollected: number;
   enemies: string[];
+  weaponChoice: string | null;
+  sidePathsEntered: Array<{ depth: number; sidePath: string }>;
   xp: number;
   level: number;
 }
 
 class StatsTracker {
-  private stats: Stats = {
-    enemiesKilled: 0,
-    damageDone: 0,
-    damageTaken: 0,
-    turnsPassed: 0,
-    coinsCollected: 0,
-    itemsCollected: 0,
-    enemies: [],
-    xp: 0,
-    level: 1,
-  };
+  private stats: Stats = StatsTracker.initialStats();
 
   constructor() {
     this.initializeListeners();
+  }
+
+  private static initialStats(): Stats {
+    return {
+      enemiesKilled: 0,
+      damageDone: 0,
+      damageTaken: 0,
+      turnsPassed: 0,
+      coinsCollected: 0,
+      itemsCollected: 0,
+      enemies: [],
+      weaponChoice: null,
+      sidePathsEntered: [],
+      xp: 0,
+      level: 1,
+    };
   }
 
   private initializeListeners(): void {
@@ -90,18 +99,25 @@ class StatsTracker {
     return this.stats.xp;
   }
 
+  public recordWeaponChoice(weaponChoice: string) {
+    this.stats.weaponChoice = weaponChoice;
+  }
+
+  public recordSidePathEntered({
+    depth,
+    sidePath,
+  }: {
+    depth: number;
+    sidePath: EnvType;
+  }) {
+    this.stats.sidePathsEntered.push({
+      depth,
+      sidePath: getEnvTypeName(sidePath),
+    });
+  }
+
   public resetStats(): void {
-    this.stats = {
-      enemiesKilled: 0,
-      damageDone: 0,
-      damageTaken: 0,
-      turnsPassed: 0,
-      coinsCollected: 0,
-      itemsCollected: 0,
-      enemies: [],
-      xp: 0,
-      level: 1,
-    };
+    this.stats = StatsTracker.initialStats();
     //console.log("Stats have been reset.");
   }
 }

@@ -185,6 +185,9 @@ export class Game {
   player: Player;
   gameStartTimeMs: number;
   hasRecordedStats: boolean = false;
+  loadedFromSaveFile: boolean = false;
+  // Reference package.json
+  version = "1.2.0";
 
   static inputReceived = false;
 
@@ -531,6 +534,7 @@ export class Game {
     this.encounteredEnemies = [];
     this.levels = [];
     this.hasRecordedStats = false;
+    this.loadedFromSaveFile = false;
 
     // In some cases, this starts the timer when a player views the start menu rather than when
     // the gameplay starts. This field is only used for analytics, so approximate timing is acceptable.

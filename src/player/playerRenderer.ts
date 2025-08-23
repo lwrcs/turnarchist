@@ -11,6 +11,7 @@ import { Player } from "./player";
 import { HoverText } from "../gui/hoverText";
 import { Shadow } from "../drawable/shadow";
 import { safeRecordGameStats } from "../api";
+import { getDeviceInfo } from "../utility/deviceDetector";
 
 export class PlayerRenderer {
   private player: Player;
@@ -580,7 +581,6 @@ export class PlayerRenderer {
       if (!this.player.game.hasRecordedStats) {
         // The default value for `lastHitBy` is "enemy", so we compare to that to determine if
         // the player was killed by an enemy
-        const killedByEnemyCreature = this.player.lastHitBy !== "enemy";
         const gameDurationMs = Date.now() - this.player.game.gameStartTimeMs;
         const inventoryItems = this.player.inventory.items
           .filter((item) => item?.name && item?.stackCount)
@@ -588,9 +588,16 @@ export class PlayerRenderer {
             name: item.name,
             stackSize: item.stackCount,
           }));
+
+        const { createGameState } = require("../game/gameState");
+
         // Report game stats to Turnarchist backend server
         safeRecordGameStats({
-          killedBy: killedByEnemyCreature ? null : this.player.lastHitBy,
+          xp: gameStats.xp,
+          level: gameStats.level,
+          gameDurationMs,
+          inventory: inventoryItems,
+          killedBy: this.player.lastHitBy ?? null,
           enemiesKilled: enemies,
           damageDone: gameStats.damageDone,
           damageTaken: gameStats.damageTaken,
@@ -598,10 +605,12 @@ export class PlayerRenderer {
           turnsPassed: gameStats.turnsPassed,
           coinsCollected: gameStats.coinsCollected,
           itemsCollected: gameStats.itemsCollected,
-          xp: gameStats.xp,
-          level: gameStats.level,
-          gameDurationMs,
-          inventory: inventoryItems,
+          deviceType: getDeviceInfo(),
+          sidePathsEntered: gameStats.sidePathsEntered,
+          weaponChoice: gameStats.weaponChoice,
+          gameState: createGameState(this.player.game),
+          gameVersion: this.player.game.version,
+          loadedFromSaveFile: this.player.game.loadedFromSaveFile,
         });
         this.player.game.hasRecordedStats = true;
       }

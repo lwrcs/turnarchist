@@ -2,6 +2,7 @@ import type { Game } from "../game";
 import type { Room } from "../room/room";
 import { UpLadder } from "../tile/upLadder";
 import type { DownLadder } from "../tile/downLadder";
+import { statsTracker } from "../game/stats";
 
 /**
  * Centralized manager for creating and wiring up sidepaths (rope caves).
@@ -40,6 +41,11 @@ export class SidePathManager {
       pathId,
       downLadder.opts,
     );
+
+    statsTracker.recordSidePathEntered({
+      depth: this.game.currentDepth,
+      sidePath: downLadder.linkedRoom.envType,
+    });
   }
 
   /**

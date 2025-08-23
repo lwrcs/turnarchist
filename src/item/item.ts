@@ -9,6 +9,7 @@ import { ItemGroup } from "./itemGroup";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { Shadow } from "../drawable/shadow";
+import { statsTracker } from "../game/stats";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -136,6 +137,8 @@ export class Item extends Drawable {
         this.pickupSound();
 
         if (this.grouped) {
+          statsTracker.recordWeaponChoice(this.name);
+
           this.group.destroyOtherItems(this);
           this.grouped = false;
           this.group = null;

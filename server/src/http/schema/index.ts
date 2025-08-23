@@ -5,6 +5,30 @@ const inventoryItemSchema = z.object({
   stackSize: z.number(),
 });
 
+const sidePathEnteredSchema = z.object({
+  depth: z.number().min(0),
+  sidePath: z.string(),
+});
+
+const deviceTypeInfoSchema = z.object({
+  os: z.object({
+    name: z.string().optional(),
+    version: z.string().optional(),
+    platform: z.string().optional(),
+  }),
+  browser: z.object({
+    name: z.string().optional(),
+    version: z.string().optional(),
+    major: z.string().optional(),
+  }),
+  device: z.object({
+    model: z.string().optional(),
+    type: z.string().optional(),
+    vendor: z.string().optional(),
+  }),
+  orientation: z.string().optional(),
+});
+
 const gameStatsSchema = z.object({
   killedBy: z.string().nullable(),
   enemiesKilled: z.array(z.string()),
@@ -18,12 +42,22 @@ const gameStatsSchema = z.object({
   level: z.number().min(1),
   gameDurationMs: z.number().min(0),
   inventory: z.array(inventoryItemSchema),
+  sidePathsEntered: z.array(sidePathEnteredSchema),
+  weaponChoice: z.string().nullable(),
+  loadedFromSaveFile: z.boolean(),
+  deviceType: deviceTypeInfoSchema,
+  gameVersion: z.string(),
+  // We leave GameState untyped because it's a complex, nested field. Reference the game version
+  // and `src/game/GameState.ts` in the game-client code for the object shape.
+  gameState: z.record(z.any()),
 });
 
 export const recordGameStatsRequestSchema = {
   body: gameStatsSchema,
 };
 
+export type SidePathEntered = z.infer<typeof sidePathEnteredSchema>;
+export type DeviceTypeInfo = z.infer<typeof deviceTypeInfoSchema>;
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export type GameStats = z.infer<typeof gameStatsSchema>;
 
