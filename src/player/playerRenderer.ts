@@ -588,7 +588,6 @@ export class PlayerRenderer {
             name: item.name,
             stackSize: item.stackCount,
           }));
-
         // Report game stats to Turnarchist backend server
         safeRecordGameStats({
           killedBy: killedByEnemyCreature ? null : this.player.lastHitBy,

@@ -29,7 +29,7 @@ export type GameStats = z.infer<typeof gameStatsSchema>;
 
 export const fetchGameStatsRequestQuerySchema = z.object({
   limit: z.number().min(1).max(100).default(20),
-  createdBefore: z.string().datetime().optional(),
+  cursor: z.string().optional(),
 });
 
 export const fetchGameStatsRequestSchema = {

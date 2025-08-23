@@ -11,7 +11,6 @@ export const apiClient = axios.create({
 type GameStats = Required<GameStatsType>;
 
 export const recordGameStats = async (gameStats: GameStats) => {
-  console.log("Recording game stats:", gameStats);
   const response = await apiClient.post("/game/stats", gameStats);
   return response.data;
 };

@@ -27,12 +27,17 @@ const fetchGameStats = async (
   req: Request<{}, {}, {}, FetchGameStatsParams>,
   res: Response,
 ) => {
-  const { limit, createdBefore } = req.query;
+  const { limit, cursor } = req.query;
   const gameStats = await gameStatsDal.getGameStats({
     limit,
-    createdBefore,
+    cursor,
   });
   return res.status(HttpStatus.OK).json(gameStats);
+};
+
+const fetchGameStatsCount = async (req: Request, res: Response) => {
+  const count = await gameStatsDal.getGameStatsCount();
+  return res.status(HttpStatus.OK).json({ count });
 };
 
 export const getGameRouter = () => {
@@ -48,6 +53,7 @@ export const getGameRouter = () => {
     validateRequest(fetchGameStatsRequestSchema),
     fetchGameStats,
   );
+  gameRouter.get("/stats/count", fetchGameStatsCount);
 
   return gameRouter;
 };

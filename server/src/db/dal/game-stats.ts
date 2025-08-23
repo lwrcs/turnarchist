@@ -1,7 +1,16 @@
 import { databaseClient, PgClient } from "../index";
 import { gameStatsTable } from "../schema";
 import { GameStatsData, GameStatsEntity } from "./types";
-import { desc, getTableColumns, lt, sql } from "drizzle-orm";
+import {
+  desc,
+  getTableColumns,
+  lt,
+  sql,
+  count,
+  and,
+  or,
+  eq,
+} from "drizzle-orm";
 import { extractFirstOrThrow } from ".";
 
 const createGameStats = async (
@@ -42,30 +51,61 @@ const createGameStats = async (
   return extractFirstOrThrow(result);
 };
 
+const getGameStatsWithCursor = async (
+  cursor: string,
+  limit: number,
+  client: PgClient,
+): Promise<Array<GameStatsEntity>> => {
+  const cursorRecord = await client
+    .select()
+    .from(gameStatsTable)
+    .where(eq(gameStatsTable.id, cursor))
+    .limit(1);
+
+  if (cursorRecord.length === 0) {
+    return [];
+  }
+
+  const cursorData = cursorRecord[0]!;
+
+  return await client
+    .select()
+    .from(gameStatsTable)
+    .where(
+      or(
+        lt(gameStatsTable.createdAt, cursorData.createdAt),
+        and(
+          eq(gameStatsTable.createdAt, cursorData.createdAt),
+          lt(gameStatsTable.id, cursorData.id),
+        ),
+      ),
+    )
+    .orderBy(desc(gameStatsTable.createdAt), desc(gameStatsTable.id))
+    .limit(limit + 1);
+};
+
 const getGameStats = async (
   {
     limit = 20,
-    createdBefore,
+    cursor,
   }: {
     limit?: number;
-    createdBefore?: string;
+    cursor?: string;
   } = {},
   client: PgClient = databaseClient,
 ): Promise<{
   data: Array<GameStatsEntity>;
-  nextCreatedBefore?: string;
+  nextCursor?: string;
 }> => {
   // Query for one more than the limit to check if there's a next page
   const baseQuery = client
     .select()
     .from(gameStatsTable)
-    .orderBy(desc(gameStatsTable.createdAt))
+    .orderBy(desc(gameStatsTable.createdAt), desc(gameStatsTable.id))
     .limit(limit + 1);
 
-  const result = createdBefore
-    ? await baseQuery.where(
-        lt(gameStatsTable.createdAt, new Date(createdBefore).getTime()),
-      )
+  const result = cursor
+    ? await getGameStatsWithCursor(cursor, limit, client)
     : await baseQuery;
 
   // Check if there are more results
@@ -73,18 +113,26 @@ const getGameStats = async (
   const hasNextPage = nextResultAfterPaginationBounds !== undefined;
   const data = hasNextPage ? result.slice(0, limit) : result;
 
-  // Get timestamp for next page
-  const nextCreatedBefore = hasNextPage
-    ? new Date(nextResultAfterPaginationBounds.createdAt).toISOString()
+  const nextCursor = hasNextPage
+    ? nextResultAfterPaginationBounds.id
     : undefined;
 
   return {
     data,
-    nextCreatedBefore,
+    nextCursor,
   };
+};
+
+const getGameStatsCount = async (
+  client: PgClient = databaseClient,
+): Promise<number> => {
+  const result = await client.select({ count: count() }).from(gameStatsTable);
+
+  return result[0]?.count ?? 0;
 };
 
 export const gameStatsDal = {
   createGameStats,
   getGameStats,
+  getGameStatsCount,
 };
