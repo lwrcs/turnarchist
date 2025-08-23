@@ -23704,7 +23704,7 @@ class Apple extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
-                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                player.health = Math.min(player.maxHealth, player.health + 1);
                 sound_1.Sound.playEat();
                 if (this.stackCount > 1) {
                     this.stackCount--;
