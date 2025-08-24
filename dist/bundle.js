@@ -9079,6 +9079,71 @@ class SpiderEnemy extends enemy_1.Enemy {
             });
             return candidates[0];
         };
+        this.getOneTileCandidates = (startX, startY) => {
+            const directions = [
+                { dx: 1, dy: 0 },
+                { dx: -1, dy: 0 },
+                { dx: 0, dy: 1 },
+                { dx: 0, dy: -1 },
+            ];
+            const candidates = [];
+            for (const d of directions) {
+                const newX = startX + d.dx;
+                const newY = startY + d.dy;
+                if (this.isTileFree(newX, newY)) {
+                    candidates.push({ x: newX, y: newY });
+                }
+            }
+            return candidates;
+        };
+        this.pickBestOneTileCandidate = (candidates, targetX, targetY, preferXAxis, dxToTarget, dyToTarget) => {
+            const signX = dxToTarget === 0 ? 0 : dxToTarget > 0 ? 1 : -1;
+            const signY = dyToTarget === 0 ? 0 : dyToTarget > 0 ? 1 : -1;
+            candidates.sort((a, b) => {
+                const da = Math.abs(a.x - targetX) + Math.abs(a.y - targetY);
+                const db = Math.abs(b.x - targetX) + Math.abs(b.y - targetY);
+                if (da !== db)
+                    return da - db;
+                // Prefer movement along the preferred axis
+                const aAxis = Math.abs(a.x - targetX) > Math.abs(a.y - targetY) ? "x" : "y";
+                const bAxis = Math.abs(b.x - targetX) > Math.abs(b.y - targetY) ? "x" : "y";
+                if (preferXAxis) {
+                    if (aAxis !== bAxis)
+                        return aAxis === "x" ? -1 : 1;
+                }
+                else {
+                    if (aAxis !== bAxis)
+                        return aAxis === "y" ? -1 : 1;
+                }
+                // Prefer moving toward the target
+                const aTowards = (a.x > targetX
+                    ? dxToTarget < 0
+                    : a.x < targetX
+                        ? dxToTarget > 0
+                        : a.y > targetY
+                            ? dyToTarget < 0
+                            : a.y < targetY
+                                ? dyToTarget > 0
+                                : 0)
+                    ? -1
+                    : 1;
+                const bTowards = (b.x > targetX
+                    ? dxToTarget < 0
+                    : b.x < targetX
+                        ? dxToTarget > 0
+                        : b.y > targetY
+                            ? dyToTarget < 0
+                            : b.y < targetY
+                                ? dyToTarget > 0
+                                : 0)
+                    ? -1
+                    : 1;
+                if (aTowards !== bTowards)
+                    return aTowards - bTowards;
+                return 0;
+            });
+            return candidates[0];
+        };
         this.attackOrMoveTo = (destX, destY, oldX, oldY) => {
             let hitPlayer = false;
             for (const i in this.game.players) {
@@ -9154,14 +9219,18 @@ class SpiderEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            // Frog-like jump movement (no diagonals): attempt to jump 2 orthogonal tiles toward target
+                            // Determine target position: prioritize direct attack if player is adjacent
                             let targetPosition = {
                                 x: this.targetPlayer.x,
                                 y: this.targetPlayer.y,
                             };
-                            if (this.target === this.targetPlayer) {
-                                let dx = this.targetPlayer.x - this.x;
-                                let dy = this.targetPlayer.y - this.y;
+                            // Check if player is adjacent (Manhattan distance 1)
+                            const playerDistance = Math.abs(this.targetPlayer.x - this.x) +
+                                Math.abs(this.targetPlayer.y - this.y);
+                            if (this.target === this.targetPlayer && playerDistance === 2) {
+                                // Only consider jumping over if player is not adjacent
+                                let dx = this.targetPlayer.lastX - this.x;
+                                let dy = this.targetPlayer.lastY - this.y;
                                 // constrain to orthogonal intent
                                 if (dx !== 0 && dy !== 0) {
                                     if (Math.abs(dx) >= Math.abs(dy))
@@ -9180,7 +9249,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            else {
+                            else if (this.target !== this.targetPlayer) {
                                 targetPosition = { x: this.target.x, y: this.target.y };
                             }
                             // Compute 2-tile jump plans
@@ -9216,16 +9285,36 @@ class SpiderEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            // If we have a valid 2-length plan, execute it; otherwise evaluate all alternatives
-                            const finalDist = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-                            if (finalDist === 2) {
-                                this.attackOrMoveTo(finalX, finalY, oldX, oldY);
+                            // Execute movement: prioritize attacking when adjacent, otherwise prefer 2-tile jumps
+                            if (playerDistance === 1) {
+                                // Player is adjacent - prioritize 1-tile movement for direct attack
+                                const oneTileCandidates = this.getOneTileCandidates(oldX, oldY);
+                                if (oneTileCandidates.length > 0) {
+                                    const best = this.pickBestOneTileCandidate(oneTileCandidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                    this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                                }
                             }
                             else {
-                                const candidates = this.getTwoTileCandidates(oldX, oldY);
-                                if (candidates.length > 0) {
-                                    const best = this.pickBestCandidate(candidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
-                                    this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
+                                // Player is not adjacent - use computed movement (A* + 2-tile extension)
+                                const finalDist = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+                                if (finalDist >= 1) {
+                                    this.attackOrMoveTo(finalX, finalY, oldX, oldY);
+                                }
+                                else {
+                                    // Fall back to 2-tile jump candidates if A* didn't find a path
+                                    const candidates = this.getTwoTileCandidates(oldX, oldY);
+                                    if (candidates.length > 0) {
+                                        const best = this.pickBestCandidate(candidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                        this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
+                                    }
+                                    else {
+                                        // Fall back to 1-tile movement if no 2-tile options available
+                                        const oneTileCandidates = this.getOneTileCandidates(oldX, oldY);
+                                        if (oneTileCandidates.length > 0) {
+                                            const best = this.pickBestOneTileCandidate(oneTileCandidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                            this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                                        }
+                                    }
                                 }
                             }
                             this.rumbling = false;
@@ -9300,6 +9389,10 @@ class SpiderEnemy extends enemy_1.Enemy {
                         [2, 0],
                         [0, -2],
                         [0, 2],
+                        [-1, 0],
+                        [1, 0],
+                        [0, -1],
+                        [0, 1],
                     ]
                     : [
                         [-1, -1],
