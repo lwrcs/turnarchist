@@ -21690,8 +21690,9 @@ class Armor extends equippable_1.Equippable {
         this.coEquippable = (other) => {
             if (other instanceof Armor)
                 return false;
-            if (other instanceof weapon_1.Weapon && other.twoHanded)
+            if (other instanceof weapon_1.Weapon && other.twoHanded) {
                 return false;
+            }
             return true;
         };
         this.getDescription = () => {
@@ -22253,9 +22254,11 @@ exports.Equippable = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const armor_1 = __webpack_require__(/*! ./armor */ "./src/item/armor.ts");
 class Equippable extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
+        this.wielder = null;
         this.equipTick = false;
         this.useCost = 1;
         this.cooldown = 0;
@@ -22268,8 +22271,8 @@ class Equippable extends item_1.Item {
             return true;
         };
         this.toggleEquip = () => {
-            if (!this.broken && this.cooldown === 0) {
-                if (!this.equipped && this.wielder.inventory?.weapon) {
+            if ((!this.broken && this.cooldown <= 0) || this instanceof armor_1.Armor) {
+                if (!this.equipped && this.wielder?.inventory?.weapon) {
                     this.previousWeapon = this.wielder.inventory.weapon;
                 }
                 this.equipped = !this.equipped;
