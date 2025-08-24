@@ -6713,12 +6713,12 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
                     this.tileX = 7;
                 else
                     this.tileX = 6;
-                if (this.hasShadow)
+                if (this.hasShadow && this.state !== WizardState.teleport)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.4 * delta;
-                    if (this.frame > 11)
+                    if (this.frame > 12)
                         this.frame = -1;
                 }
                 else {
@@ -6831,18 +6831,20 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                                 const offsets = this.calculateProjectileOffsets(targetPlayer.x, targetPlayer.y, 10);
                                 this.attemptProjectilePlacement([
                                     { x: -1, y: 0 },
-                                    { x: -1, y: -1 },
                                     { x: 1, y: 0 },
-                                    { x: 1, y: 1 },
                                     { x: 0, y: -1 },
-                                    { x: 1, y: -1 },
                                     { x: 0, y: 1 },
-                                    { x: -1, y: 1 },
                                 ], wizardFireball_1.WizardFireball, false);
                             }
                             this.state = WizardState.justAttacked;
                             break;
                         case WizardState.justAttacked:
+                            this.attemptProjectilePlacement([
+                                { x: -1, y: -1 },
+                                { x: 1, y: 1 },
+                                { x: 1, y: -1 },
+                                { x: -1, y: 1 },
+                            ], wizardFireball_1.WizardFireball, false);
                             this.state = WizardState.idle;
                             break;
                         case WizardState.teleport:
@@ -6898,26 +6900,34 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
             }
         };
         this.draw = (delta) => {
-            this.frame += 0.1 * delta;
+            if (this.dead)
+                return;
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
-            if (this.frame >= 4)
-                this.frame = 0;
             if (!this.dead) {
                 this.updateDrawXY(delta);
-                if (this.hasShadow)
+                if (this.state === WizardState.attack)
+                    this.tileX = 36;
+                else
+                    this.tileX = 35;
+                if (this.hasShadow && this.state !== WizardState.idle)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(Math.floor(this.frame) + 5, 18, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    this.frame += 0.4 * delta;
+                    if (this.frame > 12)
+                        this.frame = -1;
                 }
                 else {
                     game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
                 }
-                if (!this.seenPlayer) {
-                    this.drawSleepingZs(delta);
-                }
-                if (this.alertTicks > 0) {
-                    this.drawExclamation(delta);
+                if (!this.cloned) {
+                    if (!this.seenPlayer) {
+                        this.drawSleepingZs(delta);
+                    }
+                    if (this.alertTicks > 0) {
+                        this.drawExclamation(delta);
+                    }
                 }
             }
             game_1.Game.ctx.restore();
@@ -40884,7 +40894,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.26aa7eba2580ed2ea50f.png";
+module.exports = __webpack_require__.p + "assets/mobset.13fa9365ae96474553f6.png";
 
 /***/ }),
 

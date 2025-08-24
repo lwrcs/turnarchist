@@ -97,13 +97,9 @@ export class FireWizardEnemy extends WizardEnemy {
               this.attemptProjectilePlacement(
                 [
                   { x: -1, y: 0 },
-                  { x: -1, y: -1 },
                   { x: 1, y: 0 },
-                  { x: 1, y: 1 },
                   { x: 0, y: -1 },
-                  { x: 1, y: -1 },
                   { x: 0, y: 1 },
-                  { x: -1, y: 1 },
                 ],
                 WizardFireball,
                 false,
@@ -112,6 +108,16 @@ export class FireWizardEnemy extends WizardEnemy {
             this.state = WizardState.justAttacked;
             break;
           case WizardState.justAttacked:
+            this.attemptProjectilePlacement(
+              [
+                { x: -1, y: -1 },
+                { x: 1, y: 1 },
+                { x: 1, y: -1 },
+                { x: -1, y: 1 },
+              ],
+              WizardFireball,
+              false,
+            );
             this.state = WizardState.idle;
             break;
           case WizardState.teleport:
@@ -184,27 +190,31 @@ export class FireWizardEnemy extends WizardEnemy {
   };
 
   draw = (delta: number) => {
-    this.frame += 0.1 * delta;
+    if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
-
-    if (this.frame >= 4) this.frame = 0;
     if (!this.dead) {
       this.updateDrawXY(delta);
-      if (this.hasShadow) this.drawShadow(delta);
+      if (this.state === WizardState.attack) this.tileX = 36;
+      else this.tileX = 35;
+
+      if (this.hasShadow && this.state !== WizardState.idle)
+        this.drawShadow(delta);
       if (this.frame >= 0) {
         Game.drawMob(
-          this.tileX + Math.floor(this.frame),
-          this.tileY,
+          Math.floor(this.frame) + 5,
+          18,
           1,
           2,
-          this.x - this.drawX,
-          this.y - 1.3 - this.drawY,
+          this.x,
+          this.y - 1.3,
           1,
           2,
           this.softShadeColor,
           this.shadeAmount(),
         );
+        this.frame += 0.4 * delta;
+        if (this.frame > 12) this.frame = -1;
       } else {
         Game.drawMob(
           this.tileX,
@@ -219,11 +229,13 @@ export class FireWizardEnemy extends WizardEnemy {
           this.shadeAmount(),
         );
       }
-      if (!this.seenPlayer) {
-        this.drawSleepingZs(delta);
-      }
-      if (this.alertTicks > 0) {
-        this.drawExclamation(delta);
+      if (!this.cloned) {
+        if (!this.seenPlayer) {
+          this.drawSleepingZs(delta);
+        }
+        if (this.alertTicks > 0) {
+          this.drawExclamation(delta);
+        }
       }
     }
     Game.ctx.restore();
