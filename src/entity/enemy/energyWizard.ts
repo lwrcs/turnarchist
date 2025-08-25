@@ -45,7 +45,8 @@ export class EnergyWizardEnemy extends WizardEnemy {
       if (this.state === WizardState.attack) this.tileX = 7;
       else this.tileX = 6;
 
-      if (this.hasShadow) this.drawShadow(delta);
+      if (this.hasShadow && this.state !== WizardState.teleport)
+        this.drawShadow(delta);
       if (this.frame >= 0) {
         Game.drawMob(
           Math.floor(this.frame) + 6,
@@ -53,14 +54,14 @@ export class EnergyWizardEnemy extends WizardEnemy {
           1,
           2,
           this.x,
-          this.y - 1.5,
+          this.y - 1.3,
           1,
           2,
           this.softShadeColor,
           this.shadeAmount(),
         );
         this.frame += 0.4 * delta;
-        if (this.frame > 11) this.frame = -1;
+        if (this.frame > 12) this.frame = -1;
       } else {
         Game.drawMob(
           this.tileX,

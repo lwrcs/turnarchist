@@ -28,6 +28,12 @@ import { Random } from "./utility/random";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
+import tilesetUrl = require("../res/tileset.png");
+import objsetUrl = require("../res/objset.png");
+import mobsetUrl = require("../res/mobset.png");
+import itemsetUrl = require("../res/itemset.png");
+import fxsetUrl = require("../res/fxset.png");
+import fontUrl = require("../res/font.png");
 
 export enum LevelState {
   IN_LEVEL,
@@ -325,32 +331,32 @@ export class Game {
       Game.tileset.onload = () => {
         resourcesLoaded++;
       };
-      Game.tileset.src = "res/tileset.png";
+      Game.tileset.src = tilesetUrl;
       Game.objset = new Image();
       Game.objset.onload = () => {
         resourcesLoaded++;
       };
-      Game.objset.src = "res/objset.png";
+      Game.objset.src = objsetUrl;
       Game.mobset = new Image();
       Game.mobset.onload = () => {
         resourcesLoaded++;
       };
-      Game.mobset.src = "res/mobset.png";
+      Game.mobset.src = mobsetUrl;
       Game.itemset = new Image();
       Game.itemset.onload = () => {
         resourcesLoaded++;
       };
-      Game.itemset.src = "res/itemset.png";
+      Game.itemset.src = itemsetUrl;
       Game.fxset = new Image();
       Game.fxset.onload = () => {
         resourcesLoaded++;
       };
-      Game.fxset.src = "res/fxset.png";
+      Game.fxset.src = fxsetUrl;
       Game.fontsheet = new Image();
       Game.fontsheet.onload = () => {
         resourcesLoaded++;
       };
-      Game.fontsheet.src = "res/font.png";
+      Game.fontsheet.src = fontUrl;
 
       this.levelState = LevelState.LEVEL_GENERATION;
 

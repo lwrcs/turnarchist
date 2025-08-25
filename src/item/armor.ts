@@ -22,7 +22,9 @@ export class Armor extends Equippable {
 
   coEquippable = (other: Equippable): boolean => {
     if (other instanceof Armor) return false;
-    if (other instanceof Weapon && (other as Weapon).twoHanded) return false;
+    if (other instanceof Weapon && (other as Weapon).twoHanded) {
+      return false;
+    }
     return true;
   };
 
