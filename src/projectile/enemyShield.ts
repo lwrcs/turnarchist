@@ -78,7 +78,7 @@ export class EnemyShield extends Projectile {
     let index = this.parent.room.lightSources.indexOf(this.lightSource);
     this.parent.room.lightSources[index].x = this.parent.x + 0.5;
     this.parent.room.lightSources[index].y = this.parent.y + 0.5;
-    this.parent.room.updateLighting();
+    //this.parent.room.updateLighting();
   };
 
   hurt = (damage: number) => {

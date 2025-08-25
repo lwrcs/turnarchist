@@ -335,6 +335,8 @@ export class Room {
     lastLightingUpdate: 0,
   };
   private isUpdatingLighting: boolean = false;
+  // Estimated number of tiles touched during lighting for dynamic tuning
+  estimatedLightingTiles: number = 0;
 
   constructor(
     game: Game,
@@ -1332,6 +1334,7 @@ export class Room {
     //console.log(this.entities.filter((e) => e instanceof Enemy).length);
 
     this.turn = TurnState.playerTurn;
+    this.updateLighting();
   };
 
   update = () => {
@@ -1499,6 +1502,38 @@ export class Room {
     }
   };
 
+  setLightingAngleStep = () => {
+    if (!this.active) return;
+    // Estimate total tiles we will compute for lighting this frame
+    const roomTiles = this.width * this.height;
+
+    // Count players currently in this room
+    const playersInRoom = Object.values(this.game.players || {}).filter(
+      (p: any) => p?.getRoom?.() === this,
+    ).length;
+
+    // Rays per emitter at the current angular resolution
+    const raysPerEmitter = Math.ceil(360 / LevelConstants.LIGHTING_ANGLE_STEP);
+
+    // Estimate steps per ray by summing radii of lights (capped) and players
+    let totalRayDistance = 0;
+    for (const ls of this.lightSources) {
+      totalRayDistance += Math.min(ls.r, LevelConstants.LIGHTING_MAX_DISTANCE);
+    }
+    totalRayDistance += playersInRoom * LevelConstants.LIGHTING_MAX_DISTANCE;
+
+    // Total tiles touched by rays plus per-tile blending work
+    const estimatedRayTiles = totalRayDistance * raysPerEmitter;
+    const tilesToCompute = roomTiles + estimatedRayTiles;
+
+    // Store for diagnostics/dynamic tuning usage
+    this.estimatedLightingTiles = tilesToCompute;
+
+    console.log(
+      `Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`,
+    );
+  };
+
   updateLighting = () => {
     if (!this.onScreen) return;
     if (this.isUpdatingLighting) return;
@@ -1572,6 +1607,7 @@ export class Room {
     }
     //console.timeEnd("updateLighting: Process LightSources");
     //console.time("updateLighting: Process Players");
+    this.setLightingAngleStep();
 
     let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
 

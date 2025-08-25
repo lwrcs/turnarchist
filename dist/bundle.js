@@ -32574,7 +32574,7 @@ class EnemyShield extends projectile_1.Projectile {
             let index = this.parent.room.lightSources.indexOf(this.lightSource);
             this.parent.room.lightSources[index].x = this.parent.x + 0.5;
             this.parent.room.lightSources[index].y = this.parent.y + 0.5;
-            this.parent.room.updateLighting();
+            //this.parent.room.updateLighting();
         };
         this.hurt = (damage) => {
             const damageOverShield = Math.max(0, damage - this.health);
@@ -33375,6 +33375,8 @@ class Room {
             lastLightingUpdate: 0,
         };
         this.isUpdatingLighting = false;
+        // Estimated number of tiles touched during lighting for dynamic tuning
+        this.estimatedLightingTiles = 0;
         // #region TILE ADDING METHODS
         this.removeWall = (x, y) => {
             if (this.roomArray[x][y] instanceof wall_1.Wall) {
@@ -33674,6 +33676,7 @@ class Room {
             this.checkForNoEnemies();
             //console.log(this.entities.filter((e) => e instanceof Enemy).length);
             this.turn = TurnState.playerTurn;
+            this.updateLighting();
         };
         this.update = () => {
             if (this.turn == TurnState.computerTurn) {
@@ -33825,6 +33828,28 @@ class Room {
                     r.updateLighting();
             }
         };
+        this.setLightingAngleStep = () => {
+            if (!this.active)
+                return;
+            // Estimate total tiles we will compute for lighting this frame
+            const roomTiles = this.width * this.height;
+            // Count players currently in this room
+            const playersInRoom = Object.values(this.game.players || {}).filter((p) => p?.getRoom?.() === this).length;
+            // Rays per emitter at the current angular resolution
+            const raysPerEmitter = Math.ceil(360 / levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP);
+            // Estimate steps per ray by summing radii of lights (capped) and players
+            let totalRayDistance = 0;
+            for (const ls of this.lightSources) {
+                totalRayDistance += Math.min(ls.r, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE);
+            }
+            totalRayDistance += playersInRoom * levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE;
+            // Total tiles touched by rays plus per-tile blending work
+            const estimatedRayTiles = totalRayDistance * raysPerEmitter;
+            const tilesToCompute = roomTiles + estimatedRayTiles;
+            // Store for diagnostics/dynamic tuning usage
+            this.estimatedLightingTiles = tilesToCompute;
+            console.log(`Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`);
+        };
         this.updateLighting = () => {
             if (!this.onScreen)
                 return;
@@ -33886,6 +33911,7 @@ class Room {
             }
             //console.timeEnd("updateLighting: Process LightSources");
             //console.time("updateLighting: Process Players");
+            this.setLightingAngleStep();
             let lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
             for (const p in this.game.players) {
                 let player = this.game.players[p];
