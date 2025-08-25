@@ -931,11 +931,25 @@ export class Entity extends Drawable {
     }
 
     // If not sharing any row or column, use distance-based logic
-    const entityCenterX = this.x + (this.w - 1) / 2;
-    const entityCenterY = this.y + (this.h - 1) / 2;
+    //find the tile of the big enemy closest to the player
+    let closestTile = { x: 0, y: 0 };
+    let closestDistance = 1000000;
+    for (let x = 0; x < this.w; x++) {
+      for (let y = 0; y < this.h; y++) {
+        let distance =
+          Math.abs(player.x - (this.x + x)) + Math.abs(player.y - (this.y + y));
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestTile = { x: this.x + x, y: this.y + y };
+        }
+      }
+    }
 
-    let dx = player.x - entityCenterX;
-    let dy = player.y - entityCenterY;
+    const entityCenterX = closestTile.x + (this.w - 1) / 2;
+    const entityCenterY = closestTile.y + (this.h - 1) / 2;
+
+    let dx = player.x - closestTile.x;
+    let dy = player.y - closestTile.y;
 
     if (Math.abs(dx) > Math.abs(dy)) {
       if (dx > 0) this.direction = Direction.RIGHT;

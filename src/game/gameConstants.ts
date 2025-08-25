@@ -63,8 +63,8 @@ export class GameConstants {
   static readonly SWIPE_THRESH = 25 ** 2; // (size of swipe threshold circle)^2
   static readonly HOLD_THRESH = 250; // milliseconds
 
-  static KEY_REPEAT_TIME = 300; // millseconds
-  static SWIPE_HOLD_REPEAT_TIME = 300;
+  static KEY_REPEAT_TIME = 250; // millseconds
+  static SWIPE_HOLD_REPEAT_TIME = 200;
   static SWIPE_HOLD_INITIAL_DELAY = 10;
   static MOVEMENT_COOLDOWN = 200; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds

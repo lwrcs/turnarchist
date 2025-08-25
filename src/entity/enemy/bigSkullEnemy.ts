@@ -36,11 +36,11 @@ export class BigSkullEnemy extends Enemy {
     this.h = 2;
     this.ticks = 0;
     this.frame = 0;
-    this.health = 4;
-    this.maxHealth = 4;
-    this.defaultMaxHealth = 4;
-    this.tileX = 21;
-    this.tileY = 0;
+    this.health = 8;
+    this.maxHealth = 8;
+    this.defaultMaxHealth = 8;
+    this.tileX = 33;
+    this.tileY = 12;
     this.seenPlayer = false;
     this.aggro = false;
     this.unconscious = false;
@@ -327,35 +327,16 @@ export class BigSkullEnemy extends Enemy {
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
       this.updateDrawXY(delta);
-      this.tileX = 21;
-      this.tileY = 0;
-      if (this.health <= 3) {
-        this.tileX = 21;
-        this.tileY = 4;
-        if (this.ticksSinceFirstHit >= 3) {
-          this.flashingFrame += 0.1 * delta;
-          if (Math.floor(this.flashingFrame) % 2 === 0) {
-            this.tileY = 0;
-          }
-        }
-      }
-      if (this.health <= 2) {
-        this.tileX = 21;
-        this.tileY = 8;
-        if (this.ticksSinceFirstHit >= 3) {
-          this.flashingFrame += 0.1 * delta;
-          if (Math.floor(this.flashingFrame) % 2 === 0) {
-            this.tileY = 4;
-          }
-        }
-      }
-      if (this.health <= 1 || this.cloned) {
-        this.tileX = 21;
+      this.tileX = 33;
+      this.tileY = 12;
+
+      if (this.health <= 2 || this.cloned) {
+        this.tileX = 35;
         this.tileY = 12;
         if (this.ticksSinceFirstHit >= 3) {
           this.flashingFrame += 0.1 * delta;
           if (Math.floor(this.flashingFrame) % 2 === 0) {
-            this.tileY = 8;
+            this.tileY = 4;
           }
         }
       }
@@ -365,14 +346,14 @@ export class BigSkullEnemy extends Enemy {
 
       if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
-        this.tileX + (this.tileX === 20 ? Math.floor(this.frame) * 2 : 0),
-        this.tileY,
+        this.tileX,
+        this.tileY + this.direction * 3,
         2,
-        4,
+        3,
         this.x - this.drawX,
-        this.y - 2.5 - this.drawY,
+        this.y - 1.5 - this.drawY,
         2,
-        4,
+        3,
         this.softShadeColor,
         this.shadeAmount(),
       );
