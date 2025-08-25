@@ -3270,7 +3270,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchGameStats = exports.safeRecordGameStats = exports.recordGameStats = exports.apiClient = void 0;
-const axios_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'axios'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const axios_1 = __webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs");
 const utils_1 = __webpack_require__(/*! ./utils */ "./src/api/utils.ts");
 exports.apiClient = axios_1.default.create({
     baseURL: (0, utils_1.getEnvironmentApiUrl)(),
@@ -40768,7 +40768,7 @@ exports.getCookieChunks = getCookieChunks;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getDeviceInfo = void 0;
-const UAParser = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'ua-parser-js'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const UAParser = __webpack_require__(/*! ua-parser-js */ "./node_modules/ua-parser-js/src/main/ua-parser.js");
 const getDeviceInfo = () => {
     const parser = new UAParser.UAParser(navigator.userAgent);
     const result = parser.getResult();
@@ -41087,6 +41087,5295 @@ module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png
 "use strict";
 module.exports = __webpack_require__.p + "assets/tileset.dada2d6925da4179a148.png";
 
+/***/ }),
+
+/***/ "./node_modules/axios/dist/browser/axios.cjs":
+/*!***************************************************!*\
+  !*** ./node_modules/axios/dist/browser/axios.cjs ***!
+  \***************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*! Axios v1.11.0 Copyright (c) 2025 Matt Zabriskie and contributors */
+
+
+function bind(fn, thisArg) {
+  return function wrap() {
+    return fn.apply(thisArg, arguments);
+  };
+}
+
+// utils is a library of generic helper functions non-specific to axios
+
+const {toString} = Object.prototype;
+const {getPrototypeOf} = Object;
+const {iterator, toStringTag} = Symbol;
+
+const kindOf = (cache => thing => {
+    const str = toString.call(thing);
+    return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
+})(Object.create(null));
+
+const kindOfTest = (type) => {
+  type = type.toLowerCase();
+  return (thing) => kindOf(thing) === type
+};
+
+const typeOfTest = type => thing => typeof thing === type;
+
+/**
+ * Determine if a value is an Array
+ *
+ * @param {Object} val The value to test
+ *
+ * @returns {boolean} True if value is an Array, otherwise false
+ */
+const {isArray} = Array;
+
+/**
+ * Determine if a value is undefined
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if the value is undefined, otherwise false
+ */
+const isUndefined = typeOfTest('undefined');
+
+/**
+ * Determine if a value is a Buffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Buffer, otherwise false
+ */
+function isBuffer(val) {
+  return val !== null && !isUndefined(val) && val.constructor !== null && !isUndefined(val.constructor)
+    && isFunction(val.constructor.isBuffer) && val.constructor.isBuffer(val);
+}
+
+/**
+ * Determine if a value is an ArrayBuffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is an ArrayBuffer, otherwise false
+ */
+const isArrayBuffer = kindOfTest('ArrayBuffer');
+
+
+/**
+ * Determine if a value is a view on an ArrayBuffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a view on an ArrayBuffer, otherwise false
+ */
+function isArrayBufferView(val) {
+  let result;
+  if ((typeof ArrayBuffer !== 'undefined') && (ArrayBuffer.isView)) {
+    result = ArrayBuffer.isView(val);
+  } else {
+    result = (val) && (val.buffer) && (isArrayBuffer(val.buffer));
+  }
+  return result;
+}
+
+/**
+ * Determine if a value is a String
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a String, otherwise false
+ */
+const isString = typeOfTest('string');
+
+/**
+ * Determine if a value is a Function
+ *
+ * @param {*} val The value to test
+ * @returns {boolean} True if value is a Function, otherwise false
+ */
+const isFunction = typeOfTest('function');
+
+/**
+ * Determine if a value is a Number
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Number, otherwise false
+ */
+const isNumber = typeOfTest('number');
+
+/**
+ * Determine if a value is an Object
+ *
+ * @param {*} thing The value to test
+ *
+ * @returns {boolean} True if value is an Object, otherwise false
+ */
+const isObject = (thing) => thing !== null && typeof thing === 'object';
+
+/**
+ * Determine if a value is a Boolean
+ *
+ * @param {*} thing The value to test
+ * @returns {boolean} True if value is a Boolean, otherwise false
+ */
+const isBoolean = thing => thing === true || thing === false;
+
+/**
+ * Determine if a value is a plain Object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a plain Object, otherwise false
+ */
+const isPlainObject = (val) => {
+  if (kindOf(val) !== 'object') {
+    return false;
+  }
+
+  const prototype = getPrototypeOf(val);
+  return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(toStringTag in val) && !(iterator in val);
+};
+
+/**
+ * Determine if a value is an empty object (safely handles Buffers)
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is an empty object, otherwise false
+ */
+const isEmptyObject = (val) => {
+  // Early return for non-objects or Buffers to prevent RangeError
+  if (!isObject(val) || isBuffer(val)) {
+    return false;
+  }
+  
+  try {
+    return Object.keys(val).length === 0 && Object.getPrototypeOf(val) === Object.prototype;
+  } catch (e) {
+    // Fallback for any other objects that might cause RangeError with Object.keys()
+    return false;
+  }
+};
+
+/**
+ * Determine if a value is a Date
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Date, otherwise false
+ */
+const isDate = kindOfTest('Date');
+
+/**
+ * Determine if a value is a File
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a File, otherwise false
+ */
+const isFile = kindOfTest('File');
+
+/**
+ * Determine if a value is a Blob
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Blob, otherwise false
+ */
+const isBlob = kindOfTest('Blob');
+
+/**
+ * Determine if a value is a FileList
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a File, otherwise false
+ */
+const isFileList = kindOfTest('FileList');
+
+/**
+ * Determine if a value is a Stream
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Stream, otherwise false
+ */
+const isStream = (val) => isObject(val) && isFunction(val.pipe);
+
+/**
+ * Determine if a value is a FormData
+ *
+ * @param {*} thing The value to test
+ *
+ * @returns {boolean} True if value is an FormData, otherwise false
+ */
+const isFormData = (thing) => {
+  let kind;
+  return thing && (
+    (typeof FormData === 'function' && thing instanceof FormData) || (
+      isFunction(thing.append) && (
+        (kind = kindOf(thing)) === 'formdata' ||
+        // detect form-data instance
+        (kind === 'object' && isFunction(thing.toString) && thing.toString() === '[object FormData]')
+      )
+    )
+  )
+};
+
+/**
+ * Determine if a value is a URLSearchParams object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a URLSearchParams object, otherwise false
+ */
+const isURLSearchParams = kindOfTest('URLSearchParams');
+
+const [isReadableStream, isRequest, isResponse, isHeaders] = ['ReadableStream', 'Request', 'Response', 'Headers'].map(kindOfTest);
+
+/**
+ * Trim excess whitespace off the beginning and end of a string
+ *
+ * @param {String} str The String to trim
+ *
+ * @returns {String} The String freed of excess whitespace
+ */
+const trim = (str) => str.trim ?
+  str.trim() : str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+
+/**
+ * Iterate over an Array or an Object invoking a function for each item.
+ *
+ * If `obj` is an Array callback will be called passing
+ * the value, index, and complete array for each item.
+ *
+ * If 'obj' is an Object callback will be called passing
+ * the value, key, and complete object for each property.
+ *
+ * @param {Object|Array} obj The object to iterate
+ * @param {Function} fn The callback to invoke for each item
+ *
+ * @param {Boolean} [allOwnKeys = false]
+ * @returns {any}
+ */
+function forEach(obj, fn, {allOwnKeys = false} = {}) {
+  // Don't bother if no value provided
+  if (obj === null || typeof obj === 'undefined') {
+    return;
+  }
+
+  let i;
+  let l;
+
+  // Force an array if not already something iterable
+  if (typeof obj !== 'object') {
+    /*eslint no-param-reassign:0*/
+    obj = [obj];
+  }
+
+  if (isArray(obj)) {
+    // Iterate over array values
+    for (i = 0, l = obj.length; i < l; i++) {
+      fn.call(null, obj[i], i, obj);
+    }
+  } else {
+    // Buffer check
+    if (isBuffer(obj)) {
+      return;
+    }
+
+    // Iterate over object keys
+    const keys = allOwnKeys ? Object.getOwnPropertyNames(obj) : Object.keys(obj);
+    const len = keys.length;
+    let key;
+
+    for (i = 0; i < len; i++) {
+      key = keys[i];
+      fn.call(null, obj[key], key, obj);
+    }
+  }
+}
+
+function findKey(obj, key) {
+  if (isBuffer(obj)){
+    return null;
+  }
+
+  key = key.toLowerCase();
+  const keys = Object.keys(obj);
+  let i = keys.length;
+  let _key;
+  while (i-- > 0) {
+    _key = keys[i];
+    if (key === _key.toLowerCase()) {
+      return _key;
+    }
+  }
+  return null;
+}
+
+const _global = (() => {
+  /*eslint no-undef:0*/
+  if (typeof globalThis !== "undefined") return globalThis;
+  return typeof self !== "undefined" ? self : (typeof window !== 'undefined' ? window : __webpack_require__.g)
+})();
+
+const isContextDefined = (context) => !isUndefined(context) && context !== _global;
+
+/**
+ * Accepts varargs expecting each argument to be an object, then
+ * immutably merges the properties of each object and returns result.
+ *
+ * When multiple objects contain the same key the later object in
+ * the arguments list will take precedence.
+ *
+ * Example:
+ *
+ * ```js
+ * var result = merge({foo: 123}, {foo: 456});
+ * console.log(result.foo); // outputs 456
+ * ```
+ *
+ * @param {Object} obj1 Object to merge
+ *
+ * @returns {Object} Result of all merge properties
+ */
+function merge(/* obj1, obj2, obj3, ... */) {
+  const {caseless} = isContextDefined(this) && this || {};
+  const result = {};
+  const assignValue = (val, key) => {
+    const targetKey = caseless && findKey(result, key) || key;
+    if (isPlainObject(result[targetKey]) && isPlainObject(val)) {
+      result[targetKey] = merge(result[targetKey], val);
+    } else if (isPlainObject(val)) {
+      result[targetKey] = merge({}, val);
+    } else if (isArray(val)) {
+      result[targetKey] = val.slice();
+    } else {
+      result[targetKey] = val;
+    }
+  };
+
+  for (let i = 0, l = arguments.length; i < l; i++) {
+    arguments[i] && forEach(arguments[i], assignValue);
+  }
+  return result;
+}
+
+/**
+ * Extends object a by mutably adding to it the properties of object b.
+ *
+ * @param {Object} a The object to be extended
+ * @param {Object} b The object to copy properties from
+ * @param {Object} thisArg The object to bind function to
+ *
+ * @param {Boolean} [allOwnKeys]
+ * @returns {Object} The resulting value of object a
+ */
+const extend = (a, b, thisArg, {allOwnKeys}= {}) => {
+  forEach(b, (val, key) => {
+    if (thisArg && isFunction(val)) {
+      a[key] = bind(val, thisArg);
+    } else {
+      a[key] = val;
+    }
+  }, {allOwnKeys});
+  return a;
+};
+
+/**
+ * Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+ *
+ * @param {string} content with BOM
+ *
+ * @returns {string} content value without BOM
+ */
+const stripBOM = (content) => {
+  if (content.charCodeAt(0) === 0xFEFF) {
+    content = content.slice(1);
+  }
+  return content;
+};
+
+/**
+ * Inherit the prototype methods from one constructor into another
+ * @param {function} constructor
+ * @param {function} superConstructor
+ * @param {object} [props]
+ * @param {object} [descriptors]
+ *
+ * @returns {void}
+ */
+const inherits = (constructor, superConstructor, props, descriptors) => {
+  constructor.prototype = Object.create(superConstructor.prototype, descriptors);
+  constructor.prototype.constructor = constructor;
+  Object.defineProperty(constructor, 'super', {
+    value: superConstructor.prototype
+  });
+  props && Object.assign(constructor.prototype, props);
+};
+
+/**
+ * Resolve object with deep prototype chain to a flat object
+ * @param {Object} sourceObj source object
+ * @param {Object} [destObj]
+ * @param {Function|Boolean} [filter]
+ * @param {Function} [propFilter]
+ *
+ * @returns {Object}
+ */
+const toFlatObject = (sourceObj, destObj, filter, propFilter) => {
+  let props;
+  let i;
+  let prop;
+  const merged = {};
+
+  destObj = destObj || {};
+  // eslint-disable-next-line no-eq-null,eqeqeq
+  if (sourceObj == null) return destObj;
+
+  do {
+    props = Object.getOwnPropertyNames(sourceObj);
+    i = props.length;
+    while (i-- > 0) {
+      prop = props[i];
+      if ((!propFilter || propFilter(prop, sourceObj, destObj)) && !merged[prop]) {
+        destObj[prop] = sourceObj[prop];
+        merged[prop] = true;
+      }
+    }
+    sourceObj = filter !== false && getPrototypeOf(sourceObj);
+  } while (sourceObj && (!filter || filter(sourceObj, destObj)) && sourceObj !== Object.prototype);
+
+  return destObj;
+};
+
+/**
+ * Determines whether a string ends with the characters of a specified string
+ *
+ * @param {String} str
+ * @param {String} searchString
+ * @param {Number} [position= 0]
+ *
+ * @returns {boolean}
+ */
+const endsWith = (str, searchString, position) => {
+  str = String(str);
+  if (position === undefined || position > str.length) {
+    position = str.length;
+  }
+  position -= searchString.length;
+  const lastIndex = str.indexOf(searchString, position);
+  return lastIndex !== -1 && lastIndex === position;
+};
+
+
+/**
+ * Returns new array from array like object or null if failed
+ *
+ * @param {*} [thing]
+ *
+ * @returns {?Array}
+ */
+const toArray = (thing) => {
+  if (!thing) return null;
+  if (isArray(thing)) return thing;
+  let i = thing.length;
+  if (!isNumber(i)) return null;
+  const arr = new Array(i);
+  while (i-- > 0) {
+    arr[i] = thing[i];
+  }
+  return arr;
+};
+
+/**
+ * Checking if the Uint8Array exists and if it does, it returns a function that checks if the
+ * thing passed in is an instance of Uint8Array
+ *
+ * @param {TypedArray}
+ *
+ * @returns {Array}
+ */
+// eslint-disable-next-line func-names
+const isTypedArray = (TypedArray => {
+  // eslint-disable-next-line func-names
+  return thing => {
+    return TypedArray && thing instanceof TypedArray;
+  };
+})(typeof Uint8Array !== 'undefined' && getPrototypeOf(Uint8Array));
+
+/**
+ * For each entry in the object, call the function with the key and value.
+ *
+ * @param {Object<any, any>} obj - The object to iterate over.
+ * @param {Function} fn - The function to call for each entry.
+ *
+ * @returns {void}
+ */
+const forEachEntry = (obj, fn) => {
+  const generator = obj && obj[iterator];
+
+  const _iterator = generator.call(obj);
+
+  let result;
+
+  while ((result = _iterator.next()) && !result.done) {
+    const pair = result.value;
+    fn.call(obj, pair[0], pair[1]);
+  }
+};
+
+/**
+ * It takes a regular expression and a string, and returns an array of all the matches
+ *
+ * @param {string} regExp - The regular expression to match against.
+ * @param {string} str - The string to search.
+ *
+ * @returns {Array<boolean>}
+ */
+const matchAll = (regExp, str) => {
+  let matches;
+  const arr = [];
+
+  while ((matches = regExp.exec(str)) !== null) {
+    arr.push(matches);
+  }
+
+  return arr;
+};
+
+/* Checking if the kindOfTest function returns true when passed an HTMLFormElement. */
+const isHTMLForm = kindOfTest('HTMLFormElement');
+
+const toCamelCase = str => {
+  return str.toLowerCase().replace(/[-_\s]([a-z\d])(\w*)/g,
+    function replacer(m, p1, p2) {
+      return p1.toUpperCase() + p2;
+    }
+  );
+};
+
+/* Creating a function that will check if an object has a property. */
+const hasOwnProperty = (({hasOwnProperty}) => (obj, prop) => hasOwnProperty.call(obj, prop))(Object.prototype);
+
+/**
+ * Determine if a value is a RegExp object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a RegExp object, otherwise false
+ */
+const isRegExp = kindOfTest('RegExp');
+
+const reduceDescriptors = (obj, reducer) => {
+  const descriptors = Object.getOwnPropertyDescriptors(obj);
+  const reducedDescriptors = {};
+
+  forEach(descriptors, (descriptor, name) => {
+    let ret;
+    if ((ret = reducer(descriptor, name, obj)) !== false) {
+      reducedDescriptors[name] = ret || descriptor;
+    }
+  });
+
+  Object.defineProperties(obj, reducedDescriptors);
+};
+
+/**
+ * Makes all methods read-only
+ * @param {Object} obj
+ */
+
+const freezeMethods = (obj) => {
+  reduceDescriptors(obj, (descriptor, name) => {
+    // skip restricted props in strict mode
+    if (isFunction(obj) && ['arguments', 'caller', 'callee'].indexOf(name) !== -1) {
+      return false;
+    }
+
+    const value = obj[name];
+
+    if (!isFunction(value)) return;
+
+    descriptor.enumerable = false;
+
+    if ('writable' in descriptor) {
+      descriptor.writable = false;
+      return;
+    }
+
+    if (!descriptor.set) {
+      descriptor.set = () => {
+        throw Error('Can not rewrite read-only method \'' + name + '\'');
+      };
+    }
+  });
+};
+
+const toObjectSet = (arrayOrString, delimiter) => {
+  const obj = {};
+
+  const define = (arr) => {
+    arr.forEach(value => {
+      obj[value] = true;
+    });
+  };
+
+  isArray(arrayOrString) ? define(arrayOrString) : define(String(arrayOrString).split(delimiter));
+
+  return obj;
+};
+
+const noop = () => {};
+
+const toFiniteNumber = (value, defaultValue) => {
+  return value != null && Number.isFinite(value = +value) ? value : defaultValue;
+};
+
+/**
+ * If the thing is a FormData object, return true, otherwise return false.
+ *
+ * @param {unknown} thing - The thing to check.
+ *
+ * @returns {boolean}
+ */
+function isSpecCompliantForm(thing) {
+  return !!(thing && isFunction(thing.append) && thing[toStringTag] === 'FormData' && thing[iterator]);
+}
+
+const toJSONObject = (obj) => {
+  const stack = new Array(10);
+
+  const visit = (source, i) => {
+
+    if (isObject(source)) {
+      if (stack.indexOf(source) >= 0) {
+        return;
+      }
+
+      //Buffer check
+      if (isBuffer(source)) {
+        return source;
+      }
+
+      if(!('toJSON' in source)) {
+        stack[i] = source;
+        const target = isArray(source) ? [] : {};
+
+        forEach(source, (value, key) => {
+          const reducedValue = visit(value, i + 1);
+          !isUndefined(reducedValue) && (target[key] = reducedValue);
+        });
+
+        stack[i] = undefined;
+
+        return target;
+      }
+    }
+
+    return source;
+  };
+
+  return visit(obj, 0);
+};
+
+const isAsyncFn = kindOfTest('AsyncFunction');
+
+const isThenable = (thing) =>
+  thing && (isObject(thing) || isFunction(thing)) && isFunction(thing.then) && isFunction(thing.catch);
+
+// original code
+// https://github.com/DigitalBrainJS/AxiosPromise/blob/16deab13710ec09779922131f3fa5954320f83ab/lib/utils.js#L11-L34
+
+const _setImmediate = ((setImmediateSupported, postMessageSupported) => {
+  if (setImmediateSupported) {
+    return setImmediate;
+  }
+
+  return postMessageSupported ? ((token, callbacks) => {
+    _global.addEventListener("message", ({source, data}) => {
+      if (source === _global && data === token) {
+        callbacks.length && callbacks.shift()();
+      }
+    }, false);
+
+    return (cb) => {
+      callbacks.push(cb);
+      _global.postMessage(token, "*");
+    }
+  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
+})(
+  typeof setImmediate === 'function',
+  isFunction(_global.postMessage)
+);
+
+const asap = typeof queueMicrotask !== 'undefined' ?
+  queueMicrotask.bind(_global) : ( typeof process !== 'undefined' && process.nextTick || _setImmediate);
+
+// *********************
+
+
+const isIterable = (thing) => thing != null && isFunction(thing[iterator]);
+
+
+var utils$1 = {
+  isArray,
+  isArrayBuffer,
+  isBuffer,
+  isFormData,
+  isArrayBufferView,
+  isString,
+  isNumber,
+  isBoolean,
+  isObject,
+  isPlainObject,
+  isEmptyObject,
+  isReadableStream,
+  isRequest,
+  isResponse,
+  isHeaders,
+  isUndefined,
+  isDate,
+  isFile,
+  isBlob,
+  isRegExp,
+  isFunction,
+  isStream,
+  isURLSearchParams,
+  isTypedArray,
+  isFileList,
+  forEach,
+  merge,
+  extend,
+  trim,
+  stripBOM,
+  inherits,
+  toFlatObject,
+  kindOf,
+  kindOfTest,
+  endsWith,
+  toArray,
+  forEachEntry,
+  matchAll,
+  isHTMLForm,
+  hasOwnProperty,
+  hasOwnProp: hasOwnProperty, // an alias to avoid ESLint no-prototype-builtins detection
+  reduceDescriptors,
+  freezeMethods,
+  toObjectSet,
+  toCamelCase,
+  noop,
+  toFiniteNumber,
+  findKey,
+  global: _global,
+  isContextDefined,
+  isSpecCompliantForm,
+  toJSONObject,
+  isAsyncFn,
+  isThenable,
+  setImmediate: _setImmediate,
+  asap,
+  isIterable
+};
+
+/**
+ * Create an Error with the specified message, config, error code, request and response.
+ *
+ * @param {string} message The error message.
+ * @param {string} [code] The error code (for example, 'ECONNABORTED').
+ * @param {Object} [config] The config.
+ * @param {Object} [request] The request.
+ * @param {Object} [response] The response.
+ *
+ * @returns {Error} The created error.
+ */
+function AxiosError(message, code, config, request, response) {
+  Error.call(this);
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, this.constructor);
+  } else {
+    this.stack = (new Error()).stack;
+  }
+
+  this.message = message;
+  this.name = 'AxiosError';
+  code && (this.code = code);
+  config && (this.config = config);
+  request && (this.request = request);
+  if (response) {
+    this.response = response;
+    this.status = response.status ? response.status : null;
+  }
+}
+
+utils$1.inherits(AxiosError, Error, {
+  toJSON: function toJSON() {
+    return {
+      // Standard
+      message: this.message,
+      name: this.name,
+      // Microsoft
+      description: this.description,
+      number: this.number,
+      // Mozilla
+      fileName: this.fileName,
+      lineNumber: this.lineNumber,
+      columnNumber: this.columnNumber,
+      stack: this.stack,
+      // Axios
+      config: utils$1.toJSONObject(this.config),
+      code: this.code,
+      status: this.status
+    };
+  }
+});
+
+const prototype$1 = AxiosError.prototype;
+const descriptors = {};
+
+[
+  'ERR_BAD_OPTION_VALUE',
+  'ERR_BAD_OPTION',
+  'ECONNABORTED',
+  'ETIMEDOUT',
+  'ERR_NETWORK',
+  'ERR_FR_TOO_MANY_REDIRECTS',
+  'ERR_DEPRECATED',
+  'ERR_BAD_RESPONSE',
+  'ERR_BAD_REQUEST',
+  'ERR_CANCELED',
+  'ERR_NOT_SUPPORT',
+  'ERR_INVALID_URL'
+// eslint-disable-next-line func-names
+].forEach(code => {
+  descriptors[code] = {value: code};
+});
+
+Object.defineProperties(AxiosError, descriptors);
+Object.defineProperty(prototype$1, 'isAxiosError', {value: true});
+
+// eslint-disable-next-line func-names
+AxiosError.from = (error, code, config, request, response, customProps) => {
+  const axiosError = Object.create(prototype$1);
+
+  utils$1.toFlatObject(error, axiosError, function filter(obj) {
+    return obj !== Error.prototype;
+  }, prop => {
+    return prop !== 'isAxiosError';
+  });
+
+  AxiosError.call(axiosError, error.message, code, config, request, response);
+
+  axiosError.cause = error;
+
+  axiosError.name = error.name;
+
+  customProps && Object.assign(axiosError, customProps);
+
+  return axiosError;
+};
+
+// eslint-disable-next-line strict
+var httpAdapter = null;
+
+/**
+ * Determines if the given thing is a array or js object.
+ *
+ * @param {string} thing - The object or array to be visited.
+ *
+ * @returns {boolean}
+ */
+function isVisitable(thing) {
+  return utils$1.isPlainObject(thing) || utils$1.isArray(thing);
+}
+
+/**
+ * It removes the brackets from the end of a string
+ *
+ * @param {string} key - The key of the parameter.
+ *
+ * @returns {string} the key without the brackets.
+ */
+function removeBrackets(key) {
+  return utils$1.endsWith(key, '[]') ? key.slice(0, -2) : key;
+}
+
+/**
+ * It takes a path, a key, and a boolean, and returns a string
+ *
+ * @param {string} path - The path to the current key.
+ * @param {string} key - The key of the current object being iterated over.
+ * @param {string} dots - If true, the key will be rendered with dots instead of brackets.
+ *
+ * @returns {string} The path to the current key.
+ */
+function renderKey(path, key, dots) {
+  if (!path) return key;
+  return path.concat(key).map(function each(token, i) {
+    // eslint-disable-next-line no-param-reassign
+    token = removeBrackets(token);
+    return !dots && i ? '[' + token + ']' : token;
+  }).join(dots ? '.' : '');
+}
+
+/**
+ * If the array is an array and none of its elements are visitable, then it's a flat array.
+ *
+ * @param {Array<any>} arr - The array to check
+ *
+ * @returns {boolean}
+ */
+function isFlatArray(arr) {
+  return utils$1.isArray(arr) && !arr.some(isVisitable);
+}
+
+const predicates = utils$1.toFlatObject(utils$1, {}, null, function filter(prop) {
+  return /^is[A-Z]/.test(prop);
+});
+
+/**
+ * Convert a data object to FormData
+ *
+ * @param {Object} obj
+ * @param {?Object} [formData]
+ * @param {?Object} [options]
+ * @param {Function} [options.visitor]
+ * @param {Boolean} [options.metaTokens = true]
+ * @param {Boolean} [options.dots = false]
+ * @param {?Boolean} [options.indexes = false]
+ *
+ * @returns {Object}
+ **/
+
+/**
+ * It converts an object into a FormData object
+ *
+ * @param {Object<any, any>} obj - The object to convert to form data.
+ * @param {string} formData - The FormData object to append to.
+ * @param {Object<string, any>} options
+ *
+ * @returns
+ */
+function toFormData(obj, formData, options) {
+  if (!utils$1.isObject(obj)) {
+    throw new TypeError('target must be an object');
+  }
+
+  // eslint-disable-next-line no-param-reassign
+  formData = formData || new (FormData)();
+
+  // eslint-disable-next-line no-param-reassign
+  options = utils$1.toFlatObject(options, {
+    metaTokens: true,
+    dots: false,
+    indexes: false
+  }, false, function defined(option, source) {
+    // eslint-disable-next-line no-eq-null,eqeqeq
+    return !utils$1.isUndefined(source[option]);
+  });
+
+  const metaTokens = options.metaTokens;
+  // eslint-disable-next-line no-use-before-define
+  const visitor = options.visitor || defaultVisitor;
+  const dots = options.dots;
+  const indexes = options.indexes;
+  const _Blob = options.Blob || typeof Blob !== 'undefined' && Blob;
+  const useBlob = _Blob && utils$1.isSpecCompliantForm(formData);
+
+  if (!utils$1.isFunction(visitor)) {
+    throw new TypeError('visitor must be a function');
+  }
+
+  function convertValue(value) {
+    if (value === null) return '';
+
+    if (utils$1.isDate(value)) {
+      return value.toISOString();
+    }
+
+    if (utils$1.isBoolean(value)) {
+      return value.toString();
+    }
+
+    if (!useBlob && utils$1.isBlob(value)) {
+      throw new AxiosError('Blob is not supported. Use a Buffer instead.');
+    }
+
+    if (utils$1.isArrayBuffer(value) || utils$1.isTypedArray(value)) {
+      return useBlob && typeof Blob === 'function' ? new Blob([value]) : Buffer.from(value);
+    }
+
+    return value;
+  }
+
+  /**
+   * Default visitor.
+   *
+   * @param {*} value
+   * @param {String|Number} key
+   * @param {Array<String|Number>} path
+   * @this {FormData}
+   *
+   * @returns {boolean} return true to visit the each prop of the value recursively
+   */
+  function defaultVisitor(value, key, path) {
+    let arr = value;
+
+    if (value && !path && typeof value === 'object') {
+      if (utils$1.endsWith(key, '{}')) {
+        // eslint-disable-next-line no-param-reassign
+        key = metaTokens ? key : key.slice(0, -2);
+        // eslint-disable-next-line no-param-reassign
+        value = JSON.stringify(value);
+      } else if (
+        (utils$1.isArray(value) && isFlatArray(value)) ||
+        ((utils$1.isFileList(value) || utils$1.endsWith(key, '[]')) && (arr = utils$1.toArray(value))
+        )) {
+        // eslint-disable-next-line no-param-reassign
+        key = removeBrackets(key);
+
+        arr.forEach(function each(el, index) {
+          !(utils$1.isUndefined(el) || el === null) && formData.append(
+            // eslint-disable-next-line no-nested-ternary
+            indexes === true ? renderKey([key], index, dots) : (indexes === null ? key : key + '[]'),
+            convertValue(el)
+          );
+        });
+        return false;
+      }
+    }
+
+    if (isVisitable(value)) {
+      return true;
+    }
+
+    formData.append(renderKey(path, key, dots), convertValue(value));
+
+    return false;
+  }
+
+  const stack = [];
+
+  const exposedHelpers = Object.assign(predicates, {
+    defaultVisitor,
+    convertValue,
+    isVisitable
+  });
+
+  function build(value, path) {
+    if (utils$1.isUndefined(value)) return;
+
+    if (stack.indexOf(value) !== -1) {
+      throw Error('Circular reference detected in ' + path.join('.'));
+    }
+
+    stack.push(value);
+
+    utils$1.forEach(value, function each(el, key) {
+      const result = !(utils$1.isUndefined(el) || el === null) && visitor.call(
+        formData, el, utils$1.isString(key) ? key.trim() : key, path, exposedHelpers
+      );
+
+      if (result === true) {
+        build(el, path ? path.concat(key) : [key]);
+      }
+    });
+
+    stack.pop();
+  }
+
+  if (!utils$1.isObject(obj)) {
+    throw new TypeError('data must be an object');
+  }
+
+  build(obj);
+
+  return formData;
+}
+
+/**
+ * It encodes a string by replacing all characters that are not in the unreserved set with
+ * their percent-encoded equivalents
+ *
+ * @param {string} str - The string to encode.
+ *
+ * @returns {string} The encoded string.
+ */
+function encode$1(str) {
+  const charMap = {
+    '!': '%21',
+    "'": '%27',
+    '(': '%28',
+    ')': '%29',
+    '~': '%7E',
+    '%20': '+',
+    '%00': '\x00'
+  };
+  return encodeURIComponent(str).replace(/[!'()~]|%20|%00/g, function replacer(match) {
+    return charMap[match];
+  });
+}
+
+/**
+ * It takes a params object and converts it to a FormData object
+ *
+ * @param {Object<string, any>} params - The parameters to be converted to a FormData object.
+ * @param {Object<string, any>} options - The options object passed to the Axios constructor.
+ *
+ * @returns {void}
+ */
+function AxiosURLSearchParams(params, options) {
+  this._pairs = [];
+
+  params && toFormData(params, this, options);
+}
+
+const prototype = AxiosURLSearchParams.prototype;
+
+prototype.append = function append(name, value) {
+  this._pairs.push([name, value]);
+};
+
+prototype.toString = function toString(encoder) {
+  const _encode = encoder ? function(value) {
+    return encoder.call(this, value, encode$1);
+  } : encode$1;
+
+  return this._pairs.map(function each(pair) {
+    return _encode(pair[0]) + '=' + _encode(pair[1]);
+  }, '').join('&');
+};
+
+/**
+ * It replaces all instances of the characters `:`, `$`, `,`, `+`, `[`, and `]` with their
+ * URI encoded counterparts
+ *
+ * @param {string} val The value to be encoded.
+ *
+ * @returns {string} The encoded value.
+ */
+function encode(val) {
+  return encodeURIComponent(val).
+    replace(/%3A/gi, ':').
+    replace(/%24/g, '$').
+    replace(/%2C/gi, ',').
+    replace(/%20/g, '+').
+    replace(/%5B/gi, '[').
+    replace(/%5D/gi, ']');
+}
+
+/**
+ * Build a URL by appending params to the end
+ *
+ * @param {string} url The base of the url (e.g., http://www.google.com)
+ * @param {object} [params] The params to be appended
+ * @param {?(object|Function)} options
+ *
+ * @returns {string} The formatted url
+ */
+function buildURL(url, params, options) {
+  /*eslint no-param-reassign:0*/
+  if (!params) {
+    return url;
+  }
+  
+  const _encode = options && options.encode || encode;
+
+  if (utils$1.isFunction(options)) {
+    options = {
+      serialize: options
+    };
+  } 
+
+  const serializeFn = options && options.serialize;
+
+  let serializedParams;
+
+  if (serializeFn) {
+    serializedParams = serializeFn(params, options);
+  } else {
+    serializedParams = utils$1.isURLSearchParams(params) ?
+      params.toString() :
+      new AxiosURLSearchParams(params, options).toString(_encode);
+  }
+
+  if (serializedParams) {
+    const hashmarkIndex = url.indexOf("#");
+
+    if (hashmarkIndex !== -1) {
+      url = url.slice(0, hashmarkIndex);
+    }
+    url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams;
+  }
+
+  return url;
+}
+
+class InterceptorManager {
+  constructor() {
+    this.handlers = [];
+  }
+
+  /**
+   * Add a new interceptor to the stack
+   *
+   * @param {Function} fulfilled The function to handle `then` for a `Promise`
+   * @param {Function} rejected The function to handle `reject` for a `Promise`
+   *
+   * @return {Number} An ID used to remove interceptor later
+   */
+  use(fulfilled, rejected, options) {
+    this.handlers.push({
+      fulfilled,
+      rejected,
+      synchronous: options ? options.synchronous : false,
+      runWhen: options ? options.runWhen : null
+    });
+    return this.handlers.length - 1;
+  }
+
+  /**
+   * Remove an interceptor from the stack
+   *
+   * @param {Number} id The ID that was returned by `use`
+   *
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   */
+  eject(id) {
+    if (this.handlers[id]) {
+      this.handlers[id] = null;
+    }
+  }
+
+  /**
+   * Clear all interceptors from the stack
+   *
+   * @returns {void}
+   */
+  clear() {
+    if (this.handlers) {
+      this.handlers = [];
+    }
+  }
+
+  /**
+   * Iterate over all the registered interceptors
+   *
+   * This method is particularly useful for skipping over any
+   * interceptors that may have become `null` calling `eject`.
+   *
+   * @param {Function} fn The function to call for each interceptor
+   *
+   * @returns {void}
+   */
+  forEach(fn) {
+    utils$1.forEach(this.handlers, function forEachHandler(h) {
+      if (h !== null) {
+        fn(h);
+      }
+    });
+  }
+}
+
+var InterceptorManager$1 = InterceptorManager;
+
+var transitionalDefaults = {
+  silentJSONParsing: true,
+  forcedJSONParsing: true,
+  clarifyTimeoutError: false
+};
+
+var URLSearchParams$1 = typeof URLSearchParams !== 'undefined' ? URLSearchParams : AxiosURLSearchParams;
+
+var FormData$1 = typeof FormData !== 'undefined' ? FormData : null;
+
+var Blob$1 = typeof Blob !== 'undefined' ? Blob : null;
+
+var platform$1 = {
+  isBrowser: true,
+  classes: {
+    URLSearchParams: URLSearchParams$1,
+    FormData: FormData$1,
+    Blob: Blob$1
+  },
+  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']
+};
+
+const hasBrowserEnv = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+const _navigator = typeof navigator === 'object' && navigator || undefined;
+
+/**
+ * Determine if we're running in a standard browser environment
+ *
+ * This allows axios to run in a web worker, and react-native.
+ * Both environments support XMLHttpRequest, but not fully standard globals.
+ *
+ * web workers:
+ *  typeof window -> undefined
+ *  typeof document -> undefined
+ *
+ * react-native:
+ *  navigator.product -> 'ReactNative'
+ * nativescript
+ *  navigator.product -> 'NativeScript' or 'NS'
+ *
+ * @returns {boolean}
+ */
+const hasStandardBrowserEnv = hasBrowserEnv &&
+  (!_navigator || ['ReactNative', 'NativeScript', 'NS'].indexOf(_navigator.product) < 0);
+
+/**
+ * Determine if we're running in a standard browser webWorker environment
+ *
+ * Although the `isStandardBrowserEnv` method indicates that
+ * `allows axios to run in a web worker`, the WebWorker will still be
+ * filtered out due to its judgment standard
+ * `typeof window !== 'undefined' && typeof document !== 'undefined'`.
+ * This leads to a problem when axios post `FormData` in webWorker
+ */
+const hasStandardBrowserWebWorkerEnv = (() => {
+  return (
+    typeof WorkerGlobalScope !== 'undefined' &&
+    // eslint-disable-next-line no-undef
+    self instanceof WorkerGlobalScope &&
+    typeof self.importScripts === 'function'
+  );
+})();
+
+const origin = hasBrowserEnv && window.location.href || 'http://localhost';
+
+var utils = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  hasBrowserEnv: hasBrowserEnv,
+  hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
+  hasStandardBrowserEnv: hasStandardBrowserEnv,
+  navigator: _navigator,
+  origin: origin
+});
+
+var platform = {
+  ...utils,
+  ...platform$1
+};
+
+function toURLEncodedForm(data, options) {
+  return toFormData(data, new platform.classes.URLSearchParams(), {
+    visitor: function(value, key, path, helpers) {
+      if (platform.isNode && utils$1.isBuffer(value)) {
+        this.append(key, value.toString('base64'));
+        return false;
+      }
+
+      return helpers.defaultVisitor.apply(this, arguments);
+    },
+    ...options
+  });
+}
+
+/**
+ * It takes a string like `foo[x][y][z]` and returns an array like `['foo', 'x', 'y', 'z']
+ *
+ * @param {string} name - The name of the property to get.
+ *
+ * @returns An array of strings.
+ */
+function parsePropPath(name) {
+  // foo[x][y][z]
+  // foo.x.y.z
+  // foo-x-y-z
+  // foo x y z
+  return utils$1.matchAll(/\w+|\[(\w*)]/g, name).map(match => {
+    return match[0] === '[]' ? '' : match[1] || match[0];
+  });
+}
+
+/**
+ * Convert an array to an object.
+ *
+ * @param {Array<any>} arr - The array to convert to an object.
+ *
+ * @returns An object with the same keys and values as the array.
+ */
+function arrayToObject(arr) {
+  const obj = {};
+  const keys = Object.keys(arr);
+  let i;
+  const len = keys.length;
+  let key;
+  for (i = 0; i < len; i++) {
+    key = keys[i];
+    obj[key] = arr[key];
+  }
+  return obj;
+}
+
+/**
+ * It takes a FormData object and returns a JavaScript object
+ *
+ * @param {string} formData The FormData object to convert to JSON.
+ *
+ * @returns {Object<string, any> | null} The converted object.
+ */
+function formDataToJSON(formData) {
+  function buildPath(path, value, target, index) {
+    let name = path[index++];
+
+    if (name === '__proto__') return true;
+
+    const isNumericKey = Number.isFinite(+name);
+    const isLast = index >= path.length;
+    name = !name && utils$1.isArray(target) ? target.length : name;
+
+    if (isLast) {
+      if (utils$1.hasOwnProp(target, name)) {
+        target[name] = [target[name], value];
+      } else {
+        target[name] = value;
+      }
+
+      return !isNumericKey;
+    }
+
+    if (!target[name] || !utils$1.isObject(target[name])) {
+      target[name] = [];
+    }
+
+    const result = buildPath(path, value, target[name], index);
+
+    if (result && utils$1.isArray(target[name])) {
+      target[name] = arrayToObject(target[name]);
+    }
+
+    return !isNumericKey;
+  }
+
+  if (utils$1.isFormData(formData) && utils$1.isFunction(formData.entries)) {
+    const obj = {};
+
+    utils$1.forEachEntry(formData, (name, value) => {
+      buildPath(parsePropPath(name), value, obj, 0);
+    });
+
+    return obj;
+  }
+
+  return null;
+}
+
+/**
+ * It takes a string, tries to parse it, and if it fails, it returns the stringified version
+ * of the input
+ *
+ * @param {any} rawValue - The value to be stringified.
+ * @param {Function} parser - A function that parses a string into a JavaScript object.
+ * @param {Function} encoder - A function that takes a value and returns a string.
+ *
+ * @returns {string} A stringified version of the rawValue.
+ */
+function stringifySafely(rawValue, parser, encoder) {
+  if (utils$1.isString(rawValue)) {
+    try {
+      (parser || JSON.parse)(rawValue);
+      return utils$1.trim(rawValue);
+    } catch (e) {
+      if (e.name !== 'SyntaxError') {
+        throw e;
+      }
+    }
+  }
+
+  return (encoder || JSON.stringify)(rawValue);
+}
+
+const defaults = {
+
+  transitional: transitionalDefaults,
+
+  adapter: ['xhr', 'http', 'fetch'],
+
+  transformRequest: [function transformRequest(data, headers) {
+    const contentType = headers.getContentType() || '';
+    const hasJSONContentType = contentType.indexOf('application/json') > -1;
+    const isObjectPayload = utils$1.isObject(data);
+
+    if (isObjectPayload && utils$1.isHTMLForm(data)) {
+      data = new FormData(data);
+    }
+
+    const isFormData = utils$1.isFormData(data);
+
+    if (isFormData) {
+      return hasJSONContentType ? JSON.stringify(formDataToJSON(data)) : data;
+    }
+
+    if (utils$1.isArrayBuffer(data) ||
+      utils$1.isBuffer(data) ||
+      utils$1.isStream(data) ||
+      utils$1.isFile(data) ||
+      utils$1.isBlob(data) ||
+      utils$1.isReadableStream(data)
+    ) {
+      return data;
+    }
+    if (utils$1.isArrayBufferView(data)) {
+      return data.buffer;
+    }
+    if (utils$1.isURLSearchParams(data)) {
+      headers.setContentType('application/x-www-form-urlencoded;charset=utf-8', false);
+      return data.toString();
+    }
+
+    let isFileList;
+
+    if (isObjectPayload) {
+      if (contentType.indexOf('application/x-www-form-urlencoded') > -1) {
+        return toURLEncodedForm(data, this.formSerializer).toString();
+      }
+
+      if ((isFileList = utils$1.isFileList(data)) || contentType.indexOf('multipart/form-data') > -1) {
+        const _FormData = this.env && this.env.FormData;
+
+        return toFormData(
+          isFileList ? {'files[]': data} : data,
+          _FormData && new _FormData(),
+          this.formSerializer
+        );
+      }
+    }
+
+    if (isObjectPayload || hasJSONContentType ) {
+      headers.setContentType('application/json', false);
+      return stringifySafely(data);
+    }
+
+    return data;
+  }],
+
+  transformResponse: [function transformResponse(data) {
+    const transitional = this.transitional || defaults.transitional;
+    const forcedJSONParsing = transitional && transitional.forcedJSONParsing;
+    const JSONRequested = this.responseType === 'json';
+
+    if (utils$1.isResponse(data) || utils$1.isReadableStream(data)) {
+      return data;
+    }
+
+    if (data && utils$1.isString(data) && ((forcedJSONParsing && !this.responseType) || JSONRequested)) {
+      const silentJSONParsing = transitional && transitional.silentJSONParsing;
+      const strictJSONParsing = !silentJSONParsing && JSONRequested;
+
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        if (strictJSONParsing) {
+          if (e.name === 'SyntaxError') {
+            throw AxiosError.from(e, AxiosError.ERR_BAD_RESPONSE, this, null, this.response);
+          }
+          throw e;
+        }
+      }
+    }
+
+    return data;
+  }],
+
+  /**
+   * A timeout in milliseconds to abort a request. If set to 0 (default) a
+   * timeout is not created.
+   */
+  timeout: 0,
+
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+
+  maxContentLength: -1,
+  maxBodyLength: -1,
+
+  env: {
+    FormData: platform.classes.FormData,
+    Blob: platform.classes.Blob
+  },
+
+  validateStatus: function validateStatus(status) {
+    return status >= 200 && status < 300;
+  },
+
+  headers: {
+    common: {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': undefined
+    }
+  }
+};
+
+utils$1.forEach(['delete', 'get', 'head', 'post', 'put', 'patch'], (method) => {
+  defaults.headers[method] = {};
+});
+
+var defaults$1 = defaults;
+
+// RawAxiosHeaders whose duplicates are ignored by node
+// c.f. https://nodejs.org/api/http.html#http_message_headers
+const ignoreDuplicateOf = utils$1.toObjectSet([
+  'age', 'authorization', 'content-length', 'content-type', 'etag',
+  'expires', 'from', 'host', 'if-modified-since', 'if-unmodified-since',
+  'last-modified', 'location', 'max-forwards', 'proxy-authorization',
+  'referer', 'retry-after', 'user-agent'
+]);
+
+/**
+ * Parse headers into an object
+ *
+ * ```
+ * Date: Wed, 27 Aug 2014 08:58:49 GMT
+ * Content-Type: application/json
+ * Connection: keep-alive
+ * Transfer-Encoding: chunked
+ * ```
+ *
+ * @param {String} rawHeaders Headers needing to be parsed
+ *
+ * @returns {Object} Headers parsed into an object
+ */
+var parseHeaders = rawHeaders => {
+  const parsed = {};
+  let key;
+  let val;
+  let i;
+
+  rawHeaders && rawHeaders.split('\n').forEach(function parser(line) {
+    i = line.indexOf(':');
+    key = line.substring(0, i).trim().toLowerCase();
+    val = line.substring(i + 1).trim();
+
+    if (!key || (parsed[key] && ignoreDuplicateOf[key])) {
+      return;
+    }
+
+    if (key === 'set-cookie') {
+      if (parsed[key]) {
+        parsed[key].push(val);
+      } else {
+        parsed[key] = [val];
+      }
+    } else {
+      parsed[key] = parsed[key] ? parsed[key] + ', ' + val : val;
+    }
+  });
+
+  return parsed;
+};
+
+const $internals = Symbol('internals');
+
+function normalizeHeader(header) {
+  return header && String(header).trim().toLowerCase();
+}
+
+function normalizeValue(value) {
+  if (value === false || value == null) {
+    return value;
+  }
+
+  return utils$1.isArray(value) ? value.map(normalizeValue) : String(value);
+}
+
+function parseTokens(str) {
+  const tokens = Object.create(null);
+  const tokensRE = /([^\s,;=]+)\s*(?:=\s*([^,;]+))?/g;
+  let match;
+
+  while ((match = tokensRE.exec(str))) {
+    tokens[match[1]] = match[2];
+  }
+
+  return tokens;
+}
+
+const isValidHeaderName = (str) => /^[-_a-zA-Z0-9^`|~,!#$%&'*+.]+$/.test(str.trim());
+
+function matchHeaderValue(context, value, header, filter, isHeaderNameFilter) {
+  if (utils$1.isFunction(filter)) {
+    return filter.call(this, value, header);
+  }
+
+  if (isHeaderNameFilter) {
+    value = header;
+  }
+
+  if (!utils$1.isString(value)) return;
+
+  if (utils$1.isString(filter)) {
+    return value.indexOf(filter) !== -1;
+  }
+
+  if (utils$1.isRegExp(filter)) {
+    return filter.test(value);
+  }
+}
+
+function formatHeader(header) {
+  return header.trim()
+    .toLowerCase().replace(/([a-z\d])(\w*)/g, (w, char, str) => {
+      return char.toUpperCase() + str;
+    });
+}
+
+function buildAccessors(obj, header) {
+  const accessorName = utils$1.toCamelCase(' ' + header);
+
+  ['get', 'set', 'has'].forEach(methodName => {
+    Object.defineProperty(obj, methodName + accessorName, {
+      value: function(arg1, arg2, arg3) {
+        return this[methodName].call(this, header, arg1, arg2, arg3);
+      },
+      configurable: true
+    });
+  });
+}
+
+class AxiosHeaders {
+  constructor(headers) {
+    headers && this.set(headers);
+  }
+
+  set(header, valueOrRewrite, rewrite) {
+    const self = this;
+
+    function setHeader(_value, _header, _rewrite) {
+      const lHeader = normalizeHeader(_header);
+
+      if (!lHeader) {
+        throw new Error('header name must be a non-empty string');
+      }
+
+      const key = utils$1.findKey(self, lHeader);
+
+      if(!key || self[key] === undefined || _rewrite === true || (_rewrite === undefined && self[key] !== false)) {
+        self[key || _header] = normalizeValue(_value);
+      }
+    }
+
+    const setHeaders = (headers, _rewrite) =>
+      utils$1.forEach(headers, (_value, _header) => setHeader(_value, _header, _rewrite));
+
+    if (utils$1.isPlainObject(header) || header instanceof this.constructor) {
+      setHeaders(header, valueOrRewrite);
+    } else if(utils$1.isString(header) && (header = header.trim()) && !isValidHeaderName(header)) {
+      setHeaders(parseHeaders(header), valueOrRewrite);
+    } else if (utils$1.isObject(header) && utils$1.isIterable(header)) {
+      let obj = {}, dest, key;
+      for (const entry of header) {
+        if (!utils$1.isArray(entry)) {
+          throw TypeError('Object iterator must return a key-value pair');
+        }
+
+        obj[key = entry[0]] = (dest = obj[key]) ?
+          (utils$1.isArray(dest) ? [...dest, entry[1]] : [dest, entry[1]]) : entry[1];
+      }
+
+      setHeaders(obj, valueOrRewrite);
+    } else {
+      header != null && setHeader(valueOrRewrite, header, rewrite);
+    }
+
+    return this;
+  }
+
+  get(header, parser) {
+    header = normalizeHeader(header);
+
+    if (header) {
+      const key = utils$1.findKey(this, header);
+
+      if (key) {
+        const value = this[key];
+
+        if (!parser) {
+          return value;
+        }
+
+        if (parser === true) {
+          return parseTokens(value);
+        }
+
+        if (utils$1.isFunction(parser)) {
+          return parser.call(this, value, key);
+        }
+
+        if (utils$1.isRegExp(parser)) {
+          return parser.exec(value);
+        }
+
+        throw new TypeError('parser must be boolean|regexp|function');
+      }
+    }
+  }
+
+  has(header, matcher) {
+    header = normalizeHeader(header);
+
+    if (header) {
+      const key = utils$1.findKey(this, header);
+
+      return !!(key && this[key] !== undefined && (!matcher || matchHeaderValue(this, this[key], key, matcher)));
+    }
+
+    return false;
+  }
+
+  delete(header, matcher) {
+    const self = this;
+    let deleted = false;
+
+    function deleteHeader(_header) {
+      _header = normalizeHeader(_header);
+
+      if (_header) {
+        const key = utils$1.findKey(self, _header);
+
+        if (key && (!matcher || matchHeaderValue(self, self[key], key, matcher))) {
+          delete self[key];
+
+          deleted = true;
+        }
+      }
+    }
+
+    if (utils$1.isArray(header)) {
+      header.forEach(deleteHeader);
+    } else {
+      deleteHeader(header);
+    }
+
+    return deleted;
+  }
+
+  clear(matcher) {
+    const keys = Object.keys(this);
+    let i = keys.length;
+    let deleted = false;
+
+    while (i--) {
+      const key = keys[i];
+      if(!matcher || matchHeaderValue(this, this[key], key, matcher, true)) {
+        delete this[key];
+        deleted = true;
+      }
+    }
+
+    return deleted;
+  }
+
+  normalize(format) {
+    const self = this;
+    const headers = {};
+
+    utils$1.forEach(this, (value, header) => {
+      const key = utils$1.findKey(headers, header);
+
+      if (key) {
+        self[key] = normalizeValue(value);
+        delete self[header];
+        return;
+      }
+
+      const normalized = format ? formatHeader(header) : String(header).trim();
+
+      if (normalized !== header) {
+        delete self[header];
+      }
+
+      self[normalized] = normalizeValue(value);
+
+      headers[normalized] = true;
+    });
+
+    return this;
+  }
+
+  concat(...targets) {
+    return this.constructor.concat(this, ...targets);
+  }
+
+  toJSON(asStrings) {
+    const obj = Object.create(null);
+
+    utils$1.forEach(this, (value, header) => {
+      value != null && value !== false && (obj[header] = asStrings && utils$1.isArray(value) ? value.join(', ') : value);
+    });
+
+    return obj;
+  }
+
+  [Symbol.iterator]() {
+    return Object.entries(this.toJSON())[Symbol.iterator]();
+  }
+
+  toString() {
+    return Object.entries(this.toJSON()).map(([header, value]) => header + ': ' + value).join('\n');
+  }
+
+  getSetCookie() {
+    return this.get("set-cookie") || [];
+  }
+
+  get [Symbol.toStringTag]() {
+    return 'AxiosHeaders';
+  }
+
+  static from(thing) {
+    return thing instanceof this ? thing : new this(thing);
+  }
+
+  static concat(first, ...targets) {
+    const computed = new this(first);
+
+    targets.forEach((target) => computed.set(target));
+
+    return computed;
+  }
+
+  static accessor(header) {
+    const internals = this[$internals] = (this[$internals] = {
+      accessors: {}
+    });
+
+    const accessors = internals.accessors;
+    const prototype = this.prototype;
+
+    function defineAccessor(_header) {
+      const lHeader = normalizeHeader(_header);
+
+      if (!accessors[lHeader]) {
+        buildAccessors(prototype, _header);
+        accessors[lHeader] = true;
+      }
+    }
+
+    utils$1.isArray(header) ? header.forEach(defineAccessor) : defineAccessor(header);
+
+    return this;
+  }
+}
+
+AxiosHeaders.accessor(['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding', 'User-Agent', 'Authorization']);
+
+// reserved names hotfix
+utils$1.reduceDescriptors(AxiosHeaders.prototype, ({value}, key) => {
+  let mapped = key[0].toUpperCase() + key.slice(1); // map `set` => `Set`
+  return {
+    get: () => value,
+    set(headerValue) {
+      this[mapped] = headerValue;
+    }
+  }
+});
+
+utils$1.freezeMethods(AxiosHeaders);
+
+var AxiosHeaders$1 = AxiosHeaders;
+
+/**
+ * Transform the data for a request or a response
+ *
+ * @param {Array|Function} fns A single function or Array of functions
+ * @param {?Object} response The response object
+ *
+ * @returns {*} The resulting transformed data
+ */
+function transformData(fns, response) {
+  const config = this || defaults$1;
+  const context = response || config;
+  const headers = AxiosHeaders$1.from(context.headers);
+  let data = context.data;
+
+  utils$1.forEach(fns, function transform(fn) {
+    data = fn.call(config, data, headers.normalize(), response ? response.status : undefined);
+  });
+
+  headers.normalize();
+
+  return data;
+}
+
+function isCancel(value) {
+  return !!(value && value.__CANCEL__);
+}
+
+/**
+ * A `CanceledError` is an object that is thrown when an operation is canceled.
+ *
+ * @param {string=} message The message.
+ * @param {Object=} config The config.
+ * @param {Object=} request The request.
+ *
+ * @returns {CanceledError} The created error.
+ */
+function CanceledError(message, config, request) {
+  // eslint-disable-next-line no-eq-null,eqeqeq
+  AxiosError.call(this, message == null ? 'canceled' : message, AxiosError.ERR_CANCELED, config, request);
+  this.name = 'CanceledError';
+}
+
+utils$1.inherits(CanceledError, AxiosError, {
+  __CANCEL__: true
+});
+
+/**
+ * Resolve or reject a Promise based on response status.
+ *
+ * @param {Function} resolve A function that resolves the promise.
+ * @param {Function} reject A function that rejects the promise.
+ * @param {object} response The response.
+ *
+ * @returns {object} The response.
+ */
+function settle(resolve, reject, response) {
+  const validateStatus = response.config.validateStatus;
+  if (!response.status || !validateStatus || validateStatus(response.status)) {
+    resolve(response);
+  } else {
+    reject(new AxiosError(
+      'Request failed with status code ' + response.status,
+      [AxiosError.ERR_BAD_REQUEST, AxiosError.ERR_BAD_RESPONSE][Math.floor(response.status / 100) - 4],
+      response.config,
+      response.request,
+      response
+    ));
+  }
+}
+
+function parseProtocol(url) {
+  const match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
+  return match && match[1] || '';
+}
+
+/**
+ * Calculate data maxRate
+ * @param {Number} [samplesCount= 10]
+ * @param {Number} [min= 1000]
+ * @returns {Function}
+ */
+function speedometer(samplesCount, min) {
+  samplesCount = samplesCount || 10;
+  const bytes = new Array(samplesCount);
+  const timestamps = new Array(samplesCount);
+  let head = 0;
+  let tail = 0;
+  let firstSampleTS;
+
+  min = min !== undefined ? min : 1000;
+
+  return function push(chunkLength) {
+    const now = Date.now();
+
+    const startedAt = timestamps[tail];
+
+    if (!firstSampleTS) {
+      firstSampleTS = now;
+    }
+
+    bytes[head] = chunkLength;
+    timestamps[head] = now;
+
+    let i = tail;
+    let bytesCount = 0;
+
+    while (i !== head) {
+      bytesCount += bytes[i++];
+      i = i % samplesCount;
+    }
+
+    head = (head + 1) % samplesCount;
+
+    if (head === tail) {
+      tail = (tail + 1) % samplesCount;
+    }
+
+    if (now - firstSampleTS < min) {
+      return;
+    }
+
+    const passed = startedAt && now - startedAt;
+
+    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
+  };
+}
+
+/**
+ * Throttle decorator
+ * @param {Function} fn
+ * @param {Number} freq
+ * @return {Function}
+ */
+function throttle(fn, freq) {
+  let timestamp = 0;
+  let threshold = 1000 / freq;
+  let lastArgs;
+  let timer;
+
+  const invoke = (args, now = Date.now()) => {
+    timestamp = now;
+    lastArgs = null;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn(...args);
+  };
+
+  const throttled = (...args) => {
+    const now = Date.now();
+    const passed = now - timestamp;
+    if ( passed >= threshold) {
+      invoke(args, now);
+    } else {
+      lastArgs = args;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null;
+          invoke(lastArgs);
+        }, threshold - passed);
+      }
+    }
+  };
+
+  const flush = () => lastArgs && invoke(lastArgs);
+
+  return [throttled, flush];
+}
+
+const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
+  let bytesNotified = 0;
+  const _speedometer = speedometer(50, 250);
+
+  return throttle(e => {
+    const loaded = e.loaded;
+    const total = e.lengthComputable ? e.total : undefined;
+    const progressBytes = loaded - bytesNotified;
+    const rate = _speedometer(progressBytes);
+    const inRange = loaded <= total;
+
+    bytesNotified = loaded;
+
+    const data = {
+      loaded,
+      total,
+      progress: total ? (loaded / total) : undefined,
+      bytes: progressBytes,
+      rate: rate ? rate : undefined,
+      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
+      event: e,
+      lengthComputable: total != null,
+      [isDownloadStream ? 'download' : 'upload']: true
+    };
+
+    listener(data);
+  }, freq);
+};
+
+const progressEventDecorator = (total, throttled) => {
+  const lengthComputable = total != null;
+
+  return [(loaded) => throttled[0]({
+    lengthComputable,
+    total,
+    loaded
+  }), throttled[1]];
+};
+
+const asyncDecorator = (fn) => (...args) => utils$1.asap(() => fn(...args));
+
+var isURLSameOrigin = platform.hasStandardBrowserEnv ? ((origin, isMSIE) => (url) => {
+  url = new URL(url, platform.origin);
+
+  return (
+    origin.protocol === url.protocol &&
+    origin.host === url.host &&
+    (isMSIE || origin.port === url.port)
+  );
+})(
+  new URL(platform.origin),
+  platform.navigator && /(msie|trident)/i.test(platform.navigator.userAgent)
+) : () => true;
+
+var cookies = platform.hasStandardBrowserEnv ?
+
+  // Standard browser envs support document.cookie
+  {
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
+
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
+
+      document.cookie = cookie.join('; ');
+    },
+
+    read(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
+    },
+
+    remove(name) {
+      this.write(name, '', Date.now() - 86400000);
+    }
+  }
+
+  :
+
+  // Non-standard browser env (web workers, react-native) lack needed support.
+  {
+    write() {},
+    read() {
+      return null;
+    },
+    remove() {}
+  };
+
+/**
+ * Determines whether the specified URL is absolute
+ *
+ * @param {string} url The URL to test
+ *
+ * @returns {boolean} True if the specified URL is absolute, otherwise false
+ */
+function isAbsoluteURL(url) {
+  // A URL is considered absolute if it begins with "<scheme>://" or "//" (protocol-relative URL).
+  // RFC 3986 defines scheme name as a sequence of characters beginning with a letter and followed
+  // by any combination of letters, digits, plus, period, or hyphen.
+  return /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url);
+}
+
+/**
+ * Creates a new URL by combining the specified URLs
+ *
+ * @param {string} baseURL The base URL
+ * @param {string} relativeURL The relative URL
+ *
+ * @returns {string} The combined URL
+ */
+function combineURLs(baseURL, relativeURL) {
+  return relativeURL
+    ? baseURL.replace(/\/?\/$/, '') + '/' + relativeURL.replace(/^\/+/, '')
+    : baseURL;
+}
+
+/**
+ * Creates a new URL by combining the baseURL with the requestedURL,
+ * only when the requestedURL is not already an absolute URL.
+ * If the requestURL is absolute, this function returns the requestedURL untouched.
+ *
+ * @param {string} baseURL The base URL
+ * @param {string} requestedURL Absolute or relative URL to combine
+ *
+ * @returns {string} The combined full path
+ */
+function buildFullPath(baseURL, requestedURL, allowAbsoluteUrls) {
+  let isRelativeUrl = !isAbsoluteURL(requestedURL);
+  if (baseURL && (isRelativeUrl || allowAbsoluteUrls == false)) {
+    return combineURLs(baseURL, requestedURL);
+  }
+  return requestedURL;
+}
+
+const headersToObject = (thing) => thing instanceof AxiosHeaders$1 ? { ...thing } : thing;
+
+/**
+ * Config-specific merge-function which creates a new config-object
+ * by merging two configuration objects together.
+ *
+ * @param {Object} config1
+ * @param {Object} config2
+ *
+ * @returns {Object} New object resulting from merging config2 to config1
+ */
+function mergeConfig(config1, config2) {
+  // eslint-disable-next-line no-param-reassign
+  config2 = config2 || {};
+  const config = {};
+
+  function getMergedValue(target, source, prop, caseless) {
+    if (utils$1.isPlainObject(target) && utils$1.isPlainObject(source)) {
+      return utils$1.merge.call({caseless}, target, source);
+    } else if (utils$1.isPlainObject(source)) {
+      return utils$1.merge({}, source);
+    } else if (utils$1.isArray(source)) {
+      return source.slice();
+    }
+    return source;
+  }
+
+  // eslint-disable-next-line consistent-return
+  function mergeDeepProperties(a, b, prop , caseless) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(a, b, prop , caseless);
+    } else if (!utils$1.isUndefined(a)) {
+      return getMergedValue(undefined, a, prop , caseless);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function valueFromConfig2(a, b) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(undefined, b);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function defaultToConfig2(a, b) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(undefined, b);
+    } else if (!utils$1.isUndefined(a)) {
+      return getMergedValue(undefined, a);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function mergeDirectKeys(a, b, prop) {
+    if (prop in config2) {
+      return getMergedValue(a, b);
+    } else if (prop in config1) {
+      return getMergedValue(undefined, a);
+    }
+  }
+
+  const mergeMap = {
+    url: valueFromConfig2,
+    method: valueFromConfig2,
+    data: valueFromConfig2,
+    baseURL: defaultToConfig2,
+    transformRequest: defaultToConfig2,
+    transformResponse: defaultToConfig2,
+    paramsSerializer: defaultToConfig2,
+    timeout: defaultToConfig2,
+    timeoutMessage: defaultToConfig2,
+    withCredentials: defaultToConfig2,
+    withXSRFToken: defaultToConfig2,
+    adapter: defaultToConfig2,
+    responseType: defaultToConfig2,
+    xsrfCookieName: defaultToConfig2,
+    xsrfHeaderName: defaultToConfig2,
+    onUploadProgress: defaultToConfig2,
+    onDownloadProgress: defaultToConfig2,
+    decompress: defaultToConfig2,
+    maxContentLength: defaultToConfig2,
+    maxBodyLength: defaultToConfig2,
+    beforeRedirect: defaultToConfig2,
+    transport: defaultToConfig2,
+    httpAgent: defaultToConfig2,
+    httpsAgent: defaultToConfig2,
+    cancelToken: defaultToConfig2,
+    socketPath: defaultToConfig2,
+    responseEncoding: defaultToConfig2,
+    validateStatus: mergeDirectKeys,
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+  };
+
+  utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
+    const merge = mergeMap[prop] || mergeDeepProperties;
+    const configValue = merge(config1[prop], config2[prop], prop);
+    (utils$1.isUndefined(configValue) && merge !== mergeDirectKeys) || (config[prop] = configValue);
+  });
+
+  return config;
+}
+
+var resolveConfig = (config) => {
+  const newConfig = mergeConfig({}, config);
+
+  let {data, withXSRFToken, xsrfHeaderName, xsrfCookieName, headers, auth} = newConfig;
+
+  newConfig.headers = headers = AxiosHeaders$1.from(headers);
+
+  newConfig.url = buildURL(buildFullPath(newConfig.baseURL, newConfig.url, newConfig.allowAbsoluteUrls), config.params, config.paramsSerializer);
+
+  // HTTP basic authentication
+  if (auth) {
+    headers.set('Authorization', 'Basic ' +
+      btoa((auth.username || '') + ':' + (auth.password ? unescape(encodeURIComponent(auth.password)) : ''))
+    );
+  }
+
+  let contentType;
+
+  if (utils$1.isFormData(data)) {
+    if (platform.hasStandardBrowserEnv || platform.hasStandardBrowserWebWorkerEnv) {
+      headers.setContentType(undefined); // Let the browser set it
+    } else if ((contentType = headers.getContentType()) !== false) {
+      // fix semicolon duplication issue for ReactNative FormData implementation
+      const [type, ...tokens] = contentType ? contentType.split(';').map(token => token.trim()).filter(Boolean) : [];
+      headers.setContentType([type || 'multipart/form-data', ...tokens].join('; '));
+    }
+  }
+
+  // Add xsrf header
+  // This is only done if running in a standard browser environment.
+  // Specifically not if we're in a web worker, or react-native.
+
+  if (platform.hasStandardBrowserEnv) {
+    withXSRFToken && utils$1.isFunction(withXSRFToken) && (withXSRFToken = withXSRFToken(newConfig));
+
+    if (withXSRFToken || (withXSRFToken !== false && isURLSameOrigin(newConfig.url))) {
+      // Add xsrf header
+      const xsrfValue = xsrfHeaderName && xsrfCookieName && cookies.read(xsrfCookieName);
+
+      if (xsrfValue) {
+        headers.set(xsrfHeaderName, xsrfValue);
+      }
+    }
+  }
+
+  return newConfig;
+};
+
+const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
+
+var xhrAdapter = isXHRAdapterSupported && function (config) {
+  return new Promise(function dispatchXhrRequest(resolve, reject) {
+    const _config = resolveConfig(config);
+    let requestData = _config.data;
+    const requestHeaders = AxiosHeaders$1.from(_config.headers).normalize();
+    let {responseType, onUploadProgress, onDownloadProgress} = _config;
+    let onCanceled;
+    let uploadThrottled, downloadThrottled;
+    let flushUpload, flushDownload;
+
+    function done() {
+      flushUpload && flushUpload(); // flush events
+      flushDownload && flushDownload(); // flush events
+
+      _config.cancelToken && _config.cancelToken.unsubscribe(onCanceled);
+
+      _config.signal && _config.signal.removeEventListener('abort', onCanceled);
+    }
+
+    let request = new XMLHttpRequest();
+
+    request.open(_config.method.toUpperCase(), _config.url, true);
+
+    // Set the request timeout in MS
+    request.timeout = _config.timeout;
+
+    function onloadend() {
+      if (!request) {
+        return;
+      }
+      // Prepare the response
+      const responseHeaders = AxiosHeaders$1.from(
+        'getAllResponseHeaders' in request && request.getAllResponseHeaders()
+      );
+      const responseData = !responseType || responseType === 'text' || responseType === 'json' ?
+        request.responseText : request.response;
+      const response = {
+        data: responseData,
+        status: request.status,
+        statusText: request.statusText,
+        headers: responseHeaders,
+        config,
+        request
+      };
+
+      settle(function _resolve(value) {
+        resolve(value);
+        done();
+      }, function _reject(err) {
+        reject(err);
+        done();
+      }, response);
+
+      // Clean up request
+      request = null;
+    }
+
+    if ('onloadend' in request) {
+      // Use onloadend if available
+      request.onloadend = onloadend;
+    } else {
+      // Listen for ready state to emulate onloadend
+      request.onreadystatechange = function handleLoad() {
+        if (!request || request.readyState !== 4) {
+          return;
+        }
+
+        // The request errored out and we didn't get a response, this will be
+        // handled by onerror instead
+        // With one exception: request that using file: protocol, most browsers
+        // will return status as 0 even though it's a successful request
+        if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
+          return;
+        }
+        // readystate handler is calling before onerror or ontimeout handlers,
+        // so we should call onloadend on the next 'tick'
+        setTimeout(onloadend);
+      };
+    }
+
+    // Handle browser request cancellation (as opposed to a manual cancellation)
+    request.onabort = function handleAbort() {
+      if (!request) {
+        return;
+      }
+
+      reject(new AxiosError('Request aborted', AxiosError.ECONNABORTED, config, request));
+
+      // Clean up request
+      request = null;
+    };
+
+    // Handle low level network errors
+    request.onerror = function handleError() {
+      // Real errors are hidden from us by the browser
+      // onerror should only fire if it's a network error
+      reject(new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, request));
+
+      // Clean up request
+      request = null;
+    };
+
+    // Handle timeout
+    request.ontimeout = function handleTimeout() {
+      let timeoutErrorMessage = _config.timeout ? 'timeout of ' + _config.timeout + 'ms exceeded' : 'timeout exceeded';
+      const transitional = _config.transitional || transitionalDefaults;
+      if (_config.timeoutErrorMessage) {
+        timeoutErrorMessage = _config.timeoutErrorMessage;
+      }
+      reject(new AxiosError(
+        timeoutErrorMessage,
+        transitional.clarifyTimeoutError ? AxiosError.ETIMEDOUT : AxiosError.ECONNABORTED,
+        config,
+        request));
+
+      // Clean up request
+      request = null;
+    };
+
+    // Remove Content-Type if data is undefined
+    requestData === undefined && requestHeaders.setContentType(null);
+
+    // Add headers to the request
+    if ('setRequestHeader' in request) {
+      utils$1.forEach(requestHeaders.toJSON(), function setRequestHeader(val, key) {
+        request.setRequestHeader(key, val);
+      });
+    }
+
+    // Add withCredentials to request if needed
+    if (!utils$1.isUndefined(_config.withCredentials)) {
+      request.withCredentials = !!_config.withCredentials;
+    }
+
+    // Add responseType to request if needed
+    if (responseType && responseType !== 'json') {
+      request.responseType = _config.responseType;
+    }
+
+    // Handle progress if needed
+    if (onDownloadProgress) {
+      ([downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true));
+      request.addEventListener('progress', downloadThrottled);
+    }
+
+    // Not all browsers support upload events
+    if (onUploadProgress && request.upload) {
+      ([uploadThrottled, flushUpload] = progressEventReducer(onUploadProgress));
+
+      request.upload.addEventListener('progress', uploadThrottled);
+
+      request.upload.addEventListener('loadend', flushUpload);
+    }
+
+    if (_config.cancelToken || _config.signal) {
+      // Handle cancellation
+      // eslint-disable-next-line func-names
+      onCanceled = cancel => {
+        if (!request) {
+          return;
+        }
+        reject(!cancel || cancel.type ? new CanceledError(null, config, request) : cancel);
+        request.abort();
+        request = null;
+      };
+
+      _config.cancelToken && _config.cancelToken.subscribe(onCanceled);
+      if (_config.signal) {
+        _config.signal.aborted ? onCanceled() : _config.signal.addEventListener('abort', onCanceled);
+      }
+    }
+
+    const protocol = parseProtocol(_config.url);
+
+    if (protocol && platform.protocols.indexOf(protocol) === -1) {
+      reject(new AxiosError('Unsupported protocol ' + protocol + ':', AxiosError.ERR_BAD_REQUEST, config));
+      return;
+    }
+
+
+    // Send the request
+    request.send(requestData || null);
+  });
+};
+
+const composeSignals = (signals, timeout) => {
+  const {length} = (signals = signals ? signals.filter(Boolean) : []);
+
+  if (timeout || length) {
+    let controller = new AbortController();
+
+    let aborted;
+
+    const onabort = function (reason) {
+      if (!aborted) {
+        aborted = true;
+        unsubscribe();
+        const err = reason instanceof Error ? reason : this.reason;
+        controller.abort(err instanceof AxiosError ? err : new CanceledError(err instanceof Error ? err.message : err));
+      }
+    };
+
+    let timer = timeout && setTimeout(() => {
+      timer = null;
+      onabort(new AxiosError(`timeout ${timeout} of ms exceeded`, AxiosError.ETIMEDOUT));
+    }, timeout);
+
+    const unsubscribe = () => {
+      if (signals) {
+        timer && clearTimeout(timer);
+        timer = null;
+        signals.forEach(signal => {
+          signal.unsubscribe ? signal.unsubscribe(onabort) : signal.removeEventListener('abort', onabort);
+        });
+        signals = null;
+      }
+    };
+
+    signals.forEach((signal) => signal.addEventListener('abort', onabort));
+
+    const {signal} = controller;
+
+    signal.unsubscribe = () => utils$1.asap(unsubscribe);
+
+    return signal;
+  }
+};
+
+var composeSignals$1 = composeSignals;
+
+const streamChunk = function* (chunk, chunkSize) {
+  let len = chunk.byteLength;
+
+  if (!chunkSize || len < chunkSize) {
+    yield chunk;
+    return;
+  }
+
+  let pos = 0;
+  let end;
+
+  while (pos < len) {
+    end = pos + chunkSize;
+    yield chunk.slice(pos, end);
+    pos = end;
+  }
+};
+
+const readBytes = async function* (iterable, chunkSize) {
+  for await (const chunk of readStream(iterable)) {
+    yield* streamChunk(chunk, chunkSize);
+  }
+};
+
+const readStream = async function* (stream) {
+  if (stream[Symbol.asyncIterator]) {
+    yield* stream;
+    return;
+  }
+
+  const reader = stream.getReader();
+  try {
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) {
+        break;
+      }
+      yield value;
+    }
+  } finally {
+    await reader.cancel();
+  }
+};
+
+const trackStream = (stream, chunkSize, onProgress, onFinish) => {
+  const iterator = readBytes(stream, chunkSize);
+
+  let bytes = 0;
+  let done;
+  let _onFinish = (e) => {
+    if (!done) {
+      done = true;
+      onFinish && onFinish(e);
+    }
+  };
+
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        const {done, value} = await iterator.next();
+
+        if (done) {
+         _onFinish();
+          controller.close();
+          return;
+        }
+
+        let len = value.byteLength;
+        if (onProgress) {
+          let loadedBytes = bytes += len;
+          onProgress(loadedBytes);
+        }
+        controller.enqueue(new Uint8Array(value));
+      } catch (err) {
+        _onFinish(err);
+        throw err;
+      }
+    },
+    cancel(reason) {
+      _onFinish(reason);
+      return iterator.return();
+    }
+  }, {
+    highWaterMark: 2
+  })
+};
+
+const isFetchSupported = typeof fetch === 'function' && typeof Request === 'function' && typeof Response === 'function';
+const isReadableStreamSupported = isFetchSupported && typeof ReadableStream === 'function';
+
+// used only inside the fetch adapter
+const encodeText = isFetchSupported && (typeof TextEncoder === 'function' ?
+    ((encoder) => (str) => encoder.encode(str))(new TextEncoder()) :
+    async (str) => new Uint8Array(await new Response(str).arrayBuffer())
+);
+
+const test = (fn, ...args) => {
+  try {
+    return !!fn(...args);
+  } catch (e) {
+    return false
+  }
+};
+
+const supportsRequestStream = isReadableStreamSupported && test(() => {
+  let duplexAccessed = false;
+
+  const hasContentType = new Request(platform.origin, {
+    body: new ReadableStream(),
+    method: 'POST',
+    get duplex() {
+      duplexAccessed = true;
+      return 'half';
+    },
+  }).headers.has('Content-Type');
+
+  return duplexAccessed && !hasContentType;
+});
+
+const DEFAULT_CHUNK_SIZE = 64 * 1024;
+
+const supportsResponseStream = isReadableStreamSupported &&
+  test(() => utils$1.isReadableStream(new Response('').body));
+
+
+const resolvers = {
+  stream: supportsResponseStream && ((res) => res.body)
+};
+
+isFetchSupported && (((res) => {
+  ['text', 'arrayBuffer', 'blob', 'formData', 'stream'].forEach(type => {
+    !resolvers[type] && (resolvers[type] = utils$1.isFunction(res[type]) ? (res) => res[type]() :
+      (_, config) => {
+        throw new AxiosError(`Response type '${type}' is not supported`, AxiosError.ERR_NOT_SUPPORT, config);
+      });
+  });
+})(new Response));
+
+const getBodyLength = async (body) => {
+  if (body == null) {
+    return 0;
+  }
+
+  if(utils$1.isBlob(body)) {
+    return body.size;
+  }
+
+  if(utils$1.isSpecCompliantForm(body)) {
+    const _request = new Request(platform.origin, {
+      method: 'POST',
+      body,
+    });
+    return (await _request.arrayBuffer()).byteLength;
+  }
+
+  if(utils$1.isArrayBufferView(body) || utils$1.isArrayBuffer(body)) {
+    return body.byteLength;
+  }
+
+  if(utils$1.isURLSearchParams(body)) {
+    body = body + '';
+  }
+
+  if(utils$1.isString(body)) {
+    return (await encodeText(body)).byteLength;
+  }
+};
+
+const resolveBodyLength = async (headers, body) => {
+  const length = utils$1.toFiniteNumber(headers.getContentLength());
+
+  return length == null ? getBodyLength(body) : length;
+};
+
+var fetchAdapter = isFetchSupported && (async (config) => {
+  let {
+    url,
+    method,
+    data,
+    signal,
+    cancelToken,
+    timeout,
+    onDownloadProgress,
+    onUploadProgress,
+    responseType,
+    headers,
+    withCredentials = 'same-origin',
+    fetchOptions
+  } = resolveConfig(config);
+
+  responseType = responseType ? (responseType + '').toLowerCase() : 'text';
+
+  let composedSignal = composeSignals$1([signal, cancelToken && cancelToken.toAbortSignal()], timeout);
+
+  let request;
+
+  const unsubscribe = composedSignal && composedSignal.unsubscribe && (() => {
+      composedSignal.unsubscribe();
+  });
+
+  let requestContentLength;
+
+  try {
+    if (
+      onUploadProgress && supportsRequestStream && method !== 'get' && method !== 'head' &&
+      (requestContentLength = await resolveBodyLength(headers, data)) !== 0
+    ) {
+      let _request = new Request(url, {
+        method: 'POST',
+        body: data,
+        duplex: "half"
+      });
+
+      let contentTypeHeader;
+
+      if (utils$1.isFormData(data) && (contentTypeHeader = _request.headers.get('content-type'))) {
+        headers.setContentType(contentTypeHeader);
+      }
+
+      if (_request.body) {
+        const [onProgress, flush] = progressEventDecorator(
+          requestContentLength,
+          progressEventReducer(asyncDecorator(onUploadProgress))
+        );
+
+        data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, onProgress, flush);
+      }
+    }
+
+    if (!utils$1.isString(withCredentials)) {
+      withCredentials = withCredentials ? 'include' : 'omit';
+    }
+
+    // Cloudflare Workers throws when credentials are defined
+    // see https://github.com/cloudflare/workerd/issues/902
+    const isCredentialsSupported = "credentials" in Request.prototype;
+    request = new Request(url, {
+      ...fetchOptions,
+      signal: composedSignal,
+      method: method.toUpperCase(),
+      headers: headers.normalize().toJSON(),
+      body: data,
+      duplex: "half",
+      credentials: isCredentialsSupported ? withCredentials : undefined
+    });
+
+    let response = await fetch(request, fetchOptions);
+
+    const isStreamResponse = supportsResponseStream && (responseType === 'stream' || responseType === 'response');
+
+    if (supportsResponseStream && (onDownloadProgress || (isStreamResponse && unsubscribe))) {
+      const options = {};
+
+      ['status', 'statusText', 'headers'].forEach(prop => {
+        options[prop] = response[prop];
+      });
+
+      const responseContentLength = utils$1.toFiniteNumber(response.headers.get('content-length'));
+
+      const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
+        responseContentLength,
+        progressEventReducer(asyncDecorator(onDownloadProgress), true)
+      ) || [];
+
+      response = new Response(
+        trackStream(response.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+          flush && flush();
+          unsubscribe && unsubscribe();
+        }),
+        options
+      );
+    }
+
+    responseType = responseType || 'text';
+
+    let responseData = await resolvers[utils$1.findKey(resolvers, responseType) || 'text'](response, config);
+
+    !isStreamResponse && unsubscribe && unsubscribe();
+
+    return await new Promise((resolve, reject) => {
+      settle(resolve, reject, {
+        data: responseData,
+        headers: AxiosHeaders$1.from(response.headers),
+        status: response.status,
+        statusText: response.statusText,
+        config,
+        request
+      });
+    })
+  } catch (err) {
+    unsubscribe && unsubscribe();
+
+    if (err && err.name === 'TypeError' && /Load failed|fetch/i.test(err.message)) {
+      throw Object.assign(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, request),
+        {
+          cause: err.cause || err
+        }
+      )
+    }
+
+    throw AxiosError.from(err, err && err.code, config, request);
+  }
+});
+
+const knownAdapters = {
+  http: httpAdapter,
+  xhr: xhrAdapter,
+  fetch: fetchAdapter
+};
+
+utils$1.forEach(knownAdapters, (fn, value) => {
+  if (fn) {
+    try {
+      Object.defineProperty(fn, 'name', {value});
+    } catch (e) {
+      // eslint-disable-next-line no-empty
+    }
+    Object.defineProperty(fn, 'adapterName', {value});
+  }
+});
+
+const renderReason = (reason) => `- ${reason}`;
+
+const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
+
+var adapters = {
+  getAdapter: (adapters) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
+  adapters: knownAdapters
+};
+
+/**
+ * Throws a `CanceledError` if cancellation has been requested.
+ *
+ * @param {Object} config The config that is to be used for the request
+ *
+ * @returns {void}
+ */
+function throwIfCancellationRequested(config) {
+  if (config.cancelToken) {
+    config.cancelToken.throwIfRequested();
+  }
+
+  if (config.signal && config.signal.aborted) {
+    throw new CanceledError(null, config);
+  }
+}
+
+/**
+ * Dispatch a request to the server using the configured adapter.
+ *
+ * @param {object} config The config that is to be used for the request
+ *
+ * @returns {Promise} The Promise to be fulfilled
+ */
+function dispatchRequest(config) {
+  throwIfCancellationRequested(config);
+
+  config.headers = AxiosHeaders$1.from(config.headers);
+
+  // Transform request data
+  config.data = transformData.call(
+    config,
+    config.transformRequest
+  );
+
+  if (['post', 'put', 'patch'].indexOf(config.method) !== -1) {
+    config.headers.setContentType('application/x-www-form-urlencoded', false);
+  }
+
+  const adapter = adapters.getAdapter(config.adapter || defaults$1.adapter);
+
+  return adapter(config).then(function onAdapterResolution(response) {
+    throwIfCancellationRequested(config);
+
+    // Transform response data
+    response.data = transformData.call(
+      config,
+      config.transformResponse,
+      response
+    );
+
+    response.headers = AxiosHeaders$1.from(response.headers);
+
+    return response;
+  }, function onAdapterRejection(reason) {
+    if (!isCancel(reason)) {
+      throwIfCancellationRequested(config);
+
+      // Transform response data
+      if (reason && reason.response) {
+        reason.response.data = transformData.call(
+          config,
+          config.transformResponse,
+          reason.response
+        );
+        reason.response.headers = AxiosHeaders$1.from(reason.response.headers);
+      }
+    }
+
+    return Promise.reject(reason);
+  });
+}
+
+const VERSION = "1.11.0";
+
+const validators$1 = {};
+
+// eslint-disable-next-line func-names
+['object', 'boolean', 'number', 'function', 'string', 'symbol'].forEach((type, i) => {
+  validators$1[type] = function validator(thing) {
+    return typeof thing === type || 'a' + (i < 1 ? 'n ' : ' ') + type;
+  };
+});
+
+const deprecatedWarnings = {};
+
+/**
+ * Transitional option validator
+ *
+ * @param {function|boolean?} validator - set to false if the transitional option has been removed
+ * @param {string?} version - deprecated version / removed since version
+ * @param {string?} message - some message with additional info
+ *
+ * @returns {function}
+ */
+validators$1.transitional = function transitional(validator, version, message) {
+  function formatMessage(opt, desc) {
+    return '[Axios v' + VERSION + '] Transitional option \'' + opt + '\'' + desc + (message ? '. ' + message : '');
+  }
+
+  // eslint-disable-next-line func-names
+  return (value, opt, opts) => {
+    if (validator === false) {
+      throw new AxiosError(
+        formatMessage(opt, ' has been removed' + (version ? ' in ' + version : '')),
+        AxiosError.ERR_DEPRECATED
+      );
+    }
+
+    if (version && !deprecatedWarnings[opt]) {
+      deprecatedWarnings[opt] = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        formatMessage(
+          opt,
+          ' has been deprecated since v' + version + ' and will be removed in the near future'
+        )
+      );
+    }
+
+    return validator ? validator(value, opt, opts) : true;
+  };
+};
+
+validators$1.spelling = function spelling(correctSpelling) {
+  return (value, opt) => {
+    // eslint-disable-next-line no-console
+    console.warn(`${opt} is likely a misspelling of ${correctSpelling}`);
+    return true;
+  }
+};
+
+/**
+ * Assert object's properties type
+ *
+ * @param {object} options
+ * @param {object} schema
+ * @param {boolean?} allowUnknown
+ *
+ * @returns {object}
+ */
+
+function assertOptions(options, schema, allowUnknown) {
+  if (typeof options !== 'object') {
+    throw new AxiosError('options must be an object', AxiosError.ERR_BAD_OPTION_VALUE);
+  }
+  const keys = Object.keys(options);
+  let i = keys.length;
+  while (i-- > 0) {
+    const opt = keys[i];
+    const validator = schema[opt];
+    if (validator) {
+      const value = options[opt];
+      const result = value === undefined || validator(value, opt, options);
+      if (result !== true) {
+        throw new AxiosError('option ' + opt + ' must be ' + result, AxiosError.ERR_BAD_OPTION_VALUE);
+      }
+      continue;
+    }
+    if (allowUnknown !== true) {
+      throw new AxiosError('Unknown option ' + opt, AxiosError.ERR_BAD_OPTION);
+    }
+  }
+}
+
+var validator = {
+  assertOptions,
+  validators: validators$1
+};
+
+const validators = validator.validators;
+
+/**
+ * Create a new instance of Axios
+ *
+ * @param {Object} instanceConfig The default config for the instance
+ *
+ * @return {Axios} A new instance of Axios
+ */
+class Axios {
+  constructor(instanceConfig) {
+    this.defaults = instanceConfig || {};
+    this.interceptors = {
+      request: new InterceptorManager$1(),
+      response: new InterceptorManager$1()
+    };
+  }
+
+  /**
+   * Dispatch a request
+   *
+   * @param {String|Object} configOrUrl The config specific for this request (merged with this.defaults)
+   * @param {?Object} config
+   *
+   * @returns {Promise} The Promise to be fulfilled
+   */
+  async request(configOrUrl, config) {
+    try {
+      return await this._request(configOrUrl, config);
+    } catch (err) {
+      if (err instanceof Error) {
+        let dummy = {};
+
+        Error.captureStackTrace ? Error.captureStackTrace(dummy) : (dummy = new Error());
+
+        // slice off the Error: ... line
+        const stack = dummy.stack ? dummy.stack.replace(/^.+\n/, '') : '';
+        try {
+          if (!err.stack) {
+            err.stack = stack;
+            // match without the 2 top stack lines
+          } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\n.+\n/, ''))) {
+            err.stack += '\n' + stack;
+          }
+        } catch (e) {
+          // ignore the case where "stack" is an un-writable property
+        }
+      }
+
+      throw err;
+    }
+  }
+
+  _request(configOrUrl, config) {
+    /*eslint no-param-reassign:0*/
+    // Allow for axios('example/url'[, config]) a la fetch API
+    if (typeof configOrUrl === 'string') {
+      config = config || {};
+      config.url = configOrUrl;
+    } else {
+      config = configOrUrl || {};
+    }
+
+    config = mergeConfig(this.defaults, config);
+
+    const {transitional, paramsSerializer, headers} = config;
+
+    if (transitional !== undefined) {
+      validator.assertOptions(transitional, {
+        silentJSONParsing: validators.transitional(validators.boolean),
+        forcedJSONParsing: validators.transitional(validators.boolean),
+        clarifyTimeoutError: validators.transitional(validators.boolean)
+      }, false);
+    }
+
+    if (paramsSerializer != null) {
+      if (utils$1.isFunction(paramsSerializer)) {
+        config.paramsSerializer = {
+          serialize: paramsSerializer
+        };
+      } else {
+        validator.assertOptions(paramsSerializer, {
+          encode: validators.function,
+          serialize: validators.function
+        }, true);
+      }
+    }
+
+    // Set config.allowAbsoluteUrls
+    if (config.allowAbsoluteUrls !== undefined) ; else if (this.defaults.allowAbsoluteUrls !== undefined) {
+      config.allowAbsoluteUrls = this.defaults.allowAbsoluteUrls;
+    } else {
+      config.allowAbsoluteUrls = true;
+    }
+
+    validator.assertOptions(config, {
+      baseUrl: validators.spelling('baseURL'),
+      withXsrfToken: validators.spelling('withXSRFToken')
+    }, true);
+
+    // Set config.method
+    config.method = (config.method || this.defaults.method || 'get').toLowerCase();
+
+    // Flatten headers
+    let contextHeaders = headers && utils$1.merge(
+      headers.common,
+      headers[config.method]
+    );
+
+    headers && utils$1.forEach(
+      ['delete', 'get', 'head', 'post', 'put', 'patch', 'common'],
+      (method) => {
+        delete headers[method];
+      }
+    );
+
+    config.headers = AxiosHeaders$1.concat(contextHeaders, headers);
+
+    // filter out skipped interceptors
+    const requestInterceptorChain = [];
+    let synchronousRequestInterceptors = true;
+    this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
+      if (typeof interceptor.runWhen === 'function' && interceptor.runWhen(config) === false) {
+        return;
+      }
+
+      synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
+
+      requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
+    });
+
+    const responseInterceptorChain = [];
+    this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
+      responseInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
+    });
+
+    let promise;
+    let i = 0;
+    let len;
+
+    if (!synchronousRequestInterceptors) {
+      const chain = [dispatchRequest.bind(this), undefined];
+      chain.unshift(...requestInterceptorChain);
+      chain.push(...responseInterceptorChain);
+      len = chain.length;
+
+      promise = Promise.resolve(config);
+
+      while (i < len) {
+        promise = promise.then(chain[i++], chain[i++]);
+      }
+
+      return promise;
+    }
+
+    len = requestInterceptorChain.length;
+
+    let newConfig = config;
+
+    i = 0;
+
+    while (i < len) {
+      const onFulfilled = requestInterceptorChain[i++];
+      const onRejected = requestInterceptorChain[i++];
+      try {
+        newConfig = onFulfilled(newConfig);
+      } catch (error) {
+        onRejected.call(this, error);
+        break;
+      }
+    }
+
+    try {
+      promise = dispatchRequest.call(this, newConfig);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+
+    i = 0;
+    len = responseInterceptorChain.length;
+
+    while (i < len) {
+      promise = promise.then(responseInterceptorChain[i++], responseInterceptorChain[i++]);
+    }
+
+    return promise;
+  }
+
+  getUri(config) {
+    config = mergeConfig(this.defaults, config);
+    const fullPath = buildFullPath(config.baseURL, config.url, config.allowAbsoluteUrls);
+    return buildURL(fullPath, config.params, config.paramsSerializer);
+  }
+}
+
+// Provide aliases for supported request methods
+utils$1.forEach(['delete', 'get', 'head', 'options'], function forEachMethodNoData(method) {
+  /*eslint func-names:0*/
+  Axios.prototype[method] = function(url, config) {
+    return this.request(mergeConfig(config || {}, {
+      method,
+      url,
+      data: (config || {}).data
+    }));
+  };
+});
+
+utils$1.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
+  /*eslint func-names:0*/
+
+  function generateHTTPMethod(isForm) {
+    return function httpMethod(url, data, config) {
+      return this.request(mergeConfig(config || {}, {
+        method,
+        headers: isForm ? {
+          'Content-Type': 'multipart/form-data'
+        } : {},
+        url,
+        data
+      }));
+    };
+  }
+
+  Axios.prototype[method] = generateHTTPMethod();
+
+  Axios.prototype[method + 'Form'] = generateHTTPMethod(true);
+});
+
+var Axios$1 = Axios;
+
+/**
+ * A `CancelToken` is an object that can be used to request cancellation of an operation.
+ *
+ * @param {Function} executor The executor function.
+ *
+ * @returns {CancelToken}
+ */
+class CancelToken {
+  constructor(executor) {
+    if (typeof executor !== 'function') {
+      throw new TypeError('executor must be a function.');
+    }
+
+    let resolvePromise;
+
+    this.promise = new Promise(function promiseExecutor(resolve) {
+      resolvePromise = resolve;
+    });
+
+    const token = this;
+
+    // eslint-disable-next-line func-names
+    this.promise.then(cancel => {
+      if (!token._listeners) return;
+
+      let i = token._listeners.length;
+
+      while (i-- > 0) {
+        token._listeners[i](cancel);
+      }
+      token._listeners = null;
+    });
+
+    // eslint-disable-next-line func-names
+    this.promise.then = onfulfilled => {
+      let _resolve;
+      // eslint-disable-next-line func-names
+      const promise = new Promise(resolve => {
+        token.subscribe(resolve);
+        _resolve = resolve;
+      }).then(onfulfilled);
+
+      promise.cancel = function reject() {
+        token.unsubscribe(_resolve);
+      };
+
+      return promise;
+    };
+
+    executor(function cancel(message, config, request) {
+      if (token.reason) {
+        // Cancellation has already been requested
+        return;
+      }
+
+      token.reason = new CanceledError(message, config, request);
+      resolvePromise(token.reason);
+    });
+  }
+
+  /**
+   * Throws a `CanceledError` if cancellation has been requested.
+   */
+  throwIfRequested() {
+    if (this.reason) {
+      throw this.reason;
+    }
+  }
+
+  /**
+   * Subscribe to the cancel signal
+   */
+
+  subscribe(listener) {
+    if (this.reason) {
+      listener(this.reason);
+      return;
+    }
+
+    if (this._listeners) {
+      this._listeners.push(listener);
+    } else {
+      this._listeners = [listener];
+    }
+  }
+
+  /**
+   * Unsubscribe from the cancel signal
+   */
+
+  unsubscribe(listener) {
+    if (!this._listeners) {
+      return;
+    }
+    const index = this._listeners.indexOf(listener);
+    if (index !== -1) {
+      this._listeners.splice(index, 1);
+    }
+  }
+
+  toAbortSignal() {
+    const controller = new AbortController();
+
+    const abort = (err) => {
+      controller.abort(err);
+    };
+
+    this.subscribe(abort);
+
+    controller.signal.unsubscribe = () => this.unsubscribe(abort);
+
+    return controller.signal;
+  }
+
+  /**
+   * Returns an object that contains a new `CancelToken` and a function that, when called,
+   * cancels the `CancelToken`.
+   */
+  static source() {
+    let cancel;
+    const token = new CancelToken(function executor(c) {
+      cancel = c;
+    });
+    return {
+      token,
+      cancel
+    };
+  }
+}
+
+var CancelToken$1 = CancelToken;
+
+/**
+ * Syntactic sugar for invoking a function and expanding an array for arguments.
+ *
+ * Common use case would be to use `Function.prototype.apply`.
+ *
+ *  ```js
+ *  function f(x, y, z) {}
+ *  var args = [1, 2, 3];
+ *  f.apply(null, args);
+ *  ```
+ *
+ * With `spread` this example can be re-written.
+ *
+ *  ```js
+ *  spread(function(x, y, z) {})([1, 2, 3]);
+ *  ```
+ *
+ * @param {Function} callback
+ *
+ * @returns {Function}
+ */
+function spread(callback) {
+  return function wrap(arr) {
+    return callback.apply(null, arr);
+  };
+}
+
+/**
+ * Determines whether the payload is an error thrown by Axios
+ *
+ * @param {*} payload The value to test
+ *
+ * @returns {boolean} True if the payload is an error thrown by Axios, otherwise false
+ */
+function isAxiosError(payload) {
+  return utils$1.isObject(payload) && (payload.isAxiosError === true);
+}
+
+const HttpStatusCode = {
+  Continue: 100,
+  SwitchingProtocols: 101,
+  Processing: 102,
+  EarlyHints: 103,
+  Ok: 200,
+  Created: 201,
+  Accepted: 202,
+  NonAuthoritativeInformation: 203,
+  NoContent: 204,
+  ResetContent: 205,
+  PartialContent: 206,
+  MultiStatus: 207,
+  AlreadyReported: 208,
+  ImUsed: 226,
+  MultipleChoices: 300,
+  MovedPermanently: 301,
+  Found: 302,
+  SeeOther: 303,
+  NotModified: 304,
+  UseProxy: 305,
+  Unused: 306,
+  TemporaryRedirect: 307,
+  PermanentRedirect: 308,
+  BadRequest: 400,
+  Unauthorized: 401,
+  PaymentRequired: 402,
+  Forbidden: 403,
+  NotFound: 404,
+  MethodNotAllowed: 405,
+  NotAcceptable: 406,
+  ProxyAuthenticationRequired: 407,
+  RequestTimeout: 408,
+  Conflict: 409,
+  Gone: 410,
+  LengthRequired: 411,
+  PreconditionFailed: 412,
+  PayloadTooLarge: 413,
+  UriTooLong: 414,
+  UnsupportedMediaType: 415,
+  RangeNotSatisfiable: 416,
+  ExpectationFailed: 417,
+  ImATeapot: 418,
+  MisdirectedRequest: 421,
+  UnprocessableEntity: 422,
+  Locked: 423,
+  FailedDependency: 424,
+  TooEarly: 425,
+  UpgradeRequired: 426,
+  PreconditionRequired: 428,
+  TooManyRequests: 429,
+  RequestHeaderFieldsTooLarge: 431,
+  UnavailableForLegalReasons: 451,
+  InternalServerError: 500,
+  NotImplemented: 501,
+  BadGateway: 502,
+  ServiceUnavailable: 503,
+  GatewayTimeout: 504,
+  HttpVersionNotSupported: 505,
+  VariantAlsoNegotiates: 506,
+  InsufficientStorage: 507,
+  LoopDetected: 508,
+  NotExtended: 510,
+  NetworkAuthenticationRequired: 511,
+};
+
+Object.entries(HttpStatusCode).forEach(([key, value]) => {
+  HttpStatusCode[value] = key;
+});
+
+var HttpStatusCode$1 = HttpStatusCode;
+
+/**
+ * Create an instance of Axios
+ *
+ * @param {Object} defaultConfig The default config for the instance
+ *
+ * @returns {Axios} A new instance of Axios
+ */
+function createInstance(defaultConfig) {
+  const context = new Axios$1(defaultConfig);
+  const instance = bind(Axios$1.prototype.request, context);
+
+  // Copy axios.prototype to instance
+  utils$1.extend(instance, Axios$1.prototype, context, {allOwnKeys: true});
+
+  // Copy context to instance
+  utils$1.extend(instance, context, null, {allOwnKeys: true});
+
+  // Factory for creating new instances
+  instance.create = function create(instanceConfig) {
+    return createInstance(mergeConfig(defaultConfig, instanceConfig));
+  };
+
+  return instance;
+}
+
+// Create the default instance to be exported
+const axios = createInstance(defaults$1);
+
+// Expose Axios class to allow class inheritance
+axios.Axios = Axios$1;
+
+// Expose Cancel & CancelToken
+axios.CanceledError = CanceledError;
+axios.CancelToken = CancelToken$1;
+axios.isCancel = isCancel;
+axios.VERSION = VERSION;
+axios.toFormData = toFormData;
+
+// Expose AxiosError class
+axios.AxiosError = AxiosError;
+
+// alias for CanceledError for backward compatibility
+axios.Cancel = axios.CanceledError;
+
+// Expose all/spread
+axios.all = function all(promises) {
+  return Promise.all(promises);
+};
+
+axios.spread = spread;
+
+// Expose isAxiosError
+axios.isAxiosError = isAxiosError;
+
+// Expose mergeConfig
+axios.mergeConfig = mergeConfig;
+
+axios.AxiosHeaders = AxiosHeaders$1;
+
+axios.formToJSON = thing => formDataToJSON(utils$1.isHTMLForm(thing) ? new FormData(thing) : thing);
+
+axios.getAdapter = adapters.getAdapter;
+
+axios.HttpStatusCode = HttpStatusCode$1;
+
+axios.default = axios;
+
+module.exports = axios;
+//# sourceMappingURL=axios.cjs.map
+
+
+/***/ }),
+
+/***/ "./node_modules/ua-parser-js/src/main/ua-parser.js":
+/*!*********************************************************!*\
+  !*** ./node_modules/ua-parser-js/src/main/ua-parser.js ***!
+  \*********************************************************/
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_RESULT__;/////////////////////////////////////////////////////////////////////////////////
+/* UAParser.js v2.0.4
+   Copyright © 2012-2025 Faisal Salman <f@faisalman.com>
+   AGPLv3 License *//*
+   Detect Browser, Engine, OS, CPU, and Device type/model from User-Agent data.
+   Supports browser & node.js environment. 
+   Demo   : https://uaparser.dev
+   Source : https://github.com/faisalman/ua-parser-js */
+/////////////////////////////////////////////////////////////////////////////////
+
+/* jshint esversion: 3 */ 
+/* globals window */
+
+(function (window, undefined) {
+
+    'use strict';
+    
+    //////////////
+    // Constants
+    /////////////
+
+    var LIBVERSION  = '2.0.4',
+        UA_MAX_LENGTH = 500,
+        USER_AGENT  = 'user-agent',
+        EMPTY       = '',
+        UNKNOWN     = '?',
+
+        // typeof
+        FUNC_TYPE   = 'function',
+        UNDEF_TYPE  = 'undefined',
+        OBJ_TYPE    = 'object',
+        STR_TYPE    = 'string',
+
+        // properties
+        UA_BROWSER  = 'browser',
+        UA_CPU      = 'cpu',
+        UA_DEVICE   = 'device',
+        UA_ENGINE   = 'engine',
+        UA_OS       = 'os',
+        UA_RESULT   = 'result',
+        
+        NAME        = 'name',
+        TYPE        = 'type',
+        VENDOR      = 'vendor',
+        VERSION     = 'version',
+        ARCHITECTURE= 'architecture',
+        MAJOR       = 'major',
+        MODEL       = 'model',
+
+        // device types
+        CONSOLE     = 'console',
+        MOBILE      = 'mobile',
+        TABLET      = 'tablet',
+        SMARTTV     = 'smarttv',
+        WEARABLE    = 'wearable',
+        XR          = 'xr',
+        EMBEDDED    = 'embedded',
+
+        // browser types
+        INAPP       = 'inapp',
+
+        // client hints
+        BRANDS      = 'brands',
+        FORMFACTORS = 'formFactors',
+        FULLVERLIST = 'fullVersionList',
+        PLATFORM    = 'platform',
+        PLATFORMVER = 'platformVersion',
+        BITNESS     = 'bitness',
+        CH_HEADER   = 'sec-ch-ua',
+        CH_HEADER_FULL_VER_LIST = CH_HEADER + '-full-version-list',
+        CH_HEADER_ARCH      = CH_HEADER + '-arch',
+        CH_HEADER_BITNESS   = CH_HEADER + '-' + BITNESS,
+        CH_HEADER_FORM_FACTORS = CH_HEADER + '-form-factors',
+        CH_HEADER_MOBILE    = CH_HEADER + '-' + MOBILE,
+        CH_HEADER_MODEL     = CH_HEADER + '-' + MODEL,
+        CH_HEADER_PLATFORM  = CH_HEADER + '-' + PLATFORM,
+        CH_HEADER_PLATFORM_VER = CH_HEADER_PLATFORM + '-version',
+        CH_ALL_VALUES       = [BRANDS, FULLVERLIST, MOBILE, MODEL, PLATFORM, PLATFORMVER, ARCHITECTURE, FORMFACTORS, BITNESS],
+
+        // device vendors
+        AMAZON      = 'Amazon',
+        APPLE       = 'Apple',
+        ASUS        = 'ASUS',
+        BLACKBERRY  = 'BlackBerry',
+        GOOGLE      = 'Google',
+        HUAWEI      = 'Huawei',
+        LENOVO      = 'Lenovo',
+        HONOR       = 'Honor',
+        LG          = 'LG',
+        MICROSOFT   = 'Microsoft',
+        MOTOROLA    = 'Motorola',
+        NVIDIA      = 'Nvidia',
+        ONEPLUS     = 'OnePlus',
+        OPPO        = 'OPPO',
+        SAMSUNG     = 'Samsung',
+        SHARP       = 'Sharp',
+        SONY        = 'Sony',
+        XIAOMI      = 'Xiaomi',
+        ZEBRA       = 'Zebra',
+
+        // browsers
+        CHROME      = 'Chrome',
+        CHROMIUM    = 'Chromium',
+        CHROMECAST  = 'Chromecast',
+        EDGE        = 'Edge',
+        FIREFOX     = 'Firefox',
+        OPERA       = 'Opera',
+        FACEBOOK    = 'Facebook',
+        SOGOU       = 'Sogou',
+
+        PREFIX_MOBILE  = 'Mobile ',
+        SUFFIX_BROWSER = ' Browser',
+
+        // os
+        WINDOWS     = 'Windows';
+   
+    var isWindow            = typeof window !== UNDEF_TYPE,
+        NAVIGATOR           = (isWindow && window.navigator) ? 
+                                window.navigator : 
+                                undefined,
+        NAVIGATOR_UADATA    = (NAVIGATOR && NAVIGATOR.userAgentData) ? 
+                                NAVIGATOR.userAgentData : 
+                                undefined;
+
+    ///////////
+    // Helper
+    //////////
+
+    var extend = function (defaultRgx, extensions) {
+            var mergedRgx = {};
+            var extraRgx = extensions;
+            if (!isExtensions(extensions)) {
+                extraRgx = {};
+                for (var i in extensions) {
+                    for (var j in extensions[i]) {
+                        extraRgx[j] = extensions[i][j].concat(extraRgx[j] ? extraRgx[j] : []);
+                    }
+                }
+            }
+            for (var k in defaultRgx) {
+                mergedRgx[k] = extraRgx[k] && extraRgx[k].length % 2 === 0 ? extraRgx[k].concat(defaultRgx[k]) : defaultRgx[k];
+            }
+            return mergedRgx;
+        },
+        enumerize = function (arr) {
+            var enums = {};
+            for (var i=0; i<arr.length; i++) {
+                enums[arr[i].toUpperCase()] = arr[i];
+            }
+            return enums;
+        },
+        has = function (str1, str2) {
+            if (typeof str1 === OBJ_TYPE && str1.length > 0) {
+                for (var i in str1) {
+                    if (lowerize(str2) == lowerize(str1[i])) return true;
+                }
+                return false;
+            }
+            return isString(str1) ? lowerize(str2) == lowerize(str1) : false;
+        },
+        isExtensions = function (obj, deep) {
+            for (var prop in obj) {
+                return /^(browser|cpu|device|engine|os)$/.test(prop) || (deep ? isExtensions(obj[prop]) : false);
+            }
+        },
+        isString = function (val) {
+            return typeof val === STR_TYPE;
+        },
+        itemListToArray = function (header) {
+            if (!header) return undefined;
+            var arr = [];
+            var tokens = strip(/\\?\"/g, header).split(',');
+            for (var i = 0; i < tokens.length; i++) {
+                if (tokens[i].indexOf(';') > -1) {
+                    var token = trim(tokens[i]).split(';v=');
+                    arr[i] = { brand : token[0], version : token[1] };
+                } else {
+                    arr[i] = trim(tokens[i]);
+                }
+            }
+            return arr;
+        },
+        lowerize = function (str) {
+            return isString(str) ? str.toLowerCase() : str;
+        },
+        majorize = function (version) {
+            return isString(version) ? strip(/[^\d\.]/g, version).split('.')[0] : undefined;
+        },
+        setProps = function (arr) {
+            for (var i in arr) {
+                var propName = arr[i];
+                if (typeof propName == OBJ_TYPE && propName.length == 2) {
+                    this[propName[0]] = propName[1];
+                } else {
+                    this[propName] = undefined;
+                }
+            }
+            return this;
+        },
+        strip = function (pattern, str) {
+            return isString(str) ? str.replace(pattern, EMPTY) : str;
+        },
+        stripQuotes = function (str) {
+            return strip(/\\?\"/g, str); 
+        },
+        trim = function (str, len) {
+            if (isString(str)) {
+                str = strip(/^\s\s*/, str);
+                return typeof len === UNDEF_TYPE ? str : str.substring(0, UA_MAX_LENGTH);
+            }
+    };
+
+    ///////////////
+    // Map helper
+    //////////////
+
+    var rgxMapper = function (ua, arrays) {
+
+            if(!ua || !arrays) return;
+
+            var i = 0, j, k, p, q, matches, match;
+
+            // loop through all regexes maps
+            while (i < arrays.length && !matches) {
+
+                var regex = arrays[i],       // even sequence (0,2,4,..)
+                    props = arrays[i + 1];   // odd sequence (1,3,5,..)
+                j = k = 0;
+
+                // try matching uastring with regexes
+                while (j < regex.length && !matches) {
+
+                    if (!regex[j]) { break; }
+                    matches = regex[j++].exec(ua);
+
+                    if (!!matches) {
+                        for (p = 0; p < props.length; p++) {
+                            match = matches[++k];
+                            q = props[p];
+                            // check if given property is actually array
+                            if (typeof q === OBJ_TYPE && q.length > 0) {
+                                if (q.length === 2) {
+                                    if (typeof q[1] == FUNC_TYPE) {
+                                        // assign modified match
+                                        this[q[0]] = q[1].call(this, match);
+                                    } else {
+                                        // assign given value, ignore regex match
+                                        this[q[0]] = q[1];
+                                    }
+                                } else if (q.length >= 3) {
+                                    // Check whether q[1] FUNCTION or REGEX
+                                    if (typeof q[1] === FUNC_TYPE && !(q[1].exec && q[1].test)) {
+                                        if (q.length > 3) {
+                                            this[q[0]] = match ? q[1].apply(this, q.slice(2)) : undefined;
+                                        } else {
+                                            // call function (usually string mapper)
+                                            this[q[0]] = match ? q[1].call(this, match, q[2]) : undefined;
+                                        }
+                                    } else {
+                                        if (q.length == 3) {
+                                            // sanitize match using given regex
+                                            this[q[0]] = match ? match.replace(q[1], q[2]) : undefined;
+                                        } else if (q.length == 4) {
+                                            this[q[0]] = match ? q[3].call(this, match.replace(q[1], q[2])) : undefined;
+                                        } else if (q.length > 4) {
+                                            this[q[0]] = match ? q[3].apply(this, [match.replace(q[1], q[2])].concat(q.slice(4))) : undefined;
+                                        }
+                                    }
+                                }
+                            } else {
+                                this[q] = match ? match : undefined;
+                            }
+                        }
+                    }
+                }
+                i += 2;
+            }
+        },
+
+        strMapper = function (str, map) {
+
+            for (var i in map) {
+                // check if current value is array
+                if (typeof map[i] === OBJ_TYPE && map[i].length > 0) {
+                    for (var j = 0; j < map[i].length; j++) {
+                        if (has(map[i][j], str)) {
+                            return (i === UNKNOWN) ? undefined : i;
+                        }
+                    }
+                } else if (has(map[i], str)) {
+                    return (i === UNKNOWN) ? undefined : i;
+                }
+            }
+            return map.hasOwnProperty('*') ? map['*'] : str;
+    };
+
+    ///////////////
+    // String map
+    //////////////
+
+    var windowsVersionMap = {
+            'ME'    : '4.90',
+            'NT 3.51': '3.51',
+            'NT 4.0': '4.0',
+            '2000'  : ['5.0', '5.01'],
+            'XP'    : ['5.1', '5.2'],
+            'Vista' : '6.0',
+            '7'     : '6.1',
+            '8'     : '6.2',
+            '8.1'   : '6.3',
+            '10'    : ['6.4', '10.0'],
+            'NT'    : ''
+        },
+        
+        formFactorsMap = {
+            'embedded'  : 'Automotive',
+            'mobile'    : 'Mobile',
+            'tablet'    : ['Tablet', 'EInk'],
+            'smarttv'   : 'TV',
+            'wearable'  : 'Watch',
+            'xr'        : ['VR', 'XR'],
+            '?'         : ['Desktop', 'Unknown'],
+            '*'         : undefined
+        },
+
+        browserHintsMap = {
+            'Chrome'        : 'Google Chrome',
+            'Edge'          : 'Microsoft Edge',
+            'Edge WebView2' : 'Microsoft Edge WebView2',
+            'Chrome WebView': 'Android WebView',
+            'Chrome Headless':'HeadlessChrome',
+            'Huawei Browser': 'HuaweiBrowser',
+            'MIUI Browser'  : 'Miui Browser',
+            'Opera Mobi'    : 'OperaMobile',
+            'Yandex'        : 'YaBrowser'
+    };
+
+    //////////////
+    // Regex map
+    /////////////
+
+    var defaultRegexes = {
+
+        browser : [[
+
+            // Most common regardless engine
+            /\b(?:crmo|crios)\/([\w\.]+)/i                                      // Chrome for Android/iOS
+            ], [VERSION, [NAME, PREFIX_MOBILE + 'Chrome']], [
+            /webview.+edge\/([\w\.]+)/i                                         // Microsoft Edge
+            ], [VERSION, [NAME, EDGE+' WebView']], [
+            /edg(?:e|ios|a)?\/([\w\.]+)/i                                       
+            ], [VERSION, [NAME, 'Edge']], [
+
+            // Presto based
+            /(opera mini)\/([-\w\.]+)/i,                                        // Opera Mini
+            /(opera [mobiletab]{3,6})\b.+version\/([-\w\.]+)/i,                 // Opera Mobi/Tablet
+            /(opera)(?:.+version\/|[\/ ]+)([\w\.]+)/i                           // Opera
+            ], [NAME, VERSION], [
+            /opios[\/ ]+([\w\.]+)/i                                             // Opera mini on iphone >= 8.0
+            ], [VERSION, [NAME, OPERA+' Mini']], [
+            /\bop(?:rg)?x\/([\w\.]+)/i                                          // Opera GX
+            ], [VERSION, [NAME, OPERA+' GX']], [
+            /\bopr\/([\w\.]+)/i                                                 // Opera Webkit
+            ], [VERSION, [NAME, OPERA]], [
+
+            // Mixed
+            /\bb[ai]*d(?:uhd|[ub]*[aekoprswx]{5,6})[\/ ]?([\w\.]+)/i            // Baidu
+            ], [VERSION, [NAME, 'Baidu']], [
+            /\b(?:mxbrowser|mxios|myie2)\/?([-\w\.]*)\b/i                       // Maxthon
+            ], [VERSION, [NAME, 'Maxthon']], [
+            /(kindle)\/([\w\.]+)/i,                                             // Kindle
+            /(lunascape|maxthon|netfront|jasmine|blazer|sleipnir)[\/ ]?([\w\.]*)/i,      
+                                                                                // Lunascape/Maxthon/Netfront/Jasmine/Blazer/Sleipnir
+            // Trident based
+            /(avant|iemobile|slim(?:browser|boat|jet))[\/ ]?([\d\.]*)/i,        // Avant/IEMobile/SlimBrowser/SlimBoat/Slimjet
+            /(?:ms|\()(ie) ([\w\.]+)/i,                                         // Internet Explorer
+
+            // Blink/Webkit/KHTML based                                         // Flock/RockMelt/Midori/Epiphany/Silk/Skyfire/Bolt/Iron/Iridium/PhantomJS/Bowser/QupZilla/Falkon/LG Browser/Otter/qutebrowser/Dooble
+            /(flock|rockmelt|midori|epiphany|silk|skyfire|ovibrowser|bolt|iron|vivaldi|iridium|phantomjs|bowser|qupzilla|falkon|rekonq|puffin|brave|whale(?!.+naver)|qqbrowserlite|duckduckgo|klar|helio|(?=comodo_)?dragon|otter|dooble|(?:lg |qute)browser)\/([-\w\.]+)/i,
+                                                                                // Rekonq/Puffin/Brave/Whale/QQBrowserLite/QQ//Vivaldi/DuckDuckGo/Klar/Helio/Dragon
+            /(heytap|ovi|115|surf)browser\/([\d\.]+)/i,                         // HeyTap/Ovi/115/Surf
+            /(ecosia|weibo)(?:__| \w+@)([\d\.]+)/i                              // Ecosia/Weibo
+            ], [NAME, VERSION], [
+            /quark(?:pc)?\/([-\w\.]+)/i                                         // Quark
+            ], [VERSION, [NAME, 'Quark']], [
+            /\bddg\/([\w\.]+)/i                                                 // DuckDuckGo
+            ], [VERSION, [NAME, 'DuckDuckGo']], [
+            /(?:\buc? ?browser|(?:juc.+)ucweb)[\/ ]?([\w\.]+)/i                 // UCBrowser
+            ], [VERSION, [NAME, 'UCBrowser']], [
+            /microm.+\bqbcore\/([\w\.]+)/i,                                     // WeChat Desktop for Windows Built-in Browser
+            /\bqbcore\/([\w\.]+).+microm/i,
+            /micromessenger\/([\w\.]+)/i                                        // WeChat
+            ], [VERSION, [NAME, 'WeChat']], [
+            /konqueror\/([\w\.]+)/i                                             // Konqueror
+            ], [VERSION, [NAME, 'Konqueror']], [
+            /trident.+rv[: ]([\w\.]{1,9})\b.+like gecko/i                       // IE11
+            ], [VERSION, [NAME, 'IE']], [
+            /ya(?:search)?browser\/([\w\.]+)/i                                  // Yandex
+            ], [VERSION, [NAME, 'Yandex']], [
+            /slbrowser\/([\w\.]+)/i                                             // Smart Lenovo Browser
+            ], [VERSION, [NAME, 'Smart ' + LENOVO + SUFFIX_BROWSER]], [
+            /(avast|avg)\/([\w\.]+)/i                                           // Avast/AVG Secure Browser
+            ], [[NAME, /(.+)/, '$1 Secure' + SUFFIX_BROWSER], VERSION], [
+            /\bfocus\/([\w\.]+)/i                                               // Firefox Focus
+            ], [VERSION, [NAME, FIREFOX+' Focus']], [
+            /\bopt\/([\w\.]+)/i                                                 // Opera Touch
+            ], [VERSION, [NAME, OPERA+' Touch']], [
+            /coc_coc\w+\/([\w\.]+)/i                                            // Coc Coc Browser
+            ], [VERSION, [NAME, 'Coc Coc']], [
+            /dolfin\/([\w\.]+)/i                                                // Dolphin
+            ], [VERSION, [NAME, 'Dolphin']], [
+            /coast\/([\w\.]+)/i                                                 // Opera Coast
+            ], [VERSION, [NAME, OPERA+' Coast']], [
+            /miuibrowser\/([\w\.]+)/i                                           // MIUI Browser
+            ], [VERSION, [NAME, 'MIUI' + SUFFIX_BROWSER]], [
+            /fxios\/([\w\.-]+)/i                                                // Firefox for iOS
+            ], [VERSION, [NAME, PREFIX_MOBILE + FIREFOX]], [
+            /\bqihoobrowser\/?([\w\.]*)/i                                       // 360
+            ], [VERSION, [NAME, '360']], [
+            /\b(qq)\/([\w\.]+)/i                                                // QQ
+            ], [[NAME, /(.+)/, '$1Browser'], VERSION], [
+            /(oculus|sailfish|huawei|vivo|pico)browser\/([\w\.]+)/i
+            ], [[NAME, /(.+)/, '$1' + SUFFIX_BROWSER], VERSION], [              // Oculus/Sailfish/HuaweiBrowser/VivoBrowser/PicoBrowser
+            /samsungbrowser\/([\w\.]+)/i                                        // Samsung Internet
+            ], [VERSION, [NAME, SAMSUNG + ' Internet']], [
+            /metasr[\/ ]?([\d\.]+)/i                                            // Sogou Explorer
+            ], [VERSION, [NAME, SOGOU + ' Explorer']], [
+            /(sogou)mo\w+\/([\d\.]+)/i                                          // Sogou Mobile
+            ], [[NAME, SOGOU + ' Mobile'], VERSION], [
+            /(electron)\/([\w\.]+) safari/i,                                    // Electron-based App
+            /(tesla)(?: qtcarbrowser|\/(20\d\d\.[-\w\.]+))/i,                   // Tesla
+            /m?(qqbrowser|2345(?=browser|chrome|explorer))\w*[\/ ]?v?([\w\.]+)/i   // QQ/2345
+            ], [NAME, VERSION], [
+            /(lbbrowser|rekonq)/i                                               // LieBao Browser/Rekonq
+            ], [NAME], [
+            /ome\/([\w\.]+) \w* ?(iron) saf/i,                                  // Iron
+            /ome\/([\w\.]+).+qihu (360)[es]e/i                                  // 360
+            ], [VERSION, NAME], [
+
+            // WebView
+            /((?:fban\/fbios|fb_iab\/fb4a)(?!.+fbav)|;fbav\/([\w\.]+);)/i       // Facebook App for iOS & Android
+            ], [[NAME, FACEBOOK], VERSION, [TYPE, INAPP]], [
+            /(kakao(?:talk|story))[\/ ]([\w\.]+)/i,                             // Kakao App
+            /(naver)\(.*?(\d+\.[\w\.]+).*\)/i,                                  // Naver InApp
+            /(daum)apps[\/ ]([\w\.]+)/i,                                        // Daum App
+            /safari (line)\/([\w\.]+)/i,                                        // Line App for iOS
+            /\b(line)\/([\w\.]+)\/iab/i,                                        // Line App for Android
+            /(alipay)client\/([\w\.]+)/i,                                       // Alipay
+            /(twitter)(?:and| f.+e\/([\w\.]+))/i,                               // Twitter
+            /(instagram|snapchat|klarna)[\/ ]([-\w\.]+)/i                       // Instagram/Snapchat/Klarna
+            ], [NAME, VERSION, [TYPE, INAPP]], [
+            /\bgsa\/([\w\.]+) .*safari\//i                                      // Google Search Appliance on iOS
+            ], [VERSION, [NAME, 'GSA'], [TYPE, INAPP]], [
+            /musical_ly(?:.+app_?version\/|_)([\w\.]+)/i                        // TikTok
+            ], [VERSION, [NAME, 'TikTok'], [TYPE, INAPP]], [
+            /\[(linkedin)app\]/i                                                // LinkedIn App for iOS & Android
+            ], [NAME, [TYPE, INAPP]], [
+
+            /(chromium)[\/ ]([-\w\.]+)/i                                        // Chromium
+            ], [NAME, VERSION], [
+
+            /headlesschrome(?:\/([\w\.]+)| )/i                                  // Chrome Headless
+            ], [VERSION, [NAME, CHROME+' Headless']], [
+
+            /wv\).+chrome\/([\w\.]+).+edgw\//i                                  // Edge WebView2
+            ], [VERSION, [NAME, EDGE+' WebView2']], [
+
+            / wv\).+(chrome)\/([\w\.]+)/i                                       // Chrome WebView
+            ], [[NAME, CHROME+' WebView'], VERSION], [
+
+            /droid.+ version\/([\w\.]+)\b.+(?:mobile safari|safari)/i           // Android Browser
+            ], [VERSION, [NAME, 'Android' + SUFFIX_BROWSER]], [
+
+            /chrome\/([\w\.]+) mobile/i                                         // Chrome Mobile
+            ], [VERSION, [NAME, PREFIX_MOBILE + 'Chrome']], [
+
+            /(chrome|omniweb|arora|[tizenoka]{5} ?browser)\/v?([\w\.]+)/i       // Chrome/OmniWeb/Arora/Tizen/Nokia
+            ], [NAME, VERSION], [
+
+            /version\/([\w\.\,]+) .*mobile(?:\/\w+ | ?)safari/i                 // Safari Mobile
+            ], [VERSION, [NAME, PREFIX_MOBILE + 'Safari']], [
+            /iphone .*mobile(?:\/\w+ | ?)safari/i
+            ], [[NAME, PREFIX_MOBILE + 'Safari']], [
+            /version\/([\w\.\,]+) .*(safari)/i                                  // Safari
+            ], [VERSION, NAME], [
+            /webkit.+?(mobile ?safari|safari)(\/[\w\.]+)/i                      // Safari < 3.0
+            ], [NAME, [VERSION, '1']], [
+
+            /(webkit|khtml)\/([\w\.]+)/i
+            ], [NAME, VERSION], [
+
+            // Gecko based
+            /(?:mobile|tablet);.*(firefox)\/([\w\.-]+)/i                        // Firefox Mobile
+            ], [[NAME, PREFIX_MOBILE + FIREFOX], VERSION], [
+            /(navigator|netscape\d?)\/([-\w\.]+)/i                              // Netscape
+            ], [[NAME, 'Netscape'], VERSION], [
+            /(wolvic|librewolf)\/([\w\.]+)/i                                    // Wolvic/LibreWolf
+            ], [NAME, VERSION], [
+            /mobile vr; rv:([\w\.]+)\).+firefox/i                               // Firefox Reality
+            ], [VERSION, [NAME, FIREFOX+' Reality']], [
+            /ekiohf.+(flow)\/([\w\.]+)/i,                                       // Flow
+            /(swiftfox)/i,                                                      // Swiftfox
+            /(icedragon|iceweasel|camino|chimera|fennec|maemo browser|minimo|conkeror)[\/ ]?([\w\.\+]+)/i,
+                                                                                // IceDragon/Iceweasel/Camino/Chimera/Fennec/Maemo/Minimo/Conkeror
+            /(seamonkey|k-meleon|icecat|iceape|firebird|phoenix|palemoon|basilisk|waterfox)\/([-\w\.]+)$/i,
+                                                                                // Firefox/SeaMonkey/K-Meleon/IceCat/IceApe/Firebird/Phoenix
+            /(firefox)\/([\w\.]+)/i,                                            // Other Firefox-based
+            /(mozilla)\/([\w\.]+) .+rv\:.+gecko\/\d+/i,                         // Mozilla
+
+            // Other
+            /(amaya|dillo|doris|icab|ladybird|lynx|mosaic|netsurf|obigo|polaris|w3m|(?:go|ice|up)[\. ]?browser)[-\/ ]?v?([\w\.]+)/i,
+                                                                                // Polaris/Lynx/Dillo/iCab/Doris/Amaya/w3m/NetSurf/Obigo/Mosaic/Go/ICE/UP.Browser/Ladybird
+            /\b(links) \(([\w\.]+)/i                                            // Links
+            ], [NAME, [VERSION, /_/g, '.']], [
+            
+            /(cobalt)\/([\w\.]+)/i                                              // Cobalt
+            ], [NAME, [VERSION, /[^\d\.]+./, EMPTY]]
+        ],
+
+        cpu : [[
+
+            /\b((amd|x|x86[-_]?|wow|win)64)\b/i                                 // AMD64 (x64)
+            ], [[ARCHITECTURE, 'amd64']], [
+
+            /(ia32(?=;))/i,                                                     // IA32 (quicktime)
+            /\b((i[346]|x)86)(pc)?\b/i                                          // IA32 (x86)
+            ], [[ARCHITECTURE, 'ia32']], [
+
+            /\b(aarch64|arm(v?[89]e?l?|_?64))\b/i                               // ARM64
+            ], [[ARCHITECTURE, 'arm64']], [
+
+            /\b(arm(v[67])?ht?n?[fl]p?)\b/i                                     // ARMHF
+            ], [[ARCHITECTURE, 'armhf']], [
+
+            // PocketPC mistakenly identified as PowerPC
+            /( (ce|mobile); ppc;|\/[\w\.]+arm\b)/i
+            ], [[ARCHITECTURE, 'arm']], [
+
+            /((ppc|powerpc)(64)?)( mac|;|\))/i                                  // PowerPC
+            ], [[ARCHITECTURE, /ower/, EMPTY, lowerize]], [
+
+            / sun4\w[;\)]/i                                                     // SPARC
+            ], [[ARCHITECTURE, 'sparc']], [
+
+            /\b(avr32|ia64(?=;)|68k(?=\))|\barm(?=v([1-7]|[5-7]1)l?|;|eabi)|(irix|mips|sparc)(64)?\b|pa-risc)/i
+                                                                                // IA64, 68K, ARM/64, AVR/32, IRIX/64, MIPS/64, SPARC/64, PA-RISC
+            ], [[ARCHITECTURE, lowerize]]
+        ],
+
+        device : [[
+
+            //////////////////////////
+            // MOBILES & TABLETS
+            /////////////////////////
+
+            // Samsung
+            /\b(sch-i[89]0\d|shw-m380s|sm-[ptx]\w{2,4}|gt-[pn]\d{2,4}|sgh-t8[56]9|nexus 10)/i
+            ], [MODEL, [VENDOR, SAMSUNG], [TYPE, TABLET]], [
+            /\b((?:s[cgp]h|gt|sm)-(?![lr])\w+|sc[g-]?[\d]+a?|galaxy nexus)/i,
+            /samsung[- ]((?!sm-[lr]|browser)[-\w]+)/i,
+            /sec-(sgh\w+)/i
+            ], [MODEL, [VENDOR, SAMSUNG], [TYPE, MOBILE]], [
+
+            // Apple
+            /(?:\/|\()(ip(?:hone|od)[\w, ]*)(?:\/|;)/i                          // iPod/iPhone
+            ], [MODEL, [VENDOR, APPLE], [TYPE, MOBILE]], [
+            /\((ipad);[-\w\),; ]+apple/i,                                       // iPad
+            /applecoremedia\/[\w\.]+ \((ipad)/i,
+            /\b(ipad)\d\d?,\d\d?[;\]].+ios/i
+            ], [MODEL, [VENDOR, APPLE], [TYPE, TABLET]], [
+            /(macintosh);/i
+            ], [MODEL, [VENDOR, APPLE]], [
+
+            // Sharp
+            /\b(sh-?[altvz]?\d\d[a-ekm]?)/i
+            ], [MODEL, [VENDOR, SHARP], [TYPE, MOBILE]], [
+
+            // Honor
+            /\b((?:brt|eln|hey2?|gdi|jdn)-a?[lnw]09|(?:ag[rm]3?|jdn2|kob2)-a?[lw]0[09]hn)(?: bui|\)|;)/i
+            ], [MODEL, [VENDOR, HONOR], [TYPE, TABLET]], [
+            /honor([-\w ]+)[;\)]/i
+            ], [MODEL, [VENDOR, HONOR], [TYPE, MOBILE]], [
+
+            // Huawei
+            /\b((?:ag[rs][2356]?k?|bah[234]?|bg[2o]|bt[kv]|cmr|cpn|db[ry]2?|jdn2|got|kob2?k?|mon|pce|scm|sht?|[tw]gr|vrd)-[ad]?[lw][0125][09]b?|605hw|bg2-u03|(?:gem|fdr|m2|ple|t1)-[7a]0[1-4][lu]|t1-a2[13][lw]|mediapad[\w\. ]*(?= bui|\)))\b(?!.+d\/s)/i
+            ], [MODEL, [VENDOR, HUAWEI], [TYPE, TABLET]], [
+            /(?:huawei)([-\w ]+)[;\)]/i,
+            /\b(nexus 6p|\w{2,4}e?-[atu]?[ln][\dx][012359c][adn]?)\b(?!.+d\/s)/i
+            ], [MODEL, [VENDOR, HUAWEI], [TYPE, MOBILE]], [
+
+            // Xiaomi
+            /oid[^\)]+; (2[\dbc]{4}(182|283|rp\w{2})[cgl]|m2105k81a?c)(?: bui|\))/i,
+            /\b((?:red)?mi[-_ ]?pad[\w- ]*)(?: bui|\))/i                                // Mi Pad tablets
+            ],[[MODEL, /_/g, ' '], [VENDOR, XIAOMI], [TYPE, TABLET]], [
+
+            /\b(poco[\w ]+|m2\d{3}j\d\d[a-z]{2})(?: bui|\))/i,                  // Xiaomi POCO
+            /\b; (\w+) build\/hm\1/i,                                           // Xiaomi Hongmi 'numeric' models
+            /\b(hm[-_ ]?note?[_ ]?(?:\d\w)?) bui/i,                             // Xiaomi Hongmi
+            /\b(redmi[\-_ ]?(?:note|k)?[\w_ ]+)(?: bui|\))/i,                   // Xiaomi Redmi
+            /oid[^\)]+; (m?[12][0-389][01]\w{3,6}[c-y])( bui|; wv|\))/i,        // Xiaomi Redmi 'numeric' models
+            /\b(mi[-_ ]?(?:a\d|one|one[_ ]plus|note lte|max|cc)?[_ ]?(?:\d?\w?)[_ ]?(?:plus|se|lite|pro)?)(?: bui|\))/i, // Xiaomi Mi
+            / ([\w ]+) miui\/v?\d/i
+            ], [[MODEL, /_/g, ' '], [VENDOR, XIAOMI], [TYPE, MOBILE]], [
+
+            // OnePlus
+            /droid.+; (cph2[3-6]\d[13579]|((gm|hd)19|(ac|be|in|kb)20|(d[en]|eb|le|mt)21|ne22)[0-2]\d|p[g-k]\w[1m]10)\b/i,
+            /(?:one)?(?:plus)? (a\d0\d\d)(?: b|\))/i
+            ], [MODEL, [VENDOR, ONEPLUS], [TYPE, MOBILE]], [
+
+            // OPPO
+            /; (\w+) bui.+ oppo/i,
+            /\b(cph[12]\d{3}|p(?:af|c[al]|d\w|e[ar])[mt]\d0|x9007|a101op)\b/i
+            ], [MODEL, [VENDOR, OPPO], [TYPE, MOBILE]], [
+            /\b(opd2(\d{3}a?))(?: bui|\))/i
+            ], [MODEL, [VENDOR, strMapper, { 'OnePlus' : ['203', '304', '403', '404', '413', '415'], '*' : OPPO }], [TYPE, TABLET]], [
+
+            // BLU
+            /(vivo (5r?|6|8l?|go|one|s|x[il]?[2-4]?)[\w\+ ]*)(?: bui|\))/i  // Vivo series
+            ], [MODEL, [VENDOR, 'BLU'], [TYPE, MOBILE]], [    
+
+            // Vivo
+            /; vivo (\w+)(?: bui|\))/i,
+            /\b(v[12]\d{3}\w?[at])(?: bui|;)/i
+            ], [MODEL, [VENDOR, 'Vivo'], [TYPE, MOBILE]], [
+
+            // Realme
+            /\b(rmx[1-3]\d{3})(?: bui|;|\))/i
+            ], [MODEL, [VENDOR, 'Realme'], [TYPE, MOBILE]], [
+
+            // Lenovo
+            /(ideatab[-\w ]+|602lv|d-42a|a101lv|a2109a|a3500-hv|s[56]000|pb-6505[my]|tb-?x?\d{3,4}(?:f[cu]|xu|[av])|yt\d?-[jx]?\d+[lfmx])( bui|;|\)|\/)/i,
+            /lenovo ?(b[68]0[08]0-?[hf]?|tab(?:[\w- ]+?)|tb[\w-]{6,7})( bui|;|\)|\/)/i
+            ], [MODEL, [VENDOR, LENOVO], [TYPE, TABLET]], [            
+            /lenovo[-_ ]?([-\w ]+?)(?: bui|\)|\/)/i
+            ], [MODEL, [VENDOR, LENOVO], [TYPE, MOBILE]], [
+
+            // Motorola
+            /\b(milestone|droid(?:[2-4x]| (?:bionic|x2|pro|razr))?:?( 4g)?)\b[\w ]+build\//i,
+            /\bmot(?:orola)?[- ]([\w\s]+)(\)| bui)/i,
+            /((?:moto(?! 360)[-\w\(\) ]+|xt\d{3,4}[cgkosw\+]?[-\d]*|nexus 6)(?= bui|\)))/i
+            ], [MODEL, [VENDOR, MOTOROLA], [TYPE, MOBILE]], [
+            /\b(mz60\d|xoom[2 ]{0,2}) build\//i
+            ], [MODEL, [VENDOR, MOTOROLA], [TYPE, TABLET]], [
+
+            // LG
+            /((?=lg)?[vl]k\-?\d{3}) bui| 3\.[-\w; ]{10}lg?-([06cv9]{3,4})/i
+            ], [MODEL, [VENDOR, LG], [TYPE, TABLET]], [
+            /(lm(?:-?f100[nv]?|-[\w\.]+)(?= bui|\))|nexus [45])/i,
+            /\blg[-e;\/ ]+(?!.*(?:browser|netcast|android tv|watch|webos))(\w+)/i,
+            /\blg-?([\d\w]+) bui/i
+            ], [MODEL, [VENDOR, LG], [TYPE, MOBILE]], [
+
+            // Nokia
+            /(nokia) (t[12][01])/i
+            ], [VENDOR, MODEL, [TYPE, TABLET]], [
+            /(?:maemo|nokia).*(n900|lumia \d+|rm-\d+)/i,
+            /nokia[-_ ]?(([-\w\. ]*))/i
+            ], [[MODEL, /_/g, ' '], [TYPE, MOBILE], [VENDOR, 'Nokia']], [
+
+            // Google
+            /(pixel (c|tablet))\b/i                                             // Google Pixel C/Tablet
+            ], [MODEL, [VENDOR, GOOGLE], [TYPE, TABLET]], [
+                                                                                // Google Pixel
+            /droid.+;(?: google)? (g(01[13]a|020[aem]|025[jn]|1b60|1f8f|2ybb|4s1m|576d|5nz6|8hhn|8vou|a02099|c15s|d1yq|e2ae|ec77|gh2x|kv4x|p4bc|pj41|r83y|tt9q|ur25|wvk6)|pixel[\d ]*a?( pro)?( xl)?( fold)?( \(5g\))?)( bui|\))/i
+            ], [MODEL, [VENDOR, GOOGLE], [TYPE, MOBILE]], [
+            /(google) (pixelbook( go)?)/i
+            ], [VENDOR, MODEL], [
+
+            // Sony
+            /droid.+; (a?\d[0-2]{2}so|[c-g]\d{4}|so[-gl]\w+|xq-\w\w\d\d)(?= bui|\).+chrome\/(?![1-6]{0,1}\d\.))/i
+            ], [MODEL, [VENDOR, SONY], [TYPE, MOBILE]], [
+            /sony tablet [ps]/i,
+            /\b(?:sony)?sgp\w+(?: bui|\))/i
+            ], [[MODEL, 'Xperia Tablet'], [VENDOR, SONY], [TYPE, TABLET]], [
+
+            // Amazon
+            /(alexa)webm/i,
+            /(kf[a-z]{2}wi|aeo(?!bc)\w\w)( bui|\))/i,                           // Kindle Fire without Silk / Echo Show
+            /(kf[a-z]+)( bui|\)).+silk\//i                                      // Kindle Fire HD
+            ], [MODEL, [VENDOR, AMAZON], [TYPE, TABLET]], [
+            /((?:sd|kf)[0349hijorstuw]+)( bui|\)).+silk\//i                     // Fire Phone
+            ], [[MODEL, /(.+)/g, 'Fire Phone $1'], [VENDOR, AMAZON], [TYPE, MOBILE]], [
+
+            // BlackBerry
+            /(playbook);[-\w\),; ]+(rim)/i                                      // BlackBerry PlayBook
+            ], [MODEL, VENDOR, [TYPE, TABLET]], [
+            /\b((?:bb[a-f]|st[hv])100-\d)/i,
+            /\(bb10; (\w+)/i                                                    // BlackBerry 10
+            ], [MODEL, [VENDOR, BLACKBERRY], [TYPE, MOBILE]], [
+
+            // Asus
+            /(?:\b|asus_)(transfo[prime ]{4,10} \w+|eeepc|slider \w+|nexus 7|padfone|p00[cj])/i
+            ], [MODEL, [VENDOR, ASUS], [TYPE, TABLET]], [
+            / (z[bes]6[027][012][km][ls]|zenfone \d\w?)\b/i
+            ], [MODEL, [VENDOR, ASUS], [TYPE, MOBILE]], [
+
+            // HTC
+            /(nexus 9)/i                                                        // HTC Nexus 9
+            ], [MODEL, [VENDOR, 'HTC'], [TYPE, TABLET]], [
+            /(htc)[-;_ ]{1,2}([\w ]+(?=\)| bui)|\w+)/i,                         // HTC
+
+            // ZTE
+            /(zte)[- ]([\w ]+?)(?: bui|\/|\))/i,
+            /(alcatel|geeksphone|nexian|panasonic(?!(?:;|\.))|sony(?!-bra))[-_ ]?([-\w]*)/i         // Alcatel/GeeksPhone/Nexian/Panasonic/Sony
+            ], [VENDOR, [MODEL, /_/g, ' '], [TYPE, MOBILE]], [
+
+            // TCL
+            /tcl (xess p17aa)/i,
+            /droid [\w\.]+; ((?:8[14]9[16]|9(?:0(?:48|60|8[01])|1(?:3[27]|66)|2(?:6[69]|9[56])|466))[gqswx])(_\w(\w|\w\w))?(\)| bui)/i
+            ], [MODEL, [VENDOR, 'TCL'], [TYPE, TABLET]], [
+            /droid [\w\.]+; (418(?:7d|8v)|5087z|5102l|61(?:02[dh]|25[adfh]|27[ai]|56[dh]|59k|65[ah])|a509dl|t(?:43(?:0w|1[adepqu])|50(?:6d|7[adju])|6(?:09dl|10k|12b|71[efho]|76[hjk])|7(?:66[ahju]|67[hw]|7[045][bh]|71[hk]|73o|76[ho]|79w|81[hks]?|82h|90[bhsy]|99b)|810[hs]))(_\w(\w|\w\w))?(\)| bui)/i
+            ], [MODEL, [VENDOR, 'TCL'], [TYPE, MOBILE]], [
+
+            // itel
+            /(itel) ((\w+))/i
+            ], [[VENDOR, lowerize], MODEL, [TYPE, strMapper, { 'tablet' : ['p10001l', 'w7001'], '*' : 'mobile' }]], [
+
+            // Acer
+            /droid.+; ([ab][1-7]-?[0178a]\d\d?)/i
+            ], [MODEL, [VENDOR, 'Acer'], [TYPE, TABLET]], [
+
+            // Meizu
+            /droid.+; (m[1-5] note) bui/i,
+            /\bmz-([-\w]{2,})/i
+            ], [MODEL, [VENDOR, 'Meizu'], [TYPE, MOBILE]], [
+                
+            // Ulefone
+            /; ((?:power )?armor(?:[\w ]{0,8}))(?: bui|\))/i
+            ], [MODEL, [VENDOR, 'Ulefone'], [TYPE, MOBILE]], [
+
+            // Energizer
+            /; (energy ?\w+)(?: bui|\))/i,
+            /; energizer ([\w ]+)(?: bui|\))/i
+            ], [MODEL, [VENDOR, 'Energizer'], [TYPE, MOBILE]], [
+
+            // Cat
+            /; cat (b35);/i,
+            /; (b15q?|s22 flip|s48c|s62 pro)(?: bui|\))/i
+            ], [MODEL, [VENDOR, 'Cat'], [TYPE, MOBILE]], [
+
+            // Smartfren
+            /((?:new )?andromax[\w- ]+)(?: bui|\))/i
+            ], [MODEL, [VENDOR, 'Smartfren'], [TYPE, MOBILE]], [
+
+            // Nothing
+            /droid.+; (a(in)?(0(15|59|6[35])|142)p?)/i
+            ], [MODEL, [VENDOR, 'Nothing'], [TYPE, MOBILE]], [
+
+            // Archos
+            /; (x67 5g|tikeasy \w+|ac[1789]\d\w+)( b|\))/i,
+            /archos ?(5|gamepad2?|([\w ]*[t1789]|hello) ?\d+[\w ]*)( b|\))/i
+            ], [MODEL, [VENDOR, 'Archos'], [TYPE, TABLET]], [
+            /archos ([\w ]+)( b|\))/i,
+            /; (ac[3-6]\d\w{2,8})( b|\))/i 
+            ], [MODEL, [VENDOR, 'Archos'], [TYPE, MOBILE]], [
+
+            // HMD
+            /; (n159v)/i
+            ], [MODEL, [VENDOR, 'HMD'], [TYPE, MOBILE]], [
+
+            // MIXED
+            /(imo) (tab \w+)/i,                                                 // IMO
+            /(infinix|tecno) (x1101b?|p904|dp(7c|8d|10a)( pro)?|p70[1-3]a?|p904|t1101)/i                     // Infinix XPad / Tecno
+            ], [VENDOR, MODEL, [TYPE, TABLET]], [
+
+            /(blackberry|benq|palm(?=\-)|sonyericsson|acer|asus(?! zenw)|dell|jolla|meizu|motorola|polytron|tecno|micromax|advan)[-_ ]?([-\w]*)/i,
+                                                                                // BlackBerry/BenQ/Palm/Sony-Ericsson/Acer/Asus/Dell/Meizu/Motorola/Polytron/Tecno/Micromax/Advan
+            /; (blu|hmd|imo|infinix|lava|oneplus|tcl)[_ ]([\w\+ ]+?)(?: bui|\)|; r)/i,  // BLU/HMD/IMO/Infinix/Lava/OnePlus/TCL
+            /(hp) ([\w ]+\w)/i,                                                 // HP iPAQ
+            /(microsoft); (lumia[\w ]+)/i,                                      // Microsoft Lumia
+            /(oppo) ?([\w ]+) bui/i                                             // OPPO
+            ], [VENDOR, MODEL, [TYPE, MOBILE]], [
+
+            /(kobo)\s(ereader|touch)/i,                                         // Kobo
+            /(hp).+(touchpad(?!.+tablet)|tablet)/i,                             // HP TouchPad
+            /(kindle)\/([\w\.]+)/i                                              // Kindle
+            ], [VENDOR, MODEL, [TYPE, TABLET]], [
+
+            /(surface duo)/i                                                    // Surface Duo
+            ], [MODEL, [VENDOR, MICROSOFT], [TYPE, TABLET]], [
+            /droid [\d\.]+; (fp\du?)(?: b|\))/i                                 // Fairphone
+            ], [MODEL, [VENDOR, 'Fairphone'], [TYPE, MOBILE]], [
+            /((?:tegranote|shield t(?!.+d tv))[\w- ]*?)(?: b|\))/i              // Nvidia Tablets
+            ], [MODEL, [VENDOR, NVIDIA], [TYPE, TABLET]], [
+            /(sprint) (\w+)/i                                                   // Sprint Phones
+            ], [VENDOR, MODEL, [TYPE, MOBILE]], [
+            /(kin\.[onetw]{3})/i                                                // Microsoft Kin
+            ], [[MODEL, /\./g, ' '], [VENDOR, MICROSOFT], [TYPE, MOBILE]], [
+            /droid.+; ([c6]+|et5[16]|mc[239][23]x?|vc8[03]x?)\)/i               // Zebra
+            ], [MODEL, [VENDOR, ZEBRA], [TYPE, TABLET]], [
+            /droid.+; (ec30|ps20|tc[2-8]\d[kx])\)/i
+            ], [MODEL, [VENDOR, ZEBRA], [TYPE, MOBILE]], [
+
+            ///////////////////
+            // SMARTTVS
+            ///////////////////
+
+            /smart-tv.+(samsung)/i                                              // Samsung
+            ], [VENDOR, [TYPE, SMARTTV]], [
+            /hbbtv.+maple;(\d+)/i
+            ], [[MODEL, /^/, 'SmartTV'], [VENDOR, SAMSUNG], [TYPE, SMARTTV]], [
+            /(vizio)(?: |.+model\/)(\w+-\w+)/i,                                 // Vizio
+            /tcast.+(lg)e?. ([-\w]+)/i                                          // LG SmartTV
+            ], [VENDOR, MODEL, [TYPE, SMARTTV]], [
+            /(nux; netcast.+smarttv|lg (netcast\.tv-201\d|android tv))/i
+            ], [[VENDOR, LG], [TYPE, SMARTTV]], [
+            /(apple) ?tv/i                                                      // Apple TV
+            ], [VENDOR, [MODEL, APPLE+' TV'], [TYPE, SMARTTV]], [
+            /crkey.*devicetype\/chromecast/i                                    // Google Chromecast Third Generation
+            ], [[MODEL, CHROMECAST+' Third Generation'], [VENDOR, GOOGLE], [TYPE, SMARTTV]], [
+            /crkey.*devicetype\/([^/]*)/i                                       // Google Chromecast with specific device type
+            ], [[MODEL, /^/, 'Chromecast '], [VENDOR, GOOGLE], [TYPE, SMARTTV]], [
+            /fuchsia.*crkey/i                                                   // Google Chromecast Nest Hub
+            ], [[MODEL, CHROMECAST+' Nest Hub'], [VENDOR, GOOGLE], [TYPE, SMARTTV]], [
+            /crkey/i                                                            // Google Chromecast, Linux-based or unknown
+            ], [[MODEL, CHROMECAST], [VENDOR, GOOGLE], [TYPE, SMARTTV]], [
+            /(portaltv)/i                                                       // Facebook Portal TV
+            ], [MODEL, [VENDOR, FACEBOOK], [TYPE, SMARTTV]], [
+            /droid.+aft(\w+)( bui|\))/i                                         // Fire TV
+            ], [MODEL, [VENDOR, AMAZON], [TYPE, SMARTTV]], [
+            /(shield \w+ tv)/i                                                  // Nvidia Shield TV
+            ], [MODEL, [VENDOR, NVIDIA], [TYPE, SMARTTV]], [
+            /\(dtv[\);].+(aquos)/i,
+            /(aquos-tv[\w ]+)\)/i                                               // Sharp
+            ], [MODEL, [VENDOR, SHARP], [TYPE, SMARTTV]],[
+            /(bravia[\w ]+)( bui|\))/i                                          // Sony
+            ], [MODEL, [VENDOR, SONY], [TYPE, SMARTTV]], [
+            /(mi(tv|box)-?\w+) bui/i                                            // Xiaomi
+            ], [MODEL, [VENDOR, XIAOMI], [TYPE, SMARTTV]], [
+            /Hbbtv.*(technisat) (.*);/i                                         // TechniSAT
+            ], [VENDOR, MODEL, [TYPE, SMARTTV]], [
+            /\b(roku)[\dx]*[\)\/]((?:dvp-)?[\d\.]*)/i,                          // Roku
+            /hbbtv\/\d+\.\d+\.\d+ +\([\w\+ ]*; *([\w\d][^;]*);([^;]*)/i         // HbbTV devices
+            ], [[VENDOR, /.+\/(\w+)/, '$1', strMapper, {'LG':'lge'}], [MODEL, trim], [TYPE, SMARTTV]], [
+                                                                                // SmartTV from Unidentified Vendors
+            /droid.+; ([\w- ]+) (?:android tv|smart[- ]?tv)/i
+            ], [MODEL, [TYPE, SMARTTV]], [
+            /\b(android tv|smart[- ]?tv|opera tv|tv; rv:|large screen[\w ]+safari)\b/i
+            ], [[TYPE, SMARTTV]], [
+
+            ///////////////////
+            // CONSOLES
+            ///////////////////
+
+            /(playstation \w+)/i                                                // Playstation
+            ], [MODEL, [VENDOR, SONY], [TYPE, CONSOLE]], [
+            /\b(xbox(?: one)?(?!; xbox))[\); ]/i                                // Microsoft Xbox
+            ], [MODEL, [VENDOR, MICROSOFT], [TYPE, CONSOLE]], [
+            /(ouya)/i,                                                          // Ouya
+            /(nintendo) (\w+)/i,                                                // Nintendo
+            /(retroid) (pocket ([^\)]+))/i                                      // Retroid Pocket
+            ], [VENDOR, MODEL, [TYPE, CONSOLE]], [
+            /droid.+; (shield)( bui|\))/i                                       // Nvidia Portable
+            ], [MODEL, [VENDOR, NVIDIA], [TYPE, CONSOLE]], [
+
+            ///////////////////
+            // WEARABLES
+            ///////////////////
+
+            /\b(sm-[lr]\d\d[0156][fnuw]?s?|gear live)\b/i                       // Samsung Galaxy Watch
+            ], [MODEL, [VENDOR, SAMSUNG], [TYPE, WEARABLE]], [
+            /((pebble))app/i,                                                   // Pebble
+            /(asus|google|lg|oppo) ((pixel |zen)?watch[\w ]*)( bui|\))/i        // Asus ZenWatch / LG Watch / Pixel Watch
+            ], [VENDOR, MODEL, [TYPE, WEARABLE]], [
+            /(ow(?:19|20)?we?[1-3]{1,3})/i                                      // Oppo Watch
+            ], [MODEL, [VENDOR, OPPO], [TYPE, WEARABLE]], [
+            /(watch)(?: ?os[,\/]|\d,\d\/)[\d\.]+/i                              // Apple Watch
+            ], [MODEL, [VENDOR, APPLE], [TYPE, WEARABLE]], [
+            /(opwwe\d{3})/i                                                     // OnePlus Watch
+            ], [MODEL, [VENDOR, ONEPLUS], [TYPE, WEARABLE]], [
+            /(moto 360)/i                                                       // Motorola 360
+            ], [MODEL, [VENDOR, MOTOROLA], [TYPE, WEARABLE]], [
+            /(smartwatch 3)/i                                                   // Sony SmartWatch
+            ], [MODEL, [VENDOR, SONY], [TYPE, WEARABLE]], [
+            /(g watch r)/i                                                      // LG G Watch R
+            ], [MODEL, [VENDOR, LG], [TYPE, WEARABLE]], [
+            /droid.+; (wt63?0{2,3})\)/i
+            ], [MODEL, [VENDOR, ZEBRA], [TYPE, WEARABLE]], [
+
+            ///////////////////
+            // XR
+            ///////////////////
+
+            /droid.+; (glass) \d/i                                              // Google Glass
+            ], [MODEL, [VENDOR, GOOGLE], [TYPE, XR]], [
+            /(pico) (4|neo3(?: link|pro)?)/i                                    // Pico
+            ], [VENDOR, MODEL, [TYPE, XR]], [
+            /(quest( \d| pro)?s?).+vr/i                                         // Meta Quest
+            ], [MODEL, [VENDOR, FACEBOOK], [TYPE, XR]], [
+            /mobile vr; rv.+firefox/i                                           // Unidentifiable VR device using Firefox Reality / Wolvic
+            ], [[TYPE, XR]], [
+
+            ///////////////////
+            // EMBEDDED
+            ///////////////////
+
+            /(tesla)(?: qtcarbrowser|\/[-\w\.]+)/i                              // Tesla
+            ], [VENDOR, [TYPE, EMBEDDED]], [
+            /(aeobc)\b/i                                                        // Echo Dot
+            ], [MODEL, [VENDOR, AMAZON], [TYPE, EMBEDDED]], [
+            /(homepod).+mac os/i                                                // Apple HomePod
+            ], [MODEL, [VENDOR, APPLE], [TYPE, EMBEDDED]], [
+            /windows iot/i                                                      // Unidentifiable embedded device using Windows IoT
+            ], [[TYPE, EMBEDDED]], [
+
+            ////////////////////
+            // MIXED (GENERIC)
+            ///////////////////
+
+            /droid .+?; ([^;]+?)(?: bui|; wv\)|\) applew).+?(mobile|vr|\d) safari/i
+            ], [MODEL, [TYPE, strMapper, { 'mobile' : 'Mobile', 'xr' : 'VR', '*' : TABLET }]], [
+            /\b((tablet|tab)[;\/]|focus\/\d(?!.+mobile))/i                      // Unidentifiable Tablet
+            ], [[TYPE, TABLET]], [
+            /(phone|mobile(?:[;\/]| [ \w\/\.]*safari)|pda(?=.+windows ce))/i    // Unidentifiable Mobile
+            ], [[TYPE, MOBILE]], [
+            /droid .+?; ([\w\. -]+)( bui|\))/i                                  // Generic Android Device
+            ], [MODEL, [VENDOR, 'Generic']]
+        ],
+
+        engine : [[
+
+            /windows.+ edge\/([\w\.]+)/i                                       // EdgeHTML
+            ], [VERSION, [NAME, EDGE+'HTML']], [
+
+            /(arkweb)\/([\w\.]+)/i                                              // ArkWeb
+            ], [NAME, VERSION], [
+
+            /webkit\/537\.36.+chrome\/(?!27)([\w\.]+)/i                         // Blink
+            ], [VERSION, [NAME, 'Blink']], [
+
+            /(presto)\/([\w\.]+)/i,                                             // Presto
+            /(webkit|trident|netfront|netsurf|amaya|lynx|w3m|goanna|servo)\/([\w\.]+)/i, // WebKit/Trident/NetFront/NetSurf/Amaya/Lynx/w3m/Goanna/Servo
+            /ekioh(flow)\/([\w\.]+)/i,                                          // Flow
+            /(khtml|tasman|links)[\/ ]\(?([\w\.]+)/i,                           // KHTML/Tasman/Links
+            /(icab)[\/ ]([23]\.[\d\.]+)/i,                                      // iCab
+
+            /\b(libweb)/i                                                       // LibWeb
+            ], [NAME, VERSION], [
+            /ladybird\//i
+            ], [[NAME, 'LibWeb']], [
+
+            /rv\:([\w\.]{1,9})\b.+(gecko)/i                                     // Gecko
+            ], [VERSION, NAME]
+        ],
+
+        os : [[
+
+            // Windows
+            /(windows nt) (6\.[23]); arm/i                                      // Windows RT
+            ], [[NAME, /N/, 'R'], [VERSION, strMapper, windowsVersionMap]], [
+            /(windows (?:phone|mobile|iot))(?: os)?[\/ ]?([\d\.]*( se)?)/i,     // Windows IoT/Mobile/Phone
+                                                                                // Windows NT/3.1/95/98/ME/2000/XP/Vista/7/8/8.1/10/11
+            /(windows)[\/ ](1[01]|2000|3\.1|7|8(\.1)?|9[58]|me|server 20\d\d( r2)?|vista|xp)/i
+            ], [NAME, VERSION], [
+            /windows nt ?([\d\.\)]*)(?!.+xbox)/i,
+            /\bwin(?=3| ?9|n)(?:nt| 9x )?([\d\.;]*)/i
+            ], [[VERSION, /(;|\))/g, '', strMapper, windowsVersionMap], [NAME, WINDOWS]], [
+            /(windows ce)\/?([\d\.]*)/i                                         // Windows CE
+            ], [NAME, VERSION], [
+
+            // iOS/macOS
+            /[adehimnop]{4,7}\b(?:.*os ([\w]+) like mac|; opera)/i,             // iOS
+            /(?:ios;fbsv\/|iphone.+ios[\/ ])([\d\.]+)/i,
+            /cfnetwork\/.+darwin/i
+            ], [[VERSION, /_/g, '.'], [NAME, 'iOS']], [
+            /(mac os x) ?([\w\. ]*)/i,
+            /(macintosh|mac_powerpc\b)(?!.+(haiku|morphos))/i                   // Mac OS
+            ], [[NAME, 'macOS'], [VERSION, /_/g, '.']], [
+
+            // Google Chromecast
+            /android ([\d\.]+).*crkey/i                                         // Google Chromecast, Android-based
+            ], [VERSION, [NAME, CHROMECAST + ' Android']], [
+            /fuchsia.*crkey\/([\d\.]+)/i                                        // Google Chromecast, Fuchsia-based
+            ], [VERSION, [NAME, CHROMECAST + ' Fuchsia']], [
+            /crkey\/([\d\.]+).*devicetype\/smartspeaker/i                       // Google Chromecast, Linux-based Smart Speaker
+            ], [VERSION, [NAME, CHROMECAST + ' SmartSpeaker']], [
+            /linux.*crkey\/([\d\.]+)/i                                          // Google Chromecast, Legacy Linux-based
+            ], [VERSION, [NAME, CHROMECAST + ' Linux']], [
+            /crkey\/([\d\.]+)/i                                                 // Google Chromecast, unknown
+            ], [VERSION, [NAME, CHROMECAST]], [
+
+            // Mobile OSes
+            /droid ([\w\.]+)\b.+(android[- ]x86)/i                              // Android-x86
+            ], [VERSION, NAME], [                                               
+            /(ubuntu) ([\w\.]+) like android/i                                  // Ubuntu Touch
+            ], [[NAME, /(.+)/, '$1 Touch'], VERSION], [
+            /(harmonyos)[\/ ]?([\d\.]*)/i,                                      // HarmonyOS
+                                                                                // Android/Blackberry/WebOS/QNX/Bada/RIM/KaiOS/Maemo/MeeGo/S40/Sailfish OS/OpenHarmony/Tizen
+            /(android|bada|blackberry|kaios|maemo|meego|openharmony|qnx|rim tablet os|sailfish|series40|symbian|tizen)\w*[-\/\.; ]?([\d\.]*)/i
+            ], [NAME, VERSION], [
+            /\(bb(10);/i                                                        // BlackBerry 10
+            ], [VERSION, [NAME, BLACKBERRY]], [
+            /(?:symbian ?os|symbos|s60(?=;)|series ?60)[-\/ ]?([\w\.]*)/i       // Symbian
+            ], [VERSION, [NAME, 'Symbian']], [
+            /mozilla\/[\d\.]+ \((?:mobile|tablet|tv|mobile; [\w ]+); rv:.+ gecko\/([\w\.]+)/i // Firefox OS
+            ], [VERSION, [NAME, FIREFOX+' OS']], [
+            /\b(?:hp)?wos(?:browser)?\/([\w\.]+)/i,                             // WebOS
+            /webos(?:[ \/]?|\.tv-20(?=2[2-9]))(\d[\d\.]*)/i
+            ], [VERSION, [NAME, 'webOS']], [
+            /web0s;.+?(?:chr[o0]me|safari)\/(\d+)/i
+                                                                                // https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine
+            ], [[VERSION, strMapper, {'25':'120','24':'108','23':'94','22':'87','6':'79','5':'68','4':'53','3':'38','2':'538','1':'537','*':'TV'}], [NAME, 'webOS']], [                   
+            /watch(?: ?os[,\/]|\d,\d\/)([\d\.]+)/i                              // watchOS
+            ], [VERSION, [NAME, 'watchOS']], [
+
+            // Google ChromeOS
+            /(cros) [\w]+(?:\)| ([\w\.]+)\b)/i                                  // Chromium OS
+            ], [[NAME, "Chrome OS"], VERSION],[
+
+            // Smart TVs
+            /panasonic;(viera)/i,                                               // Panasonic Viera
+            /(netrange)mmh/i,                                                   // Netrange
+            /(nettv)\/(\d+\.[\w\.]+)/i,                                         // NetTV
+
+            // Console
+            /(nintendo|playstation) (\w+)/i,                                    // Nintendo/Playstation
+            /(xbox); +xbox ([^\);]+)/i,                                         // Microsoft Xbox (360, One, X, S, Series X, Series S)
+            /(pico) .+os([\w\.]+)/i,                                            // Pico
+
+            // Other
+            /\b(joli|palm)\b ?(?:os)?\/?([\w\.]*)/i,                            // Joli/Palm
+            /linux.+(mint)[\/\(\) ]?([\w\.]*)/i,                                // Mint
+            /(mageia|vectorlinux|fuchsia|arcaos|arch(?= ?linux))[;l ]([\d\.]*)/i,  // Mageia/VectorLinux/Fuchsia/ArcaOS/Arch
+            /([kxln]?ubuntu|debian|suse|opensuse|gentoo|slackware|fedora|mandriva|centos|pclinuxos|red ?hat|zenwalk|linpus|raspbian|plan 9|minix|risc os|contiki|deepin|manjaro|elementary os|sabayon|linspire|knoppix)(?: gnu[\/ ]linux)?(?: enterprise)?(?:[- ]linux)?(?:-gnu)?[-\/ ]?(?!chrom|package)([-\w\.]*)/i,
+                                                                                // Ubuntu/Debian/SUSE/Gentoo/Slackware/Fedora/Mandriva/CentOS/PCLinuxOS/RedHat/Zenwalk/Linpus/Raspbian/Plan9/Minix/RISCOS/Contiki/Deepin/Manjaro/elementary/Sabayon/Linspire/Knoppix
+            /((?:open)?solaris)[-\/ ]?([\w\.]*)/i,                              // Solaris
+            /\b(aix)[; ]([1-9\.]{0,4})/i,                                       // AIX
+            /(hurd|linux|morphos)(?: (?:arm|x86|ppc)\w*| ?)([\w\.]*)/i,         // Hurd/Linux/MorphOS
+            /(gnu) ?([\w\.]*)/i,                                                // GNU
+            /\b([-frentopcghs]{0,5}bsd|dragonfly)[\/ ]?(?!amd|[ix346]{1,2}86)([\w\.]*)/i, // FreeBSD/NetBSD/OpenBSD/PC-BSD/GhostBSD/DragonFly
+            /(haiku) ?(r\d)?/i                                                  // Haiku
+            ], [NAME, VERSION], [
+            /(sunos) ?([\d\.]*)/i                                               // Solaris
+            ], [[NAME, 'Solaris'], VERSION], [
+            /\b(beos|os\/2|amigaos|openvms|hp-ux|serenityos)/i,                 // BeOS/OS2/AmigaOS/OpenVMS/HP-UX/SerenityOS
+            /(unix) ?([\w\.]*)/i                                                // UNIX
+            ], [NAME, VERSION]
+        ]
+    };
+
+    /////////////////
+    // Factories
+    ////////////////
+
+    var defaultProps = (function () {
+            var props = { init : {}, isIgnore : {}, isIgnoreRgx : {}, toString : {}};
+            setProps.call(props.init, [
+                [UA_BROWSER, [NAME, VERSION, MAJOR, TYPE]],
+                [UA_CPU, [ARCHITECTURE]],
+                [UA_DEVICE, [TYPE, MODEL, VENDOR]],
+                [UA_ENGINE, [NAME, VERSION]],
+                [UA_OS, [NAME, VERSION]]
+            ]);
+            setProps.call(props.isIgnore, [
+                [UA_BROWSER, [VERSION, MAJOR]],
+                [UA_ENGINE, [VERSION]],
+                [UA_OS, [VERSION]]
+            ]);
+            setProps.call(props.isIgnoreRgx, [
+                [UA_BROWSER, / ?browser$/i],
+                [UA_OS, / ?os$/i]
+            ]);
+            setProps.call(props.toString, [
+                [UA_BROWSER, [NAME, VERSION]],
+                [UA_CPU, [ARCHITECTURE]],
+                [UA_DEVICE, [VENDOR, MODEL]],
+                [UA_ENGINE, [NAME, VERSION]],
+                [UA_OS, [NAME, VERSION]]
+            ]);
+            return props;
+    })();
+
+    var createIData = function (item, itemType) {
+
+        var init_props = defaultProps.init[itemType],
+            is_ignoreProps = defaultProps.isIgnore[itemType] || 0,
+            is_ignoreRgx = defaultProps.isIgnoreRgx[itemType] || 0,
+            toString_props = defaultProps.toString[itemType] || 0;
+
+        function IData () {
+            setProps.call(this, init_props);
+        }
+
+        IData.prototype.getItem = function () {
+            return item;
+        };
+
+        IData.prototype.withClientHints = function () {
+
+            // nodejs / non-client-hints browsers
+            if (!NAVIGATOR_UADATA) {
+                return item
+                        .parseCH()
+                        .get();
+            }
+
+            // browsers based on chromium 85+
+            return NAVIGATOR_UADATA
+                    .getHighEntropyValues(CH_ALL_VALUES)
+                    .then(function (res) {
+                        return item
+                                .setCH(new UACHData(res, false))
+                                .parseCH()
+                                .get();
+            });
+        };
+
+        IData.prototype.withFeatureCheck = function () {
+            return item.detectFeature().get();
+        };
+
+        if (itemType != UA_RESULT) {
+            IData.prototype.is = function (strToCheck) {
+                var is = false;
+                for (var i in this) {
+                    if (this.hasOwnProperty(i) && !has(is_ignoreProps, i) && lowerize(is_ignoreRgx ? strip(is_ignoreRgx, this[i]) : this[i]) == lowerize(is_ignoreRgx ? strip(is_ignoreRgx, strToCheck) : strToCheck)) {
+                        is = true;
+                        if (strToCheck != UNDEF_TYPE) break;
+                    } else if (strToCheck == UNDEF_TYPE && is) {
+                        is = !is;
+                        break;
+                    }
+                }
+                return is;
+            };
+            IData.prototype.toString = function () {
+                var str = EMPTY;
+                for (var i in toString_props) {
+                    if (typeof(this[toString_props[i]]) !== UNDEF_TYPE) {
+                        str += (str ? ' ' : EMPTY) + this[toString_props[i]];
+                    }
+                }
+                return str || UNDEF_TYPE;
+            };
+        }
+
+        if (!NAVIGATOR_UADATA) {
+            IData.prototype.then = function (cb) { 
+                var that = this;
+                var IDataResolve = function () {
+                    for (var prop in that) {
+                        if (that.hasOwnProperty(prop)) {
+                            this[prop] = that[prop];
+                        }
+                    }
+                };
+                IDataResolve.prototype = {
+                    is : IData.prototype.is,
+                    toString : IData.prototype.toString
+                };
+                var resolveData = new IDataResolve();
+                cb(resolveData);
+                return resolveData;
+            };
+        }
+
+        return new IData();
+    };
+
+    /////////////////
+    // Constructor
+    ////////////////
+
+    function UACHData (uach, isHttpUACH) {
+        uach = uach || {};
+        setProps.call(this, CH_ALL_VALUES);
+        if (isHttpUACH) {
+            setProps.call(this, [
+                [BRANDS, itemListToArray(uach[CH_HEADER])],
+                [FULLVERLIST, itemListToArray(uach[CH_HEADER_FULL_VER_LIST])],
+                [MOBILE, /\?1/.test(uach[CH_HEADER_MOBILE])],
+                [MODEL, stripQuotes(uach[CH_HEADER_MODEL])],
+                [PLATFORM, stripQuotes(uach[CH_HEADER_PLATFORM])],
+                [PLATFORMVER, stripQuotes(uach[CH_HEADER_PLATFORM_VER])],
+                [ARCHITECTURE, stripQuotes(uach[CH_HEADER_ARCH])],
+                [FORMFACTORS, itemListToArray(uach[CH_HEADER_FORM_FACTORS])],
+                [BITNESS, stripQuotes(uach[CH_HEADER_BITNESS])]
+            ]);
+        } else {
+            for (var prop in uach) {
+                if(this.hasOwnProperty(prop) && typeof uach[prop] !== UNDEF_TYPE) this[prop] = uach[prop];
+            }
+        }
+    }
+
+    function UAItem (itemType, ua, rgxMap, uaCH) {
+
+        this.get = function (prop) {
+            if (!prop) return this.data;
+            return this.data.hasOwnProperty(prop) ? this.data[prop] : undefined;
+        };
+
+        this.set = function (prop, val) {
+            this.data[prop] = val;
+            return this;
+        };
+
+        this.setCH = function (ch) {
+            this.uaCH = ch;
+            return this;
+        };
+
+        this.detectFeature = function () {
+            if (NAVIGATOR && NAVIGATOR.userAgent == this.ua) {
+                switch (this.itemType) {
+                    case UA_BROWSER:
+                        // Brave-specific detection
+                        if (NAVIGATOR.brave && typeof NAVIGATOR.brave.isBrave == FUNC_TYPE) {
+                            this.set(NAME, 'Brave');
+                        }
+                        break;
+                    case UA_DEVICE:
+                        // Chrome-specific detection: check for 'mobile' value of navigator.userAgentData
+                        if (!this.get(TYPE) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[MOBILE]) {
+                            this.set(TYPE, MOBILE);
+                        }
+                        // iPadOS-specific detection: identified as Mac, but has some iOS-only properties
+                        if (this.get(MODEL) == 'Macintosh' && NAVIGATOR && typeof NAVIGATOR.standalone !== UNDEF_TYPE && NAVIGATOR.maxTouchPoints && NAVIGATOR.maxTouchPoints > 2) {
+                            this.set(MODEL, 'iPad')
+                                .set(TYPE, TABLET);
+                        }
+                        break;
+                    case UA_OS:
+                        // Chrome-specific detection: check for 'platform' value of navigator.userAgentData
+                        if (!this.get(NAME) && NAVIGATOR_UADATA && NAVIGATOR_UADATA[PLATFORM]) {
+                            this.set(NAME, NAVIGATOR_UADATA[PLATFORM]);
+                        }
+                        break;
+                    case UA_RESULT:
+                        var data = this.data;
+                        var detect = function (itemType) {
+                            return data[itemType]
+                                    .getItem()
+                                    .detectFeature()
+                                    .get();
+                        };
+                        this.set(UA_BROWSER, detect(UA_BROWSER))
+                            .set(UA_CPU, detect(UA_CPU))
+                            .set(UA_DEVICE, detect(UA_DEVICE))
+                            .set(UA_ENGINE, detect(UA_ENGINE))
+                            .set(UA_OS, detect(UA_OS));
+                }
+            }
+            return this;
+        };
+
+        this.parseUA = function () {
+            if (this.itemType != UA_RESULT) {
+                rgxMapper.call(this.data, this.ua, this.rgxMap);
+            }
+            if (this.itemType == UA_BROWSER) {
+                this.set(MAJOR, majorize(this.get(VERSION)));
+            }
+            return this;
+        };
+
+        this.parseCH = function () {
+            var uaCH = this.uaCH,
+                rgxMap = this.rgxMap;
+    
+            switch (this.itemType) {
+                case UA_BROWSER:
+                case UA_ENGINE:
+                    var brands = uaCH[FULLVERLIST] || uaCH[BRANDS], prevName;
+                    if (brands) {
+                        for (var i in brands) {
+                            var brandName = brands[i].brand || brands[i],
+                                brandVersion = brands[i].version;
+                            if (this.itemType == UA_BROWSER && 
+                                !/not.a.brand/i.test(brandName) && 
+                                (!prevName || 
+                                    (/Chrom/.test(prevName) && brandName != CHROMIUM) || 
+                                    (prevName == EDGE && /WebView2/.test(brandName))
+                                )) {
+                                    brandName = strMapper(brandName, browserHintsMap);
+                                    prevName = this.get(NAME);
+                                    if (!(prevName && !/Chrom/.test(prevName) && /Chrom/.test(brandName))) {
+                                        this.set(NAME, brandName)
+                                            .set(VERSION, brandVersion)
+                                            .set(MAJOR, majorize(brandVersion));
+                                    }
+                                    prevName = brandName;
+                            }
+                            if (this.itemType == UA_ENGINE && brandName == CHROMIUM) {
+                                this.set(VERSION, brandVersion);
+                            }
+                        }
+                    }
+                    break;
+                case UA_CPU:
+                    var archName = uaCH[ARCHITECTURE];
+                    if (archName) {
+                        if (archName && uaCH[BITNESS] == '64') archName += '64';
+                        rgxMapper.call(this.data, archName + ';', rgxMap);
+                    }
+                    break;
+                case UA_DEVICE:
+                    if (uaCH[MOBILE]) {
+                        this.set(TYPE, MOBILE);
+                    }
+                    if (uaCH[MODEL]) {
+                        this.set(MODEL, uaCH[MODEL]);
+                        if (!this.get(TYPE) || !this.get(VENDOR)) {
+                            var reParse = {};
+                            rgxMapper.call(reParse, 'droid 9; ' + uaCH[MODEL] + ')', rgxMap);
+                            if (!this.get(TYPE) && !!reParse.type) {
+                                this.set(TYPE, reParse.type);
+                            }
+                            if (!this.get(VENDOR) && !!reParse.vendor) {
+                                this.set(VENDOR, reParse.vendor);
+                            }
+                        }
+                    }
+                    if (uaCH[FORMFACTORS]) {
+                        var ff;
+                        if (typeof uaCH[FORMFACTORS] !== 'string') {
+                            var idx = 0;
+                            while (!ff && idx < uaCH[FORMFACTORS].length) {
+                                ff = strMapper(uaCH[FORMFACTORS][idx++], formFactorsMap);
+                            }
+                        } else {
+                            ff = strMapper(uaCH[FORMFACTORS], formFactorsMap);
+                        }
+                        this.set(TYPE, ff);
+                    }
+                    break;
+                case UA_OS:
+                    var osName = uaCH[PLATFORM];
+                    if(osName) {
+                        var osVersion = uaCH[PLATFORMVER];
+                        if (osName == WINDOWS) osVersion = (parseInt(majorize(osVersion), 10) >= 13 ? '11' : '10');
+                        this.set(NAME, osName)
+                            .set(VERSION, osVersion);
+                    }
+                    // Xbox-Specific Detection
+                    if (this.get(NAME) == WINDOWS && uaCH[MODEL] == 'Xbox') {
+                        this.set(NAME, 'Xbox')
+                            .set(VERSION, undefined);
+                    }           
+                    break;
+                case UA_RESULT:
+                    var data = this.data;
+                    var parse = function (itemType) {
+                        return data[itemType]
+                                .getItem()
+                                .setCH(uaCH)
+                                .parseCH()
+                                .get();
+                    };
+                    this.set(UA_BROWSER, parse(UA_BROWSER))
+                        .set(UA_CPU, parse(UA_CPU))
+                        .set(UA_DEVICE, parse(UA_DEVICE))
+                        .set(UA_ENGINE, parse(UA_ENGINE))
+                        .set(UA_OS, parse(UA_OS));
+            }
+            return this;
+        };
+
+        setProps.call(this, [
+            ['itemType', itemType],
+            ['ua', ua],
+            ['uaCH', uaCH],
+            ['rgxMap', rgxMap],
+            ['data', createIData(this, itemType)]
+        ]);
+
+        return this;
+    }
+
+    function UAParser (ua, extensions, headers) {
+
+        if (typeof ua === OBJ_TYPE) {
+            if (isExtensions(ua, true)) {
+                if (typeof extensions === OBJ_TYPE) {
+                    headers = extensions;               // case UAParser(extensions, headers)           
+                }
+                extensions = ua;                        // case UAParser(extensions)
+            } else {
+                headers = ua;                           // case UAParser(headers)
+                extensions = undefined;
+            }
+            ua = undefined;
+        } else if (typeof ua === STR_TYPE && !isExtensions(extensions, true)) {
+            headers = extensions;                       // case UAParser(ua, headers)
+            extensions = undefined;
+        }
+
+        // Convert Headers object into a plain object
+        if (headers && typeof headers.append === FUNC_TYPE) {
+            var kv = {};
+            headers.forEach(function (v, k) { kv[k] = v; });
+            headers = kv;
+        }
+        
+        if (!(this instanceof UAParser)) {
+            return new UAParser(ua, extensions, headers).getResult();
+        }
+
+        var userAgent = typeof ua === STR_TYPE ? ua :                                       // Passed user-agent string
+                                (headers && headers[USER_AGENT] ? headers[USER_AGENT] :     // User-Agent from passed headers
+                                ((NAVIGATOR && NAVIGATOR.userAgent) ? NAVIGATOR.userAgent : // navigator.userAgent
+                                    EMPTY)),                                                // empty string
+
+            httpUACH = new UACHData(headers, true),
+            regexMap = extensions ? 
+                        extend(defaultRegexes, extensions) : 
+                        defaultRegexes,
+
+            createItemFunc = function (itemType) {
+                if (itemType == UA_RESULT) {
+                    return function () {
+                        return new UAItem(itemType, userAgent, regexMap, httpUACH)
+                                    .set('ua', userAgent)
+                                    .set(UA_BROWSER, this.getBrowser())
+                                    .set(UA_CPU, this.getCPU())
+                                    .set(UA_DEVICE, this.getDevice())
+                                    .set(UA_ENGINE, this.getEngine())
+                                    .set(UA_OS, this.getOS())
+                                    .get();
+                    };
+                } else {
+                    return function () {
+                        return new UAItem(itemType, userAgent, regexMap[itemType], httpUACH)
+                                    .parseUA()
+                                    .get();
+                    };
+                }
+            };
+            
+        // public methods
+        setProps.call(this, [
+            ['getBrowser', createItemFunc(UA_BROWSER)],
+            ['getCPU', createItemFunc(UA_CPU)],
+            ['getDevice', createItemFunc(UA_DEVICE)],
+            ['getEngine', createItemFunc(UA_ENGINE)],
+            ['getOS', createItemFunc(UA_OS)],
+            ['getResult', createItemFunc(UA_RESULT)],
+            ['getUA', function () { return userAgent; }],
+            ['setUA', function (ua) {
+                if (isString(ua))
+                    userAgent = ua.length > UA_MAX_LENGTH ? trim(ua, UA_MAX_LENGTH) : ua;
+                return this;
+            }]
+        ])
+        .setUA(userAgent);
+
+        return this;
+    }
+
+    UAParser.VERSION = LIBVERSION;
+    UAParser.BROWSER =  enumerize([NAME, VERSION, MAJOR, TYPE]);
+    UAParser.CPU = enumerize([ARCHITECTURE]);
+    UAParser.DEVICE = enumerize([MODEL, VENDOR, TYPE, CONSOLE, MOBILE, SMARTTV, TABLET, WEARABLE, EMBEDDED]);
+    UAParser.ENGINE = UAParser.OS = enumerize([NAME, VERSION]);
+
+    ///////////
+    // Export
+    //////////
+
+    // check js environment
+    if (typeof exports !== UNDEF_TYPE) {
+        // nodejs env
+        if ("object" !== UNDEF_TYPE && module.exports) {
+            exports = module.exports = UAParser;
+        }
+        exports.UAParser = UAParser;
+    } else {
+        // requirejs env (optional)
+        if ("function" === FUNC_TYPE && __webpack_require__.amdO) {
+            !(__WEBPACK_AMD_DEFINE_RESULT__ = (function () {
+                return UAParser;
+            }).call(exports, __webpack_require__, exports, module),
+		__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+        } else if (isWindow) {
+            // browser env
+            window.UAParser = UAParser;
+        }
+    }
+
+    // jQuery/Zepto specific (optional)
+    // Note:
+    //   In AMD env the global scope should be kept clean, but jQuery is an exception.
+    //   jQuery always exports to global scope, unless jQuery.noConflict(true) is used,
+    //   and we should catch that.
+    var $ = isWindow && (window.jQuery || window.Zepto);
+    if ($ && !$.ua) {
+        var parser = new UAParser();
+        $.ua = parser.getResult();
+        $.ua.get = function () {
+            return parser.getUA();
+        };
+        $.ua.set = function (ua) {
+            parser.setUA(ua);
+            var result = parser.getResult();
+            for (var prop in result) {
+                $.ua[prop] = result[prop];
+            }
+        };
+    }
+
+})(typeof window === 'object' ? window : this);
+
+
 /***/ })
 
 /******/ 	});
@@ -41109,13 +46398,18 @@ module.exports = __webpack_require__.p + "assets/tileset.dada2d6925da4179a148.pn
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/amd options */
+/******/ 	(() => {
+/******/ 		__webpack_require__.amdO = {};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/global */
 /******/ 	(() => {
 /******/ 		__webpack_require__.g = (function() {

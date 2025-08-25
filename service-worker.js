@@ -20,15 +20,23 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // Only cache GET requests and static assets
+  if (event.request.method !== "GET") {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return (
         cached ||
         fetch(event.request).then((response) => {
-          const copy = response.clone();
-          caches
-            .open("turnarchist-v1")
-            .then((cache) => cache.put(event.request, copy));
+          // Only cache successful responses
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches
+              .open("turnarchist-v1")
+              .then((cache) => cache.put(event.request, copy));
+          }
           return response;
         })
       );
