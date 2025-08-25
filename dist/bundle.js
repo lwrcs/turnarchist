@@ -4658,35 +4658,15 @@ class BigSkullEnemy extends enemy_1.Enemy {
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 this.updateDrawXY(delta);
-                this.tileX = 21;
-                this.tileY = 0;
-                if (this.health <= 3) {
-                    this.tileX = 21;
-                    this.tileY = 4;
-                    if (this.ticksSinceFirstHit >= 3) {
-                        this.flashingFrame += 0.1 * delta;
-                        if (Math.floor(this.flashingFrame) % 2 === 0) {
-                            this.tileY = 0;
-                        }
-                    }
-                }
-                if (this.health <= 2) {
-                    this.tileX = 21;
-                    this.tileY = 8;
-                    if (this.ticksSinceFirstHit >= 3) {
-                        this.flashingFrame += 0.1 * delta;
-                        if (Math.floor(this.flashingFrame) % 2 === 0) {
-                            this.tileY = 4;
-                        }
-                    }
-                }
-                if (this.health <= 1 || this.cloned) {
-                    this.tileX = 21;
+                this.tileX = 33;
+                this.tileY = 12;
+                if (this.health <= 2 || this.cloned) {
+                    this.tileX = 35;
                     this.tileY = 12;
                     if (this.ticksSinceFirstHit >= 3) {
                         this.flashingFrame += 0.1 * delta;
                         if (Math.floor(this.flashingFrame) % 2 === 0) {
-                            this.tileY = 8;
+                            this.tileY = 4;
                         }
                     }
                 }
@@ -4695,7 +4675,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 20 ? Math.floor(this.frame) * 2 : 0), this.tileY, 2, 4, this.x - this.drawX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY, 2, 3, this.softShadeColor, this.shadeAmount());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -4729,11 +4709,11 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 4;
-        this.maxHealth = 4;
-        this.defaultMaxHealth = 4;
-        this.tileX = 21;
-        this.tileY = 0;
+        this.health = 8;
+        this.maxHealth = 8;
+        this.defaultMaxHealth = 8;
+        this.tileX = 33;
+        this.tileY = 12;
         this.seenPlayer = false;
         this.aggro = false;
         this.unconscious = false;
@@ -10910,10 +10890,22 @@ class Entity extends drawable_1.Drawable {
                 return;
             }
             // If not sharing any row or column, use distance-based logic
-            const entityCenterX = this.x + (this.w - 1) / 2;
-            const entityCenterY = this.y + (this.h - 1) / 2;
-            let dx = player.x - entityCenterX;
-            let dy = player.y - entityCenterY;
+            //find the tile of the big enemy closest to the player
+            let closestTile = { x: 0, y: 0 };
+            let closestDistance = 1000000;
+            for (let x = 0; x < this.w; x++) {
+                for (let y = 0; y < this.h; y++) {
+                    let distance = Math.abs(player.x - (this.x + x)) + Math.abs(player.y - (this.y + y));
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestTile = { x: this.x + x, y: this.y + y };
+                    }
+                }
+            }
+            const entityCenterX = closestTile.x + (this.w - 1) / 2;
+            const entityCenterY = closestTile.y + (this.h - 1) / 2;
+            let dx = player.x - closestTile.x;
+            let dy = player.y - closestTile.y;
             if (Math.abs(dx) > Math.abs(dy)) {
                 if (dx > 0)
                     this.direction = game_1.Direction.RIGHT;
@@ -40894,7 +40886,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.13fa9365ae96474553f6.png";
+module.exports = __webpack_require__.p + "assets/mobset.a918f6b96c8d69eca5c0.png";
 
 /***/ }),
 
