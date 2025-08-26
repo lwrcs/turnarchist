@@ -49,7 +49,8 @@ const gameStatsSchema = z.object({
   gameVersion: z.string(),
   // We leave GameState untyped because it's a complex, nested field. Reference the game version
   // and `src/game/GameState.ts` in the game-client code for the object shape.
-  gameState: z.record(z.any()),
+  // lint was yelling at me for only having a single input so I added a second z.any()
+  gameState: z.record(z.any(), z.any()),
 });
 
 export const recordGameStatsRequestSchema = {

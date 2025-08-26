@@ -36,9 +36,9 @@ export class BigSkullEnemy extends Enemy {
     this.h = 2;
     this.ticks = 0;
     this.frame = 0;
-    this.health = 8;
-    this.maxHealth = 8;
-    this.defaultMaxHealth = 8;
+    this.health = 6;
+    this.maxHealth = 6;
+    this.defaultMaxHealth = 6;
     this.tileX = 33;
     this.tileY = 12;
     this.seenPlayer = false;
@@ -136,6 +136,25 @@ export class BigSkullEnemy extends Enemy {
           let oldX = this.x;
           let oldY = this.y;
 
+          // If aligned with the player on a row/column, turn toward the player instead of moving this turn
+          const p = this.targetPlayer;
+          const sharesRow = p.y >= this.y && p.y < this.y + this.h;
+          const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+          if (sharesRow !== sharesColumn) {
+            let desiredDir = this.direction;
+            if (sharesRow) {
+              desiredDir = p.x < this.x ? Direction.LEFT : Direction.RIGHT;
+            } else if (sharesColumn) {
+              desiredDir = p.y < this.y ? Direction.UP : Direction.DOWN;
+            }
+            if (desiredDir !== this.direction) {
+              this.direction = desiredDir;
+              this.makeBigHitWarnings();
+              this.ticks++;
+              return;
+            }
+          }
+
           let disablePositions = Array<astar.Position>();
           for (const e of this.room.entities) {
             if (e !== this) {
@@ -194,14 +213,14 @@ export class BigSkullEnemy extends Enemy {
             let oldDir = this.direction;
             let player = this.targetPlayer;
 
-            this.facePlayer(player);
+            //this.facePlayer(player);
 
             if (moveX > oldX) this.direction = Direction.RIGHT;
             else if (moveX < oldX) this.direction = Direction.LEFT;
             else if (moveY > oldY) this.direction = Direction.DOWN;
             else if (moveY < oldY) this.direction = Direction.UP;
 
-            if (oldDir == this.direction) {
+            if (oldDir === this.direction) {
               let hitPlayer = false;
               let wouldHit = (player: Player, moveX: number, moveY: number) => {
                 return (
@@ -213,13 +232,14 @@ export class BigSkullEnemy extends Enemy {
               };
 
               for (const i in this.game.players) {
+                const closestTile = this.closestTile(this.game.players[i]);
                 if (
                   this.game.rooms[this.game.players[i].levelID] === this.room &&
                   wouldHit(this.game.players[i], moveX, moveY)
                 ) {
                   this.game.players[i].hurt(this.hit(), this.name);
-                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                  this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
+                  this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
                   if (
                     this.game.players[i] ===
                     this.game.players[this.game.localPlayerID]
@@ -336,7 +356,7 @@ export class BigSkullEnemy extends Enemy {
         if (this.ticksSinceFirstHit >= 3) {
           this.flashingFrame += 0.1 * delta;
           if (Math.floor(this.flashingFrame) % 2 === 0) {
-            this.tileY = 4;
+            this.tileX = 33;
           }
         }
       }
@@ -385,7 +405,7 @@ export class BigSkullEnemy extends Enemy {
       this.health,
       this.maxHealth,
       this.x + 0.5,
-      this.y,
+      this.y - 0.5,
       true,
     );
   };

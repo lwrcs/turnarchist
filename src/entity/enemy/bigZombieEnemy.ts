@@ -92,6 +92,24 @@ export class BigZombieEnemy extends Enemy {
           let oldX = this.x;
           let oldY = this.y;
 
+          const p = this.targetPlayer;
+          const sharesRow = p.y >= this.y && p.y < this.y + this.h;
+          const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+          if (sharesRow !== sharesColumn) {
+            let desiredDir = this.direction;
+            if (sharesRow) {
+              desiredDir = p.x < this.x ? Direction.LEFT : Direction.RIGHT;
+            } else if (sharesColumn) {
+              desiredDir = p.y < this.y ? Direction.UP : Direction.DOWN;
+            }
+            if (desiredDir !== this.direction) {
+              this.direction = desiredDir;
+              this.makeBigHitWarnings();
+              this.ticks++;
+              return;
+            }
+          }
+
           // Create a list of positions to avoid
           let disablePositions = Array<astar.Position>();
           for (const e of this.room.entities) {
@@ -153,7 +171,7 @@ export class BigZombieEnemy extends Enemy {
             let player = this.targetPlayer;
 
             // Face the target player
-            this.facePlayer(player);
+            //this.facePlayer(player);
 
             // Determine the new direction based on the move
             if (moveX > oldX) this.direction = Direction.RIGHT;

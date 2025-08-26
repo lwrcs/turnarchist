@@ -880,11 +880,27 @@ export class Entity extends Drawable {
     return Math.max(Math.abs(this.x - player.x), Math.abs(this.y - player.y));
   };
 
+  closestTile = (player: Player) => {
+    let closestTile = { x: 0, y: 0 };
+    let closestDistance = 1000000;
+    for (let x = 0; x < this.w; x++) {
+      for (let y = 0; y < this.h; y++) {
+        let distance =
+          Math.abs(player.x - (this.x + x)) + Math.abs(player.y - (this.y + y));
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestTile = { x: this.x + x, y: this.y + y };
+        }
+      }
+    }
+    return closestTile;
+  };
+
   facePlayer = (player: Player) => {
     // For 1x1 entities, use the existing perfect logic
     if (this.w === 1 && this.h === 1) {
-      const entityCenterX = this.x + (this.w - 1) / 2;
-      const entityCenterY = this.y + (this.h - 1) / 2;
+      const entityCenterX = this.x + 0.5;
+      const entityCenterY = this.y + 0.5;
 
       let dx = player.x - entityCenterX;
       let dy = player.y - entityCenterY;
@@ -909,44 +925,7 @@ export class Entity extends Drawable {
     if (sharesRow && sharesColumn) {
       return;
     }
-
-    // If sharing a row but not a column, face horizontally toward player
-    if (sharesRow && !sharesColumn) {
-      if (player.x < this.x) {
-        this.direction = Direction.LEFT;
-      } else {
-        this.direction = Direction.RIGHT;
-      }
-      return;
-    }
-
-    // If sharing a column but not a row, face vertically toward player
-    if (sharesColumn && !sharesRow) {
-      if (player.y < this.y) {
-        this.direction = Direction.UP;
-      } else {
-        this.direction = Direction.DOWN;
-      }
-      return;
-    }
-
-    // If not sharing any row or column, use distance-based logic
-    //find the tile of the big enemy closest to the player
-    let closestTile = { x: 0, y: 0 };
-    let closestDistance = 1000000;
-    for (let x = 0; x < this.w; x++) {
-      for (let y = 0; y < this.h; y++) {
-        let distance =
-          Math.abs(player.x - (this.x + x)) + Math.abs(player.y - (this.y + y));
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestTile = { x: this.x + x, y: this.y + y };
-        }
-      }
-    }
-
-    const entityCenterX = closestTile.x + (this.w - 1) / 2;
-    const entityCenterY = closestTile.y + (this.h - 1) / 2;
+    const closestTile = this.closestTile(player);
 
     let dx = player.x - closestTile.x;
     let dy = player.y - closestTile.y;

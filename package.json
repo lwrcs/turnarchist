@@ -135,6 +135,7 @@
     "psl": "^1.9.0",
     "punycode": "^2.3.1",
     "reduce-flatten": "^3.0.1",
-    "ua-parser-js": "^2.0.4"
+    "ua-parser-js": "^2.0.4",
+    "zod": "^4.1.3"
   }
 }

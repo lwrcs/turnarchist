@@ -58,7 +58,7 @@ export class CrusherEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 0.5;
+    return 1;
   };
 
   // Allow crushers to move onto a player's tile
