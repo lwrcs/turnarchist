@@ -1529,9 +1529,9 @@ export class Room {
     // Store for diagnostics/dynamic tuning usage
     this.estimatedLightingTiles = tilesToCompute;
 
-    console.log(
-      `Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`,
-    );
+    //console.log(
+    //  `Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`,
+    //);
   };
 
   updateLighting = () => {

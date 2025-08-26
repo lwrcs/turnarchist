@@ -18,6 +18,7 @@ export class WeaponFragments extends Usable {
     this.stackable = true;
     this.stackCount = stackCount || Math.ceil(Random.rand() * 10) + 7;
     this.description = "Can be used to repair broken weapons";
+    this.maximumStackCount = 64;
   }
 
   onUse = (player: Player) => {

@@ -20,7 +20,7 @@ export class Fish extends Usable {
 
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
-      player.health = Math.min(player.maxHealth, player.health + 0.5);
+      player.health = Math.min(player.maxHealth, player.health + 1);
       Sound.playEat();
       if (this.stackCount > 1) {
         this.stackCount--;

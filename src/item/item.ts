@@ -47,6 +47,7 @@ export class Item extends Drawable {
   group: ItemGroup = null;
   degradeable: boolean = true;
   cooldown: number = 0;
+  maximumStackCount: number = 8;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
     super();
@@ -82,6 +83,7 @@ export class Item extends Drawable {
     this.iconOffset = 0;
     this.grouped = false;
     this.group = null;
+    this.maximumStackCount = 12;
   }
 
   static add<

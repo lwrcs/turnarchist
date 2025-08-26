@@ -20898,7 +20898,6 @@ const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
-const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
@@ -20909,7 +20908,6 @@ const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/ite
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
@@ -21110,12 +21108,12 @@ GameConstants.STARTING_DEV_INVENTORY = [
     spear_1.Spear,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
-    scythe_1.Scythe,
+    spellbook_1.Spellbook,
     armor_1.Armor,
     backpack_1.Backpack,
     hammer_1.Hammer,
     pickaxe_1.Pickaxe,
-    torch_1.Torch,
+    pickaxe_1.Pickaxe,
     bluegem_1.BlueGem,
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
@@ -28003,6 +28001,7 @@ class Item extends drawable_1.Drawable {
         this.group = null;
         this.degradeable = true;
         this.cooldown = 0;
+        this.maximumStackCount = 8;
         this.hoverText = () => {
             return this.name;
         };
@@ -28237,6 +28236,7 @@ class Item extends drawable_1.Drawable {
         this.iconOffset = 0;
         this.grouped = false;
         this.group = null;
+        this.maximumStackCount = 12;
     }
     static add(room, x, y, ...rest) {
         return new this(room, x, y, ...rest);
@@ -29360,7 +29360,7 @@ class Fish extends usable_1.Usable {
         super(level, x, y);
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
-                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                player.health = Math.min(player.maxHealth, player.health + 1);
                 sound_1.Sound.playEat();
                 if (this.stackCount > 1) {
                     this.stackCount--;
@@ -29717,6 +29717,7 @@ class WeaponFragments extends usable_1.Usable {
         this.stackable = true;
         this.stackCount = stackCount || Math.ceil(random_1.Random.rand() * 10) + 7;
         this.description = "Can be used to repair broken weapons";
+        this.maximumStackCount = 64;
     }
 }
 exports.WeaponFragments = WeaponFragments;
@@ -31016,7 +31017,7 @@ class Weapon extends equippable_1.Equippable {
             this.toggleEquip();
             //inventory.weapon = null;
             inventory.removeItem(this);
-            inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
+            inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY), numFragments);
         };
         this.dropFromInventory = () => {
             if (this.wielder.inventory.weapon === this)
@@ -39218,7 +39219,9 @@ class Room {
             const tilesToCompute = roomTiles + estimatedRayTiles;
             // Store for diagnostics/dynamic tuning usage
             this.estimatedLightingTiles = tilesToCompute;
-            console.log(`Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`);
+            //console.log(
+            //  `Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`,
+            //);
         };
         this.updateLighting = () => {
             if (!this.onScreen)

@@ -122,7 +122,8 @@ export abstract class Weapon extends Equippable {
     //inventory.weapon = null;
     inventory.removeItem(this);
     inventory.addItem(
-      new WeaponFragments(this.level, inventoryX, inventoryY, numFragments),
+      new WeaponFragments(this.level, inventoryX, inventoryY),
+      numFragments,
     );
   };
 
