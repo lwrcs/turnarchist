@@ -97,6 +97,8 @@ export class GameConstants {
   static readonly HIT_ENEMY_TEXT_COLOR = "#76428a";
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
+  static readonly XP_POPUP_ENABLED = true;
+  static readonly COIN_ANIMATION = false;
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
   static get SHADE_ENABLED() {
@@ -283,7 +285,7 @@ export class GameConstants {
     Spear,
     GodStone,
     Spellbook,
-    Spellbook,
+    FishingRod,
     Armor,
     Backpack,
     Hammer,

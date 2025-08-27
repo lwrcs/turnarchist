@@ -48,6 +48,13 @@ export class Item extends Drawable {
   degradeable: boolean = true;
   cooldown: number = 0;
   maximumStackCount: number = 8;
+  animateToInventory: boolean = false;
+  private animStartX: number = 0;
+  private animStartY: number = 0;
+  private animTargetX: number = 0;
+  private animTargetY: number = 0;
+  private animT: number = 0;
+  player: Player;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
     super();
@@ -84,6 +91,8 @@ export class Item extends Drawable {
     this.grouped = false;
     this.group = null;
     this.maximumStackCount = 12;
+    this.animateToInventory = false;
+    this.player = null;
   }
 
   static add<
@@ -124,6 +133,7 @@ export class Item extends Drawable {
   onDrop = () => {};
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
+    this.player = player;
     if (!this.pickedUp) {
       this.startY = player.y;
 
@@ -131,6 +141,22 @@ export class Item extends Drawable {
       this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
+        // Initialize lerp-to-inventory animation
+        if (this.animateToInventory === true) {
+          this.animStartX = this.x - this.player.x + this.player.drawX;
+          this.animStartY = this.y - 1 - this.player.y + this.player.drawY;
+          this.animTargetX =
+            (GameConstants.WIDTH /
+              GameConstants.TILESIZE /
+              GameConstants.TILESIZE) *
+            1.75;
+          this.animTargetY =
+            (GameConstants.HEIGHT /
+              GameConstants.TILESIZE /
+              GameConstants.TILESIZE) *
+            5;
+          this.animT = 0;
+        }
         if (this.isNewItem(player)) {
           this.pickupMessage();
 
@@ -270,10 +296,53 @@ export class Item extends Drawable {
     if (this.degradeable) this.durability -= 1;
   };
 
+  drawAboveShading = (delta: number) => {
+    if (this.pickedUp) {
+      if (this.animateToInventory === true && this.player) {
+        // Lerp towards the inventory button with ease-out
+        const speed = 0.015 * delta; // slower overall speed
+        this.animT = Math.min(1, this.animT + speed);
+        const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
+        const posX =
+          this.animStartX * (1 - t) +
+          this.animTargetX * t +
+          this.player.x -
+          this.player.drawX;
+        const posY =
+          this.animStartY * (1 - t) +
+          this.animTargetY * t +
+          this.player.y -
+          this.player.drawY;
+
+        // Fade near the end
+        const fadeStart = 0.75;
+        if (t > fadeStart) {
+          const k = (t - fadeStart) / (1 - fadeStart);
+          this.alpha = 1 - k;
+        }
+
+        if (GameConstants.ALPHA_ENABLED)
+          Game.ctx.globalAlpha = Math.max(0, this.alpha);
+        Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY, this.w, this.h);
+        Game.ctx.globalAlpha = 1.0;
+
+        if (this.animT >= 1) {
+          this.animateToInventory = false;
+          this.level.items = this.level.items.filter((x) => x !== this);
+        }
+        return;
+      } else {
+        return;
+      }
+    }
+  };
+
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
     if (this.pickedUp) {
-      this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
+      if (this.animateToInventory === false) {
+        this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
+      } else return;
 
       //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
       this.alpha *= 0.9 ** delta;

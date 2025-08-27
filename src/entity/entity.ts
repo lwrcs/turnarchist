@@ -32,6 +32,7 @@ import { DeathParticle } from "../particle/deathParticle";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Coin } from "../item/coin";
 import { Random } from "../utility/random";
+import { XPPopup } from "../particle/xpPopup";
 
 export enum EntityDirection {
   DOWN,
@@ -851,6 +852,15 @@ export class Entity extends Drawable {
         enemyId: this.name,
         xp: xp,
       });
+
+    const player = this.getPlayer();
+    if (!player) return;
+
+    if (GameConstants.XP_POPUP_ENABLED) {
+      setTimeout(() => {
+        this.room.particles.push(new XPPopup(this.room, this.x, this.y, xp));
+      }, 350);
+    }
   };
 
   doneMoving = (): boolean => {

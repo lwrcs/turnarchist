@@ -8556,7 +8556,7 @@ var __WEBPACK_AMD_DEFINE_RESULT__;//////////////////////////////////////////////
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/font.716c780490ffd235a0ed.png";
+module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 
 /***/ }),
 
@@ -15809,6 +15809,7 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle/xpPopup.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -16297,6 +16298,14 @@ class Entity extends drawable_1.Drawable {
                     enemyId: this.name,
                     xp: xp,
                 });
+            const player = this.getPlayer();
+            if (!player)
+                return;
+            if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
+                setTimeout(() => {
+                    this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
+                }, 350);
+            }
         };
         this.doneMoving = () => {
             let EPSILON = 0.01;
@@ -20470,10 +20479,10 @@ exports.Game = Game;
 // Replay manager singleton
 Game._replayManager = null;
 Game.inputReceived = false;
-Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
+Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
 Game.letter_widths = [
     4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
-    3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 1, 4, 1, 1, 2, 2, 2, 2, 5, 3, 3,
+    3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 1, 4, 1, 1, 2, 2, 2, 2, 5, 3, 3, 3,
 ];
 Game.letter_height = 6;
 Game.letter_positions = [];
@@ -20912,6 +20921,7 @@ const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/reso
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -20964,6 +20974,8 @@ GameConstants.OUTLINE = "#222034";
 GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
 GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
+GameConstants.XP_POPUP_ENABLED = true;
+GameConstants.COIN_ANIMATION = false;
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
@@ -21108,7 +21120,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     spear_1.Spear,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
-    spellbook_1.Spellbook,
+    fishingRod_1.FishingRod,
     armor_1.Armor,
     backpack_1.Backpack,
     hammer_1.Hammer,
@@ -24331,7 +24343,7 @@ class TextBox {
         this.currentMessageIndex = -1;
         this.MAX_HISTORY = 50;
         this.handleKeyPress = (key) => {
-            const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/ ".split("");
+            const fontHas = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+ ".split("");
             if (key.length === 1) {
                 key = key.toLowerCase();
                 if (fontHas.includes(key)) {
@@ -27439,6 +27451,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Coin = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class Coin extends item_1.Item {
     //checked: boolean;
     constructor(level, x, y) {
@@ -27471,6 +27484,8 @@ class Coin extends item_1.Item {
         this.stackCount = 1;
         this.stackable = true;
         this.name = Coin.itemName;
+        if (gameConstants_1.GameConstants.COIN_ANIMATION)
+            this.animateToInventory = true;
     }
     get distanceToBottomRight() {
         return Math.sqrt((this.x + this.w - window.innerWidth) ** 2 +
@@ -28002,6 +28017,12 @@ class Item extends drawable_1.Drawable {
         this.degradeable = true;
         this.cooldown = 0;
         this.maximumStackCount = 8;
+        this.animateToInventory = false;
+        this.animStartX = 0;
+        this.animStartY = 0;
+        this.animTargetX = 0;
+        this.animTargetY = 0;
+        this.animT = 0;
         this.hoverText = () => {
             return this.name;
         };
@@ -28030,12 +28051,29 @@ class Item extends drawable_1.Drawable {
         this.onDrop = () => { };
         // Function to be called when item is picked up
         this.onPickup = (player) => {
+            this.player = player;
             if (!this.pickedUp) {
                 this.startY = player.y;
                 this.drawableY = this.y;
                 this.alpha = 1;
                 this.pickedUp = player.inventory.addItem(this);
                 if (this.pickedUp) {
+                    // Initialize lerp-to-inventory animation
+                    if (this.animateToInventory === true) {
+                        this.animStartX = this.x - this.player.x + this.player.drawX;
+                        this.animStartY = this.y - 1 - this.player.y + this.player.drawY;
+                        this.animTargetX =
+                            (gameConstants_1.GameConstants.WIDTH /
+                                gameConstants_1.GameConstants.TILESIZE /
+                                gameConstants_1.GameConstants.TILESIZE) *
+                                1.75;
+                        this.animTargetY =
+                            (gameConstants_1.GameConstants.HEIGHT /
+                                gameConstants_1.GameConstants.TILESIZE /
+                                gameConstants_1.GameConstants.TILESIZE) *
+                                5;
+                        this.animT = 0;
+                    }
                     if (this.isNewItem(player)) {
                         this.pickupMessage();
                         player.inventory.foundItems.push(this);
@@ -28133,10 +28171,50 @@ class Item extends drawable_1.Drawable {
             if (this.degradeable)
                 this.durability -= 1;
         };
+        this.drawAboveShading = (delta) => {
+            if (this.pickedUp) {
+                if (this.animateToInventory === true && this.player) {
+                    // Lerp towards the inventory button with ease-out
+                    const speed = 0.015 * delta; // slower overall speed
+                    this.animT = Math.min(1, this.animT + speed);
+                    const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
+                    const posX = this.animStartX * (1 - t) +
+                        this.animTargetX * t +
+                        this.player.x -
+                        this.player.drawX;
+                    const posY = this.animStartY * (1 - t) +
+                        this.animTargetY * t +
+                        this.player.y -
+                        this.player.drawY;
+                    // Fade near the end
+                    const fadeStart = 0.75;
+                    if (t > fadeStart) {
+                        const k = (t - fadeStart) / (1 - fadeStart);
+                        this.alpha = 1 - k;
+                    }
+                    if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                        game_1.Game.ctx.globalAlpha = Math.max(0, this.alpha);
+                    game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY, this.w, this.h);
+                    game_1.Game.ctx.globalAlpha = 1.0;
+                    if (this.animT >= 1) {
+                        this.animateToInventory = false;
+                        this.level.items = this.level.items.filter((x) => x !== this);
+                    }
+                    return;
+                }
+                else {
+                    return;
+                }
+            }
+        };
         // Function to draw the top layer of the item
         this.drawTopLayer = (delta) => {
             if (this.pickedUp) {
-                this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
+                if (this.animateToInventory === false) {
+                    this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
+                }
+                else
+                    return;
                 //this.x += (Math.sin(Date.now() / 50) * delta) / 10;
                 this.alpha *= 0.9 ** delta;
                 if (Math.abs(this.alpha) < 0.01) {
@@ -28237,6 +28315,8 @@ class Item extends drawable_1.Drawable {
         this.grouped = false;
         this.group = null;
         this.maximumStackCount = 12;
+        this.animateToInventory = false;
+        this.player = null;
     }
     static add(room, x, y, ...rest) {
         return new this(room, x, y, ...rest);
@@ -29376,6 +29456,7 @@ class Fish extends usable_1.Usable {
         this.tileX = 5;
         this.tileY = 2;
         this.stackable = true;
+        this.animateToInventory = true;
     }
 }
 exports.Fish = Fish;
@@ -35176,7 +35257,8 @@ class DamageNumber extends particle_1.Particle {
                 this.dead = true;
             }
             game_1.Game.ctx.globalAlpha = this.alpha;
-            game_1.Game.fillTextOutline(this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - width / 2, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
+            const centerX = game_1.Game.measureText(this.damage.toString()).width / 2;
+            game_1.Game.fillTextOutline("-" + this.damage.toString(), (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - centerX, (this.y - 0.6) * gameConstants_1.GameConstants.TILESIZE, this.outlineColor, this.color);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.restore();
         };
@@ -35468,6 +35550,73 @@ class WizardTeleportParticle extends particle_1.Particle {
     }
 }
 exports.WizardTeleportParticle = WizardTeleportParticle;
+
+
+/***/ }),
+
+/***/ "./src/particle/xpPopup.ts":
+/*!*********************************!*\
+  !*** ./src/particle/xpPopup.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XPPopup = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+class XPPopup extends particle_1.Particle {
+    constructor(room, x, y, xp) {
+        super();
+        this.alpha = 0.25;
+        this.frame = 0;
+        this.xoffset = 0;
+        this.getXoffset = () => {
+            if (this.room.particles.length > 0) {
+                let damageNumbers = this.room.particles.filter((p) => p instanceof XPPopup);
+                if (damageNumbers.length % 3 === 0)
+                    return 0.5;
+                if (damageNumbers.length % 3 === 1)
+                    return 0;
+                if (damageNumbers.length % 3 === 2)
+                    return 0.25;
+            }
+        };
+        this.drawTopLayer = (delta) => {
+            game_1.Game.ctx.save();
+            if (this.dead) {
+                game_1.Game.ctx.restore();
+                return;
+            }
+            if (this.frame > 15)
+                this.alpha -= 0.025 * delta;
+            this.y -= 0.03 * delta;
+            this.frame += delta;
+            let width = game_1.Game.measureText(this.xp.toString()).width;
+            if (this.alpha <= 0.002) {
+                this.alpha = 0;
+                this.dead = true;
+            }
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            const centerX = game_1.Game.measureText(`+${this.xp} XP`).width / 2;
+            game_1.Game.ctx.fillStyle = this.color;
+            game_1.Game.fillText(`+${this.xp} XP`, (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - centerX, (this.y - 1.5) * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.restore();
+        };
+        this.room = room;
+        this.xp = xp;
+        this.x = x;
+        this.y = y;
+        this.color = "yellow";
+        this.outlineColor = gameConstants_1.GameConstants.OUTLINE;
+        this.xoffset = random_1.Random.rand() * 0.2;
+    }
+}
+exports.XPPopup = XPPopup;
 
 
 /***/ }),
@@ -40359,6 +40508,10 @@ class Room {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
                     this.roomArray[x][y].drawAboveShading(delta);
                 }
+            }
+            //added for coin animation
+            for (const i of this.items) {
+                i.drawAboveShading(delta);
             }
             game_1.Game.ctx.restore();
         };

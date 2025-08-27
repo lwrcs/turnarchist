@@ -237,10 +237,11 @@ export class Game {
   tip: string = Tips.getRandomTip();
   private currentLevelGenerator: LevelImageGenerator | null = null;
   static text_rendering_canvases: Record<string, HTMLCanvasElement>;
-  static readonly letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/";
+  static readonly letters =
+    "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
   static readonly letter_widths = [
     4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
-    3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 1, 4, 1, 1, 2, 2, 2, 2, 5, 3, 3,
+    3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 1, 4, 1, 1, 2, 2, 2, 2, 5, 3, 3, 3,
   ];
   static readonly letter_height = 6;
   static letter_positions = [];

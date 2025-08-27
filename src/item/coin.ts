@@ -2,6 +2,7 @@ import { Item } from "./item";
 import { Game } from "../game";
 import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
+import { GameConstants } from "../game/gameConstants";
 
 export class Coin extends Item {
   static itemName = "coin";
@@ -14,6 +15,7 @@ export class Coin extends Item {
     this.stackCount = 1;
     this.stackable = true;
     this.name = Coin.itemName;
+    if (GameConstants.COIN_ANIMATION) this.animateToInventory = true;
   }
   onDrop = () => {
     const coinList = []; //array to store coin objects

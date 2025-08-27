@@ -16,6 +16,7 @@ export class Fish extends Usable {
     this.tileY = 2;
 
     this.stackable = true;
+    this.animateToInventory = true;
   }
 
   onUse = (player: Player) => {

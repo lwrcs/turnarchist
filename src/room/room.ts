@@ -3015,6 +3015,11 @@ export class Room {
         this.roomArray[x][y].drawAboveShading(delta);
       }
     }
+    //added for coin animation
+    for (const i of this.items) {
+      i.drawAboveShading(delta);
+    }
+
     Game.ctx.restore();
   };
 
