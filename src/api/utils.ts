@@ -11,6 +11,6 @@ export const getEnvironmentApiUrl = () => {
   if (isDevelopment) {
     return "http://localhost:3000/api/v1";
   } else {
-    return `https://turnarchist.onrender.com/api/v1/game/stats`;
+    return `https://turnarchist.onrender.com/api/v1`;
   }
 };
