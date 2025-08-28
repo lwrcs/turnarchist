@@ -32346,7 +32346,8 @@ class LevelGenerator {
             // Generate partitions based on whether it's a side path or main path
             let partitions;
             const shouldUsePNG = gameConstants_1.GameConstants.USE_PNG_LEVELS && !isSidePath;
-            const rollPNG = random_1.Random.rand() < 0.25;
+            // Deterministic per-level roll that doesn't alter global RNG state
+            const rollPNG = this.shouldUsePngForLevel(depth, pid, 0.25);
             if (shouldUsePNG && rollPNG) {
                 // Use PNG-based level generation for MAIN PATHS ONLY
                 const pngUrl = await this.selectRandomLevelForDepth(depth);
@@ -32446,6 +32447,21 @@ class LevelGenerator {
         this.validator = null;
         this.visualizer = null;
         this.pngPartitionGenerator = new pngPartitionGenerator_1.PngPartitionGenerator();
+    }
+    /**
+     * Deterministically decide if PNG-based generation should be used for this level.
+     * Uses a local hash seeded by (seed, depth, pathId) to avoid touching global RNG state.
+     */
+    shouldUsePngForLevel(depth, pathId, probability) {
+        // Mix seed, depth, and path string into a 32-bit state
+        let h = (this.seed ^ depth) >>> 0;
+        // Simple LCG/hash mix over pathId characters (deterministic)
+        for (let i = 0; i < pathId.length; i++) {
+            h = (Math.imul(h ^ pathId.charCodeAt(i), 1664525) + 1013904223) >>> 0;
+        }
+        // Map to [0,1)
+        const r = (h >>> 0) / 4294967296;
+        return r < probability;
     }
     async selectRandomLevelForDepth(depth) {
         console.log(`Looking for PNG levels for depth ${depth}...`);
@@ -35566,7 +35582,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XPPopup = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 class XPPopup extends particle_1.Particle {
     constructor(room, x, y, xp) {
@@ -35601,9 +35616,9 @@ class XPPopup extends particle_1.Particle {
                 this.dead = true;
             }
             game_1.Game.ctx.globalAlpha = this.alpha;
-            const centerX = game_1.Game.measureText(`+${this.xp} XP`).width / 2;
+            const centerX = game_1.Game.measureText(`+${this.xp}xp`).width / 2;
             game_1.Game.ctx.fillStyle = this.color;
-            game_1.Game.fillText(`+${this.xp} XP`, (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - centerX, (this.y - 1.5) * gameConstants_1.GameConstants.TILESIZE);
+            game_1.Game.fillText(`+${this.xp} xp`, (this.x + 0.4 + this.xoffset) * gameConstants_1.GameConstants.TILESIZE - centerX, (this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.restore();
         };
@@ -35613,7 +35628,7 @@ class XPPopup extends particle_1.Particle {
         this.y = y;
         this.color = "yellow";
         this.outlineColor = gameConstants_1.GameConstants.OUTLINE;
-        this.xoffset = random_1.Random.rand() * 0.2;
+        this.xoffset = 0;
     }
 }
 exports.XPPopup = XPPopup;

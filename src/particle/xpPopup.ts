@@ -23,7 +23,7 @@ export class XPPopup extends Particle {
     this.y = y;
     this.color = "yellow";
     this.outlineColor = GameConstants.OUTLINE;
-    this.xoffset = Random.rand() * 0.2;
+    this.xoffset = 0;
   }
   getXoffset = () => {
     if (this.room.particles.length > 0) {
@@ -53,12 +53,12 @@ export class XPPopup extends Particle {
       this.dead = true;
     }
     Game.ctx.globalAlpha = this.alpha;
-    const centerX = Game.measureText(`+${this.xp} XP`).width / 2;
+    const centerX = Game.measureText(`+${this.xp}xp`).width / 2;
     Game.ctx.fillStyle = this.color;
     Game.fillText(
-      `+${this.xp} XP`,
+      `+${this.xp} xp`,
       (this.x + 0.4 + this.xoffset) * GameConstants.TILESIZE - centerX,
-      (this.y - 1.5) * GameConstants.TILESIZE,
+      (this.y - 0.75) * GameConstants.TILESIZE,
     );
 
     Game.ctx.globalAlpha = 1;

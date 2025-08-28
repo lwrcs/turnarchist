@@ -187,7 +187,8 @@ export class LevelGenerator {
     let partitions: Partition[];
 
     const shouldUsePNG = GameConstants.USE_PNG_LEVELS && !isSidePath;
-    const rollPNG = Random.rand() < 0.25;
+    // Deterministic per-level roll that doesn't alter global RNG state
+    const rollPNG = this.shouldUsePngForLevel(depth, pid, 0.25);
     if (shouldUsePNG && rollPNG) {
       // Use PNG-based level generation for MAIN PATHS ONLY
       const pngUrl = await this.selectRandomLevelForDepth(depth);
@@ -309,6 +310,26 @@ export class LevelGenerator {
         : rooms.find((r) => r.type === RoomType.START),
     );
   };
+
+  /**
+   * Deterministically decide if PNG-based generation should be used for this level.
+   * Uses a local hash seeded by (seed, depth, pathId) to avoid touching global RNG state.
+   */
+  private shouldUsePngForLevel(
+    depth: number,
+    pathId: string,
+    probability: number,
+  ): boolean {
+    // Mix seed, depth, and path string into a 32-bit state
+    let h = (this.seed ^ depth) >>> 0;
+    // Simple LCG/hash mix over pathId characters (deterministic)
+    for (let i = 0; i < pathId.length; i++) {
+      h = (Math.imul(h ^ pathId.charCodeAt(i), 1664525) + 1013904223) >>> 0;
+    }
+    // Map to [0,1)
+    const r = (h >>> 0) / 4294967296;
+    return r < probability;
+  }
 
   generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
     // Deterministically generate each main path depth from 0..numFloors
