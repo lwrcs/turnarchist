@@ -903,75 +903,155 @@ export class Populator {
       //console.log(`No tiles left to spawn spawners`);
       return;
     }
+    if (!GameplaySettings.PRESET_BOSSES) {
+      let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
 
-    let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
+      if (depth > 0) {
+        bosses.push("occultist");
+        bosses = bosses.filter((b) => b !== "queen");
+      }
+      if (depth > 4) {
+        bosses.push("warden");
+        bosses = bosses.filter(
+          (b) =>
+            b !== "bigskullenemy" &&
+            b !== "bigzombieenemy" &&
+            b !== "occultist",
+        );
+      }
 
-    if (depth > 0) {
-      bosses.push("occultist");
-      bosses = bosses.filter((b) => b !== "queen");
-    }
-    if (depth > 4) {
-      bosses.push("warden");
-      bosses = bosses.filter(
-        (b) =>
-          b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist",
-      );
-    }
+      const boss = Game.randTable(bosses, Random.rand);
+      console.log("bosses", bosses, "boss", boss);
 
-    const boss = Game.randTable(bosses, Random.rand);
-    console.log("bosses", bosses, "boss", boss);
+      const position =
+        boss.startsWith("big") || boss === "warden"
+          ? room.getBigRandomEmptyPosition(tiles)
+          : room.getRandomEmptyPosition(tiles);
+      if (position === null) return;
+      const { x, y } = position;
 
-    const position =
-      boss.startsWith("big") || boss === "warden"
-        ? room.getBigRandomEmptyPosition(tiles)
-        : room.getRandomEmptyPosition(tiles);
-    if (position === null) return;
-    const { x, y } = position;
+      switch (boss) {
+        case "reaper":
+          const spawner = this.addSpawners(room, Random.rand, 1);
+          spawner.dropTable = ["weapon", "equipment"];
+          spawner.dropChance = 1;
+          break;
+        case "queen":
+          const queen = QueenEnemy.add(room, room.game, x, y);
+          queen.dropTable = ["weapon", "equipment"];
+          queen.dropChance = 1;
+          break;
+        case "bigskullenemy":
+          const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
+          bigSkull.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
 
-    switch (boss) {
-      case "reaper":
-        const spawner = this.addSpawners(room, Random.rand, 1);
-        spawner.dropTable = ["weapon", "equipment"];
-        spawner.dropChance = 1;
-        break;
-      case "queen":
-        const queen = QueenEnemy.add(room, room.game, x, y);
-        queen.dropTable = ["weapon", "equipment"];
-        queen.dropChance = 1;
-        break;
-      case "bigskullenemy":
-        const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
-        bigSkull.dropTable = [
-          "weapon",
-          "equipment",
-          "consumable",
-          "gem",
-          "tool",
-        ];
+          break;
+        case "occultist":
+          const occultist = this.addOccultists(room, Random.rand, 1);
+          occultist.dropTable = ["weapon", "equipment"];
+          occultist.dropChance = 1;
 
-        break;
-      case "occultist":
-        const occultist = this.addOccultists(room, Random.rand, 1);
-        occultist.dropTable = ["weapon", "equipment"];
-        occultist.dropChance = 1;
+          break;
+        case "bigzombieenemy":
+          const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
+          bigZombie.dropChance = 1;
+          break;
+        case "warden":
+          const warden = WardenEnemy.add(room, room.game, x, y);
+          warden.dropTable = ["weapon", "equipment"];
+          warden.dropChance = 1;
+          break;
+      }
+    } else {
+      const position = room.getBigRandomEmptyPosition(tiles);
+      if (position === null) return;
+      const { x, y } = position;
+      switch (depth) {
+        case 0:
+          const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
+          bigZombie.dropChance = 1;
 
-        break;
-      case "bigzombieenemy":
-        const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
-        bigZombie.dropTable = [
-          "weapon",
-          "equipment",
-          "consumable",
-          "gem",
-          "tool",
-        ];
-        bigZombie.dropChance = 1;
-        break;
-      case "warden":
-        const warden = WardenEnemy.add(room, room.game, x, y);
-        warden.dropTable = ["weapon", "equipment"];
-        warden.dropChance = 1;
-        break;
+          const queen = QueenEnemy.add(room, room.game, x, y);
+          queen.dropTable = ["weapon", "equipment"];
+          queen.dropChance = 1;
+
+          break;
+        case 1:
+          const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
+          bigSkull.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
+
+          const spawner = this.addSpawners(room, Random.rand, 1);
+          //spawner.dropTable = ["weapon", "equipment"];
+          spawner.dropChance = 1;
+          break;
+        case 2:
+          const spawner2 = this.addSpawners(room, Random.rand, 1);
+          //spawner.dropTable = ["weapon", "equipment"];
+          spawner2.dropChance = 1;
+
+          const occultist = this.addOccultists(room, Random.rand, 1);
+          //occultist.dropTable = ["weapon", "equipment"];
+          occultist.dropChance = 1;
+          break;
+        case 3:
+          const bigZombie2 = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie2.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
+          bigZombie2.dropChance = 1;
+
+          const bigZombie3 = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie3.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
+          bigZombie3.dropChance = 1;
+
+          const occultist2 = this.addOccultists(room, Random.rand, 1);
+          //occultist.dropTable = ["weapon", "equipment"];
+          occultist2.dropChance = 1;
+          break;
+        case 4:
+          const warden = WardenEnemy.add(room, room.game, x, y);
+          warden.dropTable = ["weapon", "equipment"];
+          warden.dropChance = 1;
+          break;
+        case 5:
+          break;
+      }
     }
   }
 

@@ -43,7 +43,7 @@ export class XPPopup extends Particle {
       Game.ctx.restore();
       return;
     }
-    if (this.frame > 15) this.alpha -= 0.025 * delta;
+    if (this.frame > 15) this.alpha -= 0.005 * delta;
 
     this.y -= 0.03 * delta;
     this.frame += delta;

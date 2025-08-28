@@ -6,6 +6,7 @@ export class GameplaySettings {
   static NO_ENEMIES = false;
   static EQUIP_USES_TURN = false;
   static UNBREAKABLE_ITEMGROUP_LOOT = false;
+  static readonly PRESET_BOSSES = false;
 
   // === ENEMY POOL SETTINGS ===
 

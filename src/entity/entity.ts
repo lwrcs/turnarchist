@@ -841,18 +841,17 @@ export class Entity extends Drawable {
   };
 
   emitEnemyKilled = () => {
-    let depthMultiplier = Math.log((this.room.depth + 1) * 5);
+    let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
     console.log(depthMultiplier);
 
     let multiplier = 1;
     if (this.isEnemy) multiplier = 5;
-    const xp = Math.ceil(this.maxHealth * multiplier * depthMultiplier);
-    if (this.isEnemy)
-      globalEventBus.emit(EVENTS.ENEMY_KILLED, {
-        enemyId: this.name,
-        xp: xp,
-      });
-
+    const xp = Math.ceil(this.defaultMaxHealth * multiplier * depthMultiplier);
+    if (!this.isEnemy) return;
+    globalEventBus.emit(EVENTS.ENEMY_KILLED, {
+      enemyId: this.name,
+      xp: xp,
+    });
     const player = this.getPlayer();
     if (!player) return;
 
