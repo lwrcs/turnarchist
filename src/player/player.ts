@@ -821,7 +821,8 @@ export class Player extends Drawable {
   };
 
   enemyHurtMessage = (damage: number, enemy: string) => {
-    this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
+    if (!GameConstants.DEVELOPER_MODE)
+      this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
   };
 
   beginSlowMotion = () => {

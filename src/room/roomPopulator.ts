@@ -124,8 +124,15 @@ export class Populator {
 
     // Centralized torch, spike, and pool addition
 
+    const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
+    console.log(`Base total rooms: ${baseTotalRooms}`);
+    const roomDiff = baseTotalRooms - this.level.rooms.length;
+    console.log(`Room diff: ${roomDiff}`);
+    const numRooms = Math.max(roomDiff, 3);
+    console.log(`Num rooms: ${numRooms}`);
+    console.log(`Adding downladder to ${numRooms} rooms`);
     this.addDownladder({
-      caveRooms: 3,
+      caveRooms: numRooms,
       locked: true,
     });
 

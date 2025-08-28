@@ -6,6 +6,7 @@ import { Door } from "./door";
 import { DownLadder } from "./downLadder";
 import { UpLadder } from "./upLadder";
 import { Random } from "../utility/random";
+import { GameConstants } from "../game/gameConstants";
 
 export enum LockType {
   NONE = 0,
@@ -100,6 +101,7 @@ export class Lockable {
   }
 
   canUnlock(player: Player): boolean {
+    if (GameConstants.DEVELOPER_MODE) return true;
     if (this.lockType === LockType.LOCKED) {
       const key = this.hasKeyWithID(this.keyID, player);
       console.log(this.keyID);
@@ -138,7 +140,7 @@ export class Lockable {
   unlock(player: Player) {
     if (this.lockType === LockType.LOCKED) {
       const key = this.hasKeyWithID(this.keyID, player);
-      if (key !== null) {
+      if (key !== null || GameConstants.DEVELOPER_MODE) {
         player.inventory.removeItem(key);
         Sound.unlock();
         this.removeLock();

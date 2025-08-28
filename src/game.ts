@@ -8,7 +8,12 @@ import { LevelGenerator } from "./level/levelGenerator";
 import { Input, InputEnum } from "./game/input";
 import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./game/textbox";
-import { createGameState, GameState, loadGameState } from "./game/gameState";
+import {
+  createGameState,
+  GameState,
+  loadGameState,
+  TileType,
+} from "./game/gameState";
 import { DoorDir } from "./tile/door";
 import { LevelImageGenerator } from "./level/levelImageGenerator";
 import { Enemy } from "./entity/enemy/enemy";
@@ -959,6 +964,35 @@ export class Game {
     }
 
     switch (command) {
+      case "down":
+        let downladder: DownLadder;
+        for (const room of this.level.rooms) {
+          if (room.type !== RoomType.DOWNLADDER) {
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+              for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                if (room.roomArray[x][y] instanceof DownLadder) {
+                  downladder = room.roomArray[x][y] as DownLadder;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (downladder) {
+          downladder.room.entered = true;
+          downladder.room.calculateWallInfo();
+          this.changeLevelThroughDoor(
+            this.players[this.localPlayerID],
+            downladder.room.doors[0],
+            1,
+          );
+          downladder.lockable.removeLock();
+          this.players[this.localPlayerID].x = downladder.x;
+          this.players[this.localPlayerID].y = downladder.y;
+          downladder.room.updateLighting();
+          this.pushMessage("Downladder located");
+        }
+        break;
       case "lightup":
         LevelConstants.LIGHTING_ANGLE_STEP += 1;
         this.pushMessage(

@@ -18770,6 +18770,7 @@ exports.EVENTS = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.gs = exports.game = exports.Game = exports.ChatMessage = exports.Direction = exports.LevelState = void 0;
 const gameConstants_1 = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
+const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
 const door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 const sound_1 = __webpack_require__(/*! ./sound/sound */ "./src/sound/sound.ts");
 const levelConstants_1 = __webpack_require__(/*! ./level/levelConstants */ "./src/level/levelConstants.ts");
@@ -19305,6 +19306,31 @@ class Game {
                 return;
             }
             switch (command) {
+                case "down":
+                    let downladder;
+                    for (const room of this.level.rooms) {
+                        if (room.type !== room_1.RoomType.DOWNLADDER) {
+                            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                                    if (room.roomArray[x][y] instanceof downLadder_1.DownLadder) {
+                                        downladder = room.roomArray[x][y];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (downladder) {
+                        downladder.room.entered = true;
+                        downladder.room.calculateWallInfo();
+                        this.changeLevelThroughDoor(this.players[this.localPlayerID], downladder.room.doors[0], 1);
+                        downladder.lockable.removeLock();
+                        this.players[this.localPlayerID].x = downladder.x;
+                        this.players[this.localPlayerID].y = downladder.y;
+                        downladder.room.updateLighting();
+                        this.pushMessage("Downladder located");
+                    }
+                    break;
                 case "lightup":
                     levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP += 1;
                     this.pushMessage(`Lighting angle step is now ${levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP}`);
@@ -23372,7 +23398,7 @@ GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth 
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
-GameplaySettings.MAX_OCCULTIST_SHIELDS = 10; // Maximum number of shields an occultist can have
+GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 
 
 /***/ }),
@@ -36217,7 +36243,8 @@ class Player extends drawable_1.Drawable {
             }
         };
         this.enemyHurtMessage = (damage, enemy) => {
-            this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
+            if (!gameConstants_1.GameConstants.DEVELOPER_MODE)
+                this.game.pushMessage(`The ${enemy} hits you for ${damage} damage.`);
         };
         this.beginSlowMotion = () => {
             this.renderer.beginSlowMotion();
@@ -42067,8 +42094,15 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // Centralized torch, spike, and pool addition
+            const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
+            console.log(`Base total rooms: ${baseTotalRooms}`);
+            const roomDiff = baseTotalRooms - this.level.rooms.length;
+            console.log(`Room diff: ${roomDiff}`);
+            const numRooms = Math.max(roomDiff, 3);
+            console.log(`Num rooms: ${numRooms}`);
+            console.log(`Adding downladder to ${numRooms} rooms`);
             this.addDownladder({
-                caveRooms: 3,
+                caveRooms: numRooms,
                 locked: true,
             });
             //this.level.distributeKeys();
@@ -44853,6 +44887,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 var LockType;
 (function (LockType) {
     LockType[LockType["NONE"] = 0] = "NONE";
@@ -44923,6 +44958,8 @@ class Lockable {
         this.iconAlpha = 1;
     }
     canUnlock(player) {
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE)
+            return true;
         if (this.lockType === LockType.LOCKED) {
             const key = this.hasKeyWithID(this.keyID, player);
             console.log(this.keyID);
@@ -44954,7 +44991,7 @@ class Lockable {
     unlock(player) {
         if (this.lockType === LockType.LOCKED) {
             const key = this.hasKeyWithID(this.keyID, player);
-            if (key !== null) {
+            if (key !== null || gameConstants_1.GameConstants.DEVELOPER_MODE) {
                 player.inventory.removeItem(key);
                 sound_1.Sound.unlock();
                 this.removeLock();

@@ -33,5 +33,5 @@ export class GameplaySettings {
   static readonly MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
   static readonly FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
 
-  static readonly MAX_OCCULTIST_SHIELDS = 10; // Maximum number of shields an occultist can have
+  static readonly MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 }
