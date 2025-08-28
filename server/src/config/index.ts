@@ -1,15 +1,21 @@
 import { config as configure } from "dotenv";
-import { getEnvironmentVariableOrThrow } from "./utils";
+import {
+  getEnvironmentVariableOrDefault,
+  getEnvironmentVariableOrThrow,
+} from "./utils";
 
-configure({ path: `.env.${process.env.NODE_ENV ?? "development"}` });
+const NODE_ENV = getEnvironmentVariableOrDefault("NODE_ENV", "development");
 
-const NODE_ENV = getEnvironmentVariableOrThrow("NODE_ENV");
+configure({
+  path: `.env.${NODE_ENV}`,
+});
+
 const isDevelopment = NODE_ENV.startsWith("dev");
 
 export const config = {
   isDevelopment,
   server: {
-    port: getEnvironmentVariableOrThrow("PORT"),
+    port: getEnvironmentVariableOrDefault("PORT", "3000"),
   },
   database: {
     url: getEnvironmentVariableOrThrow("DATABASE_URL"),

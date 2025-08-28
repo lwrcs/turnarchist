@@ -8,7 +8,9 @@
     "start:debug": "tsx --inspect-brk ./src/index.ts",
     "migrate": "tsx scripts/db/migrate.ts",
     "generate:migrations": "npx drizzle-kit generate",
-    "generate:migrations:custom": "npx drizzle-kit generate --custom"
+    "generate:migrations:custom": "npx drizzle-kit generate --custom",
+    "read:db:csv": "cross-env OUTPUT_FORMAT=csv tsx scripts/db/read.ts",
+    "read:db:json": "cross-env OUTPUT_FORMAT=json tsx scripts/db/read.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -29,5 +31,8 @@
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "cross-env": "^10.0.0"
+  }
 }

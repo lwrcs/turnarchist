@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\"",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "read:db:csv": "cd server && npm run read:db:csv",
+    "read:db:json": "cd server && npm run read:db:json"
   },
   "repository": {
     "type": "git",
