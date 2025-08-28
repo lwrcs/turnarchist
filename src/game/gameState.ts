@@ -1306,6 +1306,7 @@ export class InventoryState {
   weaponI: number;
   coins: number;
   items: Array<ItemState | null>;
+  expansion: number;
 
   constructor(inventory: Inventory, game: Game) {
     this.isOpen = inventory.isOpen;
@@ -1321,6 +1322,7 @@ export class InventoryState {
     this.selX = inventory.selX;
     this.selY = inventory.selY;
     this.items = Array<ItemState | null>(inventory.cols * inventory.rows);
+    this.expansion = inventory.expansion;
     for (let idx = 0; idx < inventory.cols * inventory.rows; idx++) {
       this.items[idx] = null;
     }
@@ -1363,7 +1365,7 @@ let loadInventory = (inventory: Inventory, i: InventoryState, game: Game) => {
   inventory.selY = i.selY;
   inventory.equipAnimAmount = i.equipAnimAmount.map((x) => x);
   inventory.coins = i.coins;
-
+  inventory.expansion = i.expansion;
   // Set weapon reference after all items are loaded
   if (i.isWeaponEquipped && i.weaponI < inventory.items.length) {
     inventory.weapon = inventory.items[i.weaponI] as Weapon;
