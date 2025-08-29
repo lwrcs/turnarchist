@@ -964,6 +964,11 @@ export class Game {
     }
 
     switch (command) {
+      case "ladder":
+        this.pushMessage(
+          `Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`,
+        );
+        break;
       case "down":
         let downladder: DownLadder;
         for (const room of this.level.rooms) {

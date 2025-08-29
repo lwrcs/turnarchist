@@ -3302,6 +3302,74 @@ export class Room {
     return null;
   };
 
+  /**
+   * Returns true if this room contains an `UpLadder` tile.
+   */
+  hasUpLadder = (): boolean => {
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      if (!this.roomArray[x]) continue;
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const t = this.roomArray[x][y];
+        if (t instanceof UpLadder) return true;
+      }
+    }
+    return false;
+  };
+
+  /**
+   * Computes the shortest number of room hops (through linked doors) to reach
+   * a room that contains an `UpLadder`. Returns 0 if this room already has one,
+   * or null if no such room is reachable.
+   */
+  getDistanceToNearestUpLadder = (inputRoom?: Room): number | null => {
+    const currentRoom = inputRoom || this;
+    if (currentRoom.hasUpLadder()) return 0;
+
+    const visited = new Set<string>();
+    const queue: Array<{ room: Room; dist: number }> = [];
+
+    visited.add(currentRoom.globalId);
+    queue.push({ room: currentRoom, dist: 0 });
+
+    while (queue.length > 0) {
+      const { room, dist } = queue.shift();
+      for (const d of room.doors) {
+        const nextRoom = d && d.linkedDoor && d.linkedDoor.room;
+        if (!nextRoom) continue;
+        const gid = nextRoom.globalId;
+        if (visited.has(gid)) continue;
+        if (nextRoom.hasUpLadder()) {
+          console.log(
+            `Found up ladder with distance ${dist + 1} from room ${currentRoom.globalId}`,
+          );
+          return dist + 1;
+        }
+        visited.add(gid);
+        queue.push({ room: nextRoom, dist: dist + 1 });
+      }
+    }
+
+    return null;
+  };
+
+  static getRoomFurthestFromUpLadder = (rooms: Room[]): Room | null => {
+    let furthestRoom: Room | null = null;
+    let furthestDistance = 0;
+
+    for (const room of rooms) {
+      const distance = room.getDistanceToNearestUpLadder();
+      if (distance && distance > furthestDistance) {
+        furthestDistance = distance;
+        furthestRoom = room;
+      }
+    }
+    return furthestRoom;
+  };
+
+  isFurthestFromUpLadder = (): boolean => {
+    return this === Room.getRoomFurthestFromUpLadder(this.level.rooms);
+  };
+
   hasNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
     const cleared = enemies.length === 0 && this.lastEnemyCount > 0;

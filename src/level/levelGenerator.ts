@@ -22,6 +22,7 @@ import {
 import { LevelValidator, ValidationResult } from "./levelValidator";
 import { GenerationVisualizer } from "./generationVisualizer";
 import { PngPartitionGenerator } from "./pngPartitionGenerator";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export class LevelGenerator {
   game: Game;
@@ -188,7 +189,11 @@ export class LevelGenerator {
 
     const shouldUsePNG = GameConstants.USE_PNG_LEVELS && !isSidePath;
     // Deterministic per-level roll that doesn't alter global RNG state
-    const rollPNG = this.shouldUsePngForLevel(depth, pid, 0.25);
+    const rollPNG = this.shouldUsePngForLevel(
+      depth,
+      pid,
+      GameplaySettings.PNG_LEVEL_PROBABILITY,
+    );
     if (shouldUsePNG && rollPNG) {
       // Use PNG-based level generation for MAIN PATHS ONLY
       const pngUrl = await this.selectRandomLevelForDepth(depth);

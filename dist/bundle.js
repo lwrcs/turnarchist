@@ -10031,6 +10031,9 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 if (!hitPlayer) {
                                     this.tryMove(moveX, moveY);
                                     this.setDrawXY(oldX, oldY);
+                                    setTimeout(() => {
+                                        this.game.shakeScreen(0 * this.drawX, 5);
+                                    }, 300);
                                     if (this.x > oldX)
                                         this.direction = game_1.Direction.RIGHT;
                                     else if (this.x < oldX)
@@ -10142,7 +10145,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY, 2, 3, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -19306,6 +19309,9 @@ class Game {
                 return;
             }
             switch (command) {
+                case "ladder":
+                    this.pushMessage(`Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`);
+                    break;
                 case "down":
                     let downladder;
                     for (const room of this.level.rooms) {
@@ -23379,6 +23385,7 @@ GameplaySettings.NO_ENEMIES = false;
 GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
+GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -23397,7 +23404,7 @@ GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = 
 GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
-GameplaySettings.FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
+GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 
 
@@ -31679,7 +31686,7 @@ const environmentData = {
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
             // Depth 2 enemies
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.1, minDepth: 2 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
             {
                 class: bigKnightEnemy_1.BigKnightEnemy,
                 weight: 0.3,
@@ -31697,7 +31704,7 @@ const environmentData = {
             { class: bishopEnemy_1.BishopEnemy, weight: 0.5, minDepth: 2 },
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.9, minDepth: 2 },
-            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 0.5, minDepth: 2 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.25, minDepth: 2 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 0.5, minDepth: 2 },
         ],
@@ -32292,6 +32299,7 @@ const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes
 const partitionGenerator_1 = __webpack_require__(/*! ./partitionGenerator */ "./src/level/partitionGenerator.ts");
 const levelValidator_1 = __webpack_require__(/*! ./levelValidator */ "./src/level/levelValidator.ts");
 const pngPartitionGenerator_1 = __webpack_require__(/*! ./pngPartitionGenerator */ "./src/level/pngPartitionGenerator.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class LevelGenerator {
     constructor() {
         this.depthReached = 0;
@@ -32377,7 +32385,7 @@ class LevelGenerator {
             let partitions;
             const shouldUsePNG = gameConstants_1.GameConstants.USE_PNG_LEVELS && !isSidePath;
             // Deterministic per-level roll that doesn't alter global RNG state
-            const rollPNG = this.shouldUsePngForLevel(depth, pid, 0.25);
+            const rollPNG = this.shouldUsePngForLevel(depth, pid, gameplaySettings_1.GameplaySettings.PNG_LEVEL_PROBABILITY);
             if (shouldUsePNG && rollPNG) {
                 // Use PNG-based level generation for MAIN PATHS ONLY
                 const pngUrl = await this.selectRandomLevelForDepth(depth);
@@ -40718,6 +40726,56 @@ class Room {
             }
             return null;
         };
+        /**
+         * Returns true if this room contains an `UpLadder` tile.
+         */
+        this.hasUpLadder = () => {
+            for (let x = this.roomX; x < this.roomX + this.width; x++) {
+                if (!this.roomArray[x])
+                    continue;
+                for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                    const t = this.roomArray[x][y];
+                    if (t instanceof upLadder_1.UpLadder)
+                        return true;
+                }
+            }
+            return false;
+        };
+        /**
+         * Computes the shortest number of room hops (through linked doors) to reach
+         * a room that contains an `UpLadder`. Returns 0 if this room already has one,
+         * or null if no such room is reachable.
+         */
+        this.getDistanceToNearestUpLadder = (inputRoom) => {
+            const currentRoom = inputRoom || this;
+            if (currentRoom.hasUpLadder())
+                return 0;
+            const visited = new Set();
+            const queue = [];
+            visited.add(currentRoom.globalId);
+            queue.push({ room: currentRoom, dist: 0 });
+            while (queue.length > 0) {
+                const { room, dist } = queue.shift();
+                for (const d of room.doors) {
+                    const nextRoom = d && d.linkedDoor && d.linkedDoor.room;
+                    if (!nextRoom)
+                        continue;
+                    const gid = nextRoom.globalId;
+                    if (visited.has(gid))
+                        continue;
+                    if (nextRoom.hasUpLadder()) {
+                        console.log(`Found up ladder with distance ${dist + 1} from room ${currentRoom.globalId}`);
+                        return dist + 1;
+                    }
+                    visited.add(gid);
+                    queue.push({ room: nextRoom, dist: dist + 1 });
+                }
+            }
+            return null;
+        };
+        this.isFurthestFromUpLadder = () => {
+            return this === Room.getRoomFurthestFromUpLadder(this.level.rooms);
+        };
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
             const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
@@ -41866,6 +41924,18 @@ class Room {
     }
 }
 exports.Room = Room;
+Room.getRoomFurthestFromUpLadder = (rooms) => {
+    let furthestRoom = null;
+    let furthestDistance = 0;
+    for (const room of rooms) {
+        const distance = room.getDistanceToNearestUpLadder();
+        if (distance && distance > furthestDistance) {
+            furthestDistance = distance;
+            furthestRoom = room;
+        }
+    }
+    return furthestRoom;
+};
 
 
 /***/ }),
@@ -42089,22 +42159,31 @@ class Populator {
                 if (room.type === room_1.RoomType.START ||
                     room.type === room_1.RoomType.DOWNLADDER ||
                     room.type === room_1.RoomType.UPLADDER ||
-                    room.type === room_1.RoomType.ROPEHOLE)
+                    room.type === room_1.RoomType.ROPEHOLE ||
+                    room.type === room_1.RoomType.ROPECAVE)
                     return;
                 this.populateByEnvironment(room);
             });
-            // Centralized torch, spike, and pool addition
+            // calculate a base room number based on depth
             const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
-            console.log(`Base total rooms: ${baseTotalRooms}`);
+            // find the difference between the base total rooms and the number of rooms in the level
             const roomDiff = baseTotalRooms - this.level.rooms.length;
-            console.log(`Room diff: ${roomDiff}`);
+            // add sidepath rooms to offset the room difference
             const numRooms = Math.max(roomDiff, 3);
-            console.log(`Num rooms: ${numRooms}`);
-            console.log(`Adding downladder to ${numRooms} rooms`);
-            this.addDownladder({
-                caveRooms: numRooms,
-                locked: true,
-            });
+            console.log(`Adding downladder with ${numRooms} rooms`);
+            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON) {
+                this.addDownladder({
+                    caveRooms: numRooms,
+                    locked: true,
+                });
+            }
+            if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
+                this.addDownladder({
+                    caveRooms: numRooms,
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.MAGMA_CAVE,
+                });
+            }
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -42115,20 +42194,23 @@ class Populator {
                 case environmentTypes_1.EnvType.FOREST:
                     this.populateForestEnvironment(room);
                     break;
+                case environmentTypes_1.EnvType.MAGMA_CAVE:
+                    this.populateMagmaCaveEnvironment(room);
+                    break;
                 default:
                     this.populateDefaultEnvironment(room);
                     break;
             }
         };
         this.addDownladder = (opts) => {
-            if (this.level.environment.type !== environmentTypes_1.EnvType.DUNGEON)
-                return;
             const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&
                 room.type !== room_1.RoomType.DOWNLADDER &&
                 room.type !== room_1.RoomType.UPLADDER &&
                 room.type !== room_1.RoomType.ROPEHOLE &&
                 room.type !== room_1.RoomType.BOSS);
-            const downLadderRoom = rooms[Math.floor(random_1.Random.rand() * rooms.length)];
+            const downLadderRoom = this.level.isMainPath
+                ? rooms[Math.floor(random_1.Random.rand() * rooms.length)]
+                : room_1.Room.getRoomFurthestFromUpLadder(rooms);
             console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -42143,13 +42225,15 @@ class Populator {
                 return;
             console.log(`Placing downladder at position (${position.x}, ${position.y})`);
             // Place a DownLadder tile directly; avoid entity side-effects post-load
-            const env = downLadderRoom.depth < 1
-                ? environmentTypes_1.EnvType.FOREST
-                : downLadderRoom.depth > 1
-                    ? random_1.Random.rand() < 0.5
-                        ? environmentTypes_1.EnvType.FOREST
-                        : environmentTypes_1.EnvType.CAVE
-                    : environmentTypes_1.EnvType.CAVE;
+            const env = opts?.envType
+                ? opts.envType
+                : downLadderRoom.depth < 1
+                    ? environmentTypes_1.EnvType.FOREST
+                    : downLadderRoom.depth > 1
+                        ? random_1.Random.rand() < 0.5
+                            ? environmentTypes_1.EnvType.FOREST
+                            : environmentTypes_1.EnvType.CAVE
+                        : environmentTypes_1.EnvType.CAVE;
             const lockOverride = opts && typeof opts.locked === "boolean"
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;
@@ -42518,6 +42602,17 @@ class Populator {
             useSeedPosition: false,
         });
         // ADD: Enemies after props, based on remaining space
+        this.addRandomEnemies(room, gameplaySettings_1.GameplaySettings.FOREST_ENEMY_REDUCTION);
+    }
+    populateMagmaCaveEnvironment(room) {
+        const numProps = this.getNumProps(room);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
+        // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
     }
     getNumProps(room, medianDensity) {
@@ -42873,7 +42968,7 @@ class Populator {
             }
         }
     }
-    addRandomEnemies(room) {
+    addRandomEnemies(room, multiplier = 1) {
         const numEmptyTiles = room.getEmptyTiles().length;
         const meanValue = (room.roomArea + numEmptyTiles) / 2;
         const factor = Math.min((room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
@@ -42881,11 +42976,7 @@ class Populator {
         const baseEnemyCount = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, meanValue * factor), meanValue * factor));
         // Cap at the number of empty tiles (hard limit)
         const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
-        // Apply forest reduction (moved from old addEnemies method)
-        const adjustedEnemies = room.envType === environmentTypes_1.EnvType.FOREST
-            ? Math.floor(numEnemies * gameplaySettings_1.GameplaySettings.FOREST_ENEMY_REDUCTION)
-            : numEnemies;
-        this.addEnemiesUnified(room, adjustedEnemies, room.envType);
+        this.addEnemiesUnified(room, numEnemies * multiplier, room.envType);
     }
     addSpawners(room, rand, numSpawners) {
         let tiles = room.getEmptyTiles();
@@ -42900,7 +42991,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
                 // Remove used tile
                 tiles = tiles.filter((t) => !(t.x === x && t.y === y));
@@ -44706,7 +44797,8 @@ class DownLadder extends passageway_1.Passageway {
             }
             //if (this.environment === EnvType.FOREST) xx = 16;
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            game_1.Game.drawTile(xx, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawTile(xx, 0, //this.skin,
+            1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.drawAboveShading = (delta) => {
             // Update lockable animation

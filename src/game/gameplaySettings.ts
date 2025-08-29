@@ -7,6 +7,7 @@ export class GameplaySettings {
   static EQUIP_USES_TURN = false;
   static UNBREAKABLE_ITEMGROUP_LOOT = false;
   static readonly PRESET_BOSSES = false;
+  static readonly PNG_LEVEL_PROBABILITY = 0.1;
 
   // === ENEMY POOL SETTINGS ===
 
@@ -31,7 +32,7 @@ export class GameplaySettings {
   static readonly ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
   static readonly ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
   static readonly MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
-  static readonly FOREST_ENEMY_REDUCTION = 0.5; // Multiplier for enemy count in forest environments
+  static readonly FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 
   static readonly MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 }

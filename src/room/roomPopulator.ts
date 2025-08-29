@@ -115,26 +115,36 @@ export class Populator {
         room.type === RoomType.START ||
         room.type === RoomType.DOWNLADDER ||
         room.type === RoomType.UPLADDER ||
-        room.type === RoomType.ROPEHOLE
+        room.type === RoomType.ROPEHOLE ||
+        room.type === RoomType.ROPECAVE
       )
         return;
 
       this.populateByEnvironment(room);
     });
 
-    // Centralized torch, spike, and pool addition
-
+    // calculate a base room number based on depth
     const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
-    console.log(`Base total rooms: ${baseTotalRooms}`);
+    // find the difference between the base total rooms and the number of rooms in the level
     const roomDiff = baseTotalRooms - this.level.rooms.length;
-    console.log(`Room diff: ${roomDiff}`);
+    // add sidepath rooms to offset the room difference
     const numRooms = Math.max(roomDiff, 3);
-    console.log(`Num rooms: ${numRooms}`);
-    console.log(`Adding downladder to ${numRooms} rooms`);
-    this.addDownladder({
-      caveRooms: numRooms,
-      locked: true,
-    });
+
+    console.log(`Adding downladder with ${numRooms} rooms`);
+    if (this.level.environment.type === EnvType.DUNGEON) {
+      this.addDownladder({
+        caveRooms: numRooms,
+        locked: true,
+      });
+    }
+
+    if (this.level.environment.type === EnvType.CAVE) {
+      this.addDownladder({
+        caveRooms: numRooms,
+        locked: true,
+        envType: EnvType.MAGMA_CAVE,
+      });
+    }
 
     //this.level.distributeKeys();
   };
@@ -147,6 +157,9 @@ export class Populator {
       case EnvType.FOREST:
         this.populateForestEnvironment(room);
         break;
+      case EnvType.MAGMA_CAVE:
+        this.populateMagmaCaveEnvironment(room);
+        break;
       default:
         this.populateDefaultEnvironment(room);
         break;
@@ -158,8 +171,8 @@ export class Populator {
     mapWidth?: number;
     mapHeight?: number;
     locked?: boolean; // explicitly lock or unlock the downladder
+    envType?: EnvType;
   }) => {
-    if (this.level.environment.type !== EnvType.DUNGEON) return;
     const rooms = this.level.rooms.filter(
       (room) =>
         room.type !== RoomType.START &&
@@ -169,7 +182,9 @@ export class Populator {
         room.type !== RoomType.BOSS,
     );
 
-    const downLadderRoom = rooms[Math.floor(Random.rand() * rooms.length)];
+    const downLadderRoom = this.level.isMainPath
+      ? rooms[Math.floor(Random.rand() * rooms.length)]
+      : Room.getRoomFurthestFromUpLadder(rooms);
 
     console.log(
       `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
@@ -196,8 +211,9 @@ export class Populator {
     );
 
     // Place a DownLadder tile directly; avoid entity side-effects post-load
-    const env =
-      downLadderRoom.depth < 1
+    const env = opts?.envType
+      ? opts.envType
+      : downLadderRoom.depth < 1
         ? EnvType.FOREST
         : downLadderRoom.depth > 1
           ? Random.rand() < 0.5
@@ -300,6 +316,19 @@ export class Populator {
   private populateForestEnvironment(room: Room) {
     const numProps = this.getNumProps(room, 0.75);
     //this.addProps(room, numProps, room.envType);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
+
+    // ADD: Enemies after props, based on remaining space
+    this.addRandomEnemies(room, GameplaySettings.FOREST_ENEMY_REDUCTION);
+  }
+
+  private populateMagmaCaveEnvironment(room: Room) {
+    const numProps = this.getNumProps(room);
     this.addPropsWithClustering(room, numProps, room.envType, {
       falloffExponent: 2,
       baseScore: 0.1,
@@ -780,7 +809,7 @@ export class Populator {
     }
   }
 
-  private addRandomEnemies(room: Room) {
+  private addRandomEnemies(room: Room, multiplier: number = 1) {
     const numEmptyTiles = room.getEmptyTiles().length;
     const meanValue = (room.roomArea + numEmptyTiles) / 2;
 
@@ -800,13 +829,7 @@ export class Populator {
     // Cap at the number of empty tiles (hard limit)
     const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
 
-    // Apply forest reduction (moved from old addEnemies method)
-    const adjustedEnemies =
-      room.envType === EnvType.FOREST
-        ? Math.floor(numEnemies * GameplaySettings.FOREST_ENEMY_REDUCTION)
-        : numEnemies;
-
-    this.addEnemiesUnified(room, adjustedEnemies, room.envType);
+    this.addEnemiesUnified(room, numEnemies * multiplier, room.envType);
   }
 
   private addSpawners(room: Room, rand: () => number, numSpawners?: number) {
@@ -825,7 +848,7 @@ export class Populator {
         const { x, y } = position;
 
         const spawnTable = this.getEnemyPoolForDepth(
-          Math.max(0, room.depth - 1),
+          Math.max(0, room.depth),
         ).filter((t) => t !== 7);
 
         lastSpawner = Spawner.add(room, room.game, x, y, spawnTable);

@@ -123,7 +123,7 @@ export class DownLadder extends Passageway {
     );
     Game.drawTile(
       xx,
-      this.skin,
+      0, //this.skin,
       1,
       1,
       this.x,

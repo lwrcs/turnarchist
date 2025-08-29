@@ -252,6 +252,9 @@ export class BigSkullEnemy extends Enemy {
               if (!hitPlayer) {
                 this.tryMove(moveX, moveY);
                 this.setDrawXY(oldX, oldY);
+                setTimeout(() => {
+                  this.game.shakeScreen(0 * this.drawX, 5);
+                }, 300);
 
                 if (this.x > oldX) this.direction = Direction.RIGHT;
                 else if (this.x < oldX) this.direction = Direction.LEFT;
@@ -371,7 +374,7 @@ export class BigSkullEnemy extends Enemy {
         2,
         3,
         this.x - this.drawX,
-        this.y - 1.5 - this.drawY,
+        this.y - 1.5 - this.drawY - this.jumpY,
         2,
         3,
         this.softShadeColor,
