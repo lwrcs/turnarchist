@@ -29263,9 +29263,21 @@ Stone.itemName = "stones";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FishingRod = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class FishingRod extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
+        this.disassemble = () => {
+            this.level.game.pushMessage(`You dissassemble your ${this.name} into fragments.`);
+            let inventory = this.level.game.players[this.level.game.localPlayerID].inventory;
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.floor(10 + random_1.Random.rand() * 10);
+            this.level.game.pushMessage(`You dissassemble your fishing rod into ${numFragments} fragments.`);
+            inventory.removeItem(this);
+            inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY), numFragments);
+        };
         this.tileX = 31;
         this.tileY = 2;
         this.offsetY = -0.1;
