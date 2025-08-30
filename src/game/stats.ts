@@ -2,7 +2,7 @@ import { EnvType, getEnvTypeName } from "../constants/environmentTypes";
 import { globalEventBus } from "../event/eventBus";
 import { AppEvents, EventPayloads, EVENTS } from "../event/events";
 
-interface Stats {
+export interface Stats {
   enemiesKilled: number;
   damageDone: number;
   damageTaken: number;
@@ -16,7 +16,7 @@ interface Stats {
   level: number;
 }
 
-class StatsTracker {
+export class StatsTracker {
   private stats: Stats = StatsTracker.initialStats();
 
   constructor() {
@@ -119,6 +119,10 @@ class StatsTracker {
   public resetStats(): void {
     this.stats = StatsTracker.initialStats();
     //console.log("Stats have been reset.");
+  }
+
+  public setStats(stats: Stats) {
+    this.stats = stats;
   }
 }
 

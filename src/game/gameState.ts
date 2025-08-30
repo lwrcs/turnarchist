@@ -148,6 +148,8 @@ import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
 import { ShieldLeftFragment } from "../item/weapon/shieldLeftFragment";
 import { ShieldRightFragment } from "../item/weapon/shieldRightFragment";
+import { Stats } from "./stats";
+import { statsTracker } from "./stats";
 
 export class HitWarningState {
   x: number;
@@ -1560,6 +1562,7 @@ export class GameState {
   sidepathMeta?: Array<{ pathId: string; rooms: number }>;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
   lastDroppedShieldPiece: "left" | "right" | null = null;
+  stats: Stats;
 
   constructor() {
     this.seed = 0;
@@ -1568,6 +1571,7 @@ export class GameState {
     this.offlinePlayers = {};
     this.level = null;
     this.rooms = [];
+    //this.statsTracker = statsTracker;
   }
 }
 
@@ -1582,6 +1586,7 @@ export const createGameState = (game: Game): GameState => {
 
   try {
     let gs = new GameState();
+    gs.stats = statsTracker.getStats();
 
     // Save basic game properties
     gs.seed = game.levelgen.seed;
@@ -1676,6 +1681,7 @@ export const loadGameState = (
     // game.loadedFromSaveFile = true;
 
     // Clear existing rooms
+    if (statsTracker && gameState.stats) statsTracker.setStats(gameState.stats);
 
     game.rooms = []; // Use standard array syntax
     game.roomsById = new Map();

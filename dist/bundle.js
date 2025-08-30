@@ -21323,6 +21323,7 @@ const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianRe
 const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 const shieldLeftFragment_1 = __webpack_require__(/*! ../item/weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
 const shieldRightFragment_1 = __webpack_require__(/*! ../item/weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
+const stats_1 = __webpack_require__(/*! ./stats */ "./src/game/stats.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -22667,6 +22668,7 @@ class GameState {
         this.offlinePlayers = {};
         this.level = null;
         this.rooms = [];
+        //this.statsTracker = statsTracker;
     }
 }
 exports.GameState = GameState;
@@ -22681,6 +22683,7 @@ const createGameState = (game) => {
     catch { }
     try {
         let gs = new GameState();
+        gs.stats = stats_1.statsTracker.getStats();
         // Save basic game properties
         gs.seed = game.levelgen.seed;
         gs.randomState = random_1.Random.state;
@@ -22766,6 +22769,8 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
     try {
         // game.loadedFromSaveFile = true;
         // Clear existing rooms
+        if (stats_1.statsTracker && gameState.stats)
+            stats_1.statsTracker.setStats(gameState.stats);
         game.rooms = []; // Use standard array syntax
         game.roomsById = new Map();
         game.levels = [];
@@ -24278,7 +24283,7 @@ exports.loadSettings = loadSettings;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.statsTracker = void 0;
+exports.statsTracker = exports.StatsTracker = void 0;
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
@@ -24356,7 +24361,11 @@ class StatsTracker {
         this.stats = StatsTracker.initialStats();
         //console.log("Stats have been reset.");
     }
+    setStats(stats) {
+        this.stats = stats;
+    }
 }
+exports.StatsTracker = StatsTracker;
 exports.statsTracker = new StatsTracker();
 
 
