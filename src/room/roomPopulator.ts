@@ -75,6 +75,8 @@ import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { Pool } from "../tile/pool";
 import { MagmaPool } from "../tile/magmaPool";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
+import { FishingRod } from "../item/tool/fishingRod";
+import { Hammer } from "../item/tool/hammer";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -1141,7 +1143,7 @@ export class Populator {
       room.depth > 0
         ? [
             1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-            5, 5,
+            5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7,
           ]
         : [1, 1, 1];
     let type = Game.randTable(table, rand);
@@ -1164,6 +1166,12 @@ export class Populator {
         break;
       case 5:
         VendingMachine.add(room, room.game, x, y, new Torch(room, x, y));
+        break;
+      case 6:
+        VendingMachine.add(room, room.game, x, y, new FishingRod(room, x, y));
+        break;
+      case 7:
+        VendingMachine.add(room, room.game, x, y, new Hammer(room, x, y));
         break;
     }
   }

@@ -18132,6 +18132,8 @@ const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./sr
 const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
 const pickaxe_1 = __webpack_require__(/*! ../../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const fishingRod_1 = __webpack_require__(/*! ../../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const hammer_1 = __webpack_require__(/*! ../../item/tool/hammer */ "./src/item/tool/hammer.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -18332,7 +18334,7 @@ class VendingMachine extends entity_1.Entity {
             this.setCost(3);
         }
         else if (this.item instanceof heart_1.Heart) {
-            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [9, 10, 11], 3); // Uses default random cost
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [9, 10, 11], 2); // Uses default random cost
         }
         else if (this.item instanceof spear_1.Spear) {
             this.setCost(2); // Uses default random cost
@@ -18359,6 +18361,12 @@ class VendingMachine extends entity_1.Entity {
             this.setCost(1, [new coin_1.Coin(room, 0, 0)], [9, 10, 11], 2);
         }
         else if (this.item instanceof pickaxe_1.Pickaxe) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(15, 25)]);
+        }
+        else if (this.item instanceof fishingRod_1.FishingRod) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(25, 40)]);
+        }
+        else if (this.item instanceof hammer_1.Hammer) {
             this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(15, 25)]);
         }
     }
@@ -27696,7 +27704,7 @@ DropTable.drops = [
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
-    { itemType: "fishingrod", dropRate: 10, category: ["tool"] },
+    { itemType: "fishingrod", dropRate: 40, category: ["tool"] },
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
@@ -42161,6 +42169,8 @@ const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldReso
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
 const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/magmaPool.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
+const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -43267,7 +43277,7 @@ class Populator {
         let table = room.depth > 0
             ? [
                 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-                5, 5,
+                5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7,
             ]
             : [1, 1, 1];
         let type = game_1.Game.randTable(table, rand);
@@ -43290,6 +43300,12 @@ class Populator {
                 break;
             case 5:
                 vendingMachine_1.VendingMachine.add(room, room.game, x, y, new torch_1.Torch(room, x, y));
+                break;
+            case 6:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new fishingRod_1.FishingRod(room, x, y));
+                break;
+            case 7:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new hammer_1.Hammer(room, x, y));
                 break;
         }
     }

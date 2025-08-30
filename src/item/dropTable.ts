@@ -160,7 +160,7 @@ export class DropTable {
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
-    { itemType: "fishingrod", dropRate: 10, category: ["tool"] },
+    { itemType: "fishingrod", dropRate: 40, category: ["tool"] },
 
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
 

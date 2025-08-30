@@ -26,6 +26,8 @@ import { Spellbook } from "../../item/weapon/spellbook";
 import { Candle } from "../../item/light/candle";
 import { Pickaxe } from "../../item/tool/pickaxe";
 import { Utils } from "../../utility/utils";
+import { FishingRod } from "../../item/tool/fishingRod";
+import { Hammer } from "../../item/tool/hammer";
 
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
@@ -57,7 +59,7 @@ export class VendingMachine extends Entity {
     if (this.item instanceof Shotgun) {
       this.setCost(3);
     } else if (this.item instanceof Heart) {
-      this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 3); // Uses default random cost
+      this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 2); // Uses default random cost
     } else if (this.item instanceof Spear) {
       this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Armor) {
@@ -75,6 +77,10 @@ export class VendingMachine extends Entity {
     } else if (this.item instanceof Candle) {
       this.setCost(1, [new Coin(room, 0, 0)], [9, 10, 11], 2);
     } else if (this.item instanceof Pickaxe) {
+      this.setCost(1, [new Coin(room, 0, 0)], [Utils.randomNormalInt(15, 25)]);
+    } else if (this.item instanceof FishingRod) {
+      this.setCost(1, [new Coin(room, 0, 0)], [Utils.randomNormalInt(25, 40)]);
+    } else if (this.item instanceof Hammer) {
       this.setCost(1, [new Coin(room, 0, 0)], [Utils.randomNormalInt(15, 25)]);
     }
   }
