@@ -9868,6 +9868,8 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 class BigSkullEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -9908,6 +9910,57 @@ class BigSkullEnemy extends enemy_1.Enemy {
             }
             else
                 this.hurtCallback();
+        };
+        this.tryMove = (x, y, collide = true) => {
+            let pointWouldBeIn = (someX, someY) => {
+                return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
+            };
+            let entityCollide = (entity) => {
+                if (entity.x >= x + this.w || entity.x + entity.w <= x) {
+                    return false;
+                }
+                if (entity.y >= y + this.h || entity.y + entity.h <= y) {
+                    return false;
+                }
+                if (entity.destroyable && (entity.w <= 1 || entity.h <= 1)) {
+                    entity.hurt(this, entity.health);
+                    return false;
+                }
+                return true;
+            };
+            for (const e of this.room.entities) {
+                if (e !== this && entityCollide(e) && collide) {
+                    return;
+                }
+            }
+            for (const i in this.game.players) {
+                if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+                    return;
+                }
+            }
+            let tiles = [];
+            for (let xx = 0; xx < this.w; xx++) {
+                for (let yy = 0; yy < this.h; yy++) {
+                    if (!this.room.roomArray[x + xx][y + yy].isSolid() &&
+                        !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door) &&
+                        !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder)) {
+                        tiles.push(this.room.roomArray[x + xx][y + yy]);
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
+            for (let tile of tiles) {
+                tile.onCollideEnemy(this);
+            }
+            this.x = x;
+            this.y = y;
+            if (this.w > 1 || this.h > 1) {
+                setTimeout(() => {
+                    this.game.shakeScreen(0 * this.drawX, 5);
+                }, 300);
+            }
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10031,9 +10084,6 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 if (!hitPlayer) {
                                     this.tryMove(moveX, moveY);
                                     this.setDrawXY(oldX, oldY);
-                                    setTimeout(() => {
-                                        this.game.shakeScreen(0 * this.drawX, 5);
-                                    }, 300);
                                     if (this.x > oldX)
                                         this.direction = game_1.Direction.RIGHT;
                                     else if (this.x < oldX)
@@ -15982,6 +16032,11 @@ class Entity extends drawable_1.Drawable {
             }
             this.x = x;
             this.y = y;
+            if (this.w > 1 || this.h > 1) {
+                setTimeout(() => {
+                    this.game.shakeScreen(0 * this.drawX, 5);
+                }, 300);
+            }
         };
         this.getPlayer = () => {
             const maxDistance = 138291380921; // pulled this straight outta my ass
@@ -42462,6 +42517,21 @@ class Populator {
             }, 0);
         };
         this.populateRopeCave = (room, rand) => {
+            let message = "";
+            switch (room.envType) {
+                case environmentTypes_1.EnvType.CAVE:
+                    message = "Cave";
+                    break;
+                case environmentTypes_1.EnvType.MAGMA_CAVE:
+                    message = "Magma Cave";
+                    break;
+                case environmentTypes_1.EnvType.FOREST:
+                    message = "Forest";
+                    break;
+                case environmentTypes_1.EnvType.CASTLE:
+                    message = "Castle";
+            }
+            room.name = message;
             const { x, y } = room.getRoomCenter();
             let upLadder = new upLadder_1.UpLadder(room, room.game, x, y);
             upLadder.isRope = true;
@@ -42866,7 +42936,7 @@ class Populator {
             id: environment_1.enemyClassToId.get(enemy.class), // Add ID dynamically
         }))
             .filter((enemy) => enemy.id &&
-            allowedEnemyIds.includes(enemy.id) &&
+            //allowedEnemyIds.includes(enemy.id) &&
             (enemy.minDepth ?? 0) <= room.depth);
         console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")}] -> Available [${availableEnemies.map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`).join(", ")}]`);
         return availableEnemies;

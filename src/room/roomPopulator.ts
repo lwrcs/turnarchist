@@ -628,7 +628,7 @@ export class Populator {
       .filter(
         (enemy) =>
           enemy.id &&
-          allowedEnemyIds.includes(enemy.id) &&
+          //allowedEnemyIds.includes(enemy.id) &&
           (enemy.minDepth ?? 0) <= room.depth,
       );
 
@@ -1452,6 +1452,21 @@ export class Populator {
   };
 
   populateRopeCave = (room: Room, rand: () => number) => {
+    let message = "";
+    switch (room.envType) {
+      case EnvType.CAVE:
+        message = "Cave";
+        break;
+      case EnvType.MAGMA_CAVE:
+        message = "Magma Cave";
+        break;
+      case EnvType.FOREST:
+        message = "Forest";
+        break;
+      case EnvType.CASTLE:
+        message = "Castle";
+    }
+    room.name = message;
     const { x, y } = room.getRoomCenter();
     let upLadder = new UpLadder(room, room.game, x, y);
     upLadder.isRope = true;
