@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.e1515ae81b4735951b91.png";
+module.exports = __webpack_require__.p + "assets/mobset.cdb6da352a14f1f0bfb5.png";
 
 /***/ }),
 
