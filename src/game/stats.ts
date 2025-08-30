@@ -99,6 +99,10 @@ export class StatsTracker {
     return this.stats.xp;
   }
 
+  increaseXp(xp: number) {
+    this.stats.xp += xp;
+  }
+
   public recordWeaponChoice(weaponChoice: string) {
     this.stats.weaponChoice = weaponChoice;
   }

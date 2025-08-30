@@ -1307,48 +1307,28 @@ export class Populator {
 
   // #region POPULATING METHODS
 
-  populateEmpty = (room: Room, rand: () => number) => {
-    // Removed: this.addTorchesByArea(room);
-  };
+  populateEmpty = (room: Room, rand: () => number) => {};
 
   populateTreasure = (room: Room, rand: () => number) => {
     this.addChests(room, 10, rand);
-    // Removed: this.addTorchesByArea(room);
   };
 
   populateDungeon = (room: Room, rand: () => number) => {
-    //this.addChests(10, rand);
     let factor = Game.rand(1, 36, rand);
-
-    // Removed: if (factor % 4 === 0) this.addChasms(room, rand);
-    // Removed: if (factor % 3 === 0) this.addPools(room, rand);
-    // Removed: this.addTorchesByArea(room);
-    // Removed: if (factor > 15) this.addSpikeTraps(...);
-
     if (factor <= 6) this.placeVendingMachineInWall(room);
 
     room.removeDoorObstructions();
   };
 
   populateBoss = (room: Room, rand: () => number) => {
-    // Removed: const bossDoor = room.getBossDoor();
-    // Removed: this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
-    // Removed: this.addTorchesByArea(room);
-    // Removed: this.addSpikeTraps(room, Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
     this.addBosses(room, room.depth);
   };
 
   populateBigDungeon = (room: Room, rand: () => number) => {
-    // Removed: if (Game.rand(1, 4, rand) === 1) this.addChasms(room, rand);
-    // Removed: this.addTorchesByArea(room);
-    // Removed: if (Game.rand(1, 3, rand) === 1) this.addSpikeTraps(...);
-
     room.removeDoorObstructions();
   };
 
   populateSpawner = (room: Room, rand: () => number) => {
-    // Removed: this.addTorchesByArea(room);
-
     Spawner.add(
       room,
       room.game,
@@ -1356,36 +1336,6 @@ export class Populator {
       Math.floor(room.roomY + room.height / 2),
     );
     room.removeDoorObstructions();
-  };
-
-  populateKeyRoom = (room: Room, rand: () => number) => {
-    // Removed: this.addRandomTorches(room, "medium");
-
-    room.items.push(
-      new GoldenKey(
-        room,
-        Math.floor(room.roomX + room.width / 2),
-        Math.floor(room.roomY + room.height / 2),
-      ),
-    );
-  };
-
-  populateFountain = (room: Room, rand: () => number) => {
-    // Removed: this.addRandomTorches(room, "medium");
-
-    let centerX = Math.floor(room.roomX + room.width / 2);
-    let centerY = Math.floor(room.roomY + room.height / 2);
-    for (let x = centerX - 1; x <= centerX + 1; x++) {
-      for (let y = centerY - 1; y <= centerY + 1; y++) {
-        room.roomArray[x][y] = new FountainTile(
-          room,
-          x,
-          y,
-          x - (centerX - 1),
-          y - (centerY - 1),
-        );
-      }
-    }
   };
 
   populatePuzzle = (room: Room, rand: () => number) => {
@@ -1706,9 +1656,10 @@ export class Populator {
         }
 
         if (room.envType !== EnvType.CASTLE) {
+          if (factor < 12) this.addPools(room, rand);
+
           if (factor < 12) this.addChasms(room, rand);
 
-          if (factor < 12) this.addPools(room, rand);
           if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
         }
 
@@ -1787,14 +1738,6 @@ export class Populator {
         this.addRandomTorches(room, "medium");
         break;
 
-      case RoomType.FOUNTAIN:
-        this.addRandomTorches(room, "medium");
-        break;
-
-      case RoomType.KEYROOM:
-        this.addRandomTorches(room, "medium");
-        break;
-
       case RoomType.SPIKECORRIDOR:
         this.addRandomTorches(room, "medium");
         break;
@@ -1851,9 +1794,7 @@ export class Populator {
       case RoomType.BIGDUNGEON:
         this.populateBigDungeon(room, rand);
         break;
-      case RoomType.FOUNTAIN:
-        this.populateFountain(room, rand);
-        break;
+
       case RoomType.PUZZLE:
         this.populatePuzzle(room, rand);
         break;
@@ -1863,9 +1804,7 @@ export class Populator {
       case RoomType.TREASURE:
         this.populateTreasure(room, rand);
         break;
-      case RoomType.KEYROOM:
-        this.populateKeyRoom(room, rand);
-        break;
+
       case RoomType.GRASS:
         this.populateDungeon(room, rand);
         break;

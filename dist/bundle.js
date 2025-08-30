@@ -17766,6 +17766,9 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const fish_1 = __webpack_require__(/*! ../../item/usable/fish */ "./src/item/usable/fish.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
+const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 class FishingSpot extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -17795,6 +17798,12 @@ class FishingSpot extends entity_1.Entity {
                     }
                     message = "You catch a fish.";
                     sound_1.Sound.playFishingCatch();
+                    let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
+                    let xp = Math.ceil((random_1.Random.rand() * 50 + 100) * depthMultiplier);
+                    stats_1.statsTracker.increaseXp(xp);
+                    if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
+                        this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
+                    }
                     this.fishCount--;
                     if (this.fishCount <= 0) {
                         this.active = false;
@@ -24643,6 +24652,9 @@ class StatsTracker {
     }
     getXp() {
         return this.stats.xp;
+    }
+    increaseXp(xp) {
+        this.stats.xp += xp;
     }
     recordWeaponChoice(weaponChoice) {
         this.stats.weaponChoice = weaponChoice;
@@ -42436,8 +42448,6 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
-const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
-const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
@@ -42582,55 +42592,25 @@ class Populator {
         this.populateByType = (room) => { };
         // #endregion
         // #region POPULATING METHODS
-        this.populateEmpty = (room, rand) => {
-            // Removed: this.addTorchesByArea(room);
-        };
+        this.populateEmpty = (room, rand) => { };
         this.populateTreasure = (room, rand) => {
             this.addChests(room, 10, rand);
-            // Removed: this.addTorchesByArea(room);
         };
         this.populateDungeon = (room, rand) => {
-            //this.addChests(10, rand);
             let factor = game_1.Game.rand(1, 36, rand);
-            // Removed: if (factor % 4 === 0) this.addChasms(room, rand);
-            // Removed: if (factor % 3 === 0) this.addPools(room, rand);
-            // Removed: this.addTorchesByArea(room);
-            // Removed: if (factor > 15) this.addSpikeTraps(...);
             if (factor <= 6)
                 this.placeVendingMachineInWall(room);
             room.removeDoorObstructions();
         };
         this.populateBoss = (room, rand) => {
-            // Removed: const bossDoor = room.getBossDoor();
-            // Removed: this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
-            // Removed: this.addTorchesByArea(room);
-            // Removed: this.addSpikeTraps(room, Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
             this.addBosses(room, room.depth);
         };
         this.populateBigDungeon = (room, rand) => {
-            // Removed: if (Game.rand(1, 4, rand) === 1) this.addChasms(room, rand);
-            // Removed: this.addTorchesByArea(room);
-            // Removed: if (Game.rand(1, 3, rand) === 1) this.addSpikeTraps(...);
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
-            // Removed: this.addTorchesByArea(room);
             spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2));
             room.removeDoorObstructions();
-        };
-        this.populateKeyRoom = (room, rand) => {
-            // Removed: this.addRandomTorches(room, "medium");
-            room.items.push(new goldenKey_1.GoldenKey(room, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2)));
-        };
-        this.populateFountain = (room, rand) => {
-            // Removed: this.addRandomTorches(room, "medium");
-            let centerX = Math.floor(room.roomX + room.width / 2);
-            let centerY = Math.floor(room.roomY + room.height / 2);
-            for (let x = centerX - 1; x <= centerX + 1; x++) {
-                for (let y = centerY - 1; y <= centerY + 1; y++) {
-                    room.roomArray[x][y] = new fountainTile_1.FountainTile(room, x, y, x - (centerX - 1), y - (centerY - 1));
-                }
-            }
         };
         this.populatePuzzle = (room, rand) => {
             let d;
@@ -42850,9 +42830,6 @@ class Populator {
                 case room_1.RoomType.BIGDUNGEON:
                     this.populateBigDungeon(room, rand);
                     break;
-                case room_1.RoomType.FOUNTAIN:
-                    this.populateFountain(room, rand);
-                    break;
                 case room_1.RoomType.PUZZLE:
                     this.populatePuzzle(room, rand);
                     break;
@@ -42861,9 +42838,6 @@ class Populator {
                     break;
                 case room_1.RoomType.TREASURE:
                     this.populateTreasure(room, rand);
-                    break;
-                case room_1.RoomType.KEYROOM:
-                    this.populateKeyRoom(room, rand);
                     break;
                 case room_1.RoomType.GRASS:
                     this.populateDungeon(room, rand);
@@ -43785,9 +43759,9 @@ class Populator {
                 }
                 if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
                     if (factor < 12)
-                        this.addChasms(room, rand);
-                    if (factor < 12)
                         this.addPools(room, rand);
+                    if (factor < 12)
+                        this.addChasms(room, rand);
                     if (factor < 12 && room.depth > 5)
                         this.addMagmaPools(room, rand);
                 }
@@ -43848,12 +43822,6 @@ class Populator {
                 this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
                 break;
             case room_1.RoomType.ROPEHOLE:
-                this.addRandomTorches(room, "medium");
-                break;
-            case room_1.RoomType.FOUNTAIN:
-                this.addRandomTorches(room, "medium");
-                break;
-            case room_1.RoomType.KEYROOM:
                 this.addRandomTorches(room, "medium");
                 break;
             case room_1.RoomType.SPIKECORRIDOR:
@@ -45383,40 +45351,6 @@ class Floor extends tile_1.Tile {
     }
 }
 exports.Floor = Floor;
-
-
-/***/ }),
-
-/***/ "./src/tile/fountainTile.ts":
-/*!**********************************!*\
-  !*** ./src/tile/fountainTile.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FountainTile = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
-class FountainTile extends tile_1.Tile {
-    constructor(room, x, y, subTileX, subTileY) {
-        super(room, x, y);
-        this.isSolid = () => {
-            return true;
-        };
-        this.canCrushEnemy = () => {
-            return true;
-        };
-        this.draw = (delta) => {
-            game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-            game_1.Game.drawTile(this.subTileX, 2 + this.subTileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
-        };
-        this.subTileX = subTileX;
-        this.subTileY = subTileY;
-    }
-}
-exports.FountainTile = FountainTile;
 
 
 /***/ }),

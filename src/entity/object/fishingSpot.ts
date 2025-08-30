@@ -12,6 +12,9 @@ import { Coin } from "../../item/coin";
 import { Sound } from "../../sound/sound";
 import { Player } from "../../player/player";
 import { Fish } from "../../item/usable/fish";
+import { statsTracker } from "../../game/stats";
+import { XPPopup } from "../../particle/xpPopup";
+import { GameConstants } from "../../game/gameConstants";
 
 export class FishingSpot extends Entity {
   fishCount: number = 0;
@@ -71,6 +74,13 @@ export class FishingSpot extends Entity {
         }
         message = "You catch a fish.";
         Sound.playFishingCatch();
+        let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
+        let xp = Math.ceil((Random.rand() * 50 + 100) * depthMultiplier);
+        statsTracker.increaseXp(xp);
+
+        if (GameConstants.XP_POPUP_ENABLED) {
+          this.room.particles.push(new XPPopup(this.room, this.x, this.y, xp));
+        }
         this.fishCount--;
         if (this.fishCount <= 0) {
           this.active = false;
