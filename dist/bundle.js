@@ -29347,6 +29347,10 @@ class Hammer extends usable_1.Usable {
                 let gold = other;
                 gold.smelt(player);
             }
+            else if (other.name === "fishing rod") {
+                let fishingRod = other;
+                fishingRod.disassemble();
+            }
         };
         this.disassemble = (player) => {
             let inventoryX = this.x;
