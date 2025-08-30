@@ -1302,18 +1302,41 @@ export class Entity extends Drawable {
     }
   };
 
-  makeHitWarnings = (hx: number = this.x, hy: number = this.y) => {
+  makeHitWarnings = (
+    hx: number = this.x,
+    hy: number = this.y,
+    arrowsOnly: boolean = false,
+    directionOverride: null | "diagonal" | "orthogonal" | "forward" = null,
+  ) => {
     if (this.unconscious) return;
     const player: Player = this.getPlayer();
     const isPlayerOnTile = player.x === hx && player.y === hy;
     const cullFactor = isPlayerOnTile ? 0 : 0.45;
 
-    const orthogonal = this.orthogonalAttack;
-    const diagonal = this.diagonalAttack;
-    const forwardOnly = this.forwardOnlyAttack;
+    let orthogonal = this.orthogonalAttack;
+    let diagonal = this.diagonalAttack;
+    let forwardOnly = this.forwardOnlyAttack;
     const direction = this.direction;
     const orthoRange = this.attackRange;
     const diagRange = this.diagonalAttackRange;
+
+    switch (directionOverride) {
+      case "diagonal":
+        diagonal = true;
+        orthogonal = false;
+        forwardOnly = false;
+        break;
+      case "orthogonal":
+        orthogonal = true;
+        diagonal = false;
+        forwardOnly = false;
+        break;
+      case "forward":
+        forwardOnly = true;
+        orthogonal = true;
+        diagonal = false;
+        break;
+    }
 
     const generateOffsets = (
       isOrthogonal: boolean,
@@ -1378,7 +1401,7 @@ export class Entity extends Drawable {
           hx,
           hy,
           true,
-          false,
+          arrowsOnly,
           this,
         );
         this.room.hitwarnings.push(hitWarning);

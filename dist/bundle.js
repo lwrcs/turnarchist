@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.a918f6b96c8d69eca5c0.png";
+module.exports = __webpack_require__.p + "assets/mobset.e1515ae81b4735951b91.png";
 
 /***/ }),
 
@@ -13576,6 +13576,194 @@ OccultistEnemy.tileY = 8;
 
 /***/ }),
 
+/***/ "./src/entity/enemy/pawnEnemy.ts":
+/*!***************************************!*\
+  !*** ./src/entity/enemy/pawnEnemy.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PawnEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+class PawnEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 1;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                this.ticks++;
+                if (!this.seenPlayer) {
+                    let p = this.nearestPlayer();
+                    if (p !== false) {
+                        let [distance, player] = p;
+                        if (distance <= 4) {
+                            this.targetPlayer = player;
+                            this.facePlayer(player);
+                            this.seenPlayer = true;
+                            if (player === this.game.players[this.game.localPlayerID])
+                                this.alertTicks = 1;
+                            if (distance >= 2)
+                                this.makeHitWarnings(undefined, undefined, true, "orthogonal");
+                            if (distance < 2)
+                                this.makeHitWarnings();
+                        }
+                    }
+                }
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        let oldX = this.x;
+                        let oldY = this.y;
+                        let disablePositions = Array();
+                        for (const e of this.room.entities) {
+                            if (e !== this) {
+                                disablePositions.push({ x: e.x, y: e.y });
+                            }
+                        }
+                        for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                            for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    this.room.roomArray[xx][yy].on) {
+                                    // don't walk on active spiketraps
+                                    disablePositions.push({ x: xx, y: yy });
+                                }
+                            }
+                        }
+                        // Diagonal-only attack: if player is diagonally adjacent, attack without moving
+                        const dxToPlayer = this.targetPlayer.x - this.x;
+                        const dyToPlayer = this.targetPlayer.y - this.y;
+                        if (Math.abs(dxToPlayer) === 1 &&
+                            Math.abs(dyToPlayer) === 1 &&
+                            !this.unconscious) {
+                            this.targetPlayer.hurt(this.hit(), this.name);
+                            this.drawX = 0.5 * (this.x - this.targetPlayer.x);
+                            this.drawY = 0.5 * (this.y - this.targetPlayer.y);
+                            if (this.targetPlayer === this.game.players[this.game.localPlayerID])
+                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                            this.makeHitWarnings();
+                            return;
+                        }
+                        if (this.justHurt) {
+                        }
+                        else if (!this.unconscious) {
+                            // Move one orthogonal step toward the player (no diagonal movement)
+                            // Choose axis with greater absolute distance
+                            let stepX = 0;
+                            let stepY = 0;
+                            if (Math.abs(dxToPlayer) > Math.abs(dyToPlayer)) {
+                                stepX = Math.sign(dxToPlayer);
+                            }
+                            else if (Math.abs(dyToPlayer) > 0) {
+                                stepY = Math.sign(dyToPlayer);
+                            }
+                            const moveX = this.x + stepX;
+                            const moveY = this.y + stepY;
+                            // Pawns cannot attack forward; if forward tile is the player, do not move/attack
+                            const forwardHasPlayer = this.targetPlayer.x === moveX && this.targetPlayer.y === moveY;
+                            // Avoid stepping onto active spike traps
+                            const targetTile = this.room.roomArray[moveX]?.[moveY];
+                            const isActiveSpike = targetTile instanceof spiketrap_1.SpikeTrap && targetTile.on;
+                            if (!forwardHasPlayer && !isActiveSpike) {
+                                this.tryMove(moveX, moveY);
+                                this.setDrawXY(oldX, oldY);
+                            }
+                            const distanceToPlayer = utils_1.Utils.distance(this.x, this.y, this.targetPlayer.x, this.targetPlayer.y);
+                            if (distanceToPlayer < 2) {
+                                this.makeHitWarnings();
+                            }
+                            if (distanceToPlayer >= 2) {
+                                this.makeHitWarnings(undefined, undefined, true, "orthogonal");
+                            }
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    this.makeHitWarnings();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            //let offsetTileY = this.health <= 1 || this.cloned === true ? 2 : 0;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 23;
+        this.tileY = 12;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "pawn";
+        // Pawns show only diagonal attack telegraphs
+        this.orthogonalAttack = false;
+        this.diagonalAttack = true;
+        this.jumpHeight = 0.5;
+        if (drop)
+            this.drop = drop;
+        this.armored = true;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+}
+exports.PawnEnemy = PawnEnemy;
+PawnEnemy.difficulty = 4;
+PawnEnemy.tileX = 23 + 28;
+PawnEnemy.tileY = 8;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/queenEnemy.ts":
 /*!****************************************!*\
   !*** ./src/entity/enemy/queenEnemy.ts ***!
@@ -16695,18 +16883,35 @@ class Entity extends drawable_1.Drawable {
                     break;
             }
         };
-        this.makeHitWarnings = (hx = this.x, hy = this.y) => {
+        this.makeHitWarnings = (hx = this.x, hy = this.y, arrowsOnly = false, directionOverride = null) => {
             if (this.unconscious)
                 return;
             const player = this.getPlayer();
             const isPlayerOnTile = player.x === hx && player.y === hy;
             const cullFactor = isPlayerOnTile ? 0 : 0.45;
-            const orthogonal = this.orthogonalAttack;
-            const diagonal = this.diagonalAttack;
-            const forwardOnly = this.forwardOnlyAttack;
+            let orthogonal = this.orthogonalAttack;
+            let diagonal = this.diagonalAttack;
+            let forwardOnly = this.forwardOnlyAttack;
             const direction = this.direction;
             const orthoRange = this.attackRange;
             const diagRange = this.diagonalAttackRange;
+            switch (directionOverride) {
+                case "diagonal":
+                    diagonal = true;
+                    orthogonal = false;
+                    forwardOnly = false;
+                    break;
+                case "orthogonal":
+                    orthogonal = true;
+                    diagonal = false;
+                    forwardOnly = false;
+                    break;
+                case "forward":
+                    forwardOnly = true;
+                    orthogonal = true;
+                    diagonal = false;
+                    break;
+            }
             const generateOffsets = (isOrthogonal, range) => {
                 const baseOffsets = isOrthogonal
                     ? [
@@ -16756,7 +16961,7 @@ class Entity extends drawable_1.Drawable {
                 const targetX = hx + x;
                 const targetY = hy + y;
                 if (this.isWithinRoomBounds(targetX, targetY)) {
-                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, hx, hy, true, false, this);
+                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, hx, hy, true, arrowsOnly, this);
                     this.room.hitwarnings.push(hitWarning);
                     //this.hitWarnings.push(hitWarning);
                 }
@@ -38895,6 +39100,7 @@ const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/ob
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
+const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -38928,6 +39134,7 @@ var EnemyType;
     EnemyType["tombStone"] = "tombstone";
     EnemyType["warden"] = "warden";
     EnemyType["crusher"] = "crusher";
+    EnemyType["pawn"] = "pawn";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -38960,6 +39167,7 @@ exports.EnemyTypeMap = {
     [EnemyType.tombStone]: tombStone_1.TombStone,
     [EnemyType.warden]: wardenEnemy_1.WardenEnemy,
     [EnemyType.crusher]: crusherEnemy_1.CrusherEnemy,
+    [EnemyType.pawn]: pawnEnemy_1.PawnEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

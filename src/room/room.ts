@@ -96,6 +96,7 @@ import { Tree } from "../entity/object/tree";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
+import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 
 // #endregion
 
@@ -130,6 +131,7 @@ export enum EnemyType {
   tombStone = "tombstone",
   warden = "warden",
   crusher = "crusher",
+  pawn = "pawn",
   // Add other enemy types here
 }
 
@@ -163,6 +165,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.tombStone]: TombStone,
   [EnemyType.warden]: WardenEnemy,
   [EnemyType.crusher]: CrusherEnemy,
+  [EnemyType.pawn]: PawnEnemy,
   // Add other enemy mappings here
 };
 
