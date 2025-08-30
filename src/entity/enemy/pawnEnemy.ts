@@ -7,6 +7,7 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { Enemy } from "./enemy";
 import { StunAnimation } from "../../projectile/stunAnimation";
 import { Utils } from "../../utility/utils";
+import { globalEventBus } from "../../event/eventBus";
 
 export class PawnEnemy extends Enemy {
   frame: number;
@@ -44,6 +45,30 @@ export class PawnEnemy extends Enemy {
     return 1;
   };
 
+  lookForPlayer = (face: boolean = true) => {
+    if (this.seenPlayer) return;
+
+    const p = this.nearestPlayer();
+    if (p === false) return;
+
+    const [distance, player] = p;
+    if (distance > this.alertRange) return;
+
+    this.targetPlayer = player;
+    if (face) this.facePlayer(player);
+    this.seenPlayer = true;
+
+    globalEventBus.emit("EnemySeenPlayer", {
+      enemyType: this.constructor.name,
+      enemyName: this.name,
+    });
+
+    if (player === this.game.players[this.game.localPlayerID]) {
+      this.alertTicks = 1;
+    }
+
+    this.conditionalHitWarnings();
+  };
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -63,9 +88,7 @@ export class PawnEnemy extends Enemy {
             this.seenPlayer = true;
             if (player === this.game.players[this.game.localPlayerID])
               this.alertTicks = 1;
-            if (distance >= 2)
-              this.makeHitWarnings(undefined, undefined, true, "orthogonal");
-            if (distance < 2) this.makeHitWarnings();
+            this.conditionalHitWarnings();
           }
         }
       } else if (this.seenPlayer) {
@@ -107,7 +130,8 @@ export class PawnEnemy extends Enemy {
               this.targetPlayer === this.game.players[this.game.localPlayerID]
             )
               this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-            this.makeHitWarnings();
+
+            this.conditionalHitWarnings();
             return;
           }
 
@@ -139,18 +163,8 @@ export class PawnEnemy extends Enemy {
               this.tryMove(moveX, moveY);
               this.setDrawXY(oldX, oldY);
             }
-            const distanceToPlayer = Utils.distance(
-              this.x,
-              this.y,
-              this.targetPlayer.x,
-              this.targetPlayer.y,
-            );
-            if (distanceToPlayer < 2) {
-              this.makeHitWarnings();
-            }
-            if (distanceToPlayer >= 2) {
-              this.makeHitWarnings(undefined, undefined, true, "orthogonal");
-            }
+
+            this.conditionalHitWarnings();
           }
         }
 
@@ -171,13 +185,25 @@ export class PawnEnemy extends Enemy {
                 this.facePlayer(player);
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
-                this.makeHitWarnings();
+                this.conditionalHitWarnings();
               }
             }
           }
         }
       }
     }
+  };
+
+  conditionalHitWarnings = () => {
+    const distance = Utils.distance(
+      this.x,
+      this.y,
+      this.targetPlayer.x,
+      this.targetPlayer.y,
+    );
+    if (distance >= 2 || !this.targetPlayer)
+      this.makeHitWarnings(undefined, undefined, true, "orthogonal");
+    if (distance < 3 && this.targetPlayer) this.makeHitWarnings();
   };
 
   draw = (delta: number) => {

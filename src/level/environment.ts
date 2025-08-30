@@ -41,6 +41,7 @@ import { FireWizardEnemy } from "../entity/enemy/fireWizard";
 import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 import { ObsidianResource } from "../entity/resource/obsidianResource";
+import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -61,6 +62,7 @@ export const enemyClassToId: Map<any, number> = new Map([
   [ArmoredSkullEnemy, 15],
   [MummyEnemy, 16],
   [SpiderEnemy, 17],
+  [PawnEnemy, 18],
 ]);
 
 export class Environment {
@@ -73,7 +75,7 @@ export class Environment {
 }
 
 // Import the enemy minimum depth from level.ts
-export { enemyMinimumDepth } from "./level";
+//export { enemyMinimumDepth } from "./level";
 
 interface PropInfo {
   class: any; // The class constructor
@@ -129,6 +131,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
+      { class: PawnEnemy, weight: 1.0, minDepth: 1 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -310,18 +313,19 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
       },
-      { class: RookEnemy, weight: 1.5, minDepth: 0 }, // Castle guardians
+      { class: PawnEnemy, weight: 1, minDepth: 0 }, // Castle pawns
+      { class: RookEnemy, weight: 1.25, minDepth: 0 }, // Castle guardians
       { class: BishopEnemy, weight: 1.5, minDepth: 0 }, // Castle clergy
       { class: QueenEnemy, weight: 0.5, minDepth: 0 }, // Royal enemies
 
       // Castle undead
-      { class: ArmoredzombieEnemy, weight: 1.0, minDepth: 0 }, // Fallen guards
-      { class: ArmoredSkullEnemy, weight: 1.0, minDepth: 0 }, // Armored spirits
+      { class: ArmoredzombieEnemy, weight: 0.25, minDepth: 0 }, // Fallen guards
+      { class: ArmoredSkullEnemy, weight: 0.25, minDepth: 0 }, // Armored spirits
 
       // Other castle inhabitants
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
       { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
-      { class: ChargeEnemy, weight: 0.4, minDepth: 0 }, // War beasts
+      { class: ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
     ],
   },
   [EnvType.DARK_CASTLE]: {

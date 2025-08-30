@@ -22,7 +22,7 @@ export interface EnemyParameters {
   minDepths: Record<number, number>;
 }
 
-export const enemyMinimumDepth: Record<number, number> = {
+const enemyMinimumDepth: Record<number, number> = {
   1: 0, // CrabEnemy
   2: 1, // FrogEnemy
   3: 0, // ZombieEnemy

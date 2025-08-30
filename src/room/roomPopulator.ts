@@ -8,7 +8,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import {
   environmentData,
   enemyClassToId,
-  enemyMinimumDepth,
+  //enemyMinimumDepth,
   EnemyInfo,
 } from "../level/environment";
 import { DownLadder } from "../tile/downLadder";
@@ -721,7 +721,7 @@ export class Populator {
       .filter(
         (enemy) =>
           enemy.id &&
-          //allowedEnemyIds.includes(enemy.id) &&
+          allowedEnemyIds.includes(enemy.id) &&
           (enemy.minDepth ?? 0) <= room.depth,
       );
 
@@ -806,9 +806,17 @@ export class Populator {
    * Generate enemy pool IDs based on depth and progression rules
    */
   private generateEnemyPoolIds(depth: number): number[] {
-    const availableEnemies = Object.entries(enemyMinimumDepth).map(
-      ([enemyId]) => Number(enemyId),
-    );
+    // Derive pool from the CURRENT environment's enemies using their minDepth
+    const env = this.level.environment.type;
+    const envEnemies = environmentData[env].enemies;
+
+    const availableEnemies = envEnemies
+      .map((enemy) => ({
+        id: enemyClassToId.get(enemy.class),
+        minDepth: enemy.minDepth ?? 0,
+      }))
+      .filter((e) => typeof e.id === "number" && e.minDepth <= depth)
+      .map((e) => e.id as number);
 
     // Get new enemies not yet encountered
     const newEnemies = availableEnemies.filter(

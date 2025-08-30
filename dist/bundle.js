@@ -13590,11 +13590,34 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
 class PawnEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
             return 1;
+        };
+        this.lookForPlayer = (face = true) => {
+            if (this.seenPlayer)
+                return;
+            const p = this.nearestPlayer();
+            if (p === false)
+                return;
+            const [distance, player] = p;
+            if (distance > this.alertRange)
+                return;
+            this.targetPlayer = player;
+            if (face)
+                this.facePlayer(player);
+            this.seenPlayer = true;
+            eventBus_1.globalEventBus.emit("EnemySeenPlayer", {
+                enemyType: this.constructor.name,
+                enemyName: this.name,
+            });
+            if (player === this.game.players[this.game.localPlayerID]) {
+                this.alertTicks = 1;
+            }
+            this.conditionalHitWarnings();
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -13615,10 +13638,7 @@ class PawnEnemy extends enemy_1.Enemy {
                             this.seenPlayer = true;
                             if (player === this.game.players[this.game.localPlayerID])
                                 this.alertTicks = 1;
-                            if (distance >= 2)
-                                this.makeHitWarnings(undefined, undefined, true, "orthogonal");
-                            if (distance < 2)
-                                this.makeHitWarnings();
+                            this.conditionalHitWarnings();
                         }
                     }
                 }
@@ -13653,7 +13673,7 @@ class PawnEnemy extends enemy_1.Enemy {
                             this.drawY = 0.5 * (this.y - this.targetPlayer.y);
                             if (this.targetPlayer === this.game.players[this.game.localPlayerID])
                                 this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                            this.makeHitWarnings();
+                            this.conditionalHitWarnings();
                             return;
                         }
                         if (this.justHurt) {
@@ -13680,13 +13700,7 @@ class PawnEnemy extends enemy_1.Enemy {
                                 this.tryMove(moveX, moveY);
                                 this.setDrawXY(oldX, oldY);
                             }
-                            const distanceToPlayer = utils_1.Utils.distance(this.x, this.y, this.targetPlayer.x, this.targetPlayer.y);
-                            if (distanceToPlayer < 2) {
-                                this.makeHitWarnings();
-                            }
-                            if (distanceToPlayer >= 2) {
-                                this.makeHitWarnings(undefined, undefined, true, "orthogonal");
-                            }
+                            this.conditionalHitWarnings();
                         }
                     }
                     let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
@@ -13703,13 +13717,20 @@ class PawnEnemy extends enemy_1.Enemy {
                                     this.facePlayer(player);
                                     if (player === this.game.players[this.game.localPlayerID])
                                         this.alertTicks = 1;
-                                    this.makeHitWarnings();
+                                    this.conditionalHitWarnings();
                                 }
                             }
                         }
                     }
                 }
             }
+        };
+        this.conditionalHitWarnings = () => {
+            const distance = utils_1.Utils.distance(this.x, this.y, this.targetPlayer.x, this.targetPlayer.y);
+            if (distance >= 2 || !this.targetPlayer)
+                this.makeHitWarnings(undefined, undefined, true, "orthogonal");
+            if (distance < 3 && this.targetPlayer)
+                this.makeHitWarnings();
         };
         this.draw = (delta) => {
             if (this.dead)
@@ -31644,7 +31665,7 @@ Weapon.itemName = "weapon";
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.environmentData = exports.NullProp = exports.enemyMinimumDepth = exports.Environment = exports.enemyClassToId = void 0;
+exports.environmentData = exports.NullProp = exports.Environment = exports.enemyClassToId = void 0;
 const barrel_1 = __webpack_require__(/*! ../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const block_1 = __webpack_require__(/*! ../entity/object/block */ "./src/entity/object/block.ts");
 const bush_1 = __webpack_require__(/*! ../entity/object/bush */ "./src/entity/object/bush.ts");
@@ -31684,6 +31705,7 @@ const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./sr
 const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
+const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -31703,6 +31725,7 @@ exports.enemyClassToId = new Map([
     [armoredSkullEnemy_1.ArmoredSkullEnemy, 15],
     [mummyEnemy_1.MummyEnemy, 16],
     [spiderEnemy_1.SpiderEnemy, 17],
+    [pawnEnemy_1.PawnEnemy, 18],
 ]);
 class Environment {
     constructor(type) {
@@ -31711,9 +31734,6 @@ class Environment {
     }
 }
 exports.Environment = Environment;
-// Import the enemy minimum depth from level.ts
-var level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
-Object.defineProperty(exports, "enemyMinimumDepth", ({ enumerable: true, get: function () { return level_1.enemyMinimumDepth; } }));
 // A do-nothing prop used to control spawn density without placing anything
 class NullProp {
     static add() {
@@ -31746,6 +31766,7 @@ const environmentData = {
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -31917,16 +31938,17 @@ const environmentData = {
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
             },
-            { class: rookEnemy_1.RookEnemy, weight: 1.5, minDepth: 0 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1, minDepth: 0 },
+            { class: rookEnemy_1.RookEnemy, weight: 1.25, minDepth: 0 },
             { class: bishopEnemy_1.BishopEnemy, weight: 1.5, minDepth: 0 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
             // Castle undead
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.0, minDepth: 0 },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.0, minDepth: 0 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.25, minDepth: 0 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.25, minDepth: 0 },
             // Other castle inhabitants
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 0.4, minDepth: 0 }, // War beasts
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
         ],
     },
     [environmentTypes_1.EnvType.DARK_CASTLE]: {
@@ -32314,7 +32336,7 @@ exports.GenerationVisualizer = GenerationVisualizer;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Level = exports.enemyMinimumDepth = void 0;
+exports.Level = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
@@ -32322,7 +32344,7 @@ const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/d
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
-exports.enemyMinimumDepth = {
+const enemyMinimumDepth = {
     1: 0,
     2: 1,
     3: 0,
@@ -32518,7 +32540,7 @@ class Level {
         return {
             enemyTables: {},
             maxDepthTable: this.depth,
-            minDepths: exports.enemyMinimumDepth,
+            minDepths: enemyMinimumDepth,
         };
     }
     setRoomSkins() {
@@ -43231,7 +43253,7 @@ class Populator {
             id: environment_1.enemyClassToId.get(enemy.class), // Add ID dynamically
         }))
             .filter((enemy) => enemy.id &&
-            //allowedEnemyIds.includes(enemy.id) &&
+            allowedEnemyIds.includes(enemy.id) &&
             (enemy.minDepth ?? 0) <= room.depth);
         console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
             .map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`)
@@ -43303,7 +43325,16 @@ class Populator {
      * Generate enemy pool IDs based on depth and progression rules
      */
     generateEnemyPoolIds(depth) {
-        const availableEnemies = Object.entries(environment_1.enemyMinimumDepth).map(([enemyId]) => Number(enemyId));
+        // Derive pool from the CURRENT environment's enemies using their minDepth
+        const env = this.level.environment.type;
+        const envEnemies = environment_1.environmentData[env].enemies;
+        const availableEnemies = envEnemies
+            .map((enemy) => ({
+            id: environment_1.enemyClassToId.get(enemy.class),
+            minDepth: enemy.minDepth ?? 0,
+        }))
+            .filter((e) => typeof e.id === "number" && e.minDepth <= depth)
+            .map((e) => e.id);
         // Get new enemies not yet encountered
         const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
         // Add 1-2 new enemies per level (if limiting is enabled)
