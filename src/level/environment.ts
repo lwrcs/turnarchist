@@ -295,17 +295,14 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: NullProp, weight: 1 },
       { class: Crate, weight: 10 },
       { class: Barrel, weight: 8 },
-      { class: TombStone, weight: 4, additionalParams: [1] },
-      { class: TombStone, weight: 2, additionalParams: [0] },
       { class: Block, weight: 6 },
       { class: PottedPlant, weight: 0.4 },
       { class: Pot, weight: 0.3 },
       { class: Chest, weight: 0.2 },
-      { class: Rock, weight: 0.1 },
     ],
     enemies: [
       // Royal guards and castle defenders
-      { class: KnightEnemy, weight: 2.0, minDepth: 1 }, // Castle knights
+      { class: KnightEnemy, weight: 2.0, minDepth: 0 }, // Castle knights
       {
         class: BigKnightEnemy,
         weight: 0.2,
@@ -313,18 +310,18 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
       },
-      { class: RookEnemy, weight: 1.5, minDepth: 1 }, // Castle guardians
-      { class: BishopEnemy, weight: 1.5, minDepth: 1 }, // Castle clergy
-      { class: QueenEnemy, weight: 0.5, minDepth: 2 }, // Royal enemies
+      { class: RookEnemy, weight: 1.5, minDepth: 0 }, // Castle guardians
+      { class: BishopEnemy, weight: 1.5, minDepth: 0 }, // Castle clergy
+      { class: QueenEnemy, weight: 0.5, minDepth: 0 }, // Royal enemies
 
       // Castle undead
-      { class: ArmoredzombieEnemy, weight: 1.0, minDepth: 1 }, // Fallen guards
-      { class: ArmoredSkullEnemy, weight: 1.0, minDepth: 2 }, // Armored spirits
+      { class: ArmoredzombieEnemy, weight: 1.0, minDepth: 0 }, // Fallen guards
+      { class: ArmoredSkullEnemy, weight: 1.0, minDepth: 0 }, // Armored spirits
 
       // Other castle inhabitants
-      { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 }, // Court wizards
-      { class: FireWizardEnemy, weight: 0.1, minDepth: 2 }, // Battle mages
-      { class: ChargeEnemy, weight: 0.4, minDepth: 2 }, // War beasts
+      { class: EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
+      { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
+      { class: ChargeEnemy, weight: 0.4, minDepth: 0 }, // War beasts
     ],
   },
   [EnvType.DARK_CASTLE]: {

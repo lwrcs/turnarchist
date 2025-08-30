@@ -148,6 +148,14 @@ export class Populator {
       });
     }
 
+    if (this.level.environment.type === EnvType.FOREST) {
+      this.addDownladder({
+        caveRooms: numRooms,
+        locked: true,
+        envType: EnvType.CASTLE,
+      });
+    }
+
     //this.level.distributeKeys();
   };
 
@@ -161,6 +169,9 @@ export class Populator {
         break;
       case EnvType.MAGMA_CAVE:
         this.populateMagmaCaveEnvironment(room);
+        break;
+      case EnvType.CASTLE:
+        this.populateCastleEnvironment(room);
         break;
       default:
         this.populateDefaultEnvironment(room);
@@ -330,6 +341,19 @@ export class Populator {
   }
 
   private populateMagmaCaveEnvironment(room: Room) {
+    const numProps = this.getNumProps(room);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
+
+    // ADD: Enemies after props, based on remaining space
+    this.addRandomEnemies(room);
+  }
+
+  private populateCastleEnvironment(room: Room) {
     const numProps = this.getNumProps(room);
     this.addPropsWithClustering(room, numProps, room.envType, {
       falloffExponent: 2,
@@ -687,9 +711,9 @@ export class Populator {
    * Generate enemy pool IDs based on depth and progression rules
    */
   private generateEnemyPoolIds(depth: number): number[] {
-    const availableEnemies = Object.entries(enemyMinimumDepth)
-      .filter(([enemyId, minDepth]) => depth >= minDepth)
-      .map(([enemyId]) => Number(enemyId));
+    const availableEnemies = Object.entries(enemyMinimumDepth).map(
+      ([enemyId]) => Number(enemyId),
+    );
 
     // Get new enemies not yet encountered
     const newEnemies = availableEnemies.filter(
@@ -1515,12 +1539,22 @@ export class Populator {
         break;
 
       case RoomType.DUNGEON:
-        if (factor < 20) room.builder.addWallBlocks(rand);
+        if (
+          this.level.environment.type === EnvType.CAVE ||
+          this.level.environment.type === EnvType.MAGMA_CAVE ||
+          this.level.environment.type === EnvType.FOREST
+        ) {
+          if (factor < 20) room.builder.addWallBlocksVariant(rand);
+        } else {
+          if (factor < 20) room.builder.addWallBlocks(rand);
+        }
 
-        if (factor < 12) this.addChasms(room, rand);
+        if (room.envType !== EnvType.CASTLE) {
+          if (factor < 12) this.addChasms(room, rand);
 
-        if (factor < 12) this.addPools(room, rand);
-        if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
+          if (factor < 12) this.addPools(room, rand);
+          if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
+        }
 
         this.addTorchesByArea(room);
         if (factor > 15)
@@ -1541,9 +1575,27 @@ export class Populator {
         break;
 
       case RoomType.CAVE:
-        if (factor < 30) room.builder.addWallBlocks(rand);
-        if (factor % 4 === 0) this.addChasms(room, rand);
-        if (factor % 3 === 0) this.addPools(room, rand);
+        if (
+          this.level.environment.type === EnvType.CAVE ||
+          this.level.environment.type === EnvType.MAGMA_CAVE ||
+          this.level.environment.type === EnvType.FOREST
+        ) {
+          if (factor < 20) room.builder.addWallBlocksVariant(rand);
+        } else {
+          if (factor < 20) room.builder.addWallBlocks(rand);
+        }
+
+        if (room.envType !== EnvType.CASTLE) {
+          if (factor < 12) this.addChasms(room, rand);
+
+          if (factor < 12) this.addPools(room, rand);
+          if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
+        }
+
+        if (this.level.environment.type === EnvType.CASTLE)
+          this.addTorchesByArea(room);
+
+        break;
 
       case RoomType.BIGCAVE:
         if (factor > 15)

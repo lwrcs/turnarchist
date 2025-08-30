@@ -31641,17 +31641,14 @@ const environmentData = {
             { class: NullProp, weight: 1 },
             { class: crate_1.Crate, weight: 10 },
             { class: barrel_1.Barrel, weight: 8 },
-            { class: tombStone_1.TombStone, weight: 4, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 2, additionalParams: [0] },
             { class: block_1.Block, weight: 6 },
             { class: pottedPlant_1.PottedPlant, weight: 0.4 },
             { class: pot_1.Pot, weight: 0.3 },
             { class: chest_1.Chest, weight: 0.2 },
-            { class: rockResource_1.Rock, weight: 0.1 },
         ],
         enemies: [
             // Royal guards and castle defenders
-            { class: knightEnemy_1.KnightEnemy, weight: 2.0, minDepth: 1 },
+            { class: knightEnemy_1.KnightEnemy, weight: 2.0, minDepth: 0 },
             {
                 class: bigKnightEnemy_1.BigKnightEnemy,
                 weight: 0.2,
@@ -31659,16 +31656,16 @@ const environmentData = {
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
             },
-            { class: rookEnemy_1.RookEnemy, weight: 1.5, minDepth: 1 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 1.5, minDepth: 1 },
-            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 2 },
+            { class: rookEnemy_1.RookEnemy, weight: 1.5, minDepth: 0 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 1.5, minDepth: 0 },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
             // Castle undead
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.0, minDepth: 1 },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.0, minDepth: 2 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 1.0, minDepth: 0 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 1.0, minDepth: 0 },
             // Other castle inhabitants
-            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
-            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 0.4, minDepth: 2 }, // War beasts
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.4, minDepth: 0 }, // War beasts
         ],
     },
     [environmentTypes_1.EnvType.DARK_CASTLE]: {
@@ -42219,6 +42216,13 @@ class Populator {
                     envType: environmentTypes_1.EnvType.MAGMA_CAVE,
                 });
             }
+            if (this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                this.addDownladder({
+                    caveRooms: numRooms,
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.CASTLE,
+                });
+            }
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -42231,6 +42235,9 @@ class Populator {
                     break;
                 case environmentTypes_1.EnvType.MAGMA_CAVE:
                     this.populateMagmaCaveEnvironment(room);
+                    break;
+                case environmentTypes_1.EnvType.CASTLE:
+                    this.populateCastleEnvironment(room);
                     break;
                 default:
                     this.populateDefaultEnvironment(room);
@@ -42650,6 +42657,17 @@ class Populator {
         // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
     }
+    populateCastleEnvironment(room) {
+        const numProps = this.getNumProps(room);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
+        // ADD: Enemies after props, based on remaining space
+        this.addRandomEnemies(room);
+    }
     getNumProps(room, medianDensity) {
         medianDensity = medianDensity || this.medianDensity;
         const numEmptyTiles = room.getEmptyTiles().length;
@@ -42917,9 +42935,7 @@ class Populator {
      * Generate enemy pool IDs based on depth and progression rules
      */
     generateEnemyPoolIds(depth) {
-        const availableEnemies = Object.entries(environment_1.enemyMinimumDepth)
-            .filter(([enemyId, minDepth]) => depth >= minDepth)
-            .map(([enemyId]) => Number(enemyId));
+        const availableEnemies = Object.entries(environment_1.enemyMinimumDepth).map(([enemyId]) => Number(enemyId));
         // Get new enemies not yet encountered
         const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
         // Add 1-2 new enemies per level (if limiting is enabled)
@@ -43341,14 +43357,24 @@ class Populator {
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
                 break;
             case room_1.RoomType.DUNGEON:
-                if (factor < 20)
-                    room.builder.addWallBlocks(rand);
-                if (factor < 12)
-                    this.addChasms(room, rand);
-                if (factor < 12)
-                    this.addPools(room, rand);
-                if (factor < 12 && room.depth > 5)
-                    this.addMagmaPools(room, rand);
+                if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                    if (factor < 20)
+                        room.builder.addWallBlocksVariant(rand);
+                }
+                else {
+                    if (factor < 20)
+                        room.builder.addWallBlocks(rand);
+                }
+                if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
+                    if (factor < 12)
+                        this.addChasms(room, rand);
+                    if (factor < 12)
+                        this.addPools(room, rand);
+                    if (factor < 12 && room.depth > 5)
+                        this.addMagmaPools(room, rand);
+                }
                 this.addTorchesByArea(room);
                 if (factor > 15)
                     this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
@@ -43363,12 +43389,27 @@ class Populator {
                     this.addSpikeTraps(room, game_1.Game.randTable([3, 5, 7, 8], rand), rand);
                 break;
             case room_1.RoomType.CAVE:
-                if (factor < 30)
-                    room.builder.addWallBlocks(rand);
-                if (factor % 4 === 0)
-                    this.addChasms(room, rand);
-                if (factor % 3 === 0)
-                    this.addPools(room, rand);
+                if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                    if (factor < 20)
+                        room.builder.addWallBlocksVariant(rand);
+                }
+                else {
+                    if (factor < 20)
+                        room.builder.addWallBlocks(rand);
+                }
+                if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
+                    if (factor < 12)
+                        this.addChasms(room, rand);
+                    if (factor < 12)
+                        this.addPools(room, rand);
+                    if (factor < 12 && room.depth > 5)
+                        this.addMagmaPools(room, rand);
+                }
+                if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE)
+                    this.addTorchesByArea(room);
+                break;
             case room_1.RoomType.BIGCAVE:
                 if (factor > 15)
                     this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
