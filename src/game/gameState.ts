@@ -150,6 +150,7 @@ import { ShieldLeftFragment } from "../item/weapon/shieldLeftFragment";
 import { ShieldRightFragment } from "../item/weapon/shieldRightFragment";
 import { Stats } from "./stats";
 import { statsTracker } from "./stats";
+import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 
 export class HitWarningState {
   x: number;
@@ -300,6 +301,7 @@ export enum EnemyType {
   WARDEN,
   OBSIDIAN,
   CRUSHER,
+  PAWN,
 }
 
 export class EnemyState {
@@ -544,6 +546,7 @@ export class EnemyState {
     if (enemy instanceof WardenEnemy) this.type = EnemyType.WARDEN;
     if (enemy instanceof ObsidianResource) this.type = EnemyType.OBSIDIAN;
     if (enemy instanceof CrusherEnemy) this.type = EnemyType.CRUSHER;
+    if (enemy instanceof PawnEnemy) this.type = EnemyType.PAWN;
   }
 }
 
@@ -720,7 +723,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new Mushrooms(room, game, es.x, es.y);
   if (es.type === EnemyType.OBSIDIAN)
     enemy = new ObsidianResource(room, game, es.x, es.y);
-
+  if (es.type === EnemyType.PAWN) enemy = new PawnEnemy(room, game, es.x, es.y);
   if (!enemy) {
     console.error(
       "Unknown enemy type:",

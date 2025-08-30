@@ -21614,6 +21614,7 @@ const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "
 const shieldLeftFragment_1 = __webpack_require__(/*! ../item/weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
 const shieldRightFragment_1 = __webpack_require__(/*! ../item/weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
 const stats_1 = __webpack_require__(/*! ./stats */ "./src/game/stats.ts");
+const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -21737,6 +21738,7 @@ var EnemyType;
     EnemyType[EnemyType["WARDEN"] = 45] = "WARDEN";
     EnemyType[EnemyType["OBSIDIAN"] = 46] = "OBSIDIAN";
     EnemyType[EnemyType["CRUSHER"] = 47] = "CRUSHER";
+    EnemyType[EnemyType["PAWN"] = 48] = "PAWN";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -21951,6 +21953,8 @@ class EnemyState {
             this.type = EnemyType.OBSIDIAN;
         if (enemy instanceof crusherEnemy_1.CrusherEnemy)
             this.type = EnemyType.CRUSHER;
+        if (enemy instanceof pawnEnemy_1.PawnEnemy)
+            this.type = EnemyType.PAWN;
     }
 }
 exports.EnemyState = EnemyState;
@@ -22137,6 +22141,8 @@ let loadEnemy = (es, game) => {
         enemy = new mushrooms_1.Mushrooms(room, game, es.x, es.y);
     if (es.type === EnemyType.OBSIDIAN)
         enemy = new obsidianResource_1.ObsidianResource(room, game, es.x, es.y);
+    if (es.type === EnemyType.PAWN)
+        enemy = new pawnEnemy_1.PawnEnemy(room, game, es.x, es.y);
     if (!enemy) {
         console.error("Unknown enemy type:", es.type, "EnemyType enum value:", EnemyType[es.type], "Falling back to barrel");
         enemy = new barrel_1.Barrel(room, game, es.x, es.y);
