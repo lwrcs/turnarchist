@@ -32,7 +32,7 @@ export class StunAnimation extends Projectile {
   };
 
   tick = () => {
-    if (this.ticks > 1 || this.parent.dead === true) {
+    if (this.ticks > 0 || this.parent.dead === true) {
       this.remove();
       this.parent.unconscious = false;
       this.parent.justHurt = false;

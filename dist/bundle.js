@@ -13802,9 +13802,10 @@ class RookEnemy extends enemy_1.Enemy {
                         undefined, undefined, undefined, false, //diagonalsOmni
                         this.lastPlayerPos);
                         if (this.justHurt) {
+                            this.retreat(oldX, oldY);
                             this.stun();
                         }
-                        else if (moves.length > 0) {
+                        else if (moves.length > 0 && !this.unconscious) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
                             let hitPlayer = false;
@@ -38479,7 +38480,7 @@ class StunAnimation extends projectile_1.Projectile {
             this.parent.room.projectiles = this.parent.room.projectiles.filter((projectile) => projectile !== this);
         };
         this.tick = () => {
-            if (this.ticks > 1 || this.parent.dead === true) {
+            if (this.ticks > 0 || this.parent.dead === true) {
                 this.remove();
                 this.parent.unconscious = false;
                 this.parent.justHurt = false;
