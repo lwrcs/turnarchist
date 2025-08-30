@@ -42432,6 +42432,7 @@ const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/mag
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -42778,6 +42779,22 @@ class Populator {
             }
             this.addTorches(room, numTorches, random_1.Random.rand);
         };
+        this.addWindowsByArea = (room) => {
+            // Only place windows in castle-themed rooms
+            const isCastle = room.envType === environmentTypes_1.EnvType.CASTLE ||
+                room.level.environment.type === environmentTypes_1.EnvType.CASTLE;
+            if (!isCastle)
+                return;
+            let numWindows = Math.max(0, Math.floor(Math.sqrt(room.roomArea) / 4) -
+                Math.floor(Math.sqrt(room.depth)));
+            // Slight randomness similar to torches
+            if (room.depth === 0) {
+                if (random_1.Random.rand() < 0.15) {
+                    numWindows = 0;
+                }
+            }
+            this.addWindows(room, numWindows, random_1.Random.rand);
+        };
         this.populate = (room, rand) => {
             room.name = "";
             switch (room.type) {
@@ -43041,6 +43058,76 @@ class Populator {
             room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y, true);
         }
     }
+    // Windows: analogous helpers to torches
+    addDoorWindows(room, x, y, doorDir) {
+        if (doorDir !== game_2.Direction.UP && doorDir !== game_2.Direction.DOWN) {
+            return;
+        }
+        if (x && y) {
+            room.calculateWallInfo();
+            const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
+            const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
+            const leftOpen = leftWallInfo?.isLeftWall === false;
+            const rightOpen = rightWallInfo?.isRightWall === false;
+            const bottomWall = doorDir === game_2.Direction.DOWN ? true : false;
+            if (leftOpen && room.roomArray[x - 1]?.[y] instanceof wall_1.Wall) {
+                room.roomArray[x - 1][y] = new window_1.Window(room, x - 1, y, bottomWall);
+            }
+            if (rightOpen && room.roomArray[x + 1]?.[y] instanceof wall_1.Wall) {
+                room.roomArray[x + 1][y] = new window_1.Window(room, x + 1, y, bottomWall);
+            }
+        }
+    }
+    addWindows(room, numWindows, rand, placeX, placeY) {
+        // Restrict windows to castle-themed rooms to keep them sensible
+        const isCastle = room.envType === environmentTypes_1.EnvType.CASTLE ||
+            room.level.environment.type === environmentTypes_1.EnvType.CASTLE;
+        if (!isCastle)
+            return;
+        if (placeX !== undefined &&
+            placeY !== undefined &&
+            room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall) {
+            room.roomArray[placeX][placeY] = new window_1.Window(room, placeX, placeY);
+            return;
+        }
+        let walls = [];
+        for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+            for (let yy = room.roomY; yy < room.roomY + room.height - 1; yy++) {
+                if (room.roomArray[xx][yy] instanceof wall_1.Wall &&
+                    !(room.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                    walls.push(room.roomArray[xx][yy]);
+                }
+            }
+        }
+        let bottomWalls = [];
+        for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+            const yy = room.roomY + room.height - 1;
+            if (room.roomArray[xx][yy] instanceof wall_1.Wall &&
+                !(room.roomArray[xx][yy + 1] instanceof wall_1.Wall)) {
+                bottomWalls.push(room.roomArray[xx][yy]);
+            }
+        }
+        const wallWindows = game_1.Game.rand(0, numWindows, rand);
+        const bottomWallWindows = numWindows - wallWindows;
+        for (let i = 0; i < wallWindows; i++) {
+            if (walls.length === 0)
+                break;
+            const randomIndex = game_1.Game.rand(0, walls.length - 1, rand);
+            const t = walls.splice(randomIndex, 1)[0];
+            const x = t.x;
+            const y = t.y;
+            room.roomArray[x][y] = new window_1.Window(room, x, y);
+        }
+        for (let i = 0; i < bottomWallWindows; i++) {
+            if (bottomWalls.length === 0)
+                break;
+            const randomIndex = game_1.Game.rand(0, bottomWalls.length - 1, rand);
+            const t = bottomWalls.splice(randomIndex, 1)[0];
+            const x = t.x;
+            const y = t.y;
+            room.roomArray[x][y] = new window_1.Window(room, x, y, true);
+        }
+    }
     addRectangularTileArea(room, rand, TileClass) {
         let w = game_1.Game.rand(2, 4, rand);
         let h = game_1.Game.rand(2, 4, rand);
@@ -43146,7 +43233,9 @@ class Populator {
             .filter((enemy) => enemy.id &&
             //allowedEnemyIds.includes(enemy.id) &&
             (enemy.minDepth ?? 0) <= room.depth);
-        console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")}] -> Available [${availableEnemies.map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`).join(", ")}]`);
+        console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
+            .map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`)
+            .join(", ")}]`);
         return availableEnemies;
     }
     /**
@@ -43615,6 +43704,17 @@ class Populator {
         const randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
         this.addTorches(room, randTorches, random_1.Random.rand);
     }
+    // Windows: random and by-area helpers mirroring torches
+    addRandomWindows(room, intensity = "medium") {
+        const windowPatterns = {
+            none: [0, 0, 0],
+            low: [0, 0, 0, 1, 1],
+            medium: [0, 0, 0, 1, 1, 2, 2, 3],
+            high: [1, 1, 2, 2, 3, 3, 4],
+        };
+        const randWindows = game_1.Game.randTable(windowPatterns[intensity], random_1.Random.rand);
+        this.addWindows(room, randWindows, random_1.Random.rand);
+    }
     /**
      * Centralized method to add torches, spikes, and pools based on room type
      */
@@ -43655,6 +43755,8 @@ class Populator {
                         this.addMagmaPools(room, rand);
                 }
                 this.addTorchesByArea(room);
+                // Add windows for castle rooms
+                this.addWindowsByArea(room);
                 if (factor > 15)
                     this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 3], rand), rand);
                 break;
@@ -43688,6 +43790,8 @@ class Populator {
                 }
                 if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE)
                     this.addTorchesByArea(room);
+                // Windows for castle cave-style rooms
+                this.addWindowsByArea(room);
                 break;
             case room_1.RoomType.BIGCAVE:
                 if (factor > 15)
@@ -46256,6 +46360,74 @@ class WallTorch extends wall_1.Wall {
     }
 }
 exports.WallTorch = WallTorch;
+
+
+/***/ }),
+
+/***/ "./src/tile/window.ts":
+/*!****************************!*\
+  !*** ./src/tile/window.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Window = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const wall_1 = __webpack_require__(/*! ./wall */ "./src/tile/wall.ts");
+class Window extends wall_1.Wall {
+    constructor(room, x, y, isBottomWall) {
+        super(room, x, y);
+        this.isSolid = () => {
+            return true;
+        };
+        this.canCrushEnemy = () => {
+            return true;
+        };
+        this.isOpaque = () => {
+            const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+            if (!wallInfo)
+                return true;
+            return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
+                wallInfo.isLeftWall ||
+                wallInfo.isRightWall);
+        };
+        this.draw = (delta) => {
+            this.drawWall(delta);
+            const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
+            if (!wallInfo)
+                this.tileYOffset = 6;
+            this.frame += 0.3 * delta;
+            if (this.frame >= 12)
+                this.frame = 0;
+            this.tileYOffset =
+                wallInfo?.innerWallType === "bottomInner" ||
+                    wallInfo?.innerWallType === "surroundedInner"
+                    ? 0
+                    : 6;
+            if (!this.isBottomWall) {
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            if (this.isBottomWall) {
+                game_1.Game.drawTile(0, this.skin, 1, 1, this.x, this.y - 0.6, 1, 1, this.room.shadeColor, 1);
+            }
+        };
+        this.isBottomWall = isBottomWall;
+        //this.torchOffset = isBottomWall ? 1 : 0;
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 20, [135, 206, 235], //sky blue rgb array,
+        3);
+        this.room.lightSources.push(this.lightSource);
+        //this.frame = Random.rand() * 12;
+        //this.tileYOffset = 6;
+        this.hasBloom = true;
+        this.bloomColor = "#00FFFF"; //cyan
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
+    }
+}
+exports.Window = Window;
 
 
 /***/ }),

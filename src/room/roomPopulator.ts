@@ -77,6 +77,7 @@ import { MagmaPool } from "../tile/magmaPool";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
+import { Window } from "../tile/window";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -486,6 +487,98 @@ export class Populator {
     }
   }
 
+  // Windows: analogous helpers to torches
+  private addDoorWindows(room: Room, x: number, y: number, doorDir: Direction) {
+    if (doorDir !== Direction.UP && doorDir !== Direction.DOWN) {
+      return;
+    }
+
+    if (x && y) {
+      room.calculateWallInfo();
+      const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
+      const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
+      const leftOpen = leftWallInfo?.isLeftWall === false;
+      const rightOpen = rightWallInfo?.isRightWall === false;
+
+      const bottomWall = doorDir === Direction.DOWN ? true : false;
+
+      if (leftOpen && room.roomArray[x - 1]?.[y] instanceof Wall) {
+        room.roomArray[x - 1][y] = new Window(room, x - 1, y, bottomWall);
+      }
+
+      if (rightOpen && room.roomArray[x + 1]?.[y] instanceof Wall) {
+        room.roomArray[x + 1][y] = new Window(room, x + 1, y, bottomWall);
+      }
+    }
+  }
+
+  private addWindows(
+    room: Room,
+    numWindows: number,
+    rand: () => number,
+    placeX?: number,
+    placeY?: number,
+  ) {
+    // Restrict windows to castle-themed rooms to keep them sensible
+    const isCastle =
+      room.envType === EnvType.CASTLE ||
+      room.level.environment.type === EnvType.CASTLE;
+    if (!isCastle) return;
+
+    if (
+      placeX !== undefined &&
+      placeY !== undefined &&
+      room.roomArray[placeX]?.[placeY] instanceof Wall
+    ) {
+      room.roomArray[placeX][placeY] = new Window(room, placeX, placeY);
+      return;
+    }
+
+    let walls: any[] = [];
+    for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+      for (let yy = room.roomY; yy < room.roomY + room.height - 1; yy++) {
+        if (
+          room.roomArray[xx][yy] instanceof Wall &&
+          !(room.roomArray[xx][yy + 1] instanceof Wall)
+        ) {
+          walls.push(room.roomArray[xx][yy]);
+        }
+      }
+    }
+
+    let bottomWalls: any[] = [];
+    for (let xx = room.roomX + 1; xx < room.roomX + room.width - 2; xx++) {
+      const yy = room.roomY + room.height - 1;
+      if (
+        room.roomArray[xx][yy] instanceof Wall &&
+        !(room.roomArray[xx][yy + 1] instanceof Wall)
+      ) {
+        bottomWalls.push(room.roomArray[xx][yy]);
+      }
+    }
+
+    const wallWindows = Game.rand(0, numWindows, rand);
+    const bottomWallWindows = numWindows - wallWindows;
+
+    for (let i = 0; i < wallWindows; i++) {
+      if (walls.length === 0) break;
+      const randomIndex = Game.rand(0, walls.length - 1, rand);
+      const t = walls.splice(randomIndex, 1)[0];
+      const x = t.x;
+      const y = t.y;
+      room.roomArray[x][y] = new Window(room, x, y);
+    }
+
+    for (let i = 0; i < bottomWallWindows; i++) {
+      if (bottomWalls.length === 0) break;
+      const randomIndex = Game.rand(0, bottomWalls.length - 1, rand);
+      const t = bottomWalls.splice(randomIndex, 1)[0];
+      const x = t.x;
+      const y = t.y;
+      room.roomArray[x][y] = new Window(room, x, y, true);
+    }
+  }
+
   private addRectangularTileArea<
     T extends new (
       room: Room,
@@ -633,7 +726,9 @@ export class Populator {
       );
 
     console.log(
-      `Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")}] -> Available [${availableEnemies.map((e) => enemyIdToName[e.id!] || `Unknown(${e.id})`).join(", ")}]`,
+      `Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
+        .map((e) => enemyIdToName[e.id!] || `Unknown(${e.id})`)
+        .join(", ")}]`,
     );
 
     return availableEnemies;
@@ -1504,6 +1599,21 @@ export class Populator {
     this.addTorches(room, randTorches, Random.rand);
   }
 
+  // Windows: random and by-area helpers mirroring torches
+  private addRandomWindows(
+    room: Room,
+    intensity: "none" | "low" | "medium" | "high" = "medium",
+  ): void {
+    const windowPatterns = {
+      none: [0, 0, 0],
+      low: [0, 0, 0, 1, 1],
+      medium: [0, 0, 0, 1, 1, 2, 2, 3],
+      high: [1, 1, 2, 2, 3, 3, 4],
+    };
+    const randWindows = Game.randTable(windowPatterns[intensity], Random.rand);
+    this.addWindows(room, randWindows, Random.rand);
+  }
+
   private addTorchesByArea = (room: Room) => {
     let numTorches = Math.max(
       1,
@@ -1525,6 +1635,29 @@ export class Populator {
       }
     }
     this.addTorches(room, numTorches, Random.rand);
+  };
+
+  private addWindowsByArea = (room: Room) => {
+    // Only place windows in castle-themed rooms
+    const isCastle =
+      room.envType === EnvType.CASTLE ||
+      room.level.environment.type === EnvType.CASTLE;
+    if (!isCastle) return;
+
+    let numWindows = Math.max(
+      0,
+      Math.floor(Math.sqrt(room.roomArea) / 4) -
+        Math.floor(Math.sqrt(room.depth)),
+    );
+
+    // Slight randomness similar to torches
+    if (room.depth === 0) {
+      if (Random.rand() < 0.15) {
+        numWindows = 0;
+      }
+    }
+
+    this.addWindows(room, numWindows, Random.rand);
   };
 
   /**
@@ -1572,6 +1705,8 @@ export class Populator {
         }
 
         this.addTorchesByArea(room);
+        // Add windows for castle rooms
+        this.addWindowsByArea(room);
         if (factor > 15)
           this.addSpikeTraps(
             room,
@@ -1609,6 +1744,8 @@ export class Populator {
 
         if (this.level.environment.type === EnvType.CASTLE)
           this.addTorchesByArea(room);
+        // Windows for castle cave-style rooms
+        this.addWindowsByArea(room);
 
         break;
 
