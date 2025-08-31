@@ -34,6 +34,8 @@ export class Coin extends Item {
       if (this.stackCount >= 3) this.tileX = 20;
       if (this.stackCount >= 7) this.tileX = 21;
     }
+    if (GameConstants.COIN_AUTO_PICKUP)
+      this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
   };
   get distanceToBottomRight() {
     return Math.sqrt(

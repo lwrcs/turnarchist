@@ -8791,7 +8791,7 @@ class HealthBar {
             this.hurtTimer = Date.now();
         };
         this.draw = (delta, hearts, maxHearts, x, y, flashing) => {
-            let t = Date.now() - this.hurtTimer;
+            let t = Math.min(levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME, Math.max(Date.now() - this.hurtTimer, 0));
             if (t <= levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME) {
                 let fullHearts = Math.floor(hearts);
                 let halfHearts = Math.ceil(hearts - fullHearts);
@@ -22351,6 +22351,8 @@ GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.XP_POPUP_ENABLED = true;
 GameConstants.COIN_ANIMATION = false;
+GameConstants.COIN_AUTO_PICKUP = false;
+GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
@@ -28871,6 +28873,8 @@ class Coin extends item_1.Item {
                 if (this.stackCount >= 7)
                     this.tileX = 21;
             }
+            if (gameConstants_1.GameConstants.COIN_AUTO_PICKUP)
+                this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
         };
         this.pickupSound = () => {
             if (this.level === this.level.game.room)
@@ -29457,18 +29461,10 @@ class Item extends drawable_1.Drawable {
                 if (this.pickedUp) {
                     // Initialize lerp-to-inventory animation
                     if (this.animateToInventory === true) {
-                        this.animStartX = this.x - this.player.x + this.player.drawX;
-                        this.animStartY = this.y - 1 - this.player.y + this.player.drawY;
-                        this.animTargetX =
-                            (gameConstants_1.GameConstants.WIDTH /
-                                gameConstants_1.GameConstants.TILESIZE /
-                                gameConstants_1.GameConstants.TILESIZE) *
-                                1.75;
-                        this.animTargetY =
-                            (gameConstants_1.GameConstants.HEIGHT /
-                                gameConstants_1.GameConstants.TILESIZE /
-                                gameConstants_1.GameConstants.TILESIZE) *
-                                5;
+                        this.animStartX = this.x;
+                        this.animStartY = this.y;
+                        this.animTargetX = this.player.x;
+                        this.animTargetY = this.player.y;
                         this.animT = 0;
                     }
                     if (this.isNewItem(player)) {
@@ -29575,14 +29571,8 @@ class Item extends drawable_1.Drawable {
                     const speed = 0.015 * delta; // slower overall speed
                     this.animT = Math.min(1, this.animT + speed);
                     const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
-                    const posX = this.animStartX * (1 - t) +
-                        this.animTargetX * t +
-                        this.player.x -
-                        this.player.drawX;
-                    const posY = this.animStartY * (1 - t) +
-                        this.animTargetY * t +
-                        this.player.y -
-                        this.player.drawY;
+                    const posX = this.animStartX * (1 - t) + this.animTargetX * t;
+                    const posY = this.animStartY * (1 - t) + this.animTargetY * t;
                     // Fade near the end
                     const fadeStart = 0.75;
                     if (t > fadeStart) {
@@ -29591,7 +29581,11 @@ class Item extends drawable_1.Drawable {
                     }
                     if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                         game_1.Game.ctx.globalAlpha = Math.max(0, this.alpha);
-                    game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY, this.w, this.h);
+                    this.x = Math.floor(posX);
+                    this.y = Math.floor(posY);
+                    const diffX = this.player.x - this.animTargetX;
+                    const diffY = this.player.y - this.animTargetY;
+                    game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX - this.player.drawX + diffX, posY - 1.5 - this.player.drawY + diffY, this.w, this.h, this.level.shadeColor, this.shadeAmount());
                     game_1.Game.ctx.globalAlpha = 1.0;
                     if (this.animT >= 1) {
                         this.animateToInventory = false;

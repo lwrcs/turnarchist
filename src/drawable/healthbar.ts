@@ -4,6 +4,7 @@ import { LevelConstants } from "../level/levelConstants";
 
 export class HealthBar {
   hurtTimer: number;
+  shouldDraw: boolean;
 
   constructor() {
     this.hurtTimer = 0;
@@ -21,7 +22,10 @@ export class HealthBar {
     y: number,
     flashing: boolean,
   ) => {
-    let t = Date.now() - this.hurtTimer;
+    let t = Math.min(
+      LevelConstants.HEALTH_BAR_TOTALTIME,
+      Math.max(Date.now() - this.hurtTimer, 0),
+    );
     if (t <= LevelConstants.HEALTH_BAR_TOTALTIME) {
       let fullHearts = Math.floor(hearts);
 

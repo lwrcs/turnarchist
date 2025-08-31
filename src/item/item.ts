@@ -143,18 +143,10 @@ export class Item extends Drawable {
       if (this.pickedUp) {
         // Initialize lerp-to-inventory animation
         if (this.animateToInventory === true) {
-          this.animStartX = this.x - this.player.x + this.player.drawX;
-          this.animStartY = this.y - 1 - this.player.y + this.player.drawY;
-          this.animTargetX =
-            (GameConstants.WIDTH /
-              GameConstants.TILESIZE /
-              GameConstants.TILESIZE) *
-            1.75;
-          this.animTargetY =
-            (GameConstants.HEIGHT /
-              GameConstants.TILESIZE /
-              GameConstants.TILESIZE) *
-            5;
+          this.animStartX = this.x;
+          this.animStartY = this.y;
+          this.animTargetX = this.player.x;
+          this.animTargetY = this.player.y;
           this.animT = 0;
         }
         if (this.isNewItem(player)) {
@@ -303,16 +295,8 @@ export class Item extends Drawable {
         const speed = 0.015 * delta; // slower overall speed
         this.animT = Math.min(1, this.animT + speed);
         const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
-        const posX =
-          this.animStartX * (1 - t) +
-          this.animTargetX * t +
-          this.player.x -
-          this.player.drawX;
-        const posY =
-          this.animStartY * (1 - t) +
-          this.animTargetY * t +
-          this.player.y -
-          this.player.drawY;
+        const posX = this.animStartX * (1 - t) + this.animTargetX * t;
+        const posY = this.animStartY * (1 - t) + this.animTargetY * t;
 
         // Fade near the end
         const fadeStart = 0.75;
@@ -323,7 +307,22 @@ export class Item extends Drawable {
 
         if (GameConstants.ALPHA_ENABLED)
           Game.ctx.globalAlpha = Math.max(0, this.alpha);
-        Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY, this.w, this.h);
+        this.x = Math.floor(posX);
+        this.y = Math.floor(posY);
+        const diffX = this.player.x - this.animTargetX;
+        const diffY = this.player.y - this.animTargetY;
+        Game.drawItem(
+          this.tileX,
+          this.tileY,
+          1,
+          2,
+          posX - this.player.drawX + diffX,
+          posY - 1.5 - this.player.drawY + diffY,
+          this.w,
+          this.h,
+          this.level.shadeColor,
+          this.shadeAmount(),
+        );
         Game.ctx.globalAlpha = 1.0;
 
         if (this.animT >= 1) {
