@@ -4,7 +4,7 @@ import { Room } from "../room/room";
 import { Entity } from "../entity/entity";
 import { Utils } from "../utility/utils";
 
-enum Direction {
+export enum HitWarningDirection {
   North,
   NorthEast,
   East,
@@ -23,7 +23,7 @@ export class HitWarning extends Drawable {
   static frame = 0;
   private game: Game;
   parent: Entity | null = null;
-  private _pointerDir: Direction | null = null;
+  private _pointerDir: HitWarningDirection | null = null;
   private _pointerOffset: { x: number; y: number } | null = null;
   private tileX: number;
   private tileY: number;
@@ -94,21 +94,29 @@ export class HitWarning extends Drawable {
     }
   };
 
-  private getPointerDir(): Direction {
+  getPointerDir(): HitWarningDirection {
     if (this._pointerDir === null) {
       const dx = this.eX - this.x;
       const dy = this.eY - this.y;
 
       if (dx === 0 && dy === 0) {
-        this._pointerDir = Direction.Center;
+        this._pointerDir = HitWarningDirection.Center;
       } else if (dx === 0) {
-        this._pointerDir = dy < 0 ? Direction.South : Direction.North;
+        this._pointerDir =
+          dy < 0 ? HitWarningDirection.South : HitWarningDirection.North;
       } else if (dy === 0) {
-        this._pointerDir = dx < 0 ? Direction.East : Direction.West;
+        this._pointerDir =
+          dx < 0 ? HitWarningDirection.East : HitWarningDirection.West;
       } else if (dx < 0) {
-        this._pointerDir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+        this._pointerDir =
+          dy < 0
+            ? HitWarningDirection.SouthEast
+            : HitWarningDirection.NorthEast;
       } else {
-        this._pointerDir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+        this._pointerDir =
+          dy < 0
+            ? HitWarningDirection.SouthWest
+            : HitWarningDirection.NorthWest;
       }
 
       this.tileX = 0 + 2 * this._pointerDir;
@@ -119,15 +127,15 @@ export class HitWarning extends Drawable {
   private getPointerOffset(): { x: number; y: number } {
     if (this._pointerOffset === null) {
       const offsets = {
-        [Direction.North]: { x: 0, y: 0.5 },
-        [Direction.South]: { x: 0, y: -0.6 },
-        [Direction.West]: { x: 0.6, y: 0 },
-        [Direction.East]: { x: -0.6, y: 0 },
-        [Direction.NorthEast]: { x: -0.5, y: 0.5 },
-        [Direction.NorthWest]: { x: 0.5, y: 0.5 },
-        [Direction.SouthEast]: { x: -0.5, y: -0.5 },
-        [Direction.SouthWest]: { x: 0.5, y: -0.5 },
-        [Direction.Center]: { x: 0, y: -0.25 },
+        [HitWarningDirection.North]: { x: 0, y: 0.5 },
+        [HitWarningDirection.South]: { x: 0, y: -0.6 },
+        [HitWarningDirection.West]: { x: 0.6, y: 0 },
+        [HitWarningDirection.East]: { x: -0.6, y: 0 },
+        [HitWarningDirection.NorthEast]: { x: -0.5, y: 0.5 },
+        [HitWarningDirection.NorthWest]: { x: 0.5, y: 0.5 },
+        [HitWarningDirection.SouthEast]: { x: -0.5, y: -0.5 },
+        [HitWarningDirection.SouthWest]: { x: 0.5, y: -0.5 },
+        [HitWarningDirection.Center]: { x: 0, y: -0.25 },
       };
 
       this._pointerOffset = offsets[this.getPointerDir()];
@@ -197,7 +205,7 @@ export class HitWarning extends Drawable {
 
     Game.ctx.globalAlpha = this.alpha;
 
-    if (this.isEnemy && this.getPointerDir() !== Direction.North) {
+    if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
       //white arrow top layer
       Game.drawFX(
         this.tileX + Math.floor(HitWarning.frame),

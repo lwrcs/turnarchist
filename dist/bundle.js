@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.cdb6da352a14f1f0bfb5.png";
+module.exports = __webpack_require__.p + "assets/mobset.6a9b12752c6ca8066305.png";
 
 /***/ }),
 
@@ -8850,22 +8850,22 @@ exports.HealthBar = HealthBar;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HitWarning = void 0;
+exports.HitWarning = exports.HitWarningDirection = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable/drawable.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
-var Direction;
-(function (Direction) {
-    Direction[Direction["North"] = 0] = "North";
-    Direction[Direction["NorthEast"] = 1] = "NorthEast";
-    Direction[Direction["East"] = 2] = "East";
-    Direction[Direction["SouthEast"] = 3] = "SouthEast";
-    Direction[Direction["South"] = 4] = "South";
-    Direction[Direction["SouthWest"] = 5] = "SouthWest";
-    Direction[Direction["West"] = 6] = "West";
-    Direction[Direction["NorthWest"] = 7] = "NorthWest";
-    Direction[Direction["Center"] = 8] = "Center";
-})(Direction || (Direction = {}));
+var HitWarningDirection;
+(function (HitWarningDirection) {
+    HitWarningDirection[HitWarningDirection["North"] = 0] = "North";
+    HitWarningDirection[HitWarningDirection["NorthEast"] = 1] = "NorthEast";
+    HitWarningDirection[HitWarningDirection["East"] = 2] = "East";
+    HitWarningDirection[HitWarningDirection["SouthEast"] = 3] = "SouthEast";
+    HitWarningDirection[HitWarningDirection["South"] = 4] = "South";
+    HitWarningDirection[HitWarningDirection["SouthWest"] = 5] = "SouthWest";
+    HitWarningDirection[HitWarningDirection["West"] = 6] = "West";
+    HitWarningDirection[HitWarningDirection["NorthWest"] = 7] = "NorthWest";
+    HitWarningDirection[HitWarningDirection["Center"] = 8] = "Center";
+})(HitWarningDirection = exports.HitWarningDirection || (exports.HitWarningDirection = {}));
 class HitWarning extends drawable_1.Drawable {
     constructor(game, x, y, eX, eY, isEnemy, dirOnly = false, parent = null) {
         super();
@@ -8927,7 +8927,7 @@ class HitWarning extends drawable_1.Drawable {
         this.drawTopLayer = (delta) => {
             this.fadeHitwarnings(delta);
             game_1.Game.ctx.globalAlpha = this.alpha;
-            if (this.isEnemy && this.getPointerDir() !== Direction.North) {
+            if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
                 //white arrow top layer
                 game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
             }
@@ -8959,19 +8959,27 @@ class HitWarning extends drawable_1.Drawable {
             const dx = this.eX - this.x;
             const dy = this.eY - this.y;
             if (dx === 0 && dy === 0) {
-                this._pointerDir = Direction.Center;
+                this._pointerDir = HitWarningDirection.Center;
             }
             else if (dx === 0) {
-                this._pointerDir = dy < 0 ? Direction.South : Direction.North;
+                this._pointerDir =
+                    dy < 0 ? HitWarningDirection.South : HitWarningDirection.North;
             }
             else if (dy === 0) {
-                this._pointerDir = dx < 0 ? Direction.East : Direction.West;
+                this._pointerDir =
+                    dx < 0 ? HitWarningDirection.East : HitWarningDirection.West;
             }
             else if (dx < 0) {
-                this._pointerDir = dy < 0 ? Direction.SouthEast : Direction.NorthEast;
+                this._pointerDir =
+                    dy < 0
+                        ? HitWarningDirection.SouthEast
+                        : HitWarningDirection.NorthEast;
             }
             else {
-                this._pointerDir = dy < 0 ? Direction.SouthWest : Direction.NorthWest;
+                this._pointerDir =
+                    dy < 0
+                        ? HitWarningDirection.SouthWest
+                        : HitWarningDirection.NorthWest;
             }
             this.tileX = 0 + 2 * this._pointerDir;
         }
@@ -8980,15 +8988,15 @@ class HitWarning extends drawable_1.Drawable {
     getPointerOffset() {
         if (this._pointerOffset === null) {
             const offsets = {
-                [Direction.North]: { x: 0, y: 0.5 },
-                [Direction.South]: { x: 0, y: -0.6 },
-                [Direction.West]: { x: 0.6, y: 0 },
-                [Direction.East]: { x: -0.6, y: 0 },
-                [Direction.NorthEast]: { x: -0.5, y: 0.5 },
-                [Direction.NorthWest]: { x: 0.5, y: 0.5 },
-                [Direction.SouthEast]: { x: -0.5, y: -0.5 },
-                [Direction.SouthWest]: { x: 0.5, y: -0.5 },
-                [Direction.Center]: { x: 0, y: -0.25 },
+                [HitWarningDirection.North]: { x: 0, y: 0.5 },
+                [HitWarningDirection.South]: { x: 0, y: -0.6 },
+                [HitWarningDirection.West]: { x: 0.6, y: 0 },
+                [HitWarningDirection.East]: { x: -0.6, y: 0 },
+                [HitWarningDirection.NorthEast]: { x: -0.5, y: 0.5 },
+                [HitWarningDirection.NorthWest]: { x: 0.5, y: 0.5 },
+                [HitWarningDirection.SouthEast]: { x: -0.5, y: -0.5 },
+                [HitWarningDirection.SouthWest]: { x: 0.5, y: -0.5 },
+                [HitWarningDirection.Center]: { x: 0, y: -0.25 },
             };
             this._pointerOffset = offsets[this.getPointerDir()];
         }
@@ -9601,6 +9609,1065 @@ exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
 ArmoredzombieEnemy.difficulty = 2;
 ArmoredzombieEnemy.tileX = 17;
 ArmoredzombieEnemy.tileY = 8;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/beetleEnemy.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/enemy/beetleEnemy.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BeetleEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+class BeetleEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 1;
+        };
+        this.toggleReveal = () => {
+            let ticksSince = this.ticks - this.revealTick;
+            this.revealTick = this.ticks;
+        };
+        this.jump = (delta) => {
+            //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+            let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            if (j > 1) {
+                this.jumpDistance = 2;
+            }
+            this.jumpY = Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+            if (this.jumpY < 0.01 && this.jumpY > -0.01) {
+                this.jumpY = 0;
+                this.jumpDistance = 1;
+            }
+            if (this.jumpY > this.jumpHeight)
+                this.jumpY = this.jumpHeight;
+        };
+        // Helpers to keep movement logic concise
+        this.isTileFree = (x, y) => {
+            if (!this.room.roomArray[x] || !this.room.roomArray[x][y])
+                return false;
+            const t = this.room.roomArray[x][y];
+            if (t.isSolid())
+                return false;
+            if (t instanceof spiketrap_1.SpikeTrap && t.on)
+                return false;
+            for (const e of this.room.entities) {
+                if (e !== this && e.x === x && e.y === y)
+                    return false;
+            }
+            return true;
+        };
+        this.getTwoTileCandidates = (startX, startY) => {
+            const directions = [
+                { dx: 1, dy: 0, axis: "x" },
+                { dx: -1, dy: 0, axis: "x" },
+                { dx: 0, dy: 1, axis: "y" },
+                { dx: 0, dy: -1, axis: "y" },
+            ];
+            const candidates = [];
+            for (const d of directions) {
+                const midX = startX + d.dx;
+                const midY = startY + d.dy;
+                const endX = startX + 2 * d.dx;
+                const endY = startY + 2 * d.dy;
+                if (this.isTileFree(midX, midY) && this.isTileFree(endX, endY)) {
+                    candidates.push({ endX, endY, axis: d.axis, dx: d.dx, dy: d.dy });
+                }
+            }
+            return candidates;
+        };
+        this.pickBestCandidate = (candidates, targetX, targetY, preferXAxis, dxToTarget, dyToTarget) => {
+            const signX = dxToTarget === 0 ? 0 : dxToTarget > 0 ? 1 : -1;
+            const signY = dyToTarget === 0 ? 0 : dyToTarget > 0 ? 1 : -1;
+            candidates.sort((a, b) => {
+                const da = Math.abs(a.endX - targetX) + Math.abs(a.endY - targetY);
+                const db = Math.abs(b.endX - targetX) + Math.abs(b.endY - targetY);
+                if (da !== db)
+                    return da - db;
+                if (preferXAxis) {
+                    if (a.axis !== b.axis)
+                        return a.axis === "x" ? -1 : 1;
+                }
+                else {
+                    if (a.axis !== b.axis)
+                        return a.axis === "y" ? -1 : 1;
+                }
+                const aTowards = (a.dx !== 0 ? a.dx === signX : a.dy === signY) ? -1 : 1;
+                const bTowards = (b.dx !== 0 ? b.dx === signX : b.dy === signY) ? -1 : 1;
+                if (aTowards !== bTowards)
+                    return aTowards - bTowards;
+                return 0;
+            });
+            return candidates[0];
+        };
+        this.getOneTileCandidates = (startX, startY) => {
+            const directions = [
+                { dx: 1, dy: 0 },
+                { dx: -1, dy: 0 },
+                { dx: 0, dy: 1 },
+                { dx: 0, dy: -1 },
+            ];
+            const candidates = [];
+            for (const d of directions) {
+                const newX = startX + d.dx;
+                const newY = startY + d.dy;
+                if (this.isTileFree(newX, newY)) {
+                    candidates.push({ x: newX, y: newY });
+                }
+            }
+            return candidates;
+        };
+        this.pickBestOneTileCandidate = (candidates, targetX, targetY, preferXAxis, dxToTarget, dyToTarget) => {
+            const signX = dxToTarget === 0 ? 0 : dxToTarget > 0 ? 1 : -1;
+            const signY = dyToTarget === 0 ? 0 : dyToTarget > 0 ? 1 : -1;
+            candidates.sort((a, b) => {
+                const da = Math.abs(a.x - targetX) + Math.abs(a.y - targetY);
+                const db = Math.abs(b.x - targetX) + Math.abs(b.y - targetY);
+                if (da !== db)
+                    return da - db;
+                // Prefer movement along the preferred axis
+                const aAxis = Math.abs(a.x - targetX) > Math.abs(a.y - targetY) ? "x" : "y";
+                const bAxis = Math.abs(b.x - targetX) > Math.abs(b.y - targetY) ? "x" : "y";
+                if (preferXAxis) {
+                    if (aAxis !== bAxis)
+                        return aAxis === "x" ? -1 : 1;
+                }
+                else {
+                    if (aAxis !== bAxis)
+                        return aAxis === "y" ? -1 : 1;
+                }
+                // Prefer moving toward the target
+                const aTowards = (a.x > targetX
+                    ? dxToTarget < 0
+                    : a.x < targetX
+                        ? dxToTarget > 0
+                        : a.y > targetY
+                            ? dyToTarget < 0
+                            : a.y < targetY
+                                ? dyToTarget > 0
+                                : 0)
+                    ? -1
+                    : 1;
+                const bTowards = (b.x > targetX
+                    ? dxToTarget < 0
+                    : b.x < targetX
+                        ? dxToTarget > 0
+                        : b.y > targetY
+                            ? dyToTarget < 0
+                            : b.y < targetY
+                                ? dyToTarget > 0
+                                : 0)
+                    ? -1
+                    : 1;
+                if (aTowards !== bTowards)
+                    return aTowards - bTowards;
+                return 0;
+            });
+            return candidates[0];
+        };
+        this.attackOrMoveTo = (destX, destY, oldX, oldY) => {
+            let hitPlayer = false;
+            for (const i in this.game.players) {
+                if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                    this.game.players[i].x === destX &&
+                    this.game.players[i].y === destY) {
+                    this.game.players[i].hurt(this.hit(), this.name);
+                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                    if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    hitPlayer = true;
+                }
+            }
+            if (!hitPlayer) {
+                this.tryMove(destX, destY);
+                this.setDrawXY(oldX, oldY);
+                if (this.x > oldX)
+                    this.direction = game_1.Direction.RIGHT;
+                else if (this.x < oldX)
+                    this.direction = game_1.Direction.LEFT;
+                else if (this.y > oldY)
+                    this.direction = game_1.Direction.DOWN;
+                else if (this.y < oldY)
+                    this.direction = game_1.Direction.UP;
+            }
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    disablePositions.push({ x: e.x, y: e.y });
+                                }
+                            }
+                            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                    if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        // don't walk on active spiketraps
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            this.target =
+                                this.getAverageLuminance() > 0
+                                    ? this.targetPlayer
+                                    : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
+                                        .darkest;
+                            // Determine target position: prioritize direct attack if player is adjacent
+                            let targetPosition = {
+                                x: this.targetPlayer.x,
+                                y: this.targetPlayer.y,
+                            };
+                            // Check if player is adjacent (Manhattan distance 1)
+                            const playerDistance = Math.abs(this.targetPlayer.x - this.x) +
+                                Math.abs(this.targetPlayer.y - this.y);
+                            if (this.target === this.targetPlayer && playerDistance === 2) {
+                                // Only consider jumping over if player is not adjacent
+                                let dx = this.targetPlayer.lastX - this.x;
+                                let dy = this.targetPlayer.lastY - this.y;
+                                // constrain to orthogonal intent
+                                if (dx !== 0 && dy !== 0) {
+                                    if (Math.abs(dx) >= Math.abs(dy))
+                                        dy = 0;
+                                    else
+                                        dx = 0;
+                                }
+                                if ((dx === 0 && Math.abs(dy) <= 1) ||
+                                    (dy === 0 && Math.abs(dx) <= 1)) {
+                                    const jumpOverX = this.targetPlayer.x + Math.sign(dx);
+                                    const jumpOverY = this.targetPlayer.y + Math.sign(dy);
+                                    if (this.room.roomArray[jumpOverX] &&
+                                        this.room.roomArray[jumpOverX][jumpOverY] &&
+                                        !this.room.roomArray[jumpOverX][jumpOverY].isSolid()) {
+                                        targetPosition = { x: jumpOverX, y: jumpOverY };
+                                    }
+                                }
+                            }
+                            else if (this.target !== this.targetPlayer) {
+                                targetPosition = { x: this.target.x, y: this.target.y };
+                            }
+                            // Compute 2-tile jump plans
+                            const dxToTarget = targetPosition.x - oldX;
+                            const dyToTarget = targetPosition.y - oldY;
+                            const preferXAxis = Math.abs(dxToTarget) >= Math.abs(dyToTarget);
+                            // First, try to use A* first/second step and extend to length 2 if possible
+                            let finalX = this.x;
+                            let finalY = this.y;
+                            const moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            if (moves.length > 0) {
+                                let step = moves[0];
+                                const candidate2 = moves[1];
+                                if (candidate2) {
+                                    const preservesLine = candidate2.pos.x === oldX || candidate2.pos.y === oldY;
+                                    const alignsAxis = preferXAxis
+                                        ? candidate2.pos.y === oldY
+                                        : candidate2.pos.x === oldX;
+                                    if (preservesLine && alignsAxis)
+                                        step = candidate2;
+                                }
+                                finalX = step.pos.x;
+                                finalY = step.pos.y;
+                                const manhattanFromStart = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+                                if (manhattanFromStart === 1) {
+                                    const dirX = finalX - oldX;
+                                    const dirY = finalY - oldY;
+                                    const extX = finalX + (dirX !== 0 ? Math.sign(dirX) : 0);
+                                    const extY = finalY + (dirY !== 0 ? Math.sign(dirY) : 0);
+                                    if (this.isTileFree(extX, extY)) {
+                                        finalX = extX;
+                                        finalY = extY;
+                                    }
+                                }
+                            }
+                            // Execute movement: prioritize attacking when adjacent, otherwise prefer 2-tile jumps
+                            if (playerDistance === 1) {
+                                // Player is adjacent - prioritize 1-tile movement for direct attack
+                                const oneTileCandidates = this.getOneTileCandidates(oldX, oldY);
+                                if (oneTileCandidates.length > 0) {
+                                    const best = this.pickBestOneTileCandidate(oneTileCandidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                    this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                                }
+                            }
+                            else {
+                                // Player is not adjacent - use computed movement (A* + 2-tile extension)
+                                const finalDist = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+                                if (finalDist >= 1) {
+                                    this.attackOrMoveTo(finalX, finalY, oldX, oldY);
+                                }
+                                else {
+                                    // Fall back to 2-tile jump candidates if A* didn't find a path
+                                    const candidates = this.getTwoTileCandidates(oldX, oldY);
+                                    if (candidates.length > 0) {
+                                        const best = this.pickBestCandidate(candidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                        this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
+                                    }
+                                    else {
+                                        // Fall back to 1-tile movement if no 2-tile options available
+                                        const oneTileCandidates = this.getOneTileCandidates(oldX, oldY);
+                                        if (oneTileCandidates.length > 0) {
+                                            const best = this.pickBestOneTileCandidate(oneTileCandidates, targetPosition.x, targetPosition.y, preferXAxis, dxToTarget, dyToTarget);
+                                            this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                                        }
+                                    }
+                                }
+                            }
+                            this.rumbling = false;
+                        }
+                        else {
+                            this.rumbling = true;
+                            /*
+                            if (
+                              (this.target.x === this.targetPlayer.x &&
+                                this.target.y === this.targetPlayer.y) ||
+                              Utils.distance(
+                                this.targetPlayer.x,
+                                this.targetPlayer.y,
+                                this.x,
+                                this.y,
+                              ) <= 2
+                            )
+                              */ {
+                                this.makeHitWarnings();
+                            }
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        /*
+                                        if (
+                                          (this.target.x === this.targetPlayer.x &&
+                                            this.target.y === this.targetPlayer.y) ||
+                                          Utils.distance(
+                                            this.targetPlayer.x,
+                                            this.targetPlayer.y,
+                                            this.x,
+                                            this.y,
+                                          ) <= 2
+                                        ) */ {
+                                            this.makeHitWarnings();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.makeHitWarnings = () => {
+            const cullFactor = 0.25;
+            const player = this.getPlayer();
+            const orthogonal = this.orthogonalAttack;
+            const diagonal = this.diagonalAttack;
+            const forwardOnly = this.forwardOnlyAttack;
+            const direction = this.direction;
+            const orthoRange = this.attackRange;
+            const diagRange = this.diagonalAttackRange;
+            const generateOffsets = (isOrthogonal, range) => {
+                const baseOffsets = isOrthogonal
+                    ? [
+                        [-2, 0],
+                        [2, 0],
+                        [0, -2],
+                        [0, 2],
+                        [-1, 0],
+                        [1, 0],
+                        [0, -1],
+                        [0, 1],
+                    ]
+                    : [
+                        [-1, -1],
+                        [1, 1],
+                        [1, -1],
+                        [-1, 1],
+                    ];
+                return baseOffsets.flatMap(([dx, dy]) => Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]));
+            };
+            const directionOffsets = {
+                [game_1.Direction.LEFT]: [-1, 0],
+                [game_1.Direction.RIGHT]: [1, 0],
+                [game_1.Direction.UP]: [0, -1],
+                [game_1.Direction.DOWN]: [0, 1],
+            };
+            let offsets = [];
+            if (forwardOnly) {
+                const [dx, dy] = directionOffsets[direction];
+                offsets = Array.from({ length: orthoRange }, (_, i) => [
+                    (i + 1) * dx,
+                    (i + 1) * dy,
+                ]);
+            }
+            else {
+                if (orthogonal)
+                    offsets.push(...generateOffsets(true, orthoRange));
+                if (diagonal)
+                    offsets.push(...generateOffsets(false, diagRange));
+            }
+            const warningCoordinates = offsets
+                .map(([dx, dy]) => ({
+                x: dx,
+                y: dy,
+                distance: utils_1.Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+            }))
+                .sort((a, b) => a.distance - b.distance);
+            const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+            const culledWarnings = warningCoordinates.slice(0, keepCount);
+            culledWarnings.forEach(({ x, y }) => {
+                const targetX = this.x + x;
+                const targetY = this.y + y;
+                if (this.isWithinRoomBounds(targetX, targetY)) {
+                    const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, this.x, this.y, true, false, this);
+                    this.room.hitwarnings.push(hitWarning);
+                    //this.hitWarnings.push(hitWarning);
+                }
+            });
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                if (this.ticks % 2 === 0) {
+                    this.tileX = 13;
+                    this.tileY = 4;
+                }
+                else {
+                    this.tileX = 13;
+                    this.tileY = 4;
+                }
+                switch (this.direction) {
+                    case game_1.Direction.UP:
+                        //this.tileX = 13;
+                        break;
+                    case game_1.Direction.LEFT:
+                        //this.tileX = 13;
+                        //this.tileY = 6;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        //this.tileY = 6;
+                        break;
+                }
+                let rumble = Math.max(this.rumble(this.rumbling, this.frame, this.direction).x, Math.max(this.rumble(this.rumbling, this.frame, this.direction).y));
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                //only draw when visible
+                game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
+                2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                if (this.crushed) {
+                    this.crushAnim(delta);
+                }
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 13;
+        this.tileY = 4;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "beetle";
+        this.orthogonalAttack = true;
+        this.diagonalAttack = false;
+        this.imageParticleX = 3;
+        this.imageParticleY = 24;
+        //if (drop) this.drop = drop;
+        this.drawYOffset = 1.2;
+        this.revealTick = 0;
+        this.hasShadow = true;
+        this.jumpHeight = 1;
+        this.jumpDistance = 1;
+        this.attackRange = 1;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+    get alertText() {
+        return `New Enemy Spotted: Beetle 
+    Health: ${this.health}
+    Attack Pattern: Omnidirectional
+    Moves every other turn`;
+    }
+}
+exports.BeetleEnemy = BeetleEnemy;
+BeetleEnemy.difficulty = 1;
+BeetleEnemy.tileX = 8;
+BeetleEnemy.tileY = 4;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/bigFrogEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/bigFrogEnemy.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BigFrogEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+class BigFrogEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 0.5;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (this.cloned)
+                return;
+            this.tileX = 37;
+            this.frameLength = 3;
+            this.animationSpeed = 0.1;
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                if (!this.seenPlayer) {
+                    this.tileX = 37;
+                    this.lookForPlayer();
+                }
+                else if (this.seenPlayer) {
+                    this.tileX = 37;
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    // Block all tiles occupied by entities (supports multi-tile entities)
+                                    for (let ex = 0; ex < (e.w || 1); ex++) {
+                                        for (let ey = 0; ey < (e.h || 1); ey++) {
+                                            disablePositions.push({
+                                                x: e.x + ex,
+                                                y: e.y + ey,
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                            // Account for this enemy's 2x2 footprint when avoiding active spike traps
+                            for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                                    if (this.room.roomArray[xx] &&
+                                        this.room.roomArray[xx][yy] &&
+                                        this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        // don't walk on active spiketraps
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            let targetPosition = {
+                                x: this.targetPlayer.x,
+                                y: this.targetPlayer.y,
+                            };
+                            // 2x2-aware jump-over logic
+                            const px = this.targetPlayer.x;
+                            const py = this.targetPlayer.y;
+                            const sharesRow = py >= this.y && py < this.y + this.h;
+                            const sharesCol = px >= this.x && px < this.x + this.w;
+                            const isRightAdjacent = sharesRow && px === this.x + this.w; // x + 2
+                            const isLeftAdjacent = sharesRow && px === this.x - 1;
+                            const isBelowAdjacent = sharesCol && py === this.y + this.h; // y + 2
+                            const isAboveAdjacent = sharesCol && py === this.y - 1;
+                            const isAreaClear = (tx, ty, w, h) => {
+                                for (let xx = 0; xx < w; xx++) {
+                                    for (let yy = 0; yy < h; yy++) {
+                                        const ax = tx + xx;
+                                        const ay = ty + yy;
+                                        if (!this.room.roomArray[ax] || !this.room.roomArray[ax][ay])
+                                            return false;
+                                        const tile = this.room.roomArray[ax][ay];
+                                        if (tile.isSolid() ||
+                                            tile.isDoor ||
+                                            tile instanceof downLadder_1.DownLadder)
+                                            return false;
+                                        // prevent entity overlap
+                                        for (const e of this.room.entities) {
+                                            if (e !== this) {
+                                                if (!(e.x >= tx + w ||
+                                                    e.x + (e.w || 1) <= tx ||
+                                                    e.y >= ty + h ||
+                                                    e.y + (e.h || 1) <= ty)) {
+                                                    return false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                return true;
+                            };
+                            if (isRightAdjacent) {
+                                const tx = px + 1;
+                                const ty = this.y;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    return;
+                                }
+                            }
+                            else if (isLeftAdjacent) {
+                                const tx = px - this.w;
+                                const ty = this.y;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    return;
+                                }
+                            }
+                            else if (isBelowAdjacent) {
+                                const tx = this.x;
+                                const ty = py + 1;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    return;
+                                }
+                            }
+                            else if (isAboveAdjacent) {
+                                const tx = this.x;
+                                const ty = py - this.h;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    return;
+                                }
+                            }
+                            // Build pathfinding grid only if we didn't jump over
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            let moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            //console.log(moves); //DON'T REMOVE THIS
+                            if (moves[1]) {
+                                const wouldHit = (player, moveX, moveY) => {
+                                    return (player.x >= moveX &&
+                                        player.x < moveX + this.w &&
+                                        player.y >= moveY &&
+                                        player.y < moveY + this.h);
+                                };
+                                let hitPlayer = false;
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] !== this.room)
+                                        continue;
+                                    if (wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)) {
+                                        const closestTile = this.closestTile(this.game.players[i]);
+                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
+                                        this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
+                                        if (this.game.players[i] ===
+                                            this.game.players[this.game.localPlayerID])
+                                            this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        hitPlayer = true;
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    if (moves.length > 1) {
+                                        let moveX = moves[1].pos.x;
+                                        let moveY = moves[1].pos.y;
+                                        this.tryMove(moveX, moveY);
+                                        this.setDrawXY(oldX, oldY);
+                                        if (this.jumping) {
+                                            this.frame = 8;
+                                            this.animationSpeed = 1;
+                                        }
+                                        if (this.x > moveX)
+                                            this.direction = game_1.Direction.RIGHT;
+                                        else if (this.x < moveX)
+                                            this.direction = game_1.Direction.LEFT;
+                                        else if (this.y > moveY)
+                                            this.direction = game_1.Direction.DOWN;
+                                        else if (this.y < moveY)
+                                            this.direction = game_1.Direction.UP;
+                                    }
+                                }
+                            }
+                            this.rumbling = false;
+                        }
+                        else {
+                            this.makeBigHitWarnings();
+                            this.rumbling = true;
+                            this.tileX = 43;
+                            this.frame = 0;
+                            this.frameLength = 2;
+                            this.animationSpeed = 0.2;
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        this.makeBigHitWarnings();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.jump = (delta) => {
+            //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
+            if (this.jumping && !this.cloned) {
+                let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+                if (j > 1) {
+                    this.jumpDistance = 2;
+                }
+                this.jumpY =
+                    Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+                if (this.jumpY < 0.01 && this.jumpY > -0.01) {
+                    this.jumpY = 0;
+                    this.jumpDistance = 1;
+                }
+                if (this.jumpY > this.jumpHeight)
+                    this.jumpY = this.jumpHeight;
+            }
+        };
+        this.makeHitWarnings = () => {
+            const cullFactor = 0.25;
+            const player = this.getPlayer();
+            const orthogonal = this.orthogonalAttack;
+            const diagonal = this.diagonalAttack;
+            const forwardOnly = this.forwardOnlyAttack;
+            const direction = this.direction;
+            const orthoRange = this.attackRange;
+            const diagRange = this.diagonalAttackRange;
+            const generateOffsets = (isOrthogonal, range) => {
+                const baseOffsets = isOrthogonal
+                    ? [
+                        [-2, 0],
+                        [2, 0],
+                        [0, -2],
+                        [0, 2],
+                    ]
+                    : [
+                        [-1, -1],
+                        [1, 1],
+                        [1, -1],
+                        [-1, 1],
+                    ];
+                return baseOffsets.flatMap(([dx, dy]) => Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]));
+            };
+            const directionOffsets = {
+                [game_1.Direction.LEFT]: [-1, 0],
+                [game_1.Direction.RIGHT]: [1, 0],
+                [game_1.Direction.UP]: [0, -1],
+                [game_1.Direction.DOWN]: [0, 1],
+            };
+            let offsets = [];
+            if (forwardOnly) {
+                const [dx, dy] = directionOffsets[direction];
+                offsets = Array.from({ length: orthoRange }, (_, i) => [
+                    (i + 1) * dx,
+                    (i + 1) * dy,
+                ]);
+            }
+            else {
+                if (orthogonal)
+                    offsets.push(...generateOffsets(true, orthoRange));
+                if (diagonal)
+                    offsets.push(...generateOffsets(false, diagRange));
+            }
+            const warningCoordinates = offsets
+                .map(([dx, dy]) => ({
+                x: dx,
+                y: dy,
+                distance: utils_1.Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
+            }))
+                .sort((a, b) => a.distance - b.distance);
+            const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
+            const culledWarnings = warningCoordinates.slice(0, keepCount);
+            culledWarnings.forEach(({ x, y }) => {
+                const positions = [
+                    { x: this.x, y: this.y },
+                    { x: this.x + 1, y: this.y },
+                    { x: this.x, y: this.y + 1 },
+                    { x: this.x + 1, y: this.y + 1 },
+                ];
+                for (const position of positions) {
+                    const targetX = position.x + x;
+                    const targetY = position.y + y;
+                    if (this.isWithinRoomBounds(targetX, targetY)) {
+                        const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, position.x, position.y, true, false, this);
+                        const dir = hitWarning.getPointerDir();
+                        const ox = position.x - this.x; // 0 or 1
+                        const oy = position.y - this.y; // 0 or 1
+                        let allowed = [];
+                        if (ox === 1 && oy === 1) {
+                            // bottom-right tile: allow only south/east/southeast
+                            allowed = [
+                                hitWarning_1.HitWarningDirection.South,
+                                hitWarning_1.HitWarningDirection.East,
+                                hitWarning_1.HitWarningDirection.SouthEast,
+                            ];
+                        }
+                        else if (ox === 1 && oy === 0) {
+                            // top-right tile: allow north/east/northeast
+                            allowed = [
+                                hitWarning_1.HitWarningDirection.North,
+                                hitWarning_1.HitWarningDirection.East,
+                                hitWarning_1.HitWarningDirection.NorthEast,
+                            ];
+                        }
+                        else if (ox === 0 && oy === 1) {
+                            // bottom-left tile: allow south/west/southwest
+                            allowed = [
+                                hitWarning_1.HitWarningDirection.South,
+                                hitWarning_1.HitWarningDirection.West,
+                                hitWarning_1.HitWarningDirection.SouthWest,
+                            ];
+                        }
+                        else {
+                            // top-left tile: allow north/west/northwest
+                            allowed = [
+                                hitWarning_1.HitWarningDirection.North,
+                                hitWarning_1.HitWarningDirection.West,
+                                hitWarning_1.HitWarningDirection.NorthWest,
+                            ];
+                        }
+                        if (allowed.includes(dir)) {
+                            this.room.hitwarnings.push(hitWarning);
+                        }
+                        //this.hitWarnings.push(hitWarning);
+                    }
+                }
+            });
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+            this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.frame += this.animationSpeed * delta;
+                if (this.frame >= this.frameLength) {
+                    this.frame = 0;
+                }
+                let rumbleX = this.rumble(this.rumbling, this.frame).x;
+                let rumbleY = this.rumble(this.rumbling, this.frame).y;
+                if (this.drawX !== 0 || this.drawY !== 0) {
+                    this.jumping = true;
+                }
+                else {
+                    this.jumping = false;
+                }
+                if (this.jumping) {
+                    this.frameLength = 11;
+                    this.animationSpeed = 0.37;
+                }
+                else {
+                    this.frameLength = 3;
+                    this.animationSpeed = 0.1;
+                }
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawMob(this.tileX +
+                    (this.tileX !== 59 && !this.rumbling && !this.cloned
+                        ? Math.floor(this.frame)
+                        : 0) *
+                        2, this.tileY /*+ this.direction * 2,*/, 2, 3, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta, 0.5 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta, 0.5 * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 4;
+        this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
+        this.tileX = 37;
+        this.tileY = 24;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.deathParticleColor = "#ffffff";
+        this.frameLength = 3;
+        this.startFrame = 0;
+        this.animationSpeed = 0.1;
+        this.tickCount = 0;
+        this.jumping = false;
+        this.jumpDistance = 1;
+        this.drop = drop ? drop : new coin_1.Coin(this.room, this.x, this.y);
+        this.name = "bigfrog";
+        this.orthogonalAttack = true;
+        this.diagonalAttack = true;
+        this.jumpHeight = 1;
+        this.imageParticleX = 3;
+        this.imageParticleY = 30;
+        if (drop)
+            this.drop = drop;
+        this.h = 2;
+        this.w = 2;
+        this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
+    }
+}
+exports.BigFrogEnemy = BigFrogEnemy;
+BigFrogEnemy.difficulty = 1;
+BigFrogEnemy.tileX = 37;
+BigFrogEnemy.tileY = 24;
 
 
 /***/ }),
@@ -14917,6 +15984,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                     this.skipNextTurns--;
                     return;
                 }
+                this.rumbling = this.ticks % 2 === 1;
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -15059,20 +16127,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                         }
                         else {
                             this.rumbling = true;
-                            /*
-                            if (
-                              (this.target.x === this.targetPlayer.x &&
-                                this.target.y === this.targetPlayer.y) ||
-                              Utils.distance(
-                                this.targetPlayer.x,
-                                this.targetPlayer.y,
-                                this.x,
-                                this.y,
-                              ) <= 2
-                            )
-                              */ {
-                                this.makeHitWarnings();
-                            }
+                            this.makeHitWarnings();
                         }
                     }
                     let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
@@ -15090,19 +16145,8 @@ class SpiderEnemy extends enemy_1.Enemy {
                                     if (player === this.game.players[this.game.localPlayerID])
                                         this.alertTicks = 1;
                                     if (this.ticks % 2 === 0) {
-                                        /*
-                                        if (
-                                          (this.target.x === this.targetPlayer.x &&
-                                            this.target.y === this.targetPlayer.y) ||
-                                          Utils.distance(
-                                            this.targetPlayer.x,
-                                            this.targetPlayer.y,
-                                            this.x,
-                                            this.y,
-                                          ) <= 2
-                                        ) */ {
-                                            this.makeHitWarnings();
-                                        }
+                                        this.rumbling = true;
+                                        this.makeHitWarnings();
                                     }
                                 }
                             }
@@ -15206,8 +16250,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                         //this.tileY = 6;
                         break;
                 }
-                let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
-                let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
+                let rumble = Math.max(this.rumble(this.rumbling, this.frame, this.direction).x, Math.max(this.rumble(this.rumbling, this.frame, this.direction).y));
                 this.frame += 0.1 * delta;
                 if (this.frame >= 4)
                     this.frame = 0;
@@ -15216,7 +16259,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
                     game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                    2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                    2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
                 }
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -23711,7 +24754,7 @@ GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spa
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
-GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.02; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
@@ -39141,6 +40184,8 @@ const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator 
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
+const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -39175,6 +40220,8 @@ var EnemyType;
     EnemyType["warden"] = "warden";
     EnemyType["crusher"] = "crusher";
     EnemyType["pawn"] = "pawn";
+    EnemyType["beetle"] = "beetle";
+    EnemyType["bigfrog"] = "bigfrog";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -39208,6 +40255,8 @@ exports.EnemyTypeMap = {
     [EnemyType.warden]: wardenEnemy_1.WardenEnemy,
     [EnemyType.crusher]: crusherEnemy_1.CrusherEnemy,
     [EnemyType.pawn]: pawnEnemy_1.PawnEnemy,
+    [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
+    [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

@@ -97,6 +97,8 @@ import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
+import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
+import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 
 // #endregion
 
@@ -132,6 +134,8 @@ export enum EnemyType {
   warden = "warden",
   crusher = "crusher",
   pawn = "pawn",
+  beetle = "beetle",
+  bigfrog = "bigfrog",
   // Add other enemy types here
 }
 
@@ -166,6 +170,8 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.warden]: WardenEnemy,
   [EnemyType.crusher]: CrusherEnemy,
   [EnemyType.pawn]: PawnEnemy,
+  [EnemyType.beetle]: BeetleEnemy,
+  [EnemyType.bigfrog]: BigFrogEnemy,
   // Add other enemy mappings here
 };
 

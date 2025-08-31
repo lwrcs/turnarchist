@@ -9,13 +9,7 @@ import { Enemy } from "./enemy";
 import { Utils } from "../../utility/utils";
 import { HitWarning } from "../../drawable/hitWarning";
 
-enum SpiderState {
-  VISIBLE,
-  HIDING,
-  HIDDEN,
-}
-
-export class SpiderEnemy extends Enemy {
+export class BeetleEnemy extends Enemy {
   ticks: number;
   frame: number;
   seenPlayer: boolean;
@@ -25,7 +19,6 @@ export class SpiderEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
-  state: SpiderState;
   revealTick: number;
   jumpDistance: number;
 
@@ -36,27 +29,27 @@ export class SpiderEnemy extends Enemy {
     this.health = 1;
     this.maxHealth = 1;
     this.defaultMaxHealth = 1;
-    this.tileX = 11;
+    this.tileX = 13;
     this.tileY = 4;
     this.seenPlayer = false;
     this.aggro = false;
-    this.name = "spider";
+    this.name = "beetle";
     this.orthogonalAttack = true;
     this.diagonalAttack = false;
     this.imageParticleX = 3;
     this.imageParticleY = 24;
-    this.state = SpiderState.VISIBLE;
     //if (drop) this.drop = drop;
     this.drawYOffset = 1.2;
     this.revealTick = 0;
     this.hasShadow = true;
     this.jumpHeight = 1;
     this.jumpDistance = 1;
+    this.attackRange = 1;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
   get alertText() {
-    return `New Enemy Spotted: Spider 
+    return `New Enemy Spotted: Beetle 
     Health: ${this.health}
     Attack Pattern: Omnidirectional
     Moves every other turn`;
@@ -68,8 +61,7 @@ export class SpiderEnemy extends Enemy {
 
   toggleReveal = () => {
     let ticksSince = this.ticks - this.revealTick;
-    if (this.state === SpiderState.HIDDEN && ticksSince > 8)
-      this.state = SpiderState.HIDING;
+
     this.revealTick = this.ticks;
   };
 
@@ -291,8 +283,6 @@ export class SpiderEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
-
-      this.rumbling = this.ticks % 2 === 1;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
@@ -480,8 +470,20 @@ export class SpiderEnemy extends Enemy {
             this.rumbling = false;
           } else {
             this.rumbling = true;
-
-            this.makeHitWarnings();
+            /*
+            if (
+              (this.target.x === this.targetPlayer.x &&
+                this.target.y === this.targetPlayer.y) ||
+              Utils.distance(
+                this.targetPlayer.x,
+                this.targetPlayer.y,
+                this.x,
+                this.y,
+              ) <= 2
+            )
+              */ {
+              this.makeHitWarnings();
+            }
           }
         }
 
@@ -503,8 +505,19 @@ export class SpiderEnemy extends Enemy {
                 if (player === this.game.players[this.game.localPlayerID])
                   this.alertTicks = 1;
                 if (this.ticks % 2 === 0) {
-                  this.rumbling = true;
-                  this.makeHitWarnings();
+                  /*
+                  if (
+                    (this.target.x === this.targetPlayer.x &&
+                      this.target.y === this.targetPlayer.y) ||
+                    Utils.distance(
+                      this.targetPlayer.x,
+                      this.targetPlayer.y,
+                      this.x,
+                      this.y,
+                    ) <= 2
+                  ) */ {
+                    this.makeHitWarnings();
+                  }
                 }
               }
             }
@@ -608,10 +621,10 @@ export class SpiderEnemy extends Enemy {
     if (!this.dead) {
       this.updateDrawXY(delta);
       if (this.ticks % 2 === 0) {
-        this.tileX = 11;
+        this.tileX = 13;
         this.tileY = 4;
       } else {
-        this.tileX = 11;
+        this.tileX = 13;
         this.tileY = 4;
       }
       switch (this.direction) {
@@ -633,21 +646,20 @@ export class SpiderEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow) this.drawShadow(delta);
-      if (this.state === SpiderState.VISIBLE) {
-        //only draw when visible
-        Game.drawMob(
-          this.tileX,
-          this.tileY, // + this.direction,
-          2,
-          2,
-          this.x - this.drawX + rumble - 0.5,
-          this.y - this.drawYOffset - this.drawY - this.jumpY,
-          2 * this.crushX,
-          2 * this.crushY,
-          this.softShadeColor,
-          this.shadeAmount(),
-        );
-      }
+      //only draw when visible
+      Game.drawMob(
+        this.tileX,
+        this.tileY, // + this.direction,
+        2,
+        2,
+        this.x - this.drawX + rumble - 0.5,
+        this.y - this.drawYOffset - this.drawY - this.jumpY,
+        2 * this.crushX,
+        2 * this.crushY,
+        this.softShadeColor,
+        this.shadeAmount(),
+      );
+
       if (this.crushed) {
         this.crushAnim(delta);
       }
