@@ -1,4 +1,4 @@
-import { Game } from "../game";
+import { game, Game } from "../game";
 import { Input } from "../game/input";
 import { GameConstants } from "../game/gameConstants";
 
@@ -50,7 +50,6 @@ export class MouseCursor {
       1,
       1,
     );
-
     Game.ctx.restore();
   }
 

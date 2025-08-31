@@ -10,6 +10,7 @@ type Settings = {
   softScale?: number;
   shade?: boolean;
   smoothLighting?: boolean;
+  hoverText?: boolean;
 };
 
 export const saveSettings = (game: Game) => {
@@ -18,6 +19,7 @@ export const saveSettings = (game: Game) => {
     softScale: (GameConstants as any).SOFT_SCALE ?? GameConstants.SCALE,
     shade: GameConstants.SHADE_ENABLED,
     smoothLighting: GameConstants.SMOOTH_LIGHTING,
+    hoverText: GameConstants.HOVER_TEXT_ENABLED,
   };
   setCookie(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -37,6 +39,10 @@ export const loadSettings = (game: Game) => {
     //if (typeof s.shade === "boolean") GameConstants.SHADE_ENABLED = s.shade;
     if (typeof s.smoothLighting === "boolean")
       GameConstants.SMOOTH_LIGHTING = s.smoothLighting;
+    if (typeof s.hoverText === "boolean") {
+      GameConstants.HOVER_TEXT_ENABLED = s.hoverText;
+      console.log("Load hover text enabled", GameConstants.HOVER_TEXT_ENABLED);
+    }
   } catch (e) {
     console.warn("Failed to parse settings cookie", e);
   }

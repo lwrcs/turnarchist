@@ -496,17 +496,50 @@ export class PlayerRenderer {
       //this.drawCooldownBar();
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
       if (!transitioning) this.player.inventory.draw(delta);
-      HoverText.draw(
-        delta,
-        this.player.x,
-        this.player.y,
-        ((this.player as any).getRoom
-          ? (this.player as any).getRoom()
-          : this.player.game.levels[this.player.depth].rooms[
-              this.player.levelID
-            ]) as any,
-        this.player,
-      );
+      const inventoryOpen = this.player.inventory.isOpen;
+      const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(
+        MouseCursor.getInstance().getPosition().x,
+        MouseCursor.getInstance().getPosition().y,
+      ).inBounds;
+      if (
+        GameConstants.HOVER_TEXT_ENABLED &&
+        GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
+        !inventoryOpen &&
+        !quickbarOpen
+      ) {
+        HoverText.draw(
+          delta,
+          this.player.x,
+          this.player.y,
+          this.player.getRoom
+            ? this.player.getRoom()
+            : this.player.game.levels[this.player.depth].rooms[
+                this.player.levelID
+              ],
+          this.player,
+          MouseCursor.getInstance().getPosition().x + 8,
+          MouseCursor.getInstance().getPosition().y,
+        );
+      } else if (
+        GameConstants.HOVER_TEXT_ENABLED &&
+        GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
+        (inventoryOpen || quickbarOpen)
+      ) {
+        HoverText.draw(
+          delta,
+          this.player.x,
+          this.player.y,
+          this.player.getRoom
+            ? this.player.getRoom()
+            : this.player.game.levels[this.player.depth].rooms[
+                this.player.levelID
+              ],
+          this.player,
+          MouseCursor.getInstance().getPosition().x + 8,
+          MouseCursor.getInstance().getPosition().y,
+          true,
+        );
+      }
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();

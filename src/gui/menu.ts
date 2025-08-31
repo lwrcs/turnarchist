@@ -124,6 +124,28 @@ export class Menu {
     );
     this.addButton(smoothButton);
 
+    const hoverTextButton = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Hover Text",
+      () => {
+        GameConstants.HOVER_TEXT_ENABLED = !GameConstants.HOVER_TEXT_ENABLED;
+        const enabled = GameConstants.HOVER_TEXT_ENABLED
+          ? "enabled"
+          : "disabled";
+        this.game.pushMessage(`Hover text is now ${enabled}`);
+        try {
+          const { saveSettings } = require("../game/settingsPersistence");
+          saveSettings(this.game);
+        } catch {}
+      },
+      false,
+      this,
+    );
+    this.addButton(hoverTextButton);
+
     const saveBtn = new guiButton(
       0,
       0,
@@ -141,7 +163,7 @@ export class Menu {
       false,
       this,
     );
-    this.addButton(saveBtn);
+    //this.addButton(saveBtn);
 
     const loadBtn = new guiButton(
       0,
@@ -160,7 +182,7 @@ export class Menu {
       false,
       this,
     );
-    this.addButton(loadBtn);
+    //this.addButton(loadBtn);
 
     const newGameBtn = new guiButton(
       0,
@@ -198,7 +220,7 @@ export class Menu {
       false,
       this,
     );
-    this.addButton(clearBtn);
+    //this.addButton(clearBtn);
     //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
     this.positionButtons();
   }

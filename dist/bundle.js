@@ -22353,6 +22353,10 @@ GameConstants.XP_POPUP_ENABLED = true;
 GameConstants.COIN_ANIMATION = false;
 GameConstants.COIN_AUTO_PICKUP = false;
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
+GameConstants.HOVER_TEXT_ENABLED = false;
+GameConstants.INVENTORY_HOVER_TEXT_ENABLED = true;
+GameConstants.IN_GAME_HOVER_TEXT_ENABLED = false;
+GameConstants.HOVER_TEXT_FOLLOWS_MOUSE = true;
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
@@ -25592,6 +25596,7 @@ const saveSettings = (game) => {
         softScale: gameConstants_1.GameConstants.SOFT_SCALE ?? gameConstants_1.GameConstants.SCALE,
         shade: gameConstants_1.GameConstants.SHADE_ENABLED,
         smoothLighting: gameConstants_1.GameConstants.SMOOTH_LIGHTING,
+        hoverText: gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
     };
     (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -25614,6 +25619,10 @@ const loadSettings = (game) => {
         //if (typeof s.shade === "boolean") GameConstants.SHADE_ENABLED = s.shade;
         if (typeof s.smoothLighting === "boolean")
             gameConstants_1.GameConstants.SMOOTH_LIGHTING = s.smoothLighting;
+        if (typeof s.hoverText === "boolean") {
+            gameConstants_1.GameConstants.HOVER_TEXT_ENABLED = s.hoverText;
+            console.log("Load hover text enabled", gameConstants_1.GameConstants.HOVER_TEXT_ENABLED);
+        }
     }
     catch (e) {
         console.warn("Failed to parse settings cookie", e);
@@ -26022,7 +26031,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 class HoverText {
-    static getHoverText(x, y, room, player) {
+    static getHoverText(x, y, room, player, inventoryOpen) {
         // Handle undefined mouse coordinates
         if (input_1.Input.mouseX === undefined || input_1.Input.mouseY === undefined) {
             return [];
@@ -26038,33 +26047,59 @@ class HoverText {
         const offsetX = x + tileOffsetX;
         const offsetY = y + tileOffsetY;
         const strings = [];
-        for (const entity of room.entities) {
-            if (entity.x === offsetX && entity.y === offsetY) {
-                strings.push(entity.hoverText());
+        if (!inventoryOpen &&
+            !player.inventory.isPointInQuickbarBounds(x, y).inBounds) {
+            for (const entity of room.entities) {
+                if (entity.x === offsetX && entity.y === offsetY) {
+                    strings.push(entity.hoverText());
+                }
+            }
+            for (const item of room.items) {
+                if (item.x === offsetX && item.y === offsetY) {
+                    strings.push(item.hoverText());
+                }
+            }
+            const tile = room.getTile(offsetX, offsetY);
+            if (tile) {
+                strings.push(tile.getName());
             }
         }
-        for (const item of room.items) {
-            if (item.x === offsetX && item.y === offsetY) {
-                strings.push(item.hoverText());
+        else {
+            if (player.inventory.itemAtSelectedSlot()) {
+                strings.push(player.inventory.itemAtSelectedSlot()?.hoverText());
             }
-        }
-        const tile = room.getTile(offsetX, offsetY);
-        if (tile) {
-            strings.push(tile.getName());
         }
         return strings;
     }
-    static draw(delta, x, y, room, player) {
-        const strings = HoverText.getHoverText(x, y, room, player);
+    static draw(delta, x, y, room, player, drawX, drawY, inventoryOpen = false) {
+        const strings = HoverText.getHoverText(x, y, room, player, inventoryOpen);
         if (strings.length === 0) {
             return;
         }
         game_1.Game.ctx.save();
         for (const string of strings) {
             const offsetY = strings.indexOf(string) * 6;
+            if (inventoryOpen) {
+                game_1.Game.ctx.globalAlpha = 1;
+            }
+            else {
+                game_1.Game.ctx.globalAlpha = 0.5;
+            }
             game_1.Game.ctx.fillStyle = "yellow";
-            game_1.Game.ctx.globalAlpha = 0.1;
-            game_1.Game.fillText(string, 1, 20 + offsetY);
+            const offsetX = game_1.Game.measureText(string).width / 2;
+            let posX = gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
+                ? drawX + 8
+                : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
+            let posY = gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
+                ? drawY + 8 // + offsetY
+                : gameConstants_1.GameConstants.HEIGHT - 32;
+            //Game.fillText(string, drawX, drawY + offsetY);
+            if (gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE) {
+                posX = input_1.Input.mouseX + 8;
+                posY = input_1.Input.mouseY + 4;
+            }
+            //Game.ctx.globalCompositeOperation = "destination-out";
+            game_1.Game.fillTextOutline(string, posX, posY, "black", "yellow");
         }
         game_1.Game.ctx.restore();
     }
@@ -26509,6 +26544,19 @@ class Menu {
             catch { }
         }, false, this);
         this.addButton(smoothButton);
+        const hoverTextButton = new guiButton_1.guiButton(0, 0, 0, 0, "Hover Text", () => {
+            gameConstants_1.GameConstants.HOVER_TEXT_ENABLED = !gameConstants_1.GameConstants.HOVER_TEXT_ENABLED;
+            const enabled = gameConstants_1.GameConstants.HOVER_TEXT_ENABLED
+                ? "enabled"
+                : "disabled";
+            this.game.pushMessage(`Hover text is now ${enabled}`);
+            try {
+                const { saveSettings } = __webpack_require__(/*! ../game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                saveSettings(this.game);
+            }
+            catch { }
+        }, false, this);
+        this.addButton(hoverTextButton);
         const saveBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Save Game", () => {
             try {
                 const { saveToCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
@@ -26518,7 +26566,7 @@ class Menu {
                 this.game.pushMessage("Save failed.");
             }
         }, false, this);
-        this.addButton(saveBtn);
+        //this.addButton(saveBtn);
         const loadBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Load Game", () => {
             try {
                 const { loadFromCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
@@ -26528,7 +26576,7 @@ class Menu {
                 this.game.pushMessage("Load failed.");
             }
         }, false, this);
-        this.addButton(loadBtn);
+        //this.addButton(loadBtn);
         const newGameBtn = new guiButton_1.guiButton(0, 0, 0, 0, "New Game", () => {
             try {
                 this.game.newGame();
@@ -26548,7 +26596,7 @@ class Menu {
                 this.game.pushMessage("Clear Save failed.");
             }
         }, false, this);
-        this.addButton(clearBtn);
+        //this.addButton(clearBtn);
         //this.addButton(new guiButton(0, 0, 0, 0, "Exit", this.exitGame));
         this.positionButtons();
     }
@@ -38623,6 +38671,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const postProcess_1 = __webpack_require__(/*! ../gui/postProcess */ "./src/gui/postProcess.ts");
 const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
@@ -38973,9 +39022,23 @@ class PlayerRenderer {
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 if (!transitioning)
                     this.player.inventory.draw(delta);
-                hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, (this.player.getRoom
-                    ? this.player.getRoom()
-                    : this.player.game.levels[this.player.depth].rooms[this.player.levelID]), this.player);
+                const inventoryOpen = this.player.inventory.isOpen;
+                const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
+                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED &&
+                    gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
+                    !inventoryOpen &&
+                    !quickbarOpen) {
+                    hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
+                        ? this.player.getRoom()
+                        : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x + 8, mouseCursor_1.MouseCursor.getInstance().getPosition().y);
+                }
+                else if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED &&
+                    gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
+                    (inventoryOpen || quickbarOpen)) {
+                    hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
+                        ? this.player.getRoom()
+                        : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x + 8, mouseCursor_1.MouseCursor.getInstance().getPosition().y, true);
+                }
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;

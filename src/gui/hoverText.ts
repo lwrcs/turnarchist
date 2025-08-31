@@ -10,6 +10,7 @@ export class HoverText {
     y: number,
     room: Room,
     player: Player,
+    inventoryOpen: boolean,
   ): string[] {
     // Handle undefined mouse coordinates
     if (Input.mouseX === undefined || Input.mouseY === undefined) {
@@ -34,37 +35,81 @@ export class HoverText {
     const offsetY = y + tileOffsetY;
 
     const strings: string[] = [];
-    for (const entity of room.entities) {
-      if (entity.x === offsetX && entity.y === offsetY) {
-        strings.push(entity.hoverText());
+    if (
+      !inventoryOpen &&
+      !player.inventory.isPointInQuickbarBounds(x, y).inBounds
+    ) {
+      for (const entity of room.entities) {
+        if (entity.x === offsetX && entity.y === offsetY) {
+          strings.push(entity.hoverText());
+        }
       }
-    }
 
-    for (const item of room.items) {
-      if (item.x === offsetX && item.y === offsetY) {
-        strings.push(item.hoverText());
+      for (const item of room.items) {
+        if (item.x === offsetX && item.y === offsetY) {
+          strings.push(item.hoverText());
+        }
       }
-    }
 
-    const tile = room.getTile(offsetX, offsetY);
-    if (tile) {
-      strings.push(tile.getName());
+      const tile = room.getTile(offsetX, offsetY);
+      if (tile) {
+        strings.push(tile.getName());
+      }
+    } else {
+      if (player.inventory.itemAtSelectedSlot()) {
+        strings.push(player.inventory.itemAtSelectedSlot()?.hoverText());
+      }
     }
 
     return strings;
   }
 
-  static draw(delta: number, x: number, y: number, room: Room, player: Player) {
-    const strings: string[] = HoverText.getHoverText(x, y, room, player);
+  static draw(
+    delta: number,
+    x: number,
+    y: number,
+    room: Room,
+    player: Player,
+    drawX: number,
+    drawY: number,
+    inventoryOpen: boolean = false,
+  ) {
+    const strings: string[] = HoverText.getHoverText(
+      x,
+      y,
+      room,
+      player,
+      inventoryOpen,
+    );
     if (strings.length === 0) {
       return;
     }
     Game.ctx.save();
     for (const string of strings) {
       const offsetY = strings.indexOf(string) * 6;
+      if (inventoryOpen) {
+        Game.ctx.globalAlpha = 1;
+      } else {
+        Game.ctx.globalAlpha = 0.5;
+      }
       Game.ctx.fillStyle = "yellow";
-      Game.ctx.globalAlpha = 0.1;
-      Game.fillText(string, 1, 20 + offsetY);
+
+      const offsetX = Game.measureText(string).width / 2;
+      let posX =
+        GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
+          ? drawX + 8
+          : GameConstants.WIDTH / 2 - offsetX;
+      let posY =
+        GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
+          ? drawY + 8 // + offsetY
+          : GameConstants.HEIGHT - 32;
+      //Game.fillText(string, drawX, drawY + offsetY);
+      if (GameConstants.HOVER_TEXT_FOLLOWS_MOUSE) {
+        posX = Input.mouseX + 8;
+        posY = Input.mouseY + 4;
+      }
+      //Game.ctx.globalCompositeOperation = "destination-out";
+      Game.fillTextOutline(string, posX, posY, "black", "yellow");
     }
     Game.ctx.restore();
   }
