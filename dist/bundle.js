@@ -27748,6 +27748,16 @@ class Inventory {
                 }
             }
         };
+        this.canPickup = (item) => {
+            if (!this.isFull())
+                return true;
+            if (item instanceof coin_1.Coin)
+                return true;
+            if (this.items.find((i) => i !== null && i.constructor === item.constructor) &&
+                item.stackable)
+                return true;
+            return false;
+        };
         this.leftQuickbar = () => {
             this.mostRecentInput = "keyboard";
             this.left();
@@ -29509,6 +29519,8 @@ class Item extends drawable_1.Drawable {
         this.onDrop = () => { };
         // Function to be called when item is picked up
         this.onPickup = (player) => {
+            if (!player.inventory.canPickup(this))
+                return;
             this.player = player;
             if (!this.pickedUp) {
                 this.startY = player.y;
@@ -29649,7 +29661,7 @@ class Item extends drawable_1.Drawable {
                     const fadeStart = 0.5;
                     if (t > fadeStart) {
                         const k = (t - fadeStart) / (1 - fadeStart);
-                        this.alpha = Math.min(1 - k, Math.abs(distance / this.animStartDistance));
+                        this.alpha = Math.max(1 - k, Math.abs(distance / this.animStartDistance));
                     }
                     if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                         game_1.Game.ctx.globalAlpha = Math.max(0, this.alpha);

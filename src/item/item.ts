@@ -134,6 +134,7 @@ export class Item extends Drawable {
   onDrop = () => {};
   // Function to be called when item is picked up
   onPickup = (player: Player) => {
+    if (!player.inventory.canPickup(this)) return;
     this.player = player;
     if (!this.pickedUp) {
       this.startY = player.y;
@@ -337,7 +338,7 @@ export class Item extends Drawable {
         const fadeStart = 0.5;
         if (t > fadeStart) {
           const k = (t - fadeStart) / (1 - fadeStart);
-          this.alpha = Math.min(
+          this.alpha = Math.max(
             1 - k,
             Math.abs(distance / this.animStartDistance),
           );

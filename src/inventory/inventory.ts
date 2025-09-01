@@ -244,6 +244,19 @@ export class Inventory {
     }
   };
 
+  canPickup = (item: Item): boolean => {
+    if (!this.isFull()) return true;
+    if (item instanceof Coin) return true;
+    if (
+      this.items.find(
+        (i) => i !== null && i.constructor === item.constructor,
+      ) &&
+      item.stackable
+    )
+      return true;
+    return false;
+  };
+
   leftQuickbar = () => {
     this.mostRecentInput = "keyboard";
 
