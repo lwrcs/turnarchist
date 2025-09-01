@@ -151,6 +151,8 @@ import { ShieldRightFragment } from "../item/weapon/shieldRightFragment";
 import { Stats } from "./stats";
 import { statsTracker } from "./stats";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
+import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
+import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 
 export class HitWarningState {
   x: number;
@@ -302,6 +304,8 @@ export enum EnemyType {
   OBSIDIAN,
   CRUSHER,
   PAWN,
+  BIGFROG,
+  BEETLE,
 }
 
 export class EnemyState {
@@ -547,6 +551,8 @@ export class EnemyState {
     if (enemy instanceof ObsidianResource) this.type = EnemyType.OBSIDIAN;
     if (enemy instanceof CrusherEnemy) this.type = EnemyType.CRUSHER;
     if (enemy instanceof PawnEnemy) this.type = EnemyType.PAWN;
+    if (enemy instanceof BeetleEnemy) this.type = EnemyType.BEETLE;
+    if (enemy instanceof BigFrogEnemy) this.type = EnemyType.BIGFROG;
   }
 }
 

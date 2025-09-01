@@ -22640,6 +22640,8 @@ const shieldLeftFragment_1 = __webpack_require__(/*! ../item/weapon/shieldLeftFr
 const shieldRightFragment_1 = __webpack_require__(/*! ../item/weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
 const stats_1 = __webpack_require__(/*! ./stats */ "./src/game/stats.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -22764,6 +22766,8 @@ var EnemyType;
     EnemyType[EnemyType["OBSIDIAN"] = 46] = "OBSIDIAN";
     EnemyType[EnemyType["CRUSHER"] = 47] = "CRUSHER";
     EnemyType[EnemyType["PAWN"] = 48] = "PAWN";
+    EnemyType[EnemyType["BIGFROG"] = 49] = "BIGFROG";
+    EnemyType[EnemyType["BEETLE"] = 50] = "BEETLE";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -22980,6 +22984,10 @@ class EnemyState {
             this.type = EnemyType.CRUSHER;
         if (enemy instanceof pawnEnemy_1.PawnEnemy)
             this.type = EnemyType.PAWN;
+        if (enemy instanceof beetleEnemy_1.BeetleEnemy)
+            this.type = EnemyType.BEETLE;
+        if (enemy instanceof bigFrogEnemy_1.BigFrogEnemy)
+            this.type = EnemyType.BIGFROG;
     }
 }
 exports.EnemyState = EnemyState;
