@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.6a9b12752c6ca8066305.png";
+module.exports = __webpack_require__.p + "assets/mobset.2d9772fae6688207f2da.png";
 
 /***/ }),
 
@@ -10462,17 +10462,24 @@ class BigFrogEnemy extends enemy_1.Enemy {
             //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
             if (this.jumping && !this.cloned) {
                 let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-                if (j > 1) {
+                if (j >= 1) {
                     this.jumpDistance = 2;
                 }
                 this.jumpY =
-                    Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+                    Math.sin((j / (this.jumpDistance + 1)) * Math.PI) * this.jumpHeight;
                 if (this.jumpY < 0.01 && this.jumpY > -0.01) {
                     this.jumpY = 0;
                     this.jumpDistance = 1;
                 }
                 if (this.jumpY > this.jumpHeight)
                     this.jumpY = this.jumpHeight;
+            }
+        };
+        this.bigEnemyShake = () => {
+            if (this.w > 1 || this.h > 1) {
+                setTimeout(() => {
+                    this.game.shakeScreen(0 * this.drawX, 5);
+                }, 500);
             }
         };
         this.makeHitWarnings = () => {
@@ -10609,8 +10616,10 @@ class BigFrogEnemy extends enemy_1.Enemy {
                     this.jumping = false;
                 }
                 if (this.jumping) {
+                    if (this.frame < 4)
+                        this.frame = 4;
                     this.frameLength = 11;
-                    this.animationSpeed = 0.37;
+                    this.animationSpeed = 0.2;
                 }
                 else {
                     this.frameLength = 3;
@@ -10654,10 +10663,11 @@ class BigFrogEnemy extends enemy_1.Enemy {
         this.name = "bigfrog";
         this.orthogonalAttack = true;
         this.diagonalAttack = true;
-        this.jumpHeight = 1;
+        this.jumpHeight = 2;
         this.imageParticleX = 3;
         this.imageParticleY = 30;
         this.canDestroyOthers = true;
+        this.halfJumped = false;
         if (drop)
             this.drop = drop;
         this.h = 2;
@@ -17245,6 +17255,9 @@ class Entity extends drawable_1.Drawable {
             }
             this.x = x;
             this.y = y;
+            this.bigEnemyShake();
+        };
+        this.bigEnemyShake = () => {
             if (this.w > 1 || this.h > 1) {
                 setTimeout(() => {
                     this.game.shakeScreen(0 * this.drawX, 5);
@@ -20455,6 +20468,7 @@ class Game {
             else if (delta > deltaMax) {
                 delta = deltaMax;
             }
+            //delta = 0.025;
             // Update FPS tracking
             while (times.length > 0 && times[0] <= timestamp - 1000) {
                 times.shift();

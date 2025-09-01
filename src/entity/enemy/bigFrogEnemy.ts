@@ -26,6 +26,7 @@ export class BigFrogEnemy extends Enemy {
   rumbling: boolean;
   jumping: boolean;
   jumpDistance: number;
+  halfJumped: boolean;
   static difficulty: number = 1;
   static tileX: number = 37;
   static tileY: number = 24;
@@ -52,10 +53,11 @@ export class BigFrogEnemy extends Enemy {
     this.name = "bigfrog";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
-    this.jumpHeight = 1;
+    this.jumpHeight = 2;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
     this.canDestroyOthers = true;
+    this.halfJumped = false;
     if (drop) this.drop = drop;
     this.h = 2;
     this.w = 2;
@@ -366,16 +368,23 @@ export class BigFrogEnemy extends Enemy {
     //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
     if (this.jumping && !this.cloned) {
       let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-      if (j > 1) {
+      if (j >= 1) {
         this.jumpDistance = 2;
       }
       this.jumpY =
-        Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
+        Math.sin((j / (this.jumpDistance + 1)) * Math.PI) * this.jumpHeight;
       if (this.jumpY < 0.01 && this.jumpY > -0.01) {
         this.jumpY = 0;
         this.jumpDistance = 1;
       }
       if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
+    }
+  };
+  bigEnemyShake = () => {
+    if (this.w > 1 || this.h > 1) {
+      setTimeout(() => {
+        this.game.shakeScreen(0 * this.drawX, 5);
+      }, 500);
     }
   };
 
@@ -539,8 +548,9 @@ export class BigFrogEnemy extends Enemy {
         this.jumping = false;
       }
       if (this.jumping) {
+        if (this.frame < 4) this.frame = 4;
         this.frameLength = 11;
-        this.animationSpeed = 0.37;
+        this.animationSpeed = 0.2;
       } else {
         this.frameLength = 3;
         this.animationSpeed = 0.1;

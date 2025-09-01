@@ -497,6 +497,10 @@ export class Entity extends Drawable {
     }
     this.x = x;
     this.y = y;
+    this.bigEnemyShake();
+  };
+
+  bigEnemyShake = () => {
     if (this.w > 1 || this.h > 1) {
       setTimeout(() => {
         this.game.shakeScreen(0 * this.drawX, 5);
