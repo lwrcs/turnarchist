@@ -98,8 +98,10 @@ export class GameConstants {
   static readonly HEALTH_BUFF_COLOR = "#d77bba";
   static readonly MISS_COLOR = "#639bff";
   static readonly XP_POPUP_ENABLED = true;
-  static readonly COIN_ANIMATION = false;
-  static readonly COIN_AUTO_PICKUP = false;
+
+  static readonly COIN_ANIMATION = true;
+  static readonly COIN_AUTO_PICKUP = true;
+
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented
 
   static HOVER_TEXT_ENABLED = false;

@@ -17499,6 +17499,8 @@ class Entity extends drawable_1.Drawable {
                     }
                     this.room.items.push(drop);
                     drop.onDrop();
+                    if (this.name !== "chest")
+                        drop.autoPickup();
                 });
             }
         };
@@ -22350,8 +22352,8 @@ GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
 GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.XP_POPUP_ENABLED = true;
-GameConstants.COIN_ANIMATION = false;
-GameConstants.COIN_AUTO_PICKUP = false;
+GameConstants.COIN_ANIMATION = true;
+GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
 GameConstants.HOVER_TEXT_ENABLED = false;
 GameConstants.INVENTORY_HOVER_TEXT_ENABLED = true;
@@ -28899,6 +28901,7 @@ exports.Coin = void 0;
 const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class Coin extends item_1.Item {
     //checked: boolean;
     constructor(level, x, y) {
@@ -28921,12 +28924,17 @@ class Coin extends item_1.Item {
                 if (this.stackCount >= 7)
                     this.tileX = 21;
             }
+        };
+        this.autoPickup = () => {
             if (gameConstants_1.GameConstants.COIN_AUTO_PICKUP)
                 this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
         };
         this.pickupSound = () => {
+            let delay = 0;
+            if (gameConstants_1.GameConstants.COIN_ANIMATION)
+                delay = Math.ceil(random_1.Random.rand() * 200 + 400);
             if (this.level === this.level.game.room)
-                sound_1.Sound.pickupCoin();
+                sound_1.Sound.delayPlay(sound_1.Sound.pickupCoin, delay);
         };
         this.tileX = 19;
         this.tileY = 0;
@@ -29472,6 +29480,7 @@ class Item extends drawable_1.Drawable {
         this.animTargetX = 0;
         this.animTargetY = 0;
         this.animT = 0;
+        this.animStartDistance = null;
         this.hoverText = () => {
             return this.name;
         };
@@ -29529,6 +29538,7 @@ class Item extends drawable_1.Drawable {
                 }
             }
         };
+        this.autoPickup = () => { };
         this.pickupMessage = () => {
             const name = this.constructor.itemName;
             let message = this.stackable
@@ -29555,7 +29565,11 @@ class Item extends drawable_1.Drawable {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
                 !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                 return 0;
-            return this.level.softVis[this.x][this.y];
+            if (!this.level.softVis[this.x]) {
+                console.warn("tried to get shade for tile that does not exist", this.x, this.y);
+                return 0;
+            }
+            return this.level.softVis[this.x]?.[this.y];
         };
         this.drawStatus = (x, y) => { };
         this.drawBrokenSymbol = (x, y) => {
@@ -29616,24 +29630,33 @@ class Item extends drawable_1.Drawable {
             if (this.pickedUp) {
                 if (this.animateToInventory === true && this.player) {
                     // Lerp towards the inventory button with ease-out
-                    const speed = 0.015 * delta; // slower overall speed
+                    const speed = 0.025 * delta; // slower overall speed
                     this.animT = Math.min(1, this.animT + speed);
-                    const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
-                    const posX = this.animStartX * (1 - t) + this.animTargetX * t;
-                    const posY = this.animStartY * (1 - t) + this.animTargetY * t;
+                    const t = Math.pow(this.animT, 2); // ease-in cubic
+                    const posX = this.animStartX * (1 - t) +
+                        this.animTargetX * t +
+                        (this.player.x - this.animTargetX - this.player.drawX) * t +
+                        this.drawOffset;
+                    const posY = this.animStartY * (1 - t) +
+                        this.animTargetY * t +
+                        (this.player.y - this.animTargetY - this.player.drawY) * t +
+                        this.chestOffsetY;
+                    if (this.animStartDistance === null) {
+                        this.animStartDistance = utils_1.Utils.distance(this.player.x - this.player.drawX, this.player.y - this.player.drawY, posX, posY);
+                    }
+                    const distance = Math.abs(utils_1.Utils.distance(this.player.x - this.player.drawX, this.player.y - this.player.drawY, posX, posY));
                     // Fade near the end
-                    const fadeStart = 0.75;
+                    const fadeStart = 0.5;
                     if (t > fadeStart) {
                         const k = (t - fadeStart) / (1 - fadeStart);
-                        this.alpha = 1 - k;
+                        this.alpha = Math.min(1 - k, Math.abs(distance / this.animStartDistance));
                     }
                     if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                         game_1.Game.ctx.globalAlpha = Math.max(0, this.alpha);
                     this.x = Math.floor(posX);
                     this.y = Math.floor(posY);
-                    const diffX = this.player.x - this.animTargetX;
-                    const diffY = this.player.y - this.animTargetY;
-                    game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX - this.player.drawX + diffX, posY - 1.5 - this.player.drawY + diffY, this.w, this.h, this.level.shadeColor, this.shadeAmount());
+                    game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY - 1.5, // + diffY,
+                    this.w, this.h, this.level.shadeColor, this.shadeAmount());
                     game_1.Game.ctx.globalAlpha = 1.0;
                     if (this.animT >= 1) {
                         this.animateToInventory = false;

@@ -729,6 +729,7 @@ export class Entity extends Drawable {
         }
         this.room.items.push(drop);
         drop.onDrop();
+        if (this.name !== "chest") drop.autoPickup();
       });
     }
   };

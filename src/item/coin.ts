@@ -3,6 +3,7 @@ import { Game } from "../game";
 import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
 import { GameConstants } from "../game/gameConstants";
+import { Random } from "../utility/random";
 
 export class Coin extends Item {
   static itemName = "coin";
@@ -34,8 +35,6 @@ export class Coin extends Item {
       if (this.stackCount >= 3) this.tileX = 20;
       if (this.stackCount >= 7) this.tileX = 21;
     }
-    if (GameConstants.COIN_AUTO_PICKUP)
-      this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
   };
   get distanceToBottomRight() {
     return Math.sqrt(
@@ -44,7 +43,17 @@ export class Coin extends Item {
     );
   }
 
+  autoPickup = () => {
+    if (GameConstants.COIN_AUTO_PICKUP)
+      this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
+  };
+
   pickupSound = () => {
-    if (this.level === this.level.game.room) Sound.pickupCoin();
+    let delay = 0;
+    if (GameConstants.COIN_ANIMATION)
+      delay = Math.ceil(Random.rand() * 200 + 400);
+
+    if (this.level === this.level.game.room)
+      Sound.delayPlay(Sound.pickupCoin, delay);
   };
 }

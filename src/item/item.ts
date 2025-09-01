@@ -54,6 +54,7 @@ export class Item extends Drawable {
   private animTargetX: number = 0;
   private animTargetY: number = 0;
   private animT: number = 0;
+  private animStartDistance: number = null;
   player: Player;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number) {
@@ -167,6 +168,8 @@ export class Item extends Drawable {
     }
   };
 
+  autoPickup = () => {};
+
   pickupMessage = () => {
     const name = (this.constructor as typeof Item).itemName;
     let message = this.stackable
@@ -200,7 +203,15 @@ export class Item extends Drawable {
       !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
     )
       return 0;
-    return this.level.softVis[this.x][this.y];
+    if (!this.level.softVis[this.x]) {
+      console.warn(
+        "tried to get shade for tile that does not exist",
+        this.x,
+        this.y,
+      );
+      return 0;
+    }
+    return this.level.softVis[this.x]?.[this.y];
   };
 
   drawStatus = (x: number, y: number) => {};
@@ -292,32 +303,58 @@ export class Item extends Drawable {
     if (this.pickedUp) {
       if (this.animateToInventory === true && this.player) {
         // Lerp towards the inventory button with ease-out
-        const speed = 0.015 * delta; // slower overall speed
+        const speed = 0.025 * delta; // slower overall speed
         this.animT = Math.min(1, this.animT + speed);
-        const t = 1 - Math.pow(1 - this.animT, 3); // ease-out cubic
-        const posX = this.animStartX * (1 - t) + this.animTargetX * t;
-        const posY = this.animStartY * (1 - t) + this.animTargetY * t;
+        const t = Math.pow(this.animT, 2); // ease-in cubic
+        const posX =
+          this.animStartX * (1 - t) +
+          this.animTargetX * t +
+          (this.player.x - this.animTargetX - this.player.drawX) * t +
+          this.drawOffset;
+        const posY =
+          this.animStartY * (1 - t) +
+          this.animTargetY * t +
+          (this.player.y - this.animTargetY - this.player.drawY) * t +
+          this.chestOffsetY;
 
+        if (this.animStartDistance === null) {
+          this.animStartDistance = Utils.distance(
+            this.player.x - this.player.drawX,
+            this.player.y - this.player.drawY,
+            posX,
+            posY,
+          );
+        }
+        const distance = Math.abs(
+          Utils.distance(
+            this.player.x - this.player.drawX,
+            this.player.y - this.player.drawY,
+            posX,
+            posY,
+          ),
+        );
         // Fade near the end
-        const fadeStart = 0.75;
+        const fadeStart = 0.5;
         if (t > fadeStart) {
           const k = (t - fadeStart) / (1 - fadeStart);
-          this.alpha = 1 - k;
+          this.alpha = Math.min(
+            1 - k,
+            Math.abs(distance / this.animStartDistance),
+          );
         }
 
         if (GameConstants.ALPHA_ENABLED)
           Game.ctx.globalAlpha = Math.max(0, this.alpha);
         this.x = Math.floor(posX);
         this.y = Math.floor(posY);
-        const diffX = this.player.x - this.animTargetX;
-        const diffY = this.player.y - this.animTargetY;
+
         Game.drawItem(
           this.tileX,
           this.tileY,
           1,
           2,
-          posX - this.player.drawX + diffX,
-          posY - 1.5 - this.player.drawY + diffY,
+          posX,
+          posY - 1.5, // + diffY,
           this.w,
           this.h,
           this.level.shadeColor,
