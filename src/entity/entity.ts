@@ -101,7 +101,7 @@ export class Entity extends Drawable {
   protected crushY: number;
   protected crushVertical: boolean;
   protected crushed: boolean;
-  protected rumbling: boolean;
+  rumbling: boolean;
   protected animationSpeed: number;
   drawYOffset: number;
   name: string;

@@ -348,6 +348,8 @@ export class EnemyState {
   isInf: boolean;
   quantity: number;
   wizardState: WizardState;
+  rumbling: boolean;
+  isEnemy: boolean;
   // Persist explicit opened state for chests for clarity/forward-compatibility
   chestOpened?: boolean;
 
@@ -358,11 +360,14 @@ export class EnemyState {
     this.y = enemy.y;
     this.health = enemy.health;
     this.maxHealth = enemy.maxHealth;
+    this.rumbling = enemy.rumbling;
+    this.isEnemy = enemy.isEnemy;
     // Persist shield state on the enemy rather than saving EnemyShield projectile
     try {
       this.isShielded = (enemy as any).shielded === true;
       this.shieldHealth = (enemy as any).shield?.health ?? undefined;
     } catch {}
+
     this.shieldedBefore = (enemy as any).shieldedBefore;
     this.unconscious = (enemy as Enemy).unconscious;
     this.direction = enemy.direction;
@@ -375,11 +380,9 @@ export class EnemyState {
       this.drop = new ItemState(enemy.drop, game);
     }
     this.alertTicks = enemy.alertTicks;
-    if (enemy instanceof Barrel) this.type = EnemyType.BARREL;
-    if (enemy instanceof BigSkullEnemy) {
-      this.type = EnemyType.BIGSKULL;
+    // Common Enemy fields
+    if (enemy instanceof Enemy) {
       this.ticks = enemy.ticks;
-      this.ticksSinceFirstHit = enemy.ticksSinceFirstHit;
       this.seenPlayer = enemy.seenPlayer;
       if (enemy.seenPlayer) {
         this.targetPlayerID = Object.keys(game.players).find(
@@ -390,6 +393,11 @@ export class EnemyState {
             (key) => game.offlinePlayers[key] === enemy.targetPlayer,
           );
       }
+    }
+    if (enemy instanceof Barrel) this.type = EnemyType.BARREL;
+    if (enemy instanceof BigSkullEnemy) {
+      this.type = EnemyType.BIGSKULL;
+      this.ticksSinceFirstHit = enemy.ticksSinceFirstHit;
       this.drops = [];
       for (const d of enemy.drops) {
         if (d) {
@@ -399,7 +407,6 @@ export class EnemyState {
     }
     if (enemy instanceof ChargeEnemy) {
       this.type = EnemyType.CHARGE;
-      this.ticks = enemy.ticks;
       this.chargeEnemyState = enemy.state;
       this.startX = enemy.startX;
       this.startY = enemy.startY;
@@ -419,53 +426,18 @@ export class EnemyState {
     if (enemy instanceof GoldResource) this.type = EnemyType.GOLD;
     if (enemy instanceof KnightEnemy) {
       this.type = EnemyType.KNIGHT;
-      this.ticks = enemy.ticks;
-      this.seenPlayer = enemy.seenPlayer;
-      if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer,
-        );
-        if (!this.targetPlayerID)
-          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
-          );
-      }
     }
     if (enemy instanceof PottedPlant) this.type = EnemyType.PLANT;
     if (enemy instanceof Pot) this.type = EnemyType.POT;
     if (enemy instanceof SkullEnemy) {
       this.type = EnemyType.SKULL;
-      this.ticks = enemy.ticks;
       this.ticksSinceFirstHit = enemy.ticksSinceFirstHit;
-      this.seenPlayer = enemy.seenPlayer;
-      if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer,
-        );
-        if (!this.targetPlayerID)
-          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
-          );
-      }
     }
     if (enemy instanceof CrabEnemy) {
       this.type = EnemyType.CRAB;
-      this.ticks = enemy.ticks;
-      this.seenPlayer = enemy.seenPlayer;
-      if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer,
-        );
-        if (!this.targetPlayerID)
-          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
-          );
-      }
     }
     if (enemy instanceof Spawner) {
       this.type = EnemyType.SPAWNER;
-      this.ticks = enemy.ticks;
-      this.seenPlayer = enemy.seenPlayer;
       this.enemySpawnType = enemy.enemySpawnType;
     }
     if (enemy instanceof VendingMachine) {
@@ -496,23 +468,10 @@ export class EnemyState {
     }
     if (enemy instanceof WizardEnemy) {
       this.type = EnemyType.WIZARD;
-      this.ticks = enemy.ticks;
       this.wizardState = enemy.state;
-      this.seenPlayer = enemy.seenPlayer;
     }
     if (enemy instanceof ZombieEnemy) {
       this.type = EnemyType.ZOMBIE;
-      this.ticks = enemy.ticks;
-      this.seenPlayer = enemy.seenPlayer;
-      if (enemy.seenPlayer) {
-        this.targetPlayerID = Object.keys(game.players).find(
-          (key) => game.players[key] === enemy.targetPlayer,
-        );
-        if (!this.targetPlayerID)
-          this.targetPlayerID = Object.keys(game.offlinePlayers).find(
-            (key) => game.offlinePlayers[key] === enemy.targetPlayer,
-          );
-      }
     }
     if (enemy instanceof ArmoredSkullEnemy) this.type = EnemyType.ARMOREDSKULL;
     if (enemy instanceof ArmoredzombieEnemy)
@@ -560,17 +519,11 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   let enemy;
   let room =
     (es.roomGID && game.roomsById?.get(es.roomGID)) || game.rooms[es.roomID];
+
   if (es.type === EnemyType.BARREL) enemy = new Barrel(room, game, es.x, es.y);
   if (es.type === EnemyType.BIGSKULL) {
     enemy = new BigSkullEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
     enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
-    enemy.seenPlayer = es.seenPlayer;
-    if (es.seenPlayer) {
-      enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer)
-        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
-    }
     enemy.drops = [];
     for (const d of es.drops) {
       if (d) {
@@ -580,7 +533,6 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   }
   if (es.type === EnemyType.CHARGE) {
     enemy = new ChargeEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
     enemy.state = es.chargeEnemyState;
     enemy.startX = es.startX;
     enemy.startY = es.startY;
@@ -608,42 +560,19 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new GoldResource(room, game, es.x, es.y);
   if (es.type === EnemyType.KNIGHT) {
     enemy = new KnightEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
-    enemy.seenPlayer = es.seenPlayer;
-    if (es.seenPlayer) {
-      enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer)
-        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
-    }
   }
   if (es.type === EnemyType.PLANT)
     enemy = new PottedPlant(room, game, es.x, es.y);
   if (es.type === EnemyType.POT) enemy = new Pot(room, game, es.x, es.y);
   if (es.type === EnemyType.SKULL) {
     enemy = new SkullEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
     enemy.ticksSinceFirstHit = es.ticksSinceFirstHit;
-    enemy.seenPlayer = es.seenPlayer;
-    if (es.seenPlayer) {
-      enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer)
-        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
-    }
   }
   if (es.type === EnemyType.CRAB) {
     enemy = new CrabEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
-    enemy.seenPlayer = es.seenPlayer;
-    if (es.seenPlayer) {
-      enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer)
-        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
-    }
   }
   if (es.type === EnemyType.SPAWNER) {
     enemy = new Spawner(room, game, es.x, es.y, [es.enemySpawnType]);
-    enemy.ticks = es.ticks;
-    enemy.seenPlayer = es.seenPlayer;
     enemy.enemySpawnType = es.enemySpawnType;
   }
   if (es.type === EnemyType.VENDINGMACHINE) {
@@ -667,13 +596,6 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
 
   if (es.type === EnemyType.ZOMBIE) {
     enemy = new ZombieEnemy(room, game, es.x, es.y);
-    enemy.ticks = es.ticks;
-    enemy.seenPlayer = es.seenPlayer;
-    if (es.seenPlayer) {
-      enemy.targetPlayer = game.players[es.targetPlayerID];
-      if (!enemy.targetPlayer)
-        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
-    }
   }
   if (es.type === EnemyType.ARMOREDSKULL)
     enemy = new ArmoredSkullEnemy(room, game, es.x, es.y);
@@ -730,6 +652,21 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   if (es.type === EnemyType.OBSIDIAN)
     enemy = new ObsidianResource(room, game, es.x, es.y);
   if (es.type === EnemyType.PAWN) enemy = new PawnEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.BIGFROG)
+    enemy = new BigFrogEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.BEETLE)
+    enemy = new BeetleEnemy(room, game, es.x, es.y);
+
+  if (es.isEnemy) {
+    enemy.ticks = es.ticks;
+    enemy.seenPlayer = es.seenPlayer;
+    if (es.seenPlayer) {
+      enemy.targetPlayer = game.players[es.targetPlayerID];
+      if (!enemy.targetPlayer)
+        enemy.targetPlayer = game.offlinePlayers[es.targetPlayerID];
+    }
+  }
+
   if (!enemy) {
     console.error(
       "Unknown enemy type:",
@@ -759,6 +696,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   enemy.direction = es.direction;
   enemy.dead = es.dead;
   enemy.skipNextTurns = es.skipNextTurns;
+  enemy.rumbling = es.rumbling;
   // Restore destroyable so chests can be broken after opened
   if (typeof (es as any).destroyable === "boolean") {
     enemy.destroyable = (es as any).destroyable;
