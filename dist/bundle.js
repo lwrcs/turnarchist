@@ -20656,6 +20656,9 @@ class Game {
                 case "ladder":
                     this.pushMessage(`Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`);
                     break;
+                case "encounter":
+                    this.pushMessage("Encountering enemies..." + this.encounteredEnemies.length);
+                    break;
                 case "down":
                     let downladder;
                     for (const room of this.level.rooms) {
@@ -33858,10 +33861,7 @@ class LevelGenerator {
             else {
                 // Use procedural generation for side paths OR when PNG is disabled
                 if (isSidePath) {
-                    const mw = opts?.mapWidth ?? 50;
-                    const mh = opts?.mapHeight ?? 50;
-                    const caveRooms = opts?.caveRooms ?? 8;
-                    partitions = await this.partitionGenerator.generateCavePartitions(mw, mh, caveRooms);
+                    partitions = await this.partitionGenerator.generateCavePartitions(opts);
                 }
                 else {
                     partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
@@ -35018,16 +35018,20 @@ class PartitionGenerator {
         console.log("finished generation");
         return partialLevel.partitions;
     }
-    async generateCavePartitions(mapWidth, mapHeight, numberOfRooms = 8) {
+    async generateCavePartitions(opts) {
         const partialLevel = new PartialLevel();
         let validationResult;
         let attempts = 0;
+        const mapWidth = opts.mapWidth ?? 50;
+        const mapHeight = opts.mapHeight ?? 50;
+        const numRooms = opts.caveRooms ?? 8;
+        const linearity = opts.linearity ?? 0.5;
         this.visualizer.updateProgress("Starting cave generation", 0);
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
-            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numberOfRooms);
-            validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numberOfRooms);
+            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, linearity);
+            validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numRooms);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating cave", 0.8);
             // If validation fails, the loop will continue and regenerate
@@ -35111,7 +35115,7 @@ class PartitionGenerator {
             await this.addSpecialRooms(partialLevel);
         }
     }
-    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms) {
+    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, linearity = 0.5) {
         const CAVE_OFFSET = 100;
         partialLevel.partitions = [
             new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
@@ -35128,8 +35132,8 @@ class PartitionGenerator {
         for (let i = 1; i < partialLevel.partitions.length; i++) {
             partialLevel.partitions[i].type = room_1.RoomType.CAVE;
         }
-        await this.connectCavePartitions(partialLevel, spawn, num_rooms);
-        await this.addCaveLoops(partialLevel);
+        await this.connectCavePartitions(partialLevel, spawn, num_rooms, linearity);
+        await this.addCaveLoops(partialLevel, linearity);
         await this.calculateDistances(partialLevel, spawn);
     }
     async splitPartitions(partitions, prob) {
@@ -35277,14 +35281,19 @@ class PartitionGenerator {
             }
         }
     }
-    async connectCavePartitions(partialLevel, spawn, num_rooms) {
+    async connectCavePartitions(partialLevel, spawn, num_rooms, linearity = 0.5) {
         let connected = [spawn];
         let frontier = [spawn];
         while (frontier.length > 0 && connected.length < num_rooms) {
             let room = frontier[0];
             frontier.splice(0, 1);
             let doors_found = 0;
-            const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+            // linearly map linearity -> probability of a second door
+            // linearity 0.5 => p(second door)=0.5 (current behavior)
+            // linearity 1.0 => p(second door)=0 (no branching)
+            // linearity 0.0 => p(second door)=1 (max branching)
+            const pSecondDoor = Math.max(0, Math.min(1, 1 - linearity));
+            const num_doors = 1 + (random_1.Random.rand() < pSecondDoor ? 1 : 0);
             let tries = 0;
             const max_tries = 1000;
             while (doors_found < num_doors &&
@@ -35354,12 +35363,12 @@ class PartitionGenerator {
             }
         }
     }
-    async addCaveLoops(partialLevel) {
+    async addCaveLoops(partialLevel, linearity = 0.5) {
         // Check if we have any partitions to work with
         if (partialLevel.partitions.length === 0) {
             return;
         }
-        let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+        let num_loop_doors = Math.floor((random_1.Random.rand() * 4 + 4) * (1 - linearity));
         for (let i = 0; i < num_loop_doors; i++) {
             // Double-check array length in case partitions were removed during iteration
             if (partialLevel.partitions.length === 0) {
@@ -43631,6 +43640,7 @@ class Populator {
             for (let room of this.level.rooms) {
                 this.populate(room, random_1.Random.rand);
             }
+            //this.addTrainingDownladder({ caveRooms: 25, linearity: 1 });
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
                     room.type === room_1.RoomType.DOWNLADDER ||
@@ -43687,6 +43697,25 @@ class Populator {
                     this.populateDefaultEnvironment(room);
                     break;
             }
+        };
+        this.addTrainingDownladder = (opts) => {
+            if (this.level.depth !== 0)
+                return;
+            const room = this.level.rooms.find((room) => room.type === room_1.RoomType.START);
+            if (!room)
+                return;
+            const validTiles = room.getEmptyTilesNotBlockingDoors();
+            if (validTiles.length === 0) {
+                console.warn("No valid positions for training downladder that don't block doors");
+                return;
+            }
+            const position = room.getRandomEmptyPosition(validTiles);
+            if (position === null ||
+                position.x === undefined ||
+                position.y === undefined)
+                return;
+            const dl = new downLadder_1.DownLadder(room, this.level.game, position.x, position.y, true, environmentTypes_1.EnvType.DUNGEON, lockable_1.LockType.NONE, opts, { lockType: lockable_1.LockType.NONE });
+            room.roomArray[position.x][position.y] = dl;
         };
         this.addDownladder = (opts) => {
             const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&

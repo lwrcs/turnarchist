@@ -5,6 +5,7 @@ import { LevelParameters } from "./levelParametersGenerator";
 import { GameConstants } from "../game/gameConstants";
 import { LevelValidator, ValidationResult } from "./levelValidator";
 import { GenerationVisualizer } from "./generationVisualizer";
+import { SidePathOptions } from "./sidePathManager";
 
 export enum PathType {
   MAIN_PATH, // Has exit room (current dungeon)
@@ -263,14 +264,14 @@ export class PartitionGenerator {
     return partialLevel.partitions;
   }
 
-  async generateCavePartitions(
-    mapWidth: number,
-    mapHeight: number,
-    numberOfRooms: number = 8,
-  ): Promise<Partition[]> {
+  async generateCavePartitions(opts: SidePathOptions): Promise<Partition[]> {
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
     let attempts = 0;
+    const mapWidth = opts.mapWidth ?? 50;
+    const mapHeight = opts.mapHeight ?? 50;
+    const numRooms = opts.caveRooms ?? 8;
+    const linearity = opts.linearity ?? 0.5;
 
     this.visualizer.updateProgress("Starting cave generation", 0);
 
@@ -285,12 +286,13 @@ export class PartitionGenerator {
         partialLevel,
         mapWidth,
         mapHeight,
-        numberOfRooms,
+        numRooms,
+        linearity,
       );
 
       validationResult = this.validator.validateCavePartitions(
         partialLevel.partitions,
-        numberOfRooms,
+        numRooms,
       );
 
       // Update visualization state
@@ -453,6 +455,7 @@ export class PartitionGenerator {
     map_w: number,
     map_h: number,
     num_rooms: number,
+    linearity: number = 0.5,
   ) {
     const CAVE_OFFSET = 100;
     partialLevel.partitions = [
@@ -478,8 +481,8 @@ export class PartitionGenerator {
       partialLevel.partitions[i].type = RoomType.CAVE;
     }
 
-    await this.connectCavePartitions(partialLevel, spawn, num_rooms);
-    await this.addCaveLoops(partialLevel);
+    await this.connectCavePartitions(partialLevel, spawn, num_rooms, linearity);
+    await this.addCaveLoops(partialLevel, linearity);
     await this.calculateDistances(partialLevel, spawn);
   }
 
@@ -671,6 +674,7 @@ export class PartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
     num_rooms: number,
+    linearity: number = 0.5,
   ) {
     let connected = [spawn];
     let frontier = [spawn];
@@ -680,7 +684,12 @@ export class PartitionGenerator {
       frontier.splice(0, 1);
 
       let doors_found = 0;
-      const num_doors = Math.floor(Random.rand() * 2 + 1);
+      // linearly map linearity -> probability of a second door
+      // linearity 0.5 => p(second door)=0.5 (current behavior)
+      // linearity 1.0 => p(second door)=0 (no branching)
+      // linearity 0.0 => p(second door)=1 (max branching)
+      const pSecondDoor = Math.max(0, Math.min(1, 1 - linearity));
+      const num_doors = 1 + (Random.rand() < pSecondDoor ? 1 : 0);
       let tries = 0;
       const max_tries = 1000;
 
@@ -774,13 +783,16 @@ export class PartitionGenerator {
     }
   }
 
-  private async addCaveLoops(partialLevel: PartialLevel) {
+  private async addCaveLoops(
+    partialLevel: PartialLevel,
+    linearity: number = 0.5,
+  ) {
     // Check if we have any partitions to work with
     if (partialLevel.partitions.length === 0) {
       return;
     }
 
-    let num_loop_doors = Math.floor(Random.rand() * 4 + 4);
+    let num_loop_doors = Math.floor((Random.rand() * 4 + 4) * (1 - linearity));
     for (let i = 0; i < num_loop_doors; i++) {
       // Double-check array length in case partitions were removed during iteration
       if (partialLevel.partitions.length === 0) {

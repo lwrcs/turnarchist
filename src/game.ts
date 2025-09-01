@@ -969,6 +969,11 @@ export class Game {
           `Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`,
         );
         break;
+      case "encounter":
+        this.pushMessage(
+          "Encountering enemies..." + this.encounteredEnemies.length,
+        );
+        break;
       case "down":
         let downladder: DownLadder;
         for (const room of this.level.rooms) {

@@ -3,6 +3,16 @@ import type { Room } from "../room/room";
 import { UpLadder } from "../tile/upLadder";
 import type { DownLadder } from "../tile/downLadder";
 import { statsTracker } from "../game/stats";
+import { EnvType } from "../constants/environmentTypes";
+
+export interface SidePathOptions {
+  caveRooms?: number;
+  mapWidth?: number;
+  mapHeight?: number;
+  locked?: boolean;
+  envType?: EnvType;
+  linearity?: number;
+}
 
 /**
  * Centralized manager for creating and wiring up sidepaths (rope caves).

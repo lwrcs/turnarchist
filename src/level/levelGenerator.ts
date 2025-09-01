@@ -23,6 +23,7 @@ import { LevelValidator, ValidationResult } from "./levelValidator";
 import { GenerationVisualizer } from "./generationVisualizer";
 import { PngPartitionGenerator } from "./pngPartitionGenerator";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { SidePathOptions } from "./sidePathManager";
 
 export class LevelGenerator {
   game: Game;
@@ -152,7 +153,7 @@ export class LevelGenerator {
     environment: EnvType = EnvType.DUNGEON,
     skipPopulation = false, // Add this parameter
     pathId?: string,
-    opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number },
+    opts?: SidePathOptions,
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -230,14 +231,7 @@ export class LevelGenerator {
     } else {
       // Use procedural generation for side paths OR when PNG is disabled
       if (isSidePath) {
-        const mw = opts?.mapWidth ?? 50;
-        const mh = opts?.mapHeight ?? 50;
-        const caveRooms = opts?.caveRooms ?? 8;
-        partitions = await this.partitionGenerator.generateCavePartitions(
-          mw,
-          mh,
-          caveRooms,
-        );
+        partitions = await this.partitionGenerator.generateCavePartitions(opts);
       } else {
         partitions = await this.partitionGenerator.generateDungeonPartitions(
           game,

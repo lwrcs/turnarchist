@@ -78,6 +78,7 @@ import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
+import { SidePathOptions } from "../level/sidePathManager";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -112,6 +113,8 @@ export class Populator {
     for (let room of this.level.rooms) {
       this.populate(room, Random.rand);
     }
+
+    //this.addTrainingDownladder({ caveRooms: 25, linearity: 1 });
 
     this.level.rooms.forEach((room) => {
       if (
@@ -180,13 +183,41 @@ export class Populator {
     }
   };
 
-  addDownladder = (opts?: {
-    caveRooms?: number;
-    mapWidth?: number;
-    mapHeight?: number;
-    locked?: boolean; // explicitly lock or unlock the downladder
-    envType?: EnvType;
-  }) => {
+  addTrainingDownladder = (opts: SidePathOptions) => {
+    if (this.level.depth !== 0) return;
+    const room = this.level.rooms.find((room) => room.type === RoomType.START);
+    if (!room) return;
+    const validTiles = room.getEmptyTilesNotBlockingDoors();
+    if (validTiles.length === 0) {
+      console.warn(
+        "No valid positions for training downladder that don't block doors",
+      );
+      return;
+    }
+    const position = room.getRandomEmptyPosition(validTiles);
+    if (
+      position === null ||
+      position.x === undefined ||
+      position.y === undefined
+    )
+      return;
+
+    const dl = new DownLadder(
+      room,
+      this.level.game,
+      position.x,
+      position.y,
+      true,
+      EnvType.DUNGEON,
+      LockType.NONE,
+      opts,
+      { lockType: LockType.NONE },
+    );
+
+    room.roomArray[position.x][position.y] = dl;
+  };
+
+  addDownladder = (opts: SidePathOptions) => {
     const rooms = this.level.rooms.filter(
       (room) =>
         room.type !== RoomType.START &&

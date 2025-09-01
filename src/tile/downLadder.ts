@@ -13,7 +13,7 @@ import { LightSource } from "../lighting/lightSource";
 import { Lockable, LockType } from "./lockable";
 import { Key } from "../item/key";
 import { Passageway } from "./passageway";
-import { SidePathManager } from "../level/sidePathManager";
+import { SidePathManager, SidePathOptions } from "../level/sidePathManager";
 
 export class DownLadder extends Passageway {
   linkedRoom: Room;
@@ -21,7 +21,7 @@ export class DownLadder extends Passageway {
   depth: number;
   environment: EnvType;
   lockable: Lockable;
-  opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number };
+  opts?: SidePathOptions;
   entryUpLadderPos?: { x: number; y: number };
   private sidePathManager: SidePathManager;
 
@@ -33,7 +33,7 @@ export class DownLadder extends Passageway {
     isSidePath: boolean = false,
     environment: EnvType = EnvType.DUNGEON,
     lockType: LockType = LockType.NONE,
-    opts?: { caveRooms?: number; mapWidth?: number; mapHeight?: number },
+    opts?: SidePathOptions,
     lockStateOverride?: { lockType: LockType; keyID?: number },
   ) {
     super(room, game, x, y);
@@ -43,6 +43,7 @@ export class DownLadder extends Passageway {
     this.environment = environment;
     this.opts = opts;
     this.sidePathManager = new SidePathManager(game);
+
     // Determine effective lock based on save override, generator intent, or explicit param
     const effectiveLockType = lockStateOverride
       ? lockStateOverride.lockType
