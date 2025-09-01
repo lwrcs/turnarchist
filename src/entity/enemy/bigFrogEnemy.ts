@@ -55,6 +55,7 @@ export class BigFrogEnemy extends Enemy {
     this.jumpHeight = 1;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
+    this.canDestroyOthers = true;
     if (drop) this.drop = drop;
     this.h = 2;
     this.w = 2;
@@ -94,7 +95,7 @@ export class BigFrogEnemy extends Enemy {
             let disablePositions = Array<astar.Position>();
 
             for (const e of this.room.entities) {
-              if (e !== this) {
+              if (e !== this && !e.destroyable) {
                 // Block all tiles occupied by entities (supports multi-tile entities)
                 for (let ex = 0; ex < (e.w || 1); ex++) {
                   for (let ey = 0; ey < (e.h || 1); ey++) {
@@ -159,7 +160,7 @@ export class BigFrogEnemy extends Enemy {
                     return false;
                   // prevent entity overlap
                   for (const e of this.room.entities) {
-                    if (e !== this) {
+                    if (e !== this && !e.destroyable) {
                       if (
                         !(
                           e.x >= tx + w ||

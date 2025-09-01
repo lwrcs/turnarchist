@@ -33,6 +33,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { Coin } from "../item/coin";
 import { Random } from "../utility/random";
 import { XPPopup } from "../particle/xpPopup";
+import { Tile } from "src/tile/tile";
 
 export enum EntityDirection {
   DOWN,
@@ -150,6 +151,7 @@ export class Entity extends Drawable {
   justHurt: boolean = false;
   stunned: boolean = false;
   collidable: boolean = true;
+  canDestroyOthers: boolean = false;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -230,6 +232,7 @@ export class Entity extends Drawable {
     this.moving = false;
     this.dropTable = [];
     this.drops = [];
+    this.canDestroyOthers = false;
     if (this.drop) this.drops.push(this.drop);
   }
 
@@ -439,16 +442,32 @@ export class Entity extends Drawable {
   };
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {
+    const canDestroyOthers = this.canDestroyOthers;
     let pointWouldBeIn = (someX: number, someY: number): boolean => {
       return (
         someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
       );
     };
+
     let entityCollide = (entity: Entity): boolean => {
-      if (entity.x >= x + this.w || entity.x + entity.w <= x) return false;
-      if (entity.y >= y + this.h || entity.y + entity.h <= y) return false;
-      return true;
+      let flag = true;
+      if (entity.x >= x + this.w || entity.x + entity.w <= x) flag = false;
+      if (entity.y >= y + this.h || entity.y + entity.h <= y) flag = false;
+      if (
+        canDestroyOthers &&
+        entity.destroyable &&
+        entity.w <= 1 &&
+        entity.h <= 1 &&
+        flag === true
+      ) {
+        entity.hurt(this as any, entity.health);
+
+        flag = false;
+      }
+
+      return flag;
     };
+
     for (const e of this.room.entities) {
       if (e !== this && entityCollide(e) && collide) {
         return;
@@ -459,7 +478,7 @@ export class Entity extends Drawable {
         return;
       }
     }
-    let tiles = [];
+    let tiles: Tile[] = [];
     for (let xx = 0; xx < this.w; xx++) {
       for (let yy = 0; yy < this.h; yy++) {
         if (

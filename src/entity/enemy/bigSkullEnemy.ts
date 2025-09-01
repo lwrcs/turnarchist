@@ -58,6 +58,7 @@ export class BigSkullEnemy extends Enemy {
     this.forwardOnlyAttack = true;
     this.alertRange = 10;
     this.drawMoveSpeed = 0.9;
+    this.canDestroyOthers = true;
     if (drop) this.drops.push(drop);
     const dropAmount = Math.floor(Random.rand() * 3) + 2;
     while (this.drops.length < dropAmount && !this.cloned) {
@@ -105,61 +106,6 @@ export class BigSkullEnemy extends Enemy {
       ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 0, 24);
       this.kill();
     } else this.hurtCallback();
-  };
-
-  readonly tryMove = (x: number, y: number, collide: boolean = true) => {
-    let pointWouldBeIn = (someX: number, someY: number): boolean => {
-      return (
-        someX >= x && someX < x + this.w && someY >= y && someY < y + this.h
-      );
-    };
-    let entityCollide = (entity: Entity): boolean => {
-      if (entity.x >= x + this.w || entity.x + entity.w <= x) {
-        return false;
-      }
-      if (entity.y >= y + this.h || entity.y + entity.h <= y) {
-        return false;
-      }
-      if (entity.destroyable && (entity.w <= 1 || entity.h <= 1)) {
-        entity.hurt(this as any, entity.health);
-        return false;
-      }
-      return true;
-    };
-    for (const e of this.room.entities) {
-      if (e !== this && entityCollide(e) && collide) {
-        return;
-      }
-    }
-    for (const i in this.game.players) {
-      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
-        return;
-      }
-    }
-    let tiles = [];
-    for (let xx = 0; xx < this.w; xx++) {
-      for (let yy = 0; yy < this.h; yy++) {
-        if (
-          !this.room.roomArray[x + xx][y + yy].isSolid() &&
-          !(this.room.roomArray[x + xx][y + yy] instanceof Door) &&
-          !(this.room.roomArray[x + xx][y + yy] instanceof DownLadder)
-        ) {
-          tiles.push(this.room.roomArray[x + xx][y + yy]);
-        } else {
-          return;
-        }
-      }
-    }
-    for (let tile of tiles) {
-      tile.onCollideEnemy(this);
-    }
-    this.x = x;
-    this.y = y;
-    if (this.w > 1 || this.h > 1) {
-      setTimeout(() => {
-        this.game.shakeScreen(0 * this.drawX, 5);
-      }, 300);
-    }
   };
 
   behavior = () => {

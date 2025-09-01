@@ -10215,7 +10215,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                             let oldY = this.y;
                             let disablePositions = Array();
                             for (const e of this.room.entities) {
-                                if (e !== this) {
+                                if (e !== this && !e.destroyable) {
                                     // Block all tiles occupied by entities (supports multi-tile entities)
                                     for (let ex = 0; ex < (e.w || 1); ex++) {
                                         for (let ey = 0; ey < (e.h || 1); ey++) {
@@ -10266,7 +10266,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                             return false;
                                         // prevent entity overlap
                                         for (const e of this.room.entities) {
-                                            if (e !== this) {
+                                            if (e !== this && !e.destroyable) {
                                                 if (!(e.x >= tx + w ||
                                                     e.x + (e.w || 1) <= tx ||
                                                     e.y >= ty + h ||
@@ -10657,6 +10657,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
         this.jumpHeight = 1;
         this.imageParticleX = 3;
         this.imageParticleY = 30;
+        this.canDestroyOthers = true;
         if (drop)
             this.drop = drop;
         this.h = 2;
@@ -10935,8 +10936,6 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
-const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
-const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 class BigSkullEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -10977,57 +10976,6 @@ class BigSkullEnemy extends enemy_1.Enemy {
             }
             else
                 this.hurtCallback();
-        };
-        this.tryMove = (x, y, collide = true) => {
-            let pointWouldBeIn = (someX, someY) => {
-                return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
-            };
-            let entityCollide = (entity) => {
-                if (entity.x >= x + this.w || entity.x + entity.w <= x) {
-                    return false;
-                }
-                if (entity.y >= y + this.h || entity.y + entity.h <= y) {
-                    return false;
-                }
-                if (entity.destroyable && (entity.w <= 1 || entity.h <= 1)) {
-                    entity.hurt(this, entity.health);
-                    return false;
-                }
-                return true;
-            };
-            for (const e of this.room.entities) {
-                if (e !== this && entityCollide(e) && collide) {
-                    return;
-                }
-            }
-            for (const i in this.game.players) {
-                if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
-                    return;
-                }
-            }
-            let tiles = [];
-            for (let xx = 0; xx < this.w; xx++) {
-                for (let yy = 0; yy < this.h; yy++) {
-                    if (!this.room.roomArray[x + xx][y + yy].isSolid() &&
-                        !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door) &&
-                        !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder)) {
-                        tiles.push(this.room.roomArray[x + xx][y + yy]);
-                    }
-                    else {
-                        return;
-                    }
-                }
-            }
-            for (let tile of tiles) {
-                tile.onCollideEnemy(this);
-            }
-            this.x = x;
-            this.y = y;
-            if (this.w > 1 || this.h > 1) {
-                setTimeout(() => {
-                    this.game.shakeScreen(0 * this.drawX, 5);
-                }, 300);
-            }
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -11315,6 +11263,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         this.alertRange = 10;
         this.drawMoveSpeed = 0.9;
+        this.canDestroyOthers = true;
         if (drop)
             this.drops.push(drop);
         const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
@@ -11625,6 +11574,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.jumpHeight = 0.35;
         this.drawYOffset = 1.5;
         this.alertRange = 10;
+        this.canDestroyOthers = true;
         if (drop)
             this.drop = drop;
         const dropAmount = Math.floor(random_1.Random.rand() * 3) + 2;
@@ -17153,6 +17103,7 @@ class Entity extends drawable_1.Drawable {
         this.justHurt = false;
         this.stunned = false;
         this.collidable = true;
+        this.canDestroyOthers = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -17246,15 +17197,25 @@ class Entity extends drawable_1.Drawable {
             this.drawY += this.y - y;
         };
         this.tryMove = (x, y, collide = true) => {
+            const canDestroyOthers = this.canDestroyOthers;
             let pointWouldBeIn = (someX, someY) => {
                 return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
             };
             let entityCollide = (entity) => {
+                let flag = true;
                 if (entity.x >= x + this.w || entity.x + entity.w <= x)
-                    return false;
+                    flag = false;
                 if (entity.y >= y + this.h || entity.y + entity.h <= y)
-                    return false;
-                return true;
+                    flag = false;
+                if (canDestroyOthers &&
+                    entity.destroyable &&
+                    entity.w <= 1 &&
+                    entity.h <= 1 &&
+                    flag === true) {
+                    entity.hurt(this, entity.health);
+                    flag = false;
+                }
+                return flag;
             };
             for (const e of this.room.entities) {
                 if (e !== this && entityCollide(e) && collide) {
@@ -18111,6 +18072,7 @@ class Entity extends drawable_1.Drawable {
         this.moving = false;
         this.dropTable = [];
         this.drops = [];
+        this.canDestroyOthers = false;
         if (this.drop)
             this.drops.push(this.drop);
     }

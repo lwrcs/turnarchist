@@ -52,6 +52,7 @@ export class BigZombieEnemy extends Enemy {
     this.jumpHeight = 0.35;
     this.drawYOffset = 1.5;
     this.alertRange = 10;
+    this.canDestroyOthers = true;
 
     if (drop) this.drop = drop;
     const dropAmount = Math.floor(Random.rand() * 3) + 2;
