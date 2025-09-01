@@ -3361,24 +3361,6 @@ export class Room {
     return null;
   };
 
-  static getRoomFurthestFromUpLadder = (rooms: Room[]): Room | null => {
-    let furthestRoom: Room | null = null;
-    let furthestDistance = 0;
-
-    for (const room of rooms) {
-      const distance = room.getDistanceToNearestUpLadder();
-      if (distance && distance > furthestDistance) {
-        furthestDistance = distance;
-        furthestRoom = room;
-      }
-    }
-    return furthestRoom;
-  };
-
-  isFurthestFromUpLadder = (): boolean => {
-    return this === Room.getRoomFurthestFromUpLadder(this.level.rooms);
-  };
-
   hasNoEnemies = () => {
     let enemies = this.entities.filter((e) => e instanceof Enemy);
     const cleared = enemies.length === 0 && this.lastEnemyCount > 0;

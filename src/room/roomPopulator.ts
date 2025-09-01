@@ -79,6 +79,7 @@ import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
 import { SidePathOptions } from "../level/sidePathManager";
+import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -129,6 +130,11 @@ export class Populator {
       this.populateByEnvironment(room);
     });
 
+    const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
+    if (furthestFromUpLadder) {
+      this.populateBoss(furthestFromUpLadder, Random.rand);
+    }
+
     // calculate a base room number based on depth
     const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
     // find the difference between the base total rooms and the number of rooms in the level
@@ -141,6 +147,7 @@ export class Populator {
       this.addDownladder({
         caveRooms: numRooms,
         locked: true,
+        linearity: 1,
       });
     }
 
@@ -229,7 +236,7 @@ export class Populator {
 
     const downLadderRoom = this.level.isMainPath
       ? rooms[Math.floor(Random.rand() * rooms.length)]
-      : Room.getRoomFurthestFromUpLadder(rooms);
+      : this.level.getFurthestFromUpLadder();
 
     console.log(
       `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
@@ -369,7 +376,7 @@ export class Populator {
     });
 
     // ADD: Enemies after props, based on remaining space
-    this.addRandomEnemies(room, GameplaySettings.FOREST_ENEMY_REDUCTION);
+    this.addRandomEnemies(room);
   }
 
   private populateMagmaCaveEnvironment(room: Room) {
@@ -814,6 +821,9 @@ export class Populator {
         tiles = tiles.filter((t) => !(t.x === x && t.y === y));
       }
     }
+    console.log(
+      `Spawned ${numEnemies} enemies from pool for total empty tiles ${tiles.length}`,
+    );
   }
 
   /**
@@ -1094,11 +1104,20 @@ export class Populator {
       return;
     }
     if (!GameplaySettings.PRESET_BOSSES) {
-      let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
+      let bosses = [
+        "reaper",
+        "queen",
+        "bigskullenemy",
+        "bigzombieenemy",
+        "bigfrogenemy",
+      ];
 
       if (depth > 0) {
         bosses.push("occultist");
         bosses = bosses.filter((b) => b !== "queen");
+      }
+      if (room.envType === EnvType.FOREST) {
+        bosses.push("bigfrogenemy");
       }
       if (depth > 4) {
         bosses.push("warden");
@@ -1163,6 +1182,16 @@ export class Populator {
           const warden = WardenEnemy.add(room, room.game, x, y);
           warden.dropTable = ["weapon", "equipment"];
           warden.dropChance = 1;
+          break;
+        case "bigfrogenemy":
+          const bigFrog = BigFrogEnemy.add(room, room.game, x, y);
+          bigFrog.dropTable = [
+            "weapon",
+            "equipment",
+            "consumable",
+            "gem",
+            "tool",
+          ];
           break;
       }
     } else {
@@ -1431,7 +1460,7 @@ export class Populator {
     let numEnemies = Math.ceil(
       numEmptyTiles * Game.randTable([0.25, 0.3, 0.35], rand),
     );
-    this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
+    //this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
     if (room.level.environment.type === EnvType.CAVE)
       this.addResources(
         room,
@@ -1600,7 +1629,7 @@ export class Populator {
       high: [1, 1, 2, 2, 3, 3, 4],
     };
     const randWindows = Game.randTable(windowPatterns[intensity], Random.rand);
-    this.addWindows(room, randWindows, Random.rand);
+    //this.addWindows(room, randWindows, Random.rand);
   }
 
   private addTorchesByArea = (room: Room) => {
@@ -1646,7 +1675,7 @@ export class Populator {
       }
     }
 
-    this.addWindows(room, numWindows, Random.rand);
+    //this.addWindows(room, numWindows, Random.rand);
   };
 
   /**

@@ -24765,7 +24765,7 @@ GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spa
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
-GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.02; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
@@ -33543,6 +33543,18 @@ class Level {
                 }
             }
         };
+        this.getFurthestFromUpLadder = () => {
+            let furthestRoom = null;
+            let furthestDistance = 0;
+            for (const room of this.rooms) {
+                const distance = room.getDistanceToNearestUpLadder();
+                if (distance && distance > furthestDistance) {
+                    furthestDistance = distance;
+                    furthestRoom = room;
+                }
+            }
+            return furthestRoom;
+        };
         this.loadRoomsIntoLevelArray = () => {
             for (let room of this.rooms) {
                 for (let x = room.roomX; x < room.roomX + room.width; x++) {
@@ -42257,9 +42269,6 @@ class Room {
             }
             return null;
         };
-        this.isFurthestFromUpLadder = () => {
-            return this === Room.getRoomFurthestFromUpLadder(this.level.rooms);
-        };
         this.hasNoEnemies = () => {
             let enemies = this.entities.filter((e) => e instanceof enemy_1.Enemy);
             const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
@@ -43408,18 +43417,6 @@ class Room {
     }
 }
 exports.Room = Room;
-Room.getRoomFurthestFromUpLadder = (rooms) => {
-    let furthestRoom = null;
-    let furthestDistance = 0;
-    for (const room of rooms) {
-        const distance = room.getDistanceToNearestUpLadder();
-        if (distance && distance > furthestDistance) {
-            furthestDistance = distance;
-            furthestRoom = room;
-        }
-    }
-    return furthestRoom;
-};
 
 
 /***/ }),
@@ -43621,6 +43618,7 @@ const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -43650,6 +43648,10 @@ class Populator {
                     return;
                 this.populateByEnvironment(room);
             });
+            const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
+            if (furthestFromUpLadder) {
+                this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
+            }
             // calculate a base room number based on depth
             const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
             // find the difference between the base total rooms and the number of rooms in the level
@@ -43661,6 +43663,7 @@ class Populator {
                 this.addDownladder({
                     caveRooms: numRooms,
                     locked: true,
+                    linearity: 1,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
@@ -43725,7 +43728,7 @@ class Populator {
                 room.type !== room_1.RoomType.BOSS);
             const downLadderRoom = this.level.isMainPath
                 ? rooms[Math.floor(random_1.Random.rand() * rooms.length)]
-                : room_1.Room.getRoomFurthestFromUpLadder(rooms);
+                : this.level.getFurthestFromUpLadder();
             console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -43825,7 +43828,7 @@ class Populator {
             // Removed: if (factor > 15) this.addSpikeTraps(...);
             let numEmptyTiles = room.getEmptyTiles().length;
             let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
-            this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
+            //this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
             if (room.level.environment.type === environmentTypes_1.EnvType.CAVE)
                 this.addResources(room, (numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
             room.removeDoorObstructions();
@@ -43971,7 +43974,7 @@ class Populator {
                     numWindows = 0;
                 }
             }
-            this.addWindows(room, numWindows, random_1.Random.rand);
+            //this.addWindows(room, numWindows, Random.rand);
         };
         this.populate = (room, rand) => {
             room.name = "";
@@ -44112,7 +44115,7 @@ class Populator {
             useSeedPosition: false,
         });
         // ADD: Enemies after props, based on remaining space
-        this.addRandomEnemies(room, gameplaySettings_1.GameplaySettings.FOREST_ENEMY_REDUCTION);
+        this.addRandomEnemies(room);
     }
     populateMagmaCaveEnvironment(room) {
         const numProps = this.getNumProps(room);
@@ -44456,6 +44459,7 @@ class Populator {
                 tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
+        console.log(`Spawned ${numEnemies} enemies from pool for total empty tiles ${tiles.length}`);
     }
     /**
      * Add special enemies (spawners, occultists) - extracted for clarity
@@ -44657,10 +44661,19 @@ class Populator {
             return;
         }
         if (!gameplaySettings_1.GameplaySettings.PRESET_BOSSES) {
-            let bosses = ["reaper", "queen", "bigskullenemy", "bigzombieenemy"];
+            let bosses = [
+                "reaper",
+                "queen",
+                "bigskullenemy",
+                "bigzombieenemy",
+                "bigfrogenemy",
+            ];
             if (depth > 0) {
                 bosses.push("occultist");
                 bosses = bosses.filter((b) => b !== "queen");
+            }
+            if (room.envType === environmentTypes_1.EnvType.FOREST) {
+                bosses.push("bigfrogenemy");
             }
             if (depth > 4) {
                 bosses.push("warden");
@@ -44717,6 +44730,16 @@ class Populator {
                     const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
                     warden.dropTable = ["weapon", "equipment"];
                     warden.dropChance = 1;
+                    break;
+                case "bigfrogenemy":
+                    const bigFrog = bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, x, y);
+                    bigFrog.dropTable = [
+                        "weapon",
+                        "equipment",
+                        "consumable",
+                        "gem",
+                        "tool",
+                    ];
                     break;
             }
         }
@@ -44894,7 +44917,7 @@ class Populator {
             high: [1, 1, 2, 2, 3, 3, 4],
         };
         const randWindows = game_1.Game.randTable(windowPatterns[intensity], random_1.Random.rand);
-        this.addWindows(room, randWindows, random_1.Random.rand);
+        //this.addWindows(room, randWindows, Random.rand);
     }
     /**
      * Centralized method to add torches, spikes, and pools based on room type

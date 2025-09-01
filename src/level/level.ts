@@ -240,6 +240,20 @@ export class Level {
     }
   };
 
+  getFurthestFromUpLadder = (): Room | null => {
+    let furthestRoom: Room | null = null;
+    let furthestDistance = 0;
+
+    for (const room of this.rooms) {
+      const distance = room.getDistanceToNearestUpLadder();
+      if (distance && distance > furthestDistance) {
+        furthestDistance = distance;
+        furthestRoom = room;
+      }
+    }
+    return furthestRoom;
+  };
+
   loadRoomsIntoLevelArray = () => {
     for (let room of this.rooms) {
       for (let x = room.roomX; x < room.roomX + room.width; x++) {
