@@ -66,7 +66,7 @@ export class BigFrogEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 0.5;
+    return 1;
   };
 
   behavior = () => {

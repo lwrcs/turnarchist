@@ -10185,7 +10185,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return 1;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -14383,9 +14383,9 @@ class MummyEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 2;
-        this.maxHealth = 2;
-        this.defaultMaxHealth = 2;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 17;
         this.tileY = 16;
         this.seenPlayer = false;
@@ -15519,8 +15519,12 @@ const armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./sr
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ./spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ./mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
+const pawnEnemy_1 = __webpack_require__(/*! ./pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
+const beetleEnemy_1 = __webpack_require__(/*! ./beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 class Spawner extends enemy_1.Enemy {
-    constructor(room, game, x, y, enemyTable = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16]) {
+    constructor(room, game, x, y, enemyTable = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
+    ]) {
         super(room, game, x, y);
         this.hit = () => {
             return 1;
@@ -15567,6 +15571,9 @@ class Spawner extends enemy_1.Enemy {
                         const position = game_1.Game.randTable(positions, random_1.Random.rand);
                         let spawned;
                         switch (this.enemySpawnType) {
+                            case 0:
+                                spawned = new pawnEnemy_1.PawnEnemy(this.room, this.game, position.x, position.y);
+                                break;
                             case 1:
                                 spawned = new crabEnemy_1.CrabEnemy(this.room, this.game, position.x, position.y);
                                 break;
@@ -15640,6 +15647,9 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 18:
                                 spawned = new mummyEnemy_1.MummyEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 19:
+                                spawned = new beetleEnemy_1.BeetleEnemy(this.room, this.game, position.x, position.y);
                                 break;
                         }
                         this.setSpawnFrequency(spawned.maxHealth);
@@ -15745,6 +15755,7 @@ class Spawner extends enemy_1.Enemy {
             break;
         }*/
         this.name = "reaper";
+        console.log("spawner created spawner type", this.enemySpawnType);
     }
 }
 exports.Spawner = Spawner;
@@ -32807,6 +32818,7 @@ const mummyEnemy_1 = __webpack_require__(/*! ../entity/enemy/mummyEnemy */ "./sr
 const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -32827,6 +32839,7 @@ exports.enemyClassToId = new Map([
     [mummyEnemy_1.MummyEnemy, 16],
     [spiderEnemy_1.SpiderEnemy, 17],
     [pawnEnemy_1.PawnEnemy, 18],
+    [bigFrogEnemy_1.BigFrogEnemy, 19],
 ]);
 class Environment {
     constructor(type) {
@@ -32893,6 +32906,13 @@ const environmentData = {
             },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
+            {
+                class: bigFrogEnemy_1.BigFrogEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
         ],
     },
     [environmentTypes_1.EnvType.CAVE]: {
@@ -32953,7 +32973,14 @@ const environmentData = {
             { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 0 },
             // Rare magical forest creatures
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
+            //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
+            {
+                class: bigFrogEnemy_1.BigFrogEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
         ],
     },
     [environmentTypes_1.EnvType.DESERT]: {
@@ -33039,9 +33066,9 @@ const environmentData = {
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
             },
-            { class: pawnEnemy_1.PawnEnemy, weight: 1, minDepth: 0 },
-            { class: rookEnemy_1.RookEnemy, weight: 1.25, minDepth: 0 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 1.5, minDepth: 0 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
+            { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
             // Castle undead
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.25, minDepth: 0 },
@@ -43630,6 +43657,7 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.MAGMA_CAVE,
+                    linearity: 1,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
@@ -43637,6 +43665,15 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.CASTLE,
+                    linearity: 0.75,
+                });
+            }
+            if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
+                this.addDownladder({
+                    caveRooms: this.numRooms(),
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.DARK_CASTLE,
+                    linearity: 0,
                 });
             }
             //this.level.distributeKeys();
@@ -44414,7 +44451,7 @@ class Populator {
                 const enemy = new selectedEnemy.class(room, room.game, x, y, ...args);
                 if (this.canPlaceBigEnemy(room, enemy, x, y, tiles)) {
                     room.entities.push(enemy);
-                    this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h);
+                    this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h, enemy);
                     this.removeTilesForEnemy(tiles, x, y, enemy.w, enemy.h);
                 }
                 else {
@@ -44508,9 +44545,18 @@ class Populator {
      * Check if a big enemy can be placed at the given position
      */
     canPlaceBigEnemy(room, enemy, x, y, tiles) {
+        if (enemy.x + enemy.w > room.roomX + room.width ||
+            enemy.y + enemy.h > room.roomY + room.height ||
+            enemy.x < room.roomX ||
+            enemy.y < room.roomY) {
+            return false;
+        }
+        // Check for walls/solid tiles under any part of the enemy
         for (let xx = 0; xx < enemy.w; xx++) {
             for (let yy = 0; yy < enemy.h; yy++) {
-                if (!tiles.some((tile) => tile.x === x + xx && tile.y === y + yy)) {
+                const tile = room.roomArray[x + xx]?.[y + yy];
+                if ((tile.x === x + xx || tile.y === y + yy) && tile.isSolid()) {
+                    console.log("wall found");
                     return false;
                 }
             }
@@ -44520,10 +44566,13 @@ class Populator {
     /**
      * Clear floor tiles for big enemies (preserves existing logic)
      */
-    clearFloorForBigEnemy(room, x, y, w, h) {
+    clearFloorForBigEnemy(room, x, y, w, h, enemy) {
         for (let xx = 0; xx < w; xx++) {
             for (let yy = 0; yy < h; yy++) {
                 room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy);
+                if (room.entities.some((e) => e.x === x + xx && e.y === y + yy)) {
+                    room.entities = room.entities.filter((e) => (e.x !== x + xx && e.y !== y + yy) || e === enemy);
+                }
             }
         }
     }

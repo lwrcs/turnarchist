@@ -42,6 +42,7 @@ import { MummyEnemy } from "../entity/enemy/mummyEnemy";
 import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
+import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -63,6 +64,7 @@ export const enemyClassToId: Map<any, number> = new Map([
   [MummyEnemy, 16],
   [SpiderEnemy, 17],
   [PawnEnemy, 18],
+  [BigFrogEnemy, 19],
 ]);
 
 export class Environment {
@@ -159,6 +161,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
       { class: FireWizardEnemy, weight: 0.1, minDepth: 2 },
       { class: ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
+      {
+        class: BigFrogEnemy,
+        weight: 0.1,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
     ],
   },
   [EnvType.CAVE]: {
@@ -223,7 +232,14 @@ const environmentData: Record<EnvType, EnvironmentData> = {
 
       // Rare magical forest creatures
       { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 }, // Forest wizards
-      { class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
+      //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
+      {
+        class: BigFrogEnemy,
+        weight: 0.1,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
     ],
   },
   [EnvType.DESERT]: {
@@ -313,9 +329,9 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
       },
-      { class: PawnEnemy, weight: 1, minDepth: 0 }, // Castle pawns
-      { class: RookEnemy, weight: 1.25, minDepth: 0 }, // Castle guardians
-      { class: BishopEnemy, weight: 1.5, minDepth: 0 }, // Castle clergy
+      { class: PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
+      { class: RookEnemy, weight: 1, minDepth: 0 }, // Castle guardians
+      { class: BishopEnemy, weight: 1, minDepth: 0 }, // Castle clergy
       { class: QueenEnemy, weight: 0.5, minDepth: 0 }, // Royal enemies
 
       // Castle undead

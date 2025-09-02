@@ -32,9 +32,9 @@ export class MummyEnemy extends Enemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 2;
-    this.maxHealth = 2;
-    this.defaultMaxHealth = 2;
+    this.health = 1;
+    this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 17;
     this.tileY = 16;
     this.seenPlayer = false;

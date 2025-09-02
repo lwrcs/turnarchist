@@ -24,6 +24,8 @@ import { ArmoredSkullEnemy } from "./armoredSkullEnemy";
 import { GameplaySettings } from "../../game/gameplaySettings";
 import { SpiderEnemy } from "./spiderEnemy";
 import { MummyEnemy } from "./mummyEnemy";
+import { PawnEnemy } from "./pawnEnemy";
+import { BeetleEnemy } from "./beetleEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -40,7 +42,9 @@ export class Spawner extends Enemy {
     game: Game,
     x: number,
     y: number,
-    enemyTable: number[] = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 16],
+    enemyTable: number[] = [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
+    ],
   ) {
     super(room, game, x, y);
     this.ticks = 0;
@@ -111,6 +115,7 @@ export class Spawner extends Enemy {
         break;
     }*/
     this.name = "reaper";
+    console.log("spawner created spawner type", this.enemySpawnType);
   }
 
   hit = (): number => {
@@ -167,6 +172,14 @@ export class Spawner extends Enemy {
           let spawned;
 
           switch (this.enemySpawnType) {
+            case 0:
+              spawned = new PawnEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
             case 1:
               spawned = new CrabEnemy(
                 this.room,
@@ -336,6 +349,14 @@ export class Spawner extends Enemy {
               break;
             case 18:
               spawned = new MummyEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 19:
+              spawned = new BeetleEnemy(
                 this.room,
                 this.game,
                 position.x,

@@ -152,6 +152,7 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.MAGMA_CAVE,
+        linearity: 1,
       });
     }
 
@@ -160,6 +161,16 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.CASTLE,
+        linearity: 0.75,
+      });
+    }
+
+    if (this.level.environment.type === EnvType.CASTLE) {
+      this.addDownladder({
+        caveRooms: this.numRooms(),
+        locked: true,
+        envType: EnvType.DARK_CASTLE,
+        linearity: 0,
       });
     }
 
@@ -816,7 +827,7 @@ export class Populator {
         const enemy = new selectedEnemy.class(room, room.game, x, y, ...args);
         if (this.canPlaceBigEnemy(room, enemy, x, y, tiles)) {
           room.entities.push(enemy);
-          this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h);
+          this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h, enemy);
           this.removeTilesForEnemy(tiles, x, y, enemy.w, enemy.h);
         } else {
           numEnemies++; // Retry
@@ -937,15 +948,27 @@ export class Populator {
     enemy: Entity,
     x: number,
     y: number,
-    tiles: any[],
+    tiles: Tile[],
   ): boolean {
+    if (
+      enemy.x + enemy.w > room.roomX + room.width ||
+      enemy.y + enemy.h > room.roomY + room.height ||
+      enemy.x < room.roomX ||
+      enemy.y < room.roomY
+    ) {
+      return false;
+    }
+    // Check for walls/solid tiles under any part of the enemy
     for (let xx = 0; xx < enemy.w; xx++) {
       for (let yy = 0; yy < enemy.h; yy++) {
-        if (!tiles.some((tile) => tile.x === x + xx && tile.y === y + yy)) {
+        const tile = room.roomArray[x + xx]?.[y + yy];
+        if ((tile.x === x + xx || tile.y === y + yy) && tile.isSolid()) {
+          console.log("wall found");
           return false;
         }
       }
     }
+
     return true;
   }
 
@@ -958,10 +981,16 @@ export class Populator {
     y: number,
     w: number,
     h: number,
+    enemy: Entity,
   ): void {
     for (let xx = 0; xx < w; xx++) {
       for (let yy = 0; yy < h; yy++) {
         room.roomArray[x + xx][y + yy] = new Floor(room, x + xx, y + yy);
+        if (room.entities.some((e) => e.x === x + xx && e.y === y + yy)) {
+          room.entities = room.entities.filter(
+            (e) => (e.x !== x + xx && e.y !== y + yy) || e === enemy,
+          );
+        }
       }
     }
   }
