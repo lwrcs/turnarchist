@@ -10252,6 +10252,9 @@ class BigFrogEnemy extends enemy_1.Enemy {
                             const isLeftAdjacent = sharesRow && px === this.x - 1;
                             const isBelowAdjacent = sharesCol && py === this.y + this.h; // y + 2
                             const isAboveAdjacent = sharesCol && py === this.y - 1;
+                            // Track whether we attempted a jump-over and whether it succeeded
+                            let triedAdjacentJump = false;
+                            let performedJump = false;
                             const isAreaClear = (tx, ty, w, h) => {
                                 for (let xx = 0; xx < w; xx++) {
                                     for (let yy = 0; yy < h; yy++) {
@@ -10280,6 +10283,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                 return true;
                             };
                             if (isRightAdjacent) {
+                                triedAdjacentJump = true;
                                 const tx = px + 1;
                                 const ty = this.y;
                                 if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -10298,10 +10302,12 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                     else if (this.y < oldY)
                                         this.direction = game_1.Direction.UP;
                                     this.rumbling = false;
+                                    performedJump = true;
                                     return;
                                 }
                             }
                             else if (isLeftAdjacent) {
+                                triedAdjacentJump = true;
                                 const tx = px - this.w;
                                 const ty = this.y;
                                 if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -10320,10 +10326,12 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                     else if (this.y < oldY)
                                         this.direction = game_1.Direction.UP;
                                     this.rumbling = false;
+                                    performedJump = true;
                                     return;
                                 }
                             }
                             else if (isBelowAdjacent) {
+                                triedAdjacentJump = true;
                                 const tx = this.x;
                                 const ty = py + 1;
                                 if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -10342,10 +10350,12 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                     else if (this.y < oldY)
                                         this.direction = game_1.Direction.UP;
                                     this.rumbling = false;
+                                    performedJump = true;
                                     return;
                                 }
                             }
                             else if (isAboveAdjacent) {
+                                triedAdjacentJump = true;
                                 const tx = this.x;
                                 const ty = py - this.h;
                                 if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -10364,8 +10374,14 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                     else if (this.y < oldY)
                                         this.direction = game_1.Direction.UP;
                                     this.rumbling = false;
+                                    performedJump = true;
                                     return;
                                 }
+                            }
+                            // If adjacent and attempted to jump but destination was blocked, do nothing this turn
+                            if (triedAdjacentJump && !performedJump) {
+                                this.rumbling = false;
+                                return;
                             }
                             // Build pathfinding grid only if we didn't jump over
                             let grid = [];
@@ -10379,7 +10395,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                 }
                             }
                             let moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
-                            //console.log(moves); //DON'T REMOVE THIS
+                            console.log(moves); //DON'T REMOVE THIS
                             if (moves[1]) {
                                 const wouldHit = (player, moveX, moveY) => {
                                     return (player.x >= moveX &&
@@ -10668,6 +10684,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
         this.imageParticleY = 30;
         this.canDestroyOthers = true;
         this.halfJumped = false;
+        this.canCrushOthers = true;
         if (drop)
             this.drop = drop;
         this.h = 2;
@@ -17114,6 +17131,7 @@ class Entity extends drawable_1.Drawable {
         this.stunned = false;
         this.collidable = true;
         this.canDestroyOthers = false;
+        this.canCrushOthers = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -17223,15 +17241,24 @@ class Entity extends drawable_1.Drawable {
                     entity.h <= 1 &&
                     flag === true) {
                     entity.hurt(this, entity.health);
-                    flag = false;
+                    if (!this.canCrushOthers) {
+                        const closestTile = this.closestTile(entity);
+                        this.drawX += 1 * (closestTile.x - entity.x);
+                        this.drawY += 1 * (closestTile.y - entity.y);
+                    }
+                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                    flag = this.canCrushOthers ? false : true;
                 }
                 return flag;
             };
+            let flag = false;
             for (const e of this.room.entities) {
                 if (e !== this && entityCollide(e) && collide) {
-                    return;
+                    flag = true;
                 }
             }
+            if (flag)
+                return;
             for (const i in this.game.players) {
                 if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
                     return;
@@ -18086,6 +18113,7 @@ class Entity extends drawable_1.Drawable {
         this.dropTable = [];
         this.drops = [];
         this.canDestroyOthers = false;
+        this.canCrushOthers = false;
         if (this.drop)
             this.drops.push(this.drop);
     }
@@ -22263,11 +22291,11 @@ const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
-const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
@@ -22477,7 +22505,7 @@ GameConstants.FIND_SCALE = (isMobile) => {
 GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
-    warhammer_1.Warhammer,
+    torch_1.Torch,
     sword_1.Sword,
     spear_1.Spear,
     godStone_1.GodStone,
@@ -43564,13 +43592,15 @@ class Populator {
         this.populateRooms = () => {
             if (this.skipPopulation)
                 return;
+            // add environmental features to all rooms
             this.level.rooms.forEach((room) => {
                 this.addEnvironmentalFeatures(room, random_1.Random.rand);
             });
+            // populate each room by type (no enemies added here)
             for (let room of this.level.rooms) {
                 this.populate(room, random_1.Random.rand);
             }
-            //this.addTrainingDownladder({ caveRooms: 25, linearity: 1 });
+            // populate each room by environment (enemies added here)
             this.level.rooms.forEach((room) => {
                 if (room.type === room_1.RoomType.START ||
                     room.type === room_1.RoomType.DOWNLADDER ||
@@ -43580,34 +43610,31 @@ class Populator {
                     return;
                 this.populateByEnvironment(room);
             });
+            // add boss to furthest room from upladder if not main path
             const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
             if (furthestFromUpLadder && !this.level.isMainPath) {
                 this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
             }
-            // calculate a base room number based on depth
-            const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
-            // find the difference between the base total rooms and the number of rooms in the level
-            const roomDiff = baseTotalRooms - this.level.rooms.length;
-            // add sidepath rooms to offset the room difference
-            const numRooms = Math.max(roomDiff, 3);
-            console.log(`Adding downladder with ${numRooms} rooms`);
+            if (this.level.depth === 0)
+                return;
+            console.log(`Adding downladder with ${this.numRooms()} rooms`);
             if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON) {
                 this.addDownladder({
-                    caveRooms: numRooms,
+                    caveRooms: this.numRooms(),
                     locked: true,
                     linearity: 1,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
                 this.addDownladder({
-                    caveRooms: numRooms,
+                    caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.MAGMA_CAVE,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
                 this.addDownladder({
-                    caveRooms: numRooms,
+                    caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.CASTLE,
                 });
@@ -43677,9 +43704,9 @@ class Populator {
             // Place a DownLadder tile directly; avoid entity side-effects post-load
             const env = opts?.envType
                 ? opts.envType
-                : downLadderRoom.depth < 1
+                : downLadderRoom.depth < 2
                     ? environmentTypes_1.EnvType.FOREST
-                    : downLadderRoom.depth > 1
+                    : downLadderRoom.depth > 2
                         ? random_1.Random.rand() < 0.5
                             ? environmentTypes_1.EnvType.FOREST
                             : environmentTypes_1.EnvType.CAVE
@@ -43695,6 +43722,14 @@ class Populator {
             downLadderRoom.roomArray[position.x][position.y] = dl;
         };
         this.populateByType = (room) => { };
+        this.numRooms = () => {
+            // calculate a base room number based on depth
+            const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
+            // find the difference between the base total rooms and the number of rooms in the level
+            const roomDiff = baseTotalRooms - this.level.rooms.length;
+            // add sidepath rooms to offset the room difference
+            return Math.max(roomDiff, 3);
+        };
         // #endregion
         // #region POPULATING METHODS
         this.populateEmpty = (room, rand) => { };

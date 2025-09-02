@@ -58,6 +58,7 @@ export class BigFrogEnemy extends Enemy {
     this.imageParticleY = 30;
     this.canDestroyOthers = true;
     this.halfJumped = false;
+    this.canCrushOthers = true;
     if (drop) this.drop = drop;
     this.h = 2;
     this.w = 2;
@@ -141,6 +142,10 @@ export class BigFrogEnemy extends Enemy {
             const isBelowAdjacent = sharesCol && py === this.y + this.h; // y + 2
             const isAboveAdjacent = sharesCol && py === this.y - 1;
 
+            // Track whether we attempted a jump-over and whether it succeeded
+            let triedAdjacentJump = false;
+            let performedJump = false;
+
             const isAreaClear = (
               tx: number,
               ty: number,
@@ -181,6 +186,7 @@ export class BigFrogEnemy extends Enemy {
             };
 
             if (isRightAdjacent) {
+              triedAdjacentJump = true;
               const tx = px + 1;
               const ty = this.y;
               if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -195,9 +201,11 @@ export class BigFrogEnemy extends Enemy {
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
                 this.rumbling = false;
+                performedJump = true;
                 return;
               }
             } else if (isLeftAdjacent) {
+              triedAdjacentJump = true;
               const tx = px - this.w;
               const ty = this.y;
               if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -212,9 +220,11 @@ export class BigFrogEnemy extends Enemy {
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
                 this.rumbling = false;
+                performedJump = true;
                 return;
               }
             } else if (isBelowAdjacent) {
+              triedAdjacentJump = true;
               const tx = this.x;
               const ty = py + 1;
               if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -229,9 +239,11 @@ export class BigFrogEnemy extends Enemy {
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
                 this.rumbling = false;
+                performedJump = true;
                 return;
               }
             } else if (isAboveAdjacent) {
+              triedAdjacentJump = true;
               const tx = this.x;
               const ty = py - this.h;
               if (isAreaClear(tx, ty, this.w, this.h)) {
@@ -246,8 +258,14 @@ export class BigFrogEnemy extends Enemy {
                 else if (this.y > oldY) this.direction = Direction.DOWN;
                 else if (this.y < oldY) this.direction = Direction.UP;
                 this.rumbling = false;
+                performedJump = true;
                 return;
               }
+            }
+            // If adjacent and attempted to jump but destination was blocked, do nothing this turn
+            if (triedAdjacentJump && !performedJump) {
+              this.rumbling = false;
+              return;
             }
             // Build pathfinding grid only if we didn't jump over
             let grid = [];
@@ -272,7 +290,7 @@ export class BigFrogEnemy extends Enemy {
               false,
               this.lastPlayerPos,
             );
-            //console.log(moves); //DON'T REMOVE THIS
+            console.log(moves); //DON'T REMOVE THIS
 
             if (moves[1]) {
               const wouldHit = (

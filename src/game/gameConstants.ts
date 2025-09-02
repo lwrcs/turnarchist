@@ -289,7 +289,7 @@ export class GameConstants {
   static readonly STARTING_INVENTORY = [Dagger, Candle];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
-    Warhammer,
+    Torch,
     Sword,
     Spear,
     GodStone,

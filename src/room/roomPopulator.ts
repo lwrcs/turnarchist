@@ -106,17 +106,17 @@ export class Populator {
 
   populateRooms = () => {
     if (this.skipPopulation) return;
-
+    // add environmental features to all rooms
     this.level.rooms.forEach((room) => {
       this.addEnvironmentalFeatures(room, Random.rand);
     });
 
+    // populate each room by type (no enemies added here)
     for (let room of this.level.rooms) {
       this.populate(room, Random.rand);
     }
 
-    //this.addTrainingDownladder({ caveRooms: 25, linearity: 1 });
-
+    // populate each room by environment (enemies added here)
     this.level.rooms.forEach((room) => {
       if (
         room.type === RoomType.START ||
@@ -130,22 +130,18 @@ export class Populator {
       this.populateByEnvironment(room);
     });
 
+    // add boss to furthest room from upladder if not main path
     const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
     if (furthestFromUpLadder && !this.level.isMainPath) {
       this.populateBoss(furthestFromUpLadder, Random.rand);
     }
 
-    // calculate a base room number based on depth
-    const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
-    // find the difference between the base total rooms and the number of rooms in the level
-    const roomDiff = baseTotalRooms - this.level.rooms.length;
-    // add sidepath rooms to offset the room difference
-    const numRooms = Math.max(roomDiff, 3);
+    if (this.level.depth === 0) return;
 
-    console.log(`Adding downladder with ${numRooms} rooms`);
+    console.log(`Adding downladder with ${this.numRooms()} rooms`);
     if (this.level.environment.type === EnvType.DUNGEON) {
       this.addDownladder({
-        caveRooms: numRooms,
+        caveRooms: this.numRooms(),
         locked: true,
         linearity: 1,
       });
@@ -153,7 +149,7 @@ export class Populator {
 
     if (this.level.environment.type === EnvType.CAVE) {
       this.addDownladder({
-        caveRooms: numRooms,
+        caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.MAGMA_CAVE,
       });
@@ -161,7 +157,7 @@ export class Populator {
 
     if (this.level.environment.type === EnvType.FOREST) {
       this.addDownladder({
-        caveRooms: numRooms,
+        caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.CASTLE,
       });
@@ -265,9 +261,9 @@ export class Populator {
     // Place a DownLadder tile directly; avoid entity side-effects post-load
     const env = opts?.envType
       ? opts.envType
-      : downLadderRoom.depth < 1
+      : downLadderRoom.depth < 2
         ? EnvType.FOREST
-        : downLadderRoom.depth > 1
+        : downLadderRoom.depth > 2
           ? Random.rand() < 0.5
             ? EnvType.FOREST
             : EnvType.CAVE
@@ -429,6 +425,15 @@ export class Populator {
     // ADD: Enemies after props, based on remaining space
     this.addRandomEnemies(room);
   }
+
+  numRooms = () => {
+    // calculate a base room number based on depth
+    const baseTotalRooms = Math.ceil(10 * 1.05 ** this.level.depth);
+    // find the difference between the base total rooms and the number of rooms in the level
+    const roomDiff = baseTotalRooms - this.level.rooms.length;
+    // add sidepath rooms to offset the room difference
+    return Math.max(roomDiff, 3);
+  };
 
   // #region TILE ADDING METHODS
   private addDoorTorches(room: Room, x: number, y: number, doorDir: Direction) {

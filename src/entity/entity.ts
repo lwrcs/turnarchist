@@ -152,6 +152,7 @@ export class Entity extends Drawable {
   stunned: boolean = false;
   collidable: boolean = true;
   canDestroyOthers: boolean = false;
+  canCrushOthers: boolean = false;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -233,6 +234,7 @@ export class Entity extends Drawable {
     this.dropTable = [];
     this.drops = [];
     this.canDestroyOthers = false;
+    this.canCrushOthers = false;
     if (this.drop) this.drops.push(this.drop);
   }
 
@@ -461,18 +463,27 @@ export class Entity extends Drawable {
         flag === true
       ) {
         entity.hurt(this as any, entity.health);
+        if (!this.canCrushOthers) {
+          const closestTile = this.closestTile(entity as any);
+          this.drawX += 1 * (closestTile.x - entity.x);
+          this.drawY += 1 * (closestTile.y - entity.y);
+        }
+        this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
 
-        flag = false;
+        flag = this.canCrushOthers ? false : true;
       }
 
       return flag;
     };
 
+    let flag = false;
     for (const e of this.room.entities) {
       if (e !== this && entityCollide(e) && collide) {
-        return;
+        flag = true;
       }
     }
+    if (flag) return;
+
     for (const i in this.game.players) {
       if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
         return;
