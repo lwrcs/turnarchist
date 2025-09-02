@@ -131,7 +131,7 @@ export class Populator {
     });
 
     const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
-    if (furthestFromUpLadder) {
+    if (furthestFromUpLadder && !this.level.isMainPath) {
       this.populateBoss(furthestFromUpLadder, Random.rand);
     }
 

@@ -43581,7 +43581,7 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
-            if (furthestFromUpLadder) {
+            if (furthestFromUpLadder && !this.level.isMainPath) {
                 this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
             }
             // calculate a base room number based on depth
