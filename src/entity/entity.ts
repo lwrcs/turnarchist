@@ -318,7 +318,7 @@ export class Entity extends Drawable {
     return cloned;
   }
 
-  hoverText = () => {
+  hoverText = (): string => {
     return this.name;
   };
 

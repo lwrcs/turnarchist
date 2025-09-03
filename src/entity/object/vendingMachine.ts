@@ -124,6 +124,12 @@ export class VendingMachine extends Entity {
     this.quantity = quantity;
   };
 
+  hoverText = (): string => {
+    if (!this.open) return "Vending Machine";
+    if (this.quantity > 0) return `Buy ${this.item.name}`;
+    return `Out of stock`;
+  };
+
   static isPointInVendingMachineBounds = (
     x: number,
     y: number,
@@ -155,7 +161,7 @@ export class VendingMachine extends Entity {
     // Calculate the center of the vending machine interface
     // Note: The -1.5 adjustment for Y matches what's in drawTopLayer
     let cx = shopScreenX;
-    let cy = shopScreenY - 1.5 * GameConstants.TILESIZE;
+    let cy = shopScreenY - 2 * GameConstants.TILESIZE;
 
     const leftBound = Math.round(cx - 0.5 * width);
     const rightBound = leftBound + Math.round(width);

@@ -15,6 +15,7 @@ export class Backpack extends Usable {
     this.tileX = 4;
     this.tileY = 0;
     this.offsetY = 0;
+    this.name = Backpack.itemName;
   }
 
   onUse = (player: Player) => {

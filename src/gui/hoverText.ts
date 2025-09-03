@@ -10,10 +10,14 @@ export class HoverText {
     y: number,
     room: Room,
     player: Player,
-    inventoryOpen: boolean,
+    drawFor: "inGame" | "inventory" | "vendingMachine" | "none",
   ): string[] {
     // Handle undefined mouse coordinates
-    if (Input.mouseX === undefined || Input.mouseY === undefined) {
+    if (
+      Input.mouseX === undefined ||
+      Input.mouseY === undefined ||
+      drawFor === "none"
+    ) {
       return [];
     }
 
@@ -36,7 +40,7 @@ export class HoverText {
 
     const strings: string[] = [];
     if (
-      !inventoryOpen &&
+      drawFor === "inGame" &&
       !player.inventory.isPointInQuickbarBounds(x, y).inBounds
     ) {
       for (const entity of room.entities) {
@@ -55,9 +59,13 @@ export class HoverText {
       if (tile) {
         strings.push(tile.getName());
       }
-    } else {
+    } else if (drawFor === "inventory") {
       if (player.inventory.itemAtSelectedSlot()) {
         strings.push(player.inventory.itemAtSelectedSlot()?.hoverText());
+      }
+    } else {
+      if (player.openVendingMachine) {
+        strings.push(player.openVendingMachine.hoverText());
       }
     }
 
@@ -72,22 +80,25 @@ export class HoverText {
     player: Player,
     drawX: number,
     drawY: number,
-    inventoryOpen: boolean = false,
+    drawFor: "inGame" | "inventory" | "vendingMachine" | "none",
   ) {
     const strings: string[] = HoverText.getHoverText(
       x,
       y,
       room,
       player,
-      inventoryOpen,
+      drawFor,
     );
     if (strings.length === 0) {
       return;
     }
     Game.ctx.save();
+    if (drawFor === "none") {
+      return;
+    }
     for (const string of strings) {
       const offsetY = strings.indexOf(string) * 6;
-      if (inventoryOpen) {
+      if (drawFor === "inventory") {
         Game.ctx.globalAlpha = 1;
       } else {
         Game.ctx.globalAlpha = 0.5;
@@ -95,19 +106,37 @@ export class HoverText {
       Game.ctx.fillStyle = "yellow";
 
       const offsetX = Game.measureText(string).width / 2;
-      let posX =
-        GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
-          ? drawX + 8
-          : GameConstants.WIDTH / 2 - offsetX;
-      let posY =
-        GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
-          ? drawY + 8 // + offsetY
-          : GameConstants.HEIGHT - 32;
-      //Game.fillText(string, drawX, drawY + offsetY);
-      if (GameConstants.HOVER_TEXT_FOLLOWS_MOUSE) {
-        posX = Input.mouseX + 8;
-        posY = Input.mouseY + 4;
+
+      let posX = x;
+      let posY = y;
+
+      switch (drawFor) {
+        case "inGame":
+          posX = GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawX + 8
+            : GameConstants.WIDTH / 2 - offsetX;
+          posY = GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawY + 8 // + offsetY
+            : GameConstants.HEIGHT - 32;
+          break;
+        case "inventory":
+          posX = GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawX + 8
+            : GameConstants.WIDTH / 2 - offsetX;
+          posY = GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawY + 8 // + offsetY
+            : GameConstants.HEIGHT - 32;
+          break;
+        case "vendingMachine":
+          posX = GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawX + 8
+            : GameConstants.WIDTH / 2 - offsetX;
+          posY = GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
+            ? drawY + 8 // + offsetY
+            : GameConstants.HEIGHT - 32;
+          break;
       }
+
       //Game.ctx.globalCompositeOperation = "destination-out";
       Game.fillTextOutline(string, posX, posY, "black", "yellow");
     }

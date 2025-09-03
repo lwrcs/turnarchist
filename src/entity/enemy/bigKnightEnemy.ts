@@ -11,6 +11,8 @@ import { GameConstants } from "../../game/gameConstants";
 import { DeathParticle } from "../../particle/deathParticle";
 import { Enemy } from "./enemy";
 import { Random } from "../../utility/random";
+import { astar } from "../../utility/astarclass";
+import { SpikeTrap } from "../../tile/spiketrap";
 
 export class BigKnightEnemy extends Enemy {
   frame: number;
@@ -44,6 +46,7 @@ export class BigKnightEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.chainPushable = false;
     this.name = "giant knight";
+    this.orthogonalAttack = true;
 
     this.drops = [];
     if (drop) this.drops.push(drop);
@@ -61,33 +64,6 @@ export class BigKnightEnemy extends Enemy {
     }
   }
 
-  addHitWarnings = () => {
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 2, this.y, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y - 1, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x, this.y + 2, this.x, this.y),
-    );
-    this.room.hitwarnings.push(
-      new HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y),
-    );
-  };
-
   hit = (): number => {
     return 1;
   };
@@ -100,14 +76,13 @@ export class BigKnightEnemy extends Enemy {
         this.skipNextTurns--;
         return;
       }
-      if (this.health == 1) {
+      if (this.health === 1) {
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
           this.health++;
           this.ticksSinceFirstHit = 0;
         }
       } else {
-        this.ticks++;
         if (!this.seenPlayer) {
           let p = this.nearestPlayer();
           if (p !== false) {
@@ -118,66 +93,126 @@ export class BigKnightEnemy extends Enemy {
               this.seenPlayer = true;
               if (player === this.game.players[this.game.localPlayerID])
                 this.alertTicks = 1;
-              if (this.health >= 3) this.addHitWarnings();
+              this.makeBigHitWarnings();
             }
           }
         } else if (this.seenPlayer) {
           if (this.room.playerTicked === this.targetPlayer) {
             this.alertTicks = Math.max(0, this.alertTicks - 1);
-            let oldX = this.x;
-            let oldY = this.y;
-            let moveX = this.x;
-            let moveY = this.y;
+            this.ticks++;
+
+            // Knight cadence: warn on even ticks, move on odd ticks
             if (this.ticks % 2 === 0) {
-              // horizontal preference
-              if (this.targetPlayer.x >= this.x + this.w) moveX++;
-              else if (this.targetPlayer.x < this.x) moveX--;
-              else if (this.targetPlayer.y >= this.y + this.h) moveY++;
-              else if (this.targetPlayer.y < this.y) moveY--;
-            } else {
-              // vertical preference
-              if (this.targetPlayer.y >= this.y + this.h) moveY++;
-              else if (this.targetPlayer.y < this.y) moveY--;
-              else if (this.targetPlayer.x >= this.x + this.w) moveX++;
-              else if (this.targetPlayer.x < this.x) moveX--;
+              this.makeBigHitWarnings();
+              return;
             }
 
-            let hitPlayer = false;
-            if (this.health >= 3) {
-              let wouldHit = (player: Player, moveX: number, moveY: number) => {
-                return (
-                  player.x >= moveX &&
-                  player.x < moveX + this.w &&
-                  player.y >= moveY &&
-                  player.y < moveY + this.h
-                );
-              };
-              for (const i in this.game.players) {
-                if (
-                  this.game.rooms[this.game.players[i].levelID] === this.room &&
-                  wouldHit(this.game.players[i], moveX, moveY)
-                ) {
-                  this.game.players[i].hurt(this.hit(), this.name);
-                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (
-                    this.game.players[i] ===
-                    this.game.players[this.game.localPlayerID]
-                  )
-                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+            const oldX = this.x;
+            const oldY = this.y;
+
+            // Build disabled positions (entities and active spike traps)
+            let disablePositions = Array<astar.Position>();
+            for (const e of this.room.entities) {
+              if (e !== this) {
+                for (let dx = 0; dx < e.w; dx++) {
+                  for (let dy = 0; dy < e.h; dy++) {
+                    disablePositions.push({
+                      x: e.x + dx,
+                      y: e.y + dy,
+                    } as astar.Position);
+                  }
                 }
               }
             }
-            if (!hitPlayer) {
-              this.tryMove(moveX, moveY);
-              this.drawX = this.x - oldX;
-              this.drawY = this.y - oldY;
-              if (this.x > oldX) this.direction = Direction.RIGHT;
-              else if (this.x < oldX) this.direction = Direction.LEFT;
-              else if (this.y > oldY) this.direction = Direction.DOWN;
-              else if (this.y < oldY) this.direction = Direction.UP;
+            for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+              for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                if (
+                  this.room.roomArray[xx] &&
+                  this.room.roomArray[xx][yy] &&
+                  this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+                  (this.room.roomArray[xx][yy] as SpikeTrap).on
+                ) {
+                  disablePositions.push({ x: xx, y: yy } as astar.Position);
+                }
+              }
             }
 
+            // Build grid
+            let grid = [] as any[];
+            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+              grid[x] = [];
+              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                  grid[x][y] = this.room.roomArray[x][y];
+                else grid[x][y] = false;
+              }
+            }
+
+            // A* pathfinding like BigZombieEnemy
+            let moves = astar.AStar.search(
+              grid,
+              this,
+              this.targetPlayer,
+              disablePositions,
+              false,
+              false,
+              true,
+              this.direction,
+            );
+
+            if (moves.length > 0) {
+              const moveX = moves[0].pos.x;
+              const moveY = moves[0].pos.y;
+              if (moveX > oldX) this.direction = Direction.RIGHT;
+              else if (moveX < oldX) this.direction = Direction.LEFT;
+              else if (moveY > oldY) this.direction = Direction.DOWN;
+              else if (moveY < oldY) this.direction = Direction.UP;
+              let hitPlayer = false;
+              if (this.health >= 3) {
+                for (const i in this.game.players) {
+                  if (
+                    this.game.rooms[this.game.players[i].levelID] === this.room
+                  ) {
+                    let playerHit = false;
+                    for (let dx = 0; dx < this.w; dx++) {
+                      for (let dy = 0; dy < this.h; dy++) {
+                        if (
+                          this.game.players[i].x === moveX + dx &&
+                          this.game.players[i].y === moveY + dy
+                        ) {
+                          playerHit = true;
+                          break;
+                        }
+                      }
+                      if (playerHit) break;
+                    }
+                    if (playerHit) {
+                      this.game.players[i].hurt(this.hit(), this.name);
+                      this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                      this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                      if (
+                        this.game.players[i] ===
+                        this.game.players[this.game.localPlayerID]
+                      )
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                      hitPlayer = true;
+                    }
+                  }
+                }
+              }
+              if (!hitPlayer) {
+                this.tryMove(moveX, moveY);
+                this.setDrawXY(oldX, oldY);
+                if (this.x > oldX) this.direction = Direction.RIGHT;
+                else if (this.x < oldX) this.direction = Direction.LEFT;
+                else if (this.y > oldY) this.direction = Direction.DOWN;
+                else if (this.y < oldY) this.direction = Direction.UP;
+              }
+            } else {
+              this.facePlayer(this.targetPlayer);
+            }
+
+            // Handle regeneration while damaged
             if (this.health < this.maxHealth) {
               this.ticksSinceFirstHit++;
               if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
@@ -185,8 +220,6 @@ export class BigKnightEnemy extends Enemy {
                 this.ticksSinceFirstHit = 0;
               }
             }
-
-            if (this.health >= 3) this.addHitWarnings();
           }
 
           let targetPlayerOffline =
@@ -207,7 +240,8 @@ export class BigKnightEnemy extends Enemy {
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID])
                     this.alertTicks = 1;
-                  if (this.health >= 3) this.addHitWarnings();
+                  if (this.health >= 3 && this.ticks % 2 === 0)
+                    this.makeBigHitWarnings();
                 }
               }
             }

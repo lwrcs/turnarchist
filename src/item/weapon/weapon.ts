@@ -47,7 +47,10 @@ export abstract class Weapon extends Equippable {
     this.cooldownMax = 0;
     this.twoHanded = false;
   }
-
+  hoverText = () => {
+    //return "Equip " + this.name;
+    return this.name;
+  };
   break = () => {
     this.durability = 0;
     this.wielder.inventory.weapon = null;

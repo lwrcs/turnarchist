@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.2d9772fae6688207f2da.png";
+module.exports = __webpack_require__.p + "assets/mobset.455dbb229e4ea1d547da.png";
 
 /***/ }),
 
@@ -10711,27 +10711,18 @@ BigFrogEnemy.tileY = 24;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigKnightEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const spear_1 = __webpack_require__(/*! ../../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class BigKnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
-        this.addHitWarnings = () => {
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x - 1, this.y, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x - 1, this.y + 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 2, this.y, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 2, this.y + 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x, this.y - 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 1, this.y - 1, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x, this.y + 2, this.x, this.y));
-            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, this.x + 1, this.y + 2, this.x, this.y));
-        };
         this.hit = () => {
             return 1;
         };
@@ -10743,7 +10734,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                     this.skipNextTurns--;
                     return;
                 }
-                if (this.health == 1) {
+                if (this.health === 1) {
                     this.ticksSinceFirstHit++;
                     if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
                         this.health++;
@@ -10751,7 +10742,6 @@ class BigKnightEnemy extends enemy_1.Enemy {
                     }
                 }
                 else {
-                    this.ticks++;
                     if (!this.seenPlayer) {
                         let p = this.nearestPlayer();
                         if (p !== false) {
@@ -10762,73 +10752,114 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                 this.seenPlayer = true;
                                 if (player === this.game.players[this.game.localPlayerID])
                                     this.alertTicks = 1;
-                                if (this.health >= 3)
-                                    this.addHitWarnings();
+                                this.makeBigHitWarnings();
                             }
                         }
                     }
                     else if (this.seenPlayer) {
                         if (this.room.playerTicked === this.targetPlayer) {
                             this.alertTicks = Math.max(0, this.alertTicks - 1);
-                            let oldX = this.x;
-                            let oldY = this.y;
-                            let moveX = this.x;
-                            let moveY = this.y;
+                            this.ticks++;
+                            // Knight cadence: warn on even ticks, move on odd ticks
                             if (this.ticks % 2 === 0) {
-                                // horizontal preference
-                                if (this.targetPlayer.x >= this.x + this.w)
-                                    moveX++;
-                                else if (this.targetPlayer.x < this.x)
-                                    moveX--;
-                                else if (this.targetPlayer.y >= this.y + this.h)
-                                    moveY++;
-                                else if (this.targetPlayer.y < this.y)
-                                    moveY--;
+                                this.makeBigHitWarnings();
+                                return;
                             }
-                            else {
-                                // vertical preference
-                                if (this.targetPlayer.y >= this.y + this.h)
-                                    moveY++;
-                                else if (this.targetPlayer.y < this.y)
-                                    moveY--;
-                                else if (this.targetPlayer.x >= this.x + this.w)
-                                    moveX++;
-                                else if (this.targetPlayer.x < this.x)
-                                    moveX--;
-                            }
-                            let hitPlayer = false;
-                            if (this.health >= 3) {
-                                let wouldHit = (player, moveX, moveY) => {
-                                    return (player.x >= moveX &&
-                                        player.x < moveX + this.w &&
-                                        player.y >= moveY &&
-                                        player.y < moveY + this.h);
-                                };
-                                for (const i in this.game.players) {
-                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
-                                        wouldHit(this.game.players[i], moveX, moveY)) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                            const oldX = this.x;
+                            const oldY = this.y;
+                            // Build disabled positions (entities and active spike traps)
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    for (let dx = 0; dx < e.w; dx++) {
+                                        for (let dy = 0; dy < e.h; dy++) {
+                                            disablePositions.push({
+                                                x: e.x + dx,
+                                                y: e.y + dy,
+                                            });
+                                        }
                                     }
                                 }
                             }
-                            if (!hitPlayer) {
-                                this.tryMove(moveX, moveY);
-                                this.drawX = this.x - oldX;
-                                this.drawY = this.y - oldY;
-                                if (this.x > oldX)
-                                    this.direction = game_1.Direction.RIGHT;
-                                else if (this.x < oldX)
-                                    this.direction = game_1.Direction.LEFT;
-                                else if (this.y > oldY)
-                                    this.direction = game_1.Direction.DOWN;
-                                else if (this.y < oldY)
-                                    this.direction = game_1.Direction.UP;
+                            for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                                    if (this.room.roomArray[xx] &&
+                                        this.room.roomArray[xx][yy] &&
+                                        this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
                             }
+                            // Build grid
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
+                            }
+                            // A* pathfinding like BigZombieEnemy
+                            let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                            if (moves.length > 0) {
+                                const moveX = moves[0].pos.x;
+                                const moveY = moves[0].pos.y;
+                                if (moveX > oldX)
+                                    this.direction = game_1.Direction.RIGHT;
+                                else if (moveX < oldX)
+                                    this.direction = game_1.Direction.LEFT;
+                                else if (moveY > oldY)
+                                    this.direction = game_1.Direction.DOWN;
+                                else if (moveY < oldY)
+                                    this.direction = game_1.Direction.UP;
+                                let hitPlayer = false;
+                                if (this.health >= 3) {
+                                    for (const i in this.game.players) {
+                                        if (this.game.rooms[this.game.players[i].levelID] === this.room) {
+                                            let playerHit = false;
+                                            for (let dx = 0; dx < this.w; dx++) {
+                                                for (let dy = 0; dy < this.h; dy++) {
+                                                    if (this.game.players[i].x === moveX + dx &&
+                                                        this.game.players[i].y === moveY + dy) {
+                                                        playerHit = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (playerHit)
+                                                    break;
+                                            }
+                                            if (playerHit) {
+                                                this.game.players[i].hurt(this.hit(), this.name);
+                                                this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                                this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                                if (this.game.players[i] ===
+                                                    this.game.players[this.game.localPlayerID])
+                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                                hitPlayer = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    this.tryMove(moveX, moveY);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                }
+                            }
+                            else {
+                                this.facePlayer(this.targetPlayer);
+                            }
+                            // Handle regeneration while damaged
                             if (this.health < this.maxHealth) {
                                 this.ticksSinceFirstHit++;
                                 if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
@@ -10836,8 +10867,6 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                     this.ticksSinceFirstHit = 0;
                                 }
                             }
-                            if (this.health >= 3)
-                                this.addHitWarnings();
                         }
                         let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
                         if (!this.aggro || targetPlayerOffline) {
@@ -10852,8 +10881,8 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                         this.facePlayer(player);
                                         if (player === this.game.players[this.game.localPlayerID])
                                             this.alertTicks = 1;
-                                        if (this.health >= 3)
-                                            this.addHitWarnings();
+                                        if (this.health >= 3 && this.ticks % 2 === 0)
+                                            this.makeBigHitWarnings();
                                     }
                                 }
                             }
@@ -10920,6 +10949,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#ffffff";
         this.chainPushable = false;
         this.name = "giant knight";
+        this.orthogonalAttack = true;
         this.drops = [];
         if (drop)
             this.drops.push(drop);
@@ -19528,6 +19558,13 @@ class VendingMachine extends entity_1.Entity {
             }
             this.quantity = quantity;
         };
+        this.hoverText = () => {
+            if (!this.open)
+                return "Vending Machine";
+            if (this.quantity > 0)
+                return `Buy ${this.item.name}`;
+            return `Out of stock`;
+        };
         this.interact = (player) => {
             if (this.isInf || this.quantity > 0) {
                 if (this.open)
@@ -19747,7 +19784,7 @@ VendingMachine.isPointInVendingMachineBounds = (x, y, shop) => {
     // Calculate the center of the vending machine interface
     // Note: The -1.5 adjustment for Y matches what's in drawTopLayer
     let cx = shopScreenX;
-    let cy = shopScreenY - 1.5 * gameConstants_1.GameConstants.TILESIZE;
+    let cy = shopScreenY - 2 * gameConstants_1.GameConstants.TILESIZE;
     const leftBound = Math.round(cx - 0.5 * width);
     const rightBound = leftBound + Math.round(width);
     const topBound = Math.round(cy - 0.5 * height);
@@ -22373,10 +22410,14 @@ GameConstants.XP_POPUP_ENABLED = true;
 GameConstants.COIN_ANIMATION = true;
 GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
-GameConstants.HOVER_TEXT_ENABLED = false;
+GameConstants.HOVER_TEXT_ENABLED = true;
 GameConstants.INVENTORY_HOVER_TEXT_ENABLED = true;
 GameConstants.IN_GAME_HOVER_TEXT_ENABLED = false;
+GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED = true;
 GameConstants.HOVER_TEXT_FOLLOWS_MOUSE = true;
+GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE = true;
+GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE = true;
+GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE = true;
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
@@ -26007,9 +26048,11 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 class HoverText {
-    static getHoverText(x, y, room, player, inventoryOpen) {
+    static getHoverText(x, y, room, player, drawFor) {
         // Handle undefined mouse coordinates
-        if (input_1.Input.mouseX === undefined || input_1.Input.mouseY === undefined) {
+        if (input_1.Input.mouseX === undefined ||
+            input_1.Input.mouseY === undefined ||
+            drawFor === "none") {
             return [];
         }
         // Get screen center coordinates
@@ -26023,7 +26066,7 @@ class HoverText {
         const offsetX = x + tileOffsetX;
         const offsetY = y + tileOffsetY;
         const strings = [];
-        if (!inventoryOpen &&
+        if (drawFor === "inGame" &&
             !player.inventory.isPointInQuickbarBounds(x, y).inBounds) {
             for (const entity of room.entities) {
                 if (entity.x === offsetX && entity.y === offsetY) {
@@ -26040,22 +26083,30 @@ class HoverText {
                 strings.push(tile.getName());
             }
         }
-        else {
+        else if (drawFor === "inventory") {
             if (player.inventory.itemAtSelectedSlot()) {
                 strings.push(player.inventory.itemAtSelectedSlot()?.hoverText());
             }
         }
+        else {
+            if (player.openVendingMachine) {
+                strings.push(player.openVendingMachine.hoverText());
+            }
+        }
         return strings;
     }
-    static draw(delta, x, y, room, player, drawX, drawY, inventoryOpen = false) {
-        const strings = HoverText.getHoverText(x, y, room, player, inventoryOpen);
+    static draw(delta, x, y, room, player, drawX, drawY, drawFor) {
+        const strings = HoverText.getHoverText(x, y, room, player, drawFor);
         if (strings.length === 0) {
             return;
         }
         game_1.Game.ctx.save();
+        if (drawFor === "none") {
+            return;
+        }
         for (const string of strings) {
             const offsetY = strings.indexOf(string) * 6;
-            if (inventoryOpen) {
+            if (drawFor === "inventory") {
                 game_1.Game.ctx.globalAlpha = 1;
             }
             else {
@@ -26063,16 +26114,33 @@ class HoverText {
             }
             game_1.Game.ctx.fillStyle = "yellow";
             const offsetX = game_1.Game.measureText(string).width / 2;
-            let posX = gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
-                ? drawX + 8
-                : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
-            let posY = gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE && !inventoryOpen
-                ? drawY + 8 // + offsetY
-                : gameConstants_1.GameConstants.HEIGHT - 32;
-            //Game.fillText(string, drawX, drawY + offsetY);
-            if (gameConstants_1.GameConstants.HOVER_TEXT_FOLLOWS_MOUSE) {
-                posX = input_1.Input.mouseX + 8;
-                posY = input_1.Input.mouseY + 4;
+            let posX = x;
+            let posY = y;
+            switch (drawFor) {
+                case "inGame":
+                    posX = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawX + 8
+                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
+                    posY = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawY + 8 // + offsetY
+                        : gameConstants_1.GameConstants.HEIGHT - 32;
+                    break;
+                case "inventory":
+                    posX = gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawX + 8
+                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
+                    posY = gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawY + 8 // + offsetY
+                        : gameConstants_1.GameConstants.HEIGHT - 32;
+                    break;
+                case "vendingMachine":
+                    posX = gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawX + 8
+                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
+                    posY = gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
+                        ? drawY + 8 // + offsetY
+                        : gameConstants_1.GameConstants.HEIGHT - 32;
+                    break;
             }
             //Game.ctx.globalCompositeOperation = "destination-out";
             game_1.Game.fillTextOutline(string, posX, posY, "black", "yellow");
@@ -28795,6 +28863,7 @@ class Backpack extends usable_1.Usable {
         this.tileX = 4;
         this.tileY = 0;
         this.offsetY = 0;
+        this.name = Backpack.itemName;
     }
 }
 exports.Backpack = Backpack;
@@ -32499,6 +32568,10 @@ const armor_1 = __webpack_require__(/*! ../armor */ "./src/item/armor.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
+        this.hoverText = () => {
+            //return "Equip " + this.name;
+            return this.name;
+        };
         this.break = () => {
             this.durability = 0;
             this.wielder.inventory.weapon = null;
@@ -38723,6 +38796,7 @@ const hoverText_1 = __webpack_require__(/*! ../gui/hoverText */ "./src/gui/hover
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const api_1 = __webpack_require__(/*! ../api */ "./src/api/index.ts");
 const deviceDetector_1 = __webpack_require__(/*! ../utility/deviceDetector */ "./src/utility/deviceDetector.ts");
+const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 class PlayerRenderer {
     constructor(player) {
         this.hurt = () => {
@@ -39066,21 +39140,26 @@ class PlayerRenderer {
                 if (!transitioning)
                     this.player.inventory.draw(delta);
                 const inventoryOpen = this.player.inventory.isOpen;
-                const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
-                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED &&
-                    gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
+                const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds && !this.player.inventory.isOpen;
+                const inVendingMachine = this.player.openVendingMachine &&
+                    vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, this.player.openVendingMachine);
+                const inInventoryBounds = this.player.inventory.isPointInInventoryBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
+                const drawFor = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
                     !inventoryOpen &&
-                    !quickbarOpen) {
+                    !quickbarOpen &&
+                    !this.player.openVendingMachine
+                    ? "inGame"
+                    : gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
+                        ((inventoryOpen && inInventoryBounds) || quickbarOpen)
+                        ? "inventory"
+                        : gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
+                            inVendingMachine
+                            ? "vendingMachine"
+                            : "none";
+                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED) {
                     hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
                         ? this.player.getRoom()
-                        : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x + 8, mouseCursor_1.MouseCursor.getInstance().getPosition().y);
-                }
-                else if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED &&
-                    gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
-                    (inventoryOpen || quickbarOpen)) {
-                    hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
-                        ? this.player.getRoom()
-                        : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x + 8, mouseCursor_1.MouseCursor.getInstance().getPosition().y, true);
+                        : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, drawFor);
                 }
             }
             else {

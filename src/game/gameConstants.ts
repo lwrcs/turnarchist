@@ -104,10 +104,14 @@ export class GameConstants {
 
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented
 
-  static HOVER_TEXT_ENABLED = false;
+  static HOVER_TEXT_ENABLED = true;
   static readonly INVENTORY_HOVER_TEXT_ENABLED = true;
   static readonly IN_GAME_HOVER_TEXT_ENABLED = false;
+  static readonly VENDING_MACHINE_HOVER_TEXT_ENABLED = true;
   static readonly HOVER_TEXT_FOLLOWS_MOUSE = true;
+  static readonly INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE = true;
+  static readonly IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE = true;
+  static readonly VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE = true;
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
   static get SHADE_ENABLED() {
