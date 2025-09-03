@@ -103,6 +103,7 @@ export class BigKnightEnemy extends Enemy {
 
             // Knight cadence: warn on even ticks, move on odd ticks
             if (this.ticks % 2 === 0) {
+              this.rumbling = true;
               this.makeBigHitWarnings();
               return;
             }
@@ -241,7 +242,8 @@ export class BigKnightEnemy extends Enemy {
                   if (player === this.game.players[this.game.localPlayerID])
                     this.alertTicks = 1;
                   if (this.health >= 3 && this.ticks % 2 === 0)
-                    this.makeBigHitWarnings();
+                    this.rumbling = true;
+                  this.makeBigHitWarnings();
                 }
               }
             }
@@ -256,17 +258,23 @@ export class BigKnightEnemy extends Enemy {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
+      let rumbleX = this.rumble(this.rumbling, this.frame).x;
+      let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-
+      const tileX =
+        this.ticks % 2 === 0
+          ? 2 * Math.floor((this.tileX + this.frame) / 2) + 1
+          : this.tileX;
+      const tileY = this.ticks % 2 === 0 ? this.tileY : this.tileY + 4;
       if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
-        2 * Math.floor((this.tileX + this.frame) / 2) + 1,
-        this.tileY,
+        tileX,
+        tileY,
         2,
         4,
-        this.x - this.drawX,
+        this.x - this.drawX + rumbleX,
         this.y - 2.5 - this.drawY,
         2,
         4,
