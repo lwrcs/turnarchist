@@ -131,7 +131,7 @@ export class Populator {
     });
 
     // add boss to furthest room from upladder if not main path
-    const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
+    const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
     if (furthestFromUpLadder && !this.level.isMainPath) {
       this.populateBoss(furthestFromUpLadder, Random.rand);
     }
@@ -243,7 +243,7 @@ export class Populator {
 
     const downLadderRoom = this.level.isMainPath
       ? rooms[Math.floor(Random.rand() * rooms.length)]
-      : this.level.getFurthestFromUpLadder();
+      : this.level.getFurthestFromLadder("up");
 
     console.log(
       `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
@@ -295,11 +295,12 @@ export class Populator {
       opts,
       lockOverride,
     );
+
+    downLadderRoom.roomArray[position.x][position.y] = dl;
     if (dl.lockable.isLocked()) {
       console.log("adding key to downladder");
       this.level.distributeKey(dl);
     }
-    downLadderRoom.roomArray[position.x][position.y] = dl;
   };
 
   populateByType = (room: Room) => {};
@@ -1617,6 +1618,7 @@ export class Populator {
     const { x, y } = room.getRoomCenter();
     let upLadder = new UpLadder(room, room.game, x, y);
     upLadder.isRope = true;
+    upLadder.isSidePath = true;
     room.roomArray[x][y] = upLadder;
     if (room.envType === EnvType.CAVE)
       this.placeVendingMachineInWall(room, new Pickaxe(room, 0, 0));

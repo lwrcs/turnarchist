@@ -136,15 +136,16 @@ export class Level {
     return null;
   }
 
+  getKeyRoom(room: Room): Room | null {
+    const rooms = room.path();
+    for (const room of rooms) {
+      if (room.hasKey()) return room;
+    }
+    return null;
+  }
+
   distributeKey(downLadder: DownLadder) {
     if (this.skipPopulation) return;
-
-    const rooms = this.rooms.filter(
-      (r) =>
-        r.type !== RoomType.START &&
-        r.type !== RoomType.DOWNLADDER &&
-        r.type !== RoomType.ROPEHOLE,
-    );
 
     const disableCoords = {
       disableX: downLadder.x,
@@ -152,12 +153,14 @@ export class Level {
       disableRoom: downLadder.room,
     };
 
+    const rooms = downLadder.room.path();
+
     if (rooms.length === 0) {
       console.error("No eligible rooms found for key placement");
       return;
     }
 
-    const randomRoom = rooms[Math.floor(Random.rand() * rooms.length)];
+    const randomRoom = this.getFurthestFromLadders(downLadder.room);
 
     let emptyTiles = randomRoom.getEmptyTiles();
     if (disableCoords.disableRoom === randomRoom) {
@@ -168,7 +171,8 @@ export class Level {
 
     if (emptyTiles.length === 0) {
       console.error(
-        `No empty tiles found in room ${randomRoom.id} for key placement`,
+        `No empty tiles found in room ${randomRoom.id} for key placement, unlocking downladder ${downLadder.room.id}`,
+        downLadder.lockable.removeLock(),
       );
       return;
     }
@@ -180,7 +184,7 @@ export class Level {
     downLadder.lockable.setKey(key);
 
     randomRoom.items.push(key);
-    console.log("Key successfully distributed and linked to down ladder");
+    //console.log("Key successfully distributed and linked to down ladder");
     //this.game.player.inventory.addItem(key);
   }
 
@@ -240,17 +244,60 @@ export class Level {
     }
   };
 
-  getFurthestFromUpLadder = (): Room | null => {
+  getFurthestFromLadder = (ladderType: "up" | "down"): Room | null => {
     let furthestRoom: Room | null = null;
     let furthestDistance = 0;
 
     for (const room of this.rooms) {
-      const distance = room.getDistanceToNearestUpLadder();
+      const distance = room.getDistanceToNearestLadder(ladderType);
       if (distance && distance > furthestDistance) {
         furthestDistance = distance;
         furthestRoom = room;
       }
     }
+    return furthestRoom;
+  };
+
+  getFurthestFromLadders = (downLadderRoom: Room): Room | null => {
+    let furthestRoom: Room | null = null;
+    let furthestMinDistance = -Infinity;
+
+    // Consider all rooms in the level. We want the room whose minimum distance
+    // to both ladder types is maximized. If only one ladder type exists, we
+    // fall back to maximizing distance to the one that exists.
+    const rooms = downLadderRoom.path();
+
+    let distanceToUp = 0;
+    let distanceToDown = 0;
+    for (const room of rooms) {
+      const upDistance = room.getDistanceToNearestLadder("up");
+      const downDistance = room.getDistanceToNearestLadder("down");
+
+      distanceToUp = upDistance;
+      distanceToDown = downDistance;
+
+      const distances: number[] = [];
+      if (upDistance !== null && upDistance !== undefined)
+        distances.push(upDistance);
+      if (downDistance !== null && downDistance !== undefined)
+        distances.push(downDistance);
+
+      if (distances.length === 0) continue; // no ladders present anywhere
+
+      const minDistance = Math.min(...distances);
+
+      if (minDistance > furthestMinDistance) {
+        furthestMinDistance = minDistance;
+        furthestRoom = room;
+      }
+    }
+    const up = furthestRoom?.getDistanceToNearestLadder("up");
+    const down = furthestRoom?.getDistanceToNearestLadder("down");
+    console.log("furthestRoom", furthestRoom?.globalId, {
+      up,
+      down,
+      furthestMinDistance,
+    });
     return furthestRoom;
   };
 

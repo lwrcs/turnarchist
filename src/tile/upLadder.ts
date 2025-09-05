@@ -14,6 +14,7 @@ export class UpLadder extends Passageway {
   isRope = false;
   depth: number;
   lockable: Lockable;
+  isSidePath = false;
 
   constructor(
     room: Room,

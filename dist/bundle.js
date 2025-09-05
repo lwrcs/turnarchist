@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.455dbb229e4ea1d547da.png";
+module.exports = __webpack_require__.p + "assets/mobset.9d87ef969e16f6e1e617.png";
 
 /***/ }),
 
@@ -20714,10 +20714,27 @@ class Game {
             }
             switch (command) {
                 case "ladder":
-                    this.pushMessage(`Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`);
+                    this.pushMessage(`Distance to nearest up ladder: ${this.room.getDistanceToNearestLadder("up")}`);
                     break;
                 case "encounter":
                     this.pushMessage("Encountering enemies..." + this.encounteredEnemies.length);
+                    break;
+                case "key":
+                    const keyRoom = this.level.getKeyRoom(this.room);
+                    if (keyRoom) {
+                        this.pushMessage(`Key room: ${keyRoom.id}`);
+                        keyRoom.entered = true;
+                        keyRoom.calculateWallInfo();
+                        this.changeLevelThroughDoor(this.players[this.localPlayerID], keyRoom.doors[0], 1);
+                        const tile = keyRoom.getRandomEmptyPosition(keyRoom.getEmptyTiles());
+                        this.players[this.localPlayerID].x = tile.x;
+                        this.players[this.localPlayerID].y = tile.y;
+                        keyRoom.updateLighting();
+                        this.pushMessage("Downladder located");
+                    }
+                    break;
+                case "level":
+                    this.pushMessage(`Level: ${this.level.globalId}`);
                     break;
                 case "down":
                     let downladder;
@@ -22392,8 +22409,8 @@ GameConstants.MOVEMENT_COOLDOWN = 200; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
 GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
-GameConstants.CHAT_APPEAR_TIME = 2500;
-GameConstants.CHAT_FADE_TIME = 500;
+GameConstants.CHAT_APPEAR_TIME = 1000;
+GameConstants.CHAT_FADE_TIME = 250;
 GameConstants.ANIMATION_SPEED = 1;
 GameConstants.REPLAY_STEP_MS = 10; // base time between replayed inputs
 GameConstants.REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
@@ -33611,16 +33628,52 @@ class Level {
                 }
             }
         };
-        this.getFurthestFromUpLadder = () => {
+        this.getFurthestFromLadder = (ladderType) => {
             let furthestRoom = null;
             let furthestDistance = 0;
             for (const room of this.rooms) {
-                const distance = room.getDistanceToNearestUpLadder();
+                const distance = room.getDistanceToNearestLadder(ladderType);
                 if (distance && distance > furthestDistance) {
                     furthestDistance = distance;
                     furthestRoom = room;
                 }
             }
+            return furthestRoom;
+        };
+        this.getFurthestFromLadders = (downLadderRoom) => {
+            let furthestRoom = null;
+            let furthestMinDistance = -Infinity;
+            // Consider all rooms in the level. We want the room whose minimum distance
+            // to both ladder types is maximized. If only one ladder type exists, we
+            // fall back to maximizing distance to the one that exists.
+            const rooms = downLadderRoom.path();
+            let distanceToUp = 0;
+            let distanceToDown = 0;
+            for (const room of rooms) {
+                const upDistance = room.getDistanceToNearestLadder("up");
+                const downDistance = room.getDistanceToNearestLadder("down");
+                distanceToUp = upDistance;
+                distanceToDown = downDistance;
+                const distances = [];
+                if (upDistance !== null && upDistance !== undefined)
+                    distances.push(upDistance);
+                if (downDistance !== null && downDistance !== undefined)
+                    distances.push(downDistance);
+                if (distances.length === 0)
+                    continue; // no ladders present anywhere
+                const minDistance = Math.min(...distances);
+                if (minDistance > furthestMinDistance) {
+                    furthestMinDistance = minDistance;
+                    furthestRoom = room;
+                }
+            }
+            const up = furthestRoom?.getDistanceToNearestLadder("up");
+            const down = furthestRoom?.getDistanceToNearestLadder("down");
+            console.log("furthestRoom", furthestRoom?.globalId, {
+                up,
+                down,
+                furthestMinDistance,
+            });
             return furthestRoom;
         };
         this.loadRoomsIntoLevelArray = () => {
@@ -33680,28 +33733,34 @@ class Level {
         console.error("No down ladder found");
         return null;
     }
+    getKeyRoom(room) {
+        const rooms = room.path();
+        for (const room of rooms) {
+            if (room.hasKey())
+                return room;
+        }
+        return null;
+    }
     distributeKey(downLadder) {
         if (this.skipPopulation)
             return;
-        const rooms = this.rooms.filter((r) => r.type !== room_1.RoomType.START &&
-            r.type !== room_1.RoomType.DOWNLADDER &&
-            r.type !== room_1.RoomType.ROPEHOLE);
         const disableCoords = {
             disableX: downLadder.x,
             disableY: downLadder.y,
             disableRoom: downLadder.room,
         };
+        const rooms = downLadder.room.path();
         if (rooms.length === 0) {
             console.error("No eligible rooms found for key placement");
             return;
         }
-        const randomRoom = rooms[Math.floor(random_1.Random.rand() * rooms.length)];
+        const randomRoom = this.getFurthestFromLadders(downLadder.room);
         let emptyTiles = randomRoom.getEmptyTiles();
         if (disableCoords.disableRoom === randomRoom) {
             emptyTiles = emptyTiles.filter((t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY);
         }
         if (emptyTiles.length === 0) {
-            console.error(`No empty tiles found in room ${randomRoom.id} for key placement`);
+            console.error(`No empty tiles found in room ${randomRoom.id} for key placement, unlocking downladder ${downLadder.room.id}`, downLadder.lockable.removeLock());
             return;
         }
         const randomIndex = Math.floor(random_1.Random.rand() * emptyTiles.length);
@@ -33709,7 +33768,7 @@ class Level {
         const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
         randomRoom.items.push(key);
-        console.log("Key successfully distributed and linked to down ladder");
+        //console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
     setExitRoom() {
@@ -40373,6 +40432,7 @@ const crusherEnemy_1 = __webpack_require__(/*! ../entity/enemy/crusherEnemy */ "
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -42296,18 +42356,60 @@ class Room {
             }
             return null;
         };
+        this.path = () => {
+            // Traverse rooms via linked doors (BFS), tracking visited by room globalId
+            const visited = new Set();
+            const connectedRooms = [];
+            const queue = [this];
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (!current)
+                    continue;
+                const gid = current.globalId;
+                if (!gid || visited.has(gid))
+                    continue;
+                visited.add(gid);
+                connectedRooms.push(current);
+                try {
+                    const doors = current.doors;
+                    if (!doors)
+                        continue;
+                    for (const door of doors) {
+                        const linked = door?.linkedDoor;
+                        const nextRoom = linked && linked.room;
+                        if (nextRoom) {
+                            const nextGid = nextRoom.globalId;
+                            if (nextGid && !visited.has(nextGid)) {
+                                queue.push(nextRoom);
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+            return connectedRooms;
+        };
         /**
-         * Returns true if this room contains an `UpLadder` tile.
+         * Returns true if this room contains an ladder tile.
          */
-        this.hasUpLadder = () => {
+        this.hasLadder = (ladderType) => {
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 if (!this.roomArray[x])
                     continue;
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
                     const t = this.roomArray[x][y];
-                    if (t instanceof upLadder_1.UpLadder)
+                    if (t instanceof upLadder_1.UpLadder && ladderType === "up")
+                        return true;
+                    if (t instanceof downLadder_1.DownLadder && ladderType === "down" && t.isSidePath)
                         return true;
                 }
+            }
+            return false;
+        };
+        this.hasKey = () => {
+            for (const item of this.items) {
+                if (item instanceof key_1.Key)
+                    return true;
             }
             return false;
         };
@@ -42316,9 +42418,9 @@ class Room {
          * a room that contains an `UpLadder`. Returns 0 if this room already has one,
          * or null if no such room is reachable.
          */
-        this.getDistanceToNearestUpLadder = (inputRoom) => {
-            const currentRoom = inputRoom || this;
-            if (currentRoom.hasUpLadder())
+        this.getDistanceToNearestLadder = (ladderType) => {
+            const currentRoom = this;
+            if (currentRoom.hasLadder(ladderType))
                 return 0;
             const visited = new Set();
             const queue = [];
@@ -42333,8 +42435,7 @@ class Room {
                     const gid = nextRoom.globalId;
                     if (visited.has(gid))
                         continue;
-                    if (nextRoom.hasUpLadder()) {
-                        console.log(`Found up ladder with distance ${dist + 1} from room ${currentRoom.globalId}`);
+                    if (nextRoom.hasLadder(ladderType)) {
                         return dist + 1;
                     }
                     visited.add(gid);
@@ -42921,7 +43022,7 @@ class Room {
         for (let i = 0; i < numEnemies; i++) {
             let rerolls = 1;
             if (tiles.length === 0) {
-                console.log(`No tiles left to spawn enemies`);
+                console.warn(`No tiles left to spawn enemies`);
                 break;
             }
             let emptyTiles = this.getRandomEmptyPosition(tiles);
@@ -43725,7 +43826,7 @@ class Populator {
                 this.populateByEnvironment(room);
             });
             // add boss to furthest room from upladder if not main path
-            const furthestFromUpLadder = this.level.getFurthestFromUpLadder();
+            const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
             if (furthestFromUpLadder && !this.level.isMainPath) {
                 this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
             }
@@ -43811,7 +43912,7 @@ class Populator {
                 room.type !== room_1.RoomType.BOSS);
             const downLadderRoom = this.level.isMainPath
                 ? rooms[Math.floor(random_1.Random.rand() * rooms.length)]
-                : this.level.getFurthestFromUpLadder();
+                : this.level.getFurthestFromLadder("up");
             console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -43839,11 +43940,11 @@ class Populator {
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;
             const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts, lockOverride);
+            downLadderRoom.roomArray[position.x][position.y] = dl;
             if (dl.lockable.isLocked()) {
                 console.log("adding key to downladder");
                 this.level.distributeKey(dl);
             }
-            downLadderRoom.roomArray[position.x][position.y] = dl;
         };
         this.populateByType = (room) => { };
         this.numRooms = () => {
@@ -44016,6 +44117,7 @@ class Populator {
             const { x, y } = room.getRoomCenter();
             let upLadder = new upLadder_1.UpLadder(room, room.game, x, y);
             upLadder.isRope = true;
+            upLadder.isSidePath = true;
             room.roomArray[x][y] = upLadder;
             if (room.envType === environmentTypes_1.EnvType.CAVE)
                 this.placeVendingMachineInWall(room, new pickaxe_1.Pickaxe(room, 0, 0));
@@ -47312,6 +47414,7 @@ class UpLadder extends passageway_1.Passageway {
     constructor(room, game, x, y, lockType = lockable_1.LockType.NONE) {
         super(room, game, x, y);
         this.isRope = false;
+        this.isSidePath = false;
         this.onCollide = (player) => {
             if (!this.game) {
                 console.error("Game instance is undefined in UpLadder:", this);

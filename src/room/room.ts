@@ -99,6 +99,7 @@ import { CrusherEnemy } from "../entity/enemy/crusherEnemy";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
+import { Key } from "../item/key";
 
 // #endregion
 
@@ -702,7 +703,7 @@ export class Room {
       let rerolls = 1;
 
       if (tiles.length === 0) {
-        console.log(`No tiles left to spawn enemies`);
+        console.warn(`No tiles left to spawn enemies`);
         break;
       }
       let emptyTiles = this.getRandomEmptyPosition(tiles);
@@ -1174,6 +1175,7 @@ export class Room {
 
   enterLevel = (player: Player, position?: { x: number; y: number }) => {
     this.game.updateLevel(this);
+
     // Prefer explicit entry position from ladder transition, then provided arg, then center
     let ladderEntry = (this as any).__entryPositionFromLadder as
       | { x: number; y: number }
@@ -3311,16 +3313,59 @@ export class Room {
     return null;
   };
 
+  path = (): Room[] => {
+    // Traverse rooms via linked doors (BFS), tracking visited by room globalId
+    const visited = new Set<string>();
+    const connectedRooms: Room[] = [];
+    const queue: Room[] = [this as unknown as Room];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) continue;
+      const gid = (current as any).globalId as string | undefined;
+      if (!gid || visited.has(gid)) continue;
+
+      visited.add(gid);
+      connectedRooms.push(current);
+
+      try {
+        const doors = (current as any).doors as Array<any>;
+        if (!doors) continue;
+        for (const door of doors) {
+          const linked = (door as any)?.linkedDoor;
+          const nextRoom = linked && (linked as any).room;
+          if (nextRoom) {
+            const nextGid = (nextRoom as any).globalId as string | undefined;
+            if (nextGid && !visited.has(nextGid)) {
+              queue.push(nextRoom);
+            }
+          }
+        }
+      } catch {}
+    }
+
+    return connectedRooms;
+  };
+
   /**
-   * Returns true if this room contains an `UpLadder` tile.
+   * Returns true if this room contains an ladder tile.
    */
-  hasUpLadder = (): boolean => {
+  hasLadder = (ladderType: "up" | "down"): boolean => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       if (!this.roomArray[x]) continue;
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const t = this.roomArray[x][y];
-        if (t instanceof UpLadder) return true;
+        if (t instanceof UpLadder && ladderType === "up") return true;
+        if (t instanceof DownLadder && ladderType === "down" && t.isSidePath)
+          return true;
       }
+    }
+    return false;
+  };
+
+  hasKey = (): boolean => {
+    for (const item of this.items) {
+      if (item instanceof Key) return true;
     }
     return false;
   };
@@ -3330,9 +3375,9 @@ export class Room {
    * a room that contains an `UpLadder`. Returns 0 if this room already has one,
    * or null if no such room is reachable.
    */
-  getDistanceToNearestUpLadder = (inputRoom?: Room): number | null => {
-    const currentRoom = inputRoom || this;
-    if (currentRoom.hasUpLadder()) return 0;
+  getDistanceToNearestLadder = (ladderType: "up" | "down"): number | null => {
+    const currentRoom = this;
+    if (currentRoom.hasLadder(ladderType)) return 0;
 
     const visited = new Set<string>();
     const queue: Array<{ room: Room; dist: number }> = [];
@@ -3347,10 +3392,7 @@ export class Room {
         if (!nextRoom) continue;
         const gid = nextRoom.globalId;
         if (visited.has(gid)) continue;
-        if (nextRoom.hasUpLadder()) {
-          console.log(
-            `Found up ladder with distance ${dist + 1} from room ${currentRoom.globalId}`,
-          );
+        if (nextRoom.hasLadder(ladderType)) {
           return dist + 1;
         }
         visited.add(gid);

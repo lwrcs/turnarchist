@@ -967,13 +967,35 @@ export class Game {
     switch (command) {
       case "ladder":
         this.pushMessage(
-          `Distance to nearest up ladder: ${this.room.getDistanceToNearestUpLadder()}`,
+          `Distance to nearest up ladder: ${this.room.getDistanceToNearestLadder("up")}`,
         );
         break;
       case "encounter":
         this.pushMessage(
           "Encountering enemies..." + this.encounteredEnemies.length,
         );
+        break;
+      case "key":
+        const keyRoom = this.level.getKeyRoom(this.room);
+        if (keyRoom) {
+          this.pushMessage(`Key room: ${keyRoom.id}`);
+          keyRoom.entered = true;
+          keyRoom.calculateWallInfo();
+          this.changeLevelThroughDoor(
+            this.players[this.localPlayerID],
+            keyRoom.doors[0],
+            1,
+          );
+          const tile = keyRoom.getRandomEmptyPosition(keyRoom.getEmptyTiles());
+          this.players[this.localPlayerID].x = tile.x;
+          this.players[this.localPlayerID].y = tile.y;
+          keyRoom.updateLighting();
+          this.pushMessage("Downladder located");
+        }
+        break;
+
+      case "level":
+        this.pushMessage(`Level: ${this.level.globalId}`);
         break;
       case "down":
         let downladder: DownLadder;
