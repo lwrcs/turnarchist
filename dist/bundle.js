@@ -17084,13 +17084,13 @@ const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawab
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
-const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
-const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./src/particle/damageNumber.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
@@ -17344,6 +17344,10 @@ class Entity extends drawable_1.Drawable {
                 this.createDamageNumber(damage, type);
             this.playHitSound();
             this.healthBar.hurt();
+            // Emit damage done event for statistics tracking (only for enemies)
+            if (this.isEnemy && playerHitBy) {
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.DAMAGE_DONE, { amount: damage });
+            }
             if (type === "none" || this.health <= 0 || !this.isEnemy) {
                 this.createHitParticles();
             }
@@ -27663,6 +27667,8 @@ const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -28018,6 +28024,8 @@ class Inventory {
                 return false;
             if (item instanceof coin_1.Coin) {
                 this.coins += item.stackCount;
+                // Emit coin collected event for statistics tracking
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.COIN_COLLECTED, { amount: item.stackCount });
                 return true;
             }
             if (item instanceof equippable_1.Equippable) {
@@ -29553,6 +29561,8 @@ const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/ran
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
     // Constructor for the Item class
@@ -29619,6 +29629,8 @@ class Item extends drawable_1.Drawable {
                         player.inventory.foundItems.push(this);
                     }
                     this.pickupSound();
+                    // Emit item collected event for statistics tracking
+                    eventBus_1.globalEventBus.emit(events_1.EVENTS.ITEM_COLLECTED, { itemId: this.name });
                     if (this.grouped) {
                         stats_1.statsTracker.recordWeaponChoice(this.name);
                         this.group.destroyOtherItems(this);
@@ -37316,6 +37328,8 @@ const playerRenderer_1 = __webpack_require__(/*! ./playerRenderer */ "./src/play
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -37852,6 +37866,8 @@ class Player extends drawable_1.Drawable {
             // Apply damage if no shield
             if (!this.hurtShield) {
                 this.health -= damage;
+                // Emit damage taken event for statistics tracking
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.DAMAGE_TAKEN, { amount: damage });
             }
             this.hurtShield = false;
             // Check for death
@@ -37929,6 +37945,8 @@ class Player extends drawable_1.Drawable {
             if (totalHealthDiff < 0) {
                 this.renderer.flash();
             }
+            // Emit turn passed event for statistics tracking
+            eventBus_1.globalEventBus.emit(events_1.EVENTS.TURN_PASSED, {});
             this.moveDistance = 0;
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
