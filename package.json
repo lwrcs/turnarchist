@@ -6,6 +6,7 @@
   "scripts": {
     "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\"",
     "build": "webpack --mode production",
+    "dev": "npx http-server dist -p 8080 -c-1 --cors",
     "read:db:csv": "cd server && npm run read:db:csv",
     "read:db:json": "cd server && npm run read:db:json"
   },

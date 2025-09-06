@@ -1,5 +1,4 @@
 import { Item } from "../item/item";
-import { LevelConstants } from "../level/levelConstants";
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
 import { Equippable } from "../item/equippable";
@@ -12,12 +11,12 @@ import { Player } from "../player/player";
 import { MouseCursor } from "../gui/mouseCursor";
 import { Input } from "../game/input";
 import { Pickaxe } from "../item/tool/pickaxe";
-import { MuteButton } from "../gui/muteButton";
 import { Menu } from "../gui/menu";
 import { XPCounter } from "../gui/xpCounter";
 import { FishingRod } from "../item/tool/fishingRod";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
-import { Spear } from "../item/weapon/spear";
+import { globalEventBus } from "../event/eventBus";
+import { EVENTS } from "../event/events";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -485,6 +484,8 @@ export class Inventory {
     if (item === null) return false;
     if (item instanceof Coin) {
       this.coins += item.stackCount;
+      // Emit coin collected event for statistics tracking
+      globalEventBus.emit(EVENTS.COIN_COLLECTED, { amount: item.stackCount });
       return true;
     }
     if (item instanceof Equippable) {

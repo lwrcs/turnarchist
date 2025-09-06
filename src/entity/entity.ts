@@ -1,8 +1,6 @@
 import { Direction, Game } from "../game";
 import { Room } from "../room/room";
-import { Bones } from "../tile/bones";
 import { Player } from "../player/player";
-import { Floor } from "../tile/floor";
 import { HealthBar } from "../drawable/healthbar";
 import { Drawable } from "../drawable/drawable";
 import { Item } from "../item/item";
@@ -10,15 +8,14 @@ import { GameConstants } from "../game/gameConstants";
 import { HitWarning } from "../drawable/hitWarning";
 import { Projectile } from "../projectile/projectile";
 import { Utils } from "../utility/utils";
-import { globalEventBus } from "../event/eventBus";
 import type { LightSource } from "../lighting/lightSource";
-import { EVENTS } from "../event/events";
 import { DamageNumber } from "../particle/damageNumber";
 import { DownLadder } from "../tile/downLadder";
 import { Door } from "../tile/door";
 import { Wall } from "../tile/wall";
-import { Lighting } from "../lighting/lighting";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { globalEventBus } from "../event/eventBus";
+import { EVENTS } from "../event/events";
 import { Shadow } from "../drawable/shadow";
 
 import { DropTable } from "../item/dropTable";
@@ -26,10 +23,6 @@ import { Weapon } from "../item/weapon/weapon";
 import { EnemyShield } from "../projectile/enemyShield";
 import { Sound } from "../sound/sound";
 import { ImageParticle } from "../particle/imageParticle";
-import { Enemy } from "./enemy/enemy";
-import { Particle } from "../particle/particle";
-import { DeathParticle } from "../particle/deathParticle";
-import { GameplaySettings } from "../game/gameplaySettings";
 import { Coin } from "../item/coin";
 import { Random } from "../utility/random";
 import { XPPopup } from "../particle/xpPopup";
@@ -577,6 +570,11 @@ export class Entity extends Drawable {
     this.playHitSound();
 
     this.healthBar.hurt();
+
+    // Emit damage done event for statistics tracking (only for enemies)
+    if (this.isEnemy && playerHitBy) {
+      globalEventBus.emit(EVENTS.DAMAGE_DONE, { amount: damage });
+    }
 
     if (type === "none" || this.health <= 0 || !this.isEnemy) {
       this.createHitParticles();

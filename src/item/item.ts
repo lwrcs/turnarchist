@@ -10,6 +10,8 @@ import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { Shadow } from "../drawable/shadow";
 import { statsTracker } from "../game/stats";
+import { globalEventBus } from "../event/eventBus";
+import { EVENTS } from "../event/events";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -157,6 +159,9 @@ export class Item extends Drawable {
           player.inventory.foundItems.push(this);
         }
         this.pickupSound();
+
+        // Emit item collected event for statistics tracking
+        globalEventBus.emit(EVENTS.ITEM_COLLECTED, { itemId: this.name });
 
         if (this.grouped) {
           statsTracker.recordWeaponChoice(this.name);
