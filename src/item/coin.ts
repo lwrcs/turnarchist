@@ -1,5 +1,4 @@
 import { Item } from "./item";
-import { Game } from "../game";
 import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
 import { GameConstants } from "../game/gameConstants";

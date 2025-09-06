@@ -1,7 +1,7 @@
-import { Input, InputEnum } from "../game/input";
+import { Input } from "../game/input";
 import { GameConstants } from "../game/gameConstants";
-import { ChatMessage, Direction, Game, LevelState } from "../game";
-import { Door, DoorType } from "../tile/door";
+import { Direction, Game, LevelState } from "../game";
+import { Door } from "../tile/door";
 import { Trapdoor } from "../tile/trapdoor";
 import { Inventory } from "../inventory/inventory";
 import { Sound } from "../sound/sound";
@@ -10,25 +10,24 @@ import { Map } from "../gui/map";
 import { HealthBar } from "../drawable/healthbar";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { Drawable } from "../drawable/drawable";
-import { HitWarning } from "../drawable/hitWarning";
-import { Entity, EntityType } from "../entity/entity";
+import { Entity } from "../entity/entity";
 import { Item } from "../item/item";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
 import { LightSource } from "../lighting/lightSource";
 
-import { Utils } from "../utility/utils";
 import { Menu } from "../gui/menu";
 import { Bestiary } from "../game/bestiary";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
 import { PlayerRenderer } from "./playerRenderer";
-import { Wall } from "../tile/wall";
 import { UpLadder } from "../tile/upLadder";
 import { DownLadder } from "../tile/downLadder";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { globalEventBus } from "../event/eventBus";
+import { EVENTS } from "../event/events";
 
 export enum PlayerDirection {
   DOWN,
@@ -811,6 +810,8 @@ export class Player extends Drawable {
     // Apply damage if no shield
     if (!this.hurtShield) {
       this.health -= damage;
+      // Emit damage taken event for statistics tracking
+      globalEventBus.emit(EVENTS.DAMAGE_TAKEN, { amount: damage });
     }
     this.hurtShield = false;
 
@@ -903,6 +904,9 @@ export class Player extends Drawable {
     if (totalHealthDiff < 0) {
       this.renderer.flash();
     }
+
+    // Emit turn passed event for statistics tracking
+    globalEventBus.emit(EVENTS.TURN_PASSED, {});
     this.moveDistance = 0;
 
     //this.actionTab.actionState = ActionState.READY;
