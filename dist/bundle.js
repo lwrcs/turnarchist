@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.9d87ef969e16f6e1e617.png";
+module.exports = __webpack_require__.p + "assets/mobset.9cf68c8bc6478165765d.png";
 
 /***/ }),
 
@@ -10685,11 +10685,11 @@ class BigFrogEnemy extends enemy_1.Enemy {
         this.canDestroyOthers = true;
         this.halfJumped = false;
         this.canCrushOthers = true;
-        if (drop)
-            this.drop = drop;
+        this.dropChance = 1;
+        //if (drop) this.drop = drop;
         this.h = 2;
         this.w = 2;
-        this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
+        this.getDrop(["frog"], true);
     }
 }
 exports.BigFrogEnemy = BigFrogEnemy;
@@ -10926,20 +10926,6 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
-        };
-        this.dropLoot = () => {
-            let dropOffsets = [
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-                { x: 0, y: 1 },
-                { x: 1, y: 1 },
-            ];
-            for (let i = 0; i < this.drops.length; i++) {
-                this.drops[i].level = this.room;
-                this.drops[i].x = this.x + dropOffsets[i].x;
-                this.drops[i].y = this.y + dropOffsets[i].y;
-                this.room.items.push(this.drops[i]);
-            }
         };
         this.w = 2;
         this.h = 2;
@@ -11291,20 +11277,6 @@ class BigSkullEnemy extends enemy_1.Enemy {
             this.drawableY = this.y;
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y - 0.5, true);
         };
-        this.dropLoot = () => {
-            let dropOffsets = [
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-                { x: 0, y: 1 },
-                { x: 1, y: 1 },
-            ];
-            for (let i = 0; i < this.drops.length; i++) {
-                this.drops[i].level = this.room;
-                this.drops[i].x = this.x + dropOffsets[i].x;
-                this.drops[i].y = this.y + dropOffsets[i].y;
-                this.room.items.push(this.drops[i]);
-            }
-        };
         this.w = 2;
         this.h = 2;
         this.ticks = 0;
@@ -11582,20 +11554,6 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
-        };
-        this.dropLoot = () => {
-            let dropOffsets = [
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-                { x: 0, y: 1 },
-                { x: 1, y: 1 },
-            ];
-            for (let i = 0; i < this.drops.length; i++) {
-                this.drops[i].level = this.room;
-                this.drops[i].x = this.x + dropOffsets[i].x;
-                this.drops[i].y = this.y + dropOffsets[i].y;
-                this.room.items.push(this.drops[i]);
-            }
         };
         this.draw = (delta) => {
             if (this.dead)
@@ -17541,17 +17499,63 @@ class Entity extends drawable_1.Drawable {
                 this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
             }
             if (this.drops.length > 0) {
-                this.drops.forEach((drop) => {
+                // Consider all non-solid tiles within the entity's footprint (handles big enemies)
+                const candidates = [];
+                for (let dx = 0; dx < this.w; dx++) {
+                    for (let dy = 0; dy < this.h; dy++) {
+                        const tx = coordX + dx;
+                        const ty = coordY + dy;
+                        if (this.room.roomArray[tx] &&
+                            this.room.roomArray[tx][ty] &&
+                            !this.room.roomArray[tx][ty].isSolid()) {
+                            candidates.push({ x: tx, y: ty });
+                        }
+                    }
+                }
+                // If no valid candidate tiles found, fall back to origin if it's valid
+                if (candidates.length === 0 &&
+                    this.room.roomArray[coordX] &&
+                    this.room.roomArray[coordX][coordY] &&
+                    !this.room.roomArray[coordX][coordY].isSolid()) {
+                    candidates.push({ x: coordX, y: coordY });
+                }
+                const used = new Set();
+                // Choose a random starting tile among candidates, then place subsequent drops on the next tiles
+                const startIndex = candidates.length > 0
+                    ? Math.floor(random_1.Random.rand() * candidates.length)
+                    : 0;
+                this.drops.forEach((drop, index) => {
                     drop.level = this.room;
-                    if (!this.room.roomArray[coordX][coordY].isSolid()) {
+                    if (candidates.length > 0) {
+                        const pos = candidates[(startIndex + index) % candidates.length];
+                        drop.x = pos.x;
+                        drop.y = pos.y;
+                        used.add(`${pos.x},${pos.y}`);
+                    }
+                    else if (this.room.roomArray[coordX] &&
+                        this.room.roomArray[coordX][coordY] &&
+                        !this.room.roomArray[coordX][coordY].isSolid()) {
                         drop.x = coordX;
                         drop.y = coordY;
+                        used.add(`${coordX},${coordY}`);
                     }
                     this.room.items.push(drop);
                     drop.onDrop();
                     if (this.name !== "chest")
                         drop.autoPickup();
                 });
+                // For big enemies, drop coins on any remaining footprint tiles not chosen above
+                if (this.isEnemy && (this.w > 1 || this.h > 1) && candidates.length > 0) {
+                    const remaining = candidates.filter((p) => !used.has(`${p.x},${p.y}`));
+                    remaining.forEach((p) => {
+                        const coin = new coin_1.Coin(this.room, p.x, p.y);
+                        coin.level = this.room;
+                        this.room.items.push(coin);
+                        coin.onDrop();
+                        if (this.name !== "chest")
+                            coin.autoPickup();
+                    });
+                }
             }
         };
         this.kill = (player) => {
@@ -29180,6 +29184,12 @@ DropTable.drops = [
         category: ["occultist"],
         unique: true,
     },
+    {
+        itemType: "weaponpoison",
+        dropRate: 3,
+        category: ["frog"],
+        unique: true,
+    },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
     // Tools
@@ -29189,7 +29199,7 @@ DropTable.drops = [
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
-    { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
+    //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
     // Common items
     { itemType: "coin", dropRate: 10, category: ["coin"] },

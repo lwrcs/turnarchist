@@ -316,21 +316,6 @@ export class BigZombieEnemy extends Enemy {
     );
   };
 
-  dropLoot = () => {
-    let dropOffsets = [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 0, y: 1 },
-      { x: 1, y: 1 },
-    ];
-    for (let i = 0; i < this.drops.length; i++) {
-      this.drops[i].level = this.room;
-      this.drops[i].x = this.x + dropOffsets[i].x;
-      this.drops[i].y = this.y + dropOffsets[i].y;
-      this.room.items.push(this.drops[i]);
-    }
-  };
-
   draw = (delta: number) => {
     if (this.dead) return;
     //this.updateShadeColor(delta);

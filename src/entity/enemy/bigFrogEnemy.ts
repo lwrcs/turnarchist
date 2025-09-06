@@ -59,10 +59,11 @@ export class BigFrogEnemy extends Enemy {
     this.canDestroyOthers = true;
     this.halfJumped = false;
     this.canCrushOthers = true;
-    if (drop) this.drop = drop;
+    this.dropChance = 1;
+    //if (drop) this.drop = drop;
     this.h = 2;
     this.w = 2;
-    this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
+    this.getDrop(["frog"], true);
   }
 
   hit = (): number => {
@@ -398,6 +399,7 @@ export class BigFrogEnemy extends Enemy {
       if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
     }
   };
+
   bigEnemyShake = () => {
     if (this.w > 1 || this.h > 1) {
       setTimeout(() => {

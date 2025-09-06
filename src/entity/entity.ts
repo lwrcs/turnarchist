@@ -755,16 +755,72 @@ export class Entity extends Drawable {
       this.drops.push(new Coin(this.room, this.x, this.y));
     }
     if (this.drops.length > 0) {
-      this.drops.forEach((drop) => {
+      // Consider all non-solid tiles within the entity's footprint (handles big enemies)
+      const candidates: { x: number; y: number }[] = [];
+      for (let dx = 0; dx < this.w; dx++) {
+        for (let dy = 0; dy < this.h; dy++) {
+          const tx = coordX + dx;
+          const ty = coordY + dy;
+          if (
+            this.room.roomArray[tx] &&
+            this.room.roomArray[tx][ty] &&
+            !this.room.roomArray[tx][ty].isSolid()
+          ) {
+            candidates.push({ x: tx, y: ty });
+          }
+        }
+      }
+
+      // If no valid candidate tiles found, fall back to origin if it's valid
+      if (
+        candidates.length === 0 &&
+        this.room.roomArray[coordX] &&
+        this.room.roomArray[coordX][coordY] &&
+        !this.room.roomArray[coordX][coordY].isSolid()
+      ) {
+        candidates.push({ x: coordX, y: coordY });
+      }
+
+      const used = new Set<string>();
+
+      // Choose a random starting tile among candidates, then place subsequent drops on the next tiles
+      const startIndex =
+        candidates.length > 0
+          ? Math.floor(Random.rand() * candidates.length)
+          : 0;
+
+      this.drops.forEach((drop, index) => {
         drop.level = this.room;
-        if (!this.room.roomArray[coordX][coordY].isSolid()) {
+        if (candidates.length > 0) {
+          const pos = candidates[(startIndex + index) % candidates.length];
+          drop.x = pos.x;
+          drop.y = pos.y;
+          used.add(`${pos.x},${pos.y}`);
+        } else if (
+          this.room.roomArray[coordX] &&
+          this.room.roomArray[coordX][coordY] &&
+          !this.room.roomArray[coordX][coordY].isSolid()
+        ) {
           drop.x = coordX;
           drop.y = coordY;
+          used.add(`${coordX},${coordY}`);
         }
         this.room.items.push(drop);
         drop.onDrop();
         if (this.name !== "chest") drop.autoPickup();
       });
+
+      // For big enemies, drop coins on any remaining footprint tiles not chosen above
+      if (this.isEnemy && (this.w > 1 || this.h > 1) && candidates.length > 0) {
+        const remaining = candidates.filter((p) => !used.has(`${p.x},${p.y}`));
+        remaining.forEach((p) => {
+          const coin = new Coin(this.room, p.x, p.y);
+          coin.level = this.room;
+          this.room.items.push(coin);
+          coin.onDrop();
+          if (this.name !== "chest") coin.autoPickup();
+        });
+      }
     }
   };
 

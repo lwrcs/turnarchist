@@ -154,6 +154,13 @@ export class DropTable {
       unique: true,
     },
 
+    {
+      itemType: "weaponpoison",
+      dropRate: 3,
+      category: ["frog"],
+      unique: true,
+    },
+
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
 
@@ -166,7 +173,7 @@ export class DropTable {
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
-    { itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
+    //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
 
     // Common items
