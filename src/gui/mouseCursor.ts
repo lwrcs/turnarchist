@@ -1,0 +1,156 @@
+import { game, Game } from "../game";
+import { Input } from "../game/input";
+import { GameConstants } from "../game/gameConstants";
+
+export class MouseCursor {
+  private static instance: MouseCursor;
+  private cursorSize: number = 5; // Size of the cursor rectangle
+  private clickX: number = 0;
+  private clickY: number = 0;
+  private rawClickX: number = 0;
+  private rawClickY: number = 0;
+  private tileX: number = 6;
+  private lastMouseX: number = 0;
+  private lastMouseY: number = 0;
+  private posChangeTime: number = Date.now();
+  private cursorTimeout: number = 5000;
+
+  private constructor() {}
+  private frame: number = 0;
+
+  public static getInstance(): MouseCursor {
+    if (!MouseCursor.instance) {
+      MouseCursor.instance = new MouseCursor();
+    }
+    return MouseCursor.instance;
+  }
+
+  public drawCursor(): void {
+    Game.ctx.save();
+    const timeSinceChange = Date.now() - this.posChangeTime;
+    const fadeStartTime = this.cursorTimeout - 200; // Start fade 200ms before timeout
+
+    let alpha: number = 1;
+    if (timeSinceChange > fadeStartTime) {
+      // Only fade in the last 200ms
+      const fadeProgress = (timeSinceChange - fadeStartTime) / 200;
+      alpha = 1 - fadeProgress;
+    }
+
+    Game.ctx.globalAlpha = alpha;
+
+    //Game.ctx.fillRect(Input.mouseX, Input.mouseY, 1, 1);
+    Game.drawFX(
+      this.tileX,
+      0,
+      1,
+      1,
+      Input.mouseX / GameConstants.TILESIZE - 8 / GameConstants.TILESIZE,
+      Input.mouseY / GameConstants.TILESIZE - 8 / GameConstants.TILESIZE,
+      1,
+      1,
+    );
+    Game.ctx.restore();
+  }
+
+  public drawAnimation(delta: number): void {
+    if (this.frame > 5) {
+      //14 is max frame for animation
+      return;
+    }
+    Game.drawFX(
+      9 + Math.ceil(this.frame),
+      1,
+      1,
+      1,
+      this.clickX / GameConstants.TILESIZE - 8 / GameConstants.TILESIZE,
+      this.clickY / GameConstants.TILESIZE - 8 / GameConstants.TILESIZE,
+      1,
+      1,
+    );
+    this.frame = this.frame + delta / 5;
+  }
+
+  public startClickAnim(): void {
+    this.frame = 0;
+    this.clickX = Input.mouseX;
+    this.clickY = Input.mouseY;
+    this.rawClickX = Input.rawMouseX;
+    this.rawClickY = Input.rawMouseY;
+  }
+
+  public recalculateClickPosition(): void {
+    if (this.rawClickX !== undefined && this.rawClickY !== undefined) {
+      const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
+      const rect = canvas.getBoundingClientRect();
+
+      this.clickX = Math.floor(this.rawClickX / Game.scale);
+      this.clickY = Math.floor(this.rawClickY / Game.scale);
+    }
+  }
+
+  public setIcon = (icon: string) => {
+    switch (icon) {
+      case "arrow":
+        this.tileX = 8;
+        break;
+      case "sword":
+        this.tileX = 7;
+        break;
+      case "hand":
+        this.tileX = 6;
+        break;
+      case "wait":
+        this.tileX = 9;
+        break;
+      case "grab":
+        this.tileX = 10;
+        break;
+      case "up":
+        this.tileX = 11;
+        break;
+      case "right":
+        this.tileX = 12;
+        break;
+      case "down":
+        this.tileX = 13;
+        break;
+      case "left":
+        this.tileX = 14;
+        break;
+      case "mine":
+        this.tileX = 15;
+        break;
+    }
+  };
+
+  public draw = (delta: number, mobile: boolean = false) => {
+    if (!mobile && Date.now() - this.posChangeTime < this.cursorTimeout)
+      this.drawCursor();
+    this.drawAnimation(delta);
+  };
+
+  public getPosition(): { x: number; y: number } {
+    if (Input.mouseX !== this.lastMouseX || Input.mouseY !== this.lastMouseY) {
+      this.posChangeTime = Date.now();
+    }
+
+    this.lastMouseX = Input.mouseX;
+    this.lastMouseY = Input.mouseY;
+    return { x: Input.mouseX, y: Input.mouseY };
+  }
+
+  public getTilePosition(): { x: number; y: number } {
+    return {
+      x: Math.floor(Input.mouseX / GameConstants.TILESIZE),
+      y: Math.floor(Input.mouseY / GameConstants.TILESIZE),
+    };
+  }
+
+  public getInventoryPosition(): { x: number; y: number } {
+    return {
+      x: Input.mouseX,
+      y: Input.mouseY,
+    };
+  }
+}

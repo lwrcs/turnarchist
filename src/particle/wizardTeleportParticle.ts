@@ -19,11 +19,12 @@ export class WizardTeleportParticle extends Particle {
     this.dz = 0.1;
   }
 
-  draw = () => {
+  draw = (delta: number) => {
+    if (this.dead) return;
     Game.drawFX(Math.floor(this.frame), 3, 1, 1, this.x, this.y - this.z, 1, 1);
-    this.z += this.dz;
+    this.z += this.dz * delta;
     this.dz *= 0.9;
-    this.frame += 0.25;
+    this.frame += 0.3 * delta;
     if (this.frame > 6) this.dead = true;
   };
 }

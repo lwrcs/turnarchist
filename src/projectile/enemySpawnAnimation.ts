@@ -1,94 +1,84 @@
 import { Projectile } from "./projectile";
 import { Game } from "../game";
-import { WizardEnemy } from "../enemy/wizardEnemy";
-import { Player } from "../player";
-import { Enemy } from "../enemy/enemy";
-import { Level } from "../level";
+import { WizardEnemy } from "../entity/enemy/wizardEnemy";
+import { Player } from "../player/player";
+import { Entity } from "../entity/entity";
+import { Room } from "../room/room";
 import { GenericParticle } from "../particle/genericParticle";
-import { Sound } from "../sound";
+import { Sound } from "../sound/sound";
+import { HitWarning } from "../drawable/hitWarning";
+import { ImageParticle } from "../particle/imageParticle";
+import { LightSource } from "../lighting/lightSource";
 
 export class EnemySpawnAnimation extends Projectile {
   readonly ANIM_COUNT = 3;
 
-  level: Level;
-  enemy: Enemy;
+  room: Room;
+  enemy: Entity;
   frame: number;
-  knockbackX: number;
-  knockbackY: number;
-  f: number[];
-  xx: number[];
-  yy: number[];
-
-  constructor(
-    level: Level,
-    enemy: Enemy,
-    x: number,
-    y: number,
-    knockbackX: number,
-    knockbackY: number
-  ) {
-    super(x, y);
-    this.level = level;
+  constructor(room: Room, enemy: Entity, x: number, y: number) {
+    super(enemy, x, y);
+    this.room = room;
     this.enemy = enemy;
     this.frame = 0;
+    this.hasBloom = true;
+    this.bloomColor = "#00BFFF";
+    this.bloomOffsetY = -0.5;
 
-    this.f = [];
-    this.xx = [];
-    this.yy = [];
-    for (let i = 0; i < this.ANIM_COUNT; i++) {
-      this.f[i] = this.xx[i] = Math.random() * 6.28;
-      this.yy[i] = Math.random() * 8 - 8;
-    }
-
-    this.knockbackX = knockbackX;
-    this.knockbackY = knockbackY;
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      1,
+      [0, 50, 150],
+      1,
+    );
+    this.room.lightSources.push(this.lightSource);
+    this.room.updateLighting();
   }
 
   tick = () => {
-    Sound.enemySpawn();
+    if (this.room === this.room.game.room) Sound.enemySpawn();
 
-    this.dead = true;
-    this.enemy.skipNextTurns = 1;
-    this.level.enemies.push(this.enemy);
-    if (this.level.game.player.x === this.x && this.level.game.player.y === this.y) {
-      this.level.game.player.hurt(0.5);
-      this.level.game.player.move(this.knockbackX, this.knockbackY);
+    let hitPlayer = false;
+    for (const i in this.room.game.players) {
+      if (
+        this.room.game.players[i].x === this.x &&
+        this.room.game.players[i].y === this.y
+      ) {
+        this.room.game.players[i].hurt(0.5, "reaper");
+        hitPlayer = true;
+      }
     }
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
-    GenericParticle.spawnCluster(this.level, this.x + 0.5, this.y + 0.5, "#ffffff");
+    if (!hitPlayer) {
+      this.dead = true;
+      this.enemy.skipNextTurns = 1;
+      this.room.entities.push(this.enemy);
+      this.enemy.createHitParticles();
+      this.lightSource.dead = true;
+    } else {
+      this.room.hitwarnings.push(
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y),
+      );
+    }
   };
 
-  drawTopLayer = () => {
-    this.frame += 0.25;
+  drawTopLayer = (delta: number) => {
+    if (this.dead) return;
+
+    this.frame += 0.25 * delta;
     if (this.frame >= 8) this.frame = 0;
     for (let i = 0; i < this.ANIM_COUNT; i++) {
-      let offsetX = 0; //4 * Math.sin(this.frame + this.xx[i]);
+      let offsetX = 0;
       Game.drawFX(
         Math.floor(this.frame),
-        26,
+        27,
         1,
-        2,
+        1,
         this.x + Math.round(offsetX) / 16.0,
-        this.y - 1.5, // + Math.round(this.yy[i]) / 16.0,
+        this.y - 0.5,
         1,
-        2
+        1,
       );
     }
-    if (Math.floor(this.frame * 4) % 2 == 0)
-      this.level.particles.push(
-        new GenericParticle(
-          this.level,
-          this.x + 0.5 + Math.random() * 0.05 - 0.025,
-          this.y + Math.random() * 0.05 - 0.025,
-          0.25,
-          Math.random() * 0.5,
-          0.025 * (Math.random() * 1 - 0.5),
-          0.025 * (Math.random() * 1 - 0.5),
-          0.2 * (Math.random() - 1),
-          "#ffffff",
-          0
-        )
-      );
-    //Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, this.x, this.y, 1, 1);
   };
 }

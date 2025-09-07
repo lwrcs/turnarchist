@@ -1,45 +1,82 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <link rel="icon" href="res/favicon.png" />
-  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png" />
-
   <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
-    />
-    <meta name="description" content="" />
-    <meta name="author" content="" />
+    
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6SQVMV018N"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
-    <title>Bewitched</title>
+  gtag('config', 'G-6SQVMV018N');
+</script>
+
+    <link rel="icon" href="res/favicon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#000000" />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Turnarchist - Home</title>
+    <style>
+    </style>
   </head>
-
   <body>
-    <link rel="stylesheet" type="text/css" href="style.css" />
-    <canvas id="gameCanvas" width="272" height="272"></canvas>
+    <link rel="stylesheet" type="text/css" href="pagestyle.css" />
 
-    <script src="dist/bundle.js"></script>
+    <header></header>
+      <nav>Turnarchist</nav>
+    </header>
+    <!-- Video Background -->
+    <h1>Welcome To Turnarchist</h1>
+<!-- Hero Section -->
+<div class="hero-container">
+  <video class="hero-video" autoplay loop muted>
+    <source src="res/site/hero.webm" type="video/webm" />
+    <source src="res/site/hero.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+  <p class="hero-text">Explore never-ending dungeons in your web browser!<br><span class="small">Open Alpha v1.2.0</span></p>
+</div>
+
+<!-- Main Content (Appears Below Video) -->
+<div class="main-content">
+  <h1>Links to play</h1>
+  <a href="/play.html" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'play_button'});">Play now!<br><span class="small">I know what I'm doing.</span></a>
+  <a href="/help/" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'help_button'});">I'm new here...</a>
+</div>
+
+<!-- Social Media Container -->
+<div class="social-media-container">
+  <!-- Discord Community Link -->
+  <div class="social-item">
+    <a href="https://discord.gg/Fa4SBzraU3" class="btn discord-btn" onclick="gtag('event', 'click', {event_category: 'social', event_label: 'discord'});">Join our Discord</a>
+  </div>
+
+  <!-- Instagram Link -->
+  <div class="social-item">
+    <a href="https://www.instagram.com/turnarchist/" class="btn instagram-btn" onclick="gtag('event', 'click', {event_category: 'social', event_label: 'instagram'});">Follow us on Instagram</a>
+  </div>
+
+  <!-- TikTok Link -->
+  <div class="social-item">
+    <a href="https://www.tiktok.com/@turnarchist" class="btn tiktok-btn" onclick="gtag('event', 'click', {event_category: 'social', event_label: 'tiktok'});">Follow us on TikTok</a>
+  </div>
+
+  <!-- Patreon Link -->
+  <div class="social-item">
+    <a href="https://www.patreon.com/turnarchist" class="btn patreon-btn" onclick="gtag('event', 'click', {event_category: 'social', event_label: 'patreon'});">Support us on Patreon</a>
+  </div>
+</div>
+    
+    <footer>© 2025 Turnarchist. All rights reserved.</footer>
     <script>
-      (function(i, s, o, g, r, a, m) {
-        i["GoogleAnalyticsObject"] = r;
-        (i[r] =
-          i[r] ||
-          function() {
-            (i[r].q = i[r].q || []).push(arguments);
-          }),
-          (i[r].l = 1 * new Date());
-        (a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]);
-        a.async = 1;
-        a.src = g;
-        m.parentNode.insertBefore(a, m);
-      })(window, document, "script", "https://www.google-analytics.com/analytics.js", "ga");
-
-      ga("create", "UA-104337234-1", "auto");
-      ga("send", "pageview");
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js');
+        });
+      }
     </script>
-
-    <!-- <p class="center-text"><a href="help.html">help</a></p> -->
   </body>
 </html>

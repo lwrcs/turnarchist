@@ -1,5 +1,6 @@
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
+import { Random } from "../utility/random";
 import { Particle } from "./particle";
 
 export class TextParticle extends Particle {
@@ -13,7 +14,13 @@ export class TextParticle extends Particle {
   dead: boolean;
   delay: number;
 
-  constructor(text: string, x: number, y: number, color: string, delay?: number) {
+  constructor(
+    text: string,
+    x: number,
+    y: number,
+    color: string,
+    delay?: number,
+  ) {
     super();
     this.text = text;
     this.x = x * GameConstants.TILESIZE;
@@ -23,12 +30,14 @@ export class TextParticle extends Particle {
     this.color = color;
     this.dead = false;
     this.time = 0;
-    if (delay === undefined) this.delay = Game.rand(0, 10);
+    if (delay === undefined) this.delay = Game.rand(0, 10, Random.rand);
     // up to a 10 tick delay
     else this.delay = delay;
   }
 
-  draw = () => {
+  draw = (delta: number) => {
+    if (this.dead) return;
+
     if (this.delay > 0) {
       this.delay--;
     } else {
@@ -45,17 +54,15 @@ export class TextParticle extends Particle {
       this.time++;
       if (this.time > GameConstants.FPS * TIMEOUT) this.dead = true;
 
-      let width = Game.ctx.measureText(this.text).width;
+      let width = Game.measureText(this.text).width;
 
-      for (let xx = -1; xx <= 1; xx++) {
-        for (let yy = -1; yy <= 1; yy++) {
-          Game.ctx.fillStyle = GameConstants.OUTLINE;
-          Game.fillText(this.text, this.x - width / 2 + xx, this.y - this.z + yy);
-        }
-      }
-
-      Game.ctx.fillStyle = this.color;
-      Game.fillText(this.text, this.x - width / 2, this.y - this.z);
+      Game.fillTextOutline(
+        this.text,
+        this.x - width / 2,
+        this.y - this.z,
+        GameConstants.OUTLINE,
+        this.color,
+      );
     }
   };
 }

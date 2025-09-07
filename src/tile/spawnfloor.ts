@@ -1,22 +1,29 @@
 import { Game } from "../game";
-import { Tile } from "./tile";
-import { Level } from "../level";
+import { Tile, SkinType } from "./tile";
+import { Room } from "../room/room";
+import { Random } from "../utility/random";
 
 export class SpawnFloor extends Tile {
   // all are in grid units
-  w: number;
-  h: number;
   variation: number;
 
-  constructor(level: Level, x: number, y: number) {
-    super(level, x, y);
-    this.w = 1;
-    this.h = 1;
+  constructor(room: Room, x: number, y: number) {
+    super(room, x, y);
     this.variation = 1;
-    if (Game.rand(1, 20) == 1) this.variation = Game.randTable([8, 9, 10, 12]);
+    if (this.skin == SkinType.DUNGEON)
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Random.rand,
+      );
+    if (this.skin == SkinType.CAVE)
+      //this.variation = Game.randTable([1, 1, 1, 1, 8, 9, 10, 12], Random.rand);
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Random.rand,
+      );
   }
 
-  draw = () => {
+  draw = (delta: number) => {
     Game.drawTile(
       this.variation,
       this.skin,
@@ -24,10 +31,10 @@ export class SpawnFloor extends Tile {
       1,
       this.x,
       this.y,
-      this.w,
-      this.h,
-      this.level.shadeColor,
-      this.shadeAmount()
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
   };
 }

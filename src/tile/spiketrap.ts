@@ -1,24 +1,27 @@
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Game } from "../game";
-import { Level } from "../level";
-import { LevelConstants } from "../levelConstants";
+import { Room } from "../room/room";
+import { LevelConstants } from "../level/levelConstants";
 import { Tile } from "./tile";
-import { Enemy } from "../enemy/enemy";
-import { Crate } from "../enemy/crate";
-import { Barrel } from "../enemy/barrel";
-import { HitWarning } from "../projectile/hitWarning";
+import { Entity } from "../entity/entity";
+import { Crate } from "../entity/object/crate";
+import { Barrel } from "../entity/object/barrel";
+import { HitWarning } from "../drawable/hitWarning";
 
 export class SpikeTrap extends Tile {
   on: boolean;
   tickCount: number;
   frame: number;
+  t: number;
 
-  constructor(level: Level, x: number, y: number, tickCount?: number) {
-    super(level, x, y);
+  constructor(room: Room, x: number, y: number, tickCount?: number) {
+    super(room, x, y);
     if (tickCount) this.tickCount = tickCount;
     else this.tickCount = 0;
     this.on = false;
     this.frame = 0;
+    this.t = 0;
+    this.name = "spike trap";
   }
 
   tick = () => {
@@ -27,29 +30,40 @@ export class SpikeTrap extends Tile {
     this.on = this.tickCount === 0;
 
     if (this.on) {
-      if (this.level.game.player.x === this.x && this.level.game.player.y === this.y)
-        this.level.game.player.hurt(1);
+      for (const i in this.room.game.players) {
+        if (
+          this.room ===
+            this.room.game.rooms[this.room.game.players[i].levelID] &&
+          this.room.game.players[i].x === this.x &&
+          this.room.game.players[i].y === this.y
+        )
+          this.room.game.players[i].hurt(0.5, "spike trap");
+      }
     }
 
     if (this.tickCount === 3)
-      this.level.projectiles.push(new HitWarning(this.level.game, this.x, this.y));
+      this.room.hitwarnings.push(
+        new HitWarning(this.room.game, this.x, this.y, this.x, this.y, false),
+      );
   };
 
   tickEnd = () => {
     if (this.on) {
-      for (const e of this.level.enemies) {
+      for (const e of this.room.entities) {
         if (e.x === this.x && e.y === this.y) {
-          e.hurt(1);
+          e.hurt(null, 1);
         }
       }
     }
   };
 
-  onCollideEnemy = (enemy: Enemy) => {
-    if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel)) enemy.hurt(1);
+  onCollideEnemy = (enemy: Entity) => {
+    if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel))
+      enemy.hurt(null, 1);
   };
 
-  draw = () => {
+  draw = (delta: number) => {
+    this.drawableY = this.y - 0.01;
     Game.drawTile(
       1,
       this.skin,
@@ -59,40 +73,52 @@ export class SpikeTrap extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
-      this.shadeAmount()
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
-  };
 
-  t = 0;
-
-  drawUnderPlayer = () => {
     let rumbleOffsetX = 0;
-    this.t++;
+    this.t += delta;
     if (!this.on && this.tickCount === 3) {
-      if (this.t % 4 === 1) rumbleOffsetX = 0.0325;
-      if (this.t % 4 === 3) rumbleOffsetX = -0.0325;
+      if (Math.floor(this.t) % 4 === 1) rumbleOffsetX = 0.0325;
+      if (Math.floor(this.t) % 4 === 3) rumbleOffsetX = -0.0325;
     }
     let frames = [0, 1, 2, 3, 3, 4, 2, 0];
     let f = 6 + frames[Math.floor(this.frame)];
-    if (this.tickCount === 1 || (this.tickCount === 0 && frames[Math.floor(this.frame)] === 0)) {
+    if (
+      this.tickCount === 1 ||
+      (this.tickCount === 0 && frames[Math.floor(this.frame)] === 0)
+    ) {
       f = 5;
     }
     Game.drawObj(
       f,
+      1,
+      1,
+      1,
+      this.x + rumbleOffsetX,
+      this.y,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
+    Game.drawObj(
+      f,
       0,
       1,
-      2,
+      1,
       this.x + rumbleOffsetX,
       this.y - 1,
       1,
-      2,
-      this.level.shadeColor,
-      this.shadeAmount()
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(0, 0, false),
     );
+
     if (this.on && this.frame < frames.length - 1) {
-      if (frames[Math.floor(this.frame)] < 3) this.frame += 0.4;
-      else this.frame += 0.2;
+      if (frames[Math.floor(this.frame)] < 3) this.frame += 0.4 * delta;
+      else this.frame += 0.2 * delta;
     }
     if (!this.on) this.frame = 0;
   };

@@ -2,7 +2,7 @@ import { Game } from "../game";
 import { Floor } from "./floor";
 
 export class Bones extends Floor {
-  draw = () => {
+  draw = (delta: number) => {
     Game.drawTile(
       7,
       this.skin,
@@ -12,8 +12,8 @@ export class Bones extends Floor {
       this.y,
       1,
       1,
-      this.level.shadeColor,
-      this.shadeAmount()
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
   };
 }

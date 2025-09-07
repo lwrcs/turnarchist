@@ -14,10 +14,10 @@ export class DashParticle extends Particle {
     this.frame = frameOffset;
   }
 
-  drawBehind = () => {
+  drawBehind = (delta: number) => {
     Game.drawFX(Math.round(this.frame), 0, 1, 2, this.x, this.y, 1, 2);
 
-    this.frame += 0.4;
+    this.frame += 0.4 * delta;
     if (this.frame > 7) this.dead = true;
   };
 }

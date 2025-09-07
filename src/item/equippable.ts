@@ -1,24 +1,80 @@
 import { Item } from "./item";
 import { Game } from "../game";
-import { Level } from "../level";
+import { Room } from "../room/room";
+import { Player } from "../player/player";
+import { GameplaySettings } from "../game/gameplaySettings";
+import { Weapon } from "./weapon/weapon";
+import { Armor } from "./armor";
 
 export class Equippable extends Item {
+  wielder: Player | null = null;
   equipped: boolean;
+  equipTick: boolean = false;
+  useCost: number = 1;
+  cooldown: number = 0;
+  cooldownMax: number = 0;
+  previousWeapon: Weapon | null = null;
 
-  constructor(level: Level, x: number, y: number) {
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.equipped = false;
   }
+
+  setWielder = (wielder: Player) => {
+    this.wielder = wielder;
+  };
 
   coEquippable = (other: Equippable): boolean => {
     return true;
   };
 
   toggleEquip = () => {
-    this.equipped = !this.equipped;
+    if ((!this.broken && this.cooldown <= 0) || this instanceof Armor) {
+      if (!this.equipped && this.wielder?.inventory?.weapon) {
+        this.previousWeapon = this.wielder.inventory.weapon;
+      }
+
+      this.equipped = !this.equipped;
+
+      if (GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
+        this.wielder?.stall();
+    } else if (this.broken) {
+      this.equipped = false;
+      let pronoun = this.name.endsWith("s") ? "them" : "it";
+      this.level.game.pushMessage(
+        "You'll have to fix your " +
+          this.name +
+          " before you can use " +
+          pronoun +
+          ".",
+      );
+    } else if (this.cooldown > 0) {
+      this.level.game.pushMessage("Cooldown: " + this.cooldown);
+    }
   };
 
-  drawEquipped = (x: number, y: number) => {
+  drawEquipped = (delta: number, x: number, y: number) => {
     Game.drawItem(this.tileX, this.tileY, 1, 2, x, y - 1, this.w, this.h);
+  };
+
+  degrade = (degradeAmount: number = 1) => {
+    if (!this.degradeable) return;
+    this.durability -= degradeAmount * this.useCost;
+    if (this.durability <= 0) this.break();
+  };
+
+  break = () => {
+    this.durability = 0;
+    this.broken = true;
+    this.toggleEquip();
+    //this.wielder.inventory.removeItem(this);
+    //this.wielder = null;
+  };
+
+  onDrop = () => {};
+
+  dropFromInventory = () => {
+    this.wielder = null;
+    this.equipped = false;
   };
 }

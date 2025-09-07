@@ -1,16 +1,15 @@
-import { Player } from "../player";
+import { Player } from "../player/player";
 import { Game } from "../game";
-import { Level } from "../level";
-import { BottomDoor } from "./bottomDoor";
-import { GameConstants } from "../gameConstants";
+import { Room } from "../room/room";
+import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 
 export class InsideLevelDoor extends Tile {
   game: Game;
   opened: boolean;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
-    super(level, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, x, y);
     this.game = game;
     this.opened = false;
   }
@@ -25,10 +24,32 @@ export class InsideLevelDoor extends Tile {
     return !this.opened;
   };
 
-  draw = () => {
-    Game.drawTile(1, 0, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+  draw = (delta: number) => {
+    Game.drawTile(
+      1,
+      0,
+      1,
+      1,
+      this.x,
+      this.y,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
     if (this.opened)
-      Game.drawTile(15, 1, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+      Game.drawTile(
+        15,
+        1,
+        1,
+        1,
+        this.x,
+        this.y,
+        1,
+        1,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
     else
       Game.drawTile(
         3,
@@ -39,12 +60,12 @@ export class InsideLevelDoor extends Tile {
         this.y,
         1,
         1,
-        this.level.shadeColor,
-        this.shadeAmount()
+        this.room.shadeColor,
+        this.shadeAmount(),
       );
   };
 
-  drawAbovePlayer = () => {
+  drawAbovePlayer = (delta: number) => {
     if (!this.opened)
       Game.drawTile(
         13,
@@ -55,8 +76,8 @@ export class InsideLevelDoor extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
-        this.shadeAmount()
+        this.room.shadeColor,
+        this.shadeAmount(),
       );
     else
       Game.drawTile(
@@ -68,8 +89,8 @@ export class InsideLevelDoor extends Tile {
         this.y - 1,
         1,
         1,
-        this.level.shadeColor,
-        this.shadeAmount()
+        this.room.shadeColor,
+        this.shadeAmount(),
       );
   };
 }

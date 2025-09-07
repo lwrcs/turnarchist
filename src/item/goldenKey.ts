@@ -1,13 +1,15 @@
 import { Item } from "./item";
 import { Equippable } from "./equippable";
-import { Level } from "../level";
+import { Room } from "../room/room";
 
 export class GoldenKey extends Equippable {
-  constructor(level: Level, x: number, y: number) {
+  static itemName = "goldenKey";
+  constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 6;
     this.tileY = 0;
+    this.name = "goldenKey";
   }
 
   getDescription = (): string => {

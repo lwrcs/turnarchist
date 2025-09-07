@@ -1,10 +1,11 @@
-import { Level } from "../level";
+import { Room } from "../room/room";
 import { Particle } from "./particle";
 import { Game } from "../game";
-import { GameConstants } from "../gameConstants";
+import { GameConstants } from "../game/gameConstants";
+import { Random } from "../utility/random";
 
 export class GenericParticle extends Particle {
-  level: Level;
+  level: Room;
   x: number;
   y: number;
   z: number;
@@ -21,12 +22,12 @@ export class GenericParticle extends Particle {
   expirationTimer: number;
 
   static shotgun = (
-    level: Level,
+    level: Room,
     cx: number,
     cy: number,
     tx: number,
     ty: number,
-    color: string
+    color: string,
   ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
@@ -35,42 +36,47 @@ export class GenericParticle extends Particle {
           cx,
           cy,
           0,
-          Math.random() * 0.5 + 0.3,
+          Random.rand() * 0.5 + 0.3,
           0,
           0,
           0,
           color,
           0,
           10000000,
-          tx + Math.random() - 0.5,
-          ty + Math.random() - 0.5,
-          0
-        )
+          tx + Random.rand() - 0.5,
+          ty + Random.rand() - 0.5,
+          0,
+        ),
       );
     }
   };
 
-  static spawnCluster = (level: Level, cx: number, cy: number, color: string) => {
+  static spawnCluster = (
+    level: Room,
+    cx: number,
+    cy: number,
+    color: string,
+  ) => {
     for (let i = 0; i < 4; i++) {
       level.particles.push(
         new GenericParticle(
           level,
-          cx + Math.random() * 0.05 - 0.025,
-          cy + Math.random() * 0.05 - 0.025,
-          Math.random() * 0.5,
+          cx + Random.rand() * 0.05 - 0.025,
+          cy + Random.rand() * 0.05 - 0.025,
+          Random.rand() * 0.5,
           0.0625 * (i + 8),
-          0.025 * (Math.random() * 2 - 1),
-          0.025 * (Math.random() * 2 - 1),
-          0.2 * (Math.random() - 1),
+          0.025 * (Random.rand() * 2 - 1),
+          0.025 * (Random.rand() * 2 - 1),
+          0.2 * (Random.rand() - 1),
           color,
-          0
-        )
+          0,
+        ),
       );
     }
   };
 
   constructor(
-    level: Level,
+    level: Room,
     x: number,
     y: number,
     z: number,
@@ -83,7 +89,7 @@ export class GenericParticle extends Particle {
     expirationTimer?: number,
     targetX?: number,
     targetY?: number,
-    targetZ?: number
+    targetZ?: number,
   ) {
     super();
     this.level = level;
@@ -110,12 +116,7 @@ export class GenericParticle extends Particle {
     let halfS = 0.5 * scaledS;
     let oldFillStyle = Game.ctx.fillStyle;
     Game.ctx.fillStyle = this.color;
-    /* Game.ctx.fillRect(
-      Math.round((this.x - halfS) * scale),
-      Math.round((this.y - this.z - halfS) * scale),
-      Math.round(scaledS * scale),
-      Math.round(scaledS * scale)
-    ); */
+    Game.ctx.imageSmoothingEnabled = false;
 
     Game.ctx.beginPath();
     Game.ctx.arc(
@@ -124,14 +125,14 @@ export class GenericParticle extends Particle {
       Math.round(halfS * scale),
       0,
       2 * Math.PI,
-      false
+      false,
     );
     Game.ctx.fill();
 
     Game.ctx.fillStyle = oldFillStyle;
   };
 
-  draw = () => {
+  draw = (delta: number) => {
     if (this.targetX) this.x += 0.1 * (this.targetX - this.x);
     else this.x += this.dx;
     if (this.targetY) this.y += 0.1 * (this.targetY - this.y);
@@ -157,6 +158,8 @@ export class GenericParticle extends Particle {
     if (this.expirationTimer <= 0) this.dead = true;
 
     if (this.dead) return;
+
+    this.drawableY = this.y;
 
     this.render();
   };

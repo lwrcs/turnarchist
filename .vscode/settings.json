@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "search.exclude": {
+    "**/dist": true,
+    "**/*.bundle.js": true,
+    "**/*bundle.js.map": true
+  }
+}

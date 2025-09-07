@@ -1,18 +1,18 @@
 import { Game } from "../game";
-import { Level } from "../level";
-import { Player } from "../player";
-import { LevelConstants } from "../levelConstants";
+import { Room } from "../room/room";
+import { Player } from "../player/player";
+import { LevelConstants } from "../level/levelConstants";
 import { Tile } from "./tile";
 
 export class Trapdoor extends Tile {
   game: Game;
 
-  constructor(level: Level, game: Game, x: number, y: number) {
-    super(level, x, y);
+  constructor(room: Room, game: Game, x: number, y: number) {
+    super(room, x, y);
     this.game = game;
   }
 
-  draw = () => {
+  draw = (delta: number) => {
     Game.drawTile(
       13,
       this.skin,
@@ -22,8 +22,8 @@ export class Trapdoor extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
-      this.shadeAmount()
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
   };
 

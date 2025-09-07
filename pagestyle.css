@@ -1,0 +1,265 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: 1em;
+}
+mark {
+  background-color: black;
+  color: yellow;
+}
+@font-face {
+  font-family: "dogica";
+  src: url("/res/fonts/dogica.woff") format("woff");
+
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "dogica";
+  src: url("/res/fonts/dogicabold.woff") format("woff"); /* Use the actual bold file */
+  font-weight: bold;
+  font-style: normal;
+}
+span.small {
+  font-size: 0.75em;
+}
+nav {
+  font-family: "dogica", sans-serif;
+  padding: 15px;
+  position: relative;
+}
+body {
+  font-family: "dogica", sans-serif;
+  text-align: center;
+  background: black;
+  color: white;
+  position: relative;
+  font-size: 1em; /* Base font size for the body */
+  margin-bottom: 15px;
+}
+
+.hero-container {
+  position: relative;
+  width: 100%;
+  height: 35vh; /* Ensures the video and text take up only part of the screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+.hero-text {
+  position: absolute;
+  color: white;
+  font-size: 1.25em;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.main-content {
+  position: relative;
+  z-index: 1;
+  padding-top: 1vh; /* Push content down so it starts after the hero section */
+}
+
+header {
+  position: center;
+  top: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px 0;
+  text-align: center;
+  font-size: 1.2em;
+}
+h1 {
+  position: center;
+
+  font-size: 1.5em;
+  margin-top: 60px;
+  margin-bottom: 40px;
+  line-height: 1.25; /* Adds comfortable spacing between lines */
+}
+p {
+  position: center;
+  font-size: 1em;
+  margin-bottom: 20px;
+  opacity: 0.9;
+  text-align: center;
+  margin-left: 50px;
+  margin-right: 50px;
+  line-height: 1.25; /* Adds comfortable spacing between lines */
+}
+.btn {
+  display: inline-block;
+  padding: 20px;
+  font-size: 0.8em; /* Font size in em relative to body font size */
+  text-decoration: none;
+  background: yellow;
+  color: #222;
+  border-radius: 1px;
+  font-weight: bold;
+  transition: 0.3s;
+  line-height: 1.25; /* Adds comfortable spacing between lines */
+  margin-left: 15px;
+  margin-right: 15px;
+  margin-bottom: 10px;
+}
+.btn:hover {
+  background: white;
+  transform: scale(1.05);
+}
+
+.discord-btn {
+  background: #5865f2 !important; /* Discord's official brand color */
+  color: white !important;
+  border-radius: 8px; /* Rounded corners */
+}
+
+.discord-btn:hover {
+  background: #4752c4 !important; /* Darker shade for hover effect */
+  color: white !important;
+  transform: scale(1.05);
+}
+
+.discord-section {
+  margin-top: 40px; /* Adds space above the Discord section */
+}
+
+.instagram-section {
+  margin-top: 20px; /* Space between Discord and Instagram */
+}
+
+.instagram-btn {
+  background: linear-gradient(
+    45deg,
+    #ffff00 0%,
+    #ff6347 25%,
+    #ff0000 50%,
+    #ff0080 75%,
+    #8a2be2 100%
+  ) !important;
+  color: white !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.instagram-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg,
+    #8a2be2 0%,
+    #ff0080 25%,
+    #ff0000 50%,
+    #ff6347 75%,
+    #ffff00 100%
+  );
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.instagram-btn:hover::before {
+  opacity: 1;
+}
+
+.instagram-btn:hover {
+  color: white !important;
+  transform: scale(1.05);
+}
+
+.tiktok-section {
+  margin-top: 20px; /* Space between Instagram and TikTok */
+}
+
+.tiktok-btn {
+  background: #000000 !important;
+  color: white !important;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  box-shadow:
+    6px 6px 0 0 #ff0050,
+    -6px -6px 0 0 #25f4ee;
+}
+
+.tiktok-btn:hover {
+  color: white !important;
+  transform: scale(1.05);
+  box-shadow:
+    -6px -6px 0 0 #ff0050,
+    6px 6px 0 0 #25f4ee;
+}
+
+.patreon-btn {
+  background: #f96855 !important;
+  color: white !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.patreon-btn:hover {
+  background: #e55a47 !important; /* Slightly darker shade for hover */
+  color: white !important;
+  transform: scale(1.05);
+}
+
+/* Social Media Container */
+.social-media-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin-top: 80px;
+  padding: 0 20px;
+}
+
+.social-media-container .btn {
+  padding: 12px; /* Reduced from 20px */
+  font-size: 0.6em; /* Reduced from 0.8em */
+}
+
+.social-item {
+  flex: 0 1 auto;
+  margin: 0 5px 10px 5px;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .social-media-container {
+    flex-direction: column;
+  }
+
+  .social-item {
+    margin: 0 0 15px 0;
+    width: 100%;
+  }
+}
+
+footer {
+  position: center;
+
+  margin-top: 50px;
+  font-size: 0.7em;
+  opacity: 0.7;
+  margin-bottom: 50px;
+  line-height: 1.5;
+}

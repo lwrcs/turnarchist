@@ -1,4 +1,4 @@
-import { Level } from "../level";
+import { Room } from "../room/room";
 import { Game } from "../game";
 import { Tile } from "./tile";
 
@@ -6,8 +6,14 @@ export class FountainTile extends Tile {
   subTileX: number; // each fountain is 3x3, this is the sub-tile coordinate
   subTileY: number;
 
-  constructor(level: Level, x: number, y: number, subTileX: number, subTileY: number) {
-    super(level, x, y);
+  constructor(
+    room: Room,
+    x: number,
+    y: number,
+    subTileX: number,
+    subTileY: number,
+  ) {
+    super(room, x, y);
     this.subTileX = subTileX;
     this.subTileY = subTileY;
   }
@@ -19,7 +25,7 @@ export class FountainTile extends Tile {
     return true;
   };
 
-  draw = () => {
+  draw = (delta: number) => {
     Game.drawTile(
       1,
       this.skin,
@@ -29,8 +35,8 @@ export class FountainTile extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
-      this.shadeAmount()
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
     Game.drawTile(
       this.subTileX,
@@ -41,8 +47,8 @@ export class FountainTile extends Tile {
       this.y,
       1,
       1,
-      this.level.shadeColor,
-      this.shadeAmount()
+      this.room.shadeColor,
+      this.shadeAmount(),
     );
   };
 }

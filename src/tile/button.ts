@@ -1,9 +1,10 @@
 import { Game } from "../game";
 import { Tile, SkinType } from "./tile";
-import { Level } from "../level";
-import { Player } from "../player";
+import { Room } from "../room/room";
+import { Player } from "../player/player";
 import { InsideLevelDoor } from "./insideLevelDoor";
-import { Enemy } from "../enemy/enemy";
+import { Entity } from "../entity/entity";
+import { Enemy } from "../entity/enemy/enemy";
 
 export class Button extends Tile {
   // all are in grid units
@@ -13,8 +14,8 @@ export class Button extends Tile {
   turnsSincePressed: number;
   linkedDoor: InsideLevelDoor;
 
-  constructor(level: Level, x: number, y: number, linkedDoor: InsideLevelDoor) {
-    super(level, x, y);
+  constructor(room: Room, x: number, y: number, linkedDoor: InsideLevelDoor) {
+    super(room, x, y);
     this.w = 1;
     this.h = 1;
 
@@ -34,24 +35,41 @@ export class Button extends Tile {
     this.linkedDoor.opened = false;
   };
 
-  /*onCollide = (player: Player) => {
+  onCollide = (player: Player) => {
     this.press();
   };
 
   onCollideEnemy = (enemy: Enemy) => {
     this.press();
-  };*/
+  };
 
   tickEnd = () => {
     this.unpress();
-    if (this.level.game.player.x === this.x && this.level.game.player.y === this.y) this.press();
-    for (const e of this.level.enemies) {
+    for (const i in this.room.game.players) {
+      if (
+        this.room.game.players[i].x === this.x &&
+        this.room.game.players[i].y === this.y
+      )
+        this.press();
+    }
+    for (const e of this.room.entities) {
       if (e.x === this.x && e.y === this.y) this.press();
     }
   };
 
-  draw = () => {
-    Game.drawTile(1, 0, 1, 1, this.x, this.y, 1, 1, this.level.shadeColor, this.shadeAmount());
+  draw = (delta: number) => {
+    Game.drawTile(
+      1,
+      0,
+      1,
+      1,
+      this.x,
+      this.y,
+      1,
+      1,
+      this.room.shadeColor,
+      this.shadeAmount(),
+    );
     if (this.pressed)
       Game.drawTile(
         18,
@@ -62,8 +80,8 @@ export class Button extends Tile {
         this.y,
         this.w,
         this.h,
-        this.level.shadeColor,
-        this.shadeAmount()
+        this.room.shadeColor,
+        this.shadeAmount(),
       );
     else
       Game.drawTile(
@@ -75,8 +93,8 @@ export class Button extends Tile {
         this.y,
         this.w,
         this.h,
-        this.level.shadeColor,
-        this.shadeAmount()
+        this.room.shadeColor,
+        this.shadeAmount(),
       );
   };
 }

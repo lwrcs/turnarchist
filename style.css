@@ -10,19 +10,23 @@ canvas {
   image-rendering: -webkit-optimize-contrast; /* Safari                        */
   image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
   image-rendering: pixelated; /* Awesome future-browsers       */
-
+  cursor: none;
   -ms-interpolation-mode: nearest-neighbor; /* IE                            */
 }
+
 body {
-  background-color: black;
+  background-color: #080808;
   margin: 0;
   overscroll-behavior-y: contain;
   touch-action: none;
+  filter: none;
+  overflow: hidden;
 }
 
 html {
   overscroll-behavior-y: contain;
   touch-action: none;
+  overflow: hidden;
 }
 
 @font-face {
@@ -32,7 +36,7 @@ html {
 
 @font-face {
   font-family: Script;
-  src: url("./res/Typecast.ttf");
+  src: url("./res/CWEBL.ttf");
 }
 
 .center-text {
