@@ -12,6 +12,8 @@ export interface SidePathOptions {
   locked?: boolean;
   envType?: EnvType;
   linearity?: number;
+  branching?: number; // 0..1 probability of adding a second branch door
+  loopiness?: number; // 0..1 scale for number of loop connections
 }
 
 /**

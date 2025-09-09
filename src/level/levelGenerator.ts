@@ -226,6 +226,13 @@ export class LevelGenerator {
           this.levelParams.mapHeight,
           depth,
           this.levelParams,
+          // Allow main-path overrides via opts when not a side path
+          isSidePath
+            ? undefined
+            : {
+                branching: (opts as any)?.branching,
+                loopiness: (opts as any)?.loopiness,
+              },
         );
       }
     } else {
@@ -239,6 +246,12 @@ export class LevelGenerator {
           this.levelParams.mapHeight,
           depth,
           this.levelParams,
+          isSidePath
+            ? undefined
+            : {
+                branching: (opts as any)?.branching,
+                loopiness: (opts as any)?.loopiness,
+              },
         );
       }
     }
@@ -340,6 +353,11 @@ export class LevelGenerator {
         () => {},
         EnvType.DUNGEON,
         skipPopulation,
+        undefined,
+        {
+          branching: GameplaySettings.MAIN_PATH_BRANCHING,
+          loopiness: GameplaySettings.MAIN_PATH_LOOPINESS,
+        },
       );
       // generate() updates game.rooms to this depth's rooms
     }

@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.97c1c87745c93c774a26.png";
+module.exports = __webpack_require__.p + "assets/mobset.5dedb9a6156da275c9b2.png";
 
 /***/ }),
 
@@ -24799,6 +24799,8 @@ GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
+GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
+GameplaySettings.MAIN_PATH_LOOPINESS = 0.1;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -34027,7 +34029,14 @@ class LevelGenerator {
                     else {
                         console.warn("PNG generation failed, falling back to procedural generation");
                     }
-                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
+                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams, 
+                    // Allow main-path overrides via opts when not a side path
+                    isSidePath
+                        ? undefined
+                        : {
+                            branching: opts?.branching,
+                            loopiness: opts?.loopiness,
+                        });
                 }
             }
             else {
@@ -34036,7 +34045,12 @@ class LevelGenerator {
                     partitions = await this.partitionGenerator.generateCavePartitions(opts);
                 }
                 else {
-                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
+                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams, isSidePath
+                        ? undefined
+                        : {
+                            branching: opts?.branching,
+                            loopiness: opts?.loopiness,
+                        });
                 }
             }
             // Use validator instead of direct overlap checking
@@ -34089,7 +34103,10 @@ class LevelGenerator {
         this.generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
             // Deterministically generate each main path depth from 0..numFloors
             for (let depth = 0; depth <= numFloors; depth++) {
-                await this.generate(game, depth, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation);
+                await this.generate(game, depth, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation, undefined, {
+                    branching: gameplaySettings_1.GameplaySettings.MAIN_PATH_BRANCHING,
+                    loopiness: gameplaySettings_1.GameplaySettings.MAIN_PATH_LOOPINESS,
+                });
                 // generate() updates game.rooms to this depth's rooms
             }
         };
@@ -35169,7 +35186,7 @@ class PartitionGenerator {
         this.validator = new levelValidator_1.LevelValidator(game);
         this.visualizer = new generationVisualizer_1.GenerationVisualizer(game);
     }
-    async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params) {
+    async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params, controls) {
         const partialLevel = new PartialLevel();
         let validationResult;
         let attempts = 0;
@@ -35177,7 +35194,7 @@ class PartitionGenerator {
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating candidate ${attempts}`, attempts * 0.1);
-            await this.generateDungeonCandidate(game, partialLevel, mapWidth, mapHeight, depth, params);
+            await this.generateDungeonCandidate(game, partialLevel, mapWidth, mapHeight, depth, params, controls);
             validationResult = this.validator.validateDungeonPartitions(partialLevel.partitions, params);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating", 0.8);
@@ -35197,12 +35214,22 @@ class PartitionGenerator {
         const mapWidth = opts.mapWidth ?? 50;
         const mapHeight = opts.mapHeight ?? 50;
         const numRooms = opts.caveRooms ?? 8;
-        const linearity = opts.linearity ?? 0.5;
+        const hasLinearity = typeof opts.linearity === "number";
+        const branching = typeof opts.branching === "number"
+            ? opts.branching
+            : hasLinearity
+                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                : 0.5; // default: 50% chance of second door
+        const loopiness = typeof opts.loopiness === "number"
+            ? opts.loopiness
+            : hasLinearity
+                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                : 0.5; // default: moderate loops
         this.visualizer.updateProgress("Starting cave generation", 0);
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
-            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, linearity);
+            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
             validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numRooms);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating cave", 0.8);
@@ -35221,7 +35248,7 @@ class PartitionGenerator {
         }
         return partitions;
     }
-    async generateDungeonCandidate(game, partialLevel, map_w, map_h, depth, params) {
+    async generateDungeonCandidate(game, partialLevel, map_w, map_h, depth, params, controls) {
         const { minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, softMaxRoomArea, } = params;
         partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
         this.visualizer.updateProgress("Splitting partitions", 0.1);
@@ -35272,10 +35299,10 @@ class PartitionGenerator {
                 "red";
         }
         this.visualizer.updateProgress("Connecting partitions", 0.6);
-        await this.connectPartitions(partialLevel, spawn);
+        await this.connectPartitions(partialLevel, spawn, controls?.branching);
         this.visualizer.updateProgress("Adding loop connections", 0.7);
         if (partialLevel.partitions.length > 0) {
-            await this.addLoopConnections(partialLevel);
+            await this.addLoopConnections(partialLevel, controls?.loopiness);
         }
         this.visualizer.updateProgress("Adding stair room", 0.8);
         if (partialLevel.partitions.length > 0) {
@@ -35287,7 +35314,7 @@ class PartitionGenerator {
             await this.addSpecialRooms(partialLevel);
         }
     }
-    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, linearity = 0.5) {
+    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5) {
         const CAVE_OFFSET = 100;
         partialLevel.partitions = [
             new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
@@ -35304,8 +35331,8 @@ class PartitionGenerator {
         for (let i = 1; i < partialLevel.partitions.length; i++) {
             partialLevel.partitions[i].type = room_1.RoomType.CAVE;
         }
-        await this.connectCavePartitions(partialLevel, spawn, num_rooms, linearity);
-        await this.addCaveLoops(partialLevel, linearity);
+        await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
+        await this.addCaveLoops(partialLevel, loopiness);
         await this.calculateDistances(partialLevel, spawn);
     }
     async splitPartitions(partitions, prob) {
@@ -35408,7 +35435,7 @@ class PartitionGenerator {
         }
         return partitions;
     }
-    async connectPartitions(partialLevel, spawn) {
+    async connectPartitions(partialLevel, spawn, branching) {
         let connected = [spawn];
         let frontier = [spawn];
         let found_boss = false;
@@ -35419,7 +35446,10 @@ class PartitionGenerator {
             }
             frontier.splice(0, 1);
             let doors_found = 0;
-            const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+            // Default behavior kept if branching is undefined
+            const num_doors = branching === undefined
+                ? Math.floor(random_1.Random.rand() * 2 + 1)
+                : 1 + (random_1.Random.rand() < Math.max(0, Math.min(1, branching)) ? 1 : 0);
             let tries = 0;
             const max_tries = 1000;
             while (doors_found < num_doors && tries < max_tries) {
@@ -35453,18 +35483,15 @@ class PartitionGenerator {
             }
         }
     }
-    async connectCavePartitions(partialLevel, spawn, num_rooms, linearity = 0.5) {
+    async connectCavePartitions(partialLevel, spawn, num_rooms, branching = 0.5) {
         let connected = [spawn];
         let frontier = [spawn];
         while (frontier.length > 0 && connected.length < num_rooms) {
             let room = frontier[0];
             frontier.splice(0, 1);
             let doors_found = 0;
-            // linearly map linearity -> probability of a second door
-            // linearity 0.5 => p(second door)=0.5 (current behavior)
-            // linearity 1.0 => p(second door)=0 (no branching)
-            // linearity 0.0 => p(second door)=1 (max branching)
-            const pSecondDoor = Math.max(0, Math.min(1, 1 - linearity));
+            // branching controls probability of a second door
+            const pSecondDoor = Math.max(0, Math.min(1, branching));
             const num_doors = 1 + (random_1.Random.rand() < pSecondDoor ? 1 : 0);
             let tries = 0;
             const max_tries = 1000;
@@ -35495,12 +35522,14 @@ class PartitionGenerator {
             throw new Error("No valid rooms after filtering.");
         }
     }
-    async addLoopConnections(partialLevel) {
+    async addLoopConnections(partialLevel, loopiness) {
         // Check if we have any partitions to work with
         if (partialLevel.partitions.length === 0) {
             return;
         }
-        let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+        let num_loop_doors = loopiness === undefined
+            ? Math.floor(random_1.Random.rand() * 4 + 4)
+            : Math.floor((random_1.Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)));
         for (let i = 0; i < num_loop_doors; i++) {
             // Double-check array length in case partitions were removed during iteration
             if (partialLevel.partitions.length === 0) {
@@ -35535,12 +35564,12 @@ class PartitionGenerator {
             }
         }
     }
-    async addCaveLoops(partialLevel, linearity = 0.5) {
+    async addCaveLoops(partialLevel, loopiness = 0.5) {
         // Check if we have any partitions to work with
         if (partialLevel.partitions.length === 0) {
             return;
         }
-        let num_loop_doors = Math.floor((random_1.Random.rand() * 4 + 4) * (1 - linearity));
+        let num_loop_doors = Math.floor((random_1.Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)));
         for (let i = 0; i < num_loop_doors; i++) {
             // Double-check array length in case partitions were removed during iteration
             if (partialLevel.partitions.length === 0) {
@@ -43893,7 +43922,7 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.CASTLE,
-                    linearity: 0.75,
+                    linearity: 0.8,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
@@ -43901,7 +43930,7 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.DARK_CASTLE,
-                    linearity: 0,
+                    linearity: 0.8,
                 });
             }
             this.linkExitToStart();
@@ -44006,7 +44035,7 @@ class Populator {
             // find the difference between the base total rooms and the number of rooms in the level
             const roomDiff = baseTotalRooms - this.level.rooms.length;
             // add sidepath rooms to offset the room difference
-            return Math.max(roomDiff, 3);
+            return Math.max(roomDiff, 5);
         };
         // #endregion
         // #region POPULATING METHODS

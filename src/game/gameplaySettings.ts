@@ -9,6 +9,9 @@ export class GameplaySettings {
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
 
+  static readonly MAIN_PATH_BRANCHING = 0.1;
+  static readonly MAIN_PATH_LOOPINESS = 0.1;
+
   // === ENEMY POOL SETTINGS ===
 
   // Enemy Type Progression

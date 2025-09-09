@@ -161,7 +161,7 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.CASTLE,
-        linearity: 0.75,
+        linearity: 0.8,
       });
     }
 
@@ -170,7 +170,7 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.DARK_CASTLE,
-        linearity: 0,
+        linearity: 0.8,
       });
     }
 
@@ -457,7 +457,7 @@ export class Populator {
     // find the difference between the base total rooms and the number of rooms in the level
     const roomDiff = baseTotalRooms - this.level.rooms.length;
     // add sidepath rooms to offset the room difference
-    return Math.max(roomDiff, 3);
+    return Math.max(roomDiff, 5);
   };
 
   // #region TILE ADDING METHODS
