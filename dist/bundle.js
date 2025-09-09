@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.9cf68c8bc6478165765d.png";
+module.exports = __webpack_require__.p + "assets/mobset.97c1c87745c93c774a26.png";
 
 /***/ }),
 
@@ -8611,7 +8611,7 @@ module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.dada2d6925da4179a148.png";
+module.exports = __webpack_require__.p + "assets/tileset.ecfcc8cde5813473cf87.png";
 
 /***/ }),
 
@@ -15101,8 +15101,8 @@ class RookEnemy extends enemy_1.Enemy {
                         undefined, undefined, undefined, false, //diagonalsOmni
                         this.lastPlayerPos);
                         if (this.justHurt) {
-                            this.retreat(oldX, oldY);
-                            this.stun();
+                            //this.retreat(oldX, oldY);
+                            //this.stun();
                         }
                         else if (moves.length > 0 && !this.unconscious) {
                             let moveX = moves[0].pos.x;
@@ -15162,7 +15162,8 @@ class RookEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, // + offsetTileY,
+                1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -15176,9 +15177,9 @@ class RookEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 2;
-        this.maxHealth = 2;
-        this.defaultMaxHealth = 2;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 23 + 28;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -21092,7 +21093,10 @@ class Game {
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
             if (isSafari) {
                 gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
-                gameConstants_1.GameConstants.SMOOTH_LIGHTING = false;
+                // Only set default once at initialization; do not override user choice during resize/scale changes
+                if (gameConstants_1.GameConstants.SCALE === null) {
+                    gameConstants_1.GameConstants.SMOOTH_LIGHTING = false;
+                }
             }
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
@@ -26589,9 +26593,9 @@ class Menu {
         const buttonY = gameConstants_1.GameConstants.TILESIZE / 2;
         game_1.Game.drawFX(18, 0, 1, 1, 0, 0.5, 1, 1);
         //Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        //Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
+        game_1.Game.fillText("Menu", 10, 10);
         game_1.Game.ctx.globalAlpha = 1;
-        game_1.Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
-        //Game.fillText("Menu", buttonX + 1, buttonY + 1);
         game_1.Game.ctx.restore();
     }
     initializeCloseButton() {
@@ -27633,7 +27637,7 @@ class XPCounter {
         game_1.Game.ctx.save();
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
         game_1.Game.ctx.globalAlpha = 0.1;
-        game_1.Game.fillText(`XP: ${xp}`, 10, 10);
+        game_1.Game.fillText(`XP: ${xp}`, 1, 20);
         game_1.Game.ctx.restore();
     }
 }
@@ -33640,6 +33644,13 @@ class Level {
         this.pathsById = new Map();
         this.isMainPath = true;
         this.skipPopulation = false;
+        this.getLadderRoom = (room, ladderType) => {
+            for (const r of room.path()) {
+                if (r.hasLadder(ladderType))
+                    return r;
+            }
+            return null;
+        };
         this.initializeLevelArray = () => {
             // Create a 300x300 grid for depth 0
             this.levelArray = [];
@@ -33793,20 +33804,20 @@ class Level {
         //console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
-    setExitRoom() {
-        if (this.isMainPath) {
+    setExitRoom(mainPath = true) {
+        if (mainPath) {
             this.exitRoom = this.rooms.find((room) => room.type === room_1.RoomType.DOWNLADDER);
         }
         else {
-            this.exitRoom = this.rooms.find((room) => room.type === room_1.RoomType.UPLADDER);
+            this.exitRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "down");
         }
     }
-    setStartRoom() {
-        if (this.isMainPath) {
+    setStartRoom(mainPath = true) {
+        if (mainPath) {
             this.startRoom = this.rooms.find((room) => room.type === room_1.RoomType.START);
         }
         else {
-            this.startRoom = this.rooms.find((room) => room.type === room_1.RoomType.ROPECAVE);
+            this.startRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "up");
         }
     }
     setRooms(rooms) {
@@ -40699,13 +40710,14 @@ class Room {
         };
         // #endregion
         // #region ENTERING / EXITING ROOM METHODS
-        this.linkExitToStart = () => {
+        this.linkExitToStart = (startRoom) => {
             //if (this.type === RoomType.ROPEHOLE) return;
-            if (this.addDoorWithOffset(this.level.startRoom.roomX +
-                Math.floor(this.level.startRoom.width / 2) +
-                1, this.level.startRoom.roomY, this.level.startRoom, true) &&
+            if (!startRoom)
+                startRoom = this.level.startRoom;
+            if (this.addDoorWithOffset(startRoom.roomX + Math.floor(startRoom.width / 2) + 1, startRoom.roomY, startRoom, true) &&
                 this.addDoorWithOffset(this.roomX + Math.floor(this.width / 2) - 1, this.roomY, this, true)) {
-                this.tunnelDoor.linkedDoor = this.level.startRoom.tunnelDoor;
+                this.tunnelDoor.startRoom = true;
+                this.tunnelDoor.linkedDoor = startRoom.tunnelDoor;
                 this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
             }
         };
@@ -43892,6 +43904,7 @@ class Populator {
                     linearity: 0,
                 });
             }
+            this.linkExitToStart();
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -43912,6 +43925,18 @@ class Populator {
                     this.populateDefaultEnvironment(room);
                     break;
             }
+        };
+        this.linkExitToStart = () => {
+            console.log("linkExitToStart", this.level.isMainPath);
+            if (this.level.isMainPath)
+                return;
+            this.level.setExitRoom(false);
+            this.level.setStartRoom(false);
+            const exitRoom = this.level.exitRoom;
+            const startRoom = this.level.startRoom;
+            if (!startRoom || !exitRoom)
+                return;
+            startRoom.linkExitToStart(exitRoom);
         };
         this.addTrainingDownladder = (opts) => {
             if (this.level.depth !== 0)
@@ -46410,7 +46435,8 @@ class Door extends passageway_1.Passageway {
             }
             if (this.type === DoorType.TUNNELDOOR &&
                 (!this.opened || !this.linkedDoor.opened)) {
-                if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor) {
+                if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor ||
+                    this.startRoom) {
                     this.game.pushMessage("The door refuses to budge from this side.");
                     return false;
                 }
@@ -46500,6 +46526,9 @@ class Door extends passageway_1.Passageway {
             }
             else
                 this.game.changeLevelThroughDoor(player, this.linkedDoor, this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1);
+            if (this.type === DoorType.TUNNELDOOR && !this.startRoom) {
+                this.game.pushMessage("The tunnel leads you back to the start.");
+            }
             this.linkedDoor.removeLock();
             this.linkedDoor.removeLockIcon();
             this.removeLockIcon();

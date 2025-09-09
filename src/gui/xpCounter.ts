@@ -18,7 +18,7 @@ export class XPCounter {
 
     Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
     Game.ctx.globalAlpha = 0.1;
-    Game.fillText(`XP: ${xp}`, 10, 10);
+    Game.fillText(`XP: ${xp}`, 1, 20);
     Game.ctx.restore();
   }
 }

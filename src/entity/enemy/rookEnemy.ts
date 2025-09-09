@@ -22,9 +22,9 @@ export class RookEnemy extends Enemy {
     super(room, game, x, y);
     this.ticks = 0;
     this.frame = 0;
-    this.health = 2;
-    this.maxHealth = 2;
-    this.defaultMaxHealth = 2;
+    this.health = 1;
+    this.maxHealth = 1;
+    this.defaultMaxHealth = 1;
     this.tileX = 23 + 28;
     this.tileY = 8;
     this.seenPlayer = false;
@@ -111,9 +111,8 @@ export class RookEnemy extends Enemy {
             this.lastPlayerPos,
           );
           if (this.justHurt) {
-            this.retreat(oldX, oldY);
-
-            this.stun();
+            //this.retreat(oldX, oldY);
+            //this.stun();
           } else if (moves.length > 0 && !this.unconscious) {
             let moveX = moves[0].pos.x;
 
@@ -185,7 +184,7 @@ export class RookEnemy extends Enemy {
       if (this.hasShadow) this.drawShadow(delta);
       Game.drawMob(
         this.tileX + Math.floor(this.frame),
-        this.tileY + offsetTileY,
+        this.tileY, // + offsetTileY,
         1,
         2,
         this.x - this.drawX,

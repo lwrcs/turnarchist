@@ -57,10 +57,11 @@ export class Menu {
     Game.drawFX(18, 0, 1, 1, 0, 0.5, 1, 1);
 
     //Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+    //Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
+    Game.fillText("Menu", 10, 10);
     Game.ctx.globalAlpha = 1;
 
-    Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
-    //Game.fillText("Menu", buttonX + 1, buttonY + 1);
     Game.ctx.restore();
   }
 

@@ -1078,15 +1078,14 @@ export class Room {
 
   // #region ENTERING / EXITING ROOM METHODS
 
-  linkExitToStart = () => {
+  linkExitToStart = (startRoom?: Room) => {
     //if (this.type === RoomType.ROPEHOLE) return;
+    if (!startRoom) startRoom = this.level.startRoom;
     if (
       this.addDoorWithOffset(
-        this.level.startRoom.roomX +
-          Math.floor(this.level.startRoom.width / 2) +
-          1,
-        this.level.startRoom.roomY,
-        this.level.startRoom,
+        startRoom.roomX + Math.floor(startRoom.width / 2) + 1,
+        startRoom.roomY,
+        startRoom,
         true,
       ) &&
       this.addDoorWithOffset(
@@ -1096,7 +1095,8 @@ export class Room {
         true,
       )
     ) {
-      this.tunnelDoor.linkedDoor = this.level.startRoom.tunnelDoor;
+      this.tunnelDoor.startRoom = true;
+      this.tunnelDoor.linkedDoor = startRoom.tunnelDoor;
       this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
     }
   };

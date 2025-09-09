@@ -174,6 +174,8 @@ export class Populator {
       });
     }
 
+    this.linkExitToStart();
+
     //this.level.distributeKeys();
   };
 
@@ -195,6 +197,17 @@ export class Populator {
         this.populateDefaultEnvironment(room);
         break;
     }
+  };
+
+  linkExitToStart = () => {
+    console.log("linkExitToStart", this.level.isMainPath);
+    if (this.level.isMainPath) return;
+    this.level.setExitRoom(false);
+    this.level.setStartRoom(false);
+    const exitRoom = this.level.exitRoom;
+    const startRoom = this.level.startRoom;
+    if (!startRoom || !exitRoom) return;
+    startRoom.linkExitToStart(exitRoom);
   };
 
   addTrainingDownladder = (opts: SidePathOptions) => {

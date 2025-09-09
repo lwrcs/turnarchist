@@ -42,6 +42,7 @@ export class Door extends Passageway {
   tileX: number;
   drawTopOf: boolean;
   alpha: number;
+  startRoom: boolean;
 
   enteredFrom:
     | Direction.LEFT
@@ -77,7 +78,6 @@ export class Door extends Passageway {
     let lightOffsetY = 0;
     this.alpha = 1;
     this.enteredFrom = null;
-
     switch (this.doorDir) {
       case Direction.UP:
         lightOffsetY = -0.5;
@@ -191,7 +191,10 @@ export class Door extends Passageway {
       this.type === DoorType.TUNNELDOOR &&
       (!this.opened || !this.linkedDoor.opened)
     ) {
-      if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor) {
+      if (
+        this.linkedDoor === this.room.level.exitRoom.tunnelDoor ||
+        this.startRoom
+      ) {
         this.game.pushMessage("The door refuses to budge from this side.");
         return false;
       } else {
@@ -291,6 +294,9 @@ export class Door extends Passageway {
         this.linkedDoor,
         this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1,
       );
+    if (this.type === DoorType.TUNNELDOOR && !this.startRoom) {
+      this.game.pushMessage("The tunnel leads you back to the start.");
+    }
     this.linkedDoor.removeLock();
     this.linkedDoor.removeLockIcon();
     this.removeLockIcon();
