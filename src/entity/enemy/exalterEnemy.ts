@@ -155,6 +155,7 @@ export class ExalterEnemy extends Enemy {
 
   applyBuffTo = (enemy: Enemy) => {
     //this.shadeColor = "#2E0854";
+    if (!enemy.destroyable) return;
     this.shadeMultiplier = 1.5;
     enemy.applyBuff();
     this.buffedEnemies.push(enemy);
@@ -170,6 +171,7 @@ export class ExalterEnemy extends Enemy {
         beam.angleChange = 1;
         beam.springDamping = 0.3;
         beam.drawableY = enemy.drawableY;
+        beam.type = "buff";
         this.room.projectiles.push(beam);
       }
     }
@@ -178,12 +180,16 @@ export class ExalterEnemy extends Enemy {
   updateBeam = (delta: number) => {
     for (let beam of this.room.projectiles) {
       if (beam instanceof BeamEffect) {
-        if (!beam.parent) continue;
+        if (
+          !this.buffedEnemies.includes(beam.parent as Enemy) ||
+          beam.type !== "buff"
+        )
+          continue;
         beam.setTarget(
           this.x - this.drawX,
           this.y - this.drawY,
-          (beam.parent as any).x - (beam.parent as any).drawX,
-          (beam.parent as any).y - (beam.parent as any).drawY,
+          beam.parent.x - beam.parent.drawX,
+          beam.parent.y - beam.parent.drawY,
         );
         beam.drawableY = beam.parent.drawableY;
 

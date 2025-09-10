@@ -12368,6 +12368,7 @@ class CrusherEnemy extends enemy_1.Enemy {
             return 1;
         };
         this.applyShield = () => { };
+        this.applyBuff = () => { };
         // Allow crushers to move onto a player's tile
         this.tryMove = (x, y, collide = true) => {
             const entityCollide = (entity) => {
@@ -13424,6 +13425,8 @@ class ExalterEnemy extends enemy_1.Enemy {
         };
         this.applyBuffTo = (enemy) => {
             //this.shadeColor = "#2E0854";
+            if (!enemy.destroyable)
+                return;
             this.shadeMultiplier = 1.5;
             enemy.applyBuff();
             this.buffedEnemies.push(enemy);
@@ -13439,6 +13442,7 @@ class ExalterEnemy extends enemy_1.Enemy {
                     beam.angleChange = 1;
                     beam.springDamping = 0.3;
                     beam.drawableY = enemy.drawableY;
+                    beam.type = "buff";
                     this.room.projectiles.push(beam);
                 }
             }
@@ -13446,7 +13450,8 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.updateBeam = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (!beam.parent)
+                    if (!this.buffedEnemies.includes(beam.parent) ||
+                        beam.type !== "buff")
                         continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                     beam.drawableY = beam.parent.drawableY;
@@ -14722,31 +14727,15 @@ class OccultistEnemy extends enemy_1.Enemy {
                 beam.angleChange = 0.001;
                 beam.springDamping = 0.01;
                 beam.drawableY = enemy.drawableY;
+                beam.type = "shield";
                 this.room.projectiles.push(beam);
-            }
-        };
-        this.createBeam = (enemies) => {
-            for (let enemy of enemies) {
-                if (enemy.shielded && enemy.shield) {
-                    let beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
-                    beam.compositeOperation = "source-over";
-                    beam.color = "#2E0854";
-                    // Match runtime beam settings from applyShieldTo so loaded beams look identical
-                    beam.turbulence = 0.4;
-                    beam.gravity = 0.1;
-                    beam.iterations = 1;
-                    beam.segments = 100;
-                    beam.angleChange = 0.001;
-                    beam.springDamping = 0.01;
-                    beam.drawableY = enemy.drawableY;
-                    this.room.projectiles.push(beam);
-                }
             }
         };
         this.updateBeam = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (!beam.parent)
+                    if (!this.shieldedEnemies.includes(beam.parent) ||
+                        beam.type !== "shield")
                         continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                     beam.drawableY = beam.parent.drawableY;
@@ -16591,13 +16580,7 @@ class WardenEnemy extends enemy_1.Enemy {
             }
         };
         this.uniqueKillBehavior = () => {
-            for (let beam of this.room.projectiles) {
-                if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (beam.parent instanceof crusherEnemy_1.CrusherEnemy) {
-                        this.room.projectiles = this.room.projectiles.filter((b) => b !== beam);
-                    }
-                }
-            }
+            this.removeCrusherChains();
             for (const crusher of this.crushers) {
                 if (!crusher.dead) {
                     crusher.kill();
@@ -16608,7 +16591,8 @@ class WardenEnemy extends enemy_1.Enemy {
         this.updateCrusherChains = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (!beam.parent)
+                    if (beam.parent !== this.crushers[0] &&
+                        beam.parent !== this.crushers[1])
                         continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY - 0.5, beam.parent.x - beam.parent.drawX, beam.parent.y -
                         beam.parent.drawY -
@@ -17347,6 +17331,7 @@ class Entity extends drawable_1.Drawable {
         this.collidable = true;
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
+        this.beamIds = [];
         this.hoverText = () => {
             return this.name;
         };
@@ -17428,6 +17413,12 @@ class Entity extends drawable_1.Drawable {
             this.room.lightSources = this.room.lightSources.filter((ls) => ls !== lightSource);
             //this.lightSource = null;
             this.room.updateLighting();
+        };
+        this.addBeamId = (beamId) => {
+            this.beamIds.push(beamId);
+        };
+        this.removeBeamId = (beamId) => {
+            this.beamIds = this.beamIds.filter((id) => id !== beamId);
         };
         this.behavior = () => { };
         this.hit = () => {
@@ -18409,6 +18400,7 @@ class Entity extends drawable_1.Drawable {
         this.drops = [];
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
+        this.beamIds = [];
         if (this.drop)
             this.drops.push(this.drop);
     }
@@ -25101,7 +25093,7 @@ GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
-GameplaySettings.MAIN_PATH_LOOPINESS = 0.1;
+GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -44168,6 +44160,7 @@ const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/i
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -45259,6 +45252,7 @@ class Populator {
                 "bigskullenemy",
                 "bigzombieenemy",
                 "bigfrogenemy",
+                "exalter",
             ];
             if (depth > 0) {
                 bosses.push("occultist");
@@ -45332,6 +45326,11 @@ class Populator {
                         "gem",
                         "tool",
                     ];
+                    break;
+                case "exalter":
+                    const exalter = exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
+                    exalter.dropTable = ["weapon", "equipment"];
+                    exalter.dropChance = 1;
                     break;
             }
         }

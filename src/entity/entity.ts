@@ -150,6 +150,7 @@ export class Entity extends Drawable {
   collidable: boolean = true;
   canDestroyOthers: boolean = false;
   canCrushOthers: boolean = false;
+  beamIds: string[] = [];
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -232,6 +233,7 @@ export class Entity extends Drawable {
     this.drops = [];
     this.canDestroyOthers = false;
     this.canCrushOthers = false;
+    this.beamIds = [];
     if (this.drop) this.drops.push(this.drop);
   }
 
@@ -420,6 +422,14 @@ export class Entity extends Drawable {
     );
     //this.lightSource = null;
     this.room.updateLighting();
+  };
+
+  addBeamId = (beamId: string) => {
+    this.beamIds.push(beamId);
+  };
+
+  removeBeamId = (beamId: string) => {
+    this.beamIds = this.beamIds.filter((id) => id !== beamId);
   };
 
   behavior = () => {};

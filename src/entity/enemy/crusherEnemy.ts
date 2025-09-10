@@ -62,6 +62,7 @@ export class CrusherEnemy extends Enemy {
   };
 
   applyShield = () => {};
+  applyBuff = () => {};
 
   // Allow crushers to move onto a player's tile
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {

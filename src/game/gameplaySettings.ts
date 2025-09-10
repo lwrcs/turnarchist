@@ -10,7 +10,7 @@ export class GameplaySettings {
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
 
   static readonly MAIN_PATH_BRANCHING = 0.1;
-  static readonly MAIN_PATH_LOOPINESS = 0.1;
+  static readonly MAIN_PATH_LOOPINESS = 0.05;
 
   // === ENEMY POOL SETTINGS ===
 

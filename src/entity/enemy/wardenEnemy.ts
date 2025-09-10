@@ -165,15 +165,7 @@ export class WardenEnemy extends Enemy {
   };
 
   uniqueKillBehavior = () => {
-    for (let beam of this.room.projectiles) {
-      if (beam instanceof BeamEffect) {
-        if (beam.parent instanceof CrusherEnemy) {
-          this.room.projectiles = this.room.projectiles.filter(
-            (b) => b !== beam,
-          );
-        }
-      }
-    }
+    this.removeCrusherChains();
     for (const crusher of this.crushers) {
       if (!crusher.dead) {
         crusher.kill();
@@ -185,15 +177,19 @@ export class WardenEnemy extends Enemy {
   updateCrusherChains = (delta: number) => {
     for (let beam of this.room.projectiles) {
       if (beam instanceof BeamEffect) {
-        if (!beam.parent) continue;
+        if (
+          beam.parent !== this.crushers[0] &&
+          beam.parent !== this.crushers[1]
+        )
+          continue;
         beam.setTarget(
           this.x - this.drawX,
           this.y - this.drawY - 0.5,
-          (beam.parent as any).x - (beam.parent as any).drawX,
-          (beam.parent as any).y -
-            (beam.parent as any).drawY -
+          beam.parent.x - beam.parent.drawX,
+          beam.parent.y -
+            beam.parent.drawY -
             1.25 +
-            (beam.parent as any).softAnimateY,
+            (beam.parent as CrusherEnemy).softAnimateY,
         );
         beam.drawableY = this.drawableY - 0.1;
 

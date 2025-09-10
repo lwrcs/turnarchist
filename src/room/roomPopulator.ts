@@ -80,6 +80,7 @@ import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
 import { SidePathOptions } from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
+import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -1158,6 +1159,7 @@ export class Populator {
         "bigskullenemy",
         "bigzombieenemy",
         "bigfrogenemy",
+        "exalter",
       ];
 
       if (depth > 0) {
@@ -1240,6 +1242,11 @@ export class Populator {
             "gem",
             "tool",
           ];
+          break;
+        case "exalter":
+          const exalter = ExalterEnemy.add(room, room.game, x, y);
+          exalter.dropTable = ["weapon", "equipment"];
+          exalter.dropChance = 1;
           break;
       }
     } else {

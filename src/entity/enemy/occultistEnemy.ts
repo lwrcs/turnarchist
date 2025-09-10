@@ -168,38 +168,24 @@ export class OccultistEnemy extends Enemy {
       beam.angleChange = 0.001;
       beam.springDamping = 0.01;
       beam.drawableY = enemy.drawableY;
+      beam.type = "shield";
       this.room.projectiles.push(beam);
-    }
-  };
-
-  private createBeam = (enemies: Enemy[]) => {
-    for (let enemy of enemies) {
-      if (enemy.shielded && enemy.shield) {
-        let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
-        beam.compositeOperation = "source-over";
-        beam.color = "#2E0854";
-        // Match runtime beam settings from applyShieldTo so loaded beams look identical
-        beam.turbulence = 0.4;
-        beam.gravity = 0.1;
-        beam.iterations = 1;
-        beam.segments = 100;
-        beam.angleChange = 0.001;
-        beam.springDamping = 0.01;
-        beam.drawableY = enemy.drawableY;
-        this.room.projectiles.push(beam);
-      }
     }
   };
 
   updateBeam = (delta: number) => {
     for (let beam of this.room.projectiles) {
       if (beam instanceof BeamEffect) {
-        if (!beam.parent) continue;
+        if (
+          !this.shieldedEnemies.includes(beam.parent as Enemy) ||
+          beam.type !== "shield"
+        )
+          continue;
         beam.setTarget(
           this.x - this.drawX,
           this.y - this.drawY,
-          (beam.parent as any).x - (beam.parent as any).drawX,
-          (beam.parent as any).y - (beam.parent as any).drawY,
+          beam.parent.x - beam.parent.drawX,
+          beam.parent.y - beam.parent.drawY,
         );
         beam.drawableY = beam.parent.drawableY;
 
