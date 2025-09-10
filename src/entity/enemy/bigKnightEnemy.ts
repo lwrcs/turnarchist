@@ -65,7 +65,7 @@ export class BigKnightEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   behavior = () => {

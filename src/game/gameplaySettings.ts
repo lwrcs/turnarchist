@@ -38,4 +38,5 @@ export class GameplaySettings {
   static readonly FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 
   static readonly MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
+  static readonly MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
 }

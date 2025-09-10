@@ -63,6 +63,7 @@ export class WardenEnemy extends Enemy {
     this.crusherPositions = [];
     this.crusherCount = 0;
     this.crushers = [];
+    this.baseDamage = 2;
     this.lightSource = new LightSource(
       this.x + 0.5,
       this.y + 0.5,
@@ -85,7 +86,7 @@ export class WardenEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 2;
+    return this.damage;
   };
 
   createCrusherBlocks = (crusherPositions: { x: number; y: number }[]) => {

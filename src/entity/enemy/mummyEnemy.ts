@@ -44,13 +44,14 @@ export class MummyEnemy extends Enemy {
     this.forwardOnlyAttack = true;
     this.jumpHeight = 0.35;
     this.alertRange = 2; // very small alert range
+    this.baseDamage = 0.5;
 
     if (drop) this.drop = drop;
     this.getDrop(["consumable", "tool", "coin"]);
   }
 
   hit = (): number => {
-    return 0.5;
+    return this.damage;
   };
 
   // Immunities

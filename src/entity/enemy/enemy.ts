@@ -58,6 +58,9 @@ export abstract class Enemy extends Entity {
   justHurt: boolean = false;
   orthogonalAttack: boolean;
   diagonalAttack: boolean;
+  buffed: boolean;
+  buffedBefore: boolean;
+  baseDamage: number;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -91,12 +94,17 @@ export abstract class Enemy extends Entity {
     this.justHurt = false;
     this.orthogonalAttack = false;
     this.diagonalAttack = false;
+    this.baseDamage = 1;
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
+
+  get damage() {
+    return this.buffed ? 2 * this.baseDamage : this.baseDamage;
+  }
 
   handleEnemyCase = (playerHitBy?: Player) => {
     if (!playerHitBy) return;

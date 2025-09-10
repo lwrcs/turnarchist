@@ -42,7 +42,7 @@ export class PawnEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   lookForPlayer = (face: boolean = true) => {

@@ -56,7 +56,7 @@ export class BeetleEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   toggleReveal = () => {

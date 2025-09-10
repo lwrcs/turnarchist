@@ -153,6 +153,7 @@ import { statsTracker } from "./stats";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
+import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 
 export class HitWarningState {
   x: number;
@@ -306,6 +307,7 @@ export enum EnemyType {
   PAWN,
   BIGFROG,
   BEETLE,
+  EXALTER,
 }
 
 export class EnemyState {
@@ -350,6 +352,8 @@ export class EnemyState {
   wizardState: WizardState;
   rumbling: boolean;
   isEnemy: boolean;
+  buffed?: boolean;
+  buffedBefore?: boolean;
   // Persist explicit opened state for chests for clarity/forward-compatibility
   chestOpened?: boolean;
 
@@ -362,10 +366,18 @@ export class EnemyState {
     this.maxHealth = enemy.maxHealth;
     this.rumbling = enemy.rumbling;
     this.isEnemy = enemy.isEnemy;
+
     // Persist shield state on the enemy rather than saving EnemyShield projectile
     try {
       this.isShielded = (enemy as any).shielded === true;
       this.shieldHealth = (enemy as any).shield?.health ?? undefined;
+    } catch {}
+
+    try {
+      this.buffed = (enemy as any).buffed === true;
+    } catch {}
+    try {
+      this.buffedBefore = (enemy as any).buffedBefore === true;
     } catch {}
 
     this.shieldedBefore = (enemy as any).shieldedBefore;
@@ -512,6 +524,7 @@ export class EnemyState {
     if (enemy instanceof PawnEnemy) this.type = EnemyType.PAWN;
     if (enemy instanceof BeetleEnemy) this.type = EnemyType.BEETLE;
     if (enemy instanceof BigFrogEnemy) this.type = EnemyType.BIGFROG;
+    if (enemy instanceof ExalterEnemy) this.type = EnemyType.EXALTER;
   }
 }
 
@@ -656,6 +669,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new BigFrogEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.BEETLE)
     enemy = new BeetleEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.EXALTER)
+    enemy = new ExalterEnemy(room, game, es.x, es.y);
 
   if (es.isEnemy) {
     enemy.ticks = es.ticks;
@@ -683,6 +698,14 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   enemy.health = es.health;
   enemy.maxHealth = es.maxHealth;
   (enemy as any).shieldedBefore = es.shieldedBefore;
+  (enemy as any).buffed = es.buffed;
+  (enemy as any).buffedBefore = es.buffedBefore;
+  try {
+    if ((es as any).isBuffed) {
+      (enemy as any).applyBuff();
+    }
+  } catch {}
+
   // Rebuild shields if needed
   try {
     if ((es as any).isShielded) {
@@ -927,6 +950,24 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
   for (const hw of roomState.hitwarnings)
     room.hitwarnings.push(loadHitWarning(hw, game));
 
+  try {
+    const exalters = room.entities.filter(
+      (e) => e instanceof ExalterEnemy,
+    ) as ExalterEnemy[];
+    for (const exalter of exalters) {
+      for (const enemy of exalter.buffedEnemies) {
+        if (
+          enemy instanceof Enemy &&
+          !enemy.dead &&
+          !enemy.buffed &&
+          !enemy.buffedBefore
+        ) {
+          exalter.applyBuffTo(enemy as Enemy);
+        }
+      }
+    }
+  } catch {}
+
   // After entities and projectiles are in place, recreate occultist beams without duplicates/self-beams
   try {
     const occultists = room.entities.filter(
@@ -964,6 +1005,43 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
       (oc as any).shieldedEnemies = allies.slice();
       if ((oc as any).createBeam && allies.length) {
         (oc as any).createBeam(allies);
+      }
+    }
+  } catch {}
+
+  // Recreate Exalter buffs and beams based on saved buff flags
+  try {
+    const exalters = room.entities.filter(
+      (e) => e instanceof ExalterEnemy,
+    ) as ExalterEnemy[];
+    if (exalters.length) {
+      const buffedTargets = room.entities.filter(
+        (e) => e instanceof Enemy && (e as any).buffed && !e.dead,
+      ) as Enemy[];
+
+      // Clear any previous tracking just in case
+      for (const ex of exalters) {
+        (ex as any).buffedEnemies = [];
+      }
+
+      // Assign each buffed enemy to the nearest exalter and recreate beams
+      for (const target of buffedTargets) {
+        let nearest: ExalterEnemy | null = null;
+        let best = Number.POSITIVE_INFINITY;
+        for (const ex of exalters) {
+          const dist = Math.max(
+            Math.abs(ex.x - target.x),
+            Math.abs(ex.y - target.y),
+          );
+          if (dist < best) {
+            best = dist;
+            nearest = ex;
+          }
+        }
+        if (nearest) {
+          // applyBuffTo will push into buffedEnemies and create the beam effect
+          nearest.applyBuffTo(target);
+        }
       }
     }
   } catch {}

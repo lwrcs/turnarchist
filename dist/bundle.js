@@ -9114,7 +9114,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -9406,7 +9406,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -9634,7 +9634,7 @@ class BeetleEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.toggleReveal = () => {
             let ticksSince = this.ticks - this.revealTick;
@@ -10185,7 +10185,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10724,7 +10724,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10992,7 +10992,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -11336,7 +11336,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             // Store the current position
@@ -11671,7 +11671,7 @@ class BishopEnemy extends enemy_1.Enemy {
             this.y = y;
         };
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
@@ -11868,7 +11868,7 @@ class ChargeEnemy extends enemy_1.Enemy {
         this.maxChargeDistance = 3;
         this.trailAlpha = 1;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.canMoveOver = (x, y) => {
             for (const e of this.room.entities) {
@@ -12136,7 +12136,7 @@ class CrabEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -12321,6 +12321,7 @@ class CrabEnemy extends enemy_1.Enemy {
         this.orthogonalAttack = true;
         this.imageParticleX = 3;
         this.imageParticleY = 24;
+        this.baseDamage = 0.5;
         //if (drop) this.drop = drop;
         this.drawYOffset = 0.25;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -12366,6 +12367,7 @@ class CrusherEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return 1;
         };
+        this.applyShield = () => { };
         // Allow crushers to move onto a player's tile
         this.tryMove = (x, y, collide = true) => {
             const entityCollide = (entity) => {
@@ -12677,7 +12679,7 @@ class Enemy extends entity_1.Entity {
         super(room, game, x, y);
         this.justHurt = false;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.handleEnemyCase = (playerHitBy) => {
             if (!playerHitBy)
@@ -13220,7 +13222,11 @@ class Enemy extends entity_1.Entity {
         this.justHurt = false;
         this.orthogonalAttack = false;
         this.diagonalAttack = false;
+        this.baseDamage = 1;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    }
+    get damage() {
+        return this.buffed ? 2 * this.baseDamage : this.baseDamage;
     }
     get lastPlayerPos() {
         return {
@@ -13314,6 +13320,202 @@ exports.EnergyWizardEnemy = EnergyWizardEnemy;
 EnergyWizardEnemy.difficulty = 3;
 EnergyWizardEnemy.tileX = 6;
 EnergyWizardEnemy.tileY = 0;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/exalterEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/exalterEnemy.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExalterEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+class ExalterEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 1;
+        };
+        this.uniqueKillBehavior = () => {
+            this.unbuffEnemies();
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            let enemiesToBuff = this.enemyBuffCandidates();
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                this.ticks++;
+                if (this.ticks % 2 === 0) {
+                    this.buffEnemies(enemiesToBuff);
+                    this.updateBuffedEnemies();
+                    this.runAway();
+                }
+            }
+            if (this.buffedEnemies.length > 0) {
+                this.shadeColor = "#306082";
+            }
+            else {
+                this.shadeColor = "#000000";
+            }
+            if (this.lightSource) {
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            }
+        };
+        this.onHurt = (damage = 1) => {
+            if (this.health < this.lastHealth &&
+                this.health % 2 === 0 &&
+                this.health > 0) {
+                this.teleport();
+            }
+            this.lastHealth = this.health;
+        };
+        this.updateBuffedEnemies = () => {
+            this.buffedEnemies.forEach((enemy) => {
+                if (enemy.dead) {
+                    this.buffedEnemies = this.buffedEnemies.filter((e) => e !== enemy);
+                }
+            });
+        };
+        this.buffEnemies = (enemiesToBuff) => {
+            if (enemiesToBuff.length > 0) {
+                enemiesToBuff.forEach((enemy) => {
+                    const distance = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y);
+                    if (random_1.Random.rand() * 10 > distance) {
+                        this.applyBuffTo(enemy);
+                    }
+                });
+            }
+        };
+        this.enemyBuffCandidates = () => {
+            const uncappedCandidates = this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
+                utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
+                !entity.buffed &&
+                !entity.dead &&
+                entity !== this &&
+                !entity.buffedBefore);
+            return uncappedCandidates.slice(0, gameplaySettings_1.GameplaySettings.MAX_EXALTER_BUFFS);
+        };
+        this.unbuffEnemies = () => {
+            if (this.buffedEnemies.length > 0) {
+                for (let enemy of this.buffedEnemies) {
+                    if (!enemy.cloned) {
+                        enemy.removeBuff();
+                    }
+                }
+                this.buffedEnemies = [];
+            }
+        };
+        this.applyBuffTo = (enemy) => {
+            //this.shadeColor = "#2E0854";
+            this.shadeMultiplier = 1.5;
+            enemy.applyBuff();
+            this.buffedEnemies.push(enemy);
+            if (enemy.buffed) {
+                for (let i = 0; i < 5; i++) {
+                    let beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#00FFFF";
+                    beam.turbulence = 1;
+                    beam.gravity = 0;
+                    beam.iterations = 3;
+                    beam.segments = 30;
+                    beam.angleChange = 1;
+                    beam.springDamping = 0.3;
+                    beam.drawableY = enemy.drawableY;
+                    this.room.projectiles.push(beam);
+                }
+            }
+        };
+        this.updateBeam = (delta) => {
+            for (let beam of this.room.projectiles) {
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (!beam.parent)
+                        continue;
+                    beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
+                    beam.drawableY = beam.parent.drawableY;
+                    switch (Math.floor(this.frame)) {
+                        case 0:
+                            beam.color = "#00FFFF";
+                            break;
+                        case 1:
+                            beam.color = "#00a1dc"; //darker cyan;
+                            break;
+                        case 2:
+                            beam.color = "#008ea7"; //darker cyan;
+                            break;
+                        case 3:
+                            beam.color = "#00a1dc"; //darker cyan;
+                            break;
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.drawableY = this.y;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.updateBeam(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.health = 4;
+        this.lastHealth = this.health;
+        this.maxHealth = 4;
+        this.tileX = 59;
+        this.tileY = 8;
+        this.seenPlayer = true;
+        this.name = "exalter";
+        this.range = 6;
+        this.aggro = false;
+        this.frame = 0;
+        this.hasShadow = true;
+        this.buffedBefore = false;
+        this.buffedEnemies = [];
+        this.shadeColor = "#000000";
+        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [1, 20, 30], 3.5, 20);
+        this.addLightSource(this.lightSource);
+        this.room.updateLighting();
+        this.hasBloom = true;
+        this.bloomColor = "#00FFFF"; //cyan;
+        this.bloomAlpha = 0.5;
+        this.softBloomAlpha = 0;
+        this.dropChance = 1;
+        this.getDrop(["exalter"], false);
+        this.pushable = false;
+        this.chainPushable = false;
+    }
+}
+exports.ExalterEnemy = ExalterEnemy;
+ExalterEnemy.tileX = 59;
+ExalterEnemy.tileY = 8;
 
 
 /***/ }),
@@ -13537,7 +13739,7 @@ class FrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -13829,6 +14031,7 @@ class FrogEnemy extends enemy_1.Enemy {
         this.jumpHeight = 1;
         this.imageParticleX = 3;
         this.imageParticleY = 30;
+        this.baseDamage = 0.5;
         if (drop)
             this.drop = drop;
         this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
@@ -13965,7 +14168,7 @@ class KnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -14175,7 +14378,7 @@ class MummyEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         // Immunities
         this.poison = () => {
@@ -14391,6 +14594,7 @@ class MummyEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         this.jumpHeight = 0.35;
         this.alertRange = 2; // very small alert range
+        this.baseDamage = 0.5;
         if (drop)
             this.drop = drop;
         this.getDrop(["consumable", "tool", "coin"]);
@@ -14635,7 +14839,7 @@ class PawnEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
@@ -14844,7 +15048,7 @@ class QueenEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.justHurt = false;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -15041,7 +15245,7 @@ class RookEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -15222,7 +15426,7 @@ class SkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -15789,7 +15993,7 @@ class SpiderEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.toggleReveal = () => {
             let ticksSince = this.ticks - this.revealTick;
@@ -16323,7 +16527,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.crusherCount = 0;
         this.crushers = [];
         this.hit = () => {
-            return 2;
+            return this.damage;
         };
         this.createCrusherBlocks = (crusherPositions) => {
             for (const position of crusherPositions) {
@@ -16617,6 +16821,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.crusherPositions = [];
         this.crusherCount = 0;
         this.crushers = [];
+        this.baseDamage = 2;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 10, [255, 10, 10], 1.5);
         this.addLightSource(this.lightSource);
         this.hasBloom = true;
@@ -16850,7 +17055,7 @@ class ZombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             // Store the current position
@@ -17101,6 +17306,8 @@ const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -17169,6 +17376,36 @@ class Entity extends drawable_1.Drawable {
                 this.hasBloom = false;
                 this.bloomAlpha = 0;
             }
+        };
+        this.applyBuff = () => {
+            this.buffed = true;
+            this.buffedBefore = true;
+            this.shadeColor = "cyan";
+            this.shadeMultiplier = 0.5;
+            this.hasBloom = true;
+            this.bloomColor = "#00FFFF";
+            this.bloomAlpha = 0.5;
+            this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [0, 40, 40], 3.5, 20);
+            this.addLightSource(this.lightSource);
+            this.room.updateLighting();
+        };
+        this.removeBuff = () => {
+            let beams = this.room.projectiles.filter((projectile) => projectile instanceof beamEffect_1.BeamEffect && projectile.parent === this);
+            if (beams) {
+                beams.forEach((beam) => {
+                    beam.dead = true;
+                });
+            }
+            //this.shadeColor = "black";
+            //this.lightSource = null;
+            //this.shield = null;
+            this.shadeColor = this.room.shadeColor;
+            this.shadeMultiplier = 1;
+            this.hasBloom = false;
+            this.bloomAlpha = 0;
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+            this.room.updateLighting();
         };
         this.getDrop = (useCategory = [], force = false) => {
             if (this.cloned)
@@ -22773,6 +23010,7 @@ const stats_1 = __webpack_require__(/*! ./stats */ "./src/game/stats.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -22899,6 +23137,7 @@ var EnemyType;
     EnemyType[EnemyType["PAWN"] = 48] = "PAWN";
     EnemyType[EnemyType["BIGFROG"] = 49] = "BIGFROG";
     EnemyType[EnemyType["BEETLE"] = 50] = "BEETLE";
+    EnemyType[EnemyType["EXALTER"] = 51] = "EXALTER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -22914,6 +23153,14 @@ class EnemyState {
         try {
             this.isShielded = enemy.shielded === true;
             this.shieldHealth = enemy.shield?.health ?? undefined;
+        }
+        catch { }
+        try {
+            this.buffed = enemy.buffed === true;
+        }
+        catch { }
+        try {
+            this.buffedBefore = enemy.buffedBefore === true;
         }
         catch { }
         this.shieldedBefore = enemy.shieldedBefore;
@@ -23091,6 +23338,8 @@ class EnemyState {
             this.type = EnemyType.BEETLE;
         if (enemy instanceof bigFrogEnemy_1.BigFrogEnemy)
             this.type = EnemyType.BIGFROG;
+        if (enemy instanceof exalterEnemy_1.ExalterEnemy)
+            this.type = EnemyType.EXALTER;
     }
 }
 exports.EnemyState = EnemyState;
@@ -23245,6 +23494,8 @@ let loadEnemy = (es, game) => {
         enemy = new bigFrogEnemy_1.BigFrogEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.BEETLE)
         enemy = new beetleEnemy_1.BeetleEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.EXALTER)
+        enemy = new exalterEnemy_1.ExalterEnemy(room, game, es.x, es.y);
     if (es.isEnemy) {
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
@@ -23263,6 +23514,14 @@ let loadEnemy = (es, game) => {
     enemy.health = es.health;
     enemy.maxHealth = es.maxHealth;
     enemy.shieldedBefore = es.shieldedBefore;
+    enemy.buffed = es.buffed;
+    enemy.buffedBefore = es.buffedBefore;
+    try {
+        if (es.isBuffed) {
+            enemy.applyBuff();
+        }
+    }
+    catch { }
     // Rebuild shields if needed
     try {
         if (es.isShielded) {
@@ -23485,6 +23744,20 @@ let loadRoom = (room, roomState, game) => {
     }
     for (const hw of roomState.hitwarnings)
         room.hitwarnings.push(loadHitWarning(hw, game));
+    try {
+        const exalters = room.entities.filter((e) => e instanceof exalterEnemy_1.ExalterEnemy);
+        for (const exalter of exalters) {
+            for (const enemy of exalter.buffedEnemies) {
+                if (enemy instanceof enemy_1.Enemy &&
+                    !enemy.dead &&
+                    !enemy.buffed &&
+                    !enemy.buffedBefore) {
+                    exalter.applyBuffTo(enemy);
+                }
+            }
+        }
+    }
+    catch { }
     // After entities and projectiles are in place, recreate occultist beams without duplicates/self-beams
     try {
         const occultists = room.entities.filter((e) => e instanceof occultistEnemy_1.OccultistEnemy);
@@ -23517,6 +23790,34 @@ let loadRoom = (room, roomState, game) => {
             oc.shieldedEnemies = allies.slice();
             if (oc.createBeam && allies.length) {
                 oc.createBeam(allies);
+            }
+        }
+    }
+    catch { }
+    // Recreate Exalter buffs and beams based on saved buff flags
+    try {
+        const exalters = room.entities.filter((e) => e instanceof exalterEnemy_1.ExalterEnemy);
+        if (exalters.length) {
+            const buffedTargets = room.entities.filter((e) => e instanceof enemy_1.Enemy && e.buffed && !e.dead);
+            // Clear any previous tracking just in case
+            for (const ex of exalters) {
+                ex.buffedEnemies = [];
+            }
+            // Assign each buffed enemy to the nearest exalter and recreate beams
+            for (const target of buffedTargets) {
+                let nearest = null;
+                let best = Number.POSITIVE_INFINITY;
+                for (const ex of exalters) {
+                    const dist = Math.max(Math.abs(ex.x - target.x), Math.abs(ex.y - target.y));
+                    if (dist < best) {
+                        best = dist;
+                        nearest = ex;
+                    }
+                }
+                if (nearest) {
+                    // applyBuffTo will push into buffedEnemies and create the beam effect
+                    nearest.applyBuffTo(target);
+                }
             }
         }
     }
@@ -24821,6 +25122,7 @@ GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multip
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
+GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
 
 
 /***/ }),
@@ -40501,6 +40803,7 @@ const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -40537,6 +40840,7 @@ var EnemyType;
     EnemyType["pawn"] = "pawn";
     EnemyType["beetle"] = "beetle";
     EnemyType["bigfrog"] = "bigfrog";
+    EnemyType["exalter"] = "exalter";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -40572,6 +40876,7 @@ exports.EnemyTypeMap = {
     [EnemyType.pawn]: pawnEnemy_1.PawnEnemy,
     [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
+    [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

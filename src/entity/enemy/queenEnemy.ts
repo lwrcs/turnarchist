@@ -40,7 +40,7 @@ export class QueenEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   behavior = () => {

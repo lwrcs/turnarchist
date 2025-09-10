@@ -50,7 +50,7 @@ export class ZombieEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   behavior = () => {

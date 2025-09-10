@@ -100,6 +100,7 @@ import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { Key } from "../item/key";
+import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 
 // #endregion
 
@@ -137,6 +138,7 @@ export enum EnemyType {
   pawn = "pawn",
   beetle = "beetle",
   bigfrog = "bigfrog",
+  exalter = "exalter",
   // Add other enemy types here
 }
 
@@ -173,6 +175,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.pawn]: PawnEnemy,
   [EnemyType.beetle]: BeetleEnemy,
   [EnemyType.bigfrog]: BigFrogEnemy,
+  [EnemyType.exalter]: ExalterEnemy,
   // Add other enemy mappings here
 };
 

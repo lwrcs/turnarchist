@@ -26,7 +26,9 @@ import { ImageParticle } from "../particle/imageParticle";
 import { Coin } from "../item/coin";
 import { Random } from "../utility/random";
 import { XPPopup } from "../particle/xpPopup";
-import { Tile } from "src/tile/tile";
+import { Tile } from "../tile/tile";
+import { BeamEffect } from "../projectile/beamEffect";
+import { Lighting } from "../lighting/lighting";
 
 export enum EntityDirection {
   DOWN,
@@ -112,6 +114,8 @@ export class Entity extends Drawable {
   dropChance: number = 1;
   isEnemy: boolean;
   shielded: boolean;
+  buffed: boolean;
+  buffedBefore: boolean;
   //shieldHealth: number;
   frame: number;
   shield: EnemyShield;
@@ -347,6 +351,47 @@ export class Entity extends Drawable {
       this.hasBloom = false;
       this.bloomAlpha = 0;
     }
+  };
+
+  applyBuff = () => {
+    this.buffed = true;
+    this.buffedBefore = true;
+    this.shadeColor = "cyan";
+    this.shadeMultiplier = 0.5;
+    this.hasBloom = true;
+    this.bloomColor = "#00FFFF";
+    this.bloomAlpha = 0.5;
+    this.lightSource = Lighting.newLightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      [0, 40, 40],
+      3.5,
+      20,
+    );
+    this.addLightSource(this.lightSource);
+    this.room.updateLighting();
+  };
+
+  removeBuff = () => {
+    let beams = this.room.projectiles.filter(
+      (projectile) =>
+        projectile instanceof BeamEffect && projectile.parent === this,
+    );
+    if (beams) {
+      beams.forEach((beam) => {
+        beam.dead = true;
+      });
+    }
+    //this.shadeColor = "black";
+    //this.lightSource = null;
+    //this.shield = null;
+    this.shadeColor = this.room.shadeColor;
+    this.shadeMultiplier = 1;
+    this.hasBloom = false;
+    this.bloomAlpha = 0;
+    this.removeLightSource(this.lightSource);
+    this.lightSource = null;
+    this.room.updateLighting();
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {

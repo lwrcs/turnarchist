@@ -45,7 +45,7 @@ export class ArmoredSkullEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   hurt = (

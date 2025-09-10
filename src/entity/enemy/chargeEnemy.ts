@@ -53,7 +53,7 @@ export class ChargeEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   canMoveOver = (x: number, y: number): boolean => {
