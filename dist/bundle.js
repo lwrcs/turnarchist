@@ -12667,6 +12667,7 @@ const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const stunAnimation_1 = __webpack_require__(/*! ../../projectile/stunAnimation */ "./src/projectile/stunAnimation.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -13213,7 +13214,7 @@ class Enemy extends entity_1.Entity {
             poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
             bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
         };
-        this.alertRange = 4;
+        this.alertRange = gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_RANGE;
         this.effectStartTick = 1;
         this.startTick = 1;
         this.isEnemy = true;
@@ -25094,6 +25095,7 @@ GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
+GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -30717,6 +30719,7 @@ class Torch extends light_1.Light {
         this.radius = 7;
         this.maxBrightness = 5;
         this.minBrightness = 2;
+        this.stackable = true;
     }
 }
 exports.Torch = Torch;

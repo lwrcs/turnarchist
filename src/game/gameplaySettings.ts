@@ -12,6 +12,8 @@ export class GameplaySettings {
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;
 
+  static readonly BASE_ENEMY_ALERT_RANGE = 4;
+
   // === ENEMY POOL SETTINGS ===
 
   // Enemy Type Progression

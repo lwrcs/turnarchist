@@ -14,6 +14,7 @@ import { Door } from "../../tile/door";
 import { StunAnimation } from "../../projectile/stunAnimation";
 import { DownLadder } from "../../tile/downLadder";
 import { Random } from "../../utility/random";
+import { GameplaySettings } from "../../game/gameplaySettings";
 
 enum EnemyState {
   SLEEP,
@@ -52,9 +53,9 @@ export abstract class Enemy extends Entity {
   static difficulty: number = 1;
   private effectStartTick: number;
   private startTick: number;
-  private poisonHitCount;
-  private bleedHitCount;
-  protected alertRange;
+  private poisonHitCount: number;
+  private bleedHitCount: number;
+  protected alertRange: number;
   justHurt: boolean = false;
   orthogonalAttack: boolean;
   diagonalAttack: boolean;
@@ -84,7 +85,7 @@ export abstract class Enemy extends Entity {
       poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
       bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
     };
-    this.alertRange = 4;
+    this.alertRange = GameplaySettings.BASE_ENEMY_ALERT_RANGE;
     this.effectStartTick = 1;
     this.startTick = 1;
     this.isEnemy = true;
