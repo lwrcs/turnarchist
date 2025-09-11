@@ -294,16 +294,7 @@ export class PlayerInputHandler {
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
-      if (
-        player.game.feedbackButton &&
-        player.game.feedbackButton.isPointInButton(x, y)
-      ) {
-        player.game.feedbackButton.onClick();
-        Input.mouseDownHandled = true;
-        return;
-      }
-
-      player.restart();
+      this.handleDeathScreenInput(x, y);
       Input.mouseDownHandled = true;
       return;
     }
@@ -409,15 +400,7 @@ export class PlayerInputHandler {
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
-      if (
-        player.game.feedbackButton &&
-        player.game.feedbackButton.isPointInButton(x, y)
-      ) {
-        player.game.feedbackButton.onClick();
-        return;
-      }
-
-      player.restart();
+      this.handleDeathScreenInput(x, y);
       return;
     }
 
@@ -492,19 +475,7 @@ export class PlayerInputHandler {
     }
 
     if (this.player.dead) {
-      // Check if tap is on feedback button first
-      if (
-        this.player.game.feedbackButton &&
-        this.player.game.feedbackButton.isPointInButton(
-          Input.mouseX,
-          Input.mouseY,
-        )
-      ) {
-        this.player.game.feedbackButton.onClick();
-        return;
-      }
-
-      this.player.restart();
+      this.handleDeathScreenInput(Input.mouseX, Input.mouseY);
       return;
     } else if (!this.player.game.started) {
       if ((this.player.game as any).startMenuActive) {
@@ -673,5 +644,20 @@ export class PlayerInputHandler {
 
   handleMenuButtonClick() {
     this.player.menu.toggleOpen();
+  }
+
+  private handleDeathScreenInput(x: number, y: number) {
+    if (this.isInteractingWithFeedbackButton(x, y)) {
+      this.player.game.feedbackButton.onClick();
+    } else {
+      this.player.restart();
+    }
+  }
+
+  private isInteractingWithFeedbackButton(x: number, y: number): boolean {
+    return (
+      this.player.game.feedbackButton &&
+      this.player.game.feedbackButton.isPointInButton(x, y)
+    );
   }
 }

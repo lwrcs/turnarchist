@@ -274,7 +274,6 @@ export class Game {
   startMenu: any = null;
   startMenuActive: boolean = false;
 
-  // Feedback button
   feedbackButton: FeedbackButton = null;
 
   constructor() {
