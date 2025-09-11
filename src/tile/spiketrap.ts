@@ -63,7 +63,7 @@ export class SpikeTrap extends Tile {
   };
 
   draw = (delta: number) => {
-    this.drawableY = this.y - 0.01;
+    //this.drawableY = this.y - 0.01;
     Game.drawTile(
       1,
       this.skin,

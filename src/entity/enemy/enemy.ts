@@ -103,6 +103,25 @@ export abstract class Enemy extends Entity {
     return this.damage;
   };
 
+  alertNearbyEnemies = () => {
+    if (!this.seenPlayer) return;
+    const p = this.nearestPlayer();
+    if (p === false) return;
+    const enemies = this.room.entities.filter((e) => e instanceof Enemy);
+    for (const e of enemies) {
+      if (e === this) continue;
+      const distance = Utils.distance(this.x, this.y, e.x, e.y);
+      if (
+        distance <= GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
+        e instanceof Enemy &&
+        !e.seenPlayer
+      ) {
+        e.handleSeenPlayer(p[1], false);
+        e.alertTicks = 2;
+      }
+    }
+  };
+
   get damage() {
     return this.buffed ? 2 * this.baseDamage : this.baseDamage;
   }
@@ -197,6 +216,7 @@ export abstract class Enemy extends Entity {
       this.emitEntityData();
     }
     if (this.shielded) this.shield.updateLightSourcePos();
+    this.alertNearbyEnemies();
   };
 
   lookForPlayer = (face: boolean = true) => {
@@ -208,6 +228,12 @@ export abstract class Enemy extends Entity {
     const [distance, player] = p;
     if (distance > this.alertRange) return;
 
+    this.handleSeenPlayer(player, face);
+
+    this.makeHitWarnings();
+  };
+
+  handleSeenPlayer = (player: Player, face: boolean = true) => {
     this.targetPlayer = player;
     if (face) this.facePlayer(player);
     this.seenPlayer = true;
@@ -220,8 +246,6 @@ export abstract class Enemy extends Entity {
     if (player === this.game.players[this.game.localPlayerID]) {
       this.alertTicks = 1;
     }
-
-    this.makeHitWarnings();
   };
 
   getDisablePositions = (): Array<astar.Position> => {

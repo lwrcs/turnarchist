@@ -13,6 +13,7 @@ export class GameplaySettings {
   static readonly MAIN_PATH_LOOPINESS = 0.05;
 
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
+  static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 
   // === ENEMY POOL SETTINGS ===
 

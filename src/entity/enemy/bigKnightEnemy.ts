@@ -34,9 +34,9 @@ export class BigKnightEnemy extends Enemy {
     this.h = 2;
     this.ticks = 0;
     this.frame = 0;
-    this.health = 4;
-    this.maxHealth = 4;
-    this.defaultMaxHealth = 4;
+    this.health = 6;
+    this.maxHealth = 6;
+    this.defaultMaxHealth = 6;
     this.tileX = 29;
     this.tileY = 0;
     this.seenPlayer = false;

@@ -10931,9 +10931,9 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 4;
-        this.maxHealth = 4;
-        this.defaultMaxHealth = 4;
+        this.health = 6;
+        this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
         this.tileX = 29;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -11298,7 +11298,6 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.drops = [];
         this.direction = game_1.Direction.DOWN;
         this.forwardOnlyAttack = true;
-        this.alertRange = 10;
         this.drawMoveSpeed = 0.9;
         this.canDestroyOthers = true;
         if (drop)
@@ -11596,7 +11595,6 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.drawMoveSpeed = 0.9;
         this.jumpHeight = 0.35;
         this.drawYOffset = 1.5;
-        this.alertRange = 10;
         this.canDestroyOthers = true;
         if (drop)
             this.drop = drop;
@@ -12683,6 +12681,25 @@ class Enemy extends entity_1.Entity {
         this.hit = () => {
             return this.damage;
         };
+        this.alertNearbyEnemies = () => {
+            if (!this.seenPlayer)
+                return;
+            const p = this.nearestPlayer();
+            if (p === false)
+                return;
+            const enemies = this.room.entities.filter((e) => e instanceof Enemy);
+            for (const e of enemies) {
+                if (e === this)
+                    continue;
+                const distance = utils_1.Utils.distance(this.x, this.y, e.x, e.y);
+                if (distance <= gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
+                    e instanceof Enemy &&
+                    !e.seenPlayer) {
+                    e.handleSeenPlayer(p[1], false);
+                    e.alertTicks = 2;
+                }
+            }
+        };
         this.handleEnemyCase = (playerHitBy) => {
             if (!playerHitBy)
                 return;
@@ -12764,6 +12781,7 @@ class Enemy extends entity_1.Entity {
             }
             if (this.shielded)
                 this.shield.updateLightSourcePos();
+            this.alertNearbyEnemies();
         };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
@@ -12774,6 +12792,10 @@ class Enemy extends entity_1.Entity {
             const [distance, player] = p;
             if (distance > this.alertRange)
                 return;
+            this.handleSeenPlayer(player, face);
+            this.makeHitWarnings();
+        };
+        this.handleSeenPlayer = (player, face = true) => {
             this.targetPlayer = player;
             if (face)
                 this.facePlayer(player);
@@ -12785,7 +12807,6 @@ class Enemy extends entity_1.Entity {
             if (player === this.game.players[this.game.localPlayerID]) {
                 this.alertTicks = 1;
             }
-            this.makeHitWarnings();
         };
         this.getDisablePositions = () => {
             let disablePositions = Array();
@@ -25096,6 +25117,7 @@ GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
+GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -47641,7 +47663,7 @@ class SpikeTrap extends tile_1.Tile {
                 enemy.hurt(null, 1);
         };
         this.draw = (delta) => {
-            this.drawableY = this.y - 0.01;
+            //this.drawableY = this.y - 0.01;
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             let rumbleOffsetX = 0;
             this.t += delta;
