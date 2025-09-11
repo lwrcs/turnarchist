@@ -616,6 +616,21 @@ export class PlayerRenderer {
         startY,
       );
 
+      // Draw feedback button below the restart text
+      if (this.player.game.feedbackButton) {
+        const feedbackY = startY + Game.letter_height + 22;
+
+        const textWidth = Game.measureText(
+          this.player.game.feedbackButton.text,
+        ).width;
+        const buttonWidth = textWidth + 10;
+        const centeredX = (GameConstants.WIDTH - buttonWidth) / 2;
+
+        this.player.game.feedbackButton.x = centeredX;
+        this.player.game.feedbackButton.y = feedbackY;
+        this.player.game.feedbackButton.draw();
+      }
+
       if (!this.player.game.hasRecordedStats) {
         // The default value for `lastHitBy` is "enemy", so we compare to that to determine if
         // the player was killed by an enemy

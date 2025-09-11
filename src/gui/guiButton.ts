@@ -23,7 +23,7 @@ export class guiButton {
     text: string,
     onClick: () => void,
     toggleable: boolean = false,
-    parent: Menu,
+    parent?: Menu,
   ) {
     this.toggleable = toggleable;
     this.toggled = false;
@@ -44,6 +44,16 @@ export class guiButton {
     MuteButton.toggleMute();
 
     this.text = Sound.audioMuted ? "Sound Muted" : "Sound Unmuted";
-    this.parent.game.pushMessage(this.text);
+    this.parent?.game.pushMessage(this.text);
   };
+
+  // Check if a point is within the button bounds
+  isPointInButton(x: number, y: number): boolean {
+    return (
+      x >= this.x &&
+      x <= this.x + this.width &&
+      y >= this.y &&
+      y <= this.y + this.height
+    );
+  }
 }

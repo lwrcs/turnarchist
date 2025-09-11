@@ -3,8 +3,6 @@ import { guiButton } from "./guiButton";
 import { InputEnum } from "../game/input";
 import { GameConstants } from "../game/gameConstants";
 import { MouseCursor } from "../gui/mouseCursor";
-import { MuteButton } from "./muteButton";
-import { Sound } from "../sound/sound";
 import { Player } from "../player/player";
 
 export class Menu {
@@ -22,7 +20,13 @@ export class Menu {
   private readonly BUTTON_CLICK_DEBOUNCE_TIME = 150; // milliseconds
 
   constructor(
-    arg: Player | { game: Game; player?: Player; showCloseButton?: boolean },
+    arg:
+      | Player
+      | {
+          game: Game;
+          player?: Player;
+          showCloseButton?: boolean;
+        },
   ) {
     this.buttons = [];
     this.open = false;

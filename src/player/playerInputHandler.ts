@@ -293,9 +293,8 @@ export class PlayerInputHandler {
 
     this.setMostRecentInput("mouse");
 
-    // Handle dead player restart
     if (player.dead) {
-      player.restart();
+      this.handleDeathScreenInput(x, y);
       Input.mouseDownHandled = true;
       return;
     }
@@ -401,7 +400,7 @@ export class PlayerInputHandler {
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
-      player.restart();
+      this.handleDeathScreenInput(x, y);
       return;
     }
 
@@ -476,7 +475,7 @@ export class PlayerInputHandler {
     }
 
     if (this.player.dead) {
-      this.player.restart();
+      this.handleDeathScreenInput(Input.mouseX, Input.mouseY);
       return;
     } else if (!this.player.game.started) {
       if ((this.player.game as any).startMenuActive) {
@@ -645,5 +644,20 @@ export class PlayerInputHandler {
 
   handleMenuButtonClick() {
     this.player.menu.toggleOpen();
+  }
+
+  private handleDeathScreenInput(x: number, y: number) {
+    if (this.isInteractingWithFeedbackButton(x, y)) {
+      this.player.game.feedbackButton.onClick();
+    } else {
+      this.player.restart();
+    }
+  }
+
+  private isInteractingWithFeedbackButton(x: number, y: number): boolean {
+    return (
+      this.player.game.feedbackButton &&
+      this.player.game.feedbackButton.isPointInButton(x, y)
+    );
   }
 }
