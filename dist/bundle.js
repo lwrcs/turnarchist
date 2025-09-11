@@ -20335,7 +20335,6 @@ class Game {
         // Start screen menu (optional)
         this.startMenu = null;
         this.startMenuActive = false;
-        // Feedback button
         this.feedbackButton = null;
         this.updateDepth = (depth) => {
             //this.previousDepth = this.currentDepth;
@@ -38520,13 +38519,7 @@ class PlayerInputHandler {
         }
         this.setMostRecentInput("mouse");
         if (player.dead) {
-            if (player.game.feedbackButton &&
-                player.game.feedbackButton.isPointInButton(x, y)) {
-                player.game.feedbackButton.onClick();
-                input_1.Input.mouseDownHandled = true;
-                return;
-            }
-            player.restart();
+            this.handleDeathScreenInput(x, y);
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -38612,12 +38605,7 @@ class PlayerInputHandler {
         }
         this.setMostRecentInput("mouse");
         if (player.dead) {
-            if (player.game.feedbackButton &&
-                player.game.feedbackButton.isPointInButton(x, y)) {
-                player.game.feedbackButton.onClick();
-                return;
-            }
-            player.restart();
+            this.handleDeathScreenInput(x, y);
             return;
         }
         const inventory = player.inventory;
@@ -38664,13 +38652,7 @@ class PlayerInputHandler {
             return;
         }
         if (this.player.dead) {
-            // Check if tap is on feedback button first
-            if (this.player.game.feedbackButton &&
-                this.player.game.feedbackButton.isPointInButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                this.player.game.feedbackButton.onClick();
-                return;
-            }
-            this.player.restart();
+            this.handleDeathScreenInput(input_1.Input.mouseX, input_1.Input.mouseY);
             return;
         }
         else if (!this.player.game.started) {
@@ -38775,6 +38757,18 @@ class PlayerInputHandler {
     }
     handleMenuButtonClick() {
         this.player.menu.toggleOpen();
+    }
+    handleDeathScreenInput(x, y) {
+        if (this.isInteractingWithFeedbackButton(x, y)) {
+            this.player.game.feedbackButton.onClick();
+        }
+        else {
+            this.player.restart();
+        }
+    }
+    isInteractingWithFeedbackButton(x, y) {
+        return (this.player.game.feedbackButton &&
+            this.player.game.feedbackButton.isPointInButton(x, y));
     }
 }
 exports.PlayerInputHandler = PlayerInputHandler;
