@@ -293,8 +293,16 @@ export class PlayerInputHandler {
 
     this.setMostRecentInput("mouse");
 
-    // Handle dead player restart
     if (player.dead) {
+      if (
+        player.game.feedbackButton &&
+        player.game.feedbackButton.isPointInButton(x, y)
+      ) {
+        player.game.feedbackButton.onClick();
+        Input.mouseDownHandled = true;
+        return;
+      }
+
       player.restart();
       Input.mouseDownHandled = true;
       return;
@@ -401,6 +409,14 @@ export class PlayerInputHandler {
     this.setMostRecentInput("mouse");
 
     if (player.dead) {
+      if (
+        player.game.feedbackButton &&
+        player.game.feedbackButton.isPointInButton(x, y)
+      ) {
+        player.game.feedbackButton.onClick();
+        return;
+      }
+
       player.restart();
       return;
     }
@@ -476,6 +492,18 @@ export class PlayerInputHandler {
     }
 
     if (this.player.dead) {
+      // Check if tap is on feedback button first
+      if (
+        this.player.game.feedbackButton &&
+        this.player.game.feedbackButton.isPointInButton(
+          Input.mouseX,
+          Input.mouseY,
+        )
+      ) {
+        this.player.game.feedbackButton.onClick();
+        return;
+      }
+
       this.player.restart();
       return;
     } else if (!this.player.game.started) {

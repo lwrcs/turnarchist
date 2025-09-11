@@ -20212,6 +20212,7 @@ const mobsetUrl = __webpack_require__(/*! ../res/mobset.png */ "./res/mobset.png
 const itemsetUrl = __webpack_require__(/*! ../res/itemset.png */ "./res/itemset.png");
 const fxsetUrl = __webpack_require__(/*! ../res/fxset.png */ "./res/fxset.png");
 const fontUrl = __webpack_require__(/*! ../res/font.png */ "./res/font.png");
+const feedbackButton_1 = __webpack_require__(/*! ./gui/feedbackButton */ "./src/gui/feedbackButton.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -20334,6 +20335,8 @@ class Game {
         // Start screen menu (optional)
         this.startMenu = null;
         this.startMenuActive = false;
+        // Feedback button
+        this.feedbackButton = null;
         this.updateDepth = (depth) => {
             //this.previousDepth = this.currentDepth;
             this.currentDepth = depth;
@@ -21802,6 +21805,7 @@ class Game {
                     this.offlinePlayers = {};
                     this.chatOpen = false;
                     this.cameraAnimation = new cameraAnimation_1.CameraAnimation(0, 0, 1000, 1, 0, false);
+                    this.feedbackButton = new feedbackButton_1.FeedbackButton();
                     this.screenShakeX = 0;
                     this.screenShakeY = 0;
                     this.shakeAmountX = 0;
@@ -26028,6 +26032,36 @@ IdGenerator._registry = new Set();
 
 /***/ }),
 
+/***/ "./src/gui/feedbackButton.ts":
+/*!***********************************!*\
+  !*** ./src/gui/feedbackButton.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FeedbackButton = void 0;
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const linkButton_1 = __webpack_require__(/*! ./linkButton */ "./src/gui/linkButton.ts");
+class FeedbackButton extends linkButton_1.LinkButton {
+    constructor({ x, y } = {
+        x: gameConstants_1.GameConstants.WIDTH / 2,
+        y: gameConstants_1.GameConstants.HEIGHT / 2,
+    }) {
+        super({
+            text: "Provide Feedback",
+            linkUrl: "https://forms.gle/sWzqPGCa1L9XJ3Mk8",
+            x,
+            y,
+        });
+    }
+}
+exports.FeedbackButton = FeedbackButton;
+
+
+/***/ }),
+
 /***/ "./src/gui/guiButton.ts":
 /*!******************************!*\
   !*** ./src/gui/guiButton.ts ***!
@@ -26047,7 +26081,7 @@ class guiButton {
             // 'this' refers to the guiButton instance
             muteButton_1.MuteButton.toggleMute();
             this.text = sound_1.Sound.audioMuted ? "Sound Muted" : "Sound Unmuted";
-            this.parent.game.pushMessage(this.text);
+            this.parent?.game.pushMessage(this.text);
         };
         this.toggleable = toggleable;
         this.toggled = false;
@@ -26060,6 +26094,13 @@ class guiButton {
         this.parent = parent;
         this.noFill = false;
         this.textColor = undefined;
+    }
+    // Check if a point is within the button bounds
+    isPointInButton(x, y) {
+        return (x >= this.x &&
+            x <= this.x + this.width &&
+            y >= this.y &&
+            y <= this.y + this.height);
     }
 }
 exports.guiButton = guiButton;
@@ -26182,6 +26223,50 @@ class HoverText {
     }
 }
 exports.HoverText = HoverText;
+
+
+/***/ }),
+
+/***/ "./src/gui/linkButton.ts":
+/*!*******************************!*\
+  !*** ./src/gui/linkButton.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LinkButton = void 0;
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const guiButton_1 = __webpack_require__(/*! ./guiButton */ "./src/gui/guiButton.ts");
+class LinkButton extends guiButton_1.guiButton {
+    constructor({ text, linkUrl, x, y, }) {
+        const width = game_1.Game.measureText(text).width + 10;
+        const height = 16;
+        super(x, y, width, height, text, () => window.open(linkUrl, "_blank", "noopener,noreferrer"), false);
+    }
+    draw() {
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.imageSmoothingEnabled = false;
+        // Draw button background
+        game_1.Game.ctx.fillStyle = "rgba(100, 100, 100, 0.8)";
+        game_1.Game.ctx.fillRect(Math.round(this.x), Math.round(this.y), Math.round(this.width), Math.round(this.height));
+        // Draw button border
+        game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+        game_1.Game.ctx.lineWidth = 1;
+        game_1.Game.ctx.strokeRect(Math.round(this.x), Math.round(this.y), Math.round(this.width), Math.round(this.height));
+        // Draw button text
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 1)";
+        const textWidth = game_1.Game.measureText(this.text).width;
+        const textX = this.x + (this.width - textWidth) / 2;
+        const textY = this.y + this.height / 2 - game_1.Game.letter_height / 2;
+        game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+        game_1.Game.fillText(this.text, Math.round(textX), Math.round(textY));
+        game_1.Game.ctx.restore();
+    }
+}
+exports.LinkButton = LinkButton;
 
 
 /***/ }),
@@ -38434,8 +38519,13 @@ class PlayerInputHandler {
             return;
         }
         this.setMostRecentInput("mouse");
-        // Handle dead player restart
         if (player.dead) {
+            if (player.game.feedbackButton &&
+                player.game.feedbackButton.isPointInButton(x, y)) {
+                player.game.feedbackButton.onClick();
+                input_1.Input.mouseDownHandled = true;
+                return;
+            }
             player.restart();
             input_1.Input.mouseDownHandled = true;
             return;
@@ -38522,6 +38612,11 @@ class PlayerInputHandler {
         }
         this.setMostRecentInput("mouse");
         if (player.dead) {
+            if (player.game.feedbackButton &&
+                player.game.feedbackButton.isPointInButton(x, y)) {
+                player.game.feedbackButton.onClick();
+                return;
+            }
             player.restart();
             return;
         }
@@ -38569,6 +38664,12 @@ class PlayerInputHandler {
             return;
         }
         if (this.player.dead) {
+            // Check if tap is on feedback button first
+            if (this.player.game.feedbackButton &&
+                this.player.game.feedbackButton.isPointInButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                this.player.game.feedbackButton.onClick();
+                return;
+            }
             this.player.restart();
             return;
         }
@@ -39306,6 +39407,16 @@ class PlayerRenderer {
                 // Draw the restart button
                 const restartTextWidth = game_1.Game.measureText(restartButton).width;
                 game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - restartTextWidth / 2, startY);
+                // Draw feedback button below the restart text
+                if (this.player.game.feedbackButton) {
+                    const feedbackY = startY + game_1.Game.letter_height + 22;
+                    const textWidth = game_1.Game.measureText(this.player.game.feedbackButton.text).width;
+                    const buttonWidth = textWidth + 10;
+                    const centeredX = (gameConstants_1.GameConstants.WIDTH - buttonWidth) / 2;
+                    this.player.game.feedbackButton.x = centeredX;
+                    this.player.game.feedbackButton.y = feedbackY;
+                    this.player.game.feedbackButton.draw();
+                }
                 if (!this.player.game.hasRecordedStats) {
                     // The default value for `lastHitBy` is "enemy", so we compare to that to determine if
                     // the player was killed by an enemy

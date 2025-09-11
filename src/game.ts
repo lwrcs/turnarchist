@@ -39,6 +39,7 @@ import mobsetUrl = require("../res/mobset.png");
 import itemsetUrl = require("../res/itemset.png");
 import fxsetUrl = require("../res/fxset.png");
 import fontUrl = require("../res/font.png");
+import { FeedbackButton } from "./gui/feedbackButton";
 
 export enum LevelState {
   IN_LEVEL,
@@ -273,6 +274,9 @@ export class Game {
   startMenu: any = null;
   startMenuActive: boolean = false;
 
+  // Feedback button
+  feedbackButton: FeedbackButton = null;
+
   constructor() {
     this.globalId = IdGenerator.generate("G");
     this.roomsById = new Map();
@@ -436,6 +440,7 @@ export class Game {
           this.offlinePlayers = {};
           this.chatOpen = false;
           this.cameraAnimation = new CameraAnimation(0, 0, 1000, 1, 0, false);
+          this.feedbackButton = new FeedbackButton();
 
           this.screenShakeX = 0;
           this.screenShakeY = 0;
@@ -447,6 +452,7 @@ export class Game {
           this.screenShakeActive = false;
           this.levels = [];
           this.encounteredEnemies = [];
+
           this.newGame();
           // If a save exists, build a start-screen menu to choose Continue/New
           try {
