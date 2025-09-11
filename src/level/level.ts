@@ -188,27 +188,36 @@ export class Level {
     //this.game.player.inventory.addItem(key);
   }
 
-  setExitRoom() {
-    if (this.isMainPath) {
+  setExitRoom(mainPath = true) {
+    if (mainPath) {
       this.exitRoom = this.rooms.find(
         (room) => room.type === RoomType.DOWNLADDER,
       );
     } else {
-      this.exitRoom = this.rooms.find(
-        (room) => room.type === RoomType.UPLADDER,
+      this.exitRoom = this.getLadderRoom(
+        this.rooms[this.rooms.length - 1],
+        "down",
       );
     }
   }
 
-  setStartRoom() {
-    if (this.isMainPath) {
+  setStartRoom(mainPath = true) {
+    if (mainPath) {
       this.startRoom = this.rooms.find((room) => room.type === RoomType.START);
     } else {
-      this.startRoom = this.rooms.find(
-        (room) => room.type === RoomType.ROPECAVE,
+      this.startRoom = this.getLadderRoom(
+        this.rooms[this.rooms.length - 1],
+        "up",
       );
     }
   }
+
+  getLadderRoom = (room: Room, ladderType: "up" | "down"): Room | null => {
+    for (const r of room.path()) {
+      if (r.hasLadder(ladderType)) return r;
+    }
+    return null;
+  };
 
   setRooms(rooms: Room[]) {
     this.rooms = rooms;

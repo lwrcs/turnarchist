@@ -80,6 +80,7 @@ import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
 import { SidePathOptions } from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
+import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
@@ -161,7 +162,7 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.CASTLE,
-        linearity: 0.75,
+        linearity: 0.8,
       });
     }
 
@@ -170,9 +171,11 @@ export class Populator {
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.DARK_CASTLE,
-        linearity: 0,
+        linearity: 0.8,
       });
     }
+
+    this.linkExitToStart();
 
     //this.level.distributeKeys();
   };
@@ -195,6 +198,17 @@ export class Populator {
         this.populateDefaultEnvironment(room);
         break;
     }
+  };
+
+  linkExitToStart = () => {
+    console.log("linkExitToStart", this.level.isMainPath);
+    if (this.level.isMainPath) return;
+    this.level.setExitRoom(false);
+    this.level.setStartRoom(false);
+    const exitRoom = this.level.exitRoom;
+    const startRoom = this.level.startRoom;
+    if (!startRoom || !exitRoom) return;
+    startRoom.linkExitToStart(exitRoom);
   };
 
   addTrainingDownladder = (opts: SidePathOptions) => {
@@ -444,7 +458,7 @@ export class Populator {
     // find the difference between the base total rooms and the number of rooms in the level
     const roomDiff = baseTotalRooms - this.level.rooms.length;
     // add sidepath rooms to offset the room difference
-    return Math.max(roomDiff, 3);
+    return Math.max(roomDiff, 5);
   };
 
   // #region TILE ADDING METHODS
@@ -1145,6 +1159,7 @@ export class Populator {
         "bigskullenemy",
         "bigzombieenemy",
         "bigfrogenemy",
+        "exalter",
       ];
 
       if (depth > 0) {
@@ -1227,6 +1242,11 @@ export class Populator {
             "gem",
             "tool",
           ];
+          break;
+        case "exalter":
+          const exalter = ExalterEnemy.add(room, room.game, x, y);
+          exalter.dropTable = ["weapon", "equipment"];
+          exalter.dropChance = 1;
           break;
       }
     } else {

@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.9cf68c8bc6478165765d.png";
+module.exports = __webpack_require__.p + "assets/mobset.5dedb9a6156da275c9b2.png";
 
 /***/ }),
 
@@ -8611,7 +8611,7 @@ module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.dada2d6925da4179a148.png";
+module.exports = __webpack_require__.p + "assets/tileset.ecfcc8cde5813473cf87.png";
 
 /***/ }),
 
@@ -9114,7 +9114,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -9406,7 +9406,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -9634,7 +9634,7 @@ class BeetleEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.toggleReveal = () => {
             let ticksSince = this.ticks - this.revealTick;
@@ -10185,7 +10185,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10724,7 +10724,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10931,9 +10931,9 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 4;
-        this.maxHealth = 4;
-        this.defaultMaxHealth = 4;
+        this.health = 6;
+        this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
         this.tileX = 29;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -10992,7 +10992,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -11298,7 +11298,6 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.drops = [];
         this.direction = game_1.Direction.DOWN;
         this.forwardOnlyAttack = true;
-        this.alertRange = 10;
         this.drawMoveSpeed = 0.9;
         this.canDestroyOthers = true;
         if (drop)
@@ -11336,7 +11335,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             // Store the current position
@@ -11596,7 +11595,6 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.drawMoveSpeed = 0.9;
         this.jumpHeight = 0.35;
         this.drawYOffset = 1.5;
-        this.alertRange = 10;
         this.canDestroyOthers = true;
         if (drop)
             this.drop = drop;
@@ -11671,7 +11669,7 @@ class BishopEnemy extends enemy_1.Enemy {
             this.y = y;
         };
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
@@ -11868,7 +11866,7 @@ class ChargeEnemy extends enemy_1.Enemy {
         this.maxChargeDistance = 3;
         this.trailAlpha = 1;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.canMoveOver = (x, y) => {
             for (const e of this.room.entities) {
@@ -12136,7 +12134,7 @@ class CrabEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -12321,6 +12319,7 @@ class CrabEnemy extends enemy_1.Enemy {
         this.orthogonalAttack = true;
         this.imageParticleX = 3;
         this.imageParticleY = 24;
+        this.baseDamage = 0.5;
         //if (drop) this.drop = drop;
         this.drawYOffset = 0.25;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -12366,6 +12365,8 @@ class CrusherEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return 1;
         };
+        this.applyShield = () => { };
+        this.applyBuff = () => { };
         // Allow crushers to move onto a player's tile
         this.tryMove = (x, y, collide = true) => {
             const entityCollide = (entity) => {
@@ -12664,6 +12665,7 @@ const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const stunAnimation_1 = __webpack_require__(/*! ../../projectile/stunAnimation */ "./src/projectile/stunAnimation.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var EnemyState;
 (function (EnemyState) {
     EnemyState[EnemyState["SLEEP"] = 0] = "SLEEP";
@@ -12677,7 +12679,26 @@ class Enemy extends entity_1.Entity {
         super(room, game, x, y);
         this.justHurt = false;
         this.hit = () => {
-            return 1;
+            return this.damage;
+        };
+        this.alertNearbyEnemies = () => {
+            if (!this.seenPlayer)
+                return;
+            const p = this.nearestPlayer();
+            if (p === false)
+                return;
+            const enemies = this.room.entities.filter((e) => e instanceof Enemy);
+            for (const e of enemies) {
+                if (e === this)
+                    continue;
+                const distance = utils_1.Utils.distance(this.x, this.y, e.x, e.y);
+                if (distance <= gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
+                    e instanceof Enemy &&
+                    !e.seenPlayer) {
+                    e.handleSeenPlayer(p[1], false);
+                    e.alertTicks = 2;
+                }
+            }
         };
         this.handleEnemyCase = (playerHitBy) => {
             if (!playerHitBy)
@@ -12760,6 +12781,7 @@ class Enemy extends entity_1.Entity {
             }
             if (this.shielded)
                 this.shield.updateLightSourcePos();
+            this.alertNearbyEnemies();
         };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
@@ -12770,6 +12792,10 @@ class Enemy extends entity_1.Entity {
             const [distance, player] = p;
             if (distance > this.alertRange)
                 return;
+            this.handleSeenPlayer(player, face);
+            this.makeHitWarnings();
+        };
+        this.handleSeenPlayer = (player, face = true) => {
             this.targetPlayer = player;
             if (face)
                 this.facePlayer(player);
@@ -12781,7 +12807,6 @@ class Enemy extends entity_1.Entity {
             if (player === this.game.players[this.game.localPlayerID]) {
                 this.alertTicks = 1;
             }
-            this.makeHitWarnings();
         };
         this.getDisablePositions = () => {
             let disablePositions = Array();
@@ -13210,7 +13235,7 @@ class Enemy extends entity_1.Entity {
             poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
             bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
         };
-        this.alertRange = 4;
+        this.alertRange = gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_RANGE;
         this.effectStartTick = 1;
         this.startTick = 1;
         this.isEnemy = true;
@@ -13220,7 +13245,11 @@ class Enemy extends entity_1.Entity {
         this.justHurt = false;
         this.orthogonalAttack = false;
         this.diagonalAttack = false;
+        this.baseDamage = 1;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    }
+    get damage() {
+        return this.buffed ? 2 * this.baseDamage : this.baseDamage;
     }
     get lastPlayerPos() {
         return {
@@ -13314,6 +13343,206 @@ exports.EnergyWizardEnemy = EnergyWizardEnemy;
 EnergyWizardEnemy.difficulty = 3;
 EnergyWizardEnemy.tileX = 6;
 EnergyWizardEnemy.tileY = 0;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/exalterEnemy.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/exalterEnemy.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExalterEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+class ExalterEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return 1;
+        };
+        this.uniqueKillBehavior = () => {
+            this.unbuffEnemies();
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            let enemiesToBuff = this.enemyBuffCandidates();
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                this.ticks++;
+                if (this.ticks % 2 === 0) {
+                    this.buffEnemies(enemiesToBuff);
+                    this.updateBuffedEnemies();
+                    this.runAway();
+                }
+            }
+            if (this.buffedEnemies.length > 0) {
+                this.shadeColor = "#306082";
+            }
+            else {
+                this.shadeColor = "#000000";
+            }
+            if (this.lightSource) {
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            }
+        };
+        this.onHurt = (damage = 1) => {
+            if (this.health < this.lastHealth &&
+                this.health % 2 === 0 &&
+                this.health > 0) {
+                this.teleport();
+            }
+            this.lastHealth = this.health;
+        };
+        this.updateBuffedEnemies = () => {
+            this.buffedEnemies.forEach((enemy) => {
+                if (enemy.dead) {
+                    this.buffedEnemies = this.buffedEnemies.filter((e) => e !== enemy);
+                }
+            });
+        };
+        this.buffEnemies = (enemiesToBuff) => {
+            if (enemiesToBuff.length > 0) {
+                enemiesToBuff.forEach((enemy) => {
+                    const distance = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y);
+                    if (random_1.Random.rand() * 10 > distance) {
+                        this.applyBuffTo(enemy);
+                    }
+                });
+            }
+        };
+        this.enemyBuffCandidates = () => {
+            const uncappedCandidates = this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
+                utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
+                !entity.buffed &&
+                !entity.dead &&
+                entity !== this &&
+                !entity.buffedBefore);
+            return uncappedCandidates.slice(0, gameplaySettings_1.GameplaySettings.MAX_EXALTER_BUFFS);
+        };
+        this.unbuffEnemies = () => {
+            if (this.buffedEnemies.length > 0) {
+                for (let enemy of this.buffedEnemies) {
+                    if (!enemy.cloned) {
+                        enemy.removeBuff();
+                    }
+                }
+                this.buffedEnemies = [];
+            }
+        };
+        this.applyBuffTo = (enemy) => {
+            //this.shadeColor = "#2E0854";
+            if (!enemy.destroyable)
+                return;
+            this.shadeMultiplier = 1.5;
+            enemy.applyBuff();
+            this.buffedEnemies.push(enemy);
+            if (enemy.buffed) {
+                for (let i = 0; i < 5; i++) {
+                    let beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#00FFFF";
+                    beam.turbulence = 1;
+                    beam.gravity = 0;
+                    beam.iterations = 3;
+                    beam.segments = 30;
+                    beam.angleChange = 1;
+                    beam.springDamping = 0.3;
+                    beam.drawableY = enemy.drawableY;
+                    beam.type = "buff";
+                    this.room.projectiles.push(beam);
+                }
+            }
+        };
+        this.updateBeam = (delta) => {
+            for (let beam of this.room.projectiles) {
+                if (beam instanceof beamEffect_1.BeamEffect) {
+                    if (!this.buffedEnemies.includes(beam.parent) ||
+                        beam.type !== "buff")
+                        continue;
+                    beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
+                    beam.drawableY = beam.parent.drawableY;
+                    switch (Math.floor(this.frame)) {
+                        case 0:
+                            beam.color = "#00FFFF";
+                            break;
+                        case 1:
+                            beam.color = "#00a1dc"; //darker cyan;
+                            break;
+                        case 2:
+                            beam.color = "#008ea7"; //darker cyan;
+                            break;
+                        case 3:
+                            beam.color = "#00a1dc"; //darker cyan;
+                            break;
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.drawableY = this.y;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.updateBeam(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.health = 4;
+        this.lastHealth = this.health;
+        this.maxHealth = 4;
+        this.tileX = 59;
+        this.tileY = 8;
+        this.seenPlayer = true;
+        this.name = "exalter";
+        this.range = 6;
+        this.aggro = false;
+        this.frame = 0;
+        this.hasShadow = true;
+        this.buffedBefore = false;
+        this.buffedEnemies = [];
+        this.shadeColor = "#000000";
+        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [1, 20, 30], 3.5, 20);
+        this.addLightSource(this.lightSource);
+        this.room.updateLighting();
+        this.hasBloom = true;
+        this.bloomColor = "#00FFFF"; //cyan;
+        this.bloomAlpha = 0.5;
+        this.softBloomAlpha = 0;
+        this.dropChance = 1;
+        this.getDrop(["exalter"], false);
+        this.pushable = false;
+        this.chainPushable = false;
+    }
+}
+exports.ExalterEnemy = ExalterEnemy;
+ExalterEnemy.tileX = 59;
+ExalterEnemy.tileY = 8;
 
 
 /***/ }),
@@ -13537,7 +13766,7 @@ class FrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -13829,6 +14058,7 @@ class FrogEnemy extends enemy_1.Enemy {
         this.jumpHeight = 1;
         this.imageParticleX = 3;
         this.imageParticleY = 30;
+        this.baseDamage = 0.5;
         if (drop)
             this.drop = drop;
         this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
@@ -13965,7 +14195,7 @@ class KnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -14175,7 +14405,7 @@ class MummyEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 0.5;
+            return this.damage;
         };
         // Immunities
         this.poison = () => {
@@ -14391,6 +14621,7 @@ class MummyEnemy extends enemy_1.Enemy {
         this.forwardOnlyAttack = true;
         this.jumpHeight = 0.35;
         this.alertRange = 2; // very small alert range
+        this.baseDamage = 0.5;
         if (drop)
             this.drop = drop;
         this.getDrop(["consumable", "tool", "coin"]);
@@ -14518,31 +14749,15 @@ class OccultistEnemy extends enemy_1.Enemy {
                 beam.angleChange = 0.001;
                 beam.springDamping = 0.01;
                 beam.drawableY = enemy.drawableY;
+                beam.type = "shield";
                 this.room.projectiles.push(beam);
-            }
-        };
-        this.createBeam = (enemies) => {
-            for (let enemy of enemies) {
-                if (enemy.shielded && enemy.shield) {
-                    let beam = new beamEffect_1.BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
-                    beam.compositeOperation = "source-over";
-                    beam.color = "#2E0854";
-                    // Match runtime beam settings from applyShieldTo so loaded beams look identical
-                    beam.turbulence = 0.4;
-                    beam.gravity = 0.1;
-                    beam.iterations = 1;
-                    beam.segments = 100;
-                    beam.angleChange = 0.001;
-                    beam.springDamping = 0.01;
-                    beam.drawableY = enemy.drawableY;
-                    this.room.projectiles.push(beam);
-                }
             }
         };
         this.updateBeam = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (!beam.parent)
+                    if (!this.shieldedEnemies.includes(beam.parent) ||
+                        beam.type !== "shield")
                         continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY, beam.parent.x - beam.parent.drawX, beam.parent.y - beam.parent.drawY);
                     beam.drawableY = beam.parent.drawableY;
@@ -14635,7 +14850,7 @@ class PawnEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
@@ -14844,7 +15059,7 @@ class QueenEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.justHurt = false;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -15041,7 +15256,7 @@ class RookEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -15101,8 +15316,8 @@ class RookEnemy extends enemy_1.Enemy {
                         undefined, undefined, undefined, false, //diagonalsOmni
                         this.lastPlayerPos);
                         if (this.justHurt) {
-                            this.retreat(oldX, oldY);
-                            this.stun();
+                            //this.retreat(oldX, oldY);
+                            //this.stun();
                         }
                         else if (moves.length > 0 && !this.unconscious) {
                             let moveX = moves[0].pos.x;
@@ -15162,7 +15377,8 @@ class RookEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, // + offsetTileY,
+                1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -15176,9 +15392,9 @@ class RookEnemy extends enemy_1.Enemy {
         };
         this.ticks = 0;
         this.frame = 0;
-        this.health = 2;
-        this.maxHealth = 2;
-        this.defaultMaxHealth = 2;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
         this.tileX = 23 + 28;
         this.tileY = 8;
         this.seenPlayer = false;
@@ -15221,7 +15437,7 @@ class SkullEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.REGEN_TICKS = 5;
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
@@ -15788,7 +16004,7 @@ class SpiderEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.toggleReveal = () => {
             let ticksSince = this.ticks - this.revealTick;
@@ -16322,7 +16538,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.crusherCount = 0;
         this.crushers = [];
         this.hit = () => {
-            return 2;
+            return this.damage;
         };
         this.createCrusherBlocks = (crusherPositions) => {
             for (const position of crusherPositions) {
@@ -16386,13 +16602,7 @@ class WardenEnemy extends enemy_1.Enemy {
             }
         };
         this.uniqueKillBehavior = () => {
-            for (let beam of this.room.projectiles) {
-                if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (beam.parent instanceof crusherEnemy_1.CrusherEnemy) {
-                        this.room.projectiles = this.room.projectiles.filter((b) => b !== beam);
-                    }
-                }
-            }
+            this.removeCrusherChains();
             for (const crusher of this.crushers) {
                 if (!crusher.dead) {
                     crusher.kill();
@@ -16403,7 +16613,8 @@ class WardenEnemy extends enemy_1.Enemy {
         this.updateCrusherChains = (delta) => {
             for (let beam of this.room.projectiles) {
                 if (beam instanceof beamEffect_1.BeamEffect) {
-                    if (!beam.parent)
+                    if (beam.parent !== this.crushers[0] &&
+                        beam.parent !== this.crushers[1])
                         continue;
                     beam.setTarget(this.x - this.drawX, this.y - this.drawY - 0.5, beam.parent.x - beam.parent.drawX, beam.parent.y -
                         beam.parent.drawY -
@@ -16616,6 +16827,7 @@ class WardenEnemy extends enemy_1.Enemy {
         this.crusherPositions = [];
         this.crusherCount = 0;
         this.crushers = [];
+        this.baseDamage = 2;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 10, [255, 10, 10], 1.5);
         this.addLightSource(this.lightSource);
         this.hasBloom = true;
@@ -16849,7 +17061,7 @@ class ZombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.hit = () => {
-            return 1;
+            return this.damage;
         };
         this.behavior = () => {
             // Store the current position
@@ -17100,6 +17312,8 @@ const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -17139,6 +17353,7 @@ class Entity extends drawable_1.Drawable {
         this.collidable = true;
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
+        this.beamIds = [];
         this.hoverText = () => {
             return this.name;
         };
@@ -17169,6 +17384,36 @@ class Entity extends drawable_1.Drawable {
                 this.bloomAlpha = 0;
             }
         };
+        this.applyBuff = () => {
+            this.buffed = true;
+            this.buffedBefore = true;
+            this.shadeColor = "cyan";
+            this.shadeMultiplier = 0.5;
+            this.hasBloom = true;
+            this.bloomColor = "#00FFFF";
+            this.bloomAlpha = 0.5;
+            this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [0, 40, 40], 3.5, 20);
+            this.addLightSource(this.lightSource);
+            this.room.updateLighting();
+        };
+        this.removeBuff = () => {
+            let beams = this.room.projectiles.filter((projectile) => projectile instanceof beamEffect_1.BeamEffect && projectile.parent === this);
+            if (beams) {
+                beams.forEach((beam) => {
+                    beam.dead = true;
+                });
+            }
+            //this.shadeColor = "black";
+            //this.lightSource = null;
+            //this.shield = null;
+            this.shadeColor = this.room.shadeColor;
+            this.shadeMultiplier = 1;
+            this.hasBloom = false;
+            this.bloomAlpha = 0;
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+            this.room.updateLighting();
+        };
         this.getDrop = (useCategory = [], force = false) => {
             if (this.cloned)
                 return;
@@ -17190,6 +17435,12 @@ class Entity extends drawable_1.Drawable {
             this.room.lightSources = this.room.lightSources.filter((ls) => ls !== lightSource);
             //this.lightSource = null;
             this.room.updateLighting();
+        };
+        this.addBeamId = (beamId) => {
+            this.beamIds.push(beamId);
+        };
+        this.removeBeamId = (beamId) => {
+            this.beamIds = this.beamIds.filter((id) => id !== beamId);
         };
         this.behavior = () => { };
         this.hit = () => {
@@ -18171,6 +18422,7 @@ class Entity extends drawable_1.Drawable {
         this.drops = [];
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
+        this.beamIds = [];
         if (this.drop)
             this.drops.push(this.drop);
     }
@@ -21094,7 +21346,10 @@ class Game {
             const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
             if (isSafari) {
                 gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
-                gameConstants_1.GameConstants.SMOOTH_LIGHTING = false;
+                // Only set default once at initialization; do not override user choice during resize/scale changes
+                if (gameConstants_1.GameConstants.SCALE === null) {
+                    gameConstants_1.GameConstants.SMOOTH_LIGHTING = false;
+                }
             }
             // Define scale adjustment based on device pixel ratio
             if (gameConstants_1.GameConstants.SCALE === null) {
@@ -22772,6 +23027,7 @@ const stats_1 = __webpack_require__(/*! ./stats */ "./src/game/stats.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -22898,6 +23154,7 @@ var EnemyType;
     EnemyType[EnemyType["PAWN"] = 48] = "PAWN";
     EnemyType[EnemyType["BIGFROG"] = 49] = "BIGFROG";
     EnemyType[EnemyType["BEETLE"] = 50] = "BEETLE";
+    EnemyType[EnemyType["EXALTER"] = 51] = "EXALTER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -22913,6 +23170,14 @@ class EnemyState {
         try {
             this.isShielded = enemy.shielded === true;
             this.shieldHealth = enemy.shield?.health ?? undefined;
+        }
+        catch { }
+        try {
+            this.buffed = enemy.buffed === true;
+        }
+        catch { }
+        try {
+            this.buffedBefore = enemy.buffedBefore === true;
         }
         catch { }
         this.shieldedBefore = enemy.shieldedBefore;
@@ -23090,6 +23355,8 @@ class EnemyState {
             this.type = EnemyType.BEETLE;
         if (enemy instanceof bigFrogEnemy_1.BigFrogEnemy)
             this.type = EnemyType.BIGFROG;
+        if (enemy instanceof exalterEnemy_1.ExalterEnemy)
+            this.type = EnemyType.EXALTER;
     }
 }
 exports.EnemyState = EnemyState;
@@ -23244,6 +23511,8 @@ let loadEnemy = (es, game) => {
         enemy = new bigFrogEnemy_1.BigFrogEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.BEETLE)
         enemy = new beetleEnemy_1.BeetleEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.EXALTER)
+        enemy = new exalterEnemy_1.ExalterEnemy(room, game, es.x, es.y);
     if (es.isEnemy) {
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
@@ -23262,6 +23531,14 @@ let loadEnemy = (es, game) => {
     enemy.health = es.health;
     enemy.maxHealth = es.maxHealth;
     enemy.shieldedBefore = es.shieldedBefore;
+    enemy.buffed = es.buffed;
+    enemy.buffedBefore = es.buffedBefore;
+    try {
+        if (es.isBuffed) {
+            enemy.applyBuff();
+        }
+    }
+    catch { }
     // Rebuild shields if needed
     try {
         if (es.isShielded) {
@@ -23484,6 +23761,20 @@ let loadRoom = (room, roomState, game) => {
     }
     for (const hw of roomState.hitwarnings)
         room.hitwarnings.push(loadHitWarning(hw, game));
+    try {
+        const exalters = room.entities.filter((e) => e instanceof exalterEnemy_1.ExalterEnemy);
+        for (const exalter of exalters) {
+            for (const enemy of exalter.buffedEnemies) {
+                if (enemy instanceof enemy_1.Enemy &&
+                    !enemy.dead &&
+                    !enemy.buffed &&
+                    !enemy.buffedBefore) {
+                    exalter.applyBuffTo(enemy);
+                }
+            }
+        }
+    }
+    catch { }
     // After entities and projectiles are in place, recreate occultist beams without duplicates/self-beams
     try {
         const occultists = room.entities.filter((e) => e instanceof occultistEnemy_1.OccultistEnemy);
@@ -23516,6 +23807,34 @@ let loadRoom = (room, roomState, game) => {
             oc.shieldedEnemies = allies.slice();
             if (oc.createBeam && allies.length) {
                 oc.createBeam(allies);
+            }
+        }
+    }
+    catch { }
+    // Recreate Exalter buffs and beams based on saved buff flags
+    try {
+        const exalters = room.entities.filter((e) => e instanceof exalterEnemy_1.ExalterEnemy);
+        if (exalters.length) {
+            const buffedTargets = room.entities.filter((e) => e instanceof enemy_1.Enemy && e.buffed && !e.dead);
+            // Clear any previous tracking just in case
+            for (const ex of exalters) {
+                ex.buffedEnemies = [];
+            }
+            // Assign each buffed enemy to the nearest exalter and recreate beams
+            for (const target of buffedTargets) {
+                let nearest = null;
+                let best = Number.POSITIVE_INFINITY;
+                for (const ex of exalters) {
+                    const dist = Math.max(Math.abs(ex.x - target.x), Math.abs(ex.y - target.y));
+                    if (dist < best) {
+                        best = dist;
+                        nearest = ex;
+                    }
+                }
+                if (nearest) {
+                    // applyBuffTo will push into buffedEnemies and create the beam effect
+                    nearest.applyBuffTo(target);
+                }
             }
         }
     }
@@ -24798,6 +25117,10 @@ GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
+GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
+GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
+GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
+GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -24818,6 +25141,7 @@ GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multip
 GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
+GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
 
 
 /***/ }),
@@ -26673,9 +26997,9 @@ class Menu {
         const buttonY = gameConstants_1.GameConstants.TILESIZE / 2;
         game_1.Game.drawFX(18, 0, 1, 1, 0, 0.5, 1, 1);
         //Game.ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        //Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
+        game_1.Game.fillText("Menu", 10, 10);
         game_1.Game.ctx.globalAlpha = 1;
-        game_1.Game.ctx.fillStyle = "rgb(0, 0, 0)"; //yellow text
-        //Game.fillText("Menu", buttonX + 1, buttonY + 1);
         game_1.Game.ctx.restore();
     }
     initializeCloseButton() {
@@ -27717,7 +28041,7 @@ class XPCounter {
         game_1.Game.ctx.save();
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
         game_1.Game.ctx.globalAlpha = 0.1;
-        game_1.Game.fillText(`XP: ${xp}`, 10, 10);
+        game_1.Game.fillText(`XP: ${xp}`, 1, 20);
         game_1.Game.ctx.restore();
     }
 }
@@ -30501,6 +30825,7 @@ class Torch extends light_1.Light {
         this.radius = 7;
         this.maxBrightness = 5;
         this.minBrightness = 2;
+        this.stackable = true;
     }
 }
 exports.Torch = Torch;
@@ -33724,6 +34049,13 @@ class Level {
         this.pathsById = new Map();
         this.isMainPath = true;
         this.skipPopulation = false;
+        this.getLadderRoom = (room, ladderType) => {
+            for (const r of room.path()) {
+                if (r.hasLadder(ladderType))
+                    return r;
+            }
+            return null;
+        };
         this.initializeLevelArray = () => {
             // Create a 300x300 grid for depth 0
             this.levelArray = [];
@@ -33877,20 +34209,20 @@ class Level {
         //console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
-    setExitRoom() {
-        if (this.isMainPath) {
+    setExitRoom(mainPath = true) {
+        if (mainPath) {
             this.exitRoom = this.rooms.find((room) => room.type === room_1.RoomType.DOWNLADDER);
         }
         else {
-            this.exitRoom = this.rooms.find((room) => room.type === room_1.RoomType.UPLADDER);
+            this.exitRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "down");
         }
     }
-    setStartRoom() {
-        if (this.isMainPath) {
+    setStartRoom(mainPath = true) {
+        if (mainPath) {
             this.startRoom = this.rooms.find((room) => room.type === room_1.RoomType.START);
         }
         else {
-            this.startRoom = this.rooms.find((room) => room.type === room_1.RoomType.ROPECAVE);
+            this.startRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "up");
         }
     }
     setRooms(rooms) {
@@ -34100,7 +34432,14 @@ class LevelGenerator {
                     else {
                         console.warn("PNG generation failed, falling back to procedural generation");
                     }
-                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
+                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams, 
+                    // Allow main-path overrides via opts when not a side path
+                    isSidePath
+                        ? undefined
+                        : {
+                            branching: opts?.branching,
+                            loopiness: opts?.loopiness,
+                        });
                 }
             }
             else {
@@ -34109,7 +34448,12 @@ class LevelGenerator {
                     partitions = await this.partitionGenerator.generateCavePartitions(opts);
                 }
                 else {
-                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams);
+                    partitions = await this.partitionGenerator.generateDungeonPartitions(game, this.levelParams.mapWidth, this.levelParams.mapHeight, depth, this.levelParams, isSidePath
+                        ? undefined
+                        : {
+                            branching: opts?.branching,
+                            loopiness: opts?.loopiness,
+                        });
                 }
             }
             // Use validator instead of direct overlap checking
@@ -34162,7 +34506,10 @@ class LevelGenerator {
         this.generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
             // Deterministically generate each main path depth from 0..numFloors
             for (let depth = 0; depth <= numFloors; depth++) {
-                await this.generate(game, depth, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation);
+                await this.generate(game, depth, false, () => { }, environmentTypes_1.EnvType.DUNGEON, skipPopulation, undefined, {
+                    branching: gameplaySettings_1.GameplaySettings.MAIN_PATH_BRANCHING,
+                    loopiness: gameplaySettings_1.GameplaySettings.MAIN_PATH_LOOPINESS,
+                });
                 // generate() updates game.rooms to this depth's rooms
             }
         };
@@ -35242,7 +35589,7 @@ class PartitionGenerator {
         this.validator = new levelValidator_1.LevelValidator(game);
         this.visualizer = new generationVisualizer_1.GenerationVisualizer(game);
     }
-    async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params) {
+    async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params, controls) {
         const partialLevel = new PartialLevel();
         let validationResult;
         let attempts = 0;
@@ -35250,7 +35597,7 @@ class PartitionGenerator {
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating candidate ${attempts}`, attempts * 0.1);
-            await this.generateDungeonCandidate(game, partialLevel, mapWidth, mapHeight, depth, params);
+            await this.generateDungeonCandidate(game, partialLevel, mapWidth, mapHeight, depth, params, controls);
             validationResult = this.validator.validateDungeonPartitions(partialLevel.partitions, params);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating", 0.8);
@@ -35270,12 +35617,22 @@ class PartitionGenerator {
         const mapWidth = opts.mapWidth ?? 50;
         const mapHeight = opts.mapHeight ?? 50;
         const numRooms = opts.caveRooms ?? 8;
-        const linearity = opts.linearity ?? 0.5;
+        const hasLinearity = typeof opts.linearity === "number";
+        const branching = typeof opts.branching === "number"
+            ? opts.branching
+            : hasLinearity
+                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                : 0.5; // default: 50% chance of second door
+        const loopiness = typeof opts.loopiness === "number"
+            ? opts.loopiness
+            : hasLinearity
+                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                : 0.5; // default: moderate loops
         this.visualizer.updateProgress("Starting cave generation", 0);
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
-            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, linearity);
+            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
             validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numRooms);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating cave", 0.8);
@@ -35294,7 +35651,7 @@ class PartitionGenerator {
         }
         return partitions;
     }
-    async generateDungeonCandidate(game, partialLevel, map_w, map_h, depth, params) {
+    async generateDungeonCandidate(game, partialLevel, map_w, map_h, depth, params, controls) {
         const { minRoomCount, maxRoomCount, maxRoomArea, splitProbabilities, wallRemoveProbability, softMaxRoomArea, } = params;
         partialLevel.partitions = [new Partition(0, 0, map_w, map_h, "white")];
         this.visualizer.updateProgress("Splitting partitions", 0.1);
@@ -35345,10 +35702,10 @@ class PartitionGenerator {
                 "red";
         }
         this.visualizer.updateProgress("Connecting partitions", 0.6);
-        await this.connectPartitions(partialLevel, spawn);
+        await this.connectPartitions(partialLevel, spawn, controls?.branching);
         this.visualizer.updateProgress("Adding loop connections", 0.7);
         if (partialLevel.partitions.length > 0) {
-            await this.addLoopConnections(partialLevel);
+            await this.addLoopConnections(partialLevel, controls?.loopiness);
         }
         this.visualizer.updateProgress("Adding stair room", 0.8);
         if (partialLevel.partitions.length > 0) {
@@ -35360,7 +35717,7 @@ class PartitionGenerator {
             await this.addSpecialRooms(partialLevel);
         }
     }
-    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, linearity = 0.5) {
+    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5) {
         const CAVE_OFFSET = 100;
         partialLevel.partitions = [
             new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
@@ -35377,8 +35734,8 @@ class PartitionGenerator {
         for (let i = 1; i < partialLevel.partitions.length; i++) {
             partialLevel.partitions[i].type = room_1.RoomType.CAVE;
         }
-        await this.connectCavePartitions(partialLevel, spawn, num_rooms, linearity);
-        await this.addCaveLoops(partialLevel, linearity);
+        await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
+        await this.addCaveLoops(partialLevel, loopiness);
         await this.calculateDistances(partialLevel, spawn);
     }
     async splitPartitions(partitions, prob) {
@@ -35481,7 +35838,7 @@ class PartitionGenerator {
         }
         return partitions;
     }
-    async connectPartitions(partialLevel, spawn) {
+    async connectPartitions(partialLevel, spawn, branching) {
         let connected = [spawn];
         let frontier = [spawn];
         let found_boss = false;
@@ -35492,7 +35849,10 @@ class PartitionGenerator {
             }
             frontier.splice(0, 1);
             let doors_found = 0;
-            const num_doors = Math.floor(random_1.Random.rand() * 2 + 1);
+            // Default behavior kept if branching is undefined
+            const num_doors = branching === undefined
+                ? Math.floor(random_1.Random.rand() * 2 + 1)
+                : 1 + (random_1.Random.rand() < Math.max(0, Math.min(1, branching)) ? 1 : 0);
             let tries = 0;
             const max_tries = 1000;
             while (doors_found < num_doors && tries < max_tries) {
@@ -35526,18 +35886,15 @@ class PartitionGenerator {
             }
         }
     }
-    async connectCavePartitions(partialLevel, spawn, num_rooms, linearity = 0.5) {
+    async connectCavePartitions(partialLevel, spawn, num_rooms, branching = 0.5) {
         let connected = [spawn];
         let frontier = [spawn];
         while (frontier.length > 0 && connected.length < num_rooms) {
             let room = frontier[0];
             frontier.splice(0, 1);
             let doors_found = 0;
-            // linearly map linearity -> probability of a second door
-            // linearity 0.5 => p(second door)=0.5 (current behavior)
-            // linearity 1.0 => p(second door)=0 (no branching)
-            // linearity 0.0 => p(second door)=1 (max branching)
-            const pSecondDoor = Math.max(0, Math.min(1, 1 - linearity));
+            // branching controls probability of a second door
+            const pSecondDoor = Math.max(0, Math.min(1, branching));
             const num_doors = 1 + (random_1.Random.rand() < pSecondDoor ? 1 : 0);
             let tries = 0;
             const max_tries = 1000;
@@ -35568,12 +35925,14 @@ class PartitionGenerator {
             throw new Error("No valid rooms after filtering.");
         }
     }
-    async addLoopConnections(partialLevel) {
+    async addLoopConnections(partialLevel, loopiness) {
         // Check if we have any partitions to work with
         if (partialLevel.partitions.length === 0) {
             return;
         }
-        let num_loop_doors = Math.floor(random_1.Random.rand() * 4 + 4);
+        let num_loop_doors = loopiness === undefined
+            ? Math.floor(random_1.Random.rand() * 4 + 4)
+            : Math.floor((random_1.Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)));
         for (let i = 0; i < num_loop_doors; i++) {
             // Double-check array length in case partitions were removed during iteration
             if (partialLevel.partitions.length === 0) {
@@ -35608,12 +35967,12 @@ class PartitionGenerator {
             }
         }
     }
-    async addCaveLoops(partialLevel, linearity = 0.5) {
+    async addCaveLoops(partialLevel, loopiness = 0.5) {
         // Check if we have any partitions to work with
         if (partialLevel.partitions.length === 0) {
             return;
         }
-        let num_loop_doors = Math.floor((random_1.Random.rand() * 4 + 4) * (1 - linearity));
+        let num_loop_doors = Math.floor((random_1.Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)));
         for (let i = 0; i < num_loop_doors; i++) {
             // Double-check array length in case partitions were removed during iteration
             if (partialLevel.partitions.length === 0) {
@@ -40566,6 +40925,7 @@ const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -40602,6 +40962,7 @@ var EnemyType;
     EnemyType["pawn"] = "pawn";
     EnemyType["beetle"] = "beetle";
     EnemyType["bigfrog"] = "bigfrog";
+    EnemyType["exalter"] = "exalter";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -40637,6 +40998,7 @@ exports.EnemyTypeMap = {
     [EnemyType.pawn]: pawnEnemy_1.PawnEnemy,
     [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
+    [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -40804,13 +41166,14 @@ class Room {
         };
         // #endregion
         // #region ENTERING / EXITING ROOM METHODS
-        this.linkExitToStart = () => {
+        this.linkExitToStart = (startRoom) => {
             //if (this.type === RoomType.ROPEHOLE) return;
-            if (this.addDoorWithOffset(this.level.startRoom.roomX +
-                Math.floor(this.level.startRoom.width / 2) +
-                1, this.level.startRoom.roomY, this.level.startRoom, true) &&
+            if (!startRoom)
+                startRoom = this.level.startRoom;
+            if (this.addDoorWithOffset(startRoom.roomX + Math.floor(startRoom.width / 2) + 1, startRoom.roomY, startRoom, true) &&
                 this.addDoorWithOffset(this.roomX + Math.floor(this.width / 2) - 1, this.roomY, this, true)) {
-                this.tunnelDoor.linkedDoor = this.level.startRoom.tunnelDoor;
+                this.tunnelDoor.startRoom = true;
+                this.tunnelDoor.linkedDoor = startRoom.tunnelDoor;
                 this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
             }
         };
@@ -43927,6 +44290,7 @@ const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/i
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -43986,7 +44350,7 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.CASTLE,
-                    linearity: 0.75,
+                    linearity: 0.8,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
@@ -43994,9 +44358,10 @@ class Populator {
                     caveRooms: this.numRooms(),
                     locked: true,
                     envType: environmentTypes_1.EnvType.DARK_CASTLE,
-                    linearity: 0,
+                    linearity: 0.8,
                 });
             }
+            this.linkExitToStart();
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
@@ -44017,6 +44382,18 @@ class Populator {
                     this.populateDefaultEnvironment(room);
                     break;
             }
+        };
+        this.linkExitToStart = () => {
+            console.log("linkExitToStart", this.level.isMainPath);
+            if (this.level.isMainPath)
+                return;
+            this.level.setExitRoom(false);
+            this.level.setStartRoom(false);
+            const exitRoom = this.level.exitRoom;
+            const startRoom = this.level.startRoom;
+            if (!startRoom || !exitRoom)
+                return;
+            startRoom.linkExitToStart(exitRoom);
         };
         this.addTrainingDownladder = (opts) => {
             if (this.level.depth !== 0)
@@ -44086,7 +44463,7 @@ class Populator {
             // find the difference between the base total rooms and the number of rooms in the level
             const roomDiff = baseTotalRooms - this.level.rooms.length;
             // add sidepath rooms to offset the room difference
-            return Math.max(roomDiff, 3);
+            return Math.max(roomDiff, 5);
         };
         // #endregion
         // #region POPULATING METHODS
@@ -45005,6 +45382,7 @@ class Populator {
                 "bigskullenemy",
                 "bigzombieenemy",
                 "bigfrogenemy",
+                "exalter",
             ];
             if (depth > 0) {
                 bosses.push("occultist");
@@ -45078,6 +45456,11 @@ class Populator {
                         "gem",
                         "tool",
                     ];
+                    break;
+                case "exalter":
+                    const exalter = exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
+                    exalter.dropTable = ["weapon", "equipment"];
+                    exalter.dropChance = 1;
                     break;
             }
         }
@@ -46515,7 +46898,8 @@ class Door extends passageway_1.Passageway {
             }
             if (this.type === DoorType.TUNNELDOOR &&
                 (!this.opened || !this.linkedDoor.opened)) {
-                if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor) {
+                if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor ||
+                    this.startRoom) {
                     this.game.pushMessage("The door refuses to budge from this side.");
                     return false;
                 }
@@ -46605,6 +46989,9 @@ class Door extends passageway_1.Passageway {
             }
             else
                 this.game.changeLevelThroughDoor(player, this.linkedDoor, this.linkedDoor.room.roomX - this.room.roomX > 0 ? 1 : -1);
+            if (this.type === DoorType.TUNNELDOOR && !this.startRoom) {
+                this.game.pushMessage("The tunnel leads you back to the start.");
+            }
             this.linkedDoor.removeLock();
             this.linkedDoor.removeLockIcon();
             this.removeLockIcon();
@@ -47381,7 +47768,7 @@ class SpikeTrap extends tile_1.Tile {
                 enemy.hurt(null, 1);
         };
         this.draw = (delta) => {
-            this.drawableY = this.y - 0.01;
+            //this.drawableY = this.y - 0.01;
             game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
             let rumbleOffsetX = 0;
             this.t += delta;

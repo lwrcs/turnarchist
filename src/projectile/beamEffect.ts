@@ -5,6 +5,7 @@ import { Particle } from "../particle/particle";
 import { Projectile } from "./projectile";
 import { Room } from "../room/room";
 import { Random } from "../utility/random";
+import { IdGenerator } from "../globalStateManager/IdGenerator";
 
 interface Point {
   x: number;
@@ -84,6 +85,7 @@ export class BeamEffect extends Projectile {
   springDamping: number = BeamEffect.SPRING_DAMPING;
   iterations: number = BeamEffect.ITERATIONS;
   segments: number = BeamEffect.SEGMENTS;
+  type: string;
   constructor(x1: number, y1: number, x2: number, y2: number, parent: Entity) {
     super(parent, x1, y1);
     const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;

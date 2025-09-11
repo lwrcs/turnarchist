@@ -51,7 +51,6 @@ export class BigZombieEnemy extends Enemy {
     this.drawMoveSpeed = 0.9;
     this.jumpHeight = 0.35;
     this.drawYOffset = 1.5;
-    this.alertRange = 10;
     this.canDestroyOthers = true;
 
     if (drop) this.drop = drop;
@@ -62,7 +61,7 @@ export class BigZombieEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   behavior = () => {

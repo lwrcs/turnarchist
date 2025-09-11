@@ -12,14 +12,15 @@ import { Entity } from "../entity";
 import { Random } from "../../utility/random";
 import { GameplaySettings } from "../../game/gameplaySettings";
 
-export class OccultistEnemy extends Enemy {
+export class ExalterEnemy extends Enemy {
   ticks: number;
   seenPlayer: boolean;
-  shieldedEnemies: Enemy[];
+  buffedEnemies: Enemy[];
   range: number;
-  static tileX: number = 55;
+  static tileX: number = 59;
   static tileY: number = 8;
   lastHealth: number;
+  buffedBefore: boolean;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -27,32 +28,32 @@ export class OccultistEnemy extends Enemy {
     this.health = 4;
     this.lastHealth = this.health;
     this.maxHealth = 4;
-    this.tileX = 55;
+    this.tileX = 59;
     this.tileY = 8;
     this.seenPlayer = true;
-    this.name = "occultist";
+    this.name = "exalter";
     this.range = 6;
     this.aggro = false;
     this.frame = 0;
     this.hasShadow = true;
-    this.shieldedBefore = false;
-    this.shieldedEnemies = [];
+    this.buffedBefore = false;
+    this.buffedEnemies = [];
     this.shadeColor = "#000000";
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
-      [20, 0, 40],
+      [1, 20, 30],
       3.5,
       20,
     );
     this.addLightSource(this.lightSource);
     this.room.updateLighting();
     this.hasBloom = true;
-    this.bloomColor = "#2E0854";
-    this.bloomAlpha = 1;
+    this.bloomColor = "#00FFFF"; //cyan;
+    this.bloomAlpha = 0.5;
     this.softBloomAlpha = 0;
     this.dropChance = 1;
-    this.getDrop(["occultist"], false);
+    this.getDrop(["exalter"], false);
     this.pushable = false;
     this.chainPushable = false;
   }
@@ -62,7 +63,7 @@ export class OccultistEnemy extends Enemy {
   };
 
   uniqueKillBehavior = () => {
-    this.unshieldEnemies();
+    this.unbuffEnemies();
     this.removeLightSource(this.lightSource);
     this.lightSource = null;
   };
@@ -71,7 +72,7 @@ export class OccultistEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
 
-    let enemiesToShield = this.enemyShieldCandidates();
+    let enemiesToBuff = this.enemyBuffCandidates();
 
     if (!this.dead) {
       if (this.skipNextTurns > 0) {
@@ -82,14 +83,14 @@ export class OccultistEnemy extends Enemy {
       this.ticks++;
 
       if (this.ticks % 2 === 0) {
-        this.shieldEnemies(enemiesToShield);
-        this.updateShieldedEnemies();
+        this.buffEnemies(enemiesToBuff);
+        this.updateBuffedEnemies();
         this.runAway();
       }
     }
 
-    if (this.shieldedEnemies.length > 0) {
-      this.shadeColor = "#2E0854";
+    if (this.buffedEnemies.length > 0) {
+      this.shadeColor = "#306082";
     } else {
       this.shadeColor = "#000000";
     }
@@ -109,67 +110,70 @@ export class OccultistEnemy extends Enemy {
     this.lastHealth = this.health;
   };
 
-  updateShieldedEnemies = () => {
-    this.shieldedEnemies.forEach((enemy) => {
+  updateBuffedEnemies = () => {
+    this.buffedEnemies.forEach((enemy) => {
       if (enemy.dead) {
-        this.shieldedEnemies = this.shieldedEnemies.filter((e) => e !== enemy);
+        this.buffedEnemies = this.buffedEnemies.filter((e) => e !== enemy);
       }
     });
   };
 
-  shieldEnemies = (enemiesToShield: Entity[]) => {
-    if (enemiesToShield.length > 0) {
-      enemiesToShield.forEach((enemy) => {
+  buffEnemies = (enemiesToBuff: Entity[]) => {
+    if (enemiesToBuff.length > 0) {
+      enemiesToBuff.forEach((enemy) => {
         const distance = Utils.distance(this.x, this.y, enemy.x, enemy.y);
         if (Random.rand() * 10 > distance) {
-          this.applyShieldTo(enemy as Enemy);
+          this.applyBuffTo(enemy as Enemy);
         }
       });
     }
   };
 
-  enemyShieldCandidates = () => {
+  enemyBuffCandidates = () => {
     const uncappedCandidates = this.room.entities.filter(
       (entity) =>
         entity instanceof Enemy &&
         Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
-        !entity.shielded &&
+        !entity.buffed &&
         !entity.dead &&
         entity !== this &&
-        !entity.shieldedBefore,
+        !entity.buffedBefore,
     );
-    return uncappedCandidates.slice(0, GameplaySettings.MAX_OCCULTIST_SHIELDS);
+    return uncappedCandidates.slice(0, GameplaySettings.MAX_EXALTER_BUFFS);
   };
 
-  unshieldEnemies = () => {
-    if (this.shieldedEnemies.length > 0) {
-      for (let enemy of this.shieldedEnemies) {
+  unbuffEnemies = () => {
+    if (this.buffedEnemies.length > 0) {
+      for (let enemy of this.buffedEnemies) {
         if (!enemy.cloned) {
-          enemy.removeShield();
+          enemy.removeBuff();
         }
       }
-      this.shieldedEnemies = [];
+      this.buffedEnemies = [];
     }
   };
 
-  applyShieldTo = (enemy: Enemy) => {
+  applyBuffTo = (enemy: Enemy) => {
     //this.shadeColor = "#2E0854";
+    if (!enemy.destroyable) return;
     this.shadeMultiplier = 1.5;
-    enemy.applyShield();
-    this.shieldedEnemies.push(enemy);
-    if (enemy.shielded && enemy.shield) {
-      let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
-      beam.compositeOperation = "source-over";
-      beam.color = "#2E0854";
-      beam.turbulence = 0.4;
-      beam.gravity = 0.1;
-      beam.iterations = 1;
-      beam.segments = 100;
-      beam.angleChange = 0.001;
-      beam.springDamping = 0.01;
-      beam.drawableY = enemy.drawableY;
-      beam.type = "shield";
-      this.room.projectiles.push(beam);
+    enemy.applyBuff();
+    this.buffedEnemies.push(enemy);
+    if (enemy.buffed) {
+      for (let i = 0; i < 5; i++) {
+        let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+        beam.compositeOperation = "source-over";
+        beam.color = "#00FFFF";
+        beam.turbulence = 1;
+        beam.gravity = 0;
+        beam.iterations = 3;
+        beam.segments = 30;
+        beam.angleChange = 1;
+        beam.springDamping = 0.3;
+        beam.drawableY = enemy.drawableY;
+        beam.type = "buff";
+        this.room.projectiles.push(beam);
+      }
     }
   };
 
@@ -177,8 +181,8 @@ export class OccultistEnemy extends Enemy {
     for (let beam of this.room.projectiles) {
       if (beam instanceof BeamEffect) {
         if (
-          !this.shieldedEnemies.includes(beam.parent as Enemy) ||
-          beam.type !== "shield"
+          !this.buffedEnemies.includes(beam.parent as Enemy) ||
+          beam.type !== "buff"
         )
           continue;
         beam.setTarget(
@@ -191,16 +195,16 @@ export class OccultistEnemy extends Enemy {
 
         switch (Math.floor(this.frame)) {
           case 0:
-            beam.color = "#2e0854";
+            beam.color = "#00FFFF";
             break;
           case 1:
-            beam.color = "#331988";
+            beam.color = "#00a1dc"; //darker cyan;
             break;
           case 2:
-            beam.color = "#4729db";
+            beam.color = "#008ea7"; //darker cyan;
             break;
           case 3:
-            beam.color = "#331988";
+            beam.color = "#00a1dc"; //darker cyan;
             break;
         }
       }

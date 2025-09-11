@@ -34,6 +34,7 @@ export class CrabEnemy extends Enemy {
     this.orthogonalAttack = true;
     this.imageParticleX = 3;
     this.imageParticleY = 24;
+    this.baseDamage = 0.5;
     //if (drop) this.drop = drop;
     this.drawYOffset = 0.25;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -47,7 +48,7 @@ export class CrabEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 0.5;
+    return this.damage;
   };
 
   behavior = () => {

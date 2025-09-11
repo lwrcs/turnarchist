@@ -52,12 +52,13 @@ export class FrogEnemy extends Enemy {
     this.jumpHeight = 1;
     this.imageParticleX = 3;
     this.imageParticleY = 30;
+    this.baseDamage = 0.5;
     if (drop) this.drop = drop;
     this.getDrop(["weapon", "consumable", "tool", "coin", "poison"]);
   }
 
   hit = (): number => {
-    return 0.5;
+    return this.damage;
   };
 
   behavior = () => {

@@ -15,5 +15,6 @@ export class Torch extends Light {
     this.radius = 7;
     this.maxBrightness = 5;
     this.minBrightness = 2;
+    this.stackable = true;
   }
 }

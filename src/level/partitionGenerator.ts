@@ -214,6 +214,7 @@ export class PartitionGenerator {
     mapHeight: number,
     depth: number,
     params: LevelParameters,
+    controls?: { branching?: number; loopiness?: number },
   ): Promise<Partition[]> {
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
@@ -235,6 +236,7 @@ export class PartitionGenerator {
         mapHeight,
         depth,
         params,
+        controls,
       );
 
       validationResult = this.validator.validateDungeonPartitions(
@@ -271,7 +273,19 @@ export class PartitionGenerator {
     const mapWidth = opts.mapWidth ?? 50;
     const mapHeight = opts.mapHeight ?? 50;
     const numRooms = opts.caveRooms ?? 8;
-    const linearity = opts.linearity ?? 0.5;
+    const hasLinearity = typeof opts.linearity === "number";
+    const branching =
+      typeof opts.branching === "number"
+        ? opts.branching
+        : hasLinearity
+          ? Math.max(0, Math.min(1, 1 - (opts.linearity as number)))
+          : 0.5; // default: 50% chance of second door
+    const loopiness =
+      typeof opts.loopiness === "number"
+        ? opts.loopiness
+        : hasLinearity
+          ? Math.max(0, Math.min(1, 1 - (opts.linearity as number)))
+          : 0.5; // default: moderate loops
 
     this.visualizer.updateProgress("Starting cave generation", 0);
 
@@ -287,7 +301,8 @@ export class PartitionGenerator {
         mapWidth,
         mapHeight,
         numRooms,
-        linearity,
+        branching,
+        loopiness,
       );
 
       validationResult = this.validator.validateCavePartitions(
@@ -337,6 +352,7 @@ export class PartitionGenerator {
     map_h: number,
     depth: number,
     params: LevelParameters,
+    controls?: { branching?: number; loopiness?: number },
   ) {
     const {
       minRoomCount,
@@ -431,11 +447,11 @@ export class PartitionGenerator {
     }
 
     this.visualizer.updateProgress("Connecting partitions", 0.6);
-    await this.connectPartitions(partialLevel, spawn);
+    await this.connectPartitions(partialLevel, spawn, controls?.branching);
 
     this.visualizer.updateProgress("Adding loop connections", 0.7);
     if (partialLevel.partitions.length > 0) {
-      await this.addLoopConnections(partialLevel);
+      await this.addLoopConnections(partialLevel, controls?.loopiness);
     }
 
     this.visualizer.updateProgress("Adding stair room", 0.8);
@@ -455,7 +471,8 @@ export class PartitionGenerator {
     map_w: number,
     map_h: number,
     num_rooms: number,
-    linearity: number = 0.5,
+    branching: number = 0.5,
+    loopiness: number = 0.5,
   ) {
     const CAVE_OFFSET = 100;
     partialLevel.partitions = [
@@ -481,8 +498,8 @@ export class PartitionGenerator {
       partialLevel.partitions[i].type = RoomType.CAVE;
     }
 
-    await this.connectCavePartitions(partialLevel, spawn, num_rooms, linearity);
-    await this.addCaveLoops(partialLevel, linearity);
+    await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
+    await this.addCaveLoops(partialLevel, loopiness);
     await this.calculateDistances(partialLevel, spawn);
   }
 
@@ -613,6 +630,7 @@ export class PartitionGenerator {
   private async connectPartitions(
     partialLevel: PartialLevel,
     spawn: Partition,
+    branching?: number,
   ) {
     let connected = [spawn];
     let frontier = [spawn];
@@ -626,7 +644,11 @@ export class PartitionGenerator {
       frontier.splice(0, 1);
 
       let doors_found = 0;
-      const num_doors = Math.floor(Random.rand() * 2 + 1);
+      // Default behavior kept if branching is undefined
+      const num_doors =
+        branching === undefined
+          ? Math.floor(Random.rand() * 2 + 1)
+          : 1 + (Random.rand() < Math.max(0, Math.min(1, branching)) ? 1 : 0);
       let tries = 0;
       const max_tries = 1000;
 
@@ -674,7 +696,7 @@ export class PartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
     num_rooms: number,
-    linearity: number = 0.5,
+    branching: number = 0.5,
   ) {
     let connected = [spawn];
     let frontier = [spawn];
@@ -684,11 +706,8 @@ export class PartitionGenerator {
       frontier.splice(0, 1);
 
       let doors_found = 0;
-      // linearly map linearity -> probability of a second door
-      // linearity 0.5 => p(second door)=0.5 (current behavior)
-      // linearity 1.0 => p(second door)=0 (no branching)
-      // linearity 0.0 => p(second door)=1 (max branching)
-      const pSecondDoor = Math.max(0, Math.min(1, 1 - linearity));
+      // branching controls probability of a second door
+      const pSecondDoor = Math.max(0, Math.min(1, branching));
       const num_doors = 1 + (Random.rand() < pSecondDoor ? 1 : 0);
       let tries = 0;
       const max_tries = 1000;
@@ -729,13 +748,21 @@ export class PartitionGenerator {
     }
   }
 
-  private async addLoopConnections(partialLevel: PartialLevel) {
+  private async addLoopConnections(
+    partialLevel: PartialLevel,
+    loopiness?: number,
+  ) {
     // Check if we have any partitions to work with
     if (partialLevel.partitions.length === 0) {
       return;
     }
 
-    let num_loop_doors = Math.floor(Random.rand() * 4 + 4);
+    let num_loop_doors =
+      loopiness === undefined
+        ? Math.floor(Random.rand() * 4 + 4)
+        : Math.floor(
+            (Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)),
+          );
     for (let i = 0; i < num_loop_doors; i++) {
       // Double-check array length in case partitions were removed during iteration
       if (partialLevel.partitions.length === 0) {
@@ -785,14 +812,16 @@ export class PartitionGenerator {
 
   private async addCaveLoops(
     partialLevel: PartialLevel,
-    linearity: number = 0.5,
+    loopiness: number = 0.5,
   ) {
     // Check if we have any partitions to work with
     if (partialLevel.partitions.length === 0) {
       return;
     }
 
-    let num_loop_doors = Math.floor((Random.rand() * 4 + 4) * (1 - linearity));
+    let num_loop_doors = Math.floor(
+      (Random.rand() * 4 + 4) * Math.max(0, Math.min(1, loopiness)),
+    );
     for (let i = 0; i < num_loop_doors; i++) {
       // Double-check array length in case partitions were removed during iteration
       if (partialLevel.partitions.length === 0) {

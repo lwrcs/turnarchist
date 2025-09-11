@@ -56,7 +56,7 @@ export class BigSkullEnemy extends Enemy {
     this.drops = [];
     this.direction = Direction.DOWN;
     this.forwardOnlyAttack = true;
-    this.alertRange = 10;
+
     this.drawMoveSpeed = 0.9;
     this.canDestroyOthers = true;
     if (drop) this.drops.push(drop);
@@ -67,7 +67,7 @@ export class BigSkullEnemy extends Enemy {
   }
 
   hit = (): number => {
-    return 1;
+    return this.damage;
   };
 
   hurt = (

@@ -9,6 +9,12 @@ export class GameplaySettings {
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
 
+  static readonly MAIN_PATH_BRANCHING = 0.1;
+  static readonly MAIN_PATH_LOOPINESS = 0.05;
+
+  static readonly BASE_ENEMY_ALERT_RANGE = 4;
+  static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
+
   // === ENEMY POOL SETTINGS ===
 
   // Enemy Type Progression
@@ -35,4 +41,5 @@ export class GameplaySettings {
   static readonly FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 
   static readonly MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
+  static readonly MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
 }
