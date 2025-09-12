@@ -98,6 +98,10 @@ export class PlayerInputHandler {
         //this.player.stall();
         break;
       case InputEnum.LEFT:
+        if (this.player.dead) {
+          this.navigateDeathScreen(-1);
+          break;
+        }
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -108,6 +112,10 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.RIGHT:
+        if (this.player.dead) {
+          this.navigateDeathScreen(1);
+          break;
+        }
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -118,6 +126,10 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.UP:
+        if (this.player.dead) {
+          this.navigateDeathScreen(-1);
+          break;
+        }
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -128,6 +140,10 @@ export class PlayerInputHandler {
         break;
 
       case InputEnum.DOWN:
+        if (this.player.dead) {
+          this.navigateDeathScreen(1);
+          break;
+        }
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -659,5 +675,15 @@ export class PlayerInputHandler {
       this.player.game.feedbackButton &&
       this.player.game.feedbackButton.isPointInButton(x, y)
     );
+  }
+
+  private navigateDeathScreen(delta: number) {
+    this.setMostRecentInput("keyboard");
+    const totalPages = Math.max(1, this.player.deathScreenPageCount || 1);
+    if (totalPages <= 1) return;
+    const current = this.player.deathScreenPageIndex || 0;
+    let next = (current + delta) % totalPages;
+    if (next < 0) next += totalPages;
+    this.player.deathScreenPageIndex = next;
   }
 }

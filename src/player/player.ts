@@ -92,6 +92,9 @@ export class Player extends Drawable {
   movement: PlayerMovement;
 
   cooldownRemaining: number;
+  // Death screen pagination state
+  deathScreenPageIndex: number;
+  deathScreenPageCount: number;
 
   private renderer: PlayerRenderer;
 
@@ -160,6 +163,8 @@ export class Player extends Drawable {
     this.bestiary = new Bestiary(this.game, this);
 
     this.cooldownRemaining = 0;
+    this.deathScreenPageIndex = 0;
+    this.deathScreenPageCount = 1;
   }
 
   getRoom = () => {
@@ -573,6 +578,9 @@ export class Player extends Drawable {
   restart = () => {
     this.dead = false;
     this.game.newGame();
+    // Reset pagination on restart
+    this.deathScreenPageIndex = 0;
+    this.deathScreenPageCount = 1;
   };
 
   hit = (): number => {
@@ -818,6 +826,9 @@ export class Player extends Drawable {
     // Check for death
     if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
       this.dead = true;
+      // Reset death screen pagination when death occurs
+      this.deathScreenPageIndex = 0;
+      this.deathScreenPageCount = 1;
     }
   };
 

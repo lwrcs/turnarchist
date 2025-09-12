@@ -8589,7 +8589,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.5dedb9a6156da275c9b2.png";
+module.exports = __webpack_require__.p + "assets/mobset.e8b23e89e6c22512e140.png";
 
 /***/ }),
 
@@ -8611,7 +8611,7 @@ module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.ecfcc8cde5813473cf87.png";
+module.exports = __webpack_require__.p + "assets/tileset.b8c29399963852e689ef.png";
 
 /***/ }),
 
@@ -38152,6 +38152,9 @@ class Player extends drawable_1.Drawable {
         this.restart = () => {
             this.dead = false;
             this.game.newGame();
+            // Reset pagination on restart
+            this.deathScreenPageIndex = 0;
+            this.deathScreenPageCount = 1;
         };
         this.hit = () => {
             return 1;
@@ -38380,6 +38383,9 @@ class Player extends drawable_1.Drawable {
             // Check for death
             if (this.health <= 0 && !gameConstants_1.GameConstants.DEVELOPER_MODE) {
                 this.dead = true;
+                // Reset death screen pagination when death occurs
+                this.deathScreenPageIndex = 0;
+                this.deathScreenPageCount = 1;
             }
         };
         this.enemyHurtMessage = (damage, enemy) => {
@@ -38529,6 +38535,8 @@ class Player extends drawable_1.Drawable {
         this.renderer = new playerRenderer_1.PlayerRenderer(this);
         this.bestiary = new bestiary_1.Bestiary(this.game, this);
         this.cooldownRemaining = 0;
+        this.deathScreenPageIndex = 0;
+        this.deathScreenPageCount = 1;
     }
     get hitX() {
         return this.renderer?.drawX ?? 0;
@@ -38794,6 +38802,10 @@ class PlayerInputHandler {
                 //this.player.stall();
                 break;
             case input_1.InputEnum.LEFT:
+                if (this.player.dead) {
+                    this.navigateDeathScreen(-1);
+                    break;
+                }
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -38803,6 +38815,10 @@ class PlayerInputHandler {
                     });
                 break;
             case input_1.InputEnum.RIGHT:
+                if (this.player.dead) {
+                    this.navigateDeathScreen(1);
+                    break;
+                }
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -38812,6 +38828,10 @@ class PlayerInputHandler {
                     });
                 break;
             case input_1.InputEnum.UP:
+                if (this.player.dead) {
+                    this.navigateDeathScreen(-1);
+                    break;
+                }
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -38821,6 +38841,10 @@ class PlayerInputHandler {
                     });
                 break;
             case input_1.InputEnum.DOWN:
+                if (this.player.dead) {
+                    this.navigateDeathScreen(1);
+                    break;
+                }
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -39192,6 +39216,17 @@ class PlayerInputHandler {
     isInteractingWithFeedbackButton(x, y) {
         return (this.player.game.feedbackButton &&
             this.player.game.feedbackButton.isPointInButton(x, y));
+    }
+    navigateDeathScreen(delta) {
+        this.setMostRecentInput("keyboard");
+        const totalPages = Math.max(1, this.player.deathScreenPageCount || 1);
+        if (totalPages <= 1)
+            return;
+        const current = this.player.deathScreenPageIndex || 0;
+        let next = (current + delta) % totalPages;
+        if (next < 0)
+            next += totalPages;
+        this.player.deathScreenPageIndex = next;
     }
 }
 exports.PlayerInputHandler = PlayerInputHandler;
@@ -39799,40 +39834,91 @@ class PlayerRenderer {
                 lines.push(`Depth reached: ${diedInRoom.depth}`);
                 // Line 2: Enemies killed
                 lines.push(`${Object.values(enemyCounts).reduce((a, b) => a + b, 0)} enemies killed in total:`);
-                // Subsequent lines: Each enemy count
+                // Build enemy lines
+                const enemyLines = [];
                 Object.entries(enemyCounts).forEach(([enemy, count]) => {
-                    lines.push(`${enemy} x${count}`);
+                    enemyLines.push(`${enemy} x${count}`);
                 });
                 // Line after enemy counts: Restart instruction
                 let restartButton = "Press space or click to restart";
                 if (gameConstants_1.GameConstants.isMobile)
                     restartButton = "Tap to restart";
-                // Calculate total height based on number of lines
                 const lineHeight = game_1.Game.letter_height + 2; // Adjust spacing as needed
-                const totalHeight = lines.length * lineHeight + lineHeight; // Additional space for restart button
-                // Starting Y position to center the text block
-                let startY = gameConstants_1.GameConstants.HEIGHT / 2 - totalHeight / 2;
-                // Draw each line centered horizontally
+                // Reserve bottom area for restart + feedback button + margins
+                const restartAreaHeight = lineHeight * 2; // restart text + small spacing
+                const feedbackButtonHeight = 16; // from LinkButton
+                const bottomMargin = 10;
+                const reservedBottomHeight = restartAreaHeight + feedbackButtonHeight + bottomMargin + 8; // extra padding
+                // Compute available vertical space for content between top margin and reserved bottom
+                const topMargin = 20;
+                const availableHeight = Math.max(0, gameConstants_1.GameConstants.HEIGHT - reservedBottomHeight - topMargin);
+                // Fixed header lines (Game Over / Depth / Total)
+                const headerLines = lines.length; // currently 3
+                const headerHeight = headerLines * lineHeight + lineHeight * 0.5; // slight extra spacing
+                // How many enemy lines fit
+                const remainingForEnemies = Math.max(0, availableHeight - headerHeight);
+                const enemiesPerPageBase = Math.max(1, Math.floor(remainingForEnemies / lineHeight));
+                // Pagination setup
+                let enemiesPerPage = enemiesPerPageBase;
+                const totalEnemyLines = enemyLines.length;
+                // Precompute pages; if more than one page, reserve a row for page indicator by reducing capacity by one
+                let totalPages = Math.max(1, Math.ceil(totalEnemyLines / enemiesPerPage));
+                if (totalPages > 1) {
+                    enemiesPerPage = Math.max(1, enemiesPerPageBase - 1);
+                    totalPages = Math.max(1, Math.ceil(totalEnemyLines / enemiesPerPage));
+                }
+                this.player.deathScreenPageCount = totalPages;
+                const currentPage = Math.min(Math.max(0, this.player.deathScreenPageIndex || 0), totalPages - 1);
+                this.player.deathScreenPageIndex = currentPage;
+                const startIdx = currentPage * enemiesPerPage;
+                const endIdx = Math.min(totalEnemyLines, startIdx + enemiesPerPage);
+                const pageEnemyLines = enemyLines.slice(startIdx, endIdx);
+                // Compute starting Y to vertically position the block within available area
+                let startY = topMargin;
+                // Draw headers
                 lines.forEach((line, index) => {
                     const textWidth = game_1.Game.measureText(line).width;
-                    const spacing = index === 0 || index === 1 || index === lines.length - 1
-                        ? lineHeight * 1.5
-                        : lineHeight;
+                    const spacing = index <= 1 ? lineHeight * 1.5 : lineHeight;
                     game_1.Game.fillText(line, gameConstants_1.GameConstants.WIDTH / 2 - textWidth / 2, startY);
                     startY += spacing;
                 });
-                // Draw the restart button
+                // Draw enemies for current page
+                pageEnemyLines.forEach((line) => {
+                    const textWidth = game_1.Game.measureText(line).width;
+                    game_1.Game.fillText(line, gameConstants_1.GameConstants.WIDTH / 2 - textWidth / 2, startY);
+                    startY += lineHeight;
+                });
+                // Draw page indicator if multiple pages
+                if (totalPages > 1) {
+                    const indicator = `Page ${currentPage + 1}/${totalPages}`;
+                    const w = game_1.Game.measureText(indicator).width;
+                    const y = gameConstants_1.GameConstants.HEIGHT - reservedBottomHeight - 6;
+                    game_1.Game.fillText(indicator, gameConstants_1.GameConstants.WIDTH / 2 - w / 2, y);
+                }
+                // Draw the restart button above the feedback button
                 const restartTextWidth = game_1.Game.measureText(restartButton).width;
-                game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - restartTextWidth / 2, startY);
-                // Draw feedback button below the restart text
+                const restartY = gameConstants_1.GameConstants.HEIGHT - reservedBottomHeight + 4;
+                game_1.Game.fillText(restartButton, gameConstants_1.GameConstants.WIDTH / 2 - restartTextWidth / 2, restartY);
+                // Draw feedback button at the very bottom reserved area
                 if (this.player.game.feedbackButton) {
-                    const feedbackY = startY + game_1.Game.letter_height + 22;
+                    const feedbackY = restartY + lineHeight + 6;
                     const textWidth = game_1.Game.measureText(this.player.game.feedbackButton.text).width;
                     const buttonWidth = textWidth + 10;
                     const centeredX = (gameConstants_1.GameConstants.WIDTH - buttonWidth) / 2;
                     this.player.game.feedbackButton.x = centeredX;
                     this.player.game.feedbackButton.y = feedbackY;
                     this.player.game.feedbackButton.draw();
+                }
+                // Navigation hint for pagination on desktop
+                if (!gameConstants_1.GameConstants.isMobile && totalPages > 1) {
+                    const hint = "Use arrow keys to view more";
+                    const hintWidth = game_1.Game.measureText(hint).width;
+                    const hintY = (this.player.game.feedbackButton?.y || gameConstants_1.GameConstants.HEIGHT - 20) +
+                        feedbackButtonHeight +
+                        4;
+                    if (hintY < gameConstants_1.GameConstants.HEIGHT - 2) {
+                        game_1.Game.fillText(hint, gameConstants_1.GameConstants.WIDTH / 2 - hintWidth / 2, hintY);
+                    }
                 }
                 if (!this.player.game.hasRecordedStats) {
                     // The default value for `lastHitBy` is "enemy", so we compare to that to determine if
