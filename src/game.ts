@@ -2319,6 +2319,34 @@ export class Game {
     return ".".repeat(this.ellipsisFrame);
   };
 
+  /**
+   * Draw a sub-rectangle from a spritesheet onto the main canvas with optional shading and fade.
+   *
+   * How it works (high level):
+   * - Quantizes the shade opacity to a fixed number of steps (reduces cache churn)
+   * - Builds a cache key from the source sprite + shade settings
+   * - If not cached, renders the shaded sprite once into an offscreen canvas and stores it
+   * - Blits the cached shaded sprite to the destination on the main canvas
+   *
+   * Notes on units:
+   * - sX/sY/sW/sH are in tile units within the spritesheet
+   * - dX/dY/dW/dH are in world tile units on the destination
+   * - Internally we multiply by TILESIZE when drawing to actual pixels
+   *
+   * @param set Image sheet to sample from (tileset/objset/mobset/itemset/fxset)
+   * @param sX Source X in tiles within the sheet
+   * @param sY Source Y in tiles within the sheet
+   * @param sW Source width in tiles
+   * @param sH Source height in tiles
+   * @param dX Destination X in world tiles
+   * @param dY Destination Y in world tiles
+   * @param dW Destination width in world tiles
+   * @param dH Destination height in world tiles
+   * @param shadeColor Overlay color applied atop the sprite (default: black)
+   * @param shadeOpacity Opacity of the overlay [0..1] (quantized internally)
+   * @param entity If true, uses entity shade quantization levels
+   * @param fadeDir Optional directional fade mask (left/right/up/down)
+   */
   static drawHelper = (
     set: HTMLImageElement,
     sX: number,
@@ -2334,17 +2362,19 @@ export class Game {
     entity: boolean = false,
     fadeDir?: "left" | "right" | "up" | "down",
   ) => {
-    Game.ctx.save(); // Save the current canvas state
+    Game.ctx.save(); // Save current canvas state so we can safely modify it
 
     // Snap to nearest shading increment
     const shadeLevel = entity
       ? GameConstants.ENTITY_SHADE_LEVELS
       : GameConstants.SHADE_LEVELS;
     shadeOpacity =
+      // Round shadeOpacity to nearest increment based on shade levels (min 12 increments)
+      // e.g. if shadeLevel=8, uses 12 increments, so opacity rounds to multiples of 1/12
       Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
       Math.max(shadeLevel, 12);
 
-    // Include shadeColor and fadeDir in the cache key
+    // Build a cache key that includes shade amount, color and optional fade direction
     let key = getShadeCanvasKey(
       set,
       sX,
@@ -2357,6 +2387,7 @@ export class Game {
     );
 
     if (!Game.shade_canvases[key]) {
+      // First time for this shaded sprite: render it into an offscreen canvas and cache it
       Game.shade_canvases[key] = document.createElement("canvas");
       Game.shade_canvases[key].width = Math.round(sW * GameConstants.TILESIZE);
       Game.shade_canvases[key].height = Math.round(sH * GameConstants.TILESIZE);
@@ -2369,6 +2400,7 @@ export class Game {
         Game.shade_canvases[key].height,
       );
 
+      // 1) Draw the base sprite
       shCtx.globalCompositeOperation = "source-over";
       shCtx.drawImage(
         set,
@@ -2382,6 +2414,7 @@ export class Game {
         Math.round(sH * GameConstants.TILESIZE),
       );
 
+      // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
       shCtx.globalAlpha = shadeOpacity;
       shCtx.fillStyle = shadeColor;
       shCtx.fillRect(
@@ -2392,6 +2425,7 @@ export class Game {
       );
       shCtx.globalAlpha = 1.0;
 
+      // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
       shCtx.globalCompositeOperation = "destination-in";
       // Base alpha mask from sprite bounds
       shCtx.drawImage(
@@ -2406,7 +2440,7 @@ export class Game {
         Math.round(sH * GameConstants.TILESIZE),
       );
 
-      // Optional gradient fade mask (1->0 in specified direction)
+      // 4) Optional directional fade: multiplies in a 1→0 gradient (feathered edge)
       if (fadeDir) {
         const w = Math.round(sW * GameConstants.TILESIZE);
         const h = Math.round(sH * GameConstants.TILESIZE);
@@ -2434,13 +2468,14 @@ export class Game {
             break;
         }
         if (grad) {
-          shCtx.globalCompositeOperation = "destination-in";
+          shCtx.globalCompositeOperation = "destination-in"; // multiply existing alpha
           shCtx.fillStyle = grad;
           shCtx.fillRect(0, 0, w, h);
         }
       }
     }
 
+    // Blit the pre-shaded sprite to the main canvas at the destination position/size
     Game.ctx.drawImage(
       Game.shade_canvases[key],
       Math.round(dX * GameConstants.TILESIZE),
@@ -2449,9 +2484,13 @@ export class Game {
       Math.round(dH * GameConstants.TILESIZE),
     );
 
-    Game.ctx.restore(); // Restore the canvas state
+    Game.ctx.restore(); // Restore the canvas to the previous state
   };
 
+  /**
+   * Draw a tile from the main tileset. Convenience wrapper around drawHelper.
+   * Uses entity=false so the tile shade uses world/tile shade quantization.
+   */
   static drawTile = (
     sX: number,
     sY: number,
@@ -2482,6 +2521,10 @@ export class Game {
     );
   };
 
+  /**
+   * Draw an object (props, decorations) from the object sheet. Convenience wrapper.
+   * Uses entity=true so objects use entity shade quantization.
+   */
   static drawObj = (
     sX: number,
     sY: number,
@@ -2512,6 +2555,10 @@ export class Game {
     );
   };
 
+  /**
+   * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
+   * Uses entity=true so mobs use entity shade quantization.
+   */
   static drawMob = (
     sX: number,
     sY: number,
@@ -2542,6 +2589,10 @@ export class Game {
     );
   };
 
+  /**
+   * Draw an item from the item sheet. Convenience wrapper.
+   * Uses entity=true so items use entity shade quantization.
+   */
   static drawItem = (
     sX: number,
     sY: number,
@@ -2572,6 +2623,10 @@ export class Game {
     );
   };
 
+  /**
+   * Draw an FX frame from the FX sheet. Convenience wrapper.
+   * Uses entity=true so FX uses entity shade quantization.
+   */
   static drawFX = (
     sX: number,
     sY: number,

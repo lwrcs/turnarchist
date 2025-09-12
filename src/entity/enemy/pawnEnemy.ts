@@ -136,32 +136,50 @@ export class PawnEnemy extends Enemy {
           }
 
           if (this.justHurt) {
+            // do nothing special when just hurt
           } else if (!this.unconscious) {
-            // Move one orthogonal step toward the player (no diagonal movement)
-            // Choose axis with greater absolute distance
-            let stepX = 0;
-            let stepY = 0;
-            if (Math.abs(dxToPlayer) > Math.abs(dyToPlayer)) {
-              stepX = Math.sign(dxToPlayer);
-            } else if (Math.abs(dyToPlayer) > 0) {
-              stepY = Math.sign(dyToPlayer);
+            // Build grid like rookEnemy and use A* with orthogonal-only movement
+            let grid = [] as any[];
+            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+              grid[x] = [];
+              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                  grid[x][y] = this.room.roomArray[x][y];
+                else grid[x][y] = false;
+              }
             }
 
-            const moveX = this.x + stepX;
-            const moveY = this.y + stepY;
+            const moves = astar.AStar.search(
+              grid,
+              this,
+              this.targetPlayer,
+              disablePositions,
+              false, // diagonals
+              false, // diagonalsOnly
+              undefined,
+              undefined,
+              undefined,
+              false, // diagonalsOmni
+              this.lastPlayerPos,
+            );
 
-            // Pawns cannot attack forward; if forward tile is the player, do not move/attack
-            const forwardHasPlayer =
-              this.targetPlayer.x === moveX && this.targetPlayer.y === moveY;
+            if (moves.length > 0) {
+              const moveX = moves[0].pos.x;
+              const moveY = moves[0].pos.y;
 
-            // Avoid stepping onto active spike traps
-            const targetTile = this.room.roomArray[moveX]?.[moveY];
-            const isActiveSpike =
-              targetTile instanceof SpikeTrap && (targetTile as SpikeTrap).on;
+              // Pawns cannot attack forward: if the next step is the player's tile, skip it
+              const stepIsPlayer =
+                this.targetPlayer.x === moveX && this.targetPlayer.y === moveY;
 
-            if (!forwardHasPlayer && !isActiveSpike) {
-              this.tryMove(moveX, moveY);
-              this.setDrawXY(oldX, oldY);
+              // Avoid stepping onto active spike traps even if A* allowed it
+              const targetTile = this.room.roomArray[moveX]?.[moveY];
+              const isActiveSpike =
+                targetTile instanceof SpikeTrap && (targetTile as SpikeTrap).on;
+
+              if (!stepIsPlayer && !isActiveSpike) {
+                this.tryMove(moveX, moveY);
+                this.setDrawXY(oldX, oldY);
+              }
             }
 
             this.conditionalHitWarnings();

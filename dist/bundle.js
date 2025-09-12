@@ -14842,6 +14842,7 @@ OccultistEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PawnEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
@@ -14932,28 +14933,36 @@ class PawnEnemy extends enemy_1.Enemy {
                             return;
                         }
                         if (this.justHurt) {
+                            // do nothing special when just hurt
                         }
                         else if (!this.unconscious) {
-                            // Move one orthogonal step toward the player (no diagonal movement)
-                            // Choose axis with greater absolute distance
-                            let stepX = 0;
-                            let stepY = 0;
-                            if (Math.abs(dxToPlayer) > Math.abs(dyToPlayer)) {
-                                stepX = Math.sign(dxToPlayer);
+                            // Build grid like rookEnemy and use A* with orthogonal-only movement
+                            let grid = [];
+                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                                grid[x] = [];
+                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                        grid[x][y] = this.room.roomArray[x][y];
+                                    else
+                                        grid[x][y] = false;
+                                }
                             }
-                            else if (Math.abs(dyToPlayer) > 0) {
-                                stepY = Math.sign(dyToPlayer);
-                            }
-                            const moveX = this.x + stepX;
-                            const moveY = this.y + stepY;
-                            // Pawns cannot attack forward; if forward tile is the player, do not move/attack
-                            const forwardHasPlayer = this.targetPlayer.x === moveX && this.targetPlayer.y === moveY;
-                            // Avoid stepping onto active spike traps
-                            const targetTile = this.room.roomArray[moveX]?.[moveY];
-                            const isActiveSpike = targetTile instanceof spiketrap_1.SpikeTrap && targetTile.on;
-                            if (!forwardHasPlayer && !isActiveSpike) {
-                                this.tryMove(moveX, moveY);
-                                this.setDrawXY(oldX, oldY);
+                            const moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, // diagonals
+                            false, // diagonalsOnly
+                            undefined, undefined, undefined, false, // diagonalsOmni
+                            this.lastPlayerPos);
+                            if (moves.length > 0) {
+                                const moveX = moves[0].pos.x;
+                                const moveY = moves[0].pos.y;
+                                // Pawns cannot attack forward: if the next step is the player's tile, skip it
+                                const stepIsPlayer = this.targetPlayer.x === moveX && this.targetPlayer.y === moveY;
+                                // Avoid stepping onto active spike traps even if A* allowed it
+                                const targetTile = this.room.roomArray[moveX]?.[moveY];
+                                const isActiveSpike = targetTile instanceof spiketrap_1.SpikeTrap && targetTile.on;
+                                if (!stepIsPlayer && !isActiveSpike) {
+                                    this.tryMove(moveX, moveY);
+                                    this.setDrawXY(oldX, oldY);
+                                }
                             }
                             this.conditionalHitWarnings();
                         }
@@ -22287,33 +22296,67 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
     Game.ctx.fillStyle = fillColor;
     Game.fillText(text, x, y);
 };
+/**
+ * Draw a sub-rectangle from a spritesheet onto the main canvas with optional shading and fade.
+ *
+ * How it works (high level):
+ * - Quantizes the shade opacity to a fixed number of steps (reduces cache churn)
+ * - Builds a cache key from the source sprite + shade settings
+ * - If not cached, renders the shaded sprite once into an offscreen canvas and stores it
+ * - Blits the cached shaded sprite to the destination on the main canvas
+ *
+ * Notes on units:
+ * - sX/sY/sW/sH are in tile units within the spritesheet
+ * - dX/dY/dW/dH are in world tile units on the destination
+ * - Internally we multiply by TILESIZE when drawing to actual pixels
+ *
+ * @param set Image sheet to sample from (tileset/objset/mobset/itemset/fxset)
+ * @param sX Source X in tiles within the sheet
+ * @param sY Source Y in tiles within the sheet
+ * @param sW Source width in tiles
+ * @param sH Source height in tiles
+ * @param dX Destination X in world tiles
+ * @param dY Destination Y in world tiles
+ * @param dW Destination width in world tiles
+ * @param dH Destination height in world tiles
+ * @param shadeColor Overlay color applied atop the sprite (default: black)
+ * @param shadeOpacity Opacity of the overlay [0..1] (quantized internally)
+ * @param entity If true, uses entity shade quantization levels
+ * @param fadeDir Optional directional fade mask (left/right/up/down)
+ */
 Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir) => {
-    Game.ctx.save(); // Save the current canvas state
+    Game.ctx.save(); // Save current canvas state so we can safely modify it
     // Snap to nearest shading increment
     const shadeLevel = entity
         ? gameConstants_1.GameConstants.ENTITY_SHADE_LEVELS
         : gameConstants_1.GameConstants.SHADE_LEVELS;
     shadeOpacity =
+        // Round shadeOpacity to nearest increment based on shade levels (min 12 increments)
+        // e.g. if shadeLevel=8, uses 12 increments, so opacity rounds to multiples of 1/12
         Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
             Math.max(shadeLevel, 12);
-    // Include shadeColor and fadeDir in the cache key
+    // Build a cache key that includes shade amount, color and optional fade direction
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor, fadeDir);
     if (!Game.shade_canvases[key]) {
+        // First time for this shaded sprite: render it into an offscreen canvas and cache it
         Game.shade_canvases[key] = document.createElement("canvas");
         Game.shade_canvases[key].width = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
         Game.shade_canvases[key].height = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
         let shCtx = Game.shade_canvases[key].getContext("2d");
         shCtx.clearRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
+        // 1) Draw the base sprite
         shCtx.globalCompositeOperation = "source-over";
         shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
+        // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
         shCtx.globalAlpha = shadeOpacity;
         shCtx.fillStyle = shadeColor;
         shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         shCtx.globalAlpha = 1.0;
+        // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
         shCtx.globalCompositeOperation = "destination-in";
         // Base alpha mask from sprite bounds
         shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
-        // Optional gradient fade mask (1->0 in specified direction)
+        // 4) Optional directional fade: multiplies in a 1→0 gradient (feathered edge)
         if (fadeDir) {
             const w = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
             const h = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
@@ -22341,27 +22384,48 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
                     break;
             }
             if (grad) {
-                shCtx.globalCompositeOperation = "destination-in";
+                shCtx.globalCompositeOperation = "destination-in"; // multiply existing alpha
                 shCtx.fillStyle = grad;
                 shCtx.fillRect(0, 0, w, h);
             }
         }
     }
+    // Blit the pre-shaded sprite to the main canvas at the destination position/size
     Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE), Math.round(dY * gameConstants_1.GameConstants.TILESIZE), Math.round(dW * gameConstants_1.GameConstants.TILESIZE), Math.round(dH * gameConstants_1.GameConstants.TILESIZE));
-    Game.ctx.restore(); // Restore the canvas state
+    Game.ctx.restore(); // Restore the canvas to the previous state
 };
+/**
+ * Draw a tile from the main tileset. Convenience wrapper around drawHelper.
+ * Uses entity=false so the tile shade uses world/tile shade quantization.
+ */
 Game.drawTile = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
     Game.drawHelper(Game.tileset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, false, fadeDir);
 };
+/**
+ * Draw an object (props, decorations) from the object sheet. Convenience wrapper.
+ * Uses entity=true so objects use entity shade quantization.
+ */
 Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
     Game.drawHelper(Game.objset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
+/**
+ * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
+ * Uses entity=true so mobs use entity shade quantization.
+ */
 Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
     Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
+/**
+ * Draw an item from the item sheet. Convenience wrapper.
+ * Uses entity=true so items use entity shade quantization.
+ */
 Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
     Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
+/**
+ * Draw an FX frame from the FX sheet. Convenience wrapper.
+ * Uses entity=true so FX uses entity shade quantization.
+ */
 Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
     Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
 };
