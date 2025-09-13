@@ -1394,7 +1394,7 @@ export class Room {
     if (!hasKey) {
       this.keyPathDots = [];
     }
-    const path = (this as any).keyPathDots as
+    const path = this.keyPathDots as
       | Array<{ x: number; y: number }>
       | undefined;
     if (!path || path.length === 0) {
@@ -1433,7 +1433,7 @@ export class Room {
       }
       return false;
     };
-
+    if (!path) return;
     for (const pos of path) {
       if (!hasParticleAt(pos.x, pos.y)) {
         const particle =

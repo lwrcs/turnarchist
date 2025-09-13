@@ -41713,6 +41713,8 @@ class Room {
                 }
                 return false;
             };
+            if (!path)
+                return;
             for (const pos of path) {
                 if (!hasParticleAt(pos.x, pos.y)) {
                     const particle = new ((__webpack_require__(/*! ../particle/keyPathParticle */ "./src/particle/keyPathParticle.ts").KeyPathParticle))(pos.x, pos.y);
