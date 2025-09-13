@@ -208,7 +208,7 @@ export class Populator {
     const exitRoom = this.level.exitRoom;
     const startRoom = this.level.startRoom;
     if (!startRoom || !exitRoom) return;
-    startRoom.linkExitToStart(exitRoom);
+    exitRoom.linkExitToStart(startRoom);
   };
 
   addTrainingDownladder = (opts: SidePathOptions) => {

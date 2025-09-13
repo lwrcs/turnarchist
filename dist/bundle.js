@@ -30591,11 +30591,54 @@ class Key extends item_1.Item {
                 }
             }
         };
+        this.tickInInventory = () => {
+            //this.updatePathToDoor();
+        };
+        this.onDrop = () => {
+            this.room.syncKeyPathParticles();
+        };
+        this.updatePathToDoor = () => {
+            try {
+                const player = this.level.game.players[this.level.game.localPlayerID];
+                const playerRoom = player?.getRoom?.() || this.level;
+                if (!playerRoom)
+                    return;
+                // Only show path for sidepath downladder with matching key
+                const match = this.level.level.findSidepathDownLadderByKeyID(playerRoom, this.doorID);
+                if (!match) {
+                    // Clear any previous dots if stored on room
+                    playerRoom.keyPathDots = undefined;
+                    return;
+                }
+                const { ladder, room: ladderRoom } = match;
+                // If ladder is in the same room, path to its tile (allow drawing on ladder)
+                if (ladderRoom === playerRoom) {
+                    const path = playerRoom.buildTilePathPositions(player.x, player.y, ladder.x, ladder.y);
+                    // Store dots on the room for renderer to consume
+                    playerRoom.keyPathDots = path;
+                    return;
+                }
+                // Otherwise, compute the room-to-room door path and build dots to the first door in this room
+                const doorPath = playerRoom.findShortestDoorPathTo(ladderRoom, true);
+                if (!doorPath || doorPath.length === 0) {
+                    playerRoom.keyPathDots = undefined;
+                    return;
+                }
+                const firstDoor = doorPath[0];
+                // Path directly to the door tile (allow drawing on door)
+                const path = playerRoom.buildTilePathPositions(player.x, player.y, firstDoor.x, firstDoor.y);
+                playerRoom.keyPathDots = path;
+            }
+            catch (e) {
+                // Fail quiet
+            }
+        };
         this.tileX = 1;
         this.tileY = 0;
         this.name = "key";
         this.doorID = 0;
         this.depth = null;
+        this.room = level;
     }
 }
 exports.Key = Key;
@@ -34113,6 +34156,38 @@ class Level {
         this.pathsById = new Map();
         this.isMainPath = true;
         this.skipPopulation = false;
+        /**
+         * Finds the first sidepath DownLadder whose lockable.keyID matches the provided keyID
+         * within the same path of the provided origin room. Returns the ladder tile and its room.
+         */
+        this.findSidepathDownLadderByKeyID = (origin, keyID) => {
+            if (!origin || keyID === null || keyID === undefined)
+                return null;
+            // Search rooms reachable on the same path as origin
+            const rooms = origin.path();
+            console.log(`findSidepathDownLadderByKeyID: origin=${origin.globalId} keyID=${keyID} roomsInPath=${rooms.length}`);
+            for (const r of rooms) {
+                for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                    for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                        const tile = r.roomArray[x][y];
+                        if (tile instanceof downLadder_1.DownLadder && tile.isSidePath) {
+                            const dlKey = tile.lockable?.keyID;
+                            if (dlKey === keyID) {
+                                console.log(`findSidepathDownLadderByKeyID: MATCH room=${r.globalId} at (${x},${y}) keyID=${dlKey}`);
+                                return { ladder: tile, room: r };
+                            }
+                            else {
+                                // Log near misses occasionally
+                                if (Math.random() < 0.02)
+                                    console.log(`findSidepathDownLadderByKeyID: saw sidepath downladder key=${dlKey}, want=${keyID} in room ${r.globalId}`);
+                            }
+                        }
+                    }
+                }
+            }
+            console.log(`findSidepathDownLadderByKeyID: NO MATCH for keyID=${keyID} from origin ${origin.globalId}`);
+            return null;
+        };
         this.getLadderRoom = (room, ladderType) => {
             for (const r of room.path()) {
                 if (r.hasLadder(ladderType))
@@ -37657,6 +37732,44 @@ ImageParticle.spawnCluster = (level, cx, cy, tileX, tileY) => {
         tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i]));
     }
 };
+
+
+/***/ }),
+
+/***/ "./src/particle/keyPathParticle.ts":
+/*!*****************************************!*\
+  !*** ./src/particle/keyPathParticle.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.KeyPathParticle = void 0;
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+class KeyPathParticle extends particle_1.Particle {
+    constructor(x, y) {
+        super();
+        this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
+            const frameOffset = utils_1.Utils.distance(this.x, this.y, this.room.game.players[this.room.game.localPlayerID].x, this.room.game.players[this.room.game.localPlayerID].y);
+            this.frame += delta / 10;
+            const sinFrame = Math.sin(this.frame + frameOffset) * 1;
+            const cosFrame = Math.cos(this.frame + frameOffset) * 1;
+            game_1.Game.ctx.fillStyle = "#FFFF00";
+            game_1.Game.ctx.fillRect((this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - 1 + Math.round(sinFrame), (this.y + 0.5) * gameConstants_1.GameConstants.TILESIZE - 1 + Math.round(cosFrame), 2, 2);
+        };
+        this.x = x;
+        this.y = y - 0.25;
+        this.dead = false;
+        this.frame = 0;
+    }
+}
+exports.KeyPathParticle = KeyPathParticle;
 
 
 /***/ }),
@@ -41322,9 +41435,9 @@ class Room {
                 startRoom = this.level.startRoom;
             if (this.addDoorWithOffset(startRoom.roomX + Math.floor(startRoom.width / 2) + 1, startRoom.roomY, startRoom, true) &&
                 this.addDoorWithOffset(this.roomX + Math.floor(this.width / 2) - 1, this.roomY, this, true)) {
-                this.tunnelDoor.startRoom = true;
+                startRoom.tunnelDoor.startRoom = true;
                 this.tunnelDoor.linkedDoor = startRoom.tunnelDoor;
-                this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
+                startRoom.tunnelDoor.linkedDoor = this.tunnelDoor;
             }
         };
         this.exitLevel = () => {
@@ -41380,6 +41493,7 @@ class Room {
             this.calculateWallInfo();
             this.resetDoorLightSources();
             this.particles = [];
+            this.syncKeyPathParticles();
             this.alertEnemiesOnEntry();
             this.message = this.name;
             player.map.saveMapData();
@@ -41452,6 +41566,7 @@ class Room {
         this.tick = (player) => {
             this.updateLighting();
             player.updateSlowMotion();
+            this.syncKeyPathParticles();
             this.lastEnemyCount = this.entities.filter((e) => e instanceof enemy_1.Enemy).length;
             for (const h of this.hitwarnings) {
                 h.tick();
@@ -41523,6 +41638,7 @@ class Room {
             this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
             this.clearDeadStuff();
             this.playerTicked.finishTick();
+            // After inventory ticks (keys update keyPathDots), sync key path particles
             this.checkForNoEnemies();
             //console.log(this.entities.filter((e) => e instanceof Enemy).length);
             this.turn = TurnState.playerTurn;
@@ -41545,6 +41661,67 @@ class Room {
             this.lightSources = this.lightSources.filter((ls) => ls && !ls.dead);
             this.hitwarnings = this.hitwarnings.filter((h) => h && !h.dead);
             this.particles = this.particles.filter((p) => p && !p.dead);
+        };
+        /**
+         * Aligns KeyPathParticles with `this.keyPathDots`. Adds particles for any
+         * positions missing a live particle and marks particles not on the path as dead.
+         */
+        this.syncKeyPathParticles = () => {
+            let hasKey = false;
+            for (const player of Object.values(this.game.players)) {
+                for (const i of player.inventory.items) {
+                    if (i instanceof key_1.Key) {
+                        i.updatePathToDoor();
+                        hasKey = true;
+                    }
+                }
+            }
+            if (!hasKey) {
+                this.keyPathDots = [];
+            }
+            const path = this.keyPathDots;
+            if (!path || path.length === 0) {
+                // When no path, mark existing key-path particles as dead
+                let had = false;
+                for (const p of this.particles) {
+                    if (p.constructor?.name === "KeyPathParticle") {
+                        p.dead = true;
+                        had = true;
+                    }
+                }
+                if (had)
+                    return;
+            }
+            // Mark any existing KeyPathParticles not on the current path as dead
+            const positions = new Set((path || []).map((p) => `${p.x},${p.y}`));
+            for (const p of this.particles) {
+                if (p.constructor?.name === "KeyPathParticle") {
+                    const key = `${Math.floor(p.x)},${Math.floor(p.y + 0.25)}`; // reverse the y-offset used in ctor
+                    if (!positions.has(key)) {
+                        p.dead = true;
+                    }
+                }
+            }
+            // Add particles for any path positions lacking one
+            const hasParticleAt = (x, y) => {
+                for (const p of this.particles) {
+                    if (p.constructor?.name === "KeyPathParticle" &&
+                        Math.floor(p.x) === x &&
+                        Math.floor(p.y + 0.25) === y &&
+                        !p.dead)
+                        return true;
+                }
+                return false;
+            };
+            for (const pos of path) {
+                if (!hasParticleAt(pos.x, pos.y)) {
+                    const particle = new ((__webpack_require__(/*! ../particle/keyPathParticle */ "./src/particle/keyPathParticle.ts").KeyPathParticle))(pos.x, pos.y);
+                    particle.room = this;
+                    this.particles.push(particle);
+                    if (Math.random() < 0.1)
+                        console.log(`Room.syncKeyPathParticles: spawned at (${pos.x},${pos.y})`);
+                }
+            }
         };
         this.catchUp = () => {
             if (this.turn === TurnState.computerTurn)
@@ -43310,6 +43487,111 @@ class Room {
             return emptyTiles.filter((tile) => !this.wouldBlockDoor(tile.x, tile.y));
         };
         // #endregion
+        // #region KEY PATHFINDING HELPERS
+        /**
+         * Finds the shortest sequence of doors to traverse from this room to the target room.
+         * Returns an ordered array of doors that begins with a door in this room and ends with
+         * the door that enters the target room. If no path is found, returns null.
+         * If samePathOnly is true, restrict traversal to rooms that share the same pathId.
+         */
+        this.findShortestDoorPathTo = (target, samePathOnly = true) => {
+            if (!target)
+                return null;
+            if (target === this)
+                return [];
+            try {
+                const start = this;
+                const targetGid = target.globalId;
+                const startPathId = start.pathId;
+                const queue = [start];
+                const visited = new Set();
+                const prev = new Map();
+                const setIfUnset = (gid, value) => {
+                    if (!prev.has(gid))
+                        prev.set(gid, value);
+                };
+                const getRoomGID = (r) => r?.globalId;
+                const allowRoom = (r) => !samePathOnly || r.pathId === startPathId;
+                const startGid = getRoomGID(start);
+                if (!startGid)
+                    return null;
+                visited.add(startGid);
+                setIfUnset(startGid, { prevRoomGID: null, viaDoor: null });
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    if (!current)
+                        continue;
+                    const currentGid = getRoomGID(current);
+                    if (!currentGid)
+                        continue;
+                    if (current === target) {
+                        // Reconstruct door path by backtracking from target to start
+                        const doors = [];
+                        let cursorGid = currentGid;
+                        while (cursorGid && cursorGid !== startGid) {
+                            const entry = prev.get(cursorGid);
+                            if (!entry)
+                                break;
+                            if (entry.viaDoor)
+                                doors.push(entry.viaDoor);
+                            cursorGid = entry.prevRoomGID || undefined;
+                        }
+                        doors.reverse();
+                        return doors;
+                    }
+                    const doors = current.doors;
+                    if (!doors)
+                        continue;
+                    for (const door of doors) {
+                        const nextRoom = door?.linkedDoor?.room;
+                        if (!nextRoom)
+                            continue;
+                        if (!allowRoom(nextRoom))
+                            continue;
+                        const nextGid = getRoomGID(nextRoom);
+                        if (!nextGid || visited.has(nextGid))
+                            continue;
+                        visited.add(nextGid);
+                        setIfUnset(nextGid, { prevRoomGID: currentGid, viaDoor: door });
+                        queue.push(nextRoom);
+                    }
+                }
+                return null;
+            }
+            catch {
+                return null;
+            }
+        };
+        // getWalkableNeighborNear removed: we now allow dots on doors and downladders
+        /**
+         * Builds an in-room path (list of world tile positions) from (sx,sy) to (tx,ty).
+         * Uses the room's A* configuration. If the target tile is not walkable, pass a
+         * walkable adjacent tile as the target and append the original target afterwards for display.
+         */
+        this.buildTilePathPositions = (sx, sy, tx, ty) => {
+            // Build grid mirroring findPath()
+            const grid = [];
+            for (let x = 0; x < this.width; x++) {
+                grid[x] = [];
+                for (let y = 0; y < this.height; y++) {
+                    const roomX = this.roomX + x;
+                    const roomY = this.roomY + y;
+                    if (this.roomArray[roomX] && this.roomArray[roomX][roomY])
+                        grid[x][y] = this.roomArray[roomX][roomY];
+                    else
+                        grid[x][y] = false;
+                }
+            }
+            const startGridPos = { x: sx - this.roomX, y: sy - this.roomY };
+            const targetGridPos = { x: tx - this.roomX, y: ty - this.roomY };
+            const moves = astarclass_1.astar.AStar.search(grid, startGridPos, targetGridPos, undefined, false, false, false);
+            const path = moves.map((m) => ({
+                x: m.pos.x + this.roomX,
+                y: m.pos.y + this.roomY,
+            }));
+            return path;
+        };
+        // #endregion
         /**
          * Adds a door with offset to prevent overlapping doors.
          * If a door already exists at the desired (x, y) position, it offsets the door randomly to either side.
@@ -43386,6 +43668,14 @@ class Room {
             }
             // If no door exists at the desired position and no vending machine, place it normally
             return room.addDoor(x, y, room, tunnelDoor);
+        };
+        this.findPathToDoor = (door) => {
+            let disablePositions = Array();
+            for (const e of this.entities) {
+                disablePositions.push({ x: e.x, y: e.y });
+            }
+            const path = astarclass_1.astar.AStar.search(this.roomArray, this, door, [], false, false, false);
+            return path;
         };
         this.pointExists = (x, y) => {
             return this.roomArray[x] && this.roomArray[x][y];
@@ -44543,7 +44833,7 @@ class Populator {
             const startRoom = this.level.startRoom;
             if (!startRoom || !exitRoom)
                 return;
-            startRoom.linkExitToStart(exitRoom);
+            exitRoom.linkExitToStart(startRoom);
         };
         this.addTrainingDownladder = (opts) => {
             if (this.level.depth !== 0)

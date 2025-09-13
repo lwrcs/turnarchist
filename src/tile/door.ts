@@ -1,6 +1,6 @@
 import { Player } from "../player/player";
 import { Direction, Game } from "../game";
-import { Room } from "../room/room";
+import { Room, RoomType } from "../room/room";
 import { GameConstants } from "../game/gameConstants";
 import { SkinType, Tile } from "./tile";
 import { IdGenerator } from "../globalStateManager/IdGenerator";

@@ -136,6 +136,48 @@ export class Level {
     return null;
   }
 
+  /**
+   * Finds the first sidepath DownLadder whose lockable.keyID matches the provided keyID
+   * within the same path of the provided origin room. Returns the ladder tile and its room.
+   */
+  findSidepathDownLadderByKeyID = (
+    origin: Room,
+    keyID: number,
+  ): { ladder: DownLadder; room: Room } | null => {
+    if (!origin || keyID === null || keyID === undefined) return null;
+    // Search rooms reachable on the same path as origin
+    const rooms = origin.path();
+    console.log(
+      `findSidepathDownLadderByKeyID: origin=${(origin as any).globalId} keyID=${keyID} roomsInPath=${rooms.length}`,
+    );
+    for (const r of rooms) {
+      for (let x = r.roomX; x < r.roomX + r.width; x++) {
+        for (let y = r.roomY; y < r.roomY + r.height; y++) {
+          const tile = r.roomArray[x][y];
+          if (tile instanceof DownLadder && tile.isSidePath) {
+            const dlKey = tile.lockable?.keyID;
+            if (dlKey === keyID) {
+              console.log(
+                `findSidepathDownLadderByKeyID: MATCH room=${(r as any).globalId} at (${x},${y}) keyID=${dlKey}`,
+              );
+              return { ladder: tile, room: r };
+            } else {
+              // Log near misses occasionally
+              if (Math.random() < 0.02)
+                console.log(
+                  `findSidepathDownLadderByKeyID: saw sidepath downladder key=${dlKey}, want=${keyID} in room ${(r as any).globalId}`,
+                );
+            }
+          }
+        }
+      }
+    }
+    console.log(
+      `findSidepathDownLadderByKeyID: NO MATCH for keyID=${keyID} from origin ${(origin as any).globalId}`,
+    );
+    return null;
+  };
+
   getKeyRoom(room: Room): Room | null {
     const rooms = room.path();
     for (const room of rooms) {

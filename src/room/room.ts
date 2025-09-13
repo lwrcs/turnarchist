@@ -330,6 +330,7 @@ export class Room {
   drawInterval: number = 4;
   builder: RoomBuilder;
   envType: EnvType;
+  keyPathDots: Array<{ x: number; y: number }>;
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
@@ -1098,9 +1099,9 @@ export class Room {
         true,
       )
     ) {
-      this.tunnelDoor.startRoom = true;
+      startRoom.tunnelDoor.startRoom = true;
       this.tunnelDoor.linkedDoor = startRoom.tunnelDoor;
-      this.tunnelDoor.linkedDoor.linkedDoor = this.tunnelDoor;
+      startRoom.tunnelDoor.linkedDoor = this.tunnelDoor;
     }
   };
 
@@ -1165,6 +1166,7 @@ export class Room {
     this.resetDoorLightSources();
 
     this.particles = [];
+    this.syncKeyPathParticles();
 
     this.alertEnemiesOnEntry();
     this.message = this.name;
@@ -1251,6 +1253,7 @@ export class Room {
   tick = (player: Player) => {
     this.updateLighting();
     player.updateSlowMotion();
+    this.syncKeyPathParticles();
 
     this.lastEnemyCount = this.entities.filter(
       (e) => e instanceof Enemy,
@@ -1280,6 +1283,7 @@ export class Room {
 
     this.updateLighting();
     player.map.saveMapData();
+
     this.clearDeadStuff();
   };
 
@@ -1344,6 +1348,8 @@ export class Room {
 
     this.playerTicked.finishTick();
 
+    // After inventory ticks (keys update keyPathDots), sync key path particles
+
     this.checkForNoEnemies();
     //console.log(this.entities.filter((e) => e instanceof Enemy).length);
 
@@ -1369,6 +1375,80 @@ export class Room {
     this.lightSources = this.lightSources.filter((ls) => ls && !ls.dead);
     this.hitwarnings = this.hitwarnings.filter((h) => h && !h.dead);
     this.particles = this.particles.filter((p) => p && !p.dead);
+  };
+
+  /**
+   * Aligns KeyPathParticles with `this.keyPathDots`. Adds particles for any
+   * positions missing a live particle and marks particles not on the path as dead.
+   */
+  syncKeyPathParticles = () => {
+    let hasKey = false;
+    for (const player of Object.values(this.game.players)) {
+      for (const i of player.inventory.items) {
+        if (i instanceof Key) {
+          i.updatePathToDoor();
+          hasKey = true;
+        }
+      }
+    }
+    if (!hasKey) {
+      this.keyPathDots = [];
+    }
+    const path = (this as any).keyPathDots as
+      | Array<{ x: number; y: number }>
+      | undefined;
+    if (!path || path.length === 0) {
+      // When no path, mark existing key-path particles as dead
+      let had = false;
+      for (const p of this.particles) {
+        if (p.constructor?.name === "KeyPathParticle") {
+          p.dead = true;
+          had = true;
+        }
+      }
+      if (had) return;
+    }
+
+    // Mark any existing KeyPathParticles not on the current path as dead
+    const positions = new Set<string>((path || []).map((p) => `${p.x},${p.y}`));
+    for (const p of this.particles) {
+      if (p.constructor?.name === "KeyPathParticle") {
+        const key = `${Math.floor(p.x)},${Math.floor(p.y + 0.25)}`; // reverse the y-offset used in ctor
+        if (!positions.has(key)) {
+          p.dead = true;
+        }
+      }
+    }
+
+    // Add particles for any path positions lacking one
+    const hasParticleAt = (x: number, y: number): boolean => {
+      for (const p of this.particles) {
+        if (
+          p.constructor?.name === "KeyPathParticle" &&
+          Math.floor(p.x) === x &&
+          Math.floor(p.y + 0.25) === y &&
+          !p.dead
+        )
+          return true;
+      }
+      return false;
+    };
+
+    for (const pos of path) {
+      if (!hasParticleAt(pos.x, pos.y)) {
+        const particle =
+          new (require("../particle/keyPathParticle").KeyPathParticle)(
+            pos.x,
+            pos.y,
+          );
+        particle.room = this;
+        this.particles.push(particle);
+        if (Math.random() < 0.1)
+          console.log(
+            `Room.syncKeyPathParticles: spawned at (${pos.x},${pos.y})`,
+          );
+      }
+    }
   };
 
   catchUp = () => {
@@ -3748,6 +3828,139 @@ export class Room {
 
   // #endregion
 
+  // #region KEY PATHFINDING HELPERS
+
+  /**
+   * Finds the shortest sequence of doors to traverse from this room to the target room.
+   * Returns an ordered array of doors that begins with a door in this room and ends with
+   * the door that enters the target room. If no path is found, returns null.
+   * If samePathOnly is true, restrict traversal to rooms that share the same pathId.
+   */
+  findShortestDoorPathTo = (
+    target: Room,
+    samePathOnly: boolean = true,
+  ): Door[] | null => {
+    if (!target) return null;
+    if (target === (this as unknown as Room)) return [];
+
+    try {
+      const start: Room = this as unknown as Room;
+      const targetGid = (target as any).globalId as string | undefined;
+      const startPathId = (start as any).pathId;
+
+      const queue: Room[] = [start];
+      const visited = new Set<string>();
+      const prev = new Map<
+        string,
+        { prevRoomGID: string | null; viaDoor: Door | null }
+      >();
+
+      const setIfUnset = (
+        gid: string,
+        value: { prevRoomGID: string | null; viaDoor: Door | null },
+      ) => {
+        if (!prev.has(gid)) prev.set(gid, value);
+      };
+
+      const getRoomGID = (r: Room | undefined) =>
+        (r as any)?.globalId as string | undefined;
+
+      const allowRoom = (r: Room) =>
+        !samePathOnly || (r as any).pathId === startPathId;
+
+      const startGid = getRoomGID(start);
+      if (!startGid) return null;
+      visited.add(startGid);
+      setIfUnset(startGid, { prevRoomGID: null, viaDoor: null });
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+        if (!current) continue;
+        const currentGid = getRoomGID(current);
+        if (!currentGid) continue;
+
+        if (current === target) {
+          // Reconstruct door path by backtracking from target to start
+          const doors: Door[] = [];
+          let cursorGid: string | undefined = currentGid;
+          while (cursorGid && cursorGid !== startGid) {
+            const entry = prev.get(cursorGid);
+            if (!entry) break;
+            if (entry.viaDoor) doors.push(entry.viaDoor);
+            cursorGid = entry.prevRoomGID || undefined;
+          }
+          doors.reverse();
+          return doors;
+        }
+
+        const doors = (current as any).doors as Array<Door> | undefined;
+        if (!doors) continue;
+        for (const door of doors) {
+          const nextRoom = (door as any)?.linkedDoor?.room as Room | undefined;
+          if (!nextRoom) continue;
+          if (!allowRoom(nextRoom)) continue;
+          const nextGid = getRoomGID(nextRoom);
+          if (!nextGid || visited.has(nextGid)) continue;
+          visited.add(nextGid);
+          setIfUnset(nextGid, { prevRoomGID: currentGid, viaDoor: door });
+          queue.push(nextRoom);
+        }
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // getWalkableNeighborNear removed: we now allow dots on doors and downladders
+
+  /**
+   * Builds an in-room path (list of world tile positions) from (sx,sy) to (tx,ty).
+   * Uses the room's A* configuration. If the target tile is not walkable, pass a
+   * walkable adjacent tile as the target and append the original target afterwards for display.
+   */
+  buildTilePathPositions = (
+    sx: number,
+    sy: number,
+    tx: number,
+    ty: number,
+  ): Array<{ x: number; y: number }> => {
+    // Build grid mirroring findPath()
+    const grid: any[][] = [];
+    for (let x = 0; x < this.width; x++) {
+      grid[x] = [];
+      for (let y = 0; y < this.height; y++) {
+        const roomX = this.roomX + x;
+        const roomY = this.roomY + y;
+        if (this.roomArray[roomX] && this.roomArray[roomX][roomY])
+          grid[x][y] = this.roomArray[roomX][roomY];
+        else grid[x][y] = false;
+      }
+    }
+
+    const startGridPos = { x: sx - this.roomX, y: sy - this.roomY };
+    const targetGridPos = { x: tx - this.roomX, y: ty - this.roomY };
+
+    const moves = astar.AStar.search(
+      grid,
+      startGridPos,
+      targetGridPos,
+      undefined,
+      false,
+      false,
+      false,
+    );
+
+    const path = moves.map((m) => ({
+      x: m.pos.x + this.roomX,
+      y: m.pos.y + this.roomY,
+    }));
+    return path;
+  };
+
+  // #endregion
+
   // #region MISC
 
   /**
@@ -3943,6 +4156,23 @@ export class Room {
 
     // If no door exists at the desired position and no vending machine, place it normally
     return room.addDoor(x, y, room, tunnelDoor);
+  };
+
+  findPathToDoor = (door: Door) => {
+    let disablePositions = Array<astar.Position>();
+    for (const e of this.entities) {
+      disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+    }
+    const path = astar.AStar.search(
+      this.roomArray,
+      this,
+      door,
+      [],
+      false,
+      false,
+      false,
+    );
+    return path;
   };
 
   /**

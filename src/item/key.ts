@@ -3,11 +3,14 @@ import { Equippable } from "./equippable";
 import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
 import { Player } from "../player/player";
+import { DownLadder } from "src/tile/downLadder";
+import { Door } from "src/tile/door";
 
 export class Key extends Item {
   static itemName = "key";
   doorID: number;
   depth: number;
+  room: Room;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -16,6 +19,7 @@ export class Key extends Item {
     this.name = "key";
     this.doorID = 0;
     this.depth = null;
+    this.room = level;
   }
 
   getDescription = (): string => {
@@ -33,6 +37,70 @@ export class Key extends Item {
         if (this.depth === null) this.depth = player.depth;
         console.log(this.depth);
       }
+    }
+  };
+
+  tickInInventory = () => {
+    //this.updatePathToDoor();
+  };
+
+  onDrop = () => {
+    this.room.syncKeyPathParticles();
+  };
+
+  updatePathToDoor = () => {
+    try {
+      const player = this.level.game.players[this.level.game.localPlayerID];
+      const playerRoom = (player as any)?.getRoom?.() || this.level;
+      if (!playerRoom) return;
+
+      // Only show path for sidepath downladder with matching key
+      const match = this.level.level.findSidepathDownLadderByKeyID(
+        playerRoom,
+        this.doorID,
+      );
+      if (!match) {
+        // Clear any previous dots if stored on room
+        playerRoom.keyPathDots = undefined;
+        return;
+      }
+
+      const { ladder, room: ladderRoom } = match;
+
+      // If ladder is in the same room, path to its tile (allow drawing on ladder)
+      if (ladderRoom === playerRoom) {
+        const path = playerRoom.buildTilePathPositions(
+          player.x,
+          player.y,
+          ladder.x,
+          ladder.y,
+        );
+        // Store dots on the room for renderer to consume
+        playerRoom.keyPathDots = path;
+        return;
+      }
+
+      // Otherwise, compute the room-to-room door path and build dots to the first door in this room
+      const doorPath: Door[] | null = playerRoom.findShortestDoorPathTo(
+        ladderRoom,
+        true,
+      );
+      if (!doorPath || doorPath.length === 0) {
+        playerRoom.keyPathDots = undefined;
+        return;
+      }
+
+      const firstDoor = doorPath[0];
+      // Path directly to the door tile (allow drawing on door)
+      const path = playerRoom.buildTilePathPositions(
+        player.x,
+        player.y,
+        firstDoor.x,
+        firstDoor.y,
+      );
+      playerRoom.keyPathDots = path;
+    } catch (e) {
+      // Fail quiet
     }
   };
 }
