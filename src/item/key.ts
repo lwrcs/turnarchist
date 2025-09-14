@@ -4,13 +4,15 @@ import { Room } from "../room/room";
 import { Sound } from "../sound/sound";
 import { Player } from "../player/player";
 import { DownLadder } from "src/tile/downLadder";
-import { Door } from "src/tile/door";
+import { Door } from "../tile/door";
+import { Usable } from "./usable/usable";
 
-export class Key extends Item {
+export class Key extends Usable {
   static itemName = "key";
   doorID: number;
   depth: number;
   room: Room;
+  showPath: boolean;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -20,6 +22,7 @@ export class Key extends Item {
     this.doorID = 0;
     this.depth = null;
     this.room = level;
+    this.showPath = false;
   }
 
   getDescription = (): string => {
@@ -33,11 +36,21 @@ export class Key extends Item {
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
         this.level.game.pushMessage("You found a key!");
+        this.level.game.pushMessage("Click key to toggle path guide");
+
         Sound.keyPickup();
         if (this.depth === null) this.depth = player.depth;
         console.log(this.depth);
       }
     }
+  };
+
+  onUse = (player: Player) => {
+    this.showPath = !this.showPath;
+    const message = this.showPath ? "Showing path" : "Path hidden";
+    this.room.syncKeyPathParticles();
+
+    this.room.game.pushMessage(message);
   };
 
   tickInInventory = () => {

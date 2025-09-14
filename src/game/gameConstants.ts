@@ -72,7 +72,7 @@ export class GameConstants {
   static SLOW_INPUTS_NEAR_ENEMIES = false;
 
   static readonly CHAT_APPEAR_TIME = 1000;
-  static readonly CHAT_FADE_TIME = 250;
+  static readonly CHAT_FADE_TIME = 2000;
   static ANIMATION_SPEED = 1;
   static readonly REPLAY_STEP_MS = 10; // base time between replayed inputs
   static readonly REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay

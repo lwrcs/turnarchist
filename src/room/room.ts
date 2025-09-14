@@ -1383,21 +1383,24 @@ export class Room {
    */
   syncKeyPathParticles = () => {
     let hasKey = false;
+    let showPath = false;
     for (const player of Object.values(this.game.players)) {
       for (const i of player.inventory.items) {
         if (i instanceof Key) {
           i.updatePathToDoor();
           hasKey = true;
+          showPath = i.showPath;
         }
       }
     }
+
     if (!hasKey) {
-      this.keyPathDots = [];
+      return;
     }
     const path = this.keyPathDots as
       | Array<{ x: number; y: number }>
       | undefined;
-    if (!path || path.length === 0) {
+    if (!path || path.length === 0 || !showPath) {
       // When no path, mark existing key-path particles as dead
       let had = false;
       for (const p of this.particles) {
@@ -1406,7 +1409,7 @@ export class Room {
           had = true;
         }
       }
-      if (had) return;
+      if (had || !showPath) return;
     }
 
     // Mark any existing KeyPathParticles not on the current path as dead
@@ -1422,6 +1425,7 @@ export class Room {
 
     // Add particles for any path positions lacking one
     const hasParticleAt = (x: number, y: number): boolean => {
+      if (!showPath) return false;
       for (const p of this.particles) {
         if (
           p.constructor?.name === "KeyPathParticle" &&
@@ -1433,7 +1437,7 @@ export class Room {
       }
       return false;
     };
-    if (!path) return;
+    if (!path || !showPath) return;
     for (const pos of path) {
       if (!hasParticleAt(pos.x, pos.y)) {
         const particle =

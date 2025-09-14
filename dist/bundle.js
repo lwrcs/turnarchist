@@ -21738,6 +21738,8 @@ class Game {
                 : 1;
             const CHAT_MAX_WIDTH = gameConstants_1.GameConstants.WIDTH - 5; // Leave some margin
             const LINE_HEIGHT = Game.letter_height + 1;
+            const MAX_LINES_WHEN_CLOSED = 4;
+            let linesRemaining = MAX_LINES_WHEN_CLOSED;
             if (this.chatOpen) {
                 Game.ctx.fillStyle = "black";
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -21787,6 +21789,7 @@ class Game {
                         alpha = 0;
                     }
                 }
+                let linesDrawnThisMessage = 0;
                 if (alpha > 0) {
                     // Set message color
                     Game.ctx.fillStyle = "white";
@@ -21794,15 +21797,37 @@ class Game {
                     //  Game.ctx.fillStyle = GameConstants.GREEN;
                     //}
                     Game.ctx.globalAlpha = alpha;
-                    // Draw each line of the message from bottom to top
+                    // Draw lines (respect max when chat is closed)
                     let lineY = currentY;
-                    for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
-                        Game.fillText(lines[lineIndex], CHAT_X, lineY);
-                        lineY -= LINE_HEIGHT;
+                    if (this.chatOpen) {
+                        for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
+                            Game.fillText(lines[lineIndex], CHAT_X, lineY);
+                            lineY -= LINE_HEIGHT;
+                        }
+                        linesDrawnThisMessage = lines.length;
+                    }
+                    else {
+                        const allowed = Math.max(0, linesRemaining);
+                        const drawCount = Math.min(lines.length, allowed);
+                        const startIndex = lines.length - drawCount;
+                        for (let lineIndex = lines.length - 1; lineIndex >= startIndex; lineIndex--) {
+                            Game.fillText(lines[lineIndex], CHAT_X, lineY);
+                            lineY -= LINE_HEIGHT;
+                        }
+                        linesDrawnThisMessage = drawCount;
+                        linesRemaining -= drawCount;
                     }
                 }
-                // Move up by this message's height
-                currentY -= messageHeight;
+                // Move up by the height that was actually drawn
+                if (this.chatOpen) {
+                    currentY -= messageHeight;
+                }
+                else {
+                    currentY -= linesDrawnThisMessage * LINE_HEIGHT;
+                }
+                if (!this.chatOpen && linesRemaining <= 0) {
+                    break;
+                }
             }
             // Reset alpha
             Game.ctx.globalAlpha = 1;
@@ -22740,7 +22765,7 @@ GameConstants.MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
 GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
 GameConstants.CHAT_APPEAR_TIME = 1000;
-GameConstants.CHAT_FADE_TIME = 250;
+GameConstants.CHAT_FADE_TIME = 2000;
 GameConstants.ANIMATION_SPEED = 1;
 GameConstants.REPLAY_STEP_MS = 10; // base time between replayed inputs
 GameConstants.REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
@@ -30569,9 +30594,9 @@ ZirconRing.itemName = "zircon ring";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Key = void 0;
-const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
-class Key extends item_1.Item {
+const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
+class Key extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => {
@@ -30584,12 +30609,19 @@ class Key extends item_1.Item {
                 this.pickedUp = player.inventory.addItem(this);
                 if (this.pickedUp) {
                     this.level.game.pushMessage("You found a key!");
+                    this.level.game.pushMessage("Click key to toggle path guide");
                     sound_1.Sound.keyPickup();
                     if (this.depth === null)
                         this.depth = player.depth;
                     console.log(this.depth);
                 }
             }
+        };
+        this.onUse = (player) => {
+            this.showPath = !this.showPath;
+            const message = this.showPath ? "Showing path" : "Path hidden";
+            this.room.syncKeyPathParticles();
+            this.room.game.pushMessage(message);
         };
         this.tickInInventory = () => {
             //this.updatePathToDoor();
@@ -30639,6 +30671,7 @@ class Key extends item_1.Item {
         this.doorID = 0;
         this.depth = null;
         this.room = level;
+        this.showPath = false;
     }
 }
 exports.Key = Key;
@@ -41668,19 +41701,21 @@ class Room {
          */
         this.syncKeyPathParticles = () => {
             let hasKey = false;
+            let showPath = false;
             for (const player of Object.values(this.game.players)) {
                 for (const i of player.inventory.items) {
                     if (i instanceof key_1.Key) {
                         i.updatePathToDoor();
                         hasKey = true;
+                        showPath = i.showPath;
                     }
                 }
             }
             if (!hasKey) {
-                this.keyPathDots = [];
+                return;
             }
             const path = this.keyPathDots;
-            if (!path || path.length === 0) {
+            if (!path || path.length === 0 || !showPath) {
                 // When no path, mark existing key-path particles as dead
                 let had = false;
                 for (const p of this.particles) {
@@ -41689,7 +41724,7 @@ class Room {
                         had = true;
                     }
                 }
-                if (had)
+                if (had || !showPath)
                     return;
             }
             // Mark any existing KeyPathParticles not on the current path as dead
@@ -41704,6 +41739,8 @@ class Room {
             }
             // Add particles for any path positions lacking one
             const hasParticleAt = (x, y) => {
+                if (!showPath)
+                    return false;
                 for (const p of this.particles) {
                     if (p.constructor?.name === "KeyPathParticle" &&
                         Math.floor(p.x) === x &&
@@ -41713,7 +41750,7 @@ class Room {
                 }
                 return false;
             };
-            if (!path)
+            if (!path || !showPath)
                 return;
             for (const pos of path) {
                 if (!hasParticleAt(pos.x, pos.y)) {

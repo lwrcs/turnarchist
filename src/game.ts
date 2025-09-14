@@ -2106,6 +2106,8 @@ export class Game {
       : 1;
     const CHAT_MAX_WIDTH = GameConstants.WIDTH - 5; // Leave some margin
     const LINE_HEIGHT = Game.letter_height + 1;
+    const MAX_LINES_WHEN_CLOSED = 4;
+    let linesRemaining = MAX_LINES_WHEN_CLOSED;
 
     if (this.chatOpen) {
       Game.ctx.fillStyle = "black";
@@ -2165,6 +2167,7 @@ export class Game {
         }
       }
 
+      let linesDrawnThisMessage = 0;
       if (alpha > 0) {
         // Set message color
         Game.ctx.fillStyle = "white";
@@ -2173,16 +2176,41 @@ export class Game {
         //}
         Game.ctx.globalAlpha = alpha;
 
-        // Draw each line of the message from bottom to top
+        // Draw lines (respect max when chat is closed)
         let lineY = currentY;
-        for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
-          Game.fillText(lines[lineIndex], CHAT_X, lineY);
-          lineY -= LINE_HEIGHT;
+        if (this.chatOpen) {
+          for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
+            Game.fillText(lines[lineIndex], CHAT_X, lineY);
+            lineY -= LINE_HEIGHT;
+          }
+          linesDrawnThisMessage = lines.length;
+        } else {
+          const allowed = Math.max(0, linesRemaining);
+          const drawCount = Math.min(lines.length, allowed);
+          const startIndex = lines.length - drawCount;
+          for (
+            let lineIndex = lines.length - 1;
+            lineIndex >= startIndex;
+            lineIndex--
+          ) {
+            Game.fillText(lines[lineIndex], CHAT_X, lineY);
+            lineY -= LINE_HEIGHT;
+          }
+          linesDrawnThisMessage = drawCount;
+          linesRemaining -= drawCount;
         }
       }
 
-      // Move up by this message's height
-      currentY -= messageHeight;
+      // Move up by the height that was actually drawn
+      if (this.chatOpen) {
+        currentY -= messageHeight;
+      } else {
+        currentY -= linesDrawnThisMessage * LINE_HEIGHT;
+      }
+
+      if (!this.chatOpen && linesRemaining <= 0) {
+        break;
+      }
     }
 
     // Reset alpha
