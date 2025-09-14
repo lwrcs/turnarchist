@@ -108,6 +108,9 @@ export class BigSkullEnemy extends Enemy {
     } else this.hurtCallback();
   };
 
+  bleed = () => {};
+  poison = () => {};
+
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;

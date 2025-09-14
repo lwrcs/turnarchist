@@ -61,6 +61,8 @@ export class OccultistEnemy extends Enemy {
     return 1;
   };
 
+  bleed = () => {};
+
   uniqueKillBehavior = () => {
     this.unshieldEnemies();
     this.removeLightSource(this.lightSource);

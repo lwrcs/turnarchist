@@ -68,6 +68,7 @@ export class BigKnightEnemy extends Enemy {
     return this.damage;
   };
 
+  bleed = () => {};
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;

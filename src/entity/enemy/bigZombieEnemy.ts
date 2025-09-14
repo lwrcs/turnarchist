@@ -64,6 +64,9 @@ export class BigZombieEnemy extends Enemy {
     return this.damage;
   };
 
+  bleed = () => {};
+  poison = () => {};
+
   behavior = () => {
     // Store the current position
     this.lastX = this.x;

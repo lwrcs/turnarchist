@@ -61,6 +61,7 @@ export class ExalterEnemy extends Enemy {
   hit = (): number => {
     return 1;
   };
+  bleed = () => {};
 
   uniqueKillBehavior = () => {
     this.unbuffEnemies();

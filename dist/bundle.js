@@ -10249,6 +10249,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return this.damage;
         };
+        this.poison = () => { };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -10788,6 +10789,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return this.damage;
         };
+        this.bleed = () => { };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -11090,6 +11092,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
             else
                 this.hurtCallback();
         };
+        this.bleed = () => { };
+        this.poison = () => { };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -11399,6 +11403,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return this.damage;
         };
+        this.bleed = () => { };
+        this.poison = () => { };
         this.behavior = () => {
             // Store the current position
             this.lastX = this.x;
@@ -13432,6 +13438,7 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return 1;
         };
+        this.bleed = () => { };
         this.uniqueKillBehavior = () => {
             this.unbuffEnemies();
             this.removeLightSource(this.lightSource);
@@ -14720,6 +14727,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return 1;
         };
+        this.bleed = () => { };
         this.uniqueKillBehavior = () => {
             this.unshieldEnemies();
             this.removeLightSource(this.lightSource);
@@ -15825,6 +15833,8 @@ class Spawner extends enemy_1.Enemy {
             const spawners = this.room.entities.filter((e) => e instanceof Spawner);
             this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
         };
+        this.bleed = () => { };
+        this.poison = () => { };
         this.behavior = () => {
             let shouldSpawn = true;
             this.lastX = this.x;
@@ -16611,6 +16621,8 @@ class WardenEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return this.damage;
         };
+        this.bleed = () => { };
+        this.poison = () => { };
         this.createCrusherBlocks = (crusherPositions) => {
             for (const position of crusherPositions) {
                 const crusher = new crusherEnemy_1.CrusherEnemy(this.room, this.game, position.x, position.y);

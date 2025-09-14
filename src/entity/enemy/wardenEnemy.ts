@@ -89,6 +89,9 @@ export class WardenEnemy extends Enemy {
     return this.damage;
   };
 
+  bleed = () => {};
+  poison = () => {};
+
   createCrusherBlocks = (crusherPositions: { x: number; y: number }[]) => {
     for (const position of crusherPositions) {
       const crusher = new CrusherEnemy(

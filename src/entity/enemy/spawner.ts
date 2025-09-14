@@ -136,6 +136,9 @@ export class Spawner extends Enemy {
     this.spawnOffset = (spawners.indexOf(this) + 1) * 4;
   };
 
+  bleed = () => {};
+  poison = () => {};
+
   behavior = () => {
     let shouldSpawn = true;
     this.lastX = this.x;

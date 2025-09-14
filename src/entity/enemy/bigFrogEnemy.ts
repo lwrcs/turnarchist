@@ -70,6 +70,8 @@ export class BigFrogEnemy extends Enemy {
     return this.damage;
   };
 
+  poison = () => {};
+
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
