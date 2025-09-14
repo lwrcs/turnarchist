@@ -1,1 +1,0 @@
-git ls-files | grep .ts | grep -v node | xargs wc -l

@@ -4,9 +4,12 @@
   "description": "A turn-based roguelike dungeon crawler",
   "main": "index.js",
   "scripts": {
-    "watch": "concurrently \"webpack --watch\" \"webpack --config webpack.config.js --watch\"",
-    "build": "webpack --mode production",
-    "dev": "npx http-server . -p 8080 -c-1 --cors",
+    "start": "npm run start:frontend",
+    "start:frontend": "npm run --prefix ./frontend start",
+    "start:frontend:proxy": "npm run log:proxy && npx http-server dist -p 8080 -c-1 --cors",
+    "log:proxy": "echo \u001b[34mIMPORTANT:\u001b[0m && echo \u001b[34m This is a proxy to the production build of the frontend and does not work with hot reloading.\u001b[0m && echo \u001b[34m Use `npm run start:frontend` for development.\u001b[0m && echo.",
+    "start:backend": "npm run --prefix ./backend start",
+    "build": "npm run --prefix ./frontend build",
     "read:db:csv": "cd server && npm run read:db:csv",
     "read:db:json": "cd server && npm run read:db:json"
   },

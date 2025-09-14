@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "dogica", sans-serif;
+  --color-primary: #ffff00;
+  --color-primary-foreground: #000000;
+}
+
+/* Font faces from root styling */
+@font-face {
+  font-family: "dogica";
+  src: url("/fonts/dogica.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "dogica";
+  src: url("/fonts/dogicabold.woff") format("woff");
+  font-weight: bold;
+  font-style: normal;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: "dogica", sans-serif;
+    background: black;
+    color: white;
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Minimal focus styles */
+  *:focus-visible {
+    outline: 1px solid white;
+    outline-offset: 2px;
+  }
+}

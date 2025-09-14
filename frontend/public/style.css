@@ -1,0 +1,56 @@
+canvas {
+  width: 544px;
+  height: 544px;
+
+  display: block;
+  margin: 0 auto;
+
+  image-rendering: optimizeSpeed; /* Older versions of FF          */
+  image-rendering: -moz-crisp-edges; /* FF 6.0+                       */
+  image-rendering: -webkit-optimize-contrast; /* Safari                        */
+  image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
+  image-rendering: pixelated; /* Awesome future-browsers       */
+  cursor: none;
+  -ms-interpolation-mode: nearest-neighbor; /* IE                            */
+}
+
+body {
+  background-color: #080808;
+  margin: 0;
+  overscroll-behavior-y: contain;
+  touch-action: none;
+  filter: none;
+  overflow: hidden;
+}
+
+html {
+  overscroll-behavior-y: contain;
+  touch-action: none;
+  overflow: hidden;
+}
+
+@font-face {
+  font-family: PixelFont;
+  src: url("./res/upheavtt.ttf");
+}
+
+@font-face {
+  font-family: Script;
+  src: url("./res/CWEBL.ttf");
+}
+
+.center-text {
+  text-align: center;
+}
+
+.invis {
+  color: #808080;
+}
+
+p {
+  font-family: "Courier New";
+}
+
+a {
+  text-decoration: none;
+}

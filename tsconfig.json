@@ -4,10 +4,10 @@
     "module": "commonjs",
     "target": "es2020",
     "sourceMap": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
 
     "lib": ["es2015", "dom"],
-    //"inlineSources": true,
-    //"inlineSourceMap": false,
     "outDir": "js",
     "rootDir": ".",
     "baseUrl": ".",
@@ -15,12 +15,5 @@
       "@server/*": ["server/src/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "other-folder/**/*" // Add paths to other folders containing .ts files
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.spec.ts" // Optional: exclude test files
-  ]
+  "exclude": ["node_modules"]
 }

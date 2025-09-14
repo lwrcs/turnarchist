@@ -1,8 +1,8 @@
 {
   "editor.formatOnSave": true,
-  "search.exclude": {
-    "**/dist": true,
-    "**/*.bundle.js": true,
-    "**/*bundle.js.map": true
+  "files.exclude": {
+    // Exclude symlinked files
+    "frontend/src/game/**": true,
+    "frontend/public/res/**": true
   }
 }

@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "root",
+      "path": "..",
+    },
+    {
+      "name": "game",
+      "path": "../frontend/src/game",
+    },
+    {
+      "name": "res",
+      "path": "../frontend/public/res",
+    },
+  ],
+}

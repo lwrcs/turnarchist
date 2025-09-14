@@ -1,0 +1,36 @@
+{
+  "name": "Turnarchist",
+  "short_name": "Turnarchist",
+  "description": "Explore never-ending dungeons in your web browser!",
+  "start_url": "/play",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "id": "com.example.turnarchist",
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  },
+
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon_maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon_scaled.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "display_override": ["window-controls-overlay", "standalone", "browser"]
+}
