@@ -68,7 +68,9 @@ export class BeetleEnemy extends Enemy {
   jump = (delta: number) => {
     //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    if (j > 1) {
+    if (j > 2) {
+      this.jumpDistance = 3;
+    } else if (j > 1) {
       this.jumpDistance = 2;
     }
     this.jumpY = Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
@@ -120,6 +122,47 @@ export class BeetleEnemy extends Enemy {
       const endX = startX + 2 * d.dx;
       const endY = startY + 2 * d.dy;
       if (this.isTileFree(midX, midY) && this.isTileFree(endX, endY)) {
+        candidates.push({ endX, endY, axis: d.axis, dx: d.dx, dy: d.dy });
+      }
+    }
+    return candidates;
+  };
+
+  private getThreeTileCandidates = (
+    startX: number,
+    startY: number,
+  ): Array<{
+    endX: number;
+    endY: number;
+    axis: "x" | "y";
+    dx: number;
+    dy: number;
+  }> => {
+    const directions = [
+      { dx: 1, dy: 0, axis: "x" as const },
+      { dx: -1, dy: 0, axis: "x" as const },
+      { dx: 0, dy: 1, axis: "y" as const },
+      { dx: 0, dy: -1, axis: "y" as const },
+    ];
+    const candidates = [] as Array<{
+      endX: number;
+      endY: number;
+      axis: "x" | "y";
+      dx: number;
+      dy: number;
+    }>;
+    for (const d of directions) {
+      const mid1X = startX + d.dx;
+      const mid1Y = startY + d.dy;
+      const mid2X = startX + 2 * d.dx;
+      const mid2Y = startY + 2 * d.dy;
+      const endX = startX + 3 * d.dx;
+      const endY = startY + 3 * d.dy;
+      if (
+        this.isTileFree(mid1X, mid1Y) &&
+        this.isTileFree(mid2X, mid2Y) &&
+        this.isTileFree(endX, endY)
+      ) {
         candidates.push({ endX, endY, axis: d.axis, dx: d.dx, dy: d.dy });
       }
     }
@@ -249,6 +292,7 @@ export class BeetleEnemy extends Enemy {
     oldX: number,
     oldY: number,
   ): void => {
+    const stepDist = Math.abs(destX - oldX) + Math.abs(destY - oldY);
     let hitPlayer = false;
     for (const i in this.game.players) {
       if (
@@ -256,11 +300,16 @@ export class BeetleEnemy extends Enemy {
         this.game.players[i].x === destX &&
         this.game.players[i].y === destY
       ) {
-        this.game.players[i].hurt(this.hit(), this.name);
-        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-        if (this.game.players[i] === this.game.players[this.game.localPlayerID])
-          this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+        // Only allow attacks when moving 2-3 tiles in a single action
+        if (stepDist >= 2 && stepDist <= 3) {
+          this.game.players[i].hurt(this.hit(), this.name);
+          this.drawX = 0.5 * (this.x - this.game.players[i].x);
+          this.drawY = 0.5 * (this.y - this.game.players[i].y);
+          if (
+            this.game.players[i] === this.game.players[this.game.localPlayerID]
+          )
+            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+        }
         hitPlayer = true;
       }
     }
@@ -333,7 +382,7 @@ export class BeetleEnemy extends Enemy {
               y: this.targetPlayer.y,
             };
 
-            // Check if player is adjacent (Manhattan distance 1)
+            // Check player Manhattan distance
             const playerDistance =
               Math.abs(this.targetPlayer.x - this.x) +
               Math.abs(this.targetPlayer.y - this.y);
@@ -370,7 +419,7 @@ export class BeetleEnemy extends Enemy {
             const dyToTarget = targetPosition.y - oldY;
             const preferXAxis = Math.abs(dxToTarget) >= Math.abs(dyToTarget);
 
-            // First, try to use A* first/second step and extend to length 2 if possible
+            // First, try to use A* first/second step and extend up to length 3 if possible
             let finalX = this.x;
             let finalY = this.y;
             const moves = astar.AStar.search(
@@ -389,23 +438,33 @@ export class BeetleEnemy extends Enemy {
             if (moves.length > 0) {
               let step = moves[0];
               const candidate2 = moves[1];
-              if (candidate2) {
-                const preservesLine =
+              const candidate3 = moves[2];
+              if (candidate3) {
+                const preservesLine3 =
+                  candidate3.pos.x === oldX || candidate3.pos.y === oldY;
+                const alignsAxis3 = preferXAxis
+                  ? candidate3.pos.y === oldY
+                  : candidate3.pos.x === oldX;
+                if (preservesLine3 && alignsAxis3) step = candidate3;
+              } else if (candidate2) {
+                const preservesLine2 =
                   candidate2.pos.x === oldX || candidate2.pos.y === oldY;
-                const alignsAxis = preferXAxis
+                const alignsAxis2 = preferXAxis
                   ? candidate2.pos.y === oldY
                   : candidate2.pos.x === oldX;
-                if (preservesLine && alignsAxis) step = candidate2;
+                if (preservesLine2 && alignsAxis2) step = candidate2;
               }
               finalX = step.pos.x;
               finalY = step.pos.y;
               const manhattanFromStart =
                 Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-              if (manhattanFromStart === 1) {
+              if (manhattanFromStart === 1 || manhattanFromStart === 2) {
                 const dirX = finalX - oldX;
                 const dirY = finalY - oldY;
-                const extX = finalX + (dirX !== 0 ? Math.sign(dirX) : 0);
-                const extY = finalY + (dirY !== 0 ? Math.sign(dirY) : 0);
+                const stepX = dirX !== 0 ? Math.sign(dirX) : 0;
+                const stepY = dirY !== 0 ? Math.sign(dirY) : 0;
+                const extX = finalX + stepX;
+                const extY = finalY + stepY;
                 if (this.isTileFree(extX, extY)) {
                   finalX = extX;
                   finalY = extY;
@@ -413,29 +472,14 @@ export class BeetleEnemy extends Enemy {
               }
             }
 
-            // Execute movement: prioritize attacking when adjacent, otherwise prefer 2-tile jumps
-            if (playerDistance === 1) {
-              // Player is adjacent - prioritize 1-tile movement for direct attack
-              const oneTileCandidates = this.getOneTileCandidates(oldX, oldY);
-              if (oneTileCandidates.length > 0) {
-                const best = this.pickBestOneTileCandidate(
-                  oneTileCandidates,
-                  targetPosition.x,
-                  targetPosition.y,
-                  preferXAxis,
-                  dxToTarget,
-                  dyToTarget,
-                );
-                this.attackOrMoveTo(best.x, best.y, oldX, oldY);
-              }
-            } else {
-              // Player is not adjacent - use computed movement (A* + 2-tile extension)
+            // Execute movement: avoid 1-tile attack; prefer 2-3 range
+            if (playerDistance <= 1) {
+              // If too close, try to reposition using 2-tile jump plan or fallback
               const finalDist =
                 Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-              if (finalDist >= 1) {
+              if (finalDist >= 2) {
                 this.attackOrMoveTo(finalX, finalY, oldX, oldY);
               } else {
-                // Fall back to 2-tile jump candidates if A* didn't find a path
                 const candidates = this.getTwoTileCandidates(oldX, oldY);
                 if (candidates.length > 0) {
                   const best = this.pickBestCandidate(
@@ -448,7 +492,7 @@ export class BeetleEnemy extends Enemy {
                   );
                   this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
                 } else {
-                  // Fall back to 1-tile movement if no 2-tile options available
+                  // last resort, move 1 tile but won't be able to attack
                   const oneTileCandidates = this.getOneTileCandidates(
                     oldX,
                     oldY,
@@ -463,6 +507,57 @@ export class BeetleEnemy extends Enemy {
                       dyToTarget,
                     );
                     this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                  }
+                }
+              }
+            } else {
+              // Player is not adjacent - use computed movement (A* + extension up to 3 tiles)
+              const finalDist =
+                Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+              if (finalDist >= 1) {
+                this.attackOrMoveTo(finalX, finalY, oldX, oldY);
+              } else {
+                // Fall back to 3-tile or 2-tile jump candidates if A* didn't find a path
+                const candidates3 = this.getThreeTileCandidates(oldX, oldY);
+                if (candidates3.length > 0) {
+                  const best = this.pickBestCandidate(
+                    candidates3,
+                    targetPosition.x,
+                    targetPosition.y,
+                    preferXAxis,
+                    dxToTarget,
+                    dyToTarget,
+                  );
+                  this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
+                } else {
+                  const candidates2 = this.getTwoTileCandidates(oldX, oldY);
+                  if (candidates2.length > 0) {
+                    const best = this.pickBestCandidate(
+                      candidates2,
+                      targetPosition.x,
+                      targetPosition.y,
+                      preferXAxis,
+                      dxToTarget,
+                      dyToTarget,
+                    );
+                    this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
+                  } else {
+                    // Fall back to 1-tile movement if no longer jumps available
+                    const oneTileCandidates = this.getOneTileCandidates(
+                      oldX,
+                      oldY,
+                    );
+                    if (oneTileCandidates.length > 0) {
+                      const best = this.pickBestOneTileCandidate(
+                        oneTileCandidates,
+                        targetPosition.x,
+                        targetPosition.y,
+                        preferXAxis,
+                        dxToTarget,
+                        dyToTarget,
+                      );
+                      this.attackOrMoveTo(best.x, best.y, oldX, oldY);
+                    }
                   }
                 }
               }
@@ -543,14 +638,14 @@ export class BeetleEnemy extends Enemy {
     ): number[][] => {
       const baseOffsets = isOrthogonal
         ? [
+            [-3, 0],
+            [3, 0],
+            [0, -3],
+            [0, 3],
             [-2, 0],
             [2, 0],
             [0, -2],
             [0, 2],
-            [-1, 0],
-            [1, 0],
-            [0, -1],
-            [0, 1],
           ]
         : [
             [-1, -1],

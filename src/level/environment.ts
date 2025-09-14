@@ -43,6 +43,7 @@ import { SpiderEnemy } from "../entity/enemy/spiderEnemy";
 import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
+import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -65,6 +66,7 @@ export const enemyClassToId: Map<any, number> = new Map([
   [SpiderEnemy, 17],
   [PawnEnemy, 18],
   [BigFrogEnemy, 19],
+  [BeetleEnemy, 20],
 ]);
 
 export class Environment {
@@ -192,6 +194,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ChargeEnemy, weight: 1.0, minDepth: 2 }, // Charging creatures
       { class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
       { class: EnergyWizardEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
+      { class: BeetleEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
 
       // Deep cave threats
       {
@@ -223,6 +226,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       // Nature creatures (higher weights)
       { class: GlowBugEnemy, weight: 1.5, minDepth: 0 },
       { class: FrogEnemy, weight: 0.25, minDepth: 0 }, // Frogs love forests
+      { class: BeetleEnemy, weight: 0.1, minDepth: 0 }, // Rare magic users
       //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
 
       // Less common forest enemies
