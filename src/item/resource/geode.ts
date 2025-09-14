@@ -19,7 +19,7 @@ export class Geode extends Item {
     this.tileY = 2;
     this.name = Geode.itemName;
 
-    this.stackable = false;
+    this.stackable = true;
   }
 
   getDescription = (): string => {
@@ -42,7 +42,7 @@ export class Geode extends Item {
       for (let i = 0; i < numGems; i++) {
         inventory.addItem(new gemType(this.level, this.x, this.y));
       }
-      inventory.removeItem(this);
+      inventory.subtractItemCount(this);
     }
   };
 }

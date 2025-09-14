@@ -50,7 +50,6 @@ export class Item extends Drawable {
   degradeable: boolean = true;
   cooldown: number = 0;
   maximumStackCount: number = 8;
-  animateToInventory: boolean = false;
   private animStartX: number = 0;
   private animStartY: number = 0;
   private animTargetX: number = 0;
@@ -94,7 +93,6 @@ export class Item extends Drawable {
     this.grouped = false;
     this.group = null;
     this.maximumStackCount = 12;
-    this.animateToInventory = false;
     this.player = null;
   }
 
@@ -107,6 +105,12 @@ export class Item extends Drawable {
   hoverText = () => {
     return this.name;
   };
+
+  get animateToInventory() {
+    return GameConstants.AUTO_PICKUP_ITEMS.includes(
+      this.constructor as new (...args: any[]) => Item,
+    );
+  }
 
   // Empty tick function to be overridden by subclasses
   tick = () => {};
@@ -129,7 +133,12 @@ export class Item extends Drawable {
 
   // Function to play sound when item is picked up
   pickupSound = () => {
-    if (this.level === this.level.game.room) Sound.genericPickup();
+    let delay = 0;
+    if (GameConstants.ITEM_AUTO_PICKUP)
+      delay = Math.ceil(Random.rand() * 200 + 400);
+
+    if (this.level === this.level.game.room)
+      Sound.delayPlay(Sound.genericPickup, delay);
   };
 
   // Empty function to be called when item is dropped, to be overridden by subclasses
@@ -174,7 +183,11 @@ export class Item extends Drawable {
     }
   };
 
-  autoPickup = () => {};
+  autoPickup = () => {
+    if (GameConstants.ITEM_AUTO_PICKUP && this.animateToInventory) {
+      this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
+    }
+  };
 
   pickupMessage = () => {
     const name = (this.constructor as typeof Item).itemName;
@@ -369,7 +382,7 @@ export class Item extends Drawable {
         Game.ctx.globalAlpha = 1.0;
 
         if (this.animT >= 1) {
-          this.animateToInventory = false;
+          //this.animateToInventory = false;
           this.level.items = this.level.items.filter((x) => x !== this);
         }
         return;

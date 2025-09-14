@@ -40,6 +40,7 @@ import { ScytheHandle } from "../item/weapon/scytheHandle";
 import { OrangeGem } from "../item/resource/orangegem";
 import { GoldRing } from "../item/jewelry/goldRing";
 import { FishingRod } from "../item/tool/fishingRod";
+import { Coin } from "../item/coin";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v1.2.0"; //"v0.6.3";
@@ -101,6 +102,17 @@ export class GameConstants {
 
   static readonly COIN_ANIMATION = true;
   static readonly COIN_AUTO_PICKUP = true;
+  static readonly ITEM_AUTO_PICKUP = true;
+
+  static readonly AUTO_PICKUP_ITEMS = [
+    Coal,
+    Gold,
+    RedGem,
+    BlueGem,
+    GreenGem,
+    OrangeGem,
+    Coin,
+  ];
 
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented
 

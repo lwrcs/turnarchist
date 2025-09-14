@@ -15,7 +15,7 @@ export class Coin extends Item {
     this.stackCount = 1;
     this.stackable = true;
     this.name = Coin.itemName;
-    if (GameConstants.COIN_ANIMATION) this.animateToInventory = true;
+    //if (GameConstants.COIN_ANIMATION) this.animateToInventory = true;
   }
   onDrop = () => {
     const coinList = []; //array to store coin objects
