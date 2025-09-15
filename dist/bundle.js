@@ -8662,7 +8662,7 @@ module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.e8b23e89e6c22512e140.png";
+module.exports = __webpack_require__.p + "assets/mobset.9932aa58179ec8ea8c2b.png";
 
 /***/ }),
 
@@ -15878,16 +15878,17 @@ const fireWizard_1 = __webpack_require__(/*! ./fireWizard */ "./src/entity/enemy
 const queenEnemy_1 = __webpack_require__(/*! ./queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 const armoredzombieEnemy_1 = __webpack_require__(/*! ./armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
 const rookEnemy_1 = __webpack_require__(/*! ./rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const room_1 = __webpack_require__(/*! ../../room/room */ "./src/room/room.ts");
 const armoredSkullEnemy_1 = __webpack_require__(/*! ./armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const spiderEnemy_1 = __webpack_require__(/*! ./spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ./mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ./pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ./beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ./bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const wall_1 = __webpack_require__(/*! ../../tile/wall */ "./src/tile/wall.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20,
     ]) {
         super(room, game, x, y);
         this.hit = () => {
@@ -15936,8 +15937,9 @@ class Spawner extends enemy_1.Enemy {
                         this.tileX = 7;
                         const position = game_1.Game.randTable(positions, random_1.Random.rand);
                         let spawned;
+                        const spawnPos = this.mutatePositionForBigEnemy(position.x, position.y);
                         switch (this.enemySpawnType) {
-                            case 0:
+                            case 0: // legacy Pawn mapping
                                 spawned = new pawnEnemy_1.PawnEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 1:
@@ -15968,17 +15970,8 @@ class Spawner extends enemy_1.Enemy {
                                 spawned = new armoredzombieEnemy_1.ArmoredzombieEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 10:
-                                if (this.room.type !== room_1.RoomType.BIGDUNGEON) {
-                                    spawned = new skullEnemy_1.SkullEnemy(this.room, this.game, position.x, position.y);
-                                    break;
-                                }
-                                spawned = new bigSkullEnemy_1.BigSkullEnemy(this.room, this.game, position.x, position.y);
-                                for (let xx = 0; xx < 2; xx++) {
-                                    for (let yy = 0; yy < 2; yy++) {
-                                        this.room.roomArray[position.x + xx][position.y + yy] =
-                                            new floor_1.Floor(this.room, position.x + xx, position.y + yy); // remove any walls
-                                    }
-                                }
+                                spawned = new bigSkullEnemy_1.BigSkullEnemy(this.room, this.game, spawnPos.x, spawnPos.y);
+                                this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
                                 break;
                             case 11:
                                 spawned = new queenEnemy_1.QueenEnemy(this.room, this.game, position.x, position.y);
@@ -15987,38 +15980,37 @@ class Spawner extends enemy_1.Enemy {
                                 spawned = new knightEnemy_1.KnightEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 13:
-                                if (this.room.type !== room_1.RoomType.BIGDUNGEON) {
-                                    spawned = new knightEnemy_1.KnightEnemy(this.room, this.game, position.x, position.y);
-                                    break;
-                                }
-                                spawned = new bigKnightEnemy_1.BigKnightEnemy(this.room, this.game, position.x, position.y);
-                                for (let xx = 0; xx < 2; xx++) {
-                                    for (let yy = 0; yy < 2; yy++) {
-                                        this.room.roomArray[position.x + xx][position.y + yy] =
-                                            new floor_1.Floor(this.room, position.x + xx, position.y + yy); // remove any walls
-                                    }
-                                }
+                                spawned = new bigKnightEnemy_1.BigKnightEnemy(this.room, this.game, spawnPos.x, spawnPos.y);
+                                this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
                                 break;
                             case 14:
-                                spawned = new zombieEnemy_1.ZombieEnemy(this.room, this.game, position.x, position.y);
-                                break;
-                            case 15:
                                 spawned = new fireWizard_1.FireWizardEnemy(this.room, this.game, position.x, position.y);
                                 break;
-                            case 16:
+                            case 15:
                                 spawned = new armoredSkullEnemy_1.ArmoredSkullEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 16:
+                                spawned = new mummyEnemy_1.MummyEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 17:
                                 spawned = new spiderEnemy_1.SpiderEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 18:
-                                spawned = new mummyEnemy_1.MummyEnemy(this.room, this.game, position.x, position.y);
+                                spawned = new pawnEnemy_1.PawnEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             case 19:
+                                spawned = new bigFrogEnemy_1.BigFrogEnemy(this.room, this.game, spawnPos.x, spawnPos.y);
+                                this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
+                                break;
+                            case 20:
                                 spawned = new beetleEnemy_1.BeetleEnemy(this.room, this.game, position.x, position.y);
                                 break;
+                            default:
+                                console.warn("spawner tried to spawn unknown enemy type", this.enemySpawnType);
+                                spawned = new zombieEnemy_1.ZombieEnemy(this.room, this.game, position.x, position.y);
+                                break;
                         }
-                        this.setSpawnFrequency(spawned.maxHealth);
+                        this.setSpawnFrequency(spawned?.maxHealth ?? 1);
                         if (shouldSpawn) {
                             this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(this.room, spawned, position.x, position.y));
                             this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, position.x, position.y, this.x, this.y));
@@ -16026,6 +16018,90 @@ class Spawner extends enemy_1.Enemy {
                     }
                 }
                 this.ticks++;
+            }
+        };
+        this.mutatePositionForBigEnemy = (x, y) => {
+            // Evaluate the full 2x2 footprint: (x,y), (x+1,y), (x,y+1), (x+1,y+1)
+            const tiles = [
+                { x, y },
+                { x: x + 1, y },
+                { x, y: y + 1 },
+                { x: x + 1, y: y + 1 },
+            ];
+            // If none of the 2x2 tiles are walls, keep position
+            const hasAnyWall = tiles.some((p) => this.room.roomArray[p.x]?.[p.y] instanceof wall_1.Wall);
+            if (!hasAnyWall)
+                return { x, y };
+            // Determine inward nudge based on any wall on room edges or outer walls
+            let nx = x;
+            let ny = y;
+            const leftEdge = this.room.roomX;
+            const rightEdge = this.room.roomX + this.room.width - 1;
+            const topEdge = this.room.roomY;
+            const bottomEdge = this.room.roomY + this.room.height - 1;
+            const anyLeftWall = tiles.some((p) => {
+                const t = this.room.roomArray[p.x]?.[p.y];
+                if (p.x === leftEdge)
+                    return true;
+                if (t instanceof wall_1.Wall)
+                    return t.wallInfo?.()?.isLeftWall === true;
+                return false;
+            });
+            const anyRightWall = tiles.some((p) => {
+                const t = this.room.roomArray[p.x]?.[p.y];
+                if (p.x === rightEdge)
+                    return true;
+                if (t instanceof wall_1.Wall)
+                    return t.wallInfo?.()?.isRightWall === true;
+                return false;
+            });
+            const anyTopWall = tiles.some((p) => {
+                const t = this.room.roomArray[p.x]?.[p.y];
+                if (p.y === topEdge)
+                    return true;
+                if (t instanceof wall_1.Wall)
+                    return t.wallInfo?.()?.isTopWall === true;
+                return false;
+            });
+            const anyBottomWall = tiles.some((p) => {
+                const t = this.room.roomArray[p.x]?.[p.y];
+                if (p.y === bottomEdge)
+                    return true;
+                if (t instanceof wall_1.Wall)
+                    return t.wallInfo?.()?.isBottomWall === true;
+                return false;
+            });
+            if (anyLeftWall)
+                nx = Math.min(x + 1, rightEdge - 1);
+            if (anyRightWall)
+                nx = Math.max(x - 1, leftEdge + 1);
+            if (anyTopWall)
+                ny = Math.min(y + 1, bottomEdge - 1);
+            if (anyBottomWall)
+                ny = Math.max(y - 1, topEdge + 1);
+            // Validate 2x2 stays inside room interior bounds
+            nx = Math.max(nx, leftEdge);
+            nx = Math.min(nx, rightEdge - 1);
+            ny = Math.max(ny, topEdge);
+            ny = Math.min(ny, bottomEdge - 1);
+            // Prefer non-solid top-left if available
+            const topLeft = this.room.roomArray[nx]?.[ny];
+            if (!topLeft || topLeft.isSolid?.() !== true) {
+                return { x: nx, y: ny };
+            }
+            return { x, y };
+        };
+        this.clearSpaceForBigEnemy = (x, y) => {
+            for (let xx = 0; xx < 2; xx++) {
+                for (let yy = 0; yy < 2; yy++) {
+                    let tile = this.room.roomArray[x + xx][y + yy];
+                    if (tile instanceof wall_1.Wall) {
+                        const wallInfo = tile.wallInfo();
+                        if (wallInfo?.isInnerWall) {
+                            this.room.roomArray[x + xx][y + yy] = new floor_1.Floor(this.room, x + xx, y + yy); // remove any walls
+                        }
+                    }
+                }
             }
         };
         this.uniqueKillBehavior = () => {
@@ -22883,6 +22959,7 @@ const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -22947,6 +23024,7 @@ GameConstants.AUTO_PICKUP_ITEMS = [
     greengem_1.GreenGem,
     orangegem_1.OrangeGem,
     coin_1.Coin,
+    fish_1.Fish,
 ];
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
 GameConstants.HOVER_TEXT_ENABLED = true;
@@ -31751,7 +31829,7 @@ class Fish extends usable_1.Usable {
         this.tileX = 5;
         this.tileY = 2;
         this.stackable = true;
-        this.animateToInventory = true;
+        //this.animateToInventory = true;
     }
 }
 exports.Fish = Fish;

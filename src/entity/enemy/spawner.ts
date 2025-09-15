@@ -26,6 +26,8 @@ import { SpiderEnemy } from "./spiderEnemy";
 import { MummyEnemy } from "./mummyEnemy";
 import { PawnEnemy } from "./pawnEnemy";
 import { BeetleEnemy } from "./beetleEnemy";
+import { BigFrogEnemy } from "./bigFrogEnemy";
+import { Wall } from "../../tile/wall";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -43,7 +45,7 @@ export class Spawner extends Enemy {
     x: number,
     y: number,
     enemyTable: number[] = [
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20,
     ],
   ) {
     super(room, game, x, y);
@@ -172,10 +174,15 @@ export class Spawner extends Enemy {
 
           const position = Game.randTable(positions, Random.rand);
 
-          let spawned;
+          let spawned: Enemy;
+
+          const spawnPos = this.mutatePositionForBigEnemy(
+            position.x,
+            position.y,
+          );
 
           switch (this.enemySpawnType) {
-            case 0:
+            case 0: // legacy Pawn mapping
               spawned = new PawnEnemy(
                 this.room,
                 this.game,
@@ -256,27 +263,13 @@ export class Spawner extends Enemy {
               );
               break;
             case 10:
-              if (this.room.type !== RoomType.BIGDUNGEON) {
-                spawned = new SkullEnemy(
-                  this.room,
-                  this.game,
-                  position.x,
-                  position.y,
-                );
-                break;
-              }
               spawned = new BigSkullEnemy(
                 this.room,
                 this.game,
-                position.x,
-                position.y,
+                spawnPos.x,
+                spawnPos.y,
               );
-              for (let xx = 0; xx < 2; xx++) {
-                for (let yy = 0; yy < 2; yy++) {
-                  this.room.roomArray[position.x + xx][position.y + yy] =
-                    new Floor(this.room, position.x + xx, position.y + yy); // remove any walls
-                }
-              }
+              this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
               break;
             case 11:
               spawned = new QueenEnemy(
@@ -295,38 +288,15 @@ export class Spawner extends Enemy {
               );
               break;
             case 13:
-              if (this.room.type !== RoomType.BIGDUNGEON) {
-                spawned = new KnightEnemy(
-                  this.room,
-                  this.game,
-                  position.x,
-                  position.y,
-                );
-                break;
-              }
-
               spawned = new BigKnightEnemy(
                 this.room,
                 this.game,
-                position.x,
-                position.y,
+                spawnPos.x,
+                spawnPos.y,
               );
-              for (let xx = 0; xx < 2; xx++) {
-                for (let yy = 0; yy < 2; yy++) {
-                  this.room.roomArray[position.x + xx][position.y + yy] =
-                    new Floor(this.room, position.x + xx, position.y + yy); // remove any walls
-                }
-              }
+              this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
               break;
             case 14:
-              spawned = new ZombieEnemy(
-                this.room,
-                this.game,
-                position.x,
-                position.y,
-              );
-              break;
-            case 15:
               spawned = new FireWizardEnemy(
                 this.room,
                 this.game,
@@ -334,8 +304,16 @@ export class Spawner extends Enemy {
                 position.y,
               );
               break;
-            case 16:
+            case 15:
               spawned = new ArmoredSkullEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 16:
+              spawned = new MummyEnemy(
                 this.room,
                 this.game,
                 position.x,
@@ -351,7 +329,7 @@ export class Spawner extends Enemy {
               );
               break;
             case 18:
-              spawned = new MummyEnemy(
+              spawned = new PawnEnemy(
                 this.room,
                 this.game,
                 position.x,
@@ -359,7 +337,28 @@ export class Spawner extends Enemy {
               );
               break;
             case 19:
+              spawned = new BigFrogEnemy(
+                this.room,
+                this.game,
+                spawnPos.x,
+                spawnPos.y,
+              );
+              this.clearSpaceForBigEnemy(spawnPos.x, spawnPos.y);
+              break;
+            case 20:
               spawned = new BeetleEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            default:
+              console.warn(
+                "spawner tried to spawn unknown enemy type",
+                this.enemySpawnType,
+              );
+              spawned = new ZombieEnemy(
                 this.room,
                 this.game,
                 position.x,
@@ -368,7 +367,7 @@ export class Spawner extends Enemy {
               break;
           }
 
-          this.setSpawnFrequency(spawned.maxHealth);
+          this.setSpawnFrequency(spawned?.maxHealth ?? 1);
 
           if (shouldSpawn) {
             this.room.projectiles.push(
@@ -387,6 +386,91 @@ export class Spawner extends Enemy {
       }
 
       this.ticks++;
+    }
+  };
+
+  mutatePositionForBigEnemy = (x: number, y: number) => {
+    // Evaluate the full 2x2 footprint: (x,y), (x+1,y), (x,y+1), (x+1,y+1)
+    const tiles = [
+      { x, y },
+      { x: x + 1, y },
+      { x, y: y + 1 },
+      { x: x + 1, y: y + 1 },
+    ];
+
+    // If none of the 2x2 tiles are walls, keep position
+    const hasAnyWall = tiles.some(
+      (p) => this.room.roomArray[p.x]?.[p.y] instanceof Wall,
+    );
+    if (!hasAnyWall) return { x, y };
+
+    // Determine inward nudge based on any wall on room edges or outer walls
+    let nx = x;
+    let ny = y;
+    const leftEdge = this.room.roomX;
+    const rightEdge = this.room.roomX + this.room.width - 1;
+    const topEdge = this.room.roomY;
+    const bottomEdge = this.room.roomY + this.room.height - 1;
+
+    const anyLeftWall = tiles.some((p) => {
+      const t = this.room.roomArray[p.x]?.[p.y];
+      if (p.x === leftEdge) return true;
+      if (t instanceof Wall) return t.wallInfo?.()?.isLeftWall === true;
+      return false;
+    });
+    const anyRightWall = tiles.some((p) => {
+      const t = this.room.roomArray[p.x]?.[p.y];
+      if (p.x === rightEdge) return true;
+      if (t instanceof Wall) return t.wallInfo?.()?.isRightWall === true;
+      return false;
+    });
+    const anyTopWall = tiles.some((p) => {
+      const t = this.room.roomArray[p.x]?.[p.y];
+      if (p.y === topEdge) return true;
+      if (t instanceof Wall) return t.wallInfo?.()?.isTopWall === true;
+      return false;
+    });
+    const anyBottomWall = tiles.some((p) => {
+      const t = this.room.roomArray[p.x]?.[p.y];
+      if (p.y === bottomEdge) return true;
+      if (t instanceof Wall) return t.wallInfo?.()?.isBottomWall === true;
+      return false;
+    });
+
+    if (anyLeftWall) nx = Math.min(x + 1, rightEdge - 1);
+    if (anyRightWall) nx = Math.max(x - 1, leftEdge + 1);
+    if (anyTopWall) ny = Math.min(y + 1, bottomEdge - 1);
+    if (anyBottomWall) ny = Math.max(y - 1, topEdge + 1);
+
+    // Validate 2x2 stays inside room interior bounds
+    nx = Math.max(nx, leftEdge);
+    nx = Math.min(nx, rightEdge - 1);
+    ny = Math.max(ny, topEdge);
+    ny = Math.min(ny, bottomEdge - 1);
+
+    // Prefer non-solid top-left if available
+    const topLeft = this.room.roomArray[nx]?.[ny];
+    if (!topLeft || (topLeft as any).isSolid?.() !== true) {
+      return { x: nx, y: ny };
+    }
+    return { x, y };
+  };
+
+  clearSpaceForBigEnemy = (x: number, y: number) => {
+    for (let xx = 0; xx < 2; xx++) {
+      for (let yy = 0; yy < 2; yy++) {
+        let tile = this.room.roomArray[x + xx][y + yy];
+        if (tile instanceof Wall) {
+          const wallInfo = tile.wallInfo();
+          if (wallInfo?.isInnerWall) {
+            this.room.roomArray[x + xx][y + yy] = new Floor(
+              this.room,
+              x + xx,
+              y + yy,
+            ); // remove any walls
+          }
+        }
+      }
     }
   };
 

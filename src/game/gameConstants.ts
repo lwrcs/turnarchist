@@ -41,6 +41,7 @@ import { OrangeGem } from "../item/resource/orangegem";
 import { GoldRing } from "../item/jewelry/goldRing";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Coin } from "../item/coin";
+import { Fish } from "../item/usable/fish";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v1.2.0"; //"v0.6.3";
@@ -112,6 +113,7 @@ export class GameConstants {
     GreenGem,
     OrangeGem,
     Coin,
+    Fish,
   ];
 
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented
