@@ -13499,12 +13499,15 @@ EnergyWizardEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExalterEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class ExalterEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -13527,11 +13530,66 @@ class ExalterEnemy extends enemy_1.Enemy {
                     return;
                 }
                 this.ticks++;
-                if (this.ticks % 2 === 0) {
-                    this.buffEnemies(enemiesToBuff);
-                    this.updateBuffedEnemies();
+                //if (this.ticks % 2 === 0) {
+                this.buffEnemies(enemiesToBuff);
+                this.updateBuffedEnemies();
+                if (this.buffedEnemies.length > 0) {
+                    // Choose the farthest buffed enemy
+                    let targetEnemy = this.buffedEnemies.reduce((farthest, current) => {
+                        const dF = utils_1.Utils.distance(this.x, this.y, farthest.x, farthest.y);
+                        const dC = utils_1.Utils.distance(this.x, this.y, current.x, current.y);
+                        return dC > dF ? current : farthest;
+                    });
+                    // Build disable positions (other entities and nearby active spike traps)
+                    let disablePositions = Array();
+                    for (const e of this.room.entities) {
+                        if (e !== this) {
+                            disablePositions.push({ x: e.x, y: e.y });
+                        }
+                    }
+                    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                        for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                            if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                this.room.roomArray[xx][yy].on) {
+                                disablePositions.push({ x: xx, y: yy });
+                            }
+                        }
+                    }
+                    // Build grid
+                    let grid = [];
+                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                        grid[x] = [];
+                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                grid[x][y] = this.room.roomArray[x][y];
+                            else
+                                grid[x][y] = false;
+                        }
+                    }
+                    // A* toward the target enemy
+                    const moves = astarclass_1.astar.AStar.search(grid, this, targetEnemy, disablePositions, false, false, true, this.direction);
+                    if (moves.length > 0) {
+                        const oldX = this.x;
+                        const oldY = this.y;
+                        const moveX = moves[0].pos.x;
+                        const moveY = moves[0].pos.y;
+                        // Move one step toward target enemy
+                        this.tryMove(moveX, moveY);
+                        this.setDrawXY(oldX, oldY);
+                        if (this.x > oldX)
+                            this.direction = game_2.Direction.RIGHT;
+                        else if (this.x < oldX)
+                            this.direction = game_2.Direction.LEFT;
+                        else if (this.y > oldY)
+                            this.direction = game_2.Direction.DOWN;
+                        else if (this.y < oldY)
+                            this.direction = game_2.Direction.UP;
+                    }
+                }
+                else {
                     this.runAway();
                 }
+                //}
             }
             if (this.buffedEnemies.length > 0) {
                 this.shadeColor = "#306082";
@@ -14788,12 +14846,15 @@ MummyEnemy.tileY = 16;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OccultistEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class OccultistEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -14816,11 +14877,66 @@ class OccultistEnemy extends enemy_1.Enemy {
                     return;
                 }
                 this.ticks++;
-                if (this.ticks % 2 === 0) {
-                    this.shieldEnemies(enemiesToShield);
-                    this.updateShieldedEnemies();
+                //if (this.ticks % 2 === 0) {
+                this.shieldEnemies(enemiesToShield);
+                this.updateShieldedEnemies();
+                if (this.shieldedEnemies.length > 0) {
+                    // Choose the farthest shielded enemy
+                    let targetEnemy = this.shieldedEnemies.reduce((farthest, current) => {
+                        const dF = utils_1.Utils.distance(this.x, this.y, farthest.x, farthest.y);
+                        const dC = utils_1.Utils.distance(this.x, this.y, current.x, current.y);
+                        return dC > dF ? current : farthest;
+                    });
+                    // Build disable positions (other entities and nearby active spike traps)
+                    let disablePositions = Array();
+                    for (const e of this.room.entities) {
+                        if (e !== this) {
+                            disablePositions.push({ x: e.x, y: e.y });
+                        }
+                    }
+                    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                        for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                            if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                this.room.roomArray[xx][yy].on) {
+                                disablePositions.push({ x: xx, y: yy });
+                            }
+                        }
+                    }
+                    // Build grid
+                    let grid = [];
+                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                        grid[x] = [];
+                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                grid[x][y] = this.room.roomArray[x][y];
+                            else
+                                grid[x][y] = false;
+                        }
+                    }
+                    // A* toward the target enemy
+                    const moves = astarclass_1.astar.AStar.search(grid, this, targetEnemy, disablePositions, false, false, true, this.direction);
+                    if (moves.length > 0) {
+                        const oldX = this.x;
+                        const oldY = this.y;
+                        const moveX = moves[0].pos.x;
+                        const moveY = moves[0].pos.y;
+                        // Move one step toward target enemy
+                        this.tryMove(moveX, moveY);
+                        this.setDrawXY(oldX, oldY);
+                        if (this.x > oldX)
+                            this.direction = game_2.Direction.RIGHT;
+                        else if (this.x < oldX)
+                            this.direction = game_2.Direction.LEFT;
+                        else if (this.y > oldY)
+                            this.direction = game_2.Direction.DOWN;
+                        else if (this.y < oldY)
+                            this.direction = game_2.Direction.UP;
+                    }
+                }
+                else {
                     this.runAway();
                 }
+                //}
             }
             if (this.shieldedEnemies.length > 0) {
                 this.shadeColor = "#2E0854";

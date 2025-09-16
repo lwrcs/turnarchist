@@ -1,4 +1,5 @@
 import { Game } from "../../game";
+import { Direction } from "../../game";
 import { Room } from "../../room/room";
 
 import { Enemy } from "./enemy";
@@ -11,6 +12,8 @@ import { Lighting } from "../../lighting/lighting";
 import { Entity } from "../entity";
 import { Random } from "../../utility/random";
 import { GameplaySettings } from "../../game/gameplaySettings";
+import { astar } from "../../utility/astarclass";
+import { SpikeTrap } from "../../tile/spiketrap";
 
 export class OccultistEnemy extends Enemy {
   ticks: number;
@@ -83,11 +86,77 @@ export class OccultistEnemy extends Enemy {
 
       this.ticks++;
 
-      if (this.ticks % 2 === 0) {
-        this.shieldEnemies(enemiesToShield);
-        this.updateShieldedEnemies();
+      //if (this.ticks % 2 === 0) {
+      this.shieldEnemies(enemiesToShield);
+      this.updateShieldedEnemies();
+      if (this.shieldedEnemies.length > 0) {
+        // Choose the farthest shielded enemy
+        let targetEnemy = this.shieldedEnemies.reduce((farthest, current) => {
+          const dF = Utils.distance(this.x, this.y, farthest.x, farthest.y);
+          const dC = Utils.distance(this.x, this.y, current.x, current.y);
+          return dC > dF ? current : farthest;
+        });
+
+        // Build disable positions (other entities and nearby active spike traps)
+        let disablePositions = Array<astar.Position>();
+        for (const e of this.room.entities) {
+          if (e !== this) {
+            disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+          }
+        }
+        for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+          for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+            if (
+              this.room.roomArray[xx][yy] instanceof SpikeTrap &&
+              (this.room.roomArray[xx][yy] as SpikeTrap).on
+            ) {
+              disablePositions.push({ x: xx, y: yy } as astar.Position);
+            }
+          }
+        }
+
+        // Build grid
+        let grid = [] as any[];
+        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+          grid[x] = [];
+          for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+            if (this.room.roomArray[x] && this.room.roomArray[x][y])
+              grid[x][y] = this.room.roomArray[x][y];
+            else grid[x][y] = false;
+          }
+        }
+
+        // A* toward the target enemy
+        const moves = astar.AStar.search(
+          grid,
+          this,
+          targetEnemy,
+          disablePositions,
+          false,
+          false,
+          true,
+          this.direction,
+        );
+
+        if (moves.length > 0) {
+          const oldX = this.x;
+          const oldY = this.y;
+          const moveX = moves[0].pos.x;
+          const moveY = moves[0].pos.y;
+
+          // Move one step toward target enemy
+          this.tryMove(moveX, moveY);
+          this.setDrawXY(oldX, oldY);
+
+          if (this.x > oldX) this.direction = Direction.RIGHT;
+          else if (this.x < oldX) this.direction = Direction.LEFT;
+          else if (this.y > oldY) this.direction = Direction.DOWN;
+          else if (this.y < oldY) this.direction = Direction.UP;
+        }
+      } else {
         this.runAway();
       }
+      //}
     }
 
     if (this.shieldedEnemies.length > 0) {
