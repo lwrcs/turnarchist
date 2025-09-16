@@ -113,6 +113,7 @@ export class RookEnemy extends Enemy {
           if (this.justHurt) {
             //this.retreat(oldX, oldY);
             //this.stun();
+            this.justHurt = false;
           } else if (moves.length > 0 && !this.unconscious) {
             let moveX = moves[0].pos.x;
 
