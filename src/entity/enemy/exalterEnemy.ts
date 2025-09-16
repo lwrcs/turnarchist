@@ -161,16 +161,16 @@ export class ExalterEnemy extends Enemy {
     enemy.applyBuff();
     this.buffedEnemies.push(enemy);
     if (enemy.buffed) {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
         beam.compositeOperation = "source-over";
         beam.color = "#00FFFF";
         beam.turbulence = 1;
         beam.gravity = 0;
         beam.iterations = 3;
-        beam.segments = 30;
-        beam.angleChange = 1;
-        beam.springDamping = 0.3;
+        beam.segments = 10;
+        beam.angleChange = 3;
+        beam.springDamping = 0.4;
         beam.drawableY = enemy.drawableY;
         beam.type = "buff";
         this.room.projectiles.push(beam);
