@@ -44,6 +44,9 @@ import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
+import { GarnetResource } from "../entity/resource/garnetResource";
+import { ZirconResource } from "../entity/resource/zirconResource";
+import { AmberResource } from "../entity/resource/amberResource";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -178,6 +181,9 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CoalResource, weight: 1 },
       { class: GoldResource, weight: 0.1 },
       { class: EmeraldResource, weight: 0.05 },
+      { class: GarnetResource, weight: 0.05 },
+      { class: ZirconResource, weight: 0.05 },
+      { class: AmberResource, weight: 0.05 },
       { class: Block, weight: 0.2 },
       { class: Rock, weight: 0.4 },
       { class: Mushrooms, weight: 0.3 },

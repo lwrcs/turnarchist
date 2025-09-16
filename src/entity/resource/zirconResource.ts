@@ -10,18 +10,20 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
+import { RedGem } from "../../item/resource/redgem";
+import { BlueGem } from "../../item/resource/bluegem";
 
-export class EmeraldResource extends Resource {
+export class ZirconResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 
-    this.tileX = 14;
+    this.tileX = 16;
     this.tileY = 0;
     this.health = 3;
-    this.name = "emerald";
+    this.name = "zircon";
     if (Random.rand() < 0.025) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
-    this.drops.push(new GreenGem(this.room, this.x, this.y));
+    this.drops.push(new BlueGem(this.room, this.x, this.y));
   }
 }

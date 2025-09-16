@@ -8651,7 +8651,7 @@ module.exports = __webpack_require__.p + "assets/fxset.ee6498dd08da4789aead.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.54da62393488cb7d9e48.png";
+module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.png";
 
 /***/ }),
 
@@ -20297,6 +20297,38 @@ VendingMachine.isPointInVendingMachineBounds = (x, y, shop) => {
 
 /***/ }),
 
+/***/ "./src/entity/resource/amberResource.ts":
+/*!**********************************************!*\
+  !*** ./src/entity/resource/amberResource.ts ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AmberResource = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const orangegem_1 = __webpack_require__(/*! ../../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
+class AmberResource extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.tileX = 17;
+        this.tileY = 0;
+        this.health = 3;
+        this.name = "amber";
+        if (random_1.Random.rand() < 0.025) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        this.drops.push(new orangegem_1.OrangeGem(this.room, this.x, this.y));
+    }
+}
+exports.AmberResource = AmberResource;
+
+
+/***/ }),
+
 /***/ "./src/entity/resource/coalResource.ts":
 /*!*********************************************!*\
   !*** ./src/entity/resource/coalResource.ts ***!
@@ -20350,13 +20382,45 @@ class EmeraldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 3;
         this.name = "emerald";
-        if (random_1.Random.rand() < 0.2) {
+        if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new greengem_1.GreenGem(this.room, this.x, this.y));
     }
 }
 exports.EmeraldResource = EmeraldResource;
+
+
+/***/ }),
+
+/***/ "./src/entity/resource/garnetResource.ts":
+/*!***********************************************!*\
+  !*** ./src/entity/resource/garnetResource.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GarnetResource = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
+class GarnetResource extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.tileX = 15;
+        this.tileY = 0;
+        this.health = 3;
+        this.name = "garnet";
+        if (random_1.Random.rand() < 0.025) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        this.drops.push(new redgem_1.RedGem(this.room, this.x, this.y));
+    }
+}
+exports.GarnetResource = GarnetResource;
 
 
 /***/ }),
@@ -20372,7 +20436,7 @@ exports.EmeraldResource = EmeraldResource;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GoldResource = void 0;
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
-const gold_1 = __webpack_require__(/*! ../../item/resource/gold */ "./src/item/resource/gold.ts");
+const goldOre_1 = __webpack_require__(/*! ../../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class GoldResource extends resource_1.Resource {
@@ -20385,7 +20449,7 @@ class GoldResource extends resource_1.Resource {
         if (random_1.Random.rand() < 0.2) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
-        this.drops.push(new gold_1.Gold(this.room, this.x, this.y));
+        this.drops.push(new goldOre_1.GoldOre(this.room, this.x, this.y));
     }
 }
 exports.GoldResource = GoldResource;
@@ -20416,7 +20480,7 @@ class ObsidianResource extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "obsidian";
-        if (random_1.Random.rand() < 0.2) {
+        if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         //this.drops.push(new Stone(this.room, this.x, this.y));
@@ -20531,13 +20595,45 @@ class Rock extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "rock";
-        if (random_1.Random.rand() < 0.2) {
+        if (random_1.Random.rand() < 0.05) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         //this.drops.push(new Stone(this.room, this.x, this.y));
     }
 }
 exports.Rock = Rock;
+
+
+/***/ }),
+
+/***/ "./src/entity/resource/zirconResource.ts":
+/*!***********************************************!*\
+  !*** ./src/entity/resource/zirconResource.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ZirconResource = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const bluegem_1 = __webpack_require__(/*! ../../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+class ZirconResource extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.tileX = 16;
+        this.tileY = 0;
+        this.health = 3;
+        this.name = "zircon";
+        if (random_1.Random.rand() < 0.025) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        this.drops.push(new bluegem_1.BlueGem(this.room, this.x, this.y));
+    }
+}
+exports.ZirconResource = ZirconResource;
 
 
 /***/ }),
@@ -22954,13 +23050,14 @@ const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/ite
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
-const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
+const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -23019,7 +23116,8 @@ GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.ITEM_AUTO_PICKUP = true;
 GameConstants.AUTO_PICKUP_ITEMS = [
     coal_1.Coal,
-    gold_1.Gold,
+    goldOre_1.GoldOre,
+    ironOre_1.IronOre,
     redgem_1.RedGem,
     bluegem_1.BlueGem,
     greengem_1.GreenGem,
@@ -23191,18 +23289,19 @@ GameConstants.STARTING_DEV_INVENTORY = [
     redgem_1.RedGem,
     greengem_1.GreenGem,
     goldRing_1.GoldRing,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
-    gold_1.Gold,
+    goldOre_1.GoldOre,
+    ironOre_1.IronOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    ironOre_1.IronOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
+    goldOre_1.GoldOre,
 ];
 
 
@@ -23241,7 +23340,7 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
-const gold_1 = __webpack_require__(/*! ../item/resource/gold */ "./src/item/resource/gold.ts");
+const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const goldenKey_1 = __webpack_require__(/*! ../item/goldenKey */ "./src/item/goldenKey.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
@@ -23355,6 +23454,8 @@ const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
+const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 class HitWarningState {
     constructor(hw) {
         this.x = hw.x;
@@ -24227,6 +24328,8 @@ var ItemType;
     ItemType[ItemType["SWORD"] = 52] = "SWORD";
     ItemType[ItemType["SHIELD_LEFT_FRAGMENT"] = 53] = "SHIELD_LEFT_FRAGMENT";
     ItemType[ItemType["SHIELD_RIGHT_FRAGMENT"] = 54] = "SHIELD_RIGHT_FRAGMENT";
+    ItemType[ItemType["IRON_ORE"] = 55] = "IRON_ORE";
+    ItemType[ItemType["IRON_BAR"] = 56] = "IRON_BAR";
 })(ItemType = exports.ItemType || (exports.ItemType = {}));
 class ItemState {
     constructor(item, game) {
@@ -24244,7 +24347,7 @@ class ItemState {
             this.type = ItemType.COAL;
         if (item instanceof coin_1.Coin)
             this.type = ItemType.COIN;
-        if (item instanceof gold_1.Gold)
+        if (item instanceof goldOre_1.GoldOre)
             this.type = ItemType.GOLD;
         if (item instanceof goldenKey_1.GoldenKey)
             this.type = ItemType.GOLDENKEY;
@@ -24345,6 +24448,10 @@ class ItemState {
             this.type = ItemType.SHIELD_LEFT_FRAGMENT;
         if (item instanceof shieldRightFragment_1.ShieldRightFragment)
             this.type = ItemType.SHIELD_RIGHT_FRAGMENT;
+        if (item instanceof ironOre_1.IronOre)
+            this.type = ItemType.IRON_ORE;
+        if (item instanceof ironBar_1.IronBar)
+            this.type = ItemType.IRON_BAR;
         this.equipped = item instanceof equippable_1.Equippable && item.equipped;
         this.x = item.x;
         this.y = item.y;
@@ -24384,7 +24491,7 @@ let loadItem = (i, game, player, targetRoom) => {
     if (i.type === ItemType.COIN)
         item = new coin_1.Coin(room, i.x, i.y);
     if (i.type === ItemType.GOLD)
-        item = new gold_1.Gold(room, i.x, i.y);
+        item = new goldOre_1.GoldOre(room, i.x, i.y);
     if (i.type === ItemType.GOLDENKEY)
         item = new goldenKey_1.GoldenKey(room, i.x, i.y);
     if (i.type === ItemType.GREENGEM)
@@ -24486,6 +24593,10 @@ let loadItem = (i, game, player, targetRoom) => {
         item = new shieldLeftFragment_1.ShieldLeftFragment(room, i.x, i.y);
     if (i.type === ItemType.SHIELD_RIGHT_FRAGMENT)
         item = new shieldRightFragment_1.ShieldRightFragment(room, i.x, i.y);
+    if (i.type === ItemType.IRON_ORE)
+        item = new ironOre_1.IronOre(room, i.x, i.y);
+    if (i.type === ItemType.IRON_BAR)
+        item = new ironBar_1.IronBar(room, i.x, i.y);
     if (!item) {
         console.error("Unknown item type:", i.type, "ItemType enum value:", ItemType[i.type], "Falling back to coal");
         item = new coal_1.Coal(room, i.x, i.y);
@@ -29803,7 +29914,7 @@ const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/item/we
 const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const weaponPoison_1 = __webpack_require__(/*! ./usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const weaponBlood_1 = __webpack_require__(/*! ./usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
-const gold_1 = __webpack_require__(/*! ./resource/gold */ "./src/item/resource/gold.ts");
+const goldOre_1 = __webpack_require__(/*! ./resource/goldOre */ "./src/item/resource/goldOre.ts");
 const stone_1 = __webpack_require__(/*! ./resource/stone */ "./src/item/resource/stone.ts");
 const pickaxe_1 = __webpack_require__(/*! ./tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const hammer_1 = __webpack_require__(/*! ./tool/hammer */ "./src/item/tool/hammer.ts");
@@ -29855,7 +29966,7 @@ exports.ItemTypeMap = {
     bluegem: bluegem_1.BlueGem,
     greengem: greengem_1.GreenGem,
     geode: geode_1.Geode,
-    gold: gold_1.Gold,
+    gold: goldOre_1.GoldOre,
     stone: stone_1.Stone,
     coal: coal_1.Coal,
     bomb: bombItem_1.BombItem,
@@ -29963,11 +30074,11 @@ DropTable.drops = [
     { itemType: "torch", dropRate: 250, category: ["light"] },
     { itemType: "lantern", dropRate: 500, category: ["light"] },
     // Gems and minerals
-    { itemType: "redgem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "geode", dropRate: 100, category: ["gem", "resource"] },
-    { itemType: "gold", dropRate: 200, category: ["resource"] },
+    { itemType: "redgem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
+    { itemType: "gold ore", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
         itemType: "coal",
@@ -31346,7 +31457,11 @@ class Geode extends item_1.Item {
                 for (let i = 0; i < numGems; i++) {
                     inventory.addItem(new gemType(this.level, this.x, this.y));
                 }
-                inventory.subtractItemCount(this);
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    inventory.removeItem(this);
             }
         };
         this.tileX = 15;
@@ -31357,47 +31472,6 @@ class Geode extends item_1.Item {
 }
 exports.Geode = Geode;
 Geode.itemName = "geode";
-
-
-/***/ }),
-
-/***/ "./src/item/resource/gold.ts":
-/*!***********************************!*\
-  !*** ./src/item/resource/gold.ts ***!
-  \***********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Gold = void 0;
-const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
-const goldBar_1 = __webpack_require__(/*! ./goldBar */ "./src/item/resource/goldBar.ts");
-const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
-class Gold extends item_1.Item {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.smelt = (player) => {
-            if (player.inventory.isFull()) {
-                this.level.game.pushMessage(`You don't have enough space in your inventory to smelt the gold ore.`);
-                return;
-            }
-            if (this.stackCount >= 3) {
-                player.inventory.subtractItem(this, 3);
-                player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
-                sound_1.Sound.playSmith();
-                this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);
-            }
-        };
-        this.tileX = 18;
-        this.tileY = 0;
-        this.name = Gold.itemName;
-        this.stackable = true;
-        this.description = "Some gold ore";
-    }
-}
-exports.Gold = Gold;
-Gold.itemName = "gold";
 
 
 /***/ }),
@@ -31437,6 +31511,47 @@ GoldBar.itemName = "gold bar";
 
 /***/ }),
 
+/***/ "./src/item/resource/goldOre.ts":
+/*!**************************************!*\
+  !*** ./src/item/resource/goldOre.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GoldOre = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const goldBar_1 = __webpack_require__(/*! ./goldBar */ "./src/item/resource/goldBar.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class GoldOre extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.smelt = (player) => {
+            if (player.inventory.isFull()) {
+                this.level.game.pushMessage(`You don't have enough space in your inventory to smelt the gold ore.`);
+                return;
+            }
+            if (this.stackCount >= 3) {
+                player.inventory.subtractItem(this, 3);
+                player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
+                sound_1.Sound.playSmith();
+                this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);
+            }
+        };
+        this.tileX = 18;
+        this.tileY = 0;
+        this.name = GoldOre.itemName;
+        this.stackable = true;
+        this.description = "Some gold ore";
+    }
+}
+exports.GoldOre = GoldOre;
+GoldOre.itemName = "gold ore";
+
+
+/***/ }),
+
 /***/ "./src/item/resource/greengem.ts":
 /*!***************************************!*\
   !*** ./src/item/resource/greengem.ts ***!
@@ -31469,6 +31584,81 @@ class GreenGem extends usable_1.Usable {
 }
 exports.GreenGem = GreenGem;
 GreenGem.itemName = "emerald";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/ironBar.ts":
+/*!**************************************!*\
+  !*** ./src/item/resource/ironBar.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IronBar = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class IronBar extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.smith = (player) => {
+            player.inventory.subtractItem(this, 1);
+            //player.inventory.addItem(new GoldRing(this.level, this.x, this.y));
+            this.level.game.pushMessage(`You hammer the iron bar into a ring.`);
+            sound_1.Sound.playSmith();
+        };
+        this.tileX = 16;
+        this.tileY = 0;
+        this.name = IronBar.itemName;
+        this.stackable = true;
+        this.description = "A bar of iron. Hit it with a hammer to make a ring.";
+    }
+}
+exports.IronBar = IronBar;
+IronBar.itemName = "iron bar";
+
+
+/***/ }),
+
+/***/ "./src/item/resource/ironOre.ts":
+/*!**************************************!*\
+  !*** ./src/item/resource/ironOre.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IronOre = void 0;
+const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const ironBar_1 = __webpack_require__(/*! ./ironBar */ "./src/item/resource/ironBar.ts");
+class IronOre extends item_1.Item {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.smelt = (player) => {
+            if (player.inventory.isFull()) {
+                this.level.game.pushMessage(`You don't have enough space in your inventory to smelt the iron ore.`);
+                return;
+            }
+            if (this.stackCount >= 3) {
+                player.inventory.subtractItem(this, 3);
+                player.inventory.addItem(new ironBar_1.IronBar(this.level, this.x, this.y));
+                sound_1.Sound.playSmith();
+                this.level.game.pushMessage(`You smelt the iron ore into a iron bar.`);
+            }
+        };
+        this.tileX = 16;
+        this.tileY = 2;
+        this.name = IronOre.itemName;
+        this.stackable = true;
+        this.description = "Some iron ore";
+    }
+}
+exports.IronOre = IronOre;
+IronOre.itemName = "iron ore";
 
 
 /***/ }),
@@ -31664,7 +31854,7 @@ class Hammer extends usable_1.Usable {
                 let goldBar = other;
                 goldBar.smith(player);
             }
-            else if (other.name === "gold") {
+            else if (other.name === "gold ore") {
                 let gold = other;
                 gold.smelt(player);
             }
@@ -33734,6 +33924,9 @@ const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianRe
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
+const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
+const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -33837,6 +34030,9 @@ const environmentData = {
             { class: coalResource_1.CoalResource, weight: 1 },
             { class: goldResource_1.GoldResource, weight: 0.1 },
             { class: emeraldResource_1.EmeraldResource, weight: 0.05 },
+            { class: garnetResource_1.GarnetResource, weight: 0.05 },
+            { class: zirconResource_1.ZirconResource, weight: 0.05 },
+            { class: amberResource_1.AmberResource, weight: 0.05 },
             { class: block_1.Block, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.4 },
             { class: mushrooms_1.Mushrooms, weight: 0.3 },

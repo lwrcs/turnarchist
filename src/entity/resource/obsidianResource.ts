@@ -21,7 +21,7 @@ export class ObsidianResource extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "obsidian";
-    if (Random.rand() < 0.2) {
+    if (Random.rand() < 0.025) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     //this.drops.push(new Stone(this.room, this.x, this.y));

@@ -42,7 +42,9 @@ export class Geode extends Item {
       for (let i = 0; i < numGems; i++) {
         inventory.addItem(new gemType(this.level, this.x, this.y));
       }
-      inventory.subtractItemCount(this);
+      if (this.stackCount > 1) {
+        this.stackCount--;
+      } else inventory.removeItem(this);
     }
   };
 }

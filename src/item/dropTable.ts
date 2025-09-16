@@ -13,7 +13,7 @@ import { Warhammer } from "./weapon/warhammer";
 import { DualDagger } from "./weapon/dualdagger";
 import { WeaponPoison } from "./usable/weaponPoison";
 import { WeaponBlood } from "./usable/weaponBlood";
-import { Gold } from "./resource/gold";
+import { GoldOre } from "./resource/goldOre";
 import { Stone } from "./resource/stone";
 import { Pickaxe } from "./tool/pickaxe";
 import { Hammer } from "./tool/hammer";
@@ -84,7 +84,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   bluegem: BlueGem,
   greengem: GreenGem,
   geode: Geode,
-  gold: Gold,
+  gold: GoldOre,
   stone: Stone,
   coal: Coal,
   bomb: BombItem,
@@ -200,11 +200,11 @@ export class DropTable {
     { itemType: "lantern", dropRate: 500, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 25, category: ["gem", "resource"] },
-    { itemType: "geode", dropRate: 100, category: ["gem", "resource"] },
-    { itemType: "gold", dropRate: 200, category: ["resource"] },
+    { itemType: "redgem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
+    { itemType: "gold ore", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
       itemType: "coal",

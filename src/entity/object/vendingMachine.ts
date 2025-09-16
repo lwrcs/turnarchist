@@ -13,7 +13,6 @@ import { Dagger } from "../../item/weapon/dagger";
 import { Armor } from "../../item/armor";
 import { Heart } from "../../item/usable/heart";
 import { Spear } from "../../item/weapon/spear";
-import { Gold } from "../../item/resource/gold";
 import { BlueGem } from "../../item/resource/bluegem";
 import { DualDagger } from "../../item/weapon/dualdagger";
 import { Lantern } from "../../item/light/lantern";

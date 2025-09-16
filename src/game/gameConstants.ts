@@ -31,7 +31,7 @@ import { GlowBugs } from "../item/light/glowBugs";
 import { Shotgun } from "../item/weapon/shotgun";
 import { Scythe } from "../item/weapon/scythe";
 import { Hourglass } from "../item/usable/hourglass";
-import { Gold } from "../item/resource/gold";
+import { GoldOre } from "../item/resource/goldOre";
 import { Sword } from "../item/weapon/sword";
 import { Apple } from "../item/usable/apple";
 import { WebGLBlurRenderer } from "../gui/webglBlurRenderer";
@@ -42,6 +42,7 @@ import { GoldRing } from "../item/jewelry/goldRing";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Coin } from "../item/coin";
 import { Fish } from "../item/usable/fish";
+import { IronOre } from "../item/resource/ironOre";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v1.2.0"; //"v0.6.3";
@@ -107,7 +108,8 @@ export class GameConstants {
 
   static readonly AUTO_PICKUP_ITEMS = [
     Coal,
-    Gold,
+    GoldOre,
+    IronOre,
     RedGem,
     BlueGem,
     GreenGem,
@@ -323,17 +325,18 @@ export class GameConstants {
     RedGem,
     GreenGem,
     GoldRing,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
-    Gold,
+    GoldOre,
+    IronOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    IronOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
   ];
 }

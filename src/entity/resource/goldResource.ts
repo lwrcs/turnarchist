@@ -1,13 +1,8 @@
-import { Item } from "../../item/item";
 import { Game } from "../../game";
-import { Key } from "../../item/key";
 import { Room } from "../../room/room";
-import { Heart } from "../../item/usable/heart";
-import { Armor } from "../../item/armor";
+
 import { Resource } from "./resource";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Gold } from "../../item/resource/gold";
-import { Sound } from "../../sound/sound";
+import { GoldOre } from "../../item/resource/goldOre";
 import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 export class GoldResource extends Resource {
@@ -22,6 +17,6 @@ export class GoldResource extends Resource {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
 
-    this.drops.push(new Gold(this.room, this.x, this.y));
+    this.drops.push(new GoldOre(this.room, this.x, this.y));
   }
 }

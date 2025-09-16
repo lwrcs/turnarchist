@@ -24,7 +24,7 @@ import { Candle } from "../item/light/candle";
 import { Coal } from "../item/resource/coal";
 import { Coin } from "../item/coin";
 import { Equippable } from "../item/equippable";
-import { Gold } from "../item/resource/gold";
+import { GoldOre } from "../item/resource/goldOre";
 import { GoldenKey } from "../item/goldenKey";
 import { GreenGem } from "../item/resource/greengem";
 import { Heart } from "../item/usable/heart";
@@ -154,6 +154,8 @@ import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { IronOre } from "../item/resource/ironOre";
+import { IronBar } from "../item/resource/ironBar";
 
 export class HitWarningState {
   x: number;
@@ -1107,6 +1109,8 @@ export enum ItemType {
   SWORD,
   SHIELD_LEFT_FRAGMENT,
   SHIELD_RIGHT_FRAGMENT,
+  IRON_ORE,
+  IRON_BAR,
 }
 
 export class ItemState {
@@ -1133,7 +1137,7 @@ export class ItemState {
     if (item instanceof Candle) this.type = ItemType.CANDLE;
     if (item instanceof Coal) this.type = ItemType.COAL;
     if (item instanceof Coin) this.type = ItemType.COIN;
-    if (item instanceof Gold) this.type = ItemType.GOLD;
+    if (item instanceof GoldOre) this.type = ItemType.GOLD;
     if (item instanceof GoldenKey) this.type = ItemType.GOLDENKEY;
     if (item instanceof GreenGem) this.type = ItemType.GREENGEM;
     if (item instanceof Heart) this.type = ItemType.HEART;
@@ -1186,6 +1190,8 @@ export class ItemState {
       this.type = ItemType.SHIELD_LEFT_FRAGMENT;
     if (item instanceof ShieldRightFragment)
       this.type = ItemType.SHIELD_RIGHT_FRAGMENT;
+    if (item instanceof IronOre) this.type = ItemType.IRON_ORE;
+    if (item instanceof IronBar) this.type = ItemType.IRON_BAR;
     this.equipped = item instanceof Equippable && item.equipped;
     this.x = item.x;
     this.y = item.y;
@@ -1227,7 +1233,7 @@ let loadItem = (
   if (i.type === ItemType.CANDLE) item = new Candle(room, i.x, i.y);
   if (i.type === ItemType.COAL) item = new Coal(room, i.x, i.y);
   if (i.type === ItemType.COIN) item = new Coin(room, i.x, i.y);
-  if (i.type === ItemType.GOLD) item = new Gold(room, i.x, i.y);
+  if (i.type === ItemType.GOLD) item = new GoldOre(room, i.x, i.y);
   if (i.type === ItemType.GOLDENKEY) item = new GoldenKey(room, i.x, i.y);
   if (i.type === ItemType.GREENGEM) item = new GreenGem(room, i.x, i.y);
   if (i.type === ItemType.HEART) item = new Heart(room, i.x, i.y);
@@ -1287,6 +1293,8 @@ let loadItem = (
     item = new ShieldLeftFragment(room, i.x, i.y);
   if (i.type === ItemType.SHIELD_RIGHT_FRAGMENT)
     item = new ShieldRightFragment(room, i.x, i.y);
+  if (i.type === ItemType.IRON_ORE) item = new IronOre(room, i.x, i.y);
+  if (i.type === ItemType.IRON_BAR) item = new IronBar(room, i.x, i.y);
   if (!item) {
     console.error(
       "Unknown item type:",

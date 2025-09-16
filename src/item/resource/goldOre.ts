@@ -7,14 +7,14 @@ import { GameConstants } from "../../game/gameConstants";
 import { GoldBar } from "./goldBar";
 import { Sound } from "../../sound/sound";
 
-export class Gold extends Item {
-  static itemName = "gold";
+export class GoldOre extends Item {
+  static itemName = "gold ore";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
     this.tileX = 18;
     this.tileY = 0;
-    this.name = Gold.itemName;
+    this.name = GoldOre.itemName;
     this.stackable = true;
     this.description = "Some gold ore";
   }

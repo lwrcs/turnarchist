@@ -10,9 +10,9 @@ import { WeaponFragments } from "../usable/weaponFragments";
 import { Geode } from "../resource/geode";
 import { Pickaxe } from "./pickaxe";
 import { GoldBar } from "../resource/goldBar";
-import { Gold } from "../resource/gold";
 import { Random } from "../../utility/random";
 import { FishingRod } from "./fishingRod";
+import { GoldOre } from "../resource/goldOre";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -56,8 +56,8 @@ export class Hammer extends Usable {
     } else if (other.name === "gold bar") {
       let goldBar = other as GoldBar;
       goldBar.smith(player);
-    } else if (other.name === "gold") {
-      let gold = other as Gold;
+    } else if (other.name === "gold ore") {
+      let gold = other as GoldOre;
       gold.smelt(player);
     } else if (other.name === "fishing rod") {
       let fishingRod = other as FishingRod;
