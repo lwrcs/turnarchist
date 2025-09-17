@@ -146,16 +146,56 @@ export class TextBox {
 
   public focus(): void {
     const input = this.element as HTMLInputElement;
-    if (input && typeof input.focus === "function") {
-      try {
-        input.focus();
-        // Place cursor at end (best effort; harmless if not supported)
-        if (typeof input.setSelectionRange === "function") {
-          const len = input.value?.length ?? 0;
-          input.setSelectionRange(len, len);
-        }
-      } catch {}
-    }
+    if (!input) return;
+
+    // Temporarily position the input on-screen (near bottom-left), tiny and nearly transparent
+    const prev = {
+      position: input.style.position,
+      left: input.style.left,
+      right: input.style.right,
+      top: input.style.top,
+      bottom: input.style.bottom,
+      width: input.style.width,
+      height: input.style.height,
+      opacity: input.style.opacity,
+      zIndex: input.style.zIndex,
+      pointerEvents: input.style.pointerEvents,
+    };
+
+    input.style.position = "fixed";
+    input.style.left = "8px";
+    input.style.bottom = "40px";
+    input.style.top = "";
+    input.style.right = "";
+    input.style.width = "1px";
+    input.style.height = "1px";
+    input.style.opacity = "0.01";
+    input.style.zIndex = "9999";
+    input.style.pointerEvents = "auto";
+
+    try {
+      input.focus();
+      // Place cursor at end
+      if (typeof input.setSelectionRange === "function") {
+        const len = input.value?.length ?? 0;
+        input.setSelectionRange(len, len);
+      }
+    } catch {}
+
+    const restore = () => {
+      input.style.position = prev.position;
+      input.style.left = prev.left;
+      input.style.right = prev.right;
+      input.style.top = prev.top;
+      input.style.bottom = prev.bottom;
+      input.style.width = prev.width;
+      input.style.height = prev.height;
+      input.style.opacity = prev.opacity;
+      input.style.zIndex = prev.zIndex;
+      input.style.pointerEvents = prev.pointerEvents;
+      input.removeEventListener("blur", restore);
+    };
+    input.addEventListener("blur", restore);
   }
 
   private sendMessage(): void {

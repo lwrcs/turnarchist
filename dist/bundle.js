@@ -22534,6 +22534,9 @@ class Game {
                     input_1.Input.mouseDownListeners.push((x, y) => {
                         if (!this.isMobile)
                             return;
+                        // If already open, don't steal the event
+                        if (this.chatOpen)
+                            return;
                         if (this.isPointInChatHotspot(x, y)) {
                             this.chatOpen = true;
                             this.chatTextBox.focus();
@@ -22671,14 +22674,17 @@ class Game {
         }
     }
     isPointInChatHotspot(x, y) {
-        // Define a bottom-left tap area for opening chat
+        // Define a bottom-left area aligned with chat rendering baseline
         const margin = 5;
-        const hotspotWidth = Math.min(300, Math.floor(gameConstants_1.GameConstants.WIDTH * 0.6));
-        const hotspotHeight = Math.min(64, Math.floor(gameConstants_1.GameConstants.HEIGHT * 0.25));
-        const left = margin;
-        const top = gameConstants_1.GameConstants.HEIGHT - hotspotHeight - margin;
-        const right = left + hotspotWidth;
+        const LINE_HEIGHT = Game.letter_height + 1;
+        const inputLineHeight = LINE_HEIGHT + 4;
+        // Match drawChat() constants
+        const CHAT_X = 5;
+        const CHAT_MAX_WIDTH = gameConstants_1.GameConstants.WIDTH - 5;
+        const left = Math.max(0, CHAT_X - margin);
+        const right = Math.min(gameConstants_1.GameConstants.WIDTH, CHAT_X + CHAT_MAX_WIDTH);
         const bottom = gameConstants_1.GameConstants.HEIGHT - margin;
+        const top = Math.max(0, bottom - inputLineHeight - 10);
         return x >= left && x <= right && y >= top && y <= bottom;
     }
     destroy() {
@@ -26817,17 +26823,54 @@ class TextBox {
     }
     focus() {
         const input = this.element;
-        if (input && typeof input.focus === "function") {
-            try {
-                input.focus();
-                // Place cursor at end (best effort; harmless if not supported)
-                if (typeof input.setSelectionRange === "function") {
-                    const len = input.value?.length ?? 0;
-                    input.setSelectionRange(len, len);
-                }
+        if (!input)
+            return;
+        // Temporarily position the input on-screen (near bottom-left), tiny and nearly transparent
+        const prev = {
+            position: input.style.position,
+            left: input.style.left,
+            right: input.style.right,
+            top: input.style.top,
+            bottom: input.style.bottom,
+            width: input.style.width,
+            height: input.style.height,
+            opacity: input.style.opacity,
+            zIndex: input.style.zIndex,
+            pointerEvents: input.style.pointerEvents,
+        };
+        input.style.position = "fixed";
+        input.style.left = "8px";
+        input.style.bottom = "40px";
+        input.style.top = "";
+        input.style.right = "";
+        input.style.width = "1px";
+        input.style.height = "1px";
+        input.style.opacity = "0.01";
+        input.style.zIndex = "9999";
+        input.style.pointerEvents = "auto";
+        try {
+            input.focus();
+            // Place cursor at end
+            if (typeof input.setSelectionRange === "function") {
+                const len = input.value?.length ?? 0;
+                input.setSelectionRange(len, len);
             }
-            catch { }
         }
+        catch { }
+        const restore = () => {
+            input.style.position = prev.position;
+            input.style.left = prev.left;
+            input.style.right = prev.right;
+            input.style.top = prev.top;
+            input.style.bottom = prev.bottom;
+            input.style.width = prev.width;
+            input.style.height = prev.height;
+            input.style.opacity = prev.opacity;
+            input.style.zIndex = prev.zIndex;
+            input.style.pointerEvents = prev.pointerEvents;
+            input.removeEventListener("blur", restore);
+        };
+        input.addEventListener("blur", restore);
     }
     sendMessage() {
         let message = this.message.trim();

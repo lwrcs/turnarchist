@@ -444,6 +444,8 @@ export class Game {
           // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
           Input.mouseDownListeners.push((x: number, y: number) => {
             if (!this.isMobile) return;
+            // If already open, don't steal the event
+            if (this.chatOpen) return;
             if (this.isPointInChatHotspot(x, y)) {
               this.chatOpen = true;
               this.chatTextBox.focus();
@@ -2228,14 +2230,17 @@ export class Game {
   };
 
   private isPointInChatHotspot(x: number, y: number): boolean {
-    // Define a bottom-left tap area for opening chat
+    // Define a bottom-left area aligned with chat rendering baseline
     const margin = 5;
-    const hotspotWidth = Math.min(300, Math.floor(GameConstants.WIDTH * 0.6));
-    const hotspotHeight = Math.min(64, Math.floor(GameConstants.HEIGHT * 0.25));
-    const left = margin;
-    const top = GameConstants.HEIGHT - hotspotHeight - margin;
-    const right = left + hotspotWidth;
+    const LINE_HEIGHT = Game.letter_height + 1;
+    const inputLineHeight = LINE_HEIGHT + 4;
+    // Match drawChat() constants
+    const CHAT_X = 5;
+    const CHAT_MAX_WIDTH = GameConstants.WIDTH - 5;
+    const left = Math.max(0, CHAT_X - margin);
+    const right = Math.min(GameConstants.WIDTH, CHAT_X + CHAT_MAX_WIDTH);
     const bottom = GameConstants.HEIGHT - margin;
+    const top = Math.max(0, bottom - inputLineHeight - 10);
     return x >= left && x <= right && y >= top && y <= bottom;
   }
 
