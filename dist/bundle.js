@@ -22419,8 +22419,13 @@ class Game {
             //passwordElement.style.left = "-1000px"; // Position off-screen
             const chatElement = document.createElement("input");
             chatElement.type = "text";
+            chatElement.autocomplete = "off";
+            chatElement.autocapitalize = "off";
+            chatElement.autocorrect = "off";
+            chatElement.spellcheck = false;
+            chatElement.inputMode = "text";
             chatElement.style.position = "absolute";
-            chatElement.style.left = "-1000px"; // Position off-screen
+            chatElement.style.left = "-1000px"; // Position off-screen by default
             //document.body.appendChild(usernameElement);
             //document.body.appendChild(passwordElement);
             document.body.appendChild(chatElement);
@@ -26807,6 +26812,14 @@ class TextBox {
         this.escapeCallback = () => { };
         this.element = element;
         this.sentMessages = [];
+        // Bind DOM listeners so mobile keyboards feed into this TextBox
+        const input = this.element;
+        if (input && input.tagName === "INPUT") {
+            this.handleInputEventBound = (e) => this.handleDomInput(e);
+            this.handleKeydownEventBound = (e) => this.handleDomKeydown(e);
+            input.addEventListener("input", this.handleInputEventBound, false);
+            input.addEventListener("keydown", this.handleKeydownEventBound, false);
+        }
         //this.element.addEventListener("touchstart", this.handleTouchStart);
     }
     setEnterCallback(callback) {
@@ -26820,6 +26833,9 @@ class TextBox {
         this.cursor = 0;
         this.message = "";
         this.updateElement();
+        const input = this.element;
+        if (input && input.tagName === "INPUT")
+            input.value = "";
     }
     focus() {
         const input = this.element;
@@ -26872,6 +26888,35 @@ class TextBox {
         };
         input.addEventListener("blur", restore);
     }
+    handleDomInput(e) {
+        const input = e.target;
+        const val = input?.value ?? "";
+        this.text = val;
+        this.message = val;
+        this.cursor = val.length;
+        // Keep element value in sync if something external modified text
+        this.updateElement();
+    }
+    handleDomKeydown(e) {
+        // Map special keys to game logic; allow normal character entry via 'input' event
+        const key = e.key;
+        if (key === "Backspace" ||
+            key === "Delete" ||
+            key === "Enter" ||
+            key === "Escape" ||
+            key === "ArrowLeft" ||
+            key === "ArrowRight" ||
+            key === "ArrowUp" ||
+            key === "ArrowDown") {
+            e.preventDefault();
+            this.handleKeyPress(key);
+            const input = this.element;
+            if (input && input.tagName === "INPUT") {
+                // Reflect updated text into the DOM input
+                input.value = this.text;
+            }
+        }
+    }
     sendMessage() {
         let message = this.message.trim();
         if (message) {
@@ -26895,8 +26940,14 @@ class TextBox {
     }
     updateElement() {
         // Update the HTML element with the current text
-        // Modify to handle multiple lines if necessary
-        this.element.textContent = this.text;
+        const input = this.element;
+        if (input && input.tagName === "INPUT") {
+            input.value = this.text;
+        }
+        else {
+            // Modify to handle multiple lines if necessary
+            this.element.textContent = this.text;
+        }
         // Optionally, update cursor position in the UI
     }
     updateCursorPosition() {

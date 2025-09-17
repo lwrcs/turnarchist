@@ -300,8 +300,13 @@ export class Game {
       //passwordElement.style.left = "-1000px"; // Position off-screen
       const chatElement = document.createElement("input");
       chatElement.type = "text";
+      chatElement.autocomplete = "off";
+      chatElement.autocapitalize = "off";
+      (chatElement as any).autocorrect = "off";
+      chatElement.spellcheck = false;
+      chatElement.inputMode = "text";
       chatElement.style.position = "absolute";
-      chatElement.style.left = "-1000px"; // Position off-screen
+      chatElement.style.left = "-1000px"; // Position off-screen by default
       //document.body.appendChild(usernameElement);
       //document.body.appendChild(passwordElement);
       document.body.appendChild(chatElement);

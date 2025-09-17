@@ -11,6 +11,8 @@ export class TextBox {
   private sentMessages: Array<string>;
   private currentMessageIndex: number = -1;
   private readonly MAX_HISTORY: number = 50;
+  private handleInputEventBound: (e: Event) => void;
+  private handleKeydownEventBound: (e: KeyboardEvent) => void;
 
   constructor(element: HTMLElement) {
     this.text = "";
@@ -19,6 +21,15 @@ export class TextBox {
     this.escapeCallback = () => {};
     this.element = element;
     this.sentMessages = [];
+    // Bind DOM listeners so mobile keyboards feed into this TextBox
+    const input = this.element as HTMLInputElement;
+    if (input && input.tagName === "INPUT") {
+      this.handleInputEventBound = (e: Event) => this.handleDomInput(e);
+      this.handleKeydownEventBound = (e: KeyboardEvent) =>
+        this.handleDomKeydown(e);
+      input.addEventListener("input", this.handleInputEventBound, false);
+      input.addEventListener("keydown", this.handleKeydownEventBound, false);
+    }
 
     //this.element.addEventListener("touchstart", this.handleTouchStart);
   }
@@ -36,6 +47,8 @@ export class TextBox {
     this.cursor = 0;
     this.message = "";
     this.updateElement();
+    const input = this.element as HTMLInputElement;
+    if (input && input.tagName === "INPUT") input.value = "";
   }
 
   public handleKeyPress = (key: string): void => {
@@ -198,6 +211,39 @@ export class TextBox {
     input.addEventListener("blur", restore);
   }
 
+  private handleDomInput(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const val = input?.value ?? "";
+    this.text = val;
+    this.message = val;
+    this.cursor = val.length;
+    // Keep element value in sync if something external modified text
+    this.updateElement();
+  }
+
+  private handleDomKeydown(e: KeyboardEvent): void {
+    // Map special keys to game logic; allow normal character entry via 'input' event
+    const key = e.key;
+    if (
+      key === "Backspace" ||
+      key === "Delete" ||
+      key === "Enter" ||
+      key === "Escape" ||
+      key === "ArrowLeft" ||
+      key === "ArrowRight" ||
+      key === "ArrowUp" ||
+      key === "ArrowDown"
+    ) {
+      e.preventDefault();
+      this.handleKeyPress(key);
+      const input = this.element as HTMLInputElement;
+      if (input && input.tagName === "INPUT") {
+        // Reflect updated text into the DOM input
+        input.value = this.text;
+      }
+    }
+  }
+
   private sendMessage(): void {
     let message = this.message.trim();
 
@@ -229,8 +275,13 @@ export class TextBox {
 
   private updateElement(): void {
     // Update the HTML element with the current text
-    // Modify to handle multiple lines if necessary
-    this.element.textContent = this.text;
+    const input = this.element as HTMLInputElement;
+    if (input && input.tagName === "INPUT") {
+      input.value = this.text;
+    } else {
+      // Modify to handle multiple lines if necessary
+      this.element.textContent = this.text;
+    }
 
     // Optionally, update cursor position in the UI
   }
