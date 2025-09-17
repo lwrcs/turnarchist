@@ -211,6 +211,13 @@ export class TextBox {
     input.addEventListener("blur", restore);
   }
 
+  public blur(): void {
+    const input = this.element as HTMLInputElement;
+    try {
+      input.blur();
+    } catch {}
+  }
+
   private handleDomInput(e: Event): void {
     const input = e.target as HTMLInputElement;
     const val = input?.value ?? "";

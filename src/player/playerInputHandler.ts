@@ -301,6 +301,14 @@ export class PlayerInputHandler {
         Input.mouseDownHandled = true;
         return;
       }
+    } else if (player.game.isMobile && player.game.chatOpen) {
+      // If chat is open, tapping anywhere closes chat (unless tapping hotspot again)
+      if (!player.game.isPointInChatHotspot(x, y)) {
+        player.game.chatOpen = false;
+        player.game.chatTextBox.blur?.();
+        Input.mouseDownHandled = true;
+        return;
+      }
     }
 
     if (player.game.levelState !== LevelState.IN_LEVEL) {

@@ -21009,6 +21009,7 @@ class Game {
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
         this.localPlayerID = "localplayer";
+        this.keyboardHeightPx = 0;
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
         // Reference package.json
@@ -22168,7 +22169,9 @@ class Game {
         };
         this.drawChat = (delta) => {
             const CHAT_X = 5;
-            const CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 38;
+            // Lift chat above the on-screen keyboard if present
+            const keyboardOffset = Math.ceil(this.keyboardHeightPx / Game.scale);
+            const CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 38 - keyboardOffset;
             const CHAT_OPACITY = this.players?.[this.localPlayerID]?.inventory.isOpen
                 ? 0.05
                 : 1;
@@ -22529,6 +22532,32 @@ class Game {
                         // Small delay to ensure new dimensions are available
                         setTimeout(this.onResize, 100);
                     });
+                    // Keyboard detection using VisualViewport (iOS 13+, Android Chrome)
+                    try {
+                        const vv = window.visualViewport;
+                        if (vv && typeof vv.addEventListener === "function") {
+                            const updateKeyboard = () => {
+                                // When keyboard shows, the layout viewport height shrinks
+                                const layoutH = window.innerHeight;
+                                const visualH = vv.height;
+                                const dy = Math.max(0, layoutH - visualH - (vv.offsetTop || 0));
+                                this.keyboardHeightPx = dy;
+                            };
+                            vv.addEventListener("resize", updateKeyboard);
+                            vv.addEventListener("scroll", updateKeyboard);
+                        }
+                        else {
+                            // Fallback: compare window.innerHeight changes
+                            let baseline = window.innerHeight;
+                            window.addEventListener("resize", () => {
+                                const current = window.innerHeight;
+                                this.keyboardHeightPx = Math.max(0, baseline - current);
+                                if (current > baseline)
+                                    baseline = current; // update baseline on orientation change etc.
+                            });
+                        }
+                    }
+                    catch { }
                     //Sound.playMusic(); // loops forever
                     this.players = {};
                     this.offlinePlayers = {};
@@ -26887,6 +26916,13 @@ class TextBox {
             input.removeEventListener("blur", restore);
         };
         input.addEventListener("blur", restore);
+    }
+    blur() {
+        const input = this.element;
+        try {
+            input.blur();
+        }
+        catch { }
     }
     handleDomInput(e) {
         const input = e.target;
@@ -39781,6 +39817,15 @@ class PlayerInputHandler {
             if (player.game.isPointInChatHotspot(x, y)) {
                 player.game.chatOpen = true;
                 player.game.chatTextBox.focus();
+                input_1.Input.mouseDownHandled = true;
+                return;
+            }
+        }
+        else if (player.game.isMobile && player.game.chatOpen) {
+            // If chat is open, tapping anywhere closes chat (unless tapping hotspot again)
+            if (!player.game.isPointInChatHotspot(x, y)) {
+                player.game.chatOpen = false;
+                player.game.chatTextBox.blur?.();
                 input_1.Input.mouseDownHandled = true;
                 return;
             }
