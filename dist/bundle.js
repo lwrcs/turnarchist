@@ -8662,7 +8662,7 @@ module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.9932aa58179ec8ea8c2b.png";
+module.exports = __webpack_require__.p + "assets/mobset.8cb803e90b81a07d843c.png";
 
 /***/ }),
 
@@ -39776,6 +39776,15 @@ class PlayerInputHandler {
         if (button !== 0)
             return; // Only handle left mouse button
         const player = this.player;
+        // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
+        if (player.game.isMobile && !player.game.chatOpen) {
+            if (player.game.isPointInChatHotspot(x, y)) {
+                player.game.chatOpen = true;
+                player.game.chatTextBox.focus();
+                input_1.Input.mouseDownHandled = true;
+                return;
+            }
+        }
         if (player.game.levelState !== game_1.LevelState.IN_LEVEL) {
             // Route clicks to start menu if active
             if (!player.game.started &&

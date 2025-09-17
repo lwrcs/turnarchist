@@ -2234,7 +2234,7 @@ export class Game {
     Game.ctx.globalAlpha = 1;
   };
 
-  private isPointInChatHotspot(x: number, y: number): boolean {
+  public isPointInChatHotspot(x: number, y: number): boolean {
     // Define a bottom-left area aligned with chat rendering baseline
     const margin = 5;
     const LINE_HEIGHT = Game.letter_height + 1;

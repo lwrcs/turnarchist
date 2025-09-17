@@ -293,6 +293,16 @@ export class PlayerInputHandler {
 
     const player = this.player;
 
+    // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
+    if (player.game.isMobile && !player.game.chatOpen) {
+      if (player.game.isPointInChatHotspot(x, y)) {
+        player.game.chatOpen = true;
+        player.game.chatTextBox.focus();
+        Input.mouseDownHandled = true;
+        return;
+      }
+    }
+
     if (player.game.levelState !== LevelState.IN_LEVEL) {
       // Route clicks to start menu if active
       if (
