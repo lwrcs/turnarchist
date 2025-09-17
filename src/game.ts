@@ -441,6 +441,16 @@ export class Game {
           this.cameraAnimation = new CameraAnimation(0, 0, 1000, 1, 0, false);
           this.feedbackButton = new FeedbackButton();
 
+          // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
+          Input.mouseDownListeners.push((x: number, y: number) => {
+            if (!this.isMobile) return;
+            if (this.isPointInChatHotspot(x, y)) {
+              this.chatOpen = true;
+              this.chatTextBox.focus();
+              Input.mouseDownHandled = true;
+            }
+          });
+
           this.screenShakeX = 0;
           this.screenShakeY = 0;
           this.shakeAmountX = 0;
@@ -2216,6 +2226,18 @@ export class Game {
     // Reset alpha
     Game.ctx.globalAlpha = 1;
   };
+
+  private isPointInChatHotspot(x: number, y: number): boolean {
+    // Define a bottom-left tap area for opening chat
+    const margin = 5;
+    const hotspotWidth = Math.min(300, Math.floor(GameConstants.WIDTH * 0.6));
+    const hotspotHeight = Math.min(64, Math.floor(GameConstants.HEIGHT * 0.25));
+    const left = margin;
+    const top = GameConstants.HEIGHT - hotspotHeight - margin;
+    const right = left + hotspotWidth;
+    const bottom = GameConstants.HEIGHT - margin;
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
 
   targetCamera = (targetX: number, targetY: number) => {
     let cameraX = Math.round(

@@ -144,18 +144,18 @@ export class TextBox {
     e.preventDefault();
   };
 
-  private focus(): void {
-    // Create a temporary input element to trigger the on-screen keyboard
-    const tempInput = document.createElement("input");
-    tempInput.type = "text";
-    tempInput.style.position = "absolute";
-    tempInput.style.opacity = "0";
-    tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
-    document.body.appendChild(tempInput);
-    tempInput.focus();
-    tempInput.addEventListener("blur", () => {
-      document.body.removeChild(tempInput);
-    });
+  public focus(): void {
+    const input = this.element as HTMLInputElement;
+    if (input && typeof input.focus === "function") {
+      try {
+        input.focus();
+        // Place cursor at end (best effort; harmless if not supported)
+        if (typeof input.setSelectionRange === "function") {
+          const len = input.value?.length ?? 0;
+          input.setSelectionRange(len, len);
+        }
+      } catch {}
+    }
   }
 
   private sendMessage(): void {

@@ -22530,6 +22530,16 @@ class Game {
                     this.chatOpen = false;
                     this.cameraAnimation = new cameraAnimation_1.CameraAnimation(0, 0, 1000, 1, 0, false);
                     this.feedbackButton = new feedbackButton_1.FeedbackButton();
+                    // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
+                    input_1.Input.mouseDownListeners.push((x, y) => {
+                        if (!this.isMobile)
+                            return;
+                        if (this.isPointInChatHotspot(x, y)) {
+                            this.chatOpen = true;
+                            this.chatTextBox.focus();
+                            input_1.Input.mouseDownHandled = true;
+                        }
+                    });
                     this.screenShakeX = 0;
                     this.screenShakeY = 0;
                     this.shakeAmountX = 0;
@@ -22659,6 +22669,17 @@ class Game {
                 rooms: generator.getRooms(),
             });
         }
+    }
+    isPointInChatHotspot(x, y) {
+        // Define a bottom-left tap area for opening chat
+        const margin = 5;
+        const hotspotWidth = Math.min(300, Math.floor(gameConstants_1.GameConstants.WIDTH * 0.6));
+        const hotspotHeight = Math.min(64, Math.floor(gameConstants_1.GameConstants.HEIGHT * 0.25));
+        const left = margin;
+        const top = gameConstants_1.GameConstants.HEIGHT - hotspotHeight - margin;
+        const right = left + hotspotWidth;
+        const bottom = gameConstants_1.GameConstants.HEIGHT - margin;
+        return x >= left && x <= right && y >= top && y <= bottom;
     }
     destroy() {
         window.removeEventListener("blur", this.handleWindowBlur);
@@ -26795,17 +26816,18 @@ class TextBox {
         this.updateElement();
     }
     focus() {
-        // Create a temporary input element to trigger the on-screen keyboard
-        const tempInput = document.createElement("input");
-        tempInput.type = "text";
-        tempInput.style.position = "absolute";
-        tempInput.style.opacity = "0";
-        tempInput.style.zIndex = "-1"; // Ensure it doesn't interfere with the game UI
-        document.body.appendChild(tempInput);
-        tempInput.focus();
-        tempInput.addEventListener("blur", () => {
-            document.body.removeChild(tempInput);
-        });
+        const input = this.element;
+        if (input && typeof input.focus === "function") {
+            try {
+                input.focus();
+                // Place cursor at end (best effort; harmless if not supported)
+                if (typeof input.setSelectionRange === "function") {
+                    const len = input.value?.length ?? 0;
+                    input.setSelectionRange(len, len);
+                }
+            }
+            catch { }
+        }
     }
     sendMessage() {
         let message = this.message.trim();
