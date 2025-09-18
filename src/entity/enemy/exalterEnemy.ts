@@ -28,9 +28,9 @@ export class ExalterEnemy extends Enemy {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.ticks = 0;
-    this.health = 4;
+    this.health = 6;
     this.lastHealth = this.health;
-    this.maxHealth = 4;
+    this.maxHealth = 6;
     this.tileX = 59;
     this.tileY = 8;
     this.seenPlayer = true;
@@ -230,20 +230,18 @@ export class ExalterEnemy extends Enemy {
     enemy.applyBuff();
     this.buffedEnemies.push(enemy);
     if (enemy.buffed) {
-      for (let i = 0; i < 3; i++) {
-        let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
-        beam.compositeOperation = "source-over";
-        beam.color = "#00FFFF";
-        beam.turbulence = 1;
-        beam.gravity = 0;
-        beam.iterations = 3;
-        beam.segments = 10;
-        beam.angleChange = 3;
-        beam.springDamping = 0.4;
-        beam.drawableY = enemy.drawableY;
-        beam.type = "buff";
-        this.room.projectiles.push(beam);
-      }
+      let beam = new BeamEffect(enemy.x, enemy.y, this.x, this.y, enemy);
+      beam.compositeOperation = "source-over";
+      beam.color = "#00FFFF";
+      beam.turbulence = 0.4;
+      beam.gravity = 0.1;
+      beam.iterations = 1;
+      beam.segments = 100;
+      beam.angleChange = 0.001;
+      beam.springDamping = 0.01;
+      beam.drawableY = enemy.drawableY;
+      beam.type = "buff";
+      this.room.projectiles.push(beam);
     }
   };
 

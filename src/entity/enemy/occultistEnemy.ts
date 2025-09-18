@@ -27,9 +27,9 @@ export class OccultistEnemy extends Enemy {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.ticks = 0;
-    this.health = 4;
+    this.health = 6;
     this.lastHealth = this.health;
-    this.maxHealth = 4;
+    this.maxHealth = 6;
     this.tileX = 55;
     this.tileY = 8;
     this.seenPlayer = true;
