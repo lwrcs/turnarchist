@@ -874,7 +874,7 @@ export class PartitionGenerator {
     let boss = partialLevel.partitions.find((p) => p.type === RoomType.BOSS);
     let found_stair = false;
     const max_stair_tries = 5;
-    const stairRoomWidth = 5;
+    const stairRoomWidth = 7;
     const stairRoomHeight = 5;
 
     for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {

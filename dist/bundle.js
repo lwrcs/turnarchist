@@ -36896,7 +36896,7 @@ class PartitionGenerator {
         let boss = partialLevel.partitions.find((p) => p.type === room_1.RoomType.BOSS);
         let found_stair = false;
         const max_stair_tries = 5;
-        const stairRoomWidth = 5;
+        const stairRoomWidth = 7;
         const stairRoomHeight = 5;
         for (let stair_tries = 0; stair_tries < max_stair_tries; stair_tries++) {
             let stair = new Partition(game_1.Game.rand(boss.x - 1, boss.x + boss.w - 2, random_1.Random.rand), boss.y - stairRoomHeight - 1, stairRoomWidth, stairRoomHeight, "white");
@@ -45754,6 +45754,10 @@ class Populator {
             room.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(room, room.game, x + 1, y - 1);
             const numChests = Math.ceil(random_1.Random.rand() * 5);
             let tiles = room.getEmptyTiles();
+            let positions = [];
+            if (room.depth === 0)
+                positions = this.populateWeaponGroup(room, tiles);
+            tiles = tiles.filter((tile) => !positions.some((position) => position.x === tile.x && position.y === tile.y));
             tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
             let weaponDropped = false;
             let toolDropped = false;
@@ -45785,23 +45789,80 @@ class Populator {
                     room.entities.push(chest);
                 }
             }
-            if (room.depth === 0)
-                this.populateWeaponGroup(room, tiles);
         };
         this.populateWeaponGroup = (room, tiles) => {
-            const emptyTile = room.getRandomEmptyPosition(tiles);
-            const emptyTile2 = room.getRandomEmptyPosition(tiles, emptyTile);
-            const emptyTile3 = room.getRandomEmptyPosition(tiles, emptyTile2);
+            // Target the top interior row for this room
+            const topY = room.roomY + 1;
+            const minInteriorX = room.roomX + 1;
+            const maxInteriorX = room.roomX + room.width - 2;
+            const topRowTiles = tiles.filter((tile) => tile.y === topY && tile.x >= minInteriorX && tile.x <= maxInteriorX);
+            if (topRowTiles.length === 0)
+                return; // nothing to place on
+            // Determine center X of the room in tile coordinates
+            const center = room.getRoomCenter();
+            const centerX = center.x;
+            // Collect unique, sorted X positions on the top row
+            const xs = Array.from(new Set(topRowTiles.map((t) => t.x))).sort((a, b) => a - b);
+            if (xs.length < 3)
+                return; // not enough space
+            // Pick the middle position closest to centerX (keep this one unchanged)
+            const midX = xs
+                .slice()
+                .sort((a, b) => Math.abs(a - centerX) - Math.abs(b - centerX))[0];
+            // Choose left/right positions leaving exactly one empty tile between them and the middle (gap of 1)
+            const leftCandidates = xs.filter((x) => x < midX);
+            const rightCandidates = xs.filter((x) => x > midX);
+            const availableX = new Set(xs);
+            const preferredLeft = midX - 2;
+            const preferredRight = midX + 2;
+            // Try to use preferred positions; otherwise choose the closest positions that still keep a gap (<= midX - 2 or >= midX + 2)
+            let leftX = availableX.has(preferredLeft)
+                ? preferredLeft
+                : leftCandidates.filter((x) => x <= midX - 2).slice(-1)[0];
+            let rightX = availableX.has(preferredRight)
+                ? preferredRight
+                : rightCandidates.filter((x) => x >= midX + 2)[0];
+            // Absolute fallback if no gap-capable tiles exist on a side: allow nearest on that side (may violate gap in very tight rooms)
+            if (leftX === undefined && leftCandidates.length > 0) {
+                leftX = leftCandidates[leftCandidates.length - 1];
+            }
+            if (rightX === undefined && rightCandidates.length > 0) {
+                rightX = rightCandidates[0];
+            }
+            let positions = [];
+            if (leftX !== undefined && rightX !== undefined) {
+                positions = [
+                    { x: leftX, y: topY },
+                    { x: midX, y: topY },
+                    { x: rightX, y: topY },
+                ];
+            }
+            else {
+                // Fallback: pick the three closest to centerX and sort
+                const sorted = topRowTiles
+                    .slice()
+                    .sort((a, b) => Math.abs(a.x - centerX) - Math.abs(b.x - centerX));
+                positions = sorted.slice(0, 3).map((t) => ({ x: t.x, y: topY }));
+                if (positions.length < 3)
+                    return; // not enough space
+                positions.sort((a, b) => a.x - b.x);
+            }
+            // Randomize the order of positions (Fisher–Yates shuffle)
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = game_1.Game.rand(0, i, random_1.Random.rand);
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
             const weapons = new itemGroup_1.ItemGroup([
-                new spear_1.Spear(room, emptyTile.x, emptyTile.y),
-                new warhammer_1.Warhammer(room, emptyTile2.x, emptyTile2.y),
-                new sword_1.Sword(room, emptyTile3.x, emptyTile3.y),
+                new spear_1.Spear(room, positions[0].x, positions[0].y),
+                new warhammer_1.Warhammer(room, positions[1].x, positions[1].y),
+                new sword_1.Sword(room, positions[2].x, positions[2].y),
             ]);
             for (const item of weapons.items) {
                 item.grouped = true;
                 item.group = weapons;
                 room.items.push(item);
             }
+            return positions;
         };
         this.populateRopeHole = (room, rand) => {
             // Removed: this.addRandomTorches(room, "medium");
