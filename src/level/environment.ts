@@ -47,6 +47,7 @@ import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { GarnetResource } from "../entity/resource/garnetResource";
 import { ZirconResource } from "../entity/resource/zirconResource";
 import { AmberResource } from "../entity/resource/amberResource";
+import { Candelabra } from "../entity/object/candelabra";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -322,12 +323,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.CASTLE]: {
     props: [
       { class: NullProp, weight: 1 },
-      { class: Crate, weight: 10 },
-      { class: Barrel, weight: 8 },
-      { class: Block, weight: 6 },
-      { class: PottedPlant, weight: 0.4 },
-      { class: Pot, weight: 0.3 },
-      { class: Chest, weight: 0.2 },
+      { class: Crate, weight: 2 },
+      { class: Barrel, weight: 2 },
+      { class: Block, weight: 0.25 },
+      { class: PottedPlant, weight: 0.1 },
+      { class: Pot, weight: 0.1 },
+      { class: Chest, weight: 0.1 },
+      { class: Candelabra, weight: 0.5 },
     ],
     enemies: [
       // Royal guards and castle defenders

@@ -8673,7 +8673,7 @@ module.exports = __webpack_require__.p + "assets/mobset.8cb803e90b81a07d843c.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.754f19334f056c0ca975.png";
+module.exports = __webpack_require__.p + "assets/objset.d2ed0e1546a42b5b9846.png";
 
 /***/ }),
 
@@ -19173,6 +19173,69 @@ class Bush extends entity_1.Entity {
     }
 }
 exports.Bush = Bush;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/candelabra.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/object/candelabra.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Candelabra = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
+class Candelabra extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.frame += 0.25 * delta;
+            if (this.frame >= 4)
+                this.frame = 0;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 10;
+        this.tileY = 4;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "candelabra";
+        this.drops.push(new candle_1.Candle(this.room, this.x, this.y));
+        this.imageParticleX = 0;
+        this.imageParticleY = 25;
+        this.bloomColor = "#FFA500";
+        this.hasBloom = true;
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [200, 30, 1], 4);
+        this.addLightSource(this.lightSource);
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Candelabra = Candelabra;
 
 
 /***/ }),
@@ -34193,6 +34256,7 @@ const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
+const candelabra_1 = __webpack_require__(/*! ../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -34429,12 +34493,13 @@ const environmentData = {
     [environmentTypes_1.EnvType.CASTLE]: {
         props: [
             { class: NullProp, weight: 1 },
-            { class: crate_1.Crate, weight: 10 },
-            { class: barrel_1.Barrel, weight: 8 },
-            { class: block_1.Block, weight: 6 },
-            { class: pottedPlant_1.PottedPlant, weight: 0.4 },
-            { class: pot_1.Pot, weight: 0.3 },
-            { class: chest_1.Chest, weight: 0.2 },
+            { class: crate_1.Crate, weight: 2 },
+            { class: barrel_1.Barrel, weight: 2 },
+            { class: block_1.Block, weight: 0.25 },
+            { class: pottedPlant_1.PottedPlant, weight: 0.1 },
+            { class: pot_1.Pot, weight: 0.1 },
+            { class: chest_1.Chest, weight: 0.1 },
+            { class: candelabra_1.Candelabra, weight: 0.5 },
         ],
         enemies: [
             // Royal guards and castle defenders
