@@ -8640,7 +8640,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.ee6498dd08da4789aead.png";
+module.exports = __webpack_require__.p + "assets/fxset.77132f32a0de10fc9bd0.png";
 
 /***/ }),
 
@@ -8662,7 +8662,7 @@ module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.8cb803e90b81a07d843c.png";
+module.exports = __webpack_require__.p + "assets/mobset.2003596758c41bd15a3a.png";
 
 /***/ }),
 
@@ -8673,7 +8673,7 @@ module.exports = __webpack_require__.p + "assets/mobset.8cb803e90b81a07d843c.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.d2ed0e1546a42b5b9846.png";
+module.exports = __webpack_require__.p + "assets/objset.024899094523d75f6210.png";
 
 /***/ }),
 
@@ -13725,11 +13725,11 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.buffedBefore = false;
         this.buffedEnemies = [];
         this.shadeColor = "#000000";
-        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [1, 20, 30], 3.5, 20);
+        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [10, 15, 50], 3.5, 20);
         this.addLightSource(this.lightSource);
         this.room.updateLighting();
         this.hasBloom = true;
-        this.bloomColor = "#00FFFF"; //cyan;
+        this.bloomColor = "#639bff"; //cyan;
         this.bloomAlpha = 0.5;
         this.softBloomAlpha = 0;
         this.dropChance = 1;
@@ -14371,6 +14371,206 @@ exports.GlowBugEnemy = GlowBugEnemy;
 GlowBugEnemy.difficulty = 1;
 GlowBugEnemy.tileX = 8;
 GlowBugEnemy.tileY = 4;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/kingEnemy.ts":
+/*!***************************************!*\
+  !*** ./src/entity/enemy/kingEnemy.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.KingEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+class KingEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.justHurt = false;
+        this.hit = () => {
+            return this.damage;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (this.health <= 1)
+                this.imageParticleY = 29; //no crown particle
+            if (!this.dead) {
+                if (this.skipNextTurns > 0) {
+                    this.skipNextTurns--;
+                    return;
+                }
+                this.ticks++;
+                if (!this.seenPlayer) {
+                    this.justHurt = false;
+                    let p = this.nearestPlayer();
+                    if (p !== false) {
+                        let [distance, player] = p;
+                        if (distance <= 4) {
+                            this.targetPlayer = player;
+                            this.facePlayer(player);
+                            this.seenPlayer = true;
+                            if (player === this.game.players[this.game.localPlayerID])
+                                this.alertTicks = 1;
+                            this.makeHitWarnings();
+                        }
+                    }
+                }
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        let oldX = this.x;
+                        let oldY = this.y;
+                        let disablePositions = Array();
+                        for (const e of this.room.entities) {
+                            if (e !== this) {
+                                disablePositions.push({ x: e.x, y: e.y });
+                            }
+                        }
+                        for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                            for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                    this.room.roomArray[xx][yy].on) {
+                                    // don't walk on active spiketraps
+                                    disablePositions.push({ x: xx, y: yy });
+                                }
+                            }
+                        }
+                        let grid = [];
+                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                            grid[x] = [];
+                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                    grid[x][y] = this.room.roomArray[x][y];
+                                else
+                                    grid[x][y] = false;
+                            }
+                        }
+                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, true, //diagonals
+                        false, //diagonalsOnly
+                        undefined, undefined, undefined, false);
+                        if (this.justHurt) {
+                            this.retreat(oldX, oldY);
+                        }
+                        else if (moves.length > 0 && this.ticks % 2 === 0) {
+                            disablePositions.push({ x: oldX + 1, y: oldY });
+                            disablePositions.push({ x: oldX - 1, y: oldY });
+                            disablePositions.push({ x: oldX, y: oldY + 1 });
+                            disablePositions.push({ x: oldX, y: oldY - 1 });
+                            let moveX = moves[0].pos.x;
+                            let moveY = moves[0].pos.y;
+                            let hitPlayer = false;
+                            for (const i in this.game.players) {
+                                if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                                    this.game.players[i].x === moveX &&
+                                    this.game.players[i].y === moveY) {
+                                    this.game.players[i].hurt(this.hit(), this.name);
+                                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                    if (this.game.players[i] ===
+                                        this.game.players[this.game.localPlayerID])
+                                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                }
+                            }
+                            if (!hitPlayer) {
+                                //if ()
+                                this.tryMove(moveX, moveY);
+                                this.setDrawXY(oldX, oldY);
+                            }
+                        }
+                        if (this.ticks % 2 !== 0)
+                            this.makeHitWarnings();
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    this.makeHitWarnings();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.jump = (delta) => {
+            let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            let jumpY = Math.abs(Math.sin(j * Math.PI)) * this.jumpHeight;
+            if (jumpY < 0.01)
+                jumpY = 0;
+            if (jumpY > this.jumpHeight)
+                jumpY = this.jumpHeight;
+            this.jumpY = jumpY;
+        };
+        this.draw = (delta) => {
+            let offsetTileY = this.health <= 1 ? 0 : -3;
+            if (this.cloned)
+                offsetTileY = 0;
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY - 1, 1, 3, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 2;
+        this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
+        this.tileX = 51;
+        this.tileY = 15;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "king";
+        this.orthogonalAttack = true;
+        this.diagonalAttack = true;
+        this.jumpHeight = 1;
+        this.imageParticleX = 6;
+        this.imageParticleY = 25; //includes crown particle
+        this.baseDamage = 2;
+        if (drop)
+            this.drop = drop;
+        this.armored = true;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+}
+exports.KingEnemy = KingEnemy;
+KingEnemy.difficulty = 4;
+KingEnemy.tileX = 23;
+KingEnemy.tileY = 8;
 
 
 /***/ }),
@@ -34257,6 +34457,7 @@ const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResour
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const candelabra_1 = __webpack_require__(/*! ../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
+const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -34279,6 +34480,7 @@ exports.enemyClassToId = new Map([
     [pawnEnemy_1.PawnEnemy, 18],
     [bigFrogEnemy_1.BigFrogEnemy, 19],
     [beetleEnemy_1.BeetleEnemy, 20],
+    [kingEnemy_1.KingEnemy, 21],
 ]);
 class Environment {
     constructor(type) {
@@ -34320,6 +34522,7 @@ const environmentData = {
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.25, minDepth: 3 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -34515,6 +34718,7 @@ const environmentData = {
             { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0 },
             { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 0 },
             // Castle undead
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.25, minDepth: 0 },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.25, minDepth: 0 },
@@ -42016,6 +42220,7 @@ const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -42053,6 +42258,7 @@ var EnemyType;
     EnemyType["beetle"] = "beetle";
     EnemyType["bigfrog"] = "bigfrog";
     EnemyType["exalter"] = "exalter";
+    EnemyType["king"] = "king";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -42089,6 +42295,7 @@ exports.EnemyTypeMap = {
     [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
     [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
+    [EnemyType.king]: kingEnemy_1.KingEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

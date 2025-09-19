@@ -48,6 +48,7 @@ import { GarnetResource } from "../entity/resource/garnetResource";
 import { ZirconResource } from "../entity/resource/zirconResource";
 import { AmberResource } from "../entity/resource/amberResource";
 import { Candelabra } from "../entity/object/candelabra";
+import { KingEnemy } from "../entity/enemy/kingEnemy";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -71,6 +72,7 @@ export const enemyClassToId: Map<any, number> = new Map([
   [PawnEnemy, 18],
   [BigFrogEnemy, 19],
   [BeetleEnemy, 20],
+  [KingEnemy, 21],
 ]);
 
 export class Environment {
@@ -140,6 +142,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
       { class: PawnEnemy, weight: 1.0, minDepth: 1 },
+      { class: KingEnemy, weight: 0.25, minDepth: 3 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -345,6 +348,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: RookEnemy, weight: 1, minDepth: 0 }, // Castle guardians
       { class: BishopEnemy, weight: 1, minDepth: 0 }, // Castle clergy
       { class: QueenEnemy, weight: 0.5, minDepth: 0 }, // Royal enemies
+      { class: KingEnemy, weight: 0.125, minDepth: 0 },
 
       // Castle undead
       { class: ArmoredzombieEnemy, weight: 0.25, minDepth: 0 }, // Fallen guards

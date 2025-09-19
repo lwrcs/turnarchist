@@ -45,14 +45,14 @@ export class ExalterEnemy extends Enemy {
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
-      [1, 20, 30],
+      [10, 15, 50],
       3.5,
       20,
     );
     this.addLightSource(this.lightSource);
     this.room.updateLighting();
     this.hasBloom = true;
-    this.bloomColor = "#00FFFF"; //cyan;
+    this.bloomColor = "#639bff"; //cyan;
     this.bloomAlpha = 0.5;
     this.softBloomAlpha = 0;
     this.dropChance = 1;
