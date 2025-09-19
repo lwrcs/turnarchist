@@ -204,7 +204,7 @@ export class DropTable {
     { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
-    { itemType: "gold ore", dropRate: 350, category: ["resource"] },
+    { itemType: "goldOre", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
       itemType: "coal",

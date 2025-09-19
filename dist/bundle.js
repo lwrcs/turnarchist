@@ -30607,7 +30607,7 @@ DropTable.drops = [
     { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
-    { itemType: "gold ore", dropRate: 350, category: ["resource"] },
+    { itemType: "goldOre", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
         itemType: "coal",
@@ -30974,7 +30974,7 @@ class Item extends drawable_1.Drawable {
         // Function to play sound when item is picked up
         this.pickupSound = () => {
             let delay = 0;
-            if (gameConstants_1.GameConstants.ITEM_AUTO_PICKUP)
+            if (gameConstants_1.GameConstants.ITEM_AUTO_PICKUP && this.animateToInventory)
                 delay = Math.ceil(random_1.Random.rand() * 200 + 400);
             if (this.level === this.level.game.room)
                 sound_1.Sound.delayPlay(sound_1.Sound.genericPickup, delay);

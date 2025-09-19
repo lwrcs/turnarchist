@@ -134,7 +134,7 @@ export class Item extends Drawable {
   // Function to play sound when item is picked up
   pickupSound = () => {
     let delay = 0;
-    if (GameConstants.ITEM_AUTO_PICKUP)
+    if (GameConstants.ITEM_AUTO_PICKUP && this.animateToInventory)
       delay = Math.ceil(Random.rand() * 200 + 400);
 
     if (this.level === this.level.game.room)
