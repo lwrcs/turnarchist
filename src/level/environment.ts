@@ -49,6 +49,9 @@ import { ZirconResource } from "../entity/resource/zirconResource";
 import { AmberResource } from "../entity/resource/amberResource";
 import { Candelabra } from "../entity/object/candelabra";
 import { KingEnemy } from "../entity/enemy/kingEnemy";
+import { BishopStatue } from "../entity/object/bishopStatue";
+import { RookStatue } from "../entity/object/rookStatue";
+import { PawnStatue } from "../entity/object/pawnStatue";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -333,6 +336,9 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Pot, weight: 0.1 },
       { class: Chest, weight: 0.1 },
       { class: Candelabra, weight: 0.5 },
+      { class: PawnStatue, weight: 0.75 },
+      { class: RookStatue, weight: 0.75 },
+      { class: BishopStatue, weight: 0.75 },
     ],
     enemies: [
       // Royal guards and castle defenders

@@ -11,6 +11,7 @@ import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 import { RedGem } from "../../item/resource/redgem";
+import { LightSource } from "../../lighting/lightSource";
 
 export class GarnetResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -19,10 +20,22 @@ export class GarnetResource extends Resource {
     this.tileX = 15;
     this.tileY = 0;
     this.health = 3;
+    this.hasBloom = true;
+    this.bloomColor = "#FF0000"; //red hex color;
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
     this.name = "garnet";
     if (Random.rand() < 0.025) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     this.drops.push(new RedGem(this.room, this.x, this.y));
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      7,
+      [150, 0, 0], //dark dim red,
+      2,
+    );
+    this.addLightSource(this.lightSource);
   }
 }

@@ -13,6 +13,7 @@ import { Random } from "../../utility/random";
 import { RedGem } from "../../item/resource/redgem";
 import { BlueGem } from "../../item/resource/bluegem";
 import { OrangeGem } from "../../item/resource/orangegem";
+import { LightSource } from "../../lighting/lightSource";
 
 export class AmberResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -21,10 +22,22 @@ export class AmberResource extends Resource {
     this.tileX = 17;
     this.tileY = 0;
     this.health = 3;
+    this.hasBloom = true;
+    this.bloomColor = "#FFA500"; //orange hex color;
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
     this.name = "amber";
     if (Random.rand() < 0.025) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     this.drops.push(new OrangeGem(this.room, this.x, this.y));
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      7,
+      [100, 30, 1],
+      1,
+    );
+    this.addLightSource(this.lightSource);
   }
 }

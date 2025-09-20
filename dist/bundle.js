@@ -8684,7 +8684,7 @@ module.exports = __webpack_require__.p + "assets/objset.024899094523d75f6210.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.b8c29399963852e689ef.png";
+module.exports = __webpack_require__.p + "assets/tileset.c2ab57b53dd5d0adfdfa.png";
 
 /***/ }),
 
@@ -19114,6 +19114,66 @@ exports.Barrel = Barrel;
 
 /***/ }),
 
+/***/ "./src/entity/object/bishopStatue.ts":
+/*!*******************************************!*\
+  !*** ./src/entity/object/bishopStatue.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BishopStatue = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class BishopStatue extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 7;
+        this.tileY = 4;
+        this.hasShadow = true;
+        this.pushable = true;
+        this.name = "bishopStatue";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+        if (random_1.Random.rand() < 0.1) {
+            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
+        }
+        else {
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+        }
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.BishopStatue = BishopStatue;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/block.ts":
 /*!************************************!*\
   !*** ./src/entity/object/block.ts ***!
@@ -19953,6 +20013,66 @@ exports.Mushrooms = Mushrooms;
 
 /***/ }),
 
+/***/ "./src/entity/object/pawnStatue.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/object/pawnStatue.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PawnStatue = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class PawnStatue extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 6;
+        this.tileY = 4;
+        this.hasShadow = true;
+        this.pushable = true;
+        this.name = "pawnStatue";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+        if (random_1.Random.rand() < 0.1) {
+            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
+        }
+        else {
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+        }
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.PawnStatue = PawnStatue;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/pot.ts":
 /*!**********************************!*\
   !*** ./src/entity/object/pot.ts ***!
@@ -20138,6 +20258,66 @@ class Pumpkin extends entity_1.Entity {
     }
 }
 exports.Pumpkin = Pumpkin;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/rookStatue.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/object/rookStatue.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RookStatue = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class RookStatue extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 5;
+        this.tileY = 4;
+        this.hasShadow = true;
+        this.pushable = true;
+        this.name = "rookStatue";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+        if (random_1.Random.rand() < 0.1) {
+            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
+        }
+        else {
+            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+        }
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.RookStatue = RookStatue;
 
 
 /***/ }),
@@ -20688,17 +20868,24 @@ const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const orangegem_1 = __webpack_require__(/*! ../../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class AmberResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.tileX = 17;
         this.tileY = 0;
         this.health = 3;
+        this.hasBloom = true;
+        this.bloomColor = "#FFA500"; //orange hex color;
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
         this.name = "amber";
         if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new orangegem_1.OrangeGem(this.room, this.x, this.y));
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [100, 30, 1], 1);
+        this.addLightSource(this.lightSource);
     }
 }
 exports.AmberResource = AmberResource;
@@ -20752,17 +20939,24 @@ const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./sr
 const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class EmeraldResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.tileX = 14;
         this.tileY = 0;
         this.health = 3;
+        this.hasBloom = true;
+        this.bloomColor = "#05FF05";
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
         this.name = "emerald";
         if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new greengem_1.GreenGem(this.room, this.x, this.y));
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 150, 5], 1);
+        this.addLightSource(this.lightSource);
     }
 }
 exports.EmeraldResource = EmeraldResource;
@@ -20784,17 +20978,25 @@ const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class GarnetResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.tileX = 15;
         this.tileY = 0;
         this.health = 3;
+        this.hasBloom = true;
+        this.bloomColor = "#FF0000"; //red hex color;
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
         this.name = "garnet";
         if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new redgem_1.RedGem(this.room, this.x, this.y));
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [150, 0, 0], //dark dim red,
+        2);
+        this.addLightSource(this.lightSource);
     }
 }
 exports.GarnetResource = GarnetResource;
@@ -20997,6 +21199,7 @@ const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/
 const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const bluegem_1 = __webpack_require__(/*! ../../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 class ZirconResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -21004,10 +21207,17 @@ class ZirconResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 3;
         this.name = "zircon";
+        this.hasBloom = true;
+        this.bloomColor = "#0005FF"; //cyan hex color;
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
         if (random_1.Random.rand() < 0.025) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new bluegem_1.BlueGem(this.room, this.x, this.y));
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 5, 100], //dark dim blue,
+        2);
+        this.addLightSource(this.lightSource);
     }
 }
 exports.ZirconResource = ZirconResource;
@@ -34458,6 +34668,9 @@ const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResour
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const candelabra_1 = __webpack_require__(/*! ../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
+const bishopStatue_1 = __webpack_require__(/*! ../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
+const rookStatue_1 = __webpack_require__(/*! ../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
+const pawnStatue_1 = __webpack_require__(/*! ../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -34703,6 +34916,9 @@ const environmentData = {
             { class: pot_1.Pot, weight: 0.1 },
             { class: chest_1.Chest, weight: 0.1 },
             { class: candelabra_1.Candelabra, weight: 0.5 },
+            { class: pawnStatue_1.PawnStatue, weight: 0.75 },
+            { class: rookStatue_1.RookStatue, weight: 0.75 },
+            { class: bishopStatue_1.BishopStatue, weight: 0.75 },
         ],
         enemies: [
             // Royal guards and castle defenders
