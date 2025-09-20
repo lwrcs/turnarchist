@@ -491,6 +491,16 @@ export class Room {
     // #endregion
   }
 
+  playMusic = () => {
+    if (this.envType === EnvType.FOREST) {
+      Sound.playForestMusic();
+    } else if (this.envType === EnvType.CAVE) {
+      Sound.playCaveMusic();
+    } else {
+      Sound.stopMusic();
+    }
+  };
+
   // #region TILE ADDING METHODS
 
   removeWall = (x: number, y: number) => {
@@ -1045,6 +1055,7 @@ export class Room {
     placeY?: number,
     item?: Item,
   ) {
+    if (this.height <= 2 || this.width <= 2) return;
     const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
 
     let x = placeX ? placeX : pos.x;
@@ -1215,6 +1226,7 @@ export class Room {
 
     player.moveSnap(x, y);
     this.onEnterRoom(player);
+    this.playMusic();
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {

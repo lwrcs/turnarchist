@@ -712,9 +712,6 @@ export class Game {
       this.prevLevel.exitLevel();
     }
 
-    if (newRoom.envType === 2) Sound.playForestMusic();
-    if (newRoom.envType === 1) Sound.playCaveMusic();
-
     this.updateDepth(newRoom.depth);
 
     this.levelState = LevelState.TRANSITIONING_LADDER;

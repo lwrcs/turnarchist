@@ -638,6 +638,13 @@ export class Sound {
     }
   };
 
+  static stopMusic = () => {
+    if (Sound.forestMusicId || Sound.caveMusicId) {
+      Sound.forestMusic.stop(Sound.forestMusicId);
+      Sound.caveMusic.stop(Sound.caveMusicId);
+    }
+  };
+
   static doorOpen = () => {
     if (Sound.audioMuted) return;
     let f = Game.randTable(Sound.doorOpenSounds, Random.rand);

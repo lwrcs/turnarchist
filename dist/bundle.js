@@ -8662,7 +8662,7 @@ module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.2003596758c41bd15a3a.png";
+module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png";
 
 /***/ }),
 
@@ -21644,10 +21644,6 @@ class Game {
                 this.prevLevel = this.room;
                 this.prevLevel.exitLevel();
             }
-            if (newRoom.envType === 2)
-                sound_1.Sound.playForestMusic();
-            if (newRoom.envType === 1)
-                sound_1.Sound.playCaveMusic();
             this.updateDepth(newRoom.depth);
             this.levelState = LevelState.TRANSITIONING_LADDER;
             this.transitionStartTime = Date.now();
@@ -42589,6 +42585,17 @@ class Room {
         this.isUpdatingLighting = false;
         // Estimated number of tiles touched during lighting for dynamic tuning
         this.estimatedLightingTiles = 0;
+        this.playMusic = () => {
+            if (this.envType === environmentTypes_1.EnvType.FOREST) {
+                sound_1.Sound.playForestMusic();
+            }
+            else if (this.envType === environmentTypes_1.EnvType.CAVE) {
+                sound_1.Sound.playCaveMusic();
+            }
+            else {
+                sound_1.Sound.stopMusic();
+            }
+        };
         // #region TILE ADDING METHODS
         this.removeWall = (x, y) => {
             if (this.roomArray[x][y] instanceof wall_1.Wall) {
@@ -42779,6 +42786,7 @@ class Room {
             }
             player.moveSnap(x, y);
             this.onEnterRoom(player);
+            this.playMusic();
         };
         this.enterLevelThroughDoor = (player, door, side) => {
             // console.log(door.linkedDoor.x, door.linkedDoor.y, door.x, door.y);
@@ -45465,6 +45473,8 @@ class Room {
         }
     }
     addVendingMachine(rand, placeX, placeY, item) {
+        if (this.height <= 2 || this.width <= 2)
+            return;
         const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
         let x = placeX ? placeX : pos.x;
         let y = placeY ? placeY : pos.y;
@@ -48169,6 +48179,12 @@ Sound.playForestMusic = (index = 0) => {
     }
     catch (error) {
         console.error("Error playing forest music:", error);
+    }
+};
+Sound.stopMusic = () => {
+    if (Sound.forestMusicId || Sound.caveMusicId) {
+        Sound.forestMusic.stop(Sound.forestMusicId);
+        Sound.caveMusic.stop(Sound.caveMusicId);
     }
 };
 Sound.doorOpen = () => {
