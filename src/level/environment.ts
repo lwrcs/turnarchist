@@ -52,6 +52,7 @@ import { KingEnemy } from "../entity/enemy/kingEnemy";
 import { BishopStatue } from "../entity/object/bishopStatue";
 import { RookStatue } from "../entity/object/rookStatue";
 import { PawnStatue } from "../entity/object/pawnStatue";
+import { FallenPillar } from "../entity/object/fallenPillar";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -95,6 +96,7 @@ interface PropInfo {
   weight?: number; // Spawn weight
   blacklistedEnvironments?: EnvType[]; // Environments where this prop shouldn't spawn
   additionalParams?: any[]; // Extra constructor parameters if needed
+  size?: { w: number; h: number }; // Optional footprint size in tiles
 }
 
 interface EnemyInfo {
@@ -339,6 +341,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: PawnStatue, weight: 0.75 },
       { class: RookStatue, weight: 0.75 },
       { class: BishopStatue, weight: 0.75 },
+      { class: FallenPillar, weight: 0.5, size: { w: 2, h: 1 } },
     ],
     enemies: [
       // Royal guards and castle defenders

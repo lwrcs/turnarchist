@@ -328,14 +328,33 @@ export class Populator {
     for (let i = 0; i < numProps; i++) {
       if (tiles.length === 0) break;
 
-      const position = room.getRandomEmptyPosition(tiles);
-      if (position === null) break;
-      const { x, y } = position;
       const selectedProp = Utils.randTableWeighted(envData.props);
-      // NullProp or any entry without an add simply consumes a slot
-      if (selectedProp && selectedProp.class && selectedProp.class.add) {
+      if (!selectedProp) continue;
+
+      // Determine required footprint
+      const size = selectedProp.size || { w: 1, h: 1 };
+
+      // Find a placement that fits the footprint on currently-empty tiles
+      const pos =
+        size.w === 1 && size.h === 1
+          ? room.getRandomEmptyPosition(tiles)
+          : room.getEmptyAreaPosition(tiles, size.w, size.h);
+
+      if (!pos) break;
+      const { x, y } = pos;
+
+      // Place the prop
+      if (selectedProp.class && selectedProp.class.add) {
         const args = selectedProp.additionalParams || [];
         selectedProp.class.add(room, room.game, x, y, ...args);
+      }
+
+      // Remove used tiles from the tiles list according to footprint
+      for (let dx = 0; dx < size.w; dx++) {
+        for (let dy = 0; dy < size.h; dy++) {
+          const idx = tiles.findIndex((t) => t.x === x + dx && t.y === y + dy);
+          if (idx !== -1) tiles.splice(idx, 1);
+        }
       }
     }
   }
@@ -360,11 +379,49 @@ export class Populator {
     const clusterer = new PropClusterer(room, clusteringOptions);
     const positions = clusterer.generateClusteredPositions(numProps);
 
-    for (const { x, y } of positions) {
+    // Convert clustered single-tile seeds into valid placements for larger footprints
+    let tiles = room.getEmptyTiles();
+    for (const seed of positions) {
+      if (tiles.length === 0) break;
       const selectedProp = Utils.randTableWeighted(envData.props);
-      if (selectedProp && selectedProp.class && selectedProp.class.add) {
+      if (!selectedProp) continue;
+      const size = selectedProp.size || { w: 1, h: 1 };
+
+      let pos: { x: number; y: number } | null = null;
+      if (size.w === 1 && size.h === 1) {
+        // Use the seed directly if available
+        const hasSeed = tiles.some((t) => t.x === seed.x && t.y === seed.y);
+        pos = hasSeed
+          ? { x: seed.x, y: seed.y }
+          : room.getRandomEmptyPosition(tiles);
+      } else {
+        // Try to anchor the footprint at or near the seed
+        // First, build a small neighborhood tile list near the seed
+        const neighborhood = tiles.filter(
+          (t) =>
+            Math.abs(t.x - seed.x) <= size.w &&
+            Math.abs(t.y - seed.y) <= size.h,
+        );
+        pos = room.getEmptyAreaPosition(
+          neighborhood.length ? neighborhood : tiles,
+          size.w,
+          size.h,
+        );
+      }
+
+      if (!pos) continue;
+      const { x, y } = pos;
+
+      if (selectedProp.class && selectedProp.class.add) {
         const args = selectedProp.additionalParams || [];
         selectedProp.class.add(room, room.game, x, y, ...args);
+      }
+
+      for (let dx = 0; dx < size.w; dx++) {
+        for (let dy = 0; dy < size.h; dy++) {
+          const idx = tiles.findIndex((t) => t.x === x + dx && t.y === y + dy);
+          if (idx !== -1) tiles.splice(idx, 1);
+        }
       }
     }
   }

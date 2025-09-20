@@ -3662,6 +3662,46 @@ export class Room {
       bigTilePositions[Game.rand(0, bigTilePositions.length - 1, Random.rand)];
     return { x: selectedTile.x, y: selectedTile.y };
   }
+
+  /**
+   * Returns the top-left coordinates of an empty rectangular area of size w x h, or null if none.
+   * Uses only the provided tiles array, which should come from getEmptyTiles() or a filtered variant.
+   */
+  getEmptyAreaPosition(
+    tiles: Tile[],
+    w: number,
+    h: number,
+  ): { x: number; y: number } | null {
+    if (!tiles || tiles.length === 0) return null;
+    if (w <= 0 || h <= 0) return null;
+
+    // Build a set for O(1) membership checks
+    const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
+
+    // Candidate top-left tiles must themselves be empty
+    const candidates = tiles.filter((t) => {
+      // Early bounds check using room limits
+      if (
+        t.x + w > this.roomX + this.width ||
+        t.y + h > this.roomY + this.height ||
+        t.x < this.roomX ||
+        t.y < this.roomY
+      )
+        return false;
+
+      // Ensure entire w x h area is in the tile set
+      for (let dx = 0; dx < w; dx++) {
+        for (let dy = 0; dy < h; dy++) {
+          if (!tileSet.has(`${t.x + dx},${t.y + dy}`)) return false;
+        }
+      }
+      return true;
+    });
+
+    if (candidates.length === 0) return null;
+    const pick = candidates[Game.rand(0, candidates.length - 1, Random.rand)];
+    return { x: pick.x, y: pick.y };
+  }
   // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
   getRoomCenter(): { x: number; y: number } {
     return {

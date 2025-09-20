@@ -8673,7 +8673,7 @@ module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.024899094523d75f6210.png";
+module.exports = __webpack_require__.p + "assets/objset.8f0e0d9b5111a36dd7a0.png";
 
 /***/ }),
 
@@ -19771,6 +19771,61 @@ class DecoBlock extends entity_1.Entity {
     }
 }
 exports.DecoBlock = DecoBlock;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/fallenPillar.ts":
+/*!*******************************************!*\
+  !*** ./src/entity/object/fallenPillar.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FallenPillar = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class FallenPillar extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY + 0.75, 2, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 0;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.pushable = false;
+        this.w = 2;
+        this.name = "fallen pillar";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        //this.drawYOffset = 0.1;
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.FallenPillar = FallenPillar;
 
 
 /***/ }),
@@ -34667,6 +34722,7 @@ const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/
 const bishopStatue_1 = __webpack_require__(/*! ../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
 const rookStatue_1 = __webpack_require__(/*! ../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
 const pawnStatue_1 = __webpack_require__(/*! ../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
+const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -34915,6 +34971,7 @@ const environmentData = {
             { class: pawnStatue_1.PawnStatue, weight: 0.75 },
             { class: rookStatue_1.RookStatue, weight: 0.75 },
             { class: bishopStatue_1.BishopStatue, weight: 0.75 },
+            { class: fallenPillar_1.FallenPillar, weight: 0.5, size: { w: 2, h: 1 } },
         ],
         enemies: [
             // Royal guards and castle defenders
@@ -45619,6 +45676,39 @@ class Room {
         const selectedTile = bigTilePositions[game_1.Game.rand(0, bigTilePositions.length - 1, random_1.Random.rand)];
         return { x: selectedTile.x, y: selectedTile.y };
     }
+    /**
+     * Returns the top-left coordinates of an empty rectangular area of size w x h, or null if none.
+     * Uses only the provided tiles array, which should come from getEmptyTiles() or a filtered variant.
+     */
+    getEmptyAreaPosition(tiles, w, h) {
+        if (!tiles || tiles.length === 0)
+            return null;
+        if (w <= 0 || h <= 0)
+            return null;
+        // Build a set for O(1) membership checks
+        const tileSet = new Set(tiles.map((t) => `${t.x},${t.y}`));
+        // Candidate top-left tiles must themselves be empty
+        const candidates = tiles.filter((t) => {
+            // Early bounds check using room limits
+            if (t.x + w > this.roomX + this.width ||
+                t.y + h > this.roomY + this.height ||
+                t.x < this.roomX ||
+                t.y < this.roomY)
+                return false;
+            // Ensure entire w x h area is in the tile set
+            for (let dx = 0; dx < w; dx++) {
+                for (let dy = 0; dy < h; dy++) {
+                    if (!tileSet.has(`${t.x + dx},${t.y + dy}`))
+                        return false;
+                }
+            }
+            return true;
+        });
+        if (candidates.length === 0)
+            return null;
+        const pick = candidates[game_1.Game.rand(0, candidates.length - 1, random_1.Random.rand)];
+        return { x: pick.x, y: pick.y };
+    }
     // Used in populateUpLadder, populateDownLadder, populateRopeHole, populateRopeCave
     getRoomCenter() {
         return {
@@ -46527,15 +46617,30 @@ class Populator {
         for (let i = 0; i < numProps; i++) {
             if (tiles.length === 0)
                 break;
-            const position = room.getRandomEmptyPosition(tiles);
-            if (position === null)
-                break;
-            const { x, y } = position;
             const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
-            // NullProp or any entry without an add simply consumes a slot
-            if (selectedProp && selectedProp.class && selectedProp.class.add) {
+            if (!selectedProp)
+                continue;
+            // Determine required footprint
+            const size = selectedProp.size || { w: 1, h: 1 };
+            // Find a placement that fits the footprint on currently-empty tiles
+            const pos = size.w === 1 && size.h === 1
+                ? room.getRandomEmptyPosition(tiles)
+                : room.getEmptyAreaPosition(tiles, size.w, size.h);
+            if (!pos)
+                break;
+            const { x, y } = pos;
+            // Place the prop
+            if (selectedProp.class && selectedProp.class.add) {
                 const args = selectedProp.additionalParams || [];
                 selectedProp.class.add(room, room.game, x, y, ...args);
+            }
+            // Remove used tiles from the tiles list according to footprint
+            for (let dx = 0; dx < size.w; dx++) {
+                for (let dy = 0; dy < size.h; dy++) {
+                    const idx = tiles.findIndex((t) => t.x === x + dx && t.y === y + dy);
+                    if (idx !== -1)
+                        tiles.splice(idx, 1);
+                }
             }
         }
     }
@@ -46552,11 +46657,43 @@ class Populator {
             : environment_1.environmentData[room.level.environment.type];
         const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
         const positions = clusterer.generateClusteredPositions(numProps);
-        for (const { x, y } of positions) {
+        // Convert clustered single-tile seeds into valid placements for larger footprints
+        let tiles = room.getEmptyTiles();
+        for (const seed of positions) {
+            if (tiles.length === 0)
+                break;
             const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
-            if (selectedProp && selectedProp.class && selectedProp.class.add) {
+            if (!selectedProp)
+                continue;
+            const size = selectedProp.size || { w: 1, h: 1 };
+            let pos = null;
+            if (size.w === 1 && size.h === 1) {
+                // Use the seed directly if available
+                const hasSeed = tiles.some((t) => t.x === seed.x && t.y === seed.y);
+                pos = hasSeed
+                    ? { x: seed.x, y: seed.y }
+                    : room.getRandomEmptyPosition(tiles);
+            }
+            else {
+                // Try to anchor the footprint at or near the seed
+                // First, build a small neighborhood tile list near the seed
+                const neighborhood = tiles.filter((t) => Math.abs(t.x - seed.x) <= size.w &&
+                    Math.abs(t.y - seed.y) <= size.h);
+                pos = room.getEmptyAreaPosition(neighborhood.length ? neighborhood : tiles, size.w, size.h);
+            }
+            if (!pos)
+                continue;
+            const { x, y } = pos;
+            if (selectedProp.class && selectedProp.class.add) {
                 const args = selectedProp.additionalParams || [];
                 selectedProp.class.add(room, room.game, x, y, ...args);
+            }
+            for (let dx = 0; dx < size.w; dx++) {
+                for (let dy = 0; dy < size.h; dy++) {
+                    const idx = tiles.findIndex((t) => t.x === x + dx && t.y === y + dy);
+                    if (idx !== -1)
+                        tiles.splice(idx, 1);
+                }
             }
         }
     }
