@@ -17,7 +17,10 @@ const recordGameStats = async (
 ) => {
   const gameStats = req.body;
   logger.info("Recording game stats:", gameStats);
-  await gameStatsDal.createGameStats(gameStats);
+  await gameStatsDal.createGameStats({
+    ...gameStats,
+    ipAddress: req.ip ?? null,
+  });
   return res
     .status(HttpStatus.CREATED)
     .json({ message: "Game stats recorded successfully" });

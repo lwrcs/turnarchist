@@ -20,6 +20,7 @@ const initializeRoutes = (app: express.Application) => {
 
 export const initializeHttpServer = () => {
   const app = express();
+  app.set("trust proxy", true);
 
   initializeMiddleware(app);
   initializeRoutes(app);
