@@ -53,6 +53,9 @@ import { BishopStatue } from "../entity/object/bishopStatue";
 import { RookStatue } from "../entity/object/rookStatue";
 import { PawnStatue } from "../entity/object/pawnStatue";
 import { FallenPillar } from "../entity/object/fallenPillar";
+import { Succulent } from "../entity/object/succulent";
+import { SmallBush } from "../entity/object/smallBush";
+import { BigBlock } from "../entity/object/bigBlock";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -138,6 +141,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Chest, weight: 0.025 },
       { class: DecoBlock, weight: 0.05 },
       { class: Furnace, weight: 0.05 },
+      //{ class: BigBlock, weight: 3 },
     ],
     enemies: [
       // Early game enemies (depth 0+)
@@ -236,6 +240,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Chest, weight: 0.05 },
       { class: GlowBugEnemy, weight: 0.05 },
       { class: Tree, weight: 0.1 },
+      { class: Succulent, weight: 0.1 },
+      { class: SmallBush, weight: 0.5 },
     ],
     enemies: [
       // Nature creatures (higher weights)

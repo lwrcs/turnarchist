@@ -793,6 +793,7 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string, delay: number = 0) => {
+    if (GameConstants.DEVELOPER_MODE) return;
     // Play hurt sound if in current room
     if (this.getRoom() === this.game.room) {
       setTimeout(() => {

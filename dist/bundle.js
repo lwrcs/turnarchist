@@ -8673,7 +8673,7 @@ module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.8f0e0d9b5111a36dd7a0.png";
+module.exports = __webpack_require__.p + "assets/objset.5016e5be441d6c516853.png";
 
 /***/ }),
 
@@ -19114,6 +19114,61 @@ exports.Barrel = Barrel;
 
 /***/ }),
 
+/***/ "./src/entity/object/bigBlock.ts":
+/*!***************************************!*\
+  !*** ./src/entity/object/bigBlock.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BigBlock = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class BigBlock extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 18;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "big block";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        this.opaque = true;
+        this.hitSound = sound_1.Sound.playBush;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.BigBlock = BigBlock;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/bishopStatue.ts":
 /*!*******************************************!*\
   !*** ./src/entity/object/bishopStatue.ts ***!
@@ -20377,6 +20432,58 @@ exports.RookStatue = RookStatue;
 
 /***/ }),
 
+/***/ "./src/entity/object/smallBush.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/smallBush.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SmallBush = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class SmallBush extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 16;
+        this.tileY = 2;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "small bush";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.SmallBush = SmallBush;
+
+
+/***/ }),
+
 /***/ "./src/entity/object/sprout.ts":
 /*!*************************************!*\
   !*** ./src/entity/object/sprout.ts ***!
@@ -20425,6 +20532,58 @@ class Sprout extends entity_1.Entity {
     }
 }
 exports.Sprout = Sprout;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/succulent.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/succulent.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Succulent = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class Succulent extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 18;
+        this.tileY = 2;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "succulent";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Succulent = Succulent;
 
 
 /***/ }),
@@ -21087,6 +21246,38 @@ class GoldResource extends resource_1.Resource {
     }
 }
 exports.GoldResource = GoldResource;
+
+
+/***/ }),
+
+/***/ "./src/entity/resource/ironResource.ts":
+/*!*********************************************!*\
+  !*** ./src/entity/resource/ironResource.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IronResource = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const ironOre_1 = __webpack_require__(/*! ../../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
+class IronResource extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.tileX = 13;
+        this.tileY = 0;
+        this.health = 2;
+        this.name = "iron";
+        if (random_1.Random.rand() < 0.025) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        this.drops.push(new ironOre_1.IronOre(this.room, this.x, this.y));
+    }
+}
+exports.IronResource = IronResource;
 
 
 /***/ }),
@@ -24122,12 +24313,25 @@ const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const chestLayer_1 = __webpack_require__(/*! ../entity/object/chestLayer */ "./src/entity/object/chestLayer.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
+const bigBlock_1 = __webpack_require__(/*! ../entity/object/bigBlock */ "./src/entity/object/bigBlock.ts");
+const smallBush_1 = __webpack_require__(/*! ../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
+const succulent_1 = __webpack_require__(/*! ../entity/object/succulent */ "./src/entity/object/succulent.ts");
+const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
+const candelabra_1 = __webpack_require__(/*! ../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
+const pawnStatue_1 = __webpack_require__(/*! ../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
+const rookStatue_1 = __webpack_require__(/*! ../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
+const bishopStatue_1 = __webpack_require__(/*! ../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
 const downladderMaker_1 = __webpack_require__(/*! ../entity/downladderMaker */ "./src/entity/downladderMaker.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../entity/object/chest */ "./src/entity/object/chest.ts");
+const ironResource_1 = __webpack_require__(/*! ../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
+const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
+const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
+const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
+const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
@@ -24135,12 +24339,18 @@ const door_2 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
+const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/magmaPool.ts");
 const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
 const spawnfloor_1 = __webpack_require__(/*! ../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const spike_1 = __webpack_require__(/*! ../tile/spike */ "./src/tile/spike.ts");
 const trapdoor_1 = __webpack_require__(/*! ../tile/trapdoor */ "./src/tile/trapdoor.ts");
+const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+const fountainTile_1 = __webpack_require__(/*! ../tile/fountainTile */ "./src/tile/fountainTile.ts");
+const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
+const coffinTile_1 = __webpack_require__(/*! ../tile/coffinTile */ "./src/tile/coffinTile.ts");
 const bones_1 = __webpack_require__(/*! ../tile/bones */ "./src/tile/bones.ts");
+const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
@@ -24238,50 +24448,63 @@ var EnemyType;
     EnemyType[EnemyType["CRATE"] = 5] = "CRATE";
     EnemyType[EnemyType["EMERALD"] = 6] = "EMERALD";
     EnemyType[EnemyType["GOLD"] = 7] = "GOLD";
-    EnemyType[EnemyType["KNIGHT"] = 8] = "KNIGHT";
-    EnemyType[EnemyType["PLANT"] = 9] = "PLANT";
-    EnemyType[EnemyType["POT"] = 10] = "POT";
-    EnemyType[EnemyType["SKULL"] = 11] = "SKULL";
-    EnemyType[EnemyType["CRAB"] = 12] = "CRAB";
-    EnemyType[EnemyType["SPAWNER"] = 13] = "SPAWNER";
-    EnemyType[EnemyType["VENDINGMACHINE"] = 14] = "VENDINGMACHINE";
-    EnemyType[EnemyType["WIZARD"] = 15] = "WIZARD";
-    EnemyType[EnemyType["ZOMBIE"] = 16] = "ZOMBIE";
-    EnemyType[EnemyType["ARMOREDSKULL"] = 17] = "ARMOREDSKULL";
-    EnemyType[EnemyType["ARMOREDZOMBIE"] = 18] = "ARMOREDZOMBIE";
-    EnemyType[EnemyType["BIGKNIGHT"] = 19] = "BIGKNIGHT";
-    EnemyType[EnemyType["BIGZOMBIE"] = 20] = "BIGZOMBIE";
-    EnemyType[EnemyType["BISHOP"] = 21] = "BISHOP";
-    EnemyType[EnemyType["ENERGYWIZARD"] = 22] = "ENERGYWIZARD";
-    EnemyType[EnemyType["FIREWIZARD"] = 23] = "FIREWIZARD";
-    EnemyType[EnemyType["FROG"] = 24] = "FROG";
-    EnemyType[EnemyType["GLOWBUG"] = 25] = "GLOWBUG";
-    EnemyType[EnemyType["MUMMY"] = 26] = "MUMMY";
-    EnemyType[EnemyType["OCCULTIST"] = 27] = "OCCULTIST";
-    EnemyType[EnemyType["QUEEN"] = 28] = "QUEEN";
-    EnemyType[EnemyType["ROOK"] = 29] = "ROOK";
-    EnemyType[EnemyType["SPIDER"] = 30] = "SPIDER";
-    EnemyType[EnemyType["BUSH"] = 31] = "BUSH";
-    EnemyType[EnemyType["FISHING_SPOT"] = 32] = "FISHING_SPOT";
-    EnemyType[EnemyType["FURNACE"] = 33] = "FURNACE";
-    EnemyType[EnemyType["PUMPKIN"] = 34] = "PUMPKIN";
-    EnemyType[EnemyType["SPROUT"] = 35] = "SPROUT";
-    EnemyType[EnemyType["TOMBSTONE"] = 36] = "TOMBSTONE";
-    EnemyType[EnemyType["DECO_BLOCK"] = 37] = "DECO_BLOCK";
-    EnemyType[EnemyType["TREE"] = 38] = "TREE";
-    EnemyType[EnemyType["CHEST_LAYER"] = 39] = "CHEST_LAYER";
-    EnemyType[EnemyType["BOMB"] = 40] = "BOMB";
-    EnemyType[EnemyType["BLOCK"] = 41] = "BLOCK";
-    EnemyType[EnemyType["DOWNLADDER_MAKER"] = 42] = "DOWNLADDER_MAKER";
-    EnemyType[EnemyType["ROCK"] = 43] = "ROCK";
-    EnemyType[EnemyType["MUSHROOMS"] = 44] = "MUSHROOMS";
-    EnemyType[EnemyType["WARDEN"] = 45] = "WARDEN";
-    EnemyType[EnemyType["OBSIDIAN"] = 46] = "OBSIDIAN";
-    EnemyType[EnemyType["CRUSHER"] = 47] = "CRUSHER";
-    EnemyType[EnemyType["PAWN"] = 48] = "PAWN";
-    EnemyType[EnemyType["BIGFROG"] = 49] = "BIGFROG";
-    EnemyType[EnemyType["BEETLE"] = 50] = "BEETLE";
-    EnemyType[EnemyType["EXALTER"] = 51] = "EXALTER";
+    EnemyType[EnemyType["IRON"] = 8] = "IRON";
+    EnemyType[EnemyType["KNIGHT"] = 9] = "KNIGHT";
+    EnemyType[EnemyType["PLANT"] = 10] = "PLANT";
+    EnemyType[EnemyType["POT"] = 11] = "POT";
+    EnemyType[EnemyType["SKULL"] = 12] = "SKULL";
+    EnemyType[EnemyType["CRAB"] = 13] = "CRAB";
+    EnemyType[EnemyType["SPAWNER"] = 14] = "SPAWNER";
+    EnemyType[EnemyType["VENDINGMACHINE"] = 15] = "VENDINGMACHINE";
+    EnemyType[EnemyType["WIZARD"] = 16] = "WIZARD";
+    EnemyType[EnemyType["ZOMBIE"] = 17] = "ZOMBIE";
+    EnemyType[EnemyType["ARMOREDSKULL"] = 18] = "ARMOREDSKULL";
+    EnemyType[EnemyType["ARMOREDZOMBIE"] = 19] = "ARMOREDZOMBIE";
+    EnemyType[EnemyType["BIGKNIGHT"] = 20] = "BIGKNIGHT";
+    EnemyType[EnemyType["BIGZOMBIE"] = 21] = "BIGZOMBIE";
+    EnemyType[EnemyType["BISHOP"] = 22] = "BISHOP";
+    EnemyType[EnemyType["ENERGYWIZARD"] = 23] = "ENERGYWIZARD";
+    EnemyType[EnemyType["FIREWIZARD"] = 24] = "FIREWIZARD";
+    EnemyType[EnemyType["FROG"] = 25] = "FROG";
+    EnemyType[EnemyType["GLOWBUG"] = 26] = "GLOWBUG";
+    EnemyType[EnemyType["MUMMY"] = 27] = "MUMMY";
+    EnemyType[EnemyType["OCCULTIST"] = 28] = "OCCULTIST";
+    EnemyType[EnemyType["QUEEN"] = 29] = "QUEEN";
+    EnemyType[EnemyType["ROOK"] = 30] = "ROOK";
+    EnemyType[EnemyType["SPIDER"] = 31] = "SPIDER";
+    EnemyType[EnemyType["BUSH"] = 32] = "BUSH";
+    EnemyType[EnemyType["FISHING_SPOT"] = 33] = "FISHING_SPOT";
+    EnemyType[EnemyType["FURNACE"] = 34] = "FURNACE";
+    EnemyType[EnemyType["PUMPKIN"] = 35] = "PUMPKIN";
+    EnemyType[EnemyType["SPROUT"] = 36] = "SPROUT";
+    EnemyType[EnemyType["TOMBSTONE"] = 37] = "TOMBSTONE";
+    EnemyType[EnemyType["DECO_BLOCK"] = 38] = "DECO_BLOCK";
+    EnemyType[EnemyType["TREE"] = 39] = "TREE";
+    EnemyType[EnemyType["CHEST_LAYER"] = 40] = "CHEST_LAYER";
+    EnemyType[EnemyType["BOMB"] = 41] = "BOMB";
+    EnemyType[EnemyType["BLOCK"] = 42] = "BLOCK";
+    EnemyType[EnemyType["DOWNLADDER_MAKER"] = 43] = "DOWNLADDER_MAKER";
+    EnemyType[EnemyType["ROCK"] = 44] = "ROCK";
+    EnemyType[EnemyType["MUSHROOMS"] = 45] = "MUSHROOMS";
+    EnemyType[EnemyType["WARDEN"] = 46] = "WARDEN";
+    EnemyType[EnemyType["OBSIDIAN"] = 47] = "OBSIDIAN";
+    EnemyType[EnemyType["CRUSHER"] = 48] = "CRUSHER";
+    EnemyType[EnemyType["PAWN"] = 49] = "PAWN";
+    EnemyType[EnemyType["BIGFROG"] = 50] = "BIGFROG";
+    EnemyType[EnemyType["BEETLE"] = 51] = "BEETLE";
+    EnemyType[EnemyType["EXALTER"] = 52] = "EXALTER";
+    EnemyType[EnemyType["KING"] = 53] = "KING";
+    EnemyType[EnemyType["GARNET"] = 54] = "GARNET";
+    EnemyType[EnemyType["ZIRCON"] = 55] = "ZIRCON";
+    EnemyType[EnemyType["AMBER"] = 56] = "AMBER";
+    EnemyType[EnemyType["BIG_BLOCK"] = 57] = "BIG_BLOCK";
+    EnemyType[EnemyType["SMALL_BUSH"] = 58] = "SMALL_BUSH";
+    EnemyType[EnemyType["SUCCULENT"] = 59] = "SUCCULENT";
+    EnemyType[EnemyType["FALLEN_PILLAR"] = 60] = "FALLEN_PILLAR";
+    EnemyType[EnemyType["CANDELABRA"] = 61] = "CANDELABRA";
+    EnemyType[EnemyType["PAWN_STATUE"] = 62] = "PAWN_STATUE";
+    EnemyType[EnemyType["ROOK_STATUE"] = 63] = "ROOK_STATUE";
+    EnemyType[EnemyType["BISHOP_STATUE"] = 64] = "BISHOP_STATUE";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -24365,6 +24588,8 @@ class EnemyState {
             this.type = EnemyType.EMERALD;
         if (enemy instanceof goldResource_1.GoldResource)
             this.type = EnemyType.GOLD;
+        if (enemy instanceof ironResource_1.IronResource)
+            this.type = EnemyType.IRON;
         if (enemy instanceof knightEnemy_1.KnightEnemy) {
             this.type = EnemyType.KNIGHT;
         }
@@ -24484,6 +24709,30 @@ class EnemyState {
             this.type = EnemyType.BIGFROG;
         if (enemy instanceof exalterEnemy_1.ExalterEnemy)
             this.type = EnemyType.EXALTER;
+        if (enemy instanceof kingEnemy_1.KingEnemy)
+            this.type = EnemyType.KING;
+        if (enemy instanceof garnetResource_1.GarnetResource)
+            this.type = EnemyType.GARNET;
+        if (enemy instanceof zirconResource_1.ZirconResource)
+            this.type = EnemyType.ZIRCON;
+        if (enemy instanceof amberResource_1.AmberResource)
+            this.type = EnemyType.AMBER;
+        if (enemy instanceof bigBlock_1.BigBlock)
+            this.type = EnemyType.BIG_BLOCK;
+        if (enemy instanceof smallBush_1.SmallBush)
+            this.type = EnemyType.SMALL_BUSH;
+        if (enemy instanceof succulent_1.Succulent)
+            this.type = EnemyType.SUCCULENT;
+        if (enemy instanceof fallenPillar_1.FallenPillar)
+            this.type = EnemyType.FALLEN_PILLAR;
+        if (enemy instanceof candelabra_1.Candelabra)
+            this.type = EnemyType.CANDELABRA;
+        if (enemy instanceof pawnStatue_1.PawnStatue)
+            this.type = EnemyType.PAWN_STATUE;
+        if (enemy instanceof rookStatue_1.RookStatue)
+            this.type = EnemyType.ROOK_STATUE;
+        if (enemy instanceof bishopStatue_1.BishopStatue)
+            this.type = EnemyType.BISHOP_STATUE;
     }
 }
 exports.EnemyState = EnemyState;
@@ -24531,6 +24780,8 @@ let loadEnemy = (es, game) => {
         enemy = new emeraldResource_1.EmeraldResource(room, game, es.x, es.y);
     if (es.type === EnemyType.GOLD)
         enemy = new goldResource_1.GoldResource(room, game, es.x, es.y);
+    if (es.type === EnemyType.IRON)
+        enemy = new ironResource_1.IronResource(room, game, es.x, es.y);
     if (es.type === EnemyType.KNIGHT) {
         enemy = new knightEnemy_1.KnightEnemy(room, game, es.x, es.y);
     }
@@ -24640,6 +24891,30 @@ let loadEnemy = (es, game) => {
         enemy = new beetleEnemy_1.BeetleEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.EXALTER)
         enemy = new exalterEnemy_1.ExalterEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.KING)
+        enemy = new kingEnemy_1.KingEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.GARNET)
+        enemy = new garnetResource_1.GarnetResource(room, game, es.x, es.y);
+    if (es.type === EnemyType.ZIRCON)
+        enemy = new zirconResource_1.ZirconResource(room, game, es.x, es.y);
+    if (es.type === EnemyType.AMBER)
+        enemy = new amberResource_1.AmberResource(room, game, es.x, es.y);
+    if (es.type === EnemyType.BIG_BLOCK)
+        enemy = new bigBlock_1.BigBlock(room, game, es.x, es.y);
+    if (es.type === EnemyType.SMALL_BUSH)
+        enemy = new smallBush_1.SmallBush(room, game, es.x, es.y);
+    if (es.type === EnemyType.SUCCULENT)
+        enemy = new succulent_1.Succulent(room, game, es.x, es.y);
+    if (es.type === EnemyType.FALLEN_PILLAR)
+        enemy = new fallenPillar_1.FallenPillar(room, game, es.x, es.y);
+    if (es.type === EnemyType.CANDELABRA)
+        enemy = new candelabra_1.Candelabra(room, game, es.x, es.y);
+    if (es.type === EnemyType.PAWN_STATUE)
+        enemy = new pawnStatue_1.PawnStatue(room, game, es.x, es.y);
+    if (es.type === EnemyType.ROOK_STATUE)
+        enemy = new rookStatue_1.RookStatue(room, game, es.x, es.y);
+    if (es.type === EnemyType.BISHOP_STATUE)
+        enemy = new bishopStatue_1.BishopStatue(room, game, es.x, es.y);
     if (es.isEnemy) {
         enemy.ticks = es.ticks;
         enemy.seenPlayer = es.seenPlayer;
@@ -24748,13 +25023,19 @@ class RoomState {
     shouldSaveTile(tile) {
         return (tile instanceof chasm_1.Chasm ||
             tile instanceof pool_1.Pool ||
+            tile instanceof magmaPool_1.MagmaPool ||
             tile instanceof wall_1.Wall ||
+            tile instanceof window_1.Window ||
             tile instanceof downLadder_1.DownLadder ||
             tile instanceof upLadder_1.UpLadder ||
             tile instanceof floor_1.Floor ||
             tile instanceof wallTorch_1.WallTorch ||
             tile instanceof spawnfloor_1.SpawnFloor ||
             tile instanceof door_2.Door ||
+            tile instanceof insideLevelDoor_1.InsideLevelDoor ||
+            tile instanceof button_1.Button ||
+            tile instanceof fountainTile_1.FountainTile ||
+            tile instanceof coffinTile_1.CoffinTile ||
             tile instanceof spiketrap_1.SpikeTrap);
     }
 }
@@ -24788,9 +25069,10 @@ let loadRoom = (room, roomState, game) => {
                 // If no saved tile state, keep the generated tile as-is
             }
         }
-        // Second pass: link doors by saved linkedDoorGID
+        // Second pass: link doors by saved linkedDoorGID and link Buttons to InsideLevelDoor
         try {
             const gidToDoor = new Map();
+            const gidToInsideDoor = new Map();
             for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
                 for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                     const ts = roomState.tiles[x]?.[y];
@@ -24799,6 +25081,13 @@ let loadRoom = (room, roomState, game) => {
                         const gid = ts.properties.globalId;
                         if (gid)
                             gidToDoor.set(gid, t);
+                    }
+                    if (ts &&
+                        ts.type === TileType.INSIDE_LEVEL_DOOR &&
+                        t instanceof insideLevelDoor_1.InsideLevelDoor) {
+                        const gid = ts.properties.globalId;
+                        if (gid)
+                            gidToInsideDoor.set(gid, t);
                     }
                     // Re-add light sources for tiles that carry lights
                     if (t &&
@@ -24816,6 +25105,12 @@ let loadRoom = (room, roomState, game) => {
                         const linkedGid = ts.properties.linkedDoorGID;
                         if (linkedGid && gidToDoor.has(linkedGid)) {
                             t.link(gidToDoor.get(linkedGid));
+                        }
+                    }
+                    if (ts && ts.type === TileType.BUTTON && t instanceof button_1.Button) {
+                        const linkedGid = ts.properties.linkedDoorGID;
+                        if (linkedGid && gidToInsideDoor.has(linkedGid)) {
+                            t.linkedDoor = gidToInsideDoor.get(linkedGid);
                         }
                     }
                 }
@@ -26029,16 +26324,22 @@ var TileType;
     TileType[TileType["FLOOR"] = 0] = "FLOOR";
     TileType[TileType["WALL"] = 1] = "WALL";
     TileType[TileType["WALL_TORCH"] = 2] = "WALL_TORCH";
-    TileType[TileType["DOOR"] = 3] = "DOOR";
-    TileType[TileType["DOWN_LADDER"] = 4] = "DOWN_LADDER";
-    TileType[TileType["UP_LADDER"] = 5] = "UP_LADDER";
-    TileType[TileType["POOL"] = 6] = "POOL";
-    TileType[TileType["CHASM"] = 7] = "CHASM";
-    TileType[TileType["SPAWN_FLOOR"] = 8] = "SPAWN_FLOOR";
-    TileType[TileType["SPIKE_TRAP"] = 9] = "SPIKE_TRAP";
-    TileType[TileType["SPIKE"] = 10] = "SPIKE";
-    TileType[TileType["TRAP_DOOR"] = 11] = "TRAP_DOOR";
-    TileType[TileType["BONES"] = 12] = "BONES";
+    TileType[TileType["WINDOW"] = 3] = "WINDOW";
+    TileType[TileType["DOOR"] = 4] = "DOOR";
+    TileType[TileType["DOWN_LADDER"] = 5] = "DOWN_LADDER";
+    TileType[TileType["UP_LADDER"] = 6] = "UP_LADDER";
+    TileType[TileType["POOL"] = 7] = "POOL";
+    TileType[TileType["MAGMA_POOL"] = 8] = "MAGMA_POOL";
+    TileType[TileType["CHASM"] = 9] = "CHASM";
+    TileType[TileType["SPAWN_FLOOR"] = 10] = "SPAWN_FLOOR";
+    TileType[TileType["SPIKE_TRAP"] = 11] = "SPIKE_TRAP";
+    TileType[TileType["SPIKE"] = 12] = "SPIKE";
+    TileType[TileType["TRAP_DOOR"] = 13] = "TRAP_DOOR";
+    TileType[TileType["INSIDE_LEVEL_DOOR"] = 14] = "INSIDE_LEVEL_DOOR";
+    TileType[TileType["BUTTON"] = 15] = "BUTTON";
+    TileType[TileType["FOUNTAIN"] = 16] = "FOUNTAIN";
+    TileType[TileType["COFFIN"] = 17] = "COFFIN";
+    TileType[TileType["BONES"] = 18] = "BONES";
 })(TileType = exports.TileType || (exports.TileType = {}));
 class TileState {
     constructor(tile, game) {
@@ -26057,6 +26358,10 @@ class TileState {
             this.type = TileType.WALL_TORCH;
             this.properties.isBottomWall = tile.isBottomWall;
             this.properties.frame = tile.frame;
+        }
+        else if (tile instanceof window_1.Window) {
+            this.type = TileType.WINDOW;
+            this.properties.isBottomWall = tile.isBottomWall;
         }
         else if (tile instanceof wall_1.Wall) {
             this.type = TileType.WALL;
@@ -26078,6 +26383,17 @@ class TileState {
             this.properties.globalId = tile.globalId;
             this.properties.linkedDoorGID =
                 tile.linkedDoor?.globalId || null;
+        }
+        else if (tile instanceof insideLevelDoor_1.InsideLevelDoor) {
+            this.type = TileType.INSIDE_LEVEL_DOOR;
+            this.properties.opened = tile.opened;
+            this.properties.globalId = tile.globalId;
+        }
+        else if (tile instanceof button_1.Button) {
+            this.type = TileType.BUTTON;
+            this.properties.globalId = tile.globalId;
+            const linkedDoor = tile.linkedDoor;
+            this.properties.linkedDoorGID = linkedDoor?.globalId || null;
         }
         else if (tile instanceof downLadder_1.DownLadder) {
             this.type = TileType.DOWN_LADDER;
@@ -26105,6 +26421,15 @@ class TileState {
             this.properties.topEdge = tile.topEdge; // This is stored
             this.properties.bottomEdge = tile.tileY > baseTileY;
         }
+        else if (tile instanceof magmaPool_1.MagmaPool) {
+            this.type = TileType.MAGMA_POOL;
+            const baseTileX = 24;
+            const baseTileY = 4;
+            this.properties.leftEdge = tile.tileX < baseTileX;
+            this.properties.rightEdge = tile.tileX > baseTileX;
+            this.properties.topEdge = tile.topEdge; // stored on class
+            this.properties.bottomEdge = tile.tileY > baseTileY;
+        }
         else if (tile instanceof chasm_1.Chasm) {
             this.type = TileType.CHASM;
             // Reconstruct edge information from tileX, tileY values
@@ -26117,6 +26442,15 @@ class TileState {
         }
         else if (tile instanceof spawnfloor_1.SpawnFloor) {
             this.type = TileType.SPAWN_FLOOR;
+        }
+        else if (tile instanceof fountainTile_1.FountainTile) {
+            this.type = TileType.FOUNTAIN;
+            this.properties.subTileX = tile.subTileX;
+            this.properties.subTileY = tile.subTileY;
+        }
+        else if (tile instanceof coffinTile_1.CoffinTile) {
+            this.type = TileType.COFFIN;
+            this.properties.subTileY = tile.subTileY;
         }
         else if (tile instanceof spiketrap_1.SpikeTrap) {
             this.type = TileType.SPIKE_TRAP;
@@ -26152,6 +26486,9 @@ let loadTile = (ts, room, game) => {
             tile = new wallTorch_1.WallTorch(room, ts.x, ts.y, ts.properties.isBottomWall);
             tile.frame = ts.properties.frame || 0;
             break;
+        case TileType.WINDOW:
+            tile = new window_1.Window(room, ts.x, ts.y, ts.properties.isBottomWall);
+            break;
         case TileType.DOOR:
             // Prefer `doorType`, fallback to `type` if older saves
             const _doorType = ts.properties.doorType ??
@@ -26182,6 +26519,32 @@ let loadTile = (ts, room, game) => {
                 catch { }
             }
             break;
+        case TileType.INSIDE_LEVEL_DOOR:
+            tile = new insideLevelDoor_1.InsideLevelDoor(room, game, ts.x, ts.y);
+            if (typeof ts.properties.opened === "boolean")
+                tile.opened = ts.properties.opened;
+            if (ts.properties.globalId) {
+                try {
+                    IdGenerator_1.IdGenerator.reserve(ts.properties.globalId);
+                    tile.globalId = ts.properties.globalId;
+                }
+                catch { }
+            }
+            break;
+        case TileType.BUTTON:
+            // Temporarily create a dummy InsideLevelDoor; will be replaced in linking pass
+            const tempDoor = new insideLevelDoor_1.InsideLevelDoor(room, game, ts.x, ts.y);
+            tile = new button_1.Button(room, ts.x, ts.y, tempDoor);
+            if (ts.properties.globalId) {
+                try {
+                    IdGenerator_1.IdGenerator.reserve(ts.properties.globalId);
+                    tile.globalId = ts.properties.globalId;
+                }
+                catch { }
+            }
+            // Save target gid to link later
+            tile._pendingLinkedDoorGID = ts.properties.linkedDoorGID || null;
+            break;
         case TileType.DOWN_LADDER:
             tile = new downLadder_1.DownLadder(room, game, ts.x, ts.y, ts.properties.isSidePath || false, ts.properties.environment, ts.properties.lockType, undefined, 
             // lockStateOverride ensures saved lockType/keyID are restored exactly
@@ -26204,11 +26567,20 @@ let loadTile = (ts, room, game) => {
         case TileType.POOL:
             tile = new pool_1.Pool(room, ts.x, ts.y, ts.properties.leftEdge || false, ts.properties.rightEdge || false, ts.properties.topEdge || false, ts.properties.bottomEdge || false);
             break;
+        case TileType.MAGMA_POOL:
+            tile = new magmaPool_1.MagmaPool(room, ts.x, ts.y, ts.properties.leftEdge || false, ts.properties.rightEdge || false, ts.properties.topEdge || false, ts.properties.bottomEdge || false);
+            break;
         case TileType.CHASM:
             tile = new chasm_1.Chasm(room, ts.x, ts.y, ts.properties.leftEdge || false, ts.properties.rightEdge || false, ts.properties.topEdge || false, ts.properties.bottomEdge || false);
             break;
         case TileType.SPAWN_FLOOR:
             tile = new spawnfloor_1.SpawnFloor(room, ts.x, ts.y);
+            break;
+        case TileType.FOUNTAIN:
+            tile = new fountainTile_1.FountainTile(room, ts.x, ts.y, ts.properties.subTileX || 0, ts.properties.subTileY || 0);
+            break;
+        case TileType.COFFIN:
+            tile = new coffinTile_1.CoffinTile(room, ts.x, ts.y, ts.properties.subTileY || 0);
             break;
         case TileType.SPIKE_TRAP:
             tile = new spiketrap_1.SpikeTrap(room, ts.x, ts.y);
@@ -34723,6 +35095,8 @@ const bishopStatue_1 = __webpack_require__(/*! ../entity/object/bishopStatue */ 
 const rookStatue_1 = __webpack_require__(/*! ../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
 const pawnStatue_1 = __webpack_require__(/*! ../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
 const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
+const succulent_1 = __webpack_require__(/*! ../entity/object/succulent */ "./src/entity/object/succulent.ts");
+const smallBush_1 = __webpack_require__(/*! ../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -34778,6 +35152,7 @@ const environmentData = {
             { class: chest_1.Chest, weight: 0.025 },
             { class: decoBlock_1.DecoBlock, weight: 0.05 },
             { class: furnace_1.Furnace, weight: 0.05 },
+            //{ class: BigBlock, weight: 3 },
         ],
         enemies: [
             // Early game enemies (depth 0+)
@@ -34872,6 +35247,8 @@ const environmentData = {
             { class: chest_1.Chest, weight: 0.05 },
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
             { class: tree_1.Tree, weight: 0.1 },
+            { class: succulent_1.Succulent, weight: 0.1 },
+            { class: smallBush_1.SmallBush, weight: 0.5 },
         ],
         enemies: [
             // Nature creatures (higher weights)
@@ -39749,6 +40126,8 @@ class Player extends drawable_1.Drawable {
             this.lastY = y;
         };
         this.hurt = (damage, enemy, delay = 0) => {
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE)
+                return;
             // Play hurt sound if in current room
             if (this.getRoom() === this.game.room) {
                 setTimeout(() => {
@@ -48647,6 +49026,50 @@ exports.Chasm = Chasm;
 
 /***/ }),
 
+/***/ "./src/tile/coffinTile.ts":
+/*!********************************!*\
+  !*** ./src/tile/coffinTile.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CoffinTile = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+class CoffinTile extends tile_1.Tile {
+    constructor(room, x, y, subTileY) {
+        super(room, x, y);
+        this.isSolid = () => {
+            return true;
+        };
+        this.canCrushEnemy = () => {
+            return true;
+        };
+        this.draw = (delta) => {
+            if (this.subTileY === 0) {
+                game_1.Game.drawTile(0, 5, 1, 1, this.x - 1, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(1, 5, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(2, 5, 1, 1, this.x + 1, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(0, 6, 1, 1, this.x - 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(1, 6, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(2, 6, 1, 1, this.x + 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            else {
+                game_1.Game.drawTile(0, 7, 1, 1, this.x - 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(1, 7, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawTile(2, 7, 1, 1, this.x + 1, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+        };
+        this.subTileY = subTileY;
+    }
+}
+exports.CoffinTile = CoffinTile;
+
+
+/***/ }),
+
 /***/ "./src/tile/decorations/decoration.ts":
 /*!********************************************!*\
   !*** ./src/tile/decorations/decoration.ts ***!
@@ -49179,6 +49602,40 @@ class Floor extends tile_1.Tile {
     }
 }
 exports.Floor = Floor;
+
+
+/***/ }),
+
+/***/ "./src/tile/fountainTile.ts":
+/*!**********************************!*\
+  !*** ./src/tile/fountainTile.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FountainTile = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+class FountainTile extends tile_1.Tile {
+    constructor(room, x, y, subTileX, subTileY) {
+        super(room, x, y);
+        this.isSolid = () => {
+            return true;
+        };
+        this.canCrushEnemy = () => {
+            return true;
+        };
+        this.draw = (delta) => {
+            game_1.Game.drawTile(1, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawTile(this.subTileX, 2 + this.subTileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
+        };
+        this.subTileX = subTileX;
+        this.subTileY = subTileY;
+    }
+}
+exports.FountainTile = FountainTile;
 
 
 /***/ }),

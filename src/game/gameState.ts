@@ -111,6 +111,14 @@ import { DecoBlock } from "../entity/object/decoBlock";
 import { Tree } from "../entity/object/tree";
 import { ChestLayer } from "../entity/object/chestLayer";
 import { Bomb } from "../entity/object/bomb";
+import { BigBlock } from "../entity/object/bigBlock";
+import { SmallBush } from "../entity/object/smallBush";
+import { Succulent } from "../entity/object/succulent";
+import { FallenPillar } from "../entity/object/fallenPillar";
+import { Candelabra } from "../entity/object/candelabra";
+import { PawnStatue } from "../entity/object/pawnStatue";
+import { RookStatue } from "../entity/object/rookStatue";
+import { BishopStatue } from "../entity/object/bishopStatue";
 import { DownladderMaker } from "../entity/downladderMaker";
 import { Rock } from "../entity/resource/rockResource";
 import { Hammer } from "../item/tool/hammer";
@@ -118,6 +126,11 @@ import { EnvType } from "../constants/environmentTypes";
 import { SkinType } from "../tile/tile";
 import { Enemy } from "../entity/enemy/enemy";
 import { Chest } from "../entity/object/chest";
+import { IronResource } from "../entity/resource/ironResource";
+import { GarnetResource } from "../entity/resource/garnetResource";
+import { ZirconResource } from "../entity/resource/zirconResource";
+import { AmberResource } from "../entity/resource/amberResource";
+import { KingEnemy } from "../entity/enemy/kingEnemy";
 
 // Add tile imports
 import { Tile } from "../tile/tile";
@@ -128,6 +141,7 @@ import { Door } from "../tile/door";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
 import { Pool } from "../tile/pool";
+import { MagmaPool } from "../tile/magmaPool";
 import { Chasm } from "../tile/chasm";
 import { SpawnFloor } from "../tile/spawnfloor";
 import { SpikeTrap } from "../tile/spiketrap";
@@ -139,6 +153,7 @@ import { FountainTile } from "../tile/fountainTile";
 import { Button } from "../tile/button";
 import { CoffinTile } from "../tile/coffinTile";
 import { Bones } from "../tile/bones";
+import { Window } from "../tile/window";
 import { Puddle } from "../tile/decorations/puddle";
 import { Decoration } from "../tile/decorations/decoration";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
@@ -266,6 +281,7 @@ export enum EnemyType {
   CRATE,
   EMERALD,
   GOLD,
+  IRON,
   KNIGHT,
   PLANT,
   POT,
@@ -310,6 +326,18 @@ export enum EnemyType {
   BIGFROG,
   BEETLE,
   EXALTER,
+  KING,
+  GARNET,
+  ZIRCON,
+  AMBER,
+  BIG_BLOCK,
+  SMALL_BUSH,
+  SUCCULENT,
+  FALLEN_PILLAR,
+  CANDELABRA,
+  PAWN_STATUE,
+  ROOK_STATUE,
+  BISHOP_STATUE,
 }
 
 export class EnemyState {
@@ -438,6 +466,7 @@ export class EnemyState {
     if (enemy instanceof Crate) this.type = EnemyType.CRATE;
     if (enemy instanceof EmeraldResource) this.type = EnemyType.EMERALD;
     if (enemy instanceof GoldResource) this.type = EnemyType.GOLD;
+    if (enemy instanceof IronResource) this.type = EnemyType.IRON;
     if (enemy instanceof KnightEnemy) {
       this.type = EnemyType.KNIGHT;
     }
@@ -527,6 +556,18 @@ export class EnemyState {
     if (enemy instanceof BeetleEnemy) this.type = EnemyType.BEETLE;
     if (enemy instanceof BigFrogEnemy) this.type = EnemyType.BIGFROG;
     if (enemy instanceof ExalterEnemy) this.type = EnemyType.EXALTER;
+    if (enemy instanceof KingEnemy) this.type = EnemyType.KING;
+    if (enemy instanceof GarnetResource) this.type = EnemyType.GARNET;
+    if (enemy instanceof ZirconResource) this.type = EnemyType.ZIRCON;
+    if (enemy instanceof AmberResource) this.type = EnemyType.AMBER;
+    if (enemy instanceof BigBlock) this.type = EnemyType.BIG_BLOCK;
+    if (enemy instanceof SmallBush) this.type = EnemyType.SMALL_BUSH;
+    if (enemy instanceof Succulent) this.type = EnemyType.SUCCULENT;
+    if (enemy instanceof FallenPillar) this.type = EnemyType.FALLEN_PILLAR;
+    if (enemy instanceof Candelabra) this.type = EnemyType.CANDELABRA;
+    if (enemy instanceof PawnStatue) this.type = EnemyType.PAWN_STATUE;
+    if (enemy instanceof RookStatue) this.type = EnemyType.ROOK_STATUE;
+    if (enemy instanceof BishopStatue) this.type = EnemyType.BISHOP_STATUE;
   }
 }
 
@@ -573,6 +614,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new EmeraldResource(room, game, es.x, es.y);
   if (es.type === EnemyType.GOLD)
     enemy = new GoldResource(room, game, es.x, es.y);
+  if (es.type === EnemyType.IRON)
+    enemy = new IronResource(room, game, es.x, es.y);
   if (es.type === EnemyType.KNIGHT) {
     enemy = new KnightEnemy(room, game, es.x, es.y);
   }
@@ -673,6 +716,29 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new BeetleEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.EXALTER)
     enemy = new ExalterEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.KING) enemy = new KingEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.GARNET)
+    enemy = new GarnetResource(room, game, es.x, es.y);
+  if (es.type === EnemyType.ZIRCON)
+    enemy = new ZirconResource(room, game, es.x, es.y);
+  if (es.type === EnemyType.AMBER)
+    enemy = new AmberResource(room, game, es.x, es.y);
+  if (es.type === EnemyType.BIG_BLOCK)
+    enemy = new BigBlock(room, game, es.x, es.y);
+  if (es.type === EnemyType.SMALL_BUSH)
+    enemy = new SmallBush(room, game, es.x, es.y);
+  if (es.type === EnemyType.SUCCULENT)
+    enemy = new Succulent(room, game, es.x, es.y);
+  if (es.type === EnemyType.FALLEN_PILLAR)
+    enemy = new FallenPillar(room, game, es.x, es.y);
+  if (es.type === EnemyType.CANDELABRA)
+    enemy = new Candelabra(room, game, es.x, es.y);
+  if (es.type === EnemyType.PAWN_STATUE)
+    enemy = new PawnStatue(room, game, es.x, es.y);
+  if (es.type === EnemyType.ROOK_STATUE)
+    enemy = new RookStatue(room, game, es.x, es.y);
+  if (es.type === EnemyType.BISHOP_STATUE)
+    enemy = new BishopStatue(room, game, es.x, es.y);
 
   if (es.isEnemy) {
     enemy.ticks = es.ticks;
@@ -807,13 +873,19 @@ export class RoomState {
     return (
       tile instanceof Chasm ||
       tile instanceof Pool ||
+      tile instanceof MagmaPool ||
       tile instanceof Wall ||
+      tile instanceof Window ||
       tile instanceof DownLadder ||
       tile instanceof UpLadder ||
       tile instanceof Floor ||
       tile instanceof WallTorch ||
       tile instanceof SpawnFloor ||
       tile instanceof Door ||
+      tile instanceof InsideLevelDoor ||
+      tile instanceof Button ||
+      tile instanceof FountainTile ||
+      tile instanceof CoffinTile ||
       tile instanceof SpikeTrap
     );
   }
@@ -848,9 +920,10 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
       }
     }
 
-    // Second pass: link doors by saved linkedDoorGID
+    // Second pass: link doors by saved linkedDoorGID and link Buttons to InsideLevelDoor
     try {
       const gidToDoor = new Map<string, Door>();
+      const gidToInsideDoor = new Map<string, InsideLevelDoor>();
       for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
         for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
           const ts = roomState.tiles[x]?.[y];
@@ -858,6 +931,14 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
           if (ts && ts.type === TileType.DOOR && t instanceof Door) {
             const gid = ts.properties.globalId as string | undefined;
             if (gid) gidToDoor.set(gid, t);
+          }
+          if (
+            ts &&
+            ts.type === TileType.INSIDE_LEVEL_DOOR &&
+            t instanceof InsideLevelDoor
+          ) {
+            const gid = ts.properties.globalId as string | undefined;
+            if (gid) gidToInsideDoor.set(gid, t);
           }
           // Re-add light sources for tiles that carry lights
           if (
@@ -877,6 +958,12 @@ let loadRoom = (room: Room, roomState: RoomState, game: Game) => {
             const linkedGid = ts.properties.linkedDoorGID as string | null;
             if (linkedGid && gidToDoor.has(linkedGid)) {
               t.link(gidToDoor.get(linkedGid));
+            }
+          }
+          if (ts && ts.type === TileType.BUTTON && t instanceof Button) {
+            const linkedGid = ts.properties.linkedDoorGID as string | null;
+            if (linkedGid && gidToInsideDoor.has(linkedGid)) {
+              (t as any).linkedDoor = gidToInsideDoor.get(linkedGid);
             }
           }
         }
@@ -2167,15 +2254,21 @@ export enum TileType {
   FLOOR,
   WALL,
   WALL_TORCH,
+  WINDOW,
   DOOR,
   DOWN_LADDER,
   UP_LADDER,
   POOL,
+  MAGMA_POOL,
   CHASM,
   SPAWN_FLOOR,
   SPIKE_TRAP,
   SPIKE,
   TRAP_DOOR,
+  INSIDE_LEVEL_DOOR,
+  BUTTON,
+  FOUNTAIN,
+  COFFIN,
   BONES,
 }
 export class TileState {
@@ -2202,6 +2295,9 @@ export class TileState {
       this.type = TileType.WALL_TORCH;
       this.properties.isBottomWall = (tile as any).isBottomWall;
       this.properties.frame = (tile as any).frame;
+    } else if (tile instanceof Window) {
+      this.type = TileType.WINDOW;
+      this.properties.isBottomWall = (tile as any).isBottomWall;
     } else if (tile instanceof Wall) {
       this.type = TileType.WALL;
     } else if (tile instanceof Door) {
@@ -2221,6 +2317,15 @@ export class TileState {
       this.properties.globalId = (tile as any).globalId;
       this.properties.linkedDoorGID =
         (tile as any).linkedDoor?.globalId || null;
+    } else if (tile instanceof InsideLevelDoor) {
+      this.type = TileType.INSIDE_LEVEL_DOOR;
+      this.properties.opened = (tile as any).opened;
+      this.properties.globalId = (tile as any).globalId;
+    } else if (tile instanceof Button) {
+      this.type = TileType.BUTTON;
+      this.properties.globalId = (tile as any).globalId;
+      const linkedDoor = (tile as any).linkedDoor as InsideLevelDoor | null;
+      this.properties.linkedDoorGID = linkedDoor?.globalId || null;
     } else if (tile instanceof DownLadder) {
       this.type = TileType.DOWN_LADDER;
       this.properties.isSidePath = (tile as any).isSidePath;
@@ -2244,6 +2349,14 @@ export class TileState {
       this.properties.rightEdge = (tile as any).tileX > baseTileX;
       this.properties.topEdge = (tile as any).topEdge; // This is stored
       this.properties.bottomEdge = (tile as any).tileY > baseTileY;
+    } else if (tile instanceof MagmaPool) {
+      this.type = TileType.MAGMA_POOL;
+      const baseTileX = 24;
+      const baseTileY = 4;
+      this.properties.leftEdge = (tile as any).tileX < baseTileX;
+      this.properties.rightEdge = (tile as any).tileX > baseTileX;
+      this.properties.topEdge = (tile as any).topEdge; // stored on class
+      this.properties.bottomEdge = (tile as any).tileY > baseTileY;
     } else if (tile instanceof Chasm) {
       this.type = TileType.CHASM;
       // Reconstruct edge information from tileX, tileY values
@@ -2255,6 +2368,13 @@ export class TileState {
       this.properties.bottomEdge = (tile as any).tileY > baseTileY;
     } else if (tile instanceof SpawnFloor) {
       this.type = TileType.SPAWN_FLOOR;
+    } else if (tile instanceof FountainTile) {
+      this.type = TileType.FOUNTAIN;
+      this.properties.subTileX = (tile as any).subTileX;
+      this.properties.subTileY = (tile as any).subTileY;
+    } else if (tile instanceof CoffinTile) {
+      this.type = TileType.COFFIN;
+      this.properties.subTileY = (tile as any).subTileY;
     } else if (tile instanceof SpikeTrap) {
       this.type = TileType.SPIKE_TRAP;
       this.properties.triggered = (tile as any).triggered;
@@ -2289,6 +2409,9 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
       tile = new WallTorch(room, ts.x, ts.y, ts.properties.isBottomWall);
       (tile as any).frame = ts.properties.frame || 0;
       break;
+    case TileType.WINDOW:
+      tile = new Window(room, ts.x, ts.y, ts.properties.isBottomWall);
+      break;
     case TileType.DOOR:
       // Prefer `doorType`, fallback to `type` if older saves
       const _doorType =
@@ -2317,6 +2440,30 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
           (tile as any).globalId = ts.properties.globalId;
         } catch {}
       }
+      break;
+    case TileType.INSIDE_LEVEL_DOOR:
+      tile = new InsideLevelDoor(room, game, ts.x, ts.y);
+      if (typeof ts.properties.opened === "boolean")
+        (tile as any).opened = ts.properties.opened;
+      if (ts.properties.globalId) {
+        try {
+          IdGenerator.reserve(ts.properties.globalId);
+          (tile as any).globalId = ts.properties.globalId;
+        } catch {}
+      }
+      break;
+    case TileType.BUTTON:
+      // Temporarily create a dummy InsideLevelDoor; will be replaced in linking pass
+      const tempDoor = new InsideLevelDoor(room, game, ts.x, ts.y);
+      tile = new Button(room, ts.x, ts.y, tempDoor);
+      if (ts.properties.globalId) {
+        try {
+          IdGenerator.reserve(ts.properties.globalId);
+          (tile as any).globalId = ts.properties.globalId;
+        } catch {}
+      }
+      // Save target gid to link later
+      (tile as any)._pendingLinkedDoorGID = ts.properties.linkedDoorGID || null;
       break;
     case TileType.DOWN_LADDER:
       tile = new DownLadder(
@@ -2355,6 +2502,17 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
         ts.properties.bottomEdge || false,
       );
       break;
+    case TileType.MAGMA_POOL:
+      tile = new MagmaPool(
+        room,
+        ts.x,
+        ts.y,
+        ts.properties.leftEdge || false,
+        ts.properties.rightEdge || false,
+        ts.properties.topEdge || false,
+        ts.properties.bottomEdge || false,
+      );
+      break;
     case TileType.CHASM:
       tile = new Chasm(
         room,
@@ -2368,6 +2526,19 @@ let loadTile = (ts: TileState, room: Room, game: Game): Tile => {
       break;
     case TileType.SPAWN_FLOOR:
       tile = new SpawnFloor(room, ts.x, ts.y);
+      break;
+
+    case TileType.FOUNTAIN:
+      tile = new FountainTile(
+        room,
+        ts.x,
+        ts.y,
+        ts.properties.subTileX || 0,
+        ts.properties.subTileY || 0,
+      );
+      break;
+    case TileType.COFFIN:
+      tile = new CoffinTile(room, ts.x, ts.y, ts.properties.subTileY || 0);
       break;
 
     case TileType.SPIKE_TRAP:
