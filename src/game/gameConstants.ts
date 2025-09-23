@@ -45,7 +45,7 @@ import { Fish } from "../item/usable/fish";
 import { IronOre } from "../item/resource/ironOre";
 
 export class GameConstants {
-  static readonly VERSION = "Alpha v1.2.0"; //"v0.6.3";
+  static readonly VERSION = "Alpha v0.3.0"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
   static isIOS = false;

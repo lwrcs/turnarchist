@@ -200,7 +200,7 @@ export class Game {
   hasRecordedStats: boolean = false;
   loadedFromSaveFile: boolean = false;
   // Reference package.json
-  version = "1.2.0";
+  version = "0.3.0";
 
   static inputReceived = false;
 
