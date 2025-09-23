@@ -245,32 +245,35 @@ export class Menu {
     header.noFill = true;
     header.textColor = "rgb(255, 255, 0)"; // yellow text
     this.addButton(header);
-    const continueBtn = new guiButton(
-      0,
-      0,
-      0,
-      0,
-      "Continue",
-      () => {
-        try {
-          const { loadFromCookies } = require("../game/savePersistence");
-          loadFromCookies(this.game).then((ok: boolean) => {
-            if (ok) {
-              this.game.pushMessage("Loaded save.");
-              this.close();
-              (this.game as any).startedFadeOut = true;
-              (this.game as any).startMenuActive = false;
-            } else {
-              this.game.pushMessage("Load failed.");
-            }
-          });
-        } catch (e) {
-          this.game.pushMessage("Load failed.");
-        }
-      },
-      false,
-      this,
-    );
+    if (GameConstants.SAVING_ENABLED) {
+      const continueBtn = new guiButton(
+        0,
+        0,
+        0,
+        0,
+        "Continue",
+        () => {
+          try {
+            const { loadFromCookies } = require("../game/savePersistence");
+            loadFromCookies(this.game).then((ok: boolean) => {
+              if (ok) {
+                this.game.pushMessage("Loaded save.");
+                this.close();
+                (this.game as any).startedFadeOut = true;
+                (this.game as any).startMenuActive = false;
+              } else {
+                this.game.pushMessage("Load failed.");
+              }
+            });
+          } catch (e) {
+            this.game.pushMessage("Load failed.");
+          }
+        },
+        false,
+        this,
+      );
+      this.addButton(continueBtn);
+    }
     const newBtn = new guiButton(
       0,
       0,
@@ -285,7 +288,6 @@ export class Menu {
       false,
       this,
     );
-    this.addButton(continueBtn);
     this.addButton(newBtn);
     this.positionButtons();
   }

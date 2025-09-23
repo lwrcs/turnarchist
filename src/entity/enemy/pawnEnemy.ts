@@ -137,6 +137,7 @@ export class PawnEnemy extends Enemy {
 
           if (this.justHurt) {
             // do nothing special when just hurt
+            this.justHurt = false;
           } else if (!this.unconscious) {
             // Build grid like rookEnemy and use A* with orthogonal-only movement
             let grid = [] as any[];
