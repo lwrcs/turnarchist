@@ -8697,9 +8697,10 @@ module.exports = __webpack_require__.p + "assets/tileset.c2ab57b53dd5d0adfdfa.pn
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchGameStats = exports.safeRecordGameStats = exports.recordGameStats = exports.apiClient = void 0;
+exports.fetchGameStats = exports.safeRecordGameStats = exports.getOrCreateUserId = exports.recordGameStats = exports.apiClient = void 0;
 const axios_1 = __webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs");
 const utils_1 = __webpack_require__(/*! ./utils */ "./src/api/utils.ts");
+const uuid_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'uuid'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
 exports.apiClient = axios_1.default.create({
     baseURL: (0, utils_1.getEnvironmentApiUrl)(),
 });
@@ -8708,6 +8709,18 @@ const recordGameStats = async (gameStats) => {
     return response.data;
 };
 exports.recordGameStats = recordGameStats;
+// Create a unique user id. This id is per device per browser,
+// so users may have multiple ids if they have multiple devices or browsers.
+const getOrCreateUserId = () => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+        const newUserId = (0, uuid_1.v4)();
+        localStorage.setItem("userId", newUserId);
+        return newUserId;
+    }
+    return userId;
+};
+exports.getOrCreateUserId = getOrCreateUserId;
 const safeRecordGameStats = async (gameStats) => {
     try {
         return await (0, exports.recordGameStats)(gameStats);
@@ -15391,6 +15404,7 @@ class PawnEnemy extends enemy_1.Enemy {
                         }
                         if (this.justHurt) {
                             // do nothing special when just hurt
+                            this.justHurt = false;
                         }
                         else if (!this.unconscious) {
                             // Build grid like rookEnemy and use A* with orthogonal-only movement
@@ -21730,7 +21744,7 @@ class Game {
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
         // Reference package.json
-        this.version = "1.2.0";
+        this.version = "0.3.0";
         this.loginMessage = "";
         this.startScreenAlpha = 1;
         //previousDepth: number;
@@ -23954,11 +23968,12 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "Alpha v1.2.0"; //"v0.6.3";
+GameConstants.VERSION = "Alpha v0.3.0"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
+GameConstants.SAVING_ENABLED = false;
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
@@ -28691,31 +28706,33 @@ class Menu {
         header.noFill = true;
         header.textColor = "rgb(255, 255, 0)"; // yellow text
         this.addButton(header);
-        const continueBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Continue", () => {
-            try {
-                const { loadFromCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
-                loadFromCookies(this.game).then((ok) => {
-                    if (ok) {
-                        this.game.pushMessage("Loaded save.");
-                        this.close();
-                        this.game.startedFadeOut = true;
-                        this.game.startMenuActive = false;
-                    }
-                    else {
-                        this.game.pushMessage("Load failed.");
-                    }
-                });
-            }
-            catch (e) {
-                this.game.pushMessage("Load failed.");
-            }
-        }, false, this);
+        if (gameConstants_1.GameConstants.SAVING_ENABLED) {
+            const continueBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Continue", () => {
+                try {
+                    const { loadFromCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
+                    loadFromCookies(this.game).then((ok) => {
+                        if (ok) {
+                            this.game.pushMessage("Loaded save.");
+                            this.close();
+                            this.game.startedFadeOut = true;
+                            this.game.startMenuActive = false;
+                        }
+                        else {
+                            this.game.pushMessage("Load failed.");
+                        }
+                    });
+                }
+                catch (e) {
+                    this.game.pushMessage("Load failed.");
+                }
+            }, false, this);
+            this.addButton(continueBtn);
+        }
         const newBtn = new guiButton_1.guiButton(0, 0, 0, 0, "New Game", () => {
             this.close();
             this.game.startedFadeOut = true;
             this.game.startMenuActive = false;
         }, false, this);
-        this.addButton(continueBtn);
         this.addButton(newBtn);
         this.positionButtons();
     }
@@ -41725,6 +41742,7 @@ class PlayerRenderer {
                     const { createGameState } = __webpack_require__(/*! ../game/gameState */ "./src/game/gameState.ts");
                     // Report game stats to Turnarchist backend server
                     (0, api_1.safeRecordGameStats)({
+                        userId: (0, api_1.getOrCreateUserId)(),
                         xp: gameStats.xp,
                         level: gameStats.level,
                         gameDurationMs,
