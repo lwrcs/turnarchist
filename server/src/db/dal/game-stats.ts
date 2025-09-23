@@ -24,6 +24,8 @@ const createGameStats = async (
     gameState,
     gameVersion,
     loadedFromSaveFile,
+    ipAddress,
+    userId,
   }: GameStatsData,
   client: PgClient = databaseClient,
 ): Promise<GameStatsEntity> => {
@@ -48,6 +50,8 @@ const createGameStats = async (
       gameState,
       gameVersion,
       loadedFromSaveFile,
+      ipAddress,
+      userId,
     })
     .returning(getTableColumns(gameStatsTable));
 

@@ -21,6 +21,8 @@ export const gameStatsTable = turnarchistSchema.table(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuid_generate_v1mc()`),
+    userId: uuid("user_id"),
+    ipAddress: varchar("ip_address", { length: 100 }),
     killedBy: varchar("killed_by", { length: 100 }),
     enemiesKilled: jsonb("enemies_killed").$type<string[]>().notNull(),
     damageDone: integer("damage_done").notNull().default(0),

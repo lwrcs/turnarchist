@@ -44,6 +44,7 @@ const gameStatsSchema = z.object({
   inventory: z.array(inventoryItemSchema),
   sidePathsEntered: z.array(sidePathEnteredSchema),
   weaponChoice: z.string().nullable(),
+  userId: z.string().nullable(),
   loadedFromSaveFile: z.boolean(),
   deviceType: deviceTypeInfoSchema,
   gameVersion: z.string(),

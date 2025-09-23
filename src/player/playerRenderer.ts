@@ -10,7 +10,7 @@ import { Spellbook } from "../item/weapon/spellbook";
 import { Player } from "./player";
 import { HoverText } from "../gui/hoverText";
 import { Shadow } from "../drawable/shadow";
-import { safeRecordGameStats } from "../api";
+import { getOrCreateUserId, safeRecordGameStats } from "../api";
 import { getDeviceInfo } from "../utility/deviceDetector";
 import { VendingMachine } from "../entity/object/vendingMachine";
 
@@ -715,6 +715,7 @@ export class PlayerRenderer {
 
         // Report game stats to Turnarchist backend server
         safeRecordGameStats({
+          userId: getOrCreateUserId(),
           xp: gameStats.xp,
           level: gameStats.level,
           gameDurationMs,

@@ -10,6 +10,7 @@ import express from "express";
 import { logger } from "../../logger";
 import { gameStatsDal } from "db/dal/game-stats";
 import HttpStatus from "http-status-codes";
+import { getClientIp } from "request-ip";
 
 const recordGameStats = async (
   req: Request<{}, {}, GameStats>,
@@ -17,7 +18,10 @@ const recordGameStats = async (
 ) => {
   const gameStats = req.body;
   logger.info("Recording game stats:", gameStats);
-  await gameStatsDal.createGameStats(gameStats);
+  await gameStatsDal.createGameStats({
+    ...gameStats,
+    ipAddress: getClientIp(req),
+  });
   return res
     .status(HttpStatus.CREATED)
     .json({ message: "Game stats recorded successfully" });

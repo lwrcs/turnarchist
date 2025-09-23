@@ -139,6 +139,7 @@
     "punycode": "^2.3.1",
     "reduce-flatten": "^3.0.1",
     "ua-parser-js": "^2.0.4",
+    "uuid": "^13.0.0",
     "zod": "^4.1.3"
   }
 }
