@@ -4,6 +4,18 @@ import { GameStatsData, GameStatsEntity } from "./types";
 import { desc, getTableColumns, lt, count, and, or, eq } from "drizzle-orm";
 import { extractFirstOrThrow } from ".";
 
+// Helper function to safely convert string numbers to integers
+const safeToInt = (value: any): number => {
+  if (typeof value === "number") {
+    return Math.floor(value);
+  }
+  if (typeof value === "string") {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : Math.floor(parsed);
+  }
+  return 0;
+};
+
 const createGameStats = async (
   {
     killedBy,
@@ -34,15 +46,15 @@ const createGameStats = async (
     .values({
       killedBy,
       enemiesKilled,
-      damageDone: Math.floor(damageDone),
-      damageTaken: Math.floor(damageTaken),
-      depthReached: Math.floor(depthReached),
-      turnsPassed: Math.floor(turnsPassed),
-      coinsCollected: Math.floor(coinsCollected),
-      itemsCollected,
-      xp: Math.floor(xp),
-      level: Math.floor(level),
-      gameDurationMs,
+      damageDone: safeToInt(damageDone),
+      damageTaken: safeToInt(damageTaken),
+      depthReached: safeToInt(depthReached),
+      turnsPassed: safeToInt(turnsPassed),
+      coinsCollected: safeToInt(coinsCollected),
+      itemsCollected: safeToInt(itemsCollected),
+      xp: safeToInt(xp),
+      level: safeToInt(level),
+      gameDurationMs: safeToInt(gameDurationMs),
       inventory,
       deviceType,
       sidePathsEntered,
