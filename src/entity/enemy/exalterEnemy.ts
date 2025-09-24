@@ -59,6 +59,7 @@ export class ExalterEnemy extends Enemy {
     this.getDrop(["exalter"], false);
     this.pushable = false;
     this.chainPushable = false;
+    this.destroyableByOthers = false;
   }
 
   hit = (): number => {

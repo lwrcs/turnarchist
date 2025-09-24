@@ -58,6 +58,7 @@ export class OccultistEnemy extends Enemy {
     this.getDrop(["occultist"], false);
     this.pushable = false;
     this.chainPushable = false;
+    this.destroyableByOthers = false;
   }
 
   hit = (): number => {

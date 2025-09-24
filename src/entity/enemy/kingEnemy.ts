@@ -28,6 +28,7 @@ export class KingEnemy extends Enemy {
     this.tileY = 15;
     this.seenPlayer = false;
     this.aggro = false;
+    this.destroyableByOthers = false;
     this.name = "king";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;

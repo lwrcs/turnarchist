@@ -13785,7 +13785,10 @@ class Enemy extends entity_1.Entity {
                 const distance = utils_1.Utils.distance(this.x, this.y, e.x, e.y);
                 if (distance <= gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
                     e instanceof Enemy &&
-                    !e.seenPlayer) {
+                    !e.seenPlayer
+                // Do not alert freshly spawned enemies that are skipping their next turn
+                //e.skipNextTurns <= 0
+                ) {
                     e.handleSeenPlayer(p[1], false);
                     e.alertTicks = 2;
                 }
@@ -14686,6 +14689,7 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.getDrop(["exalter"], false);
         this.pushable = false;
         this.chainPushable = false;
+        this.destroyableByOthers = false;
     }
 }
 exports.ExalterEnemy = ExalterEnemy;
@@ -15504,6 +15508,7 @@ class KingEnemy extends enemy_1.Enemy {
         this.tileY = 15;
         this.seenPlayer = false;
         this.aggro = false;
+        this.destroyableByOthers = false;
         this.name = "king";
         this.orthogonalAttack = true;
         this.diagonalAttack = true;
@@ -16229,6 +16234,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.getDrop(["occultist"], false);
         this.pushable = false;
         this.chainPushable = false;
+        this.destroyableByOthers = false;
     }
 }
 exports.OccultistEnemy = OccultistEnemy;
@@ -16635,6 +16641,7 @@ class QueenEnemy extends enemy_1.Enemy {
         this.tileY = 10;
         this.seenPlayer = false;
         this.aggro = false;
+        this.destroyableByOthers = false;
         this.name = "queen";
         this.orthogonalAttack = true;
         this.diagonalAttack = true;
@@ -17410,6 +17417,7 @@ class Spawner extends enemy_1.Enemy {
         this.spawnOffset = 0;
         this.dropChance = 1;
         this.chainPushable = false;
+        this.destroyableByOthers = false;
         this.getDrop(["reaper"], false);
         /*
         switch (this.enemySpawnType) {
@@ -18993,6 +19001,7 @@ class Entity extends drawable_1.Drawable {
                     flag = false;
                 if (canDestroyOthers &&
                     entity.destroyable &&
+                    entity.destroyableByOthers &&
                     entity.w <= 1 &&
                     entity.h <= 1 &&
                     flag === true) {
@@ -19873,6 +19882,7 @@ class Entity extends drawable_1.Drawable {
         this.skipNextTurns = 0;
         this.direction = game_1.Direction.DOWN;
         this.destroyable = true;
+        this.destroyableByOthers = true;
         this.pushable = false;
         this.chainPushable = true;
         this.interactable = false;
@@ -31767,7 +31777,6 @@ exports.Armor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
-const weapon_1 = __webpack_require__(/*! ./weapon/weapon */ "./src/item/weapon/weapon.ts");
 class Armor extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -31775,9 +31784,11 @@ class Armor extends equippable_1.Equippable {
         this.coEquippable = (other) => {
             if (other instanceof Armor)
                 return false;
-            if (other instanceof weapon_1.Weapon && other.twoHanded) {
-                return false;
+            /*
+            if (other instanceof Weapon && (other as Weapon).twoHanded) {
+              return false;
             }
+            */
             return true;
         };
         this.getDescription = () => {

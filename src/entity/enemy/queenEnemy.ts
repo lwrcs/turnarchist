@@ -28,6 +28,7 @@ export class QueenEnemy extends Enemy {
     this.tileY = 10;
     this.seenPlayer = false;
     this.aggro = false;
+    this.destroyableByOthers = false;
     this.name = "queen";
     this.orthogonalAttack = true;
     this.diagonalAttack = true;

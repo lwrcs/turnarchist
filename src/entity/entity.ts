@@ -80,6 +80,7 @@ export class Entity extends Drawable {
   skipNextTurns: number;
   //TODO: change these to functions? for enemies that switch states
   destroyable: boolean; // can the player destroy this enemy?
+  destroyableByOthers: boolean; // can other entities destroy this enemy?
   pushable: boolean; // can the player push this enemy? (true for crates/barrels, false for regular mobs)
   chainPushable: boolean; // can the player pushing another enemy push this enemy? (default true)
   interactable: boolean; // can the player interact
@@ -186,6 +187,7 @@ export class Entity extends Drawable {
     this.skipNextTurns = 0;
     this.direction = Direction.DOWN;
     this.destroyable = true;
+    this.destroyableByOthers = true;
     this.pushable = false;
     this.chainPushable = true;
     this.interactable = false;
@@ -506,6 +508,7 @@ export class Entity extends Drawable {
       if (
         canDestroyOthers &&
         entity.destroyable &&
+        entity.destroyableByOthers &&
         entity.w <= 1 &&
         entity.h <= 1 &&
         flag === true
