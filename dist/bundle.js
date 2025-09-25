@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.5016e5be441d6c516853.png";
+module.exports = __webpack_require__.p + "assets/objset.1d8cd10618c83d297532.png";
 
 /***/ }),
 
@@ -24241,6 +24241,10 @@ class Game {
                     // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
                     input_1.Input.mouseDownListeners.push((x, y) => {
                         if (!this.isMobile)
+                            return;
+                        // Do not allow opening chat via touch when the death screen is active
+                        const localPlayer = this.players?.[this.localPlayerID];
+                        if (localPlayer && localPlayer.dead)
                             return;
                         // If already open, don't steal the event
                         if (this.chatOpen)
@@ -41694,6 +41698,9 @@ class PlayerInputHandler {
         const player = this.player;
         // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
         if (player.game.isMobile && !player.game.chatOpen) {
+            // Block opening chat while the death screen is active
+            if (player.dead)
+                return;
             if (player.game.isPointInChatHotspot(x, y)) {
                 player.game.chatOpen = true;
                 player.game.chatTextBox.focus();

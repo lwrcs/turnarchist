@@ -474,6 +474,9 @@ export class Game {
           // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
           Input.mouseDownListeners.push((x: number, y: number) => {
             if (!this.isMobile) return;
+            // Do not allow opening chat via touch when the death screen is active
+            const localPlayer = this.players?.[this.localPlayerID];
+            if (localPlayer && localPlayer.dead) return;
             // If already open, don't steal the event
             if (this.chatOpen) return;
             if (this.isPointInChatHotspot(x, y)) {
