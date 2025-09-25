@@ -8,8 +8,9 @@ import { Shrooms } from "../../item/usable/shrooms";
 import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
+import { Resource } from "../resource/resource";
 
-export class BigBlock extends Entity {
+export class ObsidianBlock extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
@@ -18,11 +19,11 @@ export class BigBlock extends Entity {
     this.tileY = 6;
     this.hasShadow = true;
     this.chainPushable = false;
-    this.name = "big block";
-    this.imageParticleX = 0;
-    this.imageParticleY = 28;
+    this.name = "obsidian block";
+    this.imageParticleX = 6;
+    this.imageParticleY = 24;
     this.opaque = true;
-    this.hitSound = Sound.playBush;
+    this.hitSound = Sound.breakRock;
     //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
 

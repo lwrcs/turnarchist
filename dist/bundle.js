@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.77132f32a0de10fc9bd0.png";
+module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png";
 
 /***/ }),
 
@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.1d8cd10618c83d297532.png";
+module.exports = __webpack_require__.p + "assets/objset.c6be87ce66992d413032.png";
 
 /***/ }),
 
@@ -20075,61 +20075,6 @@ exports.Barrel = Barrel;
 
 /***/ }),
 
-/***/ "./src/entity/object/bigBlock.ts":
-/*!***************************************!*\
-  !*** ./src/entity/object/bigBlock.ts ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BigBlock = void 0;
-const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
-class BigBlock extends entity_1.Entity {
-    constructor(room, game, x, y) {
-        super(room, game, x, y);
-        this.draw = (delta) => {
-            if (this.dead)
-                return;
-            game_1.Game.ctx.save();
-            game_1.Game.ctx.globalAlpha = this.alpha;
-            if (!this.dead) {
-                this.updateDrawXY(delta);
-                if (this.hasShadow)
-                    this.drawShadow(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
-            }
-            game_1.Game.ctx.restore();
-        };
-        this.drawTopLayer = (delta) => {
-            this.drawableY = this.y;
-        };
-        this.room = room;
-        this.health = 1;
-        this.tileX = 18;
-        this.tileY = 6;
-        this.hasShadow = true;
-        this.chainPushable = false;
-        this.name = "big block";
-        this.imageParticleX = 0;
-        this.imageParticleY = 28;
-        this.opaque = true;
-        this.hitSound = sound_1.Sound.playBush;
-        //this.drops.push(new Shrooms(this.room, this.x, this.y));
-    }
-    get type() {
-        return entity_2.EntityType.PROP;
-    }
-}
-exports.BigBlock = BigBlock;
-
-
-/***/ }),
-
 /***/ "./src/entity/object/bishopStatue.ts":
 /*!*******************************************!*\
   !*** ./src/entity/object/bishopStatue.ts ***!
@@ -21080,6 +21025,61 @@ class Mushrooms extends entity_1.Entity {
     }
 }
 exports.Mushrooms = Mushrooms;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/obsidianBlock.ts":
+/*!********************************************!*\
+  !*** ./src/entity/object/obsidianBlock.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObsidianBlock = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const resource_1 = __webpack_require__(/*! ../resource/resource */ "./src/entity/resource/resource.ts");
+class ObsidianBlock extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 18;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "obsidian block";
+        this.imageParticleX = 6;
+        this.imageParticleY = 24;
+        this.opaque = true;
+        this.hitSound = sound_1.Sound.breakRock;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_1.EntityType.PROP;
+    }
+}
+exports.ObsidianBlock = ObsidianBlock;
 
 
 /***/ }),
@@ -25002,7 +25002,7 @@ GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
 GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
 GameConstants.BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
-GameConstants.ENEMIES_BLOCK_LIGHT = false;
+GameConstants.ENEMIES_BLOCK_LIGHT = true;
 GameConstants.USE_PNG_LEVELS = true;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -25279,7 +25279,7 @@ const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const chestLayer_1 = __webpack_require__(/*! ../entity/object/chestLayer */ "./src/entity/object/chestLayer.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
-const bigBlock_1 = __webpack_require__(/*! ../entity/object/bigBlock */ "./src/entity/object/bigBlock.ts");
+const obsidianBlock_1 = __webpack_require__(/*! ../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
 const smallBush_1 = __webpack_require__(/*! ../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
 const succulent_1 = __webpack_require__(/*! ../entity/object/succulent */ "./src/entity/object/succulent.ts");
 const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
@@ -25683,7 +25683,7 @@ class EnemyState {
             this.type = EnemyType.ZIRCON;
         if (enemy instanceof amberResource_1.AmberResource)
             this.type = EnemyType.AMBER;
-        if (enemy instanceof bigBlock_1.BigBlock)
+        if (enemy instanceof obsidianBlock_1.ObsidianBlock)
             this.type = EnemyType.BIG_BLOCK;
         if (enemy instanceof smallBush_1.SmallBush)
             this.type = EnemyType.SMALL_BUSH;
@@ -25866,7 +25866,7 @@ let loadEnemy = (es, game) => {
     if (es.type === EnemyType.AMBER)
         enemy = new amberResource_1.AmberResource(room, game, es.x, es.y);
     if (es.type === EnemyType.BIG_BLOCK)
-        enemy = new bigBlock_1.BigBlock(room, game, es.x, es.y);
+        enemy = new obsidianBlock_1.ObsidianBlock(room, game, es.x, es.y);
     if (es.type === EnemyType.SMALL_BUSH)
         enemy = new smallBush_1.SmallBush(room, game, es.x, es.y);
     if (es.type === EnemyType.SUCCULENT)
@@ -36066,6 +36066,7 @@ const pawnStatue_1 = __webpack_require__(/*! ../entity/object/pawnStatue */ "./s
 const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
 const succulent_1 = __webpack_require__(/*! ../entity/object/succulent */ "./src/entity/object/succulent.ts");
 const smallBush_1 = __webpack_require__(/*! ../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
+const obsidianBlock_1 = __webpack_require__(/*! ../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -36121,7 +36122,6 @@ const environmentData = {
             { class: chest_1.Chest, weight: 0.025 },
             { class: decoBlock_1.DecoBlock, weight: 0.05 },
             { class: furnace_1.Furnace, weight: 0.05 },
-            //{ class: BigBlock, weight: 3 },
         ],
         enemies: [
             // Early game enemies (depth 0+)
@@ -36381,6 +36381,7 @@ const environmentData = {
             { class: obsidianResource_1.ObsidianResource, weight: 0.5 },
             // Keep sparse and harsh
             { class: chest_1.Chest, weight: 0.05 },
+            { class: obsidianBlock_1.ObsidianBlock, weight: 3 },
         ],
         enemies: [
             // Only high-level, late-game threats

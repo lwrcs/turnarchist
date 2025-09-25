@@ -111,7 +111,7 @@ import { DecoBlock } from "../entity/object/decoBlock";
 import { Tree } from "../entity/object/tree";
 import { ChestLayer } from "../entity/object/chestLayer";
 import { Bomb } from "../entity/object/bomb";
-import { BigBlock } from "../entity/object/bigBlock";
+import { ObsidianBlock } from "../entity/object/obsidianBlock";
 import { SmallBush } from "../entity/object/smallBush";
 import { Succulent } from "../entity/object/succulent";
 import { FallenPillar } from "../entity/object/fallenPillar";
@@ -560,7 +560,7 @@ export class EnemyState {
     if (enemy instanceof GarnetResource) this.type = EnemyType.GARNET;
     if (enemy instanceof ZirconResource) this.type = EnemyType.ZIRCON;
     if (enemy instanceof AmberResource) this.type = EnemyType.AMBER;
-    if (enemy instanceof BigBlock) this.type = EnemyType.BIG_BLOCK;
+    if (enemy instanceof ObsidianBlock) this.type = EnemyType.BIG_BLOCK;
     if (enemy instanceof SmallBush) this.type = EnemyType.SMALL_BUSH;
     if (enemy instanceof Succulent) this.type = EnemyType.SUCCULENT;
     if (enemy instanceof FallenPillar) this.type = EnemyType.FALLEN_PILLAR;
@@ -724,7 +724,7 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
   if (es.type === EnemyType.AMBER)
     enemy = new AmberResource(room, game, es.x, es.y);
   if (es.type === EnemyType.BIG_BLOCK)
-    enemy = new BigBlock(room, game, es.x, es.y);
+    enemy = new ObsidianBlock(room, game, es.x, es.y);
   if (es.type === EnemyType.SMALL_BUSH)
     enemy = new SmallBush(room, game, es.x, es.y);
   if (es.type === EnemyType.SUCCULENT)
