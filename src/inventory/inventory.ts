@@ -273,11 +273,11 @@ export class Inventory {
   };
 
   mouseMove = () => {
-    this.mostRecentInput = "mouse";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
     if (bounds.inBounds) {
+      this.mostRecentInput = "mouse";
       const s = this.isOpen
         ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
         : 18;
@@ -667,6 +667,7 @@ export class Inventory {
   drawQuickbar = (delta: number) => {
     const { x, y } = MouseCursor.getInstance().getPosition();
     const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
+    const isActive = isInBounds || this.mostRecentInput === "keyboard";
 
     const s = 18; // size of box
     const b = 2; // border
@@ -685,8 +686,8 @@ export class Inventory {
     */
     //Game.ctx.globalCompositeOperation = "xor";
 
-    // Draw highlighted background for selected item only if mouse is in bounds
-    if (isInBounds || this.mostRecentInput === "keyboard") {
+    // Draw highlighted background for selected item only if active (hover or keyboard-like input)
+    if (isActive) {
       /*
       Game.ctx.fillRect(
         Math.floor(startX + this.selX * (s + 2 * b + g) - hg - ob),
@@ -756,11 +757,11 @@ export class Inventory {
       }
     }
 
-    // Draw selection box only if mouse is in bounds
+    // Draw selection box; use active state to control emphasis
     if (true) {
       const selStartX = Math.floor(startX + this.selX * (s + 2 * b + g));
       const selStartY = Math.floor(startY);
-      const hg2 = isInBounds ? hg : 0;
+      const hg2 = isActive ? hg : 0;
       /*
       // Outer selection box (dark)
       Game.ctx.fillStyle = OUTLINE_COLOR;
@@ -782,8 +783,8 @@ export class Inventory {
       );
 
       // Clear inner rectangle - use normal size when not in bounds
-      const clearSize = isInBounds ? s : s - 2;
-      const selOffset = isInBounds ? 0 : 1;
+      const clearSize = isActive ? s : s - 2;
+      const selOffset = isActive ? 0 : 1;
       Game.ctx.clearRect(
         Math.floor(startX + this.selX * (s + 2 * b + g) + b + selOffset),
         Math.floor(startY + b + selOffset),

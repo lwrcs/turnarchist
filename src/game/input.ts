@@ -73,6 +73,7 @@ export const Input = {
   minusListener: function () {},
   escapeListener: function () {},
   fListener: function () {},
+  wheelListener: function (deltaY: number) {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
   mouseMoveListeners: [],
@@ -547,6 +548,14 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+window.document.getElementById("gameCanvas").addEventListener(
+  "wheel",
+  (event) => {
+    (event as WheelEvent).preventDefault();
+    Input.wheelListener((event as WheelEvent).deltaY);
+  },
+  { passive: false } as any,
+);
 /** 
 window.document
   .getElementById("gameCanvas")

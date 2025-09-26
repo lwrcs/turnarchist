@@ -53,6 +53,7 @@ export class PlayerInputHandler {
     Input.minusListener = () => this.handleInput(InputEnum.MINUS);
     Input.escapeListener = () => this.handleInput(InputEnum.ESCAPE);
     Input.fListener = () => this.handleInput(InputEnum.F);
+    Input.wheelListener = (deltaY: number) => this.handleMouseWheel(deltaY);
   }
 
   handleInput(input: InputEnum) {
@@ -254,6 +255,26 @@ export class PlayerInputHandler {
         this.player.inventory.close();
         break;
     }
+  }
+
+  private handleMouseWheel(deltaY: number) {
+    // Only handle while in-game
+    if (this.player.game.levelState !== LevelState.IN_LEVEL) return;
+    const inv = this.player.inventory;
+
+    // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
+    const step = deltaY > 0 ? 1 : -1;
+
+    // Wrap-around across quickbar columns
+    const cols = this.player.inventory.cols;
+    let next = (this.player.inventory.selX + step) % cols;
+    if (next < 0) next += cols;
+    this.player.inventory.selX = next;
+    this.player.inventory.selY = 0;
+
+    // Treat wheel as keyboard-like input so selection highlights while inventory is open
+    this.setMostRecentInput("keyboard");
+    inv.mostRecentInput = "keyboard";
   }
 
   handleNumKey = (num: number) => {

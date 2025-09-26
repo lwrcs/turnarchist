@@ -27707,6 +27707,7 @@ exports.Input = {
     minusListener: function () { },
     escapeListener: function () { },
     fListener: function () { },
+    wheelListener: function (deltaY) { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
     mouseMoveListeners: [],
@@ -28111,6 +28112,10 @@ window.document
 window.document
     .getElementById("gameCanvas")
     .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+window.document.getElementById("gameCanvas").addEventListener("wheel", (event) => {
+    event.preventDefault();
+    exports.Input.wheelListener(event.deltaY);
+}, { passive: false });
 /**
 window.document
   .getElementById("gameCanvas")
@@ -30827,10 +30832,10 @@ class Inventory {
             this.itemUse();
         };
         this.mouseMove = () => {
-            this.mostRecentInput = "mouse";
             const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
             const bounds = this.isPointInInventoryBounds(x, y);
             if (bounds.inBounds) {
+                this.mostRecentInput = "mouse";
                 const s = this.isOpen
                     ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
                     : 18;
@@ -31161,6 +31166,7 @@ class Inventory {
         this.drawQuickbar = (delta) => {
             const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
             const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
+            const isActive = isInBounds || this.mostRecentInput === "keyboard";
             const s = 18; // size of box
             const b = 2; // border
             const g = -2; // gap
@@ -31176,8 +31182,8 @@ class Inventory {
             Game.ctx.fillRect(startX - ob, startY - 1, width + 2, height + 2);
             */
             //Game.ctx.globalCompositeOperation = "xor";
-            // Draw highlighted background for selected item only if mouse is in bounds
-            if (isInBounds || this.mostRecentInput === "keyboard") {
+            // Draw highlighted background for selected item only if active (hover or keyboard-like input)
+            if (isActive) {
                 /*
                 Game.ctx.fillRect(
                   Math.floor(startX + this.selX * (s + 2 * b + g) - hg - ob),
@@ -31224,11 +31230,11 @@ class Inventory {
                     this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
                 }
             }
-            // Draw selection box only if mouse is in bounds
+            // Draw selection box; use active state to control emphasis
             if (true) {
                 const selStartX = Math.floor(startX + this.selX * (s + 2 * b + g));
                 const selStartY = Math.floor(startY);
-                const hg2 = isInBounds ? hg : 0;
+                const hg2 = isActive ? hg : 0;
                 /*
                 // Outer selection box (dark)
                 Game.ctx.fillStyle = OUTLINE_COLOR;
@@ -31243,8 +31249,8 @@ class Inventory {
                 game_1.Game.ctx.fillStyle = FILL_COLOR;
                 game_1.Game.ctx.fillRect(Math.floor(selStartX + b - hg2), Math.floor(selStartY + b - hg2), Math.floor(s + 2 * hg2), Math.floor(s + 2 * hg2));
                 // Clear inner rectangle - use normal size when not in bounds
-                const clearSize = isInBounds ? s : s - 2;
-                const selOffset = isInBounds ? 0 : 1;
+                const clearSize = isActive ? s : s - 2;
+                const selOffset = isActive ? 0 : 1;
                 game_1.Game.ctx.clearRect(Math.floor(startX + this.selX * (s + 2 * b + g) + b + selOffset), Math.floor(startY + b + selOffset), Math.floor(clearSize), Math.floor(clearSize));
                 // Draw equip animation for selected slot with highlight
                 const idx = this.selX;
@@ -41511,6 +41517,7 @@ class PlayerInputHandler {
         input_1.Input.minusListener = () => this.handleInput(input_1.InputEnum.MINUS);
         input_1.Input.escapeListener = () => this.handleInput(input_1.InputEnum.ESCAPE);
         input_1.Input.fListener = () => this.handleInput(input_1.InputEnum.F);
+        input_1.Input.wheelListener = (deltaY) => this.handleMouseWheel(deltaY);
     }
     handleInput(input) {
         if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
@@ -41687,6 +41694,24 @@ class PlayerInputHandler {
                 this.player.inventory.close();
                 break;
         }
+    }
+    handleMouseWheel(deltaY) {
+        // Only handle while in-game
+        if (this.player.game.levelState !== game_1.LevelState.IN_LEVEL)
+            return;
+        const inv = this.player.inventory;
+        // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
+        const step = deltaY > 0 ? 1 : -1;
+        // Wrap-around across quickbar columns
+        const cols = this.player.inventory.cols;
+        let next = (this.player.inventory.selX + step) % cols;
+        if (next < 0)
+            next += cols;
+        this.player.inventory.selX = next;
+        this.player.inventory.selY = 0;
+        // Treat wheel as keyboard-like input so selection highlights while inventory is open
+        this.setMostRecentInput("keyboard");
+        inv.mostRecentInput = "keyboard";
     }
     handleMouseRightClick() {
         this.setMostRecentInput("mouse");
