@@ -699,6 +699,8 @@ export class Entity extends Drawable {
       this.wander();
       return;
     }
+    //25% chance to trip
+    if (Random.rand() < 0.25) return;
 
     const distance = Utils.distance(this.x, this.y, player.x, player.y);
     if (distance > 10) {

@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.f89503011f194e6d6a8e.png";
+module.exports = __webpack_require__.p + "assets/mobset.740f76bfba12963345b6.png";
 
 /***/ }),
 
@@ -19164,6 +19164,9 @@ class Entity extends drawable_1.Drawable {
                 this.wander();
                 return;
             }
+            //25% chance to trip
+            if (random_1.Random.rand() < 0.25)
+                return;
             const distance = utils_1.Utils.distance(this.x, this.y, player.x, player.y);
             if (distance > 10) {
                 this.wander();
