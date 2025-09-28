@@ -9621,7 +9621,7 @@ module.exports = __webpack_require__.p + "assets/objset.c6be87ce66992d413032.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.c2ab57b53dd5d0adfdfa.png";
+module.exports = __webpack_require__.p + "assets/tileset.ff11894f0a2639d72300.png";
 
 /***/ }),
 
@@ -13785,10 +13785,9 @@ class Enemy extends entity_1.Entity {
                 const distance = utils_1.Utils.distance(this.x, this.y, e.x, e.y);
                 if (distance <= gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
                     e instanceof Enemy &&
-                    !e.seenPlayer
-                // Do not alert freshly spawned enemies that are skipping their next turn
-                //e.skipNextTurns <= 0
-                ) {
+                    !e.seenPlayer &&
+                    // Do not alert freshly spawned enemies that are skipping their next turn
+                    e.ticks >= 1) {
                     e.handleSeenPlayer(p[1], false);
                     e.alertTicks = 2;
                 }
@@ -17182,6 +17181,7 @@ class Spawner extends enemy_1.Enemy {
         };
         this.bleed = () => { };
         this.poison = () => { };
+        //alertNearbyEnemies = () => {};
         this.behavior = () => {
             let shouldSpawn = true;
             this.lastX = this.x;
@@ -17192,7 +17192,8 @@ class Spawner extends enemy_1.Enemy {
                     return;
                 }
                 this.tileX = 6;
-                if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0) {
+                if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&
+                    this.ticks >= this.nextSpawnTick) {
                     let positions = this.room
                         .getEmptyTiles()
                         .filter((t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1);
@@ -17284,6 +17285,7 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                         }
                         this.setSpawnFrequency(spawned?.maxHealth ?? 1);
+                        this.nextSpawnTick = this.ticks + this.spawnFrequency;
                         if (shouldSpawn) {
                             this.room.projectiles.push(new enemySpawnAnimation_1.EnemySpawnAnimation(this.room, spawned, position.x, position.y));
                             this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, position.x, position.y, this.x, this.y));
@@ -17415,6 +17417,7 @@ class Spawner extends enemy_1.Enemy {
         const randSpawnType = game_1.Game.randTable(this.enemyTable, random_1.Random.rand);
         this.enemySpawnType = randSpawnType;
         this.spawnOffset = 0;
+        this.nextSpawnTick = 0;
         this.dropChance = 1;
         this.chainPushable = false;
         this.destroyableByOthers = false;

@@ -36,6 +36,7 @@ export class Spawner extends Enemy {
   enemyTable: number[];
   spawnFrequency: number;
   spawnOffset: number;
+  nextSpawnTick: number;
   static tileX: number = 6;
   static tileY: number = 4;
 
@@ -62,6 +63,7 @@ export class Spawner extends Enemy {
     const randSpawnType = Game.randTable(this.enemyTable, Random.rand);
     this.enemySpawnType = randSpawnType;
     this.spawnOffset = 0;
+    this.nextSpawnTick = 0;
     this.dropChance = 1;
     this.chainPushable = false;
     this.destroyableByOthers = false;
@@ -141,6 +143,7 @@ export class Spawner extends Enemy {
 
   bleed = () => {};
   poison = () => {};
+  //alertNearbyEnemies = () => {};
 
   behavior = () => {
     let shouldSpawn = true;
@@ -152,7 +155,10 @@ export class Spawner extends Enemy {
         return;
       }
       this.tileX = 6;
-      if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0) {
+      if (
+        (this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&
+        this.ticks >= this.nextSpawnTick
+      ) {
         let positions = this.room
           .getEmptyTiles()
           .filter(
@@ -369,6 +375,7 @@ export class Spawner extends Enemy {
           }
 
           this.setSpawnFrequency(spawned?.maxHealth ?? 1);
+          this.nextSpawnTick = this.ticks + this.spawnFrequency;
 
           if (shouldSpawn) {
             this.room.projectiles.push(

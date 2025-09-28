@@ -114,9 +114,9 @@ export abstract class Enemy extends Entity {
       if (
         distance <= GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
         e instanceof Enemy &&
-        !e.seenPlayer
+        !e.seenPlayer &&
         // Do not alert freshly spawned enemies that are skipping their next turn
-        //e.skipNextTurns <= 0
+        e.ticks >= 1
       ) {
         e.handleSeenPlayer(p[1], false);
         e.alertTicks = 2;
