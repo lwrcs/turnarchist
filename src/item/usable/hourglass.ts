@@ -6,6 +6,7 @@ import { Room } from "../../room/room";
 import { Usable } from "./usable";
 
 export class Hourglass extends Usable {
+  static itemName = "hourglass";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 0;
@@ -13,6 +14,7 @@ export class Hourglass extends Usable {
     this.offsetY = -0.3;
     this.durability = 30;
     this.durabilityMax = 30;
+    this.name = Hourglass.itemName;
   }
 
   onUse = (player: Player) => {

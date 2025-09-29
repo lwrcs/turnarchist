@@ -34282,9 +34282,11 @@ class Hourglass extends usable_1.Usable {
         this.offsetY = -0.3;
         this.durability = 30;
         this.durabilityMax = 30;
+        this.name = Hourglass.itemName;
     }
 }
 exports.Hourglass = Hourglass;
+Hourglass.itemName = "hourglass";
 
 
 /***/ }),
