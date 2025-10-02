@@ -136,7 +136,7 @@ export class Player extends Drawable {
     this.healthBar = new HealthBar();
     this.dead = false;
     this.lastTickHealth = this.health;
-    this.damageBonus = 1;
+    this.damageBonus = 0;
 
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
