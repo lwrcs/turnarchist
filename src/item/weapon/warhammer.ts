@@ -27,7 +27,12 @@ export class Warhammer extends Weapon {
   weaponMove = (newX: number, newY: number): boolean => {
     if (this.checkForPushables(newX, newY)) return true;
 
-    const hitSomething = this.executeAttack(newX, newY);
+    const hitSomething = this.executeAttack(
+      newX,
+      newY,
+      true,
+      this.damage + this.wielder.damageBonus,
+    );
     if (hitSomething) {
       this.cooldown = this.cooldownMax;
     }

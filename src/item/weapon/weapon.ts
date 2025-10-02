@@ -66,7 +66,7 @@ export abstract class Weapon extends Equippable {
 
   coEquippable = (other: Equippable): boolean => {
     if (other instanceof Weapon) return false;
-    if (other instanceof Armor && this.twoHanded) return false;
+    //if (other instanceof Armor && this.twoHanded) return false;
     return true;
   };
 
@@ -335,7 +335,7 @@ export abstract class Weapon extends Equippable {
     targetX: number,
     targetY: number,
     animated: boolean = true,
-    damage: number = this.damage,
+    damage: number = this.damage + this.wielder.damageBonus,
     shakeScreen: boolean = true,
     sound: boolean = true,
     mainAttack: boolean = true,

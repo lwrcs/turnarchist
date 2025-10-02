@@ -86,6 +86,7 @@ export class Player extends Drawable {
   menu: Menu;
   busyAnimating: boolean;
   lightColor: [number, number, number];
+  damageBonus: number;
 
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
@@ -135,6 +136,7 @@ export class Player extends Drawable {
     this.healthBar = new HealthBar();
     this.dead = false;
     this.lastTickHealth = this.health;
+    this.damageBonus = 1;
 
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;

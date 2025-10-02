@@ -28,6 +28,9 @@ export class Equippable extends Item {
     return true;
   };
 
+  onEquip = () => {};
+  onUnequip = () => {};
+
   toggleEquip = () => {
     if ((!this.broken && this.cooldown <= 0) || this instanceof Armor) {
       if (!this.equipped && this.wielder?.inventory?.weapon) {
@@ -35,6 +38,12 @@ export class Equippable extends Item {
       }
 
       this.equipped = !this.equipped;
+
+      if (this.equipped) {
+        this.onEquip();
+      } else {
+        this.onUnequip();
+      }
 
       if (GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
         this.wielder?.stall();

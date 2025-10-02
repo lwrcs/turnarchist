@@ -71,7 +71,7 @@ export class Scythe extends Weapon {
       newX,
       newY,
       true,
-      1,
+      this.damage + this.wielder.damageBonus,
       true,
       true,
       true,
@@ -84,7 +84,11 @@ export class Scythe extends Weapon {
             ? (this.wielder as any).getRoom()
             : this.game.rooms[this.wielder.levelID];
           if (!room.roomArray[pos.x][pos.y].isSolid()) {
-            this.hitEntitiesAt(pos.x, pos.y, 1);
+            this.hitEntitiesAt(
+              pos.x,
+              pos.y,
+              this.damage + this.wielder.damageBonus,
+            );
           }
         }
       }

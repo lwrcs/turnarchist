@@ -17,4 +17,22 @@ export class GarnetRing extends Equippable {
     this.stackable = false;
     this.description = "A ring of garnet";
   }
+
+  onEquip = () => {
+    this.wielder.damageBonus = 1;
+    this.level.game.pushMessage("You feel a surge of power in your ring.");
+  };
+
+  onUnequip = () => {
+    this.wielder.damageBonus = 0;
+    this.level.game.pushMessage("The power in your ring fades.");
+  };
+
+  onDrop = () => {
+    this.wielder.damageBonus = 0;
+    if (this.equipped) {
+      this.level.game.pushMessage("The power in your ring fades.");
+      this.equipped = false;
+    }
+  };
 }

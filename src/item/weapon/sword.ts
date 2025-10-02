@@ -60,7 +60,7 @@ export class Sword extends Weapon {
       newX,
       newY,
       true,
-      1,
+      this.damage + this.wielder.damageBonus,
       true,
       true,
       true,
@@ -73,7 +73,7 @@ export class Sword extends Weapon {
             pos.y
           ].isSolid()
         ) {
-          const damage = 1;
+          const damage = this.damage + this.wielder.damageBonus;
           this.hitEntitiesAt(pos.x, pos.y, damage);
         }
       }

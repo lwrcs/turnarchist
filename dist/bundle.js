@@ -32399,12 +32399,20 @@ class Equippable extends item_1.Item {
         this.coEquippable = (other) => {
             return true;
         };
+        this.onEquip = () => { };
+        this.onUnequip = () => { };
         this.toggleEquip = () => {
             if ((!this.broken && this.cooldown <= 0) || this instanceof armor_1.Armor) {
                 if (!this.equipped && this.wielder?.inventory?.weapon) {
                     this.previousWeapon = this.wielder.inventory.weapon;
                 }
                 this.equipped = !this.equipped;
+                if (this.equipped) {
+                    this.onEquip();
+                }
+                else {
+                    this.onUnequip();
+                }
                 if (gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
                     this.wielder?.stall();
             }
@@ -32993,6 +33001,21 @@ const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equipp
 class GarnetRing extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.onEquip = () => {
+            this.wielder.damageBonus = 1;
+            this.level.game.pushMessage("You feel a surge of power in your ring.");
+        };
+        this.onUnequip = () => {
+            this.wielder.damageBonus = 0;
+            this.level.game.pushMessage("The power in your ring fades.");
+        };
+        this.onDrop = () => {
+            this.wielder.damageBonus = 0;
+            if (this.equipped) {
+                this.level.game.pushMessage("The power in your ring fades.");
+                this.equipped = false;
+            }
+        };
         this.tileX = 12;
         this.tileY = 2;
         this.name = GarnetRing.itemName;
@@ -34578,7 +34601,7 @@ class Dagger extends weapon_1.Weapon {
         this.weaponMove = (newX, newY) => {
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY);
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus);
             return !hitSomething;
         };
         this.degrade = () => { };
@@ -34802,7 +34825,7 @@ class Scythe extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY, true, 1, true, true, true, false);
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus, true, true, true, false);
             if (hitSomething) {
                 if (positions.length > 0) {
                     for (const pos of positions) {
@@ -34810,7 +34833,7 @@ class Scythe extends weapon_1.Weapon {
                             ? this.wielder.getRoom()
                             : this.game.rooms[this.wielder.levelID];
                         if (!room.roomArray[pos.x][pos.y].isSolid()) {
-                            this.hitEntitiesAt(pos.x, pos.y, 1);
+                            this.hitEntitiesAt(pos.x, pos.y, this.damage + this.wielder.damageBonus);
                         }
                     }
                 }
@@ -35361,7 +35384,7 @@ class Spear extends weapon_1.Weapon {
             if (nonEnemiesAtFirstTile.length > 0) {
                 // Hit non-enemy entities at first tile and stop (blocked)
                 for (const entity of nonEnemiesAtFirstTile) {
-                    this.attack(entity);
+                    this.attack(entity, this.damage + this.wielder.damageBonus);
                 }
                 this.hitSound();
                 this.attackAnimation(newX, newY);
@@ -35374,7 +35397,7 @@ class Spear extends weapon_1.Weapon {
             const enemiesAtFirstTile = entitiesAtFirstTile.filter((e) => !e.pushable && e.isEnemy);
             if (enemiesAtFirstTile.length > 0) {
                 for (const enemy of enemiesAtFirstTile) {
-                    this.attack(enemy);
+                    this.attack(enemy, this.damage + this.wielder.damageBonus);
                 }
                 hitEnemies = true;
             }
@@ -35385,7 +35408,7 @@ class Spear extends weapon_1.Weapon {
                 const enemiesAtSecondTile = entitiesAtSecondTile.filter((e) => !e.pushable && e.isEnemy);
                 if (enemiesAtSecondTile.length > 0) {
                     for (const enemy of enemiesAtSecondTile) {
-                        this.attack(enemy);
+                        this.attack(enemy, this.damage + this.wielder.damageBonus);
                     }
                     hitEnemies = true;
                 }
@@ -35503,7 +35526,7 @@ class Spellbook extends weapon_1.Weapon {
                     ? this.wielder.getRoom()
                     : this.game.rooms[this.wielder.levelID];
                 if (!room.roomArray[e.x][e.y].isSolid()) {
-                    e.hurt(this.wielder, 1);
+                    e.hurt(this.wielder, this.damage + this.wielder.damageBonus);
                     room.projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
                     // Add to the list of actually hit targets
                     actuallyHitTargets.push(e);
@@ -35609,11 +35632,11 @@ class Sword extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY, true, 1, true, true, true, false);
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus, true, true, true, false);
             if (hitSomething) {
                 for (const pos of positions) {
                     if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
-                        const damage = 1;
+                        const damage = this.damage + this.wielder.damageBonus;
                         this.hitEntitiesAt(pos.x, pos.y, damage);
                     }
                 }
@@ -35681,7 +35704,7 @@ class Warhammer extends weapon_1.Weapon {
         this.weaponMove = (newX, newY) => {
             if (this.checkForPushables(newX, newY))
                 return true;
-            const hitSomething = this.executeAttack(newX, newY);
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus);
             if (hitSomething) {
                 this.cooldown = this.cooldownMax;
             }
@@ -35740,7 +35763,6 @@ const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./s
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const armor_1 = __webpack_require__(/*! ../armor */ "./src/item/armor.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
@@ -35763,8 +35785,7 @@ class Weapon extends equippable_1.Equippable {
         this.coEquippable = (other) => {
             if (other instanceof Weapon)
                 return false;
-            if (other instanceof armor_1.Armor && this.twoHanded)
-                return false;
+            //if (other instanceof Armor && this.twoHanded) return false;
             return true;
         };
         this.applyStatus = (status) => {
@@ -35987,7 +36008,7 @@ class Weapon extends equippable_1.Equippable {
         const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
         return pushables.length > 0 && hasSpaceToPush;
     }
-    executeAttack(targetX, targetY, animated = true, damage = this.damage, shakeScreen = true, sound = true, mainAttack = true, shouldTick = true) {
+    executeAttack(targetX, targetY, animated = true, damage = this.damage + this.wielder.damageBonus, shakeScreen = true, sound = true, mainAttack = true, shouldTick = true) {
         const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
@@ -41272,6 +41293,7 @@ class Player extends drawable_1.Drawable {
         this.healthBar = new healthbar_1.HealthBar();
         this.dead = false;
         this.lastTickHealth = this.health;
+        this.damageBonus = 1;
         this.inventory = new inventory_1.Inventory(game, this);
         this.defaultSightRadius = 3;
         this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
@@ -51012,7 +51034,7 @@ class Pool extends tile_1.Tile {
                 game_1.Game.drawTile(22, 3, 1, 2, this.x, this.y, 1, 2, this.room.shadeColor, this.shadeAmount());
             game_1.Game.drawTile(this.tileX, this.tileY, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
-        this.tileX = this.skin === 1 ? 24 : 20;
+        this.tileX = 20;
         this.tileY = 4;
         if (leftEdge)
             this.tileX--;

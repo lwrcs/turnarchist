@@ -19,7 +19,7 @@ export class Pool extends Tile {
   ) {
     super(room, x, y);
 
-    this.tileX = this.skin === 1 ? 24 : 20;
+    this.tileX = 20;
     this.tileY = 4;
 
     if (leftEdge) this.tileX--;

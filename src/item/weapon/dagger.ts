@@ -15,7 +15,12 @@ export class Dagger extends Weapon {
   weaponMove = (newX: number, newY: number): boolean => {
     if (this.checkForPushables(newX, newY)) return true;
 
-    const hitSomething = this.executeAttack(newX, newY);
+    const hitSomething = this.executeAttack(
+      newX,
+      newY,
+      true,
+      this.damage + this.wielder.damageBonus,
+    );
 
     return !hitSomething;
   };

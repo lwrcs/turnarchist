@@ -41,7 +41,7 @@ export class Spear extends Weapon {
     if (nonEnemiesAtFirstTile.length > 0) {
       // Hit non-enemy entities at first tile and stop (blocked)
       for (const entity of nonEnemiesAtFirstTile) {
-        this.attack(entity);
+        this.attack(entity, this.damage + this.wielder.damageBonus);
       }
       this.hitSound();
       this.attackAnimation(newX, newY);
@@ -57,7 +57,7 @@ export class Spear extends Weapon {
     );
     if (enemiesAtFirstTile.length > 0) {
       for (const enemy of enemiesAtFirstTile) {
-        this.attack(enemy);
+        this.attack(enemy, this.damage + this.wielder.damageBonus);
       }
       hitEnemies = true;
     }
@@ -73,7 +73,7 @@ export class Spear extends Weapon {
       );
       if (enemiesAtSecondTile.length > 0) {
         for (const enemy of enemiesAtSecondTile) {
-          this.attack(enemy);
+          this.attack(enemy, this.damage + this.wielder.damageBonus);
         }
         hitEnemies = true;
       }
