@@ -23,11 +23,14 @@ export class Crate extends Entity {
     this.name = "crate";
     this.imageParticleX = 3;
     this.imageParticleY = 26;
+
+    /*
     if (Random.rand() < 0.1) {
       this.drops.push(new WeaponFragments(this.room, this.x, this.y, 10));
     } else {
       this.drops.push(new Coin(this.room, this.x, this.y));
     }
+    */
   }
 
   get type() {

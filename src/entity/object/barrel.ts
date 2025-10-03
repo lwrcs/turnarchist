@@ -19,11 +19,13 @@ export class Barrel extends Entity {
     this.name = "barrel";
     this.imageParticleX = 3;
     this.imageParticleY = 25;
+    /*
     if (Random.rand() < 0.1) {
       this.drops.push(new WeaponFragments(this.room, this.x, this.y));
     } else {
       this.drops.push(new Coin(this.room, this.x, this.y));
     }
+    */
   }
 
   get type() {

@@ -20034,9 +20034,6 @@ exports.Barrel = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Barrel extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -20065,12 +20062,13 @@ class Barrel extends entity_1.Entity {
         this.name = "barrel";
         this.imageParticleX = 3;
         this.imageParticleY = 25;
-        if (random_1.Random.rand() < 0.1) {
-            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y));
+        /*
+        if (Random.rand() < 0.1) {
+          this.drops.push(new WeaponFragments(this.room, this.x, this.y));
+        } else {
+          this.drops.push(new Coin(this.room, this.x, this.y));
         }
-        else {
-            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
-        }
+        */
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -20643,9 +20641,6 @@ exports.Crate = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
-const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
-const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class Crate extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -20675,12 +20670,13 @@ class Crate extends entity_1.Entity {
         this.name = "crate";
         this.imageParticleX = 3;
         this.imageParticleY = 26;
-        if (random_1.Random.rand() < 0.1) {
-            this.drops.push(new weaponFragments_1.WeaponFragments(this.room, this.x, this.y, 10));
+        /*
+        if (Random.rand() < 0.1) {
+          this.drops.push(new WeaponFragments(this.room, this.x, this.y, 10));
+        } else {
+          this.drops.push(new Coin(this.room, this.x, this.y));
         }
-        else {
-            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
-        }
+        */
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -21162,10 +21158,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pot = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
-const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 class Pot extends entity_1.Entity {
     constructor(room, game, x, y) {
@@ -21197,10 +21191,8 @@ class Pot extends entity_1.Entity {
         this.imageParticleX = 0;
         this.imageParticleY = 29;
         let dropProb = random_1.Random.rand();
-        if (dropProb < 0.025)
-            this.drops.push(new heart_1.Heart(this.room, this.x, this.y));
-        else
-            this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+        //if (dropProb < 0.025) this.drops.push(new Heart(this.room, this.x, this.y));
+        //else this.drops.push(new Coin(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -21223,10 +21215,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PottedPlant = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
-const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 class PottedPlant extends entity_1.Entity {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -21262,13 +21251,14 @@ class PottedPlant extends entity_1.Entity {
         this.imageParticleY = 28;
         if (drop)
             this.drop = drop;
+        /*
         else {
-            let dropProb = random_1.Random.rand();
-            if (dropProb < 0.025)
-                this.drops.push(new heart_1.Heart(this.room, this.x, this.y));
-            else
-                this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
+          let dropProb = Random.rand();
+          if (dropProb < 0.025)
+            this.drops.push(new Heart(this.room, this.x, this.y));
+          else this.drops.push(new Coin(this.room, this.x, this.y));
         }
+          */
     }
     get type() {
         return entity_2.EntityType.PROP;
