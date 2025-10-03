@@ -23968,9 +23968,12 @@ class Game {
                 this.justTransitioned = false;
             }
             if (this.cameraAnimation.active) {
-                speed = 0.075;
+                // While a camera animation is active, never hard-snap due to large distance
+                // Speed up significantly if fast-forward is engaged
+                speed = this.cameraAnimation.fast ? 0.5 : 0.075;
             }
-            if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+            else if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+                // Only allow instant snaps when no animation is active
                 speed = 1;
             }
             if ((Math.abs(dx) > 1 || Math.abs(dy) > 1) && speed !== 1) {
@@ -24022,12 +24025,23 @@ class Game {
             //console.log("updating camera animation", this.cameraAnimation.active);
             if (!this.cameraAnimation.active)
                 return;
-            const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
+            const speed = this.cameraAnimation.fast ? 10 : 1;
+            const elapsed = (this.cameraAnimation.frame / this.cameraAnimation.duration) * speed;
             if (elapsed < 0.6)
                 this.targetCamera(this.cameraAnimation.x, this.cameraAnimation.y);
-            this.cameraAnimation.frame += delta;
+            // Accelerate frames if fast mode is enabled
+            this.cameraAnimation.frame += delta * (this.cameraAnimation.fast ? 10 : 1);
             if (this.cameraAnimation.frame > this.cameraAnimation.duration)
                 this.cameraAnimation.active = false;
+        };
+        // Allow skipping the active camera animation immediately
+        this.skipCameraAnimation = () => {
+            if (this.cameraAnimation.active) {
+                this.cameraAnimation.active = false;
+                // Snap camera to target to avoid mid-lerp offset
+                this.cameraX = this.cameraTargetX;
+                this.cameraY = this.cameraTargetY;
+            }
         };
         this.startCameraAnimation = (x, y, duration) => {
             //console.log("starting camera animation", x, y, duration);
@@ -24036,6 +24050,11 @@ class Game {
             this.cameraAnimation.y = y;
             this.cameraAnimation.duration = duration;
             this.cameraAnimation.frame = 0;
+            this.cameraAnimation.fast = false;
+            const skipMsg = this.isMobile
+                ? "Tap to skip camera animation"
+                : "Press space or click to skip camera animation";
+            this.pushMessage(skipMsg);
         };
         this.drawTextScreen = (text, bg = true) => {
             if (bg) {
@@ -24881,6 +24900,7 @@ class CameraAnimation {
         this.speed = speed;
         this.frame = 0;
         this.active = false;
+        this.fast = false;
     }
 }
 exports.CameraAnimation = CameraAnimation;
@@ -41573,7 +41593,19 @@ class PlayerInputHandler {
         input_1.Input.wheelListener = (deltaY) => this.handleMouseWheel(deltaY);
     }
     handleInput(input) {
-        if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
+        // If a camera animation is active, allow inputs that should fast-forward it
+        if (this.player.game.cameraAnimation.active) {
+            switch (input) {
+                case input_1.InputEnum.SPACE:
+                case input_1.InputEnum.LEFT_CLICK:
+                    this.player.game.cameraAnimation.fast = true;
+                    return;
+                default:
+                    // Block other inputs while animation is active (until fast-forward completes)
+                    return;
+            }
+        }
+        if (this.player.busyAnimating)
             return;
         // Block input during level transitions, except for mouse movement
         if ((this.player.game.levelState === game_1.LevelState.TRANSITIONING ||
@@ -41661,6 +41693,11 @@ class PlayerInputHandler {
                     });
                 break;
             case input_1.InputEnum.SPACE:
+                // If camera animation is running, speed it up
+                if (this.player.game.cameraAnimation.active) {
+                    this.player.game.cameraAnimation.fast = true;
+                    break;
+                }
                 const player = this.player;
                 this.setMostRecentInput("keyboard");
                 if (player.game.chatOpen)
@@ -41689,6 +41726,11 @@ class PlayerInputHandler {
                 this.player.actionProcessor.process({ type: "InventoryRight" });
                 break;
             case input_1.InputEnum.LEFT_CLICK:
+                // Speed up camera animation on click
+                if (this.player.game.cameraAnimation.active) {
+                    this.player.game.cameraAnimation.fast = true;
+                    break;
+                }
                 this.handleMouseLeftClick();
                 break;
             case input_1.InputEnum.RIGHT_CLICK:
@@ -41778,6 +41820,12 @@ class PlayerInputHandler {
         if (button !== 0)
             return; // Only handle left mouse button
         const player = this.player;
+        // Speed up camera animation on any mouse down
+        if (player.game.cameraAnimation.active) {
+            player.game.cameraAnimation.fast = true;
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
         if (player.game.isMobile && !player.game.chatOpen) {
             // Block opening chat while the death screen is active
@@ -41942,6 +41990,11 @@ class PlayerInputHandler {
     handleTap() {
         // If the interaction was already handled by mouseDown, don't process it again
         if (input_1.Input.mouseDownHandled) {
+            return;
+        }
+        // Speed up camera animation on tap
+        if (this.player.game.cameraAnimation.active) {
+            this.player.game.cameraAnimation.fast = true;
             return;
         }
         if (this.player.dead) {

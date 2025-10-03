@@ -57,8 +57,19 @@ export class PlayerInputHandler {
   }
 
   handleInput(input: InputEnum) {
-    if (this.player.busyAnimating || this.player.game.cameraAnimation.active)
-      return;
+    // If a camera animation is active, allow inputs that should fast-forward it
+    if (this.player.game.cameraAnimation.active) {
+      switch (input) {
+        case InputEnum.SPACE:
+        case InputEnum.LEFT_CLICK:
+          this.player.game.cameraAnimation.fast = true;
+          return;
+        default:
+          // Block other inputs while animation is active (until fast-forward completes)
+          return;
+      }
+    }
+    if (this.player.busyAnimating) return;
 
     // Block input during level transitions, except for mouse movement
     if (
@@ -154,6 +165,11 @@ export class PlayerInputHandler {
           });
         break;
       case InputEnum.SPACE:
+        // If camera animation is running, speed it up
+        if (this.player.game.cameraAnimation.active) {
+          this.player.game.cameraAnimation.fast = true;
+          break;
+        }
         const player = this.player;
         this.setMostRecentInput("keyboard");
 
@@ -189,6 +205,11 @@ export class PlayerInputHandler {
         this.player.actionProcessor.process({ type: "InventoryRight" });
         break;
       case InputEnum.LEFT_CLICK:
+        // Speed up camera animation on click
+        if (this.player.game.cameraAnimation.active) {
+          this.player.game.cameraAnimation.fast = true;
+          break;
+        }
         this.handleMouseLeftClick();
         break;
       case InputEnum.RIGHT_CLICK:
@@ -313,6 +334,13 @@ export class PlayerInputHandler {
     if (button !== 0) return; // Only handle left mouse button
 
     const player = this.player;
+
+    // Speed up camera animation on any mouse down
+    if (player.game.cameraAnimation.active) {
+      player.game.cameraAnimation.fast = true;
+      Input.mouseDownHandled = true;
+      return;
+    }
 
     // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
     if (player.game.isMobile && !player.game.chatOpen) {
@@ -528,6 +556,12 @@ export class PlayerInputHandler {
   handleTap() {
     // If the interaction was already handled by mouseDown, don't process it again
     if (Input.mouseDownHandled) {
+      return;
+    }
+
+    // Speed up camera animation on tap
+    if (this.player.game.cameraAnimation.active) {
+      this.player.game.cameraAnimation.fast = true;
       return;
     }
 

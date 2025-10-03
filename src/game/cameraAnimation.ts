@@ -14,5 +14,7 @@ export class CameraAnimation {
     this.speed = speed;
     this.frame = 0;
     this.active = false;
+    this.fast = false;
   }
+  public fast: boolean;
 }

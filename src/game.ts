@@ -2302,10 +2302,11 @@ export class Game {
     }
 
     if (this.cameraAnimation.active) {
-      speed = 0.075;
-    }
-
-    if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+      // While a camera animation is active, never hard-snap due to large distance
+      // Speed up significantly if fast-forward is engaged
+      speed = this.cameraAnimation.fast ? 0.5 : 0.075;
+    } else if (Math.abs(dx) > 250 || Math.abs(dy) > 250) {
+      // Only allow instant snaps when no animation is active
       speed = 1;
     }
 
@@ -2367,13 +2368,26 @@ export class Game {
   updateCameraAnimation = (delta: number) => {
     //console.log("updating camera animation", this.cameraAnimation.active);
     if (!this.cameraAnimation.active) return;
-    const elapsed = this.cameraAnimation.frame / this.cameraAnimation.duration;
+    const speed = this.cameraAnimation.fast ? 10 : 1;
+    const elapsed =
+      (this.cameraAnimation.frame / this.cameraAnimation.duration) * speed;
 
     if (elapsed < 0.6)
       this.targetCamera(this.cameraAnimation.x, this.cameraAnimation.y);
-    this.cameraAnimation.frame += delta;
+    // Accelerate frames if fast mode is enabled
+    this.cameraAnimation.frame += delta * (this.cameraAnimation.fast ? 10 : 1);
     if (this.cameraAnimation.frame > this.cameraAnimation.duration)
       this.cameraAnimation.active = false;
+  };
+
+  // Allow skipping the active camera animation immediately
+  skipCameraAnimation = () => {
+    if (this.cameraAnimation.active) {
+      this.cameraAnimation.active = false;
+      // Snap camera to target to avoid mid-lerp offset
+      this.cameraX = this.cameraTargetX;
+      this.cameraY = this.cameraTargetY;
+    }
   };
 
   startCameraAnimation = (x: number, y: number, duration: number) => {
@@ -2383,6 +2397,11 @@ export class Game {
     this.cameraAnimation.y = y;
     this.cameraAnimation.duration = duration;
     this.cameraAnimation.frame = 0;
+    this.cameraAnimation.fast = false;
+    const skipMsg = this.isMobile
+      ? "Tap to skip camera animation"
+      : "Press space or click to skip camera animation";
+    this.pushMessage(skipMsg);
   };
 
   drawTextScreen = (text: string, bg: boolean = true) => {
