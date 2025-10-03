@@ -70,8 +70,8 @@ export class GameConstants {
   static KEY_REPEAT_TIME = 250; // millseconds
   static SWIPE_HOLD_REPEAT_TIME = 200;
   static SWIPE_HOLD_INITIAL_DELAY = 10;
-  static MOVEMENT_COOLDOWN = 200; // milliseconds
-  static MOVEMENT_QUEUE_COOLDOWN = 100; // milliseconds
+  static MOVEMENT_COOLDOWN = 50; // milliseconds
+  static MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
   static SLOW_INPUTS_NEAR_ENEMIES = false;
 
