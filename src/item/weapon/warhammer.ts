@@ -46,16 +46,16 @@ export class Warhammer extends Weapon {
       this.wielder.endSlowMotion();
       switch (this.wielder.direction) {
         case Direction.DOWN:
-          this.game.shakeScreen(0, -30, false);
+          this.game.shakeScreen(0, -5, false);
           break;
         case Direction.UP:
-          this.game.shakeScreen(0, -30, false);
+          this.game.shakeScreen(0, -5, false);
           break;
         case Direction.LEFT:
-          this.game.shakeScreen(-5, -30, false);
+          this.game.shakeScreen(-5, -5, false);
           break;
         case Direction.RIGHT:
-          this.game.shakeScreen(5, -30, false);
+          this.game.shakeScreen(5, -5, false);
           break;
       }
     }, this.hitDelay);

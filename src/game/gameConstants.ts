@@ -74,6 +74,7 @@ export class GameConstants {
   static MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
   static SLOW_INPUTS_NEAR_ENEMIES = false;
+  static SCREEN_SHAKE_ENABLED = true;
 
   static readonly CHAT_APPEAR_TIME = 1000;
   static readonly CHAT_FADE_TIME = 2000;

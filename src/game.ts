@@ -1625,17 +1625,19 @@ export class Game {
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = false) => {
-    let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
-    let finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
+    if (GameConstants.SCREEN_SHAKE_ENABLED) {
+      let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
+      let finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
 
-    this.screenShakeActive = true;
-    this.screenShakeX += finalX;
-    this.screenShakeY += finalY;
-    this.shakeAmountX += Math.abs(finalX);
-    this.shakeAmountY += Math.abs(finalY);
-    if (finalX < 0 || finalY < 0) this.shakeFrame = (3 * Math.PI) / 2;
-    if (finalX > 0 || finalY > 0) this.shakeFrame = Math.PI / 2;
-    this.screenShakeCutoff = Date.now();
+      this.screenShakeActive = true;
+      this.screenShakeX += finalX;
+      this.screenShakeY += finalY;
+      this.shakeAmountX += Math.abs(finalX);
+      this.shakeAmountY += Math.abs(finalY);
+      if (finalX < 0 || finalY < 0) this.shakeFrame = (3 * Math.PI) / 2;
+      if (finalX > 0 || finalY > 0) this.shakeFrame = Math.PI / 2;
+      this.screenShakeCutoff = Date.now();
+    }
   };
 
   drawRooms = (delta: number, skipLocalPlayer: boolean = false) => {

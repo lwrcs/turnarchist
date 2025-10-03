@@ -129,6 +129,36 @@ export class Menu {
     );
     this.addButton(smoothButton);
 
+    const getScreenShakeLabel = () =>
+      GameConstants.SCREEN_SHAKE_ENABLED
+        ? "Disable Screen Shake"
+        : "Enable Screen Shake";
+
+    const screenShakeButton = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      getScreenShakeLabel(),
+      () => {
+        GameConstants.SCREEN_SHAKE_ENABLED =
+          !GameConstants.SCREEN_SHAKE_ENABLED;
+        // Update label based on new state
+        screenShakeButton.text = getScreenShakeLabel();
+        const enabled = GameConstants.SCREEN_SHAKE_ENABLED
+          ? "enabled"
+          : "disabled";
+        this.game.pushMessage(`Screen shake is now ${enabled}`);
+        try {
+          const { saveSettings } = require("../game/settingsPersistence");
+          saveSettings(this.game);
+        } catch {}
+      },
+      false,
+      this,
+    );
+    this.addButton(screenShakeButton);
+
     const hoverTextButton = new guiButton(
       0,
       0,

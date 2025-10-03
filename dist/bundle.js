@@ -23545,18 +23545,20 @@ class Game {
             }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
-            let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
-            let finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
-            this.screenShakeActive = true;
-            this.screenShakeX += finalX;
-            this.screenShakeY += finalY;
-            this.shakeAmountX += Math.abs(finalX);
-            this.shakeAmountY += Math.abs(finalY);
-            if (finalX < 0 || finalY < 0)
-                this.shakeFrame = (3 * Math.PI) / 2;
-            if (finalX > 0 || finalY > 0)
-                this.shakeFrame = Math.PI / 2;
-            this.screenShakeCutoff = Date.now();
+            if (gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED) {
+                let finalX = clamp ? Math.max(-3, Math.min(3, shakeX)) : shakeX;
+                let finalY = clamp ? Math.max(-3, Math.min(3, shakeY)) : shakeY;
+                this.screenShakeActive = true;
+                this.screenShakeX += finalX;
+                this.screenShakeY += finalY;
+                this.shakeAmountX += Math.abs(finalX);
+                this.shakeAmountY += Math.abs(finalY);
+                if (finalX < 0 || finalY < 0)
+                    this.shakeFrame = (3 * Math.PI) / 2;
+                if (finalX > 0 || finalY > 0)
+                    this.shakeFrame = Math.PI / 2;
+                this.screenShakeCutoff = Date.now();
+            }
         };
         this.drawRooms = (delta, skipLocalPlayer = false) => {
             if (!gameConstants_1.GameConstants.drawOtherRooms) {
@@ -24950,6 +24952,7 @@ GameConstants.MOVEMENT_COOLDOWN = 50; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
 GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
+GameConstants.SCREEN_SHAKE_ENABLED = true;
 GameConstants.CHAT_APPEAR_TIME = 1000;
 GameConstants.CHAT_FADE_TIME = 2000;
 GameConstants.ANIMATION_SPEED = 1;
@@ -28460,6 +28463,7 @@ const saveSettings = (game) => {
         shade: gameConstants_1.GameConstants.SHADE_ENABLED,
         smoothLighting: gameConstants_1.GameConstants.SMOOTH_LIGHTING,
         hoverText: gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
+        screenShake: gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED,
     };
     (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -28485,6 +28489,9 @@ const loadSettings = (game) => {
         if (typeof s.hoverText === "boolean") {
             gameConstants_1.GameConstants.HOVER_TEXT_ENABLED = s.hoverText;
             console.log("Load hover text enabled", gameConstants_1.GameConstants.HOVER_TEXT_ENABLED);
+        }
+        if (typeof s.screenShake === "boolean") {
+            gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED = s.screenShake;
         }
     }
     catch (e) {
@@ -29606,6 +29613,25 @@ class Menu {
             catch { }
         }, false, this);
         this.addButton(smoothButton);
+        const getScreenShakeLabel = () => gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED
+            ? "Disable Screen Shake"
+            : "Enable Screen Shake";
+        const screenShakeButton = new guiButton_1.guiButton(0, 0, 0, 0, getScreenShakeLabel(), () => {
+            gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED =
+                !gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED;
+            // Update label based on new state
+            screenShakeButton.text = getScreenShakeLabel();
+            const enabled = gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED
+                ? "enabled"
+                : "disabled";
+            this.game.pushMessage(`Screen shake is now ${enabled}`);
+            try {
+                const { saveSettings } = __webpack_require__(/*! ../game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                saveSettings(this.game);
+            }
+            catch { }
+        }, false, this);
+        this.addButton(screenShakeButton);
         const hoverTextButton = new guiButton_1.guiButton(0, 0, 0, 0, "Hover Text", () => {
             gameConstants_1.GameConstants.HOVER_TEXT_ENABLED = !gameConstants_1.GameConstants.HOVER_TEXT_ENABLED;
             const enabled = gameConstants_1.GameConstants.HOVER_TEXT_ENABLED
@@ -35716,16 +35742,16 @@ class Warhammer extends weapon_1.Weapon {
                 this.wielder.endSlowMotion();
                 switch (this.wielder.direction) {
                     case game_1.Direction.DOWN:
-                        this.game.shakeScreen(0, -30, false);
+                        this.game.shakeScreen(0, -5, false);
                         break;
                     case game_1.Direction.UP:
-                        this.game.shakeScreen(0, -30, false);
+                        this.game.shakeScreen(0, -5, false);
                         break;
                     case game_1.Direction.LEFT:
-                        this.game.shakeScreen(-5, -30, false);
+                        this.game.shakeScreen(-5, -5, false);
                         break;
                     case game_1.Direction.RIGHT:
-                        this.game.shakeScreen(5, -30, false);
+                        this.game.shakeScreen(5, -5, false);
                         break;
                 }
             }, this.hitDelay);
