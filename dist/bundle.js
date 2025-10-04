@@ -12093,15 +12093,17 @@ class BigSkullEnemy extends enemy_1.Enemy {
                 }
             }
             this.ticksSinceFirstHit = 0;
-            if (this.health == 4)
+            if (this.health === 4)
                 this.unconscious = false;
             this.health -= damage;
             this.maxHealth -= shieldHealth;
             this.startHurting();
             this.healthBar.hurt();
             this.createDamageNumber(damage, type);
+            console.log("health", this.health);
+            console.log("damage", damage);
             this.playHitSound();
-            if (this.health == 2) {
+            if (this.health === 2) {
                 this.unconscious = true;
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 3, 28);
             }
@@ -24919,6 +24921,7 @@ const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/we
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
@@ -24926,11 +24929,11 @@ const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/to
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
-const goldRing_1 = __webpack_require__(/*! ../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
+const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -25162,13 +25165,10 @@ GameConstants.STARTING_DEV_INVENTORY = [
     bluegem_1.BlueGem,
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
-    greengem_1.GreenGem,
-    goldRing_1.GoldRing,
-    goldOre_1.GoldOre,
-    ironOre_1.IronOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
+    garnetRing_1.GarnetRing,
+    bombItem_1.BombItem,
+    bombItem_1.BombItem,
+    bombItem_1.BombItem,
     ironOre_1.IronOre,
     goldOre_1.GoldOre,
     goldOre_1.GoldOre,
@@ -43452,6 +43452,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Explosion = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -43478,8 +43479,8 @@ class Explosion extends projectile_1.Projectile {
         this.delay = 0;
         lighting_1.Lighting.momentaryLight(this.parent.room, this.x + 0.5, this.y + 0.5, 0.5, [255, 100, 0], 350, 20, Math.abs(this.offsetFrame));
         const distance = utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y);
-        let damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
-        for (let entity of this.parent.room.entities) {
+        const damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
+        for (const entity of this.parent.room.entities) {
             if (entity.x === this.x &&
                 entity.y === this.y &&
                 entity !== this.parent) {
@@ -43489,7 +43490,9 @@ class Explosion extends projectile_1.Projectile {
                 entity.hurt(playerHitBy, damage);
             }
             if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
-                playerHitBy.hurt(damage, "bomb");
+                if (playerHitBy instanceof player_1.Player) {
+                    playerHitBy.hurt(damage, "bomb");
+                }
             }
         }
     }

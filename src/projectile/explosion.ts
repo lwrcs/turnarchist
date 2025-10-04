@@ -39,9 +39,9 @@ export class Explosion extends Projectile {
       this.y,
     );
 
-    let damage =
+    const damage =
       distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
-    for (let entity of this.parent.room.entities) {
+    for (const entity of this.parent.room.entities) {
       if (
         entity.x === this.x &&
         entity.y === this.y &&
@@ -53,7 +53,9 @@ export class Explosion extends Projectile {
         entity.hurt(playerHitBy, damage);
       }
       if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
-        playerHitBy.hurt(damage, "bomb");
+        if (playerHitBy instanceof Player) {
+          playerHitBy.hurt(damage, "bomb");
+        }
       }
     }
   }

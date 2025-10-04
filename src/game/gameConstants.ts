@@ -43,6 +43,7 @@ import { FishingRod } from "../item/tool/fishingRod";
 import { Coin } from "../item/coin";
 import { Fish } from "../item/usable/fish";
 import { IronOre } from "../item/resource/ironOre";
+import { GarnetRing } from "../item/jewelry/garnetRing";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.0"; //"v0.6.3";
@@ -325,13 +326,10 @@ export class GameConstants {
     BlueGem,
     OrangeGem,
     RedGem,
-    GreenGem,
-    GoldRing,
-    GoldOre,
-    IronOre,
-    GoldOre,
-    GoldOre,
-    GoldOre,
+    GarnetRing,
+    BombItem,
+    BombItem,
+    BombItem,
     IronOre,
     GoldOre,
     GoldOre,

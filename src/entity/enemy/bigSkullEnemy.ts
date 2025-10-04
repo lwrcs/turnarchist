@@ -87,16 +87,18 @@ export class BigSkullEnemy extends Enemy {
       }
     }
     this.ticksSinceFirstHit = 0;
-    if (this.health == 4) this.unconscious = false;
+    if (this.health === 4) this.unconscious = false;
     this.health -= damage;
     this.maxHealth -= shieldHealth;
     this.startHurting();
 
     this.healthBar.hurt();
     this.createDamageNumber(damage, type);
+    console.log("health", this.health);
+    console.log("damage", damage);
     this.playHitSound();
 
-    if (this.health == 2) {
+    if (this.health === 2) {
       this.unconscious = true;
       ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 3, 28);
     } else {
