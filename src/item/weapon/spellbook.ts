@@ -19,10 +19,10 @@ export class Spellbook extends Weapon {
     this.canMine = true;
     this.name = Spellbook.itemName;
     this.isTargeting = false;
-    this.durability = 10;
-    this.durabilityMax = 10;
+    this.durability = 15;
+    this.durabilityMax = 15;
     this.description = "Hits multiple enemies within a range of 4 tiles.";
-    this.degradeable = false;
+    this.degradeable = true;
     this.cooldownMax = 25;
   }
 
@@ -131,8 +131,13 @@ export class Spellbook extends Weapon {
       room.tick(this.wielder);
       this.shakeScreen(newX, newY);
       Sound.playMagic();
-      //this.degrade();
+      this.degrade();
       this.cooldown = this.cooldownMax;
+      for (let item of this.wielder.inventory.items) {
+        if (item instanceof Spellbook) {
+          item.cooldown = item.cooldownMax;
+        }
+      }
 
       setTimeout(() => {
         this.isTargeting = false;

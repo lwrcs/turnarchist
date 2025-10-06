@@ -25165,7 +25165,6 @@ const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombI
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
-const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
@@ -25401,8 +25400,8 @@ GameConstants.STARTING_DEV_INVENTORY = [
     armor_1.Armor,
     backpack_1.Backpack,
     hammer_1.Hammer,
-    pickaxe_1.Pickaxe,
-    pickaxe_1.Pickaxe,
+    spellbook_1.Spellbook,
+    spellbook_1.Spellbook,
     bluegem_1.BlueGem,
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
@@ -35821,8 +35820,13 @@ class Spellbook extends weapon_1.Weapon {
                 room.tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
-                //this.degrade();
+                this.degrade();
                 this.cooldown = this.cooldownMax;
+                for (let item of this.wielder.inventory.items) {
+                    if (item instanceof Spellbook) {
+                        item.cooldown = item.cooldownMax;
+                    }
+                }
                 setTimeout(() => {
                     this.isTargeting = false;
                 }, 100);
@@ -35852,10 +35856,10 @@ class Spellbook extends weapon_1.Weapon {
         this.canMine = true;
         this.name = Spellbook.itemName;
         this.isTargeting = false;
-        this.durability = 10;
-        this.durabilityMax = 10;
+        this.durability = 15;
+        this.durabilityMax = 15;
         this.description = "Hits multiple enemies within a range of 4 tiles.";
-        this.degradeable = false;
+        this.degradeable = true;
         this.cooldownMax = 25;
     }
 }
