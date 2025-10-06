@@ -343,7 +343,11 @@ export class PlayerInputHandler {
     }
 
     // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
-    if (player.game.isMobile && !player.game.chatOpen) {
+    if (
+      GameConstants.MOBILE_KEYBOARD_SUPPORT &&
+      player.game.isMobile &&
+      !player.game.chatOpen
+    ) {
       // Block opening chat while the death screen is active
       if (player.dead) return;
       if (player.game.isPointInChatHotspot(x, y)) {
@@ -352,7 +356,11 @@ export class PlayerInputHandler {
         Input.mouseDownHandled = true;
         return;
       }
-    } else if (player.game.isMobile && player.game.chatOpen) {
+    } else if (
+      GameConstants.MOBILE_KEYBOARD_SUPPORT &&
+      player.game.isMobile &&
+      player.game.chatOpen
+    ) {
       // If chat is open, tapping anywhere closes chat (unless tapping hotspot again)
       if (!player.game.isPointInChatHotspot(x, y)) {
         player.game.chatOpen = false;

@@ -23843,8 +23843,10 @@ class Game {
         };
         this.drawChat = (delta) => {
             const CHAT_X = 5;
-            // Lift chat above the on-screen keyboard if present
-            const keyboardOffset = Math.ceil(this.keyboardHeightPx / Game.scale);
+            // Lift chat above the on-screen keyboard if enabled
+            const keyboardOffset = gameConstants_1.GameConstants.MOBILE_KEYBOARD_SUPPORT
+                ? Math.ceil(this.keyboardHeightPx / Game.scale)
+                : 0;
             const CHAT_BOTTOM_Y = gameConstants_1.GameConstants.HEIGHT - Game.letter_height - 38 - keyboardOffset;
             const CHAT_OPACITY = this.players?.[this.localPlayerID]?.inventory.isOpen
                 ? 0.05
@@ -24226,31 +24228,36 @@ class Game {
                         setTimeout(this.onResize, 100);
                     });
                     // Keyboard detection using VisualViewport (iOS 13+, Android Chrome)
-                    try {
-                        const vv = window.visualViewport;
-                        if (vv && typeof vv.addEventListener === "function") {
-                            const updateKeyboard = () => {
-                                // When keyboard shows, the layout viewport height shrinks
-                                const layoutH = window.innerHeight;
-                                const visualH = vv.height;
-                                const dy = Math.max(0, layoutH - visualH - (vv.offsetTop || 0));
-                                this.keyboardHeightPx = dy;
-                            };
-                            vv.addEventListener("resize", updateKeyboard);
-                            vv.addEventListener("scroll", updateKeyboard);
+                    if (gameConstants_1.GameConstants.MOBILE_KEYBOARD_SUPPORT) {
+                        try {
+                            const vv = window.visualViewport;
+                            if (vv && typeof vv.addEventListener === "function") {
+                                const updateKeyboard = () => {
+                                    // When keyboard shows, the layout viewport height shrinks
+                                    const layoutH = window.innerHeight;
+                                    const visualH = vv.height;
+                                    const dy = Math.max(0, layoutH - visualH - (vv.offsetTop || 0));
+                                    this.keyboardHeightPx = dy;
+                                };
+                                vv.addEventListener("resize", updateKeyboard);
+                                vv.addEventListener("scroll", updateKeyboard);
+                            }
+                            else {
+                                // Fallback: compare window.innerHeight changes
+                                let baseline = window.innerHeight;
+                                window.addEventListener("resize", () => {
+                                    const current = window.innerHeight;
+                                    this.keyboardHeightPx = Math.max(0, baseline - current);
+                                    if (current > baseline)
+                                        baseline = current; // update baseline on orientation change etc.
+                                });
+                            }
                         }
-                        else {
-                            // Fallback: compare window.innerHeight changes
-                            let baseline = window.innerHeight;
-                            window.addEventListener("resize", () => {
-                                const current = window.innerHeight;
-                                this.keyboardHeightPx = Math.max(0, baseline - current);
-                                if (current > baseline)
-                                    baseline = current; // update baseline on orientation change etc.
-                            });
-                        }
+                        catch { }
                     }
-                    catch { }
+                    else {
+                        this.keyboardHeightPx = 0;
+                    }
                     //Sound.playMusic(); // loops forever
                     this.players = {};
                     this.offlinePlayers = {};
@@ -24258,22 +24265,24 @@ class Game {
                     this.cameraAnimation = new cameraAnimation_1.CameraAnimation(0, 0, 1000, 1, 0, false);
                     this.feedbackButton = new feedbackButton_1.FeedbackButton();
                     // Enable tap-to-open chat on mobile: tap bottom-left region to focus chat input
-                    input_1.Input.mouseDownListeners.push((x, y) => {
-                        if (!this.isMobile)
-                            return;
-                        // Do not allow opening chat via touch when the death screen is active
-                        const localPlayer = this.players?.[this.localPlayerID];
-                        if (localPlayer && localPlayer.dead)
-                            return;
-                        // If already open, don't steal the event
-                        if (this.chatOpen)
-                            return;
-                        if (this.isPointInChatHotspot(x, y)) {
-                            this.chatOpen = true;
-                            this.chatTextBox.focus();
-                            input_1.Input.mouseDownHandled = true;
-                        }
-                    });
+                    if (gameConstants_1.GameConstants.MOBILE_KEYBOARD_SUPPORT) {
+                        input_1.Input.mouseDownListeners.push((x, y) => {
+                            if (!this.isMobile)
+                                return;
+                            // Do not allow opening chat via touch when the death screen is active
+                            const localPlayer = this.players?.[this.localPlayerID];
+                            if (localPlayer && localPlayer.dead)
+                                return;
+                            // If already open, don't steal the event
+                            if (this.chatOpen)
+                                return;
+                            if (this.isPointInChatHotspot(x, y)) {
+                                this.chatOpen = true;
+                                this.chatTextBox.focus();
+                                input_1.Input.mouseDownHandled = true;
+                            }
+                        });
+                    }
                     this.screenShakeX = 0;
                     this.screenShakeY = 0;
                     this.shakeAmountX = 0;
@@ -24944,6 +24953,7 @@ GameConstants.VERSION = "Alpha v0.3.0"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
+GameConstants.MOBILE_KEYBOARD_SUPPORT = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
 GameConstants.SAVING_ENABLED = false;
 GameConstants.FPS = 120;
@@ -41817,7 +41827,9 @@ class PlayerInputHandler {
             return;
         }
         // On mobile, treat bottom-left hotspot as chat open/focus before any gameplay handling
-        if (player.game.isMobile && !player.game.chatOpen) {
+        if (gameConstants_1.GameConstants.MOBILE_KEYBOARD_SUPPORT &&
+            player.game.isMobile &&
+            !player.game.chatOpen) {
             // Block opening chat while the death screen is active
             if (player.dead)
                 return;
@@ -41828,7 +41840,9 @@ class PlayerInputHandler {
                 return;
             }
         }
-        else if (player.game.isMobile && player.game.chatOpen) {
+        else if (gameConstants_1.GameConstants.MOBILE_KEYBOARD_SUPPORT &&
+            player.game.isMobile &&
+            player.game.chatOpen) {
             // If chat is open, tapping anywhere closes chat (unless tapping hotspot again)
             if (!player.game.isPointInChatHotspot(x, y)) {
                 player.game.chatOpen = false;
