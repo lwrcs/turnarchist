@@ -56,6 +56,10 @@ import { FallenPillar } from "../entity/object/fallenPillar";
 import { Succulent } from "../entity/object/succulent";
 import { SmallBush } from "../entity/object/smallBush";
 import { ObsidianBlock } from "../entity/object/obsidianBlock";
+import { DarkPillar } from "../entity/object/darkPillar";
+import { DarkCrate } from "../entity/object/darkCrate";
+import { DarkPot } from "../entity/object/darkPot";
+import { DarkVase } from "../entity/object/darkVase";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<any, number> = new Map([
@@ -192,10 +196,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: NullProp, weight: 1 },
       { class: CoalResource, weight: 1 },
       { class: GoldResource, weight: 0.1 },
-      { class: EmeraldResource, weight: 0.05 },
-      { class: GarnetResource, weight: 0.05 },
-      { class: ZirconResource, weight: 0.05 },
-      { class: AmberResource, weight: 0.05 },
+      { class: EmeraldResource, weight: 0.01 },
+      { class: GarnetResource, weight: 0.01 },
+      { class: ZirconResource, weight: 0.01 },
+      { class: AmberResource, weight: 0.01 },
       { class: Block, weight: 0.2 },
       { class: Rock, weight: 0.4 },
       { class: Mushrooms, weight: 0.3 },
@@ -377,17 +381,24 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.DARK_CASTLE]: {
     props: [
       { class: NullProp, weight: 2 },
-      { class: Crate, weight: 6 },
-      { class: Barrel, weight: 4 },
+      { class: DarkCrate, weight: 2 },
+      { class: Barrel, weight: 1 },
+      { class: DarkPot, weight: 1 },
+      { class: DarkVase, weight: 1 },
       { class: Chest, weight: 0.15 },
-      { class: DecoBlock, weight: 2 },
+      { class: DarkPillar, weight: 0.05 },
+      { class: PawnStatue, weight: 0.2 },
+      { class: RookStatue, weight: 0.2 },
+      { class: BishopStatue, weight: 0.2 },
     ],
     enemies: [
       // Chess-themed defenders
       { class: RookEnemy, weight: 1.2, minDepth: 1 },
       { class: BishopEnemy, weight: 1.2, minDepth: 1 },
       { class: KnightEnemy, weight: 1.6, minDepth: 1 },
+      { class: PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
       { class: QueenEnemy, weight: 0.35, minDepth: 2 },
+      { class: KingEnemy, weight: 0.125, minDepth: 2 },
 
       // Court mages
       { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
@@ -415,6 +426,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       // Keep sparse and harsh
       { class: Chest, weight: 0.05 },
       { class: ObsidianBlock, weight: 3 },
+      { class: EmeraldResource, weight: 0.025 },
+      { class: GarnetResource, weight: 0.025 },
+      { class: ZirconResource, weight: 0.025 },
+      { class: AmberResource, weight: 0.025 },
     ],
     enemies: [
       // Only high-level, late-game threats
@@ -447,6 +462,68 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: MummyEnemy, weight: 0.5, minDepth: 2 },
       { class: QueenEnemy, weight: 0.25, minDepth: 2 },
       { class: SpiderEnemy, weight: 0.5, minDepth: 2 },
+    ],
+  },
+  [EnvType.DARK_DUNGEON]: {
+    props: [
+      { class: DarkCrate, weight: 1 },
+      { class: Barrel, weight: 1 },
+      { class: TombStone, weight: 0.01, additionalParams: [1] },
+      { class: TombStone, weight: 0.01, additionalParams: [0] },
+      { class: Pumpkin, weight: 0.05 },
+      { class: Block, weight: 1 },
+      { class: DarkPot, weight: 1 },
+      { class: DarkVase, weight: 1 },
+      { class: Mushrooms, weight: 0.1 },
+      { class: Bush, weight: 0.1 },
+      { class: Sprout, weight: 0.025 },
+      { class: Chest, weight: 0.025 },
+      { class: DarkPillar, weight: 0.05 },
+      { class: Furnace, weight: 0.05 },
+    ],
+    enemies: [
+      // Early game enemies (depth 0+)
+      { class: CrabEnemy, weight: 1.0, minDepth: 0 },
+      { class: ZombieEnemy, weight: 1.2, minDepth: 0 },
+      { class: SkullEnemy, weight: 1.0, minDepth: 0 },
+      { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
+      { class: MummyEnemy, weight: 1.0, minDepth: 2 },
+      { class: PawnEnemy, weight: 1.0, minDepth: 1 },
+      { class: KingEnemy, weight: 0.25, minDepth: 3 },
+
+      // Mid game enemies (depth 1+)
+      { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+      { class: RookEnemy, weight: 0.6, minDepth: 1 },
+      { class: BishopEnemy, weight: 0.6, minDepth: 1 },
+      { class: ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+      { class: KnightEnemy, weight: 0.7, minDepth: 1 },
+
+      // Late game enemies (depth 2+)
+      { class: ChargeEnemy, weight: 0.5, minDepth: 2 },
+      {
+        class: BigSkullEnemy,
+        weight: 0.1,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
+      { class: QueenEnemy, weight: 0.2, minDepth: 2 },
+      {
+        class: BigKnightEnemy,
+        weight: 0.1,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
+      { class: FireWizardEnemy, weight: 0.1, minDepth: 2 },
+      { class: ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
+      {
+        class: BigFrogEnemy,
+        weight: 0.1,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+      },
     ],
   },
 };

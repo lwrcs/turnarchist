@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.740f76bfba12963345b6.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.c6be87ce66992d413032.png";
+module.exports = __webpack_require__.p + "assets/objset.102e0c4c4dc10917db76.png";
 
 /***/ }),
 
@@ -9621,7 +9621,7 @@ module.exports = __webpack_require__.p + "assets/objset.c6be87ce66992d413032.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.ff11894f0a2639d72300.png";
+module.exports = __webpack_require__.p + "assets/tileset.37d8b4d6374ea714339d.png";
 
 /***/ }),
 
@@ -9727,6 +9727,7 @@ var EnvType;
     EnvType[EnvType["PLACEHOLDER"] = 6] = "PLACEHOLDER";
     EnvType[EnvType["DESERT"] = 7] = "DESERT";
     EnvType[EnvType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
+    EnvType[EnvType["DARK_DUNGEON"] = 9] = "DARK_DUNGEON";
 })(EnvType = exports.EnvType || (exports.EnvType = {}));
 const getEnvTypeName = (envType) => {
     switch (envType) {
@@ -9748,6 +9749,8 @@ const getEnvTypeName = (envType) => {
             return "DESERT";
         case EnvType.MAGMA_CAVE:
             return "MAGMA_CAVE";
+        case EnvType.DARK_DUNGEON:
+            return "DARK_DUNGEON";
     }
 };
 exports.getEnvTypeName = getEnvTypeName;
@@ -17160,6 +17163,7 @@ const pawnEnemy_1 = __webpack_require__(/*! ./pawnEnemy */ "./src/entity/enemy/p
 const beetleEnemy_1 = __webpack_require__(/*! ./beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ./bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const wall_1 = __webpack_require__(/*! ../../tile/wall */ "./src/tile/wall.ts");
+const kingEnemy_1 = __webpack_require__(/*! ./kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [
         1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20,
@@ -17280,6 +17284,9 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 20:
                                 spawned = new beetleEnemy_1.BeetleEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 21:
+                                spawned = new kingEnemy_1.KingEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             default:
                                 console.warn("spawner tried to spawn unknown enemy type", this.enemySpawnType);
@@ -20685,6 +20692,230 @@ class Crate extends entity_1.Entity {
     }
 }
 exports.Crate = Crate;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/darkCrate.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/darkCrate.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DarkCrate = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class DarkCrate extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.tileX = 6;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.pushable = true;
+        this.name = "dark crate";
+        this.imageParticleX = 3;
+        this.imageParticleY = 26;
+        /*
+        if (Random.rand() < 0.1) {
+          this.drops.push(new WeaponFragments(this.room, this.x, this.y, 10));
+        } else {
+          this.drops.push(new Coin(this.room, this.x, this.y));
+        }
+        */
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.DarkCrate = DarkCrate;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/darkPillar.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/object/darkPillar.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DarkPillar = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+class DarkPillar extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 7;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.pushable = true;
+        this.name = "dark pillar";
+        this.imageParticleX = 3;
+        this.imageParticleY = 25;
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.DarkPillar = DarkPillar;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/darkPot.ts":
+/*!**************************************!*\
+  !*** ./src/entity/object/darkPot.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DarkPot = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class DarkPot extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 8;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "dark pot";
+        this.hitSound = sound_1.Sound.potSmash;
+        this.imageParticleX = 0;
+        this.imageParticleY = 29;
+        let dropProb = random_1.Random.rand();
+        //if (dropProb < 0.025) this.drops.push(new Heart(this.room, this.x, this.y));
+        //else this.drops.push(new Coin(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.DarkPot = DarkPot;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/darkVase.ts":
+/*!***************************************!*\
+  !*** ./src/entity/object/darkVase.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DarkVase = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class DarkVase extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 9;
+        this.tileY = 6;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "dark vase";
+        this.hitSound = sound_1.Sound.potSmash;
+        this.imageParticleX = 0;
+        this.imageParticleY = 29;
+        let dropProb = random_1.Random.rand();
+        //if (dropProb < 0.025) this.drops.push(new Heart(this.room, this.x, this.y));
+        //else this.drops.push(new Coin(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.DarkVase = DarkVase;
 
 
 /***/ }),
@@ -32267,7 +32498,7 @@ DropTable.drops = [
     { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
-    { itemType: "goldOre", dropRate: 350, category: ["resource"] },
+    { itemType: "gold", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
         itemType: "coal",
@@ -36148,6 +36379,10 @@ const fallenPillar_1 = __webpack_require__(/*! ../entity/object/fallenPillar */ 
 const succulent_1 = __webpack_require__(/*! ../entity/object/succulent */ "./src/entity/object/succulent.ts");
 const smallBush_1 = __webpack_require__(/*! ../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
 const obsidianBlock_1 = __webpack_require__(/*! ../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
+const darkPillar_1 = __webpack_require__(/*! ../entity/object/darkPillar */ "./src/entity/object/darkPillar.ts");
+const darkCrate_1 = __webpack_require__(/*! ../entity/object/darkCrate */ "./src/entity/object/darkCrate.ts");
+const darkPot_1 = __webpack_require__(/*! ../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
+const darkVase_1 = __webpack_require__(/*! ../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -36252,10 +36487,10 @@ const environmentData = {
             { class: NullProp, weight: 1 },
             { class: coalResource_1.CoalResource, weight: 1 },
             { class: goldResource_1.GoldResource, weight: 0.1 },
-            { class: emeraldResource_1.EmeraldResource, weight: 0.05 },
-            { class: garnetResource_1.GarnetResource, weight: 0.05 },
-            { class: zirconResource_1.ZirconResource, weight: 0.05 },
-            { class: amberResource_1.AmberResource, weight: 0.05 },
+            { class: emeraldResource_1.EmeraldResource, weight: 0.01 },
+            { class: garnetResource_1.GarnetResource, weight: 0.01 },
+            { class: zirconResource_1.ZirconResource, weight: 0.01 },
+            { class: amberResource_1.AmberResource, weight: 0.01 },
             { class: block_1.Block, weight: 0.2 },
             { class: rockResource_1.Rock, weight: 0.4 },
             { class: mushrooms_1.Mushrooms, weight: 0.3 },
@@ -36427,17 +36662,24 @@ const environmentData = {
     [environmentTypes_1.EnvType.DARK_CASTLE]: {
         props: [
             { class: NullProp, weight: 2 },
-            { class: crate_1.Crate, weight: 6 },
-            { class: barrel_1.Barrel, weight: 4 },
+            { class: darkCrate_1.DarkCrate, weight: 2 },
+            { class: barrel_1.Barrel, weight: 1 },
+            { class: darkPot_1.DarkPot, weight: 1 },
+            { class: darkVase_1.DarkVase, weight: 1 },
             { class: chest_1.Chest, weight: 0.15 },
-            { class: decoBlock_1.DecoBlock, weight: 2 },
+            { class: darkPillar_1.DarkPillar, weight: 0.05 },
+            { class: pawnStatue_1.PawnStatue, weight: 0.2 },
+            { class: rookStatue_1.RookStatue, weight: 0.2 },
+            { class: bishopStatue_1.BishopStatue, weight: 0.2 },
         ],
         enemies: [
             // Chess-themed defenders
             { class: rookEnemy_1.RookEnemy, weight: 1.2, minDepth: 1 },
             { class: bishopEnemy_1.BishopEnemy, weight: 1.2, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 1.6, minDepth: 1 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.35, minDepth: 2 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 2 },
             // Court mages
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.35, minDepth: 2 },
@@ -36463,6 +36705,10 @@ const environmentData = {
             // Keep sparse and harsh
             { class: chest_1.Chest, weight: 0.05 },
             { class: obsidianBlock_1.ObsidianBlock, weight: 3 },
+            { class: emeraldResource_1.EmeraldResource, weight: 0.025 },
+            { class: garnetResource_1.GarnetResource, weight: 0.025 },
+            { class: zirconResource_1.ZirconResource, weight: 0.025 },
+            { class: amberResource_1.AmberResource, weight: 0.025 },
         ],
         enemies: [
             // Only high-level, late-game threats
@@ -36494,6 +36740,66 @@ const environmentData = {
             { class: mummyEnemy_1.MummyEnemy, weight: 0.5, minDepth: 2 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.25, minDepth: 2 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 0.5, minDepth: 2 },
+        ],
+    },
+    [environmentTypes_1.EnvType.DARK_DUNGEON]: {
+        props: [
+            { class: darkCrate_1.DarkCrate, weight: 1 },
+            { class: barrel_1.Barrel, weight: 1 },
+            { class: tombStone_1.TombStone, weight: 0.01, additionalParams: [1] },
+            { class: tombStone_1.TombStone, weight: 0.01, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.05 },
+            { class: block_1.Block, weight: 1 },
+            { class: darkPot_1.DarkPot, weight: 1 },
+            { class: darkVase_1.DarkVase, weight: 1 },
+            { class: mushrooms_1.Mushrooms, weight: 0.1 },
+            { class: bush_1.Bush, weight: 0.1 },
+            { class: sprout_1.Sprout, weight: 0.025 },
+            { class: chest_1.Chest, weight: 0.025 },
+            { class: darkPillar_1.DarkPillar, weight: 0.05 },
+            { class: furnace_1.Furnace, weight: 0.05 },
+        ],
+        enemies: [
+            // Early game enemies (depth 0+)
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
+            { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
+            { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.25, minDepth: 3 },
+            // Mid game enemies (depth 1+)
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
+            { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+            { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
+            // Late game enemies (depth 2+)
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
+            {
+                class: bigSkullEnemy_1.BigSkullEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.2, minDepth: 2 },
+            {
+                class: bigKnightEnemy_1.BigKnightEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
+            { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
+            {
+                class: bigFrogEnemy_1.BigFrogEnemy,
+                weight: 0.1,
+                minDepth: 2,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 2, h: 2 },
+            },
         ],
     },
 };
@@ -37310,7 +37616,7 @@ class LevelGenerator {
             if (!overlapValidation.isValid) {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
-            let mainEnvType = depth > 4 ? environmentTypes_1.EnvType.MAGMA_CAVE : environmentTypes_1.EnvType.DUNGEON;
+            let mainEnvType = depth > 4 ? environmentTypes_1.EnvType.DARK_DUNGEON : environmentTypes_1.EnvType.DUNGEON;
             let envType = !isSidePath ? mainEnvType : environment;
             // if (depth > 4) {
             //   envType = EnvType.MAGMA_CAVE;
@@ -47628,11 +47934,24 @@ class Populator {
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
+                return;
+                // removed by dead control flow
+
+            }
+            if (this.level.environment.type === environmentTypes_1.EnvType.DARK_DUNGEON) {
                 this.addDownladder({
-                    caveRooms: this.numRooms(),
+                    caveRooms: this.numRooms() * 2,
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.DARK_CASTLE,
+                    linearity: 0.8,
+                });
+            }
+            if (this.level.environment.type === environmentTypes_1.EnvType.DARK_CASTLE) {
+                this.addDownladder({
+                    caveRooms: this.numRooms() * 2,
                     locked: true,
                     envType: environmentTypes_1.EnvType.MAGMA_CAVE,
-                    linearity: 1,
+                    linearity: 0.5,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
@@ -47644,12 +47963,9 @@ class Populator {
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
-                this.addDownladder({
-                    caveRooms: this.numRooms(),
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.DARK_CASTLE,
-                    linearity: 0.8,
-                });
+                return;
+                // removed by dead control flow
+
             }
             this.linkExitToStart();
             //this.level.distributeKeys();
@@ -50714,6 +51030,14 @@ class Floor extends tile_1.Tile {
                 this.bloomColor = "#641900";
             }
         }
+        if (this.skin == tile_1.SkinType.DARK_DUNGEON) {
+            this.variation = game_1.Game.randTable([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 9, 10, 12], random_1.Random.rand);
+            if (random_1.Random.rand() < 0.2) {
+                this.hasBloom = true;
+                this.bloomAlpha = 1;
+                this.bloomColor = "#306082"; //deep blue hex;
+            }
+        }
     }
 }
 exports.Floor = Floor;
@@ -51316,6 +51640,7 @@ var SkinType;
     SkinType[SkinType["PLACEHOLDER"] = 6] = "PLACEHOLDER";
     SkinType[SkinType["DESERT"] = 7] = "DESERT";
     SkinType[SkinType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
+    SkinType[SkinType["DARK_DUNGEON"] = 9] = "DARK_DUNGEON";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y) {

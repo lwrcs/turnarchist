@@ -48,6 +48,18 @@ export class Floor extends Tile {
         this.bloomColor = "#641900";
       }
     }
+    if (this.skin == SkinType.DARK_DUNGEON) {
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 9, 10, 12],
+        Random.rand,
+      );
+
+      if (Random.rand() < 0.2) {
+        this.hasBloom = true;
+        this.bloomAlpha = 1;
+        this.bloomColor = "#306082"; //deep blue hex;
+      }
+    }
   }
 
   draw = (delta: number) => {

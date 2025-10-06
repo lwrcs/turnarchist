@@ -15,6 +15,7 @@ export enum SkinType {
   PLACEHOLDER = 6,
   DESERT = 7,
   MAGMA_CAVE = 8,
+  DARK_DUNGEON = 9,
 }
 
 export abstract class Tile extends Drawable {

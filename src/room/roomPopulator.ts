@@ -149,11 +149,30 @@ export class Populator {
     }
 
     if (this.level.environment.type === EnvType.CAVE) {
+      return;
       this.addDownladder({
         caveRooms: this.numRooms(),
         locked: true,
         envType: EnvType.MAGMA_CAVE,
-        linearity: 1,
+        linearity: 0.5,
+      });
+    }
+
+    if (this.level.environment.type === EnvType.DARK_DUNGEON) {
+      this.addDownladder({
+        caveRooms: this.numRooms() * 2,
+        locked: true,
+        envType: EnvType.DARK_CASTLE,
+        linearity: 0.8,
+      });
+    }
+
+    if (this.level.environment.type === EnvType.DARK_CASTLE) {
+      this.addDownladder({
+        caveRooms: this.numRooms() * 2,
+        locked: true,
+        envType: EnvType.MAGMA_CAVE,
+        linearity: 0.5,
       });
     }
 
@@ -167,6 +186,7 @@ export class Populator {
     }
 
     if (this.level.environment.type === EnvType.CASTLE) {
+      return;
       this.addDownladder({
         caveRooms: this.numRooms(),
         locked: true,

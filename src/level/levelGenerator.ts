@@ -263,7 +263,7 @@ export class LevelGenerator {
         `Overlap validation failed: ${overlapValidation.errorMessage}`,
       );
     }
-    let mainEnvType = depth > 4 ? EnvType.MAGMA_CAVE : EnvType.DUNGEON;
+    let mainEnvType = depth > 4 ? EnvType.DARK_DUNGEON : EnvType.DUNGEON;
     let envType = !isSidePath ? mainEnvType : environment;
     // if (depth > 4) {
     //   envType = EnvType.MAGMA_CAVE;

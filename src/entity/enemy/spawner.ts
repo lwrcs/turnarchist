@@ -28,6 +28,7 @@ import { PawnEnemy } from "./pawnEnemy";
 import { BeetleEnemy } from "./beetleEnemy";
 import { BigFrogEnemy } from "./bigFrogEnemy";
 import { Wall } from "../../tile/wall";
+import { KingEnemy } from "./kingEnemy";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -354,6 +355,14 @@ export class Spawner extends Enemy {
               break;
             case 20:
               spawned = new BeetleEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 21:
+              spawned = new KingEnemy(
                 this.room,
                 this.game,
                 position.x,
