@@ -44,6 +44,7 @@ import { Coin } from "../item/coin";
 import { Fish } from "../item/usable/fish";
 import { IronOre } from "../item/resource/ironOre";
 import { GarnetRing } from "../item/jewelry/garnetRing";
+import { WoodenShield } from "../item/woodenShield";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.0"; //"v0.6.3";
@@ -323,7 +324,7 @@ export class GameConstants {
     Backpack,
     Hammer,
     Spellbook,
-    Spellbook,
+    WoodenShield,
     BlueGem,
     OrangeGem,
     RedGem,

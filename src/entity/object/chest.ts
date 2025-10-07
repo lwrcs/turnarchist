@@ -73,6 +73,11 @@ export class Chest extends Entity {
       this.destroyable = true;
     }
   };
+  uniqueKillBehavior = () => {
+    if (this.health === 3) {
+      this.open();
+    }
+  };
 
   private open = () => {
     this.tileX = 0;
@@ -83,7 +88,7 @@ export class Chest extends Entity {
 
     if (this.drop === null)
       this.getDrop(
-        ["consumable", "gem", "coin", "tool", "light", "weapon"],
+        ["consumable", "gem", "coin", "tool", "light", "weapon", "shield"],
         true,
       );
 

@@ -17,6 +17,7 @@ import { FishingRod } from "../item/tool/fishingRod";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
+import { WoodenShield } from "../item/woodenShield";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -534,8 +535,10 @@ export class Inventory {
 
   getArmor = (): Armor | null => {
     return (
-      this.items.find((i): i is Armor => i instanceof Armor && i.equipped) ||
-      null
+      this.items.find(
+        (i): i is Armor =>
+          (i instanceof Armor || i instanceof WoodenShield) && i.equipped,
+      ) || null
     );
   };
 

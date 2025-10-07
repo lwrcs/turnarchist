@@ -795,7 +795,7 @@ export class Player extends Drawable {
   };
 
   hurt = (damage: number, enemy: string, delay: number = 0) => {
-    if (GameConstants.DEVELOPER_MODE) return;
+    //if (GameConstants.DEVELOPER_MODE) return;
     // Play hurt sound if in current room
     if (this.getRoom() === this.game.room) {
       setTimeout(() => {
@@ -807,8 +807,11 @@ export class Player extends Drawable {
     }
 
     // Handle armor damage
-    if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
-      this.inventory.getArmor().hurt(damage);
+    const armor = this.inventory.getArmor();
+    let diff = 0;
+    if (armor && armor.health > 0) {
+      diff = armor.health - damage;
+      armor.hurt(damage);
       this.renderer.hurtShield();
       this.hurtShield = true;
     }
@@ -823,6 +826,9 @@ export class Player extends Drawable {
       this.health -= damage;
       // Emit damage taken event for statistics tracking
       globalEventBus.emit(EVENTS.DAMAGE_TAKEN, { amount: damage });
+    } else if (diff < 0) {
+      this.health += diff;
+      globalEventBus.emit(EVENTS.DAMAGE_TAKEN, { amount: -diff });
     }
     this.hurtShield = false;
 

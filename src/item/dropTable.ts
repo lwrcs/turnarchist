@@ -36,6 +36,7 @@ import { ScytheBlade } from "./weapon/scytheBlade";
 import { FishingRod } from "./tool/fishingRod";
 import { ShieldRightFragment } from "./weapon/shieldRightFragment";
 import { ShieldLeftFragment } from "./weapon/shieldLeftFragment";
+import { WoodenShield } from "./woodenShield";
 
 interface Drop {
   itemType: string;
@@ -61,7 +62,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   shieldrightfragment: ShieldRightFragment,
 
   armor: Armor,
-
+  woodenshield: WoodenShield,
   pickaxe: Pickaxe,
   hammer: Hammer,
 
@@ -159,6 +160,13 @@ export class DropTable {
       dropRate: 3,
       category: ["frog"],
       unique: true,
+    },
+
+    {
+      itemType: "woodenshield",
+      dropRate: 20,
+      category: ["shield"],
+      unique: false,
     },
 
     // Equipment

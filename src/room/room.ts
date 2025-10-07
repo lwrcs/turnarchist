@@ -141,6 +141,7 @@ export enum EnemyType {
   bigfrog = "bigfrog",
   exalter = "exalter",
   king = "king",
+  chest = "chest",
   // Add other enemy types here
 }
 
@@ -179,6 +180,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.bigfrog]: BigFrogEnemy,
   [EnemyType.exalter]: ExalterEnemy,
   [EnemyType.king]: KingEnemy,
+  [EnemyType.chest]: Chest,
   // Add other enemy mappings here
 };
 

@@ -4,9 +4,9 @@ import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 import { GameConstants } from "../game/gameConstants";
 import { Weapon } from "./weapon/weapon";
-import { WoodenShield } from "./woodenShield";
+import { Armor } from "./armor";
 
-export class Armor extends Equippable {
+export class WoodenShield extends Equippable {
   health: number;
   rechargeTurnCounter: number;
   readonly RECHARGE_TURNS = 25;
@@ -16,9 +16,9 @@ export class Armor extends Equippable {
     super(level, x, y);
     this.health = 1;
     this.rechargeTurnCounter = -1;
-    this.tileX = 5;
-    this.tileY = 0;
-    this.name = "occult shield";
+    this.tileX = 3;
+    this.tileY = 2;
+    this.name = "wooden shield";
   }
 
   coEquippable = (other: Equippable): boolean => {
@@ -32,11 +32,7 @@ export class Armor extends Equippable {
   };
 
   getDescription = (): string => {
-    return (
-      "ENCHANTED SHIELD\nAn occult shield. Absorbs one hit and regenerates after " +
-      this.RECHARGE_TURNS +
-      " turns."
-    );
+    return "WOODEN SHIELD\nA wooden shield. Absorbs one hit and breaks after 1 hit";
   };
 
   tickInInventory = () => {
@@ -55,8 +51,10 @@ export class Armor extends Equippable {
   hurt = (damage: number) => {
     if (this.health <= 0) return;
     this.health -= Math.max(damage, 1);
-    this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
-    this.cooldown = this.rechargeTurnCounter;
+    this.wielder?.inventory.removeItem(this);
+    this.wielder?.game.pushMessage("Your wooden shield breaks.");
+    //this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
+    //this.cooldown = this.rechargeTurnCounter;
   };
 
   drawGUI = (

@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.70043d0d8bdacf03c650.png";
+module.exports = __webpack_require__.p + "assets/itemset.562a31aa61f128740423.png";
 
 /***/ }),
 
@@ -20514,13 +20514,18 @@ class Chest extends entity_1.Entity {
                 this.destroyable = true;
             }
         };
+        this.uniqueKillBehavior = () => {
+            if (this.health === 3) {
+                this.open();
+            }
+        };
         this.open = () => {
             this.tileX = 0;
             this.tileY = 2;
             this.opening = true;
             sound_1.Sound.chest();
             if (this.drop === null)
-                this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon"], true);
+                this.getDrop(["consumable", "gem", "coin", "tool", "light", "weapon", "shield"], true);
             this.drops.forEach((drop) => {
                 if (drop.name === "coin") {
                     let stack = game_1.Game.randTable([
@@ -25173,6 +25178,7 @@ const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
+const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -25401,7 +25407,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     backpack_1.Backpack,
     hammer_1.Hammer,
     spellbook_1.Spellbook,
-    spellbook_1.Spellbook,
+    woodenShield_1.WoodenShield,
     bluegem_1.BlueGem,
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
@@ -30932,6 +30938,7 @@ const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/i
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -31331,8 +31338,7 @@ class Inventory {
             return this.hasItem(fishingRod_1.FishingRod) !== null;
         };
         this.getArmor = () => {
-            return (this.items.find((i) => i instanceof armor_1.Armor && i.equipped) ||
-                null);
+            return (this.items.find((i) => (i instanceof armor_1.Armor || i instanceof woodenShield_1.WoodenShield) && i.equipped) || null);
         };
         this.hasWeapon = () => {
             return this.weapon !== null;
@@ -32069,12 +32075,13 @@ exports.Armor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const woodenShield_1 = __webpack_require__(/*! ./woodenShield */ "./src/item/woodenShield.ts");
 class Armor extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
         this.RECHARGE_TURNS = 25;
         this.coEquippable = (other) => {
-            if (other instanceof Armor)
+            if (other instanceof Armor || other instanceof woodenShield_1.WoodenShield)
                 return false;
             /*
             if (other instanceof Weapon && (other as Weapon).twoHanded) {
@@ -32355,6 +32362,7 @@ const scytheBlade_1 = __webpack_require__(/*! ./weapon/scytheBlade */ "./src/ite
 const fishingRod_1 = __webpack_require__(/*! ./tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const shieldRightFragment_1 = __webpack_require__(/*! ./weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
 const shieldLeftFragment_1 = __webpack_require__(/*! ./weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
+const woodenShield_1 = __webpack_require__(/*! ./woodenShield */ "./src/item/woodenShield.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -32369,6 +32377,7 @@ exports.ItemTypeMap = {
     shieldleftfragment: shieldLeftFragment_1.ShieldLeftFragment,
     shieldrightfragment: shieldRightFragment_1.ShieldRightFragment,
     armor: armor_1.Armor,
+    woodenshield: woodenShield_1.WoodenShield,
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
     heart: heart_1.Heart,
@@ -32461,6 +32470,12 @@ DropTable.drops = [
         dropRate: 3,
         category: ["frog"],
         unique: true,
+    },
+    {
+        itemType: "woodenshield",
+        dropRate: 20,
+        category: ["shield"],
+        unique: false,
     },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
@@ -36315,6 +36330,87 @@ class Weapon extends equippable_1.Equippable {
 }
 exports.Weapon = Weapon;
 Weapon.itemName = "weapon";
+
+
+/***/ }),
+
+/***/ "./src/item/woodenShield.ts":
+/*!**********************************!*\
+  !*** ./src/item/woodenShield.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WoodenShield = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const armor_1 = __webpack_require__(/*! ./armor */ "./src/item/armor.ts");
+class WoodenShield extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.RECHARGE_TURNS = 25;
+        this.coEquippable = (other) => {
+            if (other instanceof armor_1.Armor || other instanceof WoodenShield)
+                return false;
+            /*
+            if (other instanceof Weapon && (other as Weapon).twoHanded) {
+              return false;
+            }
+            */
+            return true;
+        };
+        this.getDescription = () => {
+            return "WOODEN SHIELD\nA wooden shield. Absorbs one hit and breaks after 1 hit";
+        };
+        this.tickInInventory = () => {
+            if (this.rechargeTurnCounter > 0) {
+                this.rechargeTurnCounter--;
+                this.cooldown = this.rechargeTurnCounter;
+                if (this.rechargeTurnCounter === 0) {
+                    this.rechargeTurnCounter = -1;
+                    this.cooldown = this.rechargeTurnCounter;
+                    this.health = 1;
+                }
+            }
+        };
+        this.hurt = (damage) => {
+            if (this.health <= 0)
+                return;
+            this.health -= Math.max(damage, 1);
+            this.wielder?.inventory.removeItem(this);
+            this.wielder?.game.pushMessage("Your wooden shield breaks.");
+            //this.rechargeTurnCounter = this.RECHARGE_TURNS + 1;
+            //this.cooldown = this.rechargeTurnCounter;
+        };
+        this.drawGUI = (delta, playerMaxHealth, quickbarStartX) => {
+            // Get the quickbar's left edge position (same as in playerRenderer)
+            // Convert to tile coordinates
+            const heartStartX = (quickbarStartX - 7) / gameConstants_1.GameConstants.TILESIZE;
+            // Position after the hearts
+            const shieldX = Math.max(heartStartX, -0.2) + playerMaxHealth / 1.5 + 0.5;
+            let offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
+            if (this.rechargeTurnCounter === -1)
+                game_1.Game.drawFX(5, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
+            else {
+                let rechargeProportion = 1 - this.rechargeTurnCounter / this.RECHARGE_TURNS;
+                if (rechargeProportion < 0.5)
+                    game_1.Game.drawFX(7, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
+                else
+                    game_1.Game.drawFX(8, 2, 0.75, 0.75, shieldX, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY, 0.75, 0.75);
+            }
+        };
+        this.health = 1;
+        this.rechargeTurnCounter = -1;
+        this.tileX = 3;
+        this.tileY = 2;
+        this.name = "wooden shield";
+    }
+}
+exports.WoodenShield = WoodenShield;
+WoodenShield.itemName = "occult shield";
 
 
 /***/ }),
@@ -41487,8 +41583,7 @@ class Player extends drawable_1.Drawable {
             this.lastY = y;
         };
         this.hurt = (damage, enemy, delay = 0) => {
-            if (gameConstants_1.GameConstants.DEVELOPER_MODE)
-                return;
+            //if (GameConstants.DEVELOPER_MODE) return;
             // Play hurt sound if in current room
             if (this.getRoom() === this.game.room) {
                 setTimeout(() => {
@@ -41499,8 +41594,11 @@ class Player extends drawable_1.Drawable {
                 }, delay);
             }
             // Handle armor damage
-            if (this.inventory.getArmor() && this.inventory.getArmor().health > 0) {
-                this.inventory.getArmor().hurt(damage);
+            const armor = this.inventory.getArmor();
+            let diff = 0;
+            if (armor && armor.health > 0) {
+                diff = armor.health - damage;
+                armor.hurt(damage);
                 this.renderer.hurtShield();
                 this.hurtShield = true;
             }
@@ -41513,6 +41611,10 @@ class Player extends drawable_1.Drawable {
                 this.health -= damage;
                 // Emit damage taken event for statistics tracking
                 eventBus_1.globalEventBus.emit(events_1.EVENTS.DAMAGE_TAKEN, { amount: damage });
+            }
+            else if (diff < 0) {
+                this.health += diff;
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.DAMAGE_TAKEN, { amount: -diff });
             }
             this.hurtShield = false;
             // Check for death
@@ -44332,6 +44434,7 @@ var EnemyType;
     EnemyType["bigfrog"] = "bigfrog";
     EnemyType["exalter"] = "exalter";
     EnemyType["king"] = "king";
+    EnemyType["chest"] = "chest";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -44369,6 +44472,7 @@ exports.EnemyTypeMap = {
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
     [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
     [EnemyType.king]: kingEnemy_1.KingEnemy,
+    [EnemyType.chest]: chest_1.Chest,
     // Add other enemy mappings here
 };
 var RoomType;
