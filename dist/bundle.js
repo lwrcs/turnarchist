@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.562a31aa61f128740423.png";
+module.exports = __webpack_require__.p + "assets/itemset.07e0120061b5580869bf.png";
 
 /***/ }),
 
@@ -10438,10 +10438,8 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer)
                     this.lookForPlayer();
@@ -10864,10 +10862,8 @@ class BeetleEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -11285,10 +11281,8 @@ class BigFrogEnemy extends enemy_1.Enemy {
             this.frameLength = 3;
             this.animationSpeed = 0.1;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer) {
                     this.tileX = 37;
                     this.lookForPlayer();
@@ -11820,10 +11814,8 @@ class BigKnightEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (this.health === 1) {
                     this.ticksSinceFirstHit++;
                     if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
@@ -12126,11 +12118,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
-                    this.ticks++;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (this.health <= 2) {
                     this.unconscious = true;
                     this.ticksSinceFirstHit++;
@@ -12440,10 +12429,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
             // If the enemy is not dead
             if (!this.dead) {
                 // Skip turns if necessary
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 // Increment the tick counter
                 this.ticks++;
                 // If the enemy has not seen the player yet
@@ -12778,10 +12765,8 @@ class BishopEnemy extends enemy_1.Enemy {
         };
         this.behavior = () => {
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer)
                     this.lookForPlayer();
@@ -12976,10 +12961,8 @@ class ChargeEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (this.state === ChargeEnemyState.IDLE) {
                     let blocked = false;
@@ -13236,10 +13219,8 @@ class CrabEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -13524,10 +13505,8 @@ class CrusherEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -13954,6 +13933,16 @@ class Enemy extends entity_1.Entity {
             // Find a path to the target player
             let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
         };
+        this.handleSkipTurns = () => {
+            if (this.skipNextTurns > 0) {
+                if (this.skipNextTurns === 1)
+                    this.makeHitWarnings();
+                this.skipNextTurns--;
+                return true;
+            }
+            else
+                return false;
+        };
         this.behavior = () => {
             // Store the current position
             this.lastX = this.x;
@@ -13961,10 +13950,8 @@ class Enemy extends entity_1.Entity {
             // If the enemy is not dead
             if (!this.dead) {
                 // Skip turns if necessary
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 // Increment the tick counter
                 this.ticks++;
                 // If the enemy has not seen the player yet
@@ -14482,10 +14469,8 @@ class ExalterEnemy extends enemy_1.Enemy {
             this.lastY = this.y;
             let enemiesToBuff = this.enemyBuffCandidates();
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 //if (this.ticks % 2 === 0) {
                 this.buffEnemies(enemiesToBuff);
@@ -14757,10 +14742,8 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -14931,10 +14914,9 @@ class FrogEnemy extends enemy_1.Enemy {
             this.frameLength = 3;
             this.animationSpeed = 0.1;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
+                this.ticks++;
                 if (!this.seenPlayer) {
                     this.tileX = 12;
                     this.lookForPlayer();
@@ -15360,10 +15342,8 @@ class KingEnemy extends enemy_1.Enemy {
             if (this.health <= 1)
                 this.imageParticleY = 29; //no crown particle
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer) {
                     this.justHurt = false;
@@ -15558,10 +15538,8 @@ class KnightEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer) {
                     const result = this.nearestPlayer();
                     if (result !== false) {
@@ -15780,10 +15758,8 @@ class MummyEnemy extends enemy_1.Enemy {
             // If the enemy is not dead
             if (!this.dead) {
                 // Skip turns if necessary
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 // Increment the tick counter
                 this.ticks++;
                 // If the enemy has not seen the player yet
@@ -16029,10 +16005,8 @@ class OccultistEnemy extends enemy_1.Enemy {
             this.lastY = this.y;
             let enemiesToShield = this.enemyShieldCandidates();
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 //if (this.ticks % 2 === 0) {
                 this.shieldEnemies(enemiesToShield);
@@ -16296,10 +16270,8 @@ class PawnEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer) {
                     let p = this.nearestPlayer();
@@ -16494,10 +16466,8 @@ class QueenEnemy extends enemy_1.Enemy {
             if (this.health <= 1)
                 this.imageParticleY = 29; //no crown particle
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer) {
                     this.justHurt = false;
@@ -16690,10 +16660,8 @@ class RookEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.ticks++;
                 if (!this.seenPlayer) {
                     let p = this.nearestPlayer();
@@ -16906,11 +16874,8 @@ class SkullEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
-                    this.ticks++;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (this.health <= 1) {
                     this.unconscious = true;
                     this.ticksSinceFirstHit++;
@@ -17193,10 +17158,8 @@ class Spawner extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.tileX = 6;
                 if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&
                     this.ticks >= this.nextSpawnTick) {
@@ -17696,10 +17659,8 @@ class SpiderEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 this.rumbling = this.ticks % 2 === 1;
                 if (!this.seenPlayer)
                     this.lookForPlayer();
@@ -18161,10 +18122,8 @@ class WardenEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -18432,10 +18391,8 @@ class WizardEnemy extends enemy_1.Enemy {
             this.lastX = this.x;
             this.lastY = this.y;
             if (!this.dead) {
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
@@ -18588,10 +18545,8 @@ class ZombieEnemy extends enemy_1.Enemy {
             // If the enemy is not dead
             if (!this.dead) {
                 // Skip turns if necessary
-                if (this.skipNextTurns > 0) {
-                    this.skipNextTurns--;
+                if (this.handleSkipTurns())
                     return;
-                }
                 // Increment the tick counter
                 this.ticks++;
                 // If the enemy has not seen the player yet
@@ -25163,7 +25118,6 @@ const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godSt
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
-const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
@@ -25179,6 +25133,7 @@ const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
+const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -25399,7 +25354,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
     sword_1.Sword,
-    spear_1.Spear,
+    quarterStaff_1.QuarterStaff,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
     fishingRod_1.FishingRod,
@@ -35057,6 +35012,40 @@ Greataxe.itemName = "greataxe";
 
 /***/ }),
 
+/***/ "./src/item/weapon/quarterStaff.ts":
+/*!*****************************************!*\
+  !*** ./src/item/weapon/quarterStaff.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QuarterStaff = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class QuarterStaff extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.swing();
+            sound_1.Sound.hit();
+        };
+        this.tileX = 22;
+        this.tileY = 4;
+        this.damage = 1;
+        this.name = "quarterstaff";
+        this.useCost = 1;
+        this.degradeable = false;
+        this.knockbackDistance = 1;
+    }
+}
+exports.QuarterStaff = QuarterStaff;
+QuarterStaff.itemName = "staff";
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/scythe.ts":
 /*!***********************************!*\
   !*** ./src/item/weapon/scythe.ts ***!
@@ -36059,6 +36048,7 @@ const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./s
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const pushChain_1 = __webpack_require__(/*! ../../utility/pushChain */ "./src/utility/pushChain.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
@@ -36147,6 +36137,10 @@ class Weapon extends equippable_1.Equippable {
         this.weaponMove = (newX, newY) => {
             if (this.checkForPushables(newX, newY))
                 return true;
+            // Knockback-enabled weapons attempt a push on enemies before regular attack
+            if (this.knockbackDistance > 0 && this.attemptKnockback(newX, newY)) {
+                return false;
+            }
             const hitSomething = this.executeAttack(newX, newY);
             return !hitSomething;
         };
@@ -36244,6 +36238,7 @@ class Weapon extends equippable_1.Equippable {
         this.cooldown = 0;
         this.cooldownMax = 0;
         this.twoHanded = false;
+        this.knockbackDistance = 0;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
@@ -36303,6 +36298,59 @@ class Weapon extends equippable_1.Equippable {
         const pushables = this.getEntitiesAt(x, y).filter((e) => e.pushable);
         const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
         return pushables.length > 0 && hasSpaceToPush;
+    }
+    attemptKnockback(targetX, targetY) {
+        if (this.knockbackDistance <= 0)
+            return false;
+        const room = this.wielder?.getRoom
+            ? this.wielder.getRoom()
+            : this.game?.rooms?.[this.wielder.levelID];
+        if (!room)
+            return false;
+        // Find a non-pushable enemy exactly at target tile
+        const targets = this.getEntitiesAt(targetX, targetY).filter((e) => !e.pushable && e.isEnemy);
+        if (targets.length === 0)
+            return false;
+        const enemy = targets[0];
+        const dx = Math.sign(targetX - this.wielder.x);
+        const dy = Math.sign(targetY - this.wielder.y);
+        // Deal damage to first enemy
+        this.attack(enemy, this.damage + this.wielder.damageBonus);
+        // If enemy is not chainPushable, do not attempt knockback or crush
+        if (enemy.chainPushable === false) {
+            this.applyHitDelay(true);
+            this.hitSound();
+            this.wielder.setHitXY(targetX, targetY);
+            this.attackAnimation(targetX, targetY);
+            if (room)
+                room.tick(this.wielder);
+            this.shakeScreen(targetX, targetY);
+            this.degrade();
+            return true;
+        }
+        // Compute push chain and attempt to move them one tile
+        const { chain, nextX, nextY, enemyEnd } = (0, pushChain_1.computePushChain)(room, enemy, dx, dy);
+        const behindTile = room.roomArray?.[nextX]?.[nextY];
+        const canMoveOrCrush = !!behindTile &&
+            (!behindTile.isSolid?.() || behindTile.canCrushEnemy?.() || enemyEnd);
+        let moved = false;
+        if (canMoveOrCrush) {
+            // Push one tile per hit
+            moved = (0, pushChain_1.applyPushChain)(room, enemy, chain, dx, dy, nextX, nextY, enemyEnd);
+        }
+        // Apply standard hit side-effects
+        this.applyHitDelay(true);
+        this.hitSound();
+        this.wielder.setHitXY(targetX, targetY);
+        this.attackAnimation(targetX, targetY);
+        if (room)
+            room.tick(this.wielder);
+        this.shakeScreen(targetX, targetY);
+        // Only skip enemy's next turn if we actually pushed them
+        if (moved)
+            enemy.skipNextTurns = 1;
+        this.degrade();
+        return true;
     }
     executeAttack(targetX, targetY, animated = true, damage = this.damage + this.wielder.damageBonus, shakeScreen = true, sound = true, mainAttack = true, shouldTick = true) {
         const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
@@ -52896,6 +52944,81 @@ const getDeviceInfo = () => {
     };
 };
 exports.getDeviceInfo = getDeviceInfo;
+
+
+/***/ }),
+
+/***/ "./src/utility/pushChain.ts":
+/*!**********************************!*\
+  !*** ./src/utility/pushChain.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.applyPushChain = exports.computePushChain = void 0;
+function computePushChain(room, start, dx, dy) {
+    let nextX = start.x + dx;
+    let nextY = start.y + dy;
+    let enemyEnd = false;
+    const chain = [];
+    while (true) {
+        let foundEnd = true;
+        for (const f of room.entities) {
+            f.lastX = f.x;
+            f.lastY = f.y;
+            if (f.pointIn(nextX, nextY)) {
+                if (!f.chainPushable) {
+                    enemyEnd = true;
+                    foundEnd = true;
+                    break;
+                }
+                foundEnd = false;
+                chain.push(f);
+                break;
+            }
+        }
+        if (foundEnd)
+            break;
+        const tail = chain[chain.length - 1];
+        nextX += dx * tail.w;
+        nextY += dy * tail.h;
+    }
+    return { chain, nextX, nextY, enemyEnd };
+}
+exports.computePushChain = computePushChain;
+function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
+    const behindTile = room.roomArray?.[nextX]?.[nextY];
+    const canCrush = (behindTile && behindTile.canCrushEnemy?.()) || enemyEnd;
+    // If there is no chain and the next tile would crush or is blocked by a non-chainPushable,
+    // crush the starting entity instead of moving it (mirrors player push behavior)
+    if (chain.length === 0 && canCrush) {
+        start.crush();
+        return false;
+    }
+    for (const f of chain) {
+        f.lastX = f.x;
+        f.lastY = f.y;
+        f.x += dx;
+        f.y += dy;
+        f.drawX = dx;
+        f.drawY = dy;
+        f.skipNextTurns = 1; // ensure the pushed ones skip next turn, like player push
+    }
+    if (canCrush && chain.length > 0) {
+        const tail = chain[chain.length - 1];
+        tail.crush();
+    }
+    start.lastX = start.x;
+    start.lastY = start.y;
+    start.x += dx;
+    start.y += dy;
+    start.drawX = dx;
+    start.drawY = dy;
+    return true;
+}
+exports.applyPushChain = applyPushChain;
 
 
 /***/ }),

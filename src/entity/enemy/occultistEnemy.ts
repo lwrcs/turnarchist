@@ -80,10 +80,7 @@ export class OccultistEnemy extends Enemy {
     let enemiesToShield = this.enemyShieldCandidates();
 
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
 
       this.ticks++;
 

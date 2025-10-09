@@ -73,10 +73,7 @@ export class BigKnightEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       if (this.health === 1) {
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {

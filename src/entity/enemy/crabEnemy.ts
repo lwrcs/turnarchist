@@ -56,10 +56,7 @@ export class CrabEnemy extends Enemy {
     this.lastY = this.y;
 
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {

@@ -82,10 +82,7 @@ export class BigFrogEnemy extends Enemy {
     this.animationSpeed = 0.1;
 
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       if (!this.seenPlayer) {
         this.tileX = 37;
         this.lookForPlayer();

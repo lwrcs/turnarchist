@@ -151,10 +151,7 @@ export class Spawner extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       this.tileX = 6;
       if (
         (this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&

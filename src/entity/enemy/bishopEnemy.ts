@@ -94,10 +94,8 @@ export class BishopEnemy extends Enemy {
 
   behavior = () => {
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
+
       this.ticks++;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {

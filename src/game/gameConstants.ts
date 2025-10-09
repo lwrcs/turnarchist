@@ -45,6 +45,7 @@ import { Fish } from "../item/usable/fish";
 import { IronOre } from "../item/resource/ironOre";
 import { GarnetRing } from "../item/jewelry/garnetRing";
 import { WoodenShield } from "../item/woodenShield";
+import { QuarterStaff } from "../item/weapon/quarterStaff";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.0"; //"v0.6.3";
@@ -316,7 +317,7 @@ export class GameConstants {
     Dagger,
     Torch,
     Sword,
-    Spear,
+    QuarterStaff,
     GodStone,
     Spellbook,
     FishingRod,

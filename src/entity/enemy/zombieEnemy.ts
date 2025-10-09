@@ -61,10 +61,7 @@ export class ZombieEnemy extends Enemy {
     // If the enemy is not dead
     if (!this.dead) {
       // Skip turns if necessary
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
 
       // Increment the tick counter
       this.ticks++;

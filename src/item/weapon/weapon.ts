@@ -10,6 +10,7 @@ import { Enemy } from "../../entity/enemy/enemy";
 import { AttackAnimation } from "../../particle/attackAnimation";
 import { Direction } from "../../game";
 import { Armor } from "../armor";
+import { computePushChain, applyPushChain } from "../../utility/pushChain";
 
 interface WeaponStatus {
   poison: boolean;
@@ -29,6 +30,7 @@ export abstract class Weapon extends Equippable {
   cooldown: number;
   cooldownMax: number;
   twoHanded: boolean;
+  knockbackDistance: number;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -46,6 +48,7 @@ export abstract class Weapon extends Equippable {
     this.cooldown = 0;
     this.cooldownMax = 0;
     this.twoHanded = false;
+    this.knockbackDistance = 0;
   }
   hoverText = () => {
     //return "Equip " + this.name;
@@ -148,6 +151,11 @@ export abstract class Weapon extends Equippable {
 
   weaponMove = (newX: number, newY: number): boolean => {
     if (this.checkForPushables(newX, newY)) return true;
+
+    // Knockback-enabled weapons attempt a push on enemies before regular attack
+    if (this.knockbackDistance > 0 && this.attemptKnockback(newX, newY)) {
+      return false;
+    }
 
     const hitSomething = this.executeAttack(newX, newY);
 
@@ -320,6 +328,81 @@ export abstract class Weapon extends Equippable {
     const hasSpaceToPush = !isSolidBehind && !hasUnpushablesBehind;
 
     return pushables.length > 0 && hasSpaceToPush;
+  }
+
+  protected attemptKnockback(targetX: number, targetY: number): boolean {
+    if (this.knockbackDistance <= 0) return false;
+
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
+      : this.game?.rooms?.[this.wielder.levelID];
+    if (!room) return false;
+
+    // Find a non-pushable enemy exactly at target tile
+    const targets = this.getEntitiesAt(targetX, targetY).filter(
+      (e) => !e.pushable && e.isEnemy,
+    );
+    if (targets.length === 0) return false;
+
+    const enemy = targets[0];
+    const dx = Math.sign(targetX - this.wielder.x);
+    const dy = Math.sign(targetY - this.wielder.y);
+
+    // Deal damage to first enemy
+    this.attack(enemy, this.damage + this.wielder.damageBonus);
+
+    // If enemy is not chainPushable, do not attempt knockback or crush
+    if (enemy.chainPushable === false) {
+      this.applyHitDelay(true);
+      this.hitSound();
+      this.wielder.setHitXY(targetX, targetY);
+      this.attackAnimation(targetX, targetY);
+      if (room) room.tick(this.wielder);
+      this.shakeScreen(targetX, targetY);
+      this.degrade();
+      return true;
+    }
+
+    // Compute push chain and attempt to move them one tile
+    const { chain, nextX, nextY, enemyEnd } = computePushChain(
+      room,
+      enemy,
+      dx,
+      dy,
+    );
+
+    const behindTile = room.roomArray?.[nextX]?.[nextY];
+    const canMoveOrCrush =
+      !!behindTile &&
+      (!behindTile.isSolid?.() || behindTile.canCrushEnemy?.() || enemyEnd);
+
+    let moved = false;
+    if (canMoveOrCrush) {
+      // Push one tile per hit
+      moved = applyPushChain(
+        room,
+        enemy,
+        chain,
+        dx,
+        dy,
+        nextX,
+        nextY,
+        enemyEnd,
+      );
+    }
+
+    // Apply standard hit side-effects
+    this.applyHitDelay(true);
+    this.hitSound();
+    this.wielder.setHitXY(targetX, targetY);
+    this.attackAnimation(targetX, targetY);
+    if (room) room.tick(this.wielder);
+    this.shakeScreen(targetX, targetY);
+    // Only skip enemy's next turn if we actually pushed them
+    if (moved) enemy.skipNextTurns = 1;
+    this.degrade();
+
+    return true;
   }
 
   protected applyHitDelay = (hitSomething: boolean) => {

@@ -51,10 +51,7 @@ export class KingEnemy extends Enemy {
 
     if (this.health <= 1) this.imageParticleY = 29; //no crown particle
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       this.ticks++;
       if (!this.seenPlayer) {
         this.justHurt = false;

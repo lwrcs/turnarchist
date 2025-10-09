@@ -313,6 +313,14 @@ export abstract class Enemy extends Entity {
     );
   };
 
+  handleSkipTurns = () => {
+    if (this.skipNextTurns > 0) {
+      if (this.skipNextTurns === 1) this.makeHitWarnings();
+      this.skipNextTurns--;
+      return true;
+    } else return false;
+  };
+
   behavior = () => {
     // Store the current position
     this.lastX = this.x;
@@ -321,10 +329,7 @@ export abstract class Enemy extends Entity {
     // If the enemy is not dead
     if (!this.dead) {
       // Skip turns if necessary
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
 
       // Increment the tick counter
       this.ticks++;

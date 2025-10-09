@@ -69,10 +69,8 @@ export class FrogEnemy extends Enemy {
     this.animationSpeed = 0.1;
 
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
+      this.ticks++;
       if (!this.seenPlayer) {
         this.tileX = 12;
         this.lookForPlayer();

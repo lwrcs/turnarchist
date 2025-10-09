@@ -54,10 +54,7 @@ export class KnightEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       if (!this.seenPlayer) {
         const result = this.nearestPlayer();
         if (result !== false) {

@@ -46,10 +46,7 @@ export class RookEnemy extends Enemy {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       this.ticks++;
       if (!this.seenPlayer) {
         let p = this.nearestPlayer();

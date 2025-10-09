@@ -80,10 +80,7 @@ export class ExalterEnemy extends Enemy {
     let enemiesToBuff = this.enemyBuffCandidates();
 
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
 
       this.ticks++;
 

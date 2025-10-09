@@ -74,10 +74,7 @@ export class FireWizardEnemy extends WizardEnemy {
     this.lastX = this.x;
     this.lastY = this.y;
     if (!this.dead) {
-      if (this.skipNextTurns > 0) {
-        this.skipNextTurns--;
-        return;
-      }
+      if (this.handleSkipTurns()) return;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {
         this.alertTicks = Math.max(0, this.alertTicks - 1);
