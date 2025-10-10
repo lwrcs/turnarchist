@@ -3,8 +3,8 @@ import { Player } from "../../player/player";
 import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Usable } from "../usable/usable";
-import { CrossbowLimb } from "./crossbowLimb";
 import { Crossbow } from "./crossbow";
+import { CrossbowLimb } from "./crossbowLimb";
 
 export class CrossbowStock extends Usable {
   static itemName = "crossbow stock";

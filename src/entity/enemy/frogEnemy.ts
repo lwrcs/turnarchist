@@ -70,7 +70,6 @@ export class FrogEnemy extends Enemy {
 
     if (!this.dead) {
       if (this.handleSkipTurns()) return;
-      this.ticks++;
       if (!this.seenPlayer) {
         this.tileX = 12;
         this.lookForPlayer();

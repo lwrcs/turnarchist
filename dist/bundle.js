@@ -15276,7 +15276,6 @@ class FrogEnemy extends enemy_1.Enemy {
             if (!this.dead) {
                 if (this.handleSkipTurns())
                     return;
-                this.ticks++;
                 if (!this.seenPlayer) {
                     this.tileX = 12;
                     this.lookForPlayer();
@@ -35518,8 +35517,8 @@ CrossbowLimb.itemName = "crossbow limb";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CrossbowStock = void 0;
 const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
-const crossbowLimb_1 = __webpack_require__(/*! ./crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
 const crossbow_1 = __webpack_require__(/*! ./crossbow */ "./src/item/weapon/crossbow.ts");
+const crossbowLimb_1 = __webpack_require__(/*! ./crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
 class CrossbowStock extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
