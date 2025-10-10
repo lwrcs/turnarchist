@@ -46,6 +46,9 @@ import { IronOre } from "../item/resource/ironOre";
 import { GarnetRing } from "../item/jewelry/garnetRing";
 import { WoodenShield } from "../item/woodenShield";
 import { QuarterStaff } from "../item/weapon/quarterStaff";
+import { Slingshot } from "../item/weapon/slingshot";
+import { CrossbowBolt } from "../item/weapon/crossbowBolt";
+import { Crossbow } from "../item/weapon/crossbow";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.0"; //"v0.6.3";
@@ -317,7 +320,7 @@ export class GameConstants {
     Dagger,
     Torch,
     Sword,
-    QuarterStaff,
+    Crossbow,
     GodStone,
     Spellbook,
     FishingRod,
@@ -330,8 +333,7 @@ export class GameConstants {
     OrangeGem,
     RedGem,
     GarnetRing,
-    BombItem,
-    BombItem,
+    CrossbowBolt,
     BombItem,
     IronOre,
     GoldOre,

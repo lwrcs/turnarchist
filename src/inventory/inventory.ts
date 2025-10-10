@@ -97,7 +97,7 @@ export class Inventory {
       if (i instanceof Equippable) {
         i.setWielder(this.player);
       }
-      if (i instanceof Weapon && this.weapon === null) {
+      if (i instanceof Weapon && this.weapon === null && !i.disabled) {
         i.toggleEquip();
         this.weapon = i;
         //this.player.weapon = this.weapon;
@@ -225,7 +225,7 @@ export class Inventory {
         // Existing equipping logic
         item.toggleEquip();
         if (item instanceof Weapon) {
-          if (item.broken || item.cooldown > 0) return;
+          if (item.broken || item.cooldown > 0 || item.disabled) return;
           this.weapon = item.equipped ? item : null;
         }
         if (item.equipped) {

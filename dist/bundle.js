@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.07e0120061b5580869bf.png";
+module.exports = __webpack_require__.p + "assets/itemset.a676a144dc492dbadcdc.png";
 
 /***/ }),
 
@@ -25133,7 +25133,8 @@ const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
-const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
+const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const crossbow_1 = __webpack_require__(/*! ../item/weapon/crossbow */ "./src/item/weapon/crossbow.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -25354,7 +25355,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
     sword_1.Sword,
-    quarterStaff_1.QuarterStaff,
+    crossbow_1.Crossbow,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
     fishingRod_1.FishingRod,
@@ -25367,8 +25368,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
     garnetRing_1.GarnetRing,
-    bombItem_1.BombItem,
-    bombItem_1.BombItem,
+    crossbowBolt_1.CrossbowBolt,
     bombItem_1.BombItem,
     ironOre_1.IronOre,
     goldOre_1.GoldOre,
@@ -31033,7 +31033,7 @@ class Inventory {
                     // Existing equipping logic
                     item.toggleEquip();
                     if (item instanceof weapon_1.Weapon) {
-                        if (item.broken || item.cooldown > 0)
+                        if (item.broken || item.cooldown > 0 || item.disabled)
                             return;
                         this.weapon = item.equipped ? item : null;
                     }
@@ -31972,7 +31972,7 @@ class Inventory {
             if (i instanceof equippable_1.Equippable) {
                 i.setWielder(this.player);
             }
-            if (i instanceof weapon_1.Weapon && this.weapon === null) {
+            if (i instanceof weapon_1.Weapon && this.weapon === null && !i.disabled) {
                 i.toggleEquip();
                 this.weapon = i;
                 //this.player.weapon = this.weapon;
@@ -32639,6 +32639,7 @@ class Equippable extends item_1.Item {
         this.cooldown = 0;
         this.cooldownMax = 0;
         this.previousWeapon = null;
+        this.disabled = false;
         this.setWielder = (wielder) => {
             this.wielder = wielder;
         };
@@ -34830,6 +34831,253 @@ WeaponPoison.itemName = "weapon poison";
 
 /***/ }),
 
+/***/ "./src/item/weapon/crossbow.ts":
+/*!*************************************!*\
+  !*** ./src/item/weapon/crossbow.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Crossbow = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const arrowParticle_1 = __webpack_require__(/*! ../../particle/arrowParticle */ "./src/particle/arrowParticle.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const crossbowBolt_1 = __webpack_require__(/*! ./crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+var CrossbowState;
+(function (CrossbowState) {
+    CrossbowState[CrossbowState["EMPTY"] = 0] = "EMPTY";
+    CrossbowState[CrossbowState["LOADED"] = 1] = "LOADED";
+    CrossbowState[CrossbowState["COCKED"] = 2] = "COCKED";
+    CrossbowState[CrossbowState["FIRING"] = 3] = "FIRING";
+})(CrossbowState || (CrossbowState = {}));
+class Crossbow extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.toggleEquip = () => {
+            if (!this.broken &&
+                this.cooldown <= 0 &&
+                this.state === CrossbowState.COCKED) {
+                if (!this.equipped && this.wielder?.inventory?.weapon) {
+                    this.previousWeapon = this.wielder.inventory.weapon;
+                }
+                this.equipped = !this.equipped;
+                if (this.equipped) {
+                    this.onEquip();
+                }
+                else {
+                    this.onUnequip();
+                }
+                if (gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN && this.equipped === true)
+                    this.wielder?.stall();
+            }
+            else if (this.state === CrossbowState.EMPTY) {
+                this.tileX = 23;
+                //this.equipped = false;
+                this.level.game.pushMessage("You need to load the crossbow before you can use it.");
+            }
+            else if (this.state === CrossbowState.LOADED) {
+                this.cock();
+            }
+            else if (this.cooldown > 0) {
+                this.level.game.pushMessage("Cooldown: " + this.cooldown);
+            }
+        };
+        this.addBolt = (silent = false) => {
+            if (this.state === CrossbowState.EMPTY) {
+                this.state = CrossbowState.LOADED;
+                if (!silent)
+                    this.level.game.pushMessage("You load the crossbow.");
+                this.tileX = 24;
+                return true;
+            }
+            else if (!silent)
+                this.level.game.pushMessage("You already have a bolt loaded.");
+            return false;
+        };
+        this.cock = () => {
+            if (this.state === CrossbowState.LOADED) {
+                this.state = CrossbowState.COCKED;
+                this.tileX = 25;
+                this.level.game.pushMessage("You cock the crossbow back and equip it.");
+                this.disabled = false;
+                if (!this.equipped && this.wielder?.inventory?.weapon) {
+                    this.previousWeapon = this.wielder.inventory.weapon;
+                }
+                this.equipped = true;
+            }
+        };
+        this.fire = () => {
+            if (this.state === CrossbowState.COCKED ||
+                this.state === CrossbowState.FIRING) {
+                this.state = CrossbowState.EMPTY;
+                this.tileX = 23;
+                this.equipped = false;
+                this.wielder.inventory.weapon = null;
+                this.wielder.inventory.weapon = this.previousWeapon;
+                this.previousWeapon.equipped = true;
+                this.previousWeapon = null;
+                this.disabled = true;
+                const bolt = this.wielder.inventory.hasItem(crossbowBolt_1.CrossbowBolt);
+                if (bolt !== null) {
+                    bolt.stackCount--;
+                    if (bolt.stackCount <= 0) {
+                        this.wielder.inventory.removeItem(bolt);
+                    }
+                    this.addBolt(true);
+                }
+            }
+        };
+        this.weaponMove = (newX, newY) => {
+            // Must be cocked to fire
+            if (this.state !== CrossbowState.COCKED)
+                return true;
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            if (!room)
+                return true;
+            const dx = Math.sign(newX - this.wielder.x);
+            const dy = Math.sign(newY - this.wielder.y);
+            // Only allow cardinal directions
+            const cardinal = (dx === 0) !== (dy === 0);
+            if (!cardinal)
+                return true;
+            let cx = this.wielder.x;
+            let cy = this.wielder.y;
+            const maxSteps = 15;
+            let hitTarget = null;
+            let hitX = cx;
+            let hitY = cy;
+            for (let step = 1; step <= maxSteps; step++) {
+                cx += dx;
+                cy += dy;
+                if (!room.tileInside(cx, cy))
+                    break;
+                const tile = room.roomArray?.[cx]?.[cy];
+                if (!tile || tile.isSolid())
+                    break;
+                const entitiesHere = room.entities.filter((e) => e.pointIn(cx, cy));
+                // Distance-sensitive targeting:
+                // - At step 1, any destroyable (non-pushable) is a valid target
+                // - Beyond step 1, only enemies are valid targets
+                const target = entitiesHere.find((e) => {
+                    if (!e.destroyable || e.pushable)
+                        return false;
+                    if (step === 1)
+                        return true;
+                    return e.isEnemy === true;
+                });
+                if (target) {
+                    hitTarget = target;
+                    hitX = cx;
+                    hitY = cy;
+                    break;
+                }
+                // Blocking rules:
+                // - Pushables or non-destroyables always block
+                // - Non-enemy destroyables block when step > 1
+                const blocked = entitiesHere.some((e) => {
+                    if (e.pushable || !e.destroyable)
+                        return true;
+                    if (step > 1 && e.destroyable && !e.isEnemy)
+                        return true;
+                    return false;
+                });
+                if (blocked)
+                    break;
+            }
+            // No enemy found in line-of-sight: allow movement (no attack)
+            if (!hitTarget)
+                return true;
+            // Begin firing sequence at the enemy only
+            this.state = CrossbowState.FIRING;
+            this.attack(hitTarget, this.damage + this.wielder.damageBonus);
+            this.hitSound();
+            this.wielder.setHitXY(hitX, hitY);
+            // Arrow visual: small square traveling from player to impact
+            room.particles.push(new arrowParticle_1.ArrowParticle(room, this.wielder.x + 0.5, this.wielder.y, hitX + 0.5, hitY));
+            room.tick(this.wielder);
+            // Shake in shot direction with magnitude 1
+            this.game.shakeScreen(dx * 5, dy * 5);
+            // Consume the bolt and unequip appropriately
+            this.fire();
+            return false;
+        };
+        this.tileX = 23;
+        this.tileY = 4;
+        this.name = Crossbow.itemName;
+        this.state = CrossbowState.EMPTY;
+        this.disabled = true;
+        this.damage = 4;
+    }
+}
+exports.Crossbow = Crossbow;
+Crossbow.itemName = "crossbow";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/crossbowBolt.ts":
+/*!*****************************************!*\
+  !*** ./src/item/weapon/crossbowBolt.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CrossbowBolt = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const crossbow_1 = __webpack_require__(/*! ./crossbow */ "./src/item/weapon/crossbow.ts");
+class CrossbowBolt extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            const room = player?.getRoom
+                ? player.getRoom()
+                : this.level.game.rooms[player.levelID];
+            if (room === this.level.game.room)
+                sound_1.Sound.heal();
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof crossbow_1.Crossbow) {
+                if (other.addBolt()) {
+                    this.stackCount--;
+                    if (this.stackCount <= 0)
+                        player.inventory.removeItem(this);
+                }
+            }
+        };
+        this.disassemble = (player) => {
+            let inventoryX = this.x;
+            let inventoryY = this.y;
+            let numFragments = Math.ceil(random_1.Random.rand() * 2 + 3);
+            player.inventory.removeItem(this);
+            player.inventory.addItem(new weaponFragments_1.WeaponFragments(this.level, inventoryX, inventoryY, numFragments));
+        };
+        this.tileX = 21;
+        this.tileY = 4;
+        this.offsetY = -0.3;
+        this.canUseOnOther = true;
+        this.description = "useful for shooting with a crossbow";
+        this.stackable = true;
+        this.stackCount = 10;
+        this.name = CrossbowBolt.itemName;
+    }
+}
+exports.CrossbowBolt = CrossbowBolt;
+CrossbowBolt.itemName = "crossbow bolt";
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/dagger.ts":
 /*!***********************************!*\
   !*** ./src/item/weapon/dagger.ts ***!
@@ -35008,40 +35256,6 @@ class Greataxe extends weapon_1.Weapon {
 }
 exports.Greataxe = Greataxe;
 Greataxe.itemName = "greataxe";
-
-
-/***/ }),
-
-/***/ "./src/item/weapon/quarterStaff.ts":
-/*!*****************************************!*\
-  !*** ./src/item/weapon/quarterStaff.ts ***!
-  \*****************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.QuarterStaff = void 0;
-const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
-const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
-class QuarterStaff extends weapon_1.Weapon {
-    constructor(level, x, y) {
-        super(level, x, y);
-        this.hitSound = () => {
-            sound_1.Sound.swing();
-            sound_1.Sound.hit();
-        };
-        this.tileX = 22;
-        this.tileY = 4;
-        this.damage = 1;
-        this.name = "quarterstaff";
-        this.useCost = 1;
-        this.degradeable = false;
-        this.knockbackDistance = 1;
-    }
-}
-exports.QuarterStaff = QuarterStaff;
-QuarterStaff.itemName = "staff";
 
 
 /***/ }),
@@ -40403,6 +40617,80 @@ Lighting.removeLightSource = (room, lightSource) => {
 
 /***/ }),
 
+/***/ "./src/particle/arrowParticle.ts":
+/*!***************************************!*\
+  !*** ./src/particle/arrowParticle.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ArrowParticle = void 0;
+const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+class ArrowParticle extends particle_1.Particle {
+    constructor(room, startX, startY, endX, endY) {
+        super();
+        this.renderRect = (x, y, width, height, color) => {
+            const scale = game_1.Game.ctx ? 1 : 1; // guard for server-side
+            const ctx = game_1.Game.ctx;
+            if (!ctx)
+                return;
+            const tilesize = game_1.Game.TILESIZE || 16;
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.fillStyle = color;
+            // Centered rectangle
+            const px = Math.round((x - width / 2) * tilesize);
+            const py = Math.round((y - height / 2) * tilesize);
+            const pw = Math.max(1, Math.round(width * tilesize));
+            const ph = Math.max(1, Math.round(height * tilesize));
+            ctx.fillRect(px, py, pw, ph);
+            ctx.restore();
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            // advance t based on approximate speed; clamp to [0,1]
+            const dx = this.endX - this.startX;
+            const dy = this.endY - this.startY;
+            const dist = Math.max(1, Math.abs(dx) + Math.abs(dy));
+            // normalize to travel in about (dist / speed) frames
+            this.t += (this.speed * (delta || 1)) / dist;
+            if (this.t >= 1)
+                this.t = 1;
+            // interpolate position
+            this.x = this.startX + this.t * dx;
+            this.y = this.startY + this.t * dy;
+            // when arrived, mark dead; room will clean up
+            if (this.t >= 1)
+                this.dead = true;
+            // Draw as a longer rectangle aligned to travel axis
+            const horizontal = Math.abs(dx) >= Math.abs(dy);
+            const length = 0.5; // tiles
+            const thickness = 0.12; // tiles
+            const w = horizontal ? length : thickness;
+            const h = horizontal ? thickness : length;
+            this.renderRect(this.x, this.y, w, h, "white");
+        };
+        this.room = room;
+        this.startX = startX;
+        this.startY = startY;
+        this.endX = endX;
+        this.endY = endY;
+        this.x = startX;
+        this.y = startY;
+        this.dead = false;
+        this.t = 0; // 0..1 progression
+        this.speed = 0.5; // tiles per frame (scaled by delta)
+    }
+}
+exports.ArrowParticle = ArrowParticle;
+
+
+/***/ }),
+
 /***/ "./src/particle/attackAnimation.ts":
 /*!*****************************************!*\
   !*** ./src/particle/attackAnimation.ts ***!
@@ -43953,7 +44241,7 @@ class Explosion extends projectile_1.Projectile {
         this.delay = 0;
         lighting_1.Lighting.momentaryLight(this.parent.room, this.x + 0.5, this.y + 0.5, 0.5, [255, 100, 0], 350, 20, Math.abs(this.offsetFrame));
         const distance = utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y);
-        const damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
+        const damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 6) / 2);
         for (const entity of this.parent.room.entities) {
             if (entity.x === this.x &&
                 entity.y === this.y &&

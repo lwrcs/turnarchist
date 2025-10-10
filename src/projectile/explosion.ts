@@ -40,7 +40,7 @@ export class Explosion extends Projectile {
     );
 
     const damage =
-      distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 4) / 2);
+      distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 6) / 2);
     for (const entity of this.parent.room.entities) {
       if (
         entity.x === this.x &&

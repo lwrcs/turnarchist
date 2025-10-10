@@ -14,6 +14,7 @@ export class Equippable extends Item {
   cooldown: number = 0;
   cooldownMax: number = 0;
   previousWeapon: Weapon | null = null;
+  disabled = false;
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
