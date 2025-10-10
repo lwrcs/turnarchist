@@ -28,7 +28,7 @@ export class ArrowParticle extends Particle {
     this.y = startY;
     this.dead = false;
     this.t = 0; // 0..1 progression
-    this.speed = 0.5; // tiles per frame (scaled by delta)
+    this.speed = 2; // tiles per frame (scaled by delta)
   }
 
   private renderRect = (
@@ -70,13 +70,20 @@ export class ArrowParticle extends Particle {
     this.x = this.startX + this.t * dx;
     this.y = this.startY + this.t * dy;
 
-    // when arrived, mark dead; room will clean up
-    if (this.t >= 1) this.dead = true;
+    // when arrived, trigger a mild screen shake and mark dead; room will clean up
+    if (this.t >= 1) {
+      // Shake in travel direction with small magnitude
+      const sx = Math.sign(dx);
+      const sy = Math.sign(dy);
+      // Use small magnitude consistent with other calls (e.g., weapons often scale by 5/10)
+      this.room.game.shakeScreen(sx * 5, sy * 5);
+      this.dead = true;
+    }
 
     // Draw as a longer rectangle aligned to travel axis
     const horizontal = Math.abs(dx) >= Math.abs(dy);
-    const length = 0.5; // tiles
-    const thickness = 0.12; // tiles
+    const length = 1; // tiles
+    const thickness = 0.25; // tiles
     const w = horizontal ? length : thickness;
     const h = horizontal ? thickness : length;
     this.renderRect(this.x, this.y, w, h, "white");

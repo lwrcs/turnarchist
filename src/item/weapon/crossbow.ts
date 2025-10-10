@@ -50,9 +50,7 @@ export class Crossbow extends Weapon {
       this.tileX = 23;
       //this.equipped = false;
 
-      this.level.game.pushMessage(
-        "You need to load the crossbow before you can use it.",
-      );
+      this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
     } else if (this.state === CrossbowState.LOADED) {
       this.cock();
     } else if (this.cooldown > 0) {

@@ -239,6 +239,7 @@ export class Game {
   cameraY: number;
   justTransitioned: boolean = false;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
+  lastDroppedCrossbowPiece: "stock" | "limb" | null = null;
   lastDroppedShieldPiece: "left" | "right" | null = null;
 
   tip: string = Tips.getRandomTip();

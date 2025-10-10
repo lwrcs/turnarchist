@@ -693,7 +693,7 @@ export class Entity extends Drawable {
     }
   };
 
-  runAway = () => {
+  runAway = (wander: boolean = true) => {
     const player = this.getPlayer();
     if (!player) {
       this.wander();

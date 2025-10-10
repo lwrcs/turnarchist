@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.a676a144dc492dbadcdc.png";
+module.exports = __webpack_require__.p + "assets/itemset.feef5fcb3d58cf858171.png";
 
 /***/ }),
 
@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.a676a144dc492dbadcdc.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.740f76bfba12963345b6.png";
+module.exports = __webpack_require__.p + "assets/mobset.1c9cbb4132c140cc6bf9.png";
 
 /***/ }),
 
@@ -12915,6 +12915,366 @@ exports.BishopEnemy = BishopEnemy;
 BishopEnemy.difficulty = 2;
 BishopEnemy.tileX = 31;
 BishopEnemy.tileY = 8;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/boltcasterEnemy.ts":
+/*!*********************************************!*\
+  !*** ./src/entity/enemy/boltcasterEnemy.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BoltcasterEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const arrowParticle_1 = __webpack_require__(/*! ../../particle/arrowParticle */ "./src/particle/arrowParticle.ts");
+var BoltcasterState;
+(function (BoltcasterState) {
+    BoltcasterState[BoltcasterState["SEEK_LINE"] = 0] = "SEEK_LINE";
+    BoltcasterState[BoltcasterState["LOADING"] = 1] = "LOADING";
+})(BoltcasterState || (BoltcasterState = {}));
+class BoltcasterEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.isInlineWithPlayerAndClear = (px, py) => {
+            if (this.x !== px && this.y !== py)
+                return false;
+            const dx = Math.sign(px - this.x);
+            const dy = Math.sign(py - this.y);
+            let cx = this.x;
+            let cy = this.y;
+            while (true) {
+                cx += dx;
+                cy += dy;
+                if (cx === px && cy === py)
+                    return true;
+                if (!this.room.tileInside(cx, cy))
+                    return false;
+                const tile = this.room.roomArray[cx]?.[cy];
+                if (!tile || tile.isSolid())
+                    return false;
+                // Any entity blocks line except the player at the end
+                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                    return false;
+            }
+        };
+        this.findNearestInlineTile = () => {
+            const p = this.getPlayer();
+            if (!p)
+                return null;
+            const px = p.x;
+            const py = p.y;
+            const candidates = [];
+            // Collect candidate tiles along same row and column as player
+            for (let x = this.room.roomX; x < this.room.roomX + this.room.width; x++) {
+                const y = py;
+                const tile = this.room.roomArray[x]?.[y];
+                if (!tile || tile.isSolid())
+                    continue;
+                if (this.room.entities.some((e) => e.x === x && e.y === y))
+                    continue;
+                // LOS from candidate to player must be clear
+                if (this.lineClear(x, y, px, py))
+                    candidates.push({ x, y });
+            }
+            for (let y = this.room.roomY; y < this.room.roomY + this.room.height; y++) {
+                const x = px;
+                const tile = this.room.roomArray[x]?.[y];
+                if (!tile || tile.isSolid())
+                    continue;
+                if (this.room.entities.some((e) => e.x === x && e.y === y))
+                    continue;
+                if (this.lineClear(x, y, px, py))
+                    candidates.push({ x, y });
+            }
+            if (candidates.length === 0)
+                return null;
+            // Choose shortest path candidate using A*
+            let best = null;
+            let bestLen = Infinity;
+            // Build nav grid
+            let grid = [];
+            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                grid[x] = [];
+                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                        grid[x][y] = this.room.roomArray[x][y];
+                    else
+                        grid[x][y] = false;
+                }
+            }
+            const disablePositions = [];
+            for (const e of this.room.entities) {
+                if (e !== this)
+                    disablePositions.push({ x: e.x, y: e.y });
+            }
+            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                    if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
+                        this.room.roomArray[xx][yy].on) {
+                        disablePositions.push({ x: xx, y: yy });
+                    }
+                }
+            }
+            for (const c of candidates) {
+                const fakeTarget = { x: c.x, y: c.y };
+                const moves = astarclass_1.astar.AStar.search(grid, this, fakeTarget, disablePositions, false, false, true, this.direction);
+                if (moves && moves.length > 0 && moves.length < bestLen) {
+                    best = c;
+                    bestLen = moves.length;
+                }
+            }
+            return best;
+        };
+        this.lineClear = (x0, y0, x1, y1) => {
+            if (x0 !== x1 && y0 !== y1)
+                return false;
+            const dx = Math.sign(x1 - x0);
+            const dy = Math.sign(y1 - y0);
+            let cx = x0;
+            let cy = y0;
+            while (true) {
+                cx += dx;
+                cy += dy;
+                if (cx === x1 && cy === y1)
+                    return true;
+                if (!this.room.tileInside(cx, cy))
+                    return false;
+                const tile = this.room.roomArray[cx]?.[cy];
+                if (!tile || tile.isSolid())
+                    return false;
+                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                    return false;
+            }
+        };
+        this.makeLineHitWarnings = (px, py) => {
+            const dx = Math.sign(px - this.x);
+            const dy = Math.sign(py - this.y);
+            let cx = this.x;
+            let cy = this.y;
+            while (true) {
+                cx += dx;
+                cy += dy;
+                if (cx === px && cy === py)
+                    break;
+                if (!this.room.tileInside(cx, cy))
+                    break;
+                // stop at solid tiles
+                const tile = this.room.roomArray[cx]?.[cy];
+                if (!tile || tile.isSolid())
+                    break;
+                // singular hit warning per tile
+                this.makeHitWarning(px, py, cx, cy);
+            }
+        };
+        this.makeHitWarning = (x, y, eX, eY) => {
+            this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.room.game, x, y, eX, eY, true, false, this));
+        };
+        this.fireLoadedShot = () => {
+            // Prefer current inline LOS direction if available; otherwise use stored direction
+            let dx = this.loadDx;
+            let dy = this.loadDy;
+            const player = this.targetPlayer;
+            if (player && (this.x === player.x || this.y === player.y)) {
+                if (this.lineClear(this.x, this.y, player.x, player.y)) {
+                    dx = Math.sign(player.x - this.x) || 0;
+                    dy = Math.sign(player.y - this.y) || 0;
+                }
+            }
+            let cx = this.x;
+            let cy = this.y;
+            let endX = cx;
+            let endY = cy;
+            let hitEntity = null;
+            let hitPlayer = false;
+            while (true) {
+                cx += dx;
+                cy += dy;
+                if (!this.room.tileInside(cx, cy))
+                    break;
+                const tile = this.room.roomArray[cx]?.[cy];
+                if (!tile || tile.isSolid()) {
+                    endX = cx;
+                    endY = cy;
+                    break;
+                }
+                // If we reach the player's current tile, hit the player
+                if (player && cx === player.x && cy === player.y) {
+                    endX = cx;
+                    endY = cy;
+                    hitPlayer = true;
+                    break;
+                }
+                const entity = this.room.entities.find((e) => e.x === cx && e.y === cy);
+                if (entity) {
+                    hitEntity = entity;
+                    endX = cx;
+                    endY = cy;
+                    break;
+                }
+                endX = cx;
+                endY = cy;
+            }
+            // Visual arrow
+            this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, this.x + 0.5, this.y, endX + 0.5, endY));
+            // Apply damage
+            if (hitPlayer && player) {
+                player.hurt(this.hit(), this.name);
+            }
+            else if (hitEntity) {
+                hitEntity.hurt?.(this, 1);
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            //this.updateShadeColor(delta);
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            this.frame += 0.1 * delta;
+            if (this.frame >= 4)
+                this.frame = 0;
+            if (this.hasShadow)
+                this.drawShadow(delta);
+            game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
+            this.tileY, // + this.direction * 2,
+            1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta);
+                }
+            }
+            game_1.Game.ctx.globalAlpha = 1;
+        };
+        this.behavior = () => {
+            // Save last position
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (this.dead)
+                return;
+            if (this.handleSkipTurns())
+                return;
+            // Tick counter
+            this.ticks++;
+            if (!this.seenPlayer)
+                this.lookForPlayer();
+            else if (this.seenPlayer) {
+                if (this.room.playerTicked === this.targetPlayer) {
+                    this.alertTicks = Math.max(0, this.alertTicks - 1);
+                    const player = this.targetPlayer;
+                    // If too close to the player, retreat immediately
+                    if (player && this.playerDistance(player) <= 1 && !this.isLoading) {
+                        this.runAway(true);
+                        return;
+                    }
+                    // If currently loading, fire this turn
+                    if (this.isLoading) {
+                        this.isLoading = false;
+                        this.fireLoadedShot();
+                        return;
+                    }
+                    // If inline and clear, start loading sequence
+                    if (this.isInlineWithPlayerAndClear(player.x, player.y)) {
+                        this.loadDx = Math.sign(player.x - this.x) || 0;
+                        this.loadDy = Math.sign(player.y - this.y) || 0;
+                        this.loadedPlayerX = player.x;
+                        this.loadedPlayerY = player.y;
+                        this.facePlayer(player);
+                        this.isLoading = true;
+                        this.makeLineHitWarnings(player.x, player.y);
+                        return;
+                    }
+                    // Otherwise, pathfind to nearest inline tile with clear LOS
+                    // Build nav grid
+                    let grid = [];
+                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
+                        grid[x] = [];
+                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
+                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
+                                grid[x][y] = this.room.roomArray[x][y];
+                            else
+                                grid[x][y] = false;
+                        }
+                    }
+                    const disablePositions = [];
+                    for (const e of this.room.entities) {
+                        if (e !== this)
+                            disablePositions.push({ x: e.x, y: e.y });
+                    }
+                    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                        for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                            if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
+                                this.room.roomArray[xx][yy].on) {
+                                disablePositions.push({ x: xx, y: yy });
+                            }
+                        }
+                    }
+                    const target = this.findNearestInlineTile();
+                    if (target) {
+                        const moves = astarclass_1.astar.AStar.search(grid, this, { x: target.x, y: target.y }, disablePositions, false, false, true, this.direction);
+                        if (moves && moves.length > 0) {
+                            const moveX = moves[0].pos.x;
+                            const moveY = moves[0].pos.y;
+                            const oldX = this.x;
+                            const oldY = this.y;
+                            this.facePlayer(player);
+                            // Move
+                            this.tryMove(moveX, moveY);
+                            this.setDrawXY(oldX, oldY);
+                            if (this.x > oldX)
+                                this.direction = game_1.Direction.RIGHT;
+                            else if (this.x < oldX)
+                                this.direction = game_1.Direction.LEFT;
+                            else if (this.y > oldY)
+                                this.direction = game_1.Direction.DOWN;
+                            else if (this.y < oldY)
+                                this.direction = game_1.Direction.UP;
+                            // Warn during approach
+                            this.makeHitWarnings();
+                        }
+                    }
+                    else {
+                        // Default fallback: pursue player normally
+                        const moves = astarclass_1.astar.AStar.search(grid, this, player, disablePositions, false, false, true, this.direction);
+                        if (moves && moves.length > 0) {
+                            const moveX = moves[0].pos.x;
+                            const moveY = moves[0].pos.y;
+                            const oldX = this.x;
+                            const oldY = this.y;
+                            this.tryMove(moveX, moveY);
+                            this.setDrawXY(oldX, oldY);
+                        }
+                    }
+                }
+            }
+        };
+        this.name = "boltcaster";
+        this.tileX = 17 + 26; // reuse basic enemy sprite
+        this.tileY = 8;
+        this.health = 2;
+        this.maxHealth = 2;
+        this.dropChance = 1;
+        this.state = BoltcasterState.SEEK_LINE;
+        this.isLoading = false;
+        this.loadDx = 0;
+        this.loadDy = 0;
+        this.loadedPlayerX = 0;
+        this.loadedPlayerY = 0;
+        // Drop crossbow parts similar to scythe/shield pieces
+        this.getDrop(["crossbow"], false);
+    }
+}
+exports.BoltcasterEnemy = BoltcasterEnemy;
 
 
 /***/ }),
@@ -19125,7 +19485,7 @@ class Entity extends drawable_1.Drawable {
                 }
             }
         };
-        this.runAway = () => {
+        this.runAway = (wander = true) => {
             const player = this.getPlayer();
             if (!player) {
                 this.wander();
@@ -22888,6 +23248,7 @@ class Game {
         this.ellipsisStartTime = 0;
         this.justTransitioned = false;
         this.lastDroppedScythePiece = null;
+        this.lastDroppedCrossbowPiece = null;
         this.lastDroppedShieldPiece = null;
         this.tip = tips_1.Tips.getRandomTip();
         this.currentLevelGenerator = null;
@@ -32318,6 +32679,8 @@ const fishingRod_1 = __webpack_require__(/*! ./tool/fishingRod */ "./src/item/to
 const shieldRightFragment_1 = __webpack_require__(/*! ./weapon/shieldRightFragment */ "./src/item/weapon/shieldRightFragment.ts");
 const shieldLeftFragment_1 = __webpack_require__(/*! ./weapon/shieldLeftFragment */ "./src/item/weapon/shieldLeftFragment.ts");
 const woodenShield_1 = __webpack_require__(/*! ./woodenShield */ "./src/item/woodenShield.ts");
+const crossbowStock_1 = __webpack_require__(/*! ./weapon/crossbowStock */ "./src/item/weapon/crossbowStock.ts");
+const crossbowLimb_1 = __webpack_require__(/*! ./weapon/crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -32327,6 +32690,8 @@ exports.ItemTypeMap = {
     scythe: scythe_1.Scythe,
     hourglass: hourglass_1.Hourglass,
     fishingrod: fishingRod_1.FishingRod,
+    crossbowstock: crossbowStock_1.CrossbowStock,
+    crossbowlimb: crossbowLimb_1.CrossbowLimb,
     scytheblade: scytheBlade_1.ScytheBlade,
     scythehandle: scytheHandle_1.ScytheHandle,
     shieldleftfragment: shieldLeftFragment_1.ShieldLeftFragment,
@@ -32418,6 +32783,18 @@ DropTable.drops = [
         itemType: "shieldrightfragment",
         dropRate: 10,
         category: ["occultist"],
+        unique: true,
+    },
+    {
+        itemType: "crossbowstock",
+        dropRate: 10,
+        category: ["crossbow"],
+        unique: true,
+    },
+    {
+        itemType: "crossbowlimb",
+        dropRate: 10,
+        category: ["crossbow"],
         unique: true,
     },
     {
@@ -34875,7 +35252,7 @@ class Crossbow extends weapon_1.Weapon {
             else if (this.state === CrossbowState.EMPTY) {
                 this.tileX = 23;
                 //this.equipped = false;
-                this.level.game.pushMessage("You need to load the crossbow before you can use it.");
+                this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
             }
             else if (this.state === CrossbowState.LOADED) {
                 this.cock();
@@ -35074,6 +35451,110 @@ class CrossbowBolt extends usable_1.Usable {
 }
 exports.CrossbowBolt = CrossbowBolt;
 CrossbowBolt.itemName = "crossbow bolt";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/crossbowLimb.ts":
+/*!*****************************************!*\
+  !*** ./src/item/weapon/crossbowLimb.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CrossbowLimb = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const crossbowStock_1 = __webpack_require__(/*! ./crossbowStock */ "./src/item/weapon/crossbowStock.ts");
+const crossbow_1 = __webpack_require__(/*! ./crossbow */ "./src/item/weapon/crossbow.ts");
+class CrossbowLimb extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedCrossbowPiece === "limb") {
+                this.level.game.lastDroppedCrossbowPiece = null;
+                this.level.items.push(new crossbowStock_1.CrossbowStock(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedCrossbowPiece === null) {
+                this.level.game.lastDroppedCrossbowPiece = "limb";
+            }
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof crossbowStock_1.CrossbowStock) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the crossbow limb and stock.");
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const crossbow = new crossbow_1.Crossbow(room, player.x, player.y);
+                player.inventory.addItem(crossbow);
+            }
+        };
+        this.tileX = 27;
+        this.tileY = 4;
+        this.stackable = false;
+        this.name = CrossbowLimb.itemName;
+        this.description = "The limb of a crossbow. Find the stock to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.CrossbowLimb = CrossbowLimb;
+CrossbowLimb.itemName = "crossbow limb";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/crossbowStock.ts":
+/*!******************************************!*\
+  !*** ./src/item/weapon/crossbowStock.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CrossbowStock = void 0;
+const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
+const crossbowLimb_1 = __webpack_require__(/*! ./crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
+const crossbow_1 = __webpack_require__(/*! ./crossbow */ "./src/item/weapon/crossbow.ts");
+class CrossbowStock extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onDrop = () => {
+            if (this.level.game.lastDroppedCrossbowPiece === "stock") {
+                this.level.game.lastDroppedCrossbowPiece = null;
+                this.level.items.push(new crossbowLimb_1.CrossbowLimb(this.level, this.x, this.y));
+                this.level.items = this.level.items.filter((item) => item !== this);
+            }
+            else if (this.level.game.lastDroppedCrossbowPiece === null) {
+                this.level.game.lastDroppedCrossbowPiece = "stock";
+            }
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof crossbowLimb_1.CrossbowLimb) {
+                player.inventory.removeItem(this);
+                player.inventory.removeItem(other);
+                player.game.pushMessage("You combine the crossbow stock and limb.");
+                const room = player?.getRoom
+                    ? player.getRoom()
+                    : player.game.rooms[player.levelID];
+                const crossbow = new crossbow_1.Crossbow(room, player.x, player.y);
+                player.inventory.addItem(crossbow);
+            }
+        };
+        this.tileX = 26;
+        this.tileY = 4;
+        this.stackable = false;
+        this.name = CrossbowStock.itemName;
+        this.description = "The stock of a crossbow. Find the limb to use it.";
+        this.canUseOnOther = true;
+    }
+}
+exports.CrossbowStock = CrossbowStock;
+CrossbowStock.itemName = "crossbow stock";
 
 
 /***/ }),
@@ -40663,13 +41144,19 @@ class ArrowParticle extends particle_1.Particle {
             // interpolate position
             this.x = this.startX + this.t * dx;
             this.y = this.startY + this.t * dy;
-            // when arrived, mark dead; room will clean up
-            if (this.t >= 1)
+            // when arrived, trigger a mild screen shake and mark dead; room will clean up
+            if (this.t >= 1) {
+                // Shake in travel direction with small magnitude
+                const sx = Math.sign(dx);
+                const sy = Math.sign(dy);
+                // Use small magnitude consistent with other calls (e.g., weapons often scale by 5/10)
+                this.room.game.shakeScreen(sx * 5, sy * 5);
                 this.dead = true;
+            }
             // Draw as a longer rectangle aligned to travel axis
             const horizontal = Math.abs(dx) >= Math.abs(dy);
-            const length = 0.5; // tiles
-            const thickness = 0.12; // tiles
+            const length = 1; // tiles
+            const thickness = 0.25; // tiles
             const w = horizontal ? length : thickness;
             const h = horizontal ? thickness : length;
             this.renderRect(this.x, this.y, w, h, "white");
@@ -40683,7 +41170,7 @@ class ArrowParticle extends particle_1.Particle {
         this.y = startY;
         this.dead = false;
         this.t = 0; // 0..1 progression
-        this.speed = 0.5; // tiles per frame (scaled by delta)
+        this.speed = 2; // tiles per frame (scaled by delta)
     }
 }
 exports.ArrowParticle = ArrowParticle;
@@ -44732,6 +45219,7 @@ const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
+const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -44771,6 +45259,7 @@ var EnemyType;
     EnemyType["exalter"] = "exalter";
     EnemyType["king"] = "king";
     EnemyType["chest"] = "chest";
+    EnemyType["boltcaster"] = "boltcaster";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -44809,6 +45298,7 @@ exports.EnemyTypeMap = {
     [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
     [EnemyType.king]: kingEnemy_1.KingEnemy,
     [EnemyType.chest]: chest_1.Chest,
+    [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
