@@ -197,14 +197,20 @@ const generateFilterOptions = (sessions: GameStats[]): FilterOptionsData => {
 
 // Helper function to aggregate sessions into stats
 const aggregateStats = (sessions: GameStats[]): AggregatedStats => {
-  // Since GameStats doesn't have createdAt, we'll simulate some data for runs per day
-  // In a real implementation, you'd need to add a timestamp field to GameStats
-  const runsPlayedPerDay = [
-    { date: "2025-01-01", count: Math.floor(sessions.length * 0.3) },
-    { date: "2025-01-02", count: Math.floor(sessions.length * 0.4) },
-    { date: "2025-01-03", count: Math.floor(sessions.length * 0.2) },
-    { date: "2025-01-04", count: Math.floor(sessions.length * 0.1) },
-  ];
+  // Group sessions by date using createdAt timestamp
+  const runsByDate = sessions.reduce(
+    (acc, session) => {
+      const date = new Date(session.createdAt).toISOString().split("T")[0]; // YYYY-MM-DD format
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  // Convert to array and sort by date
+  const runsPlayedPerDay = Object.entries(runsByDate)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   // Run duration distribution - bucketed ranges
   const runDurationRanges = sessions.reduce(

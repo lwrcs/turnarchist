@@ -1,7 +1,10 @@
 import { GameStats as ServerGameStats } from "../../../../server/src/http/schema/index";
 
 // Re-export the server GameStats type
-export type GameStats = ServerGameStats;
+export type GameStats = ServerGameStats & {
+  createdAt: number;
+  updatedAt: number;
+};
 
 export interface FilterOptions {
   gameDuration: string;
