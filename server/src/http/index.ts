@@ -25,7 +25,6 @@ export const initializeHttpServer = () => {
   initializeMiddleware(app);
   initializeRoutes(app);
 
-  // Error handling middleware (must be last)
   app.use(errorHandler);
 
   return app;
