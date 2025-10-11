@@ -64,7 +64,7 @@ export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export type GameStats = z.infer<typeof gameStatsSchema>;
 
 export const fetchGameStatsRequestQuerySchema = z.object({
-  limit: z.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(1000).default(20),
   cursor: z.string().optional(),
 });
 
