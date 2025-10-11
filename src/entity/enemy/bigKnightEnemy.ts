@@ -278,6 +278,9 @@ export class BigKnightEnemy extends Enemy {
         4,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
 
       if (!this.cloned) {

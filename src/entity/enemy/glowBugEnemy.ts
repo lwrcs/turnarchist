@@ -109,6 +109,9 @@ export class GlowBugEnemy extends Entity {
         1,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
       if (this.crushed) {
         this.crushAnim(delta);

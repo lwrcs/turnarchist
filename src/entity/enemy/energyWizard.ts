@@ -74,6 +74,9 @@ export class EnergyWizardEnemy extends WizardEnemy {
           2,
           this.softShadeColor,
           this.shadeAmount(),
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
         );
       }
       if (!this.cloned) {

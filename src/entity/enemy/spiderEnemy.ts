@@ -643,6 +643,9 @@ export class SpiderEnemy extends Enemy {
           2 * this.crushY,
           this.softShadeColor,
           this.shadeAmount(),
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
         );
       }
       if (this.crushed) {

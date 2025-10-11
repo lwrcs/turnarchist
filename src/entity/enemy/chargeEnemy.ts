@@ -243,6 +243,9 @@ export class ChargeEnemy extends Enemy {
         2,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
       if (!this.cloned) {
         if (this.state === ChargeEnemyState.IDLE) {

@@ -327,6 +327,22 @@ export class Entity extends Drawable {
     return this._imageParticleTiles;
   }
 
+  outlineColor = (): string => {
+    let color = "black";
+    if (this.shielded) color = GameConstants.OUTLINE_SHIELD_COLOR;
+    if (this.buffed) color = GameConstants.OUTLINE_BUFF_COLOR;
+    if (this.shielded && this.buffed) color = "#5a87ff";
+    return color;
+  };
+
+  outlineOpacity = (): number => {
+    let opacity = 0;
+    if (this.shielded) opacity = 0.25;
+    if (this.buffed) opacity = 0.25;
+    if (this.shielded && this.buffed) opacity = 0.5;
+    return opacity;
+  };
+
   applyShield = (shieldHealth: number = 1, loading: boolean = false) => {
     if (!this.shieldedBefore || loading) {
       this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
@@ -396,6 +412,7 @@ export class Entity extends Drawable {
     this.removeLightSource(this.lightSource);
     this.lightSource = null;
     this.room.updateLighting();
+    this.buffed = false;
   };
 
   getDrop = (useCategory: string[] = [], force: boolean = false) => {
@@ -1150,6 +1167,9 @@ export class Entity extends Drawable {
       2,
       this.shadeColor,
       this.shadeAmount(),
+      undefined,
+      this.outlineColor(),
+      this.outlineOpacity(),
     );
 
     /*if (this.crushed) {

@@ -10371,7 +10371,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                 game_1.Game.drawMob(this.tileX +
                     (this.tileX % 5 && !this.unconscious && !this.dying
                         ? Math.floor(this.frame)
-                        : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                        : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -10599,7 +10599,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -11193,7 +11193,7 @@ class BeetleEnemy extends enemy_1.Enemy {
                     this.drawShadow(delta);
                 //only draw when visible
                 game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -11730,7 +11730,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                     (this.tileX !== 59 && !this.rumbling && !this.cloned
                         ? Math.floor(this.frame)
                         : 0) *
-                        2, this.tileY /*+ this.direction * 2,*/, 2, 3, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
+                        2, this.tileY /*+ this.direction * 2,*/, 2, 3, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -11993,7 +11993,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                 const tileY = this.ticks % 2 === 0 ? this.tileY : this.tileY + 4;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(tileX, tileY, 2, 4, this.x - this.drawX + rumbleX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(tileX, tileY, 2, 4, this.x - this.drawX + rumbleX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -12344,7 +12344,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -12649,7 +12649,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
             if (this.hasShadow)
                 this.drawShadow(delta);
             game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
-            this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount());
+            this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -12877,7 +12877,7 @@ class BishopEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -13145,7 +13145,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 this.drawShadow(delta);
             game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
             this.tileY, // + this.direction * 2,
-            1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+            1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -13458,7 +13458,7 @@ class ChargeEnemy extends enemy_1.Enemy {
                 }
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (this.state === ChargeEnemyState.IDLE) {
                         this.drawSleepingZs(delta);
@@ -13728,7 +13728,7 @@ class CrabEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY + rumbleY, 1 * this.crushX, 1 * this.crushY, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY + rumbleY, 1 * this.crushX, 1 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -14754,7 +14754,7 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -15008,7 +15008,7 @@ class ExalterEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             game_1.Game.ctx.restore();
         };
@@ -15205,7 +15205,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -15520,7 +15520,7 @@ class FrogEnemy extends enemy_1.Enemy {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX +
-                    (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0), this.tileY /*+ this.direction * 2,*/, 1, 2, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                    (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0), this.tileY /*+ this.direction * 2,*/, 1, 2, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -15619,7 +15619,7 @@ class GlowBugEnemy extends entity_1.Entity {
                 this.tileX = 8 + this.frame;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -15830,7 +15830,7 @@ class KingEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY - 1, 1, 3, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY - 1, 1, 3, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -16033,7 +16033,7 @@ class KnightEnemy extends enemy_1.Enemy {
                 game_1.Game.drawMob(this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX + rumbleX, this.y -
                     this.drawYOffset -
                     this.drawY +
-                    (this.tileX === 4 ? 0.1875 : 0), 1, 2, this.softShadeColor, this.shadeAmount());
+                    (this.tileX === 4 ? 0.1875 : 0), 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -16288,7 +16288,7 @@ class MummyEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -16541,7 +16541,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             game_1.Game.ctx.restore();
         };
@@ -16758,7 +16758,7 @@ class PawnEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -16953,7 +16953,7 @@ class QueenEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3));
+                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -17134,7 +17134,7 @@ class RookEnemy extends enemy_1.Enemy {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, // + offsetTileY,
-                1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -17410,7 +17410,7 @@ class SkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -17723,7 +17723,7 @@ class Spawner extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.dying) {
                 if (!this.seenPlayer) {
@@ -18295,7 +18295,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
                     game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                    2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                    2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -18629,7 +18629,7 @@ class WardenEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + 2 * Math.floor(this.frame), this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 2, this.softShadeColor, this.shadeAmount());
+            game_1.Game.drawMob(this.tileX + 2 * Math.floor(this.frame), this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -18836,13 +18836,13 @@ class WizardEnemy extends enemy_1.Enemy {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                     this.frame += 0.2 * delta;
                     if (this.frame > 11)
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount());
+                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -19075,7 +19075,7 @@ class ZombieEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -19189,6 +19189,26 @@ class Entity extends drawable_1.Drawable {
         this.hoverText = () => {
             return this.name;
         };
+        this.outlineColor = () => {
+            let color = "black";
+            if (this.shielded)
+                color = gameConstants_1.GameConstants.OUTLINE_SHIELD_COLOR;
+            if (this.buffed)
+                color = gameConstants_1.GameConstants.OUTLINE_BUFF_COLOR;
+            if (this.shielded && this.buffed)
+                color = "#5a87ff";
+            return color;
+        };
+        this.outlineOpacity = () => {
+            let opacity = 0;
+            if (this.shielded)
+                opacity = 0.25;
+            if (this.buffed)
+                opacity = 0.25;
+            if (this.shielded && this.buffed)
+                opacity = 0.5;
+            return opacity;
+        };
         this.applyShield = (shieldHealth = 1, loading = false) => {
             if (!this.shieldedBefore || loading) {
                 this.shield = new enemyShield_1.EnemyShield(this, this.x, this.y, shieldHealth);
@@ -19245,6 +19265,7 @@ class Entity extends drawable_1.Drawable {
             this.removeLightSource(this.lightSource);
             this.lightSource = null;
             this.room.updateLighting();
+            this.buffed = false;
         };
         this.getDrop = (useCategory = [], force = false) => {
             if (this.cloned)
@@ -19888,7 +19909,7 @@ class Entity extends drawable_1.Drawable {
               this.shadeAmount(),
             );
             */
-            game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.shadeColor, this.shadeAmount());
+            game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.shadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             /*if (this.crushed) {
               this.crushAnim(delta);
             }*/
@@ -25103,7 +25124,7 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  * @param entity If true, uses entity shade quantization levels
  * @param fadeDir Optional directional fade mask (left/right/up/down)
  */
-Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir) => {
+Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
     // Snap to nearest shading increment
     const shadeLevel = entity
@@ -25116,16 +25137,23 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             Math.max(shadeLevel, 12);
     // Build a cache key that includes shade amount, color and optional fade direction
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor, fadeDir);
+    if (outlineColor && outlineOpacity > 0)
+        key += `,outline=${outlineColor}:${Math.max(0, Math.min(1, outlineOpacity))}`;
     if (!Game.shade_canvases[key]) {
         // First time for this shaded sprite: render it into an offscreen canvas and cache it
         Game.shade_canvases[key] = document.createElement("canvas");
-        Game.shade_canvases[key].width = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
-        Game.shade_canvases[key].height = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
+        const baseW = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
+        const baseH = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
+        const extra = outlineColor && outlineOpacity > 0 ? 2 : 0;
+        Game.shade_canvases[key].width = baseW + extra;
+        Game.shade_canvases[key].height = baseH + extra;
         let shCtx = Game.shade_canvases[key].getContext("2d");
         shCtx.clearRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         // 1) Draw the base sprite
+        const dx = outlineColor && outlineOpacity > 0 ? 1 : 0;
+        const dy = outlineColor && outlineOpacity > 0 ? 1 : 0;
         shCtx.globalCompositeOperation = "source-over";
-        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
+        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
         // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
         shCtx.globalAlpha = shadeOpacity;
         shCtx.fillStyle = shadeColor;
@@ -25134,11 +25162,11 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
         shCtx.globalCompositeOperation = "destination-in";
         // Base alpha mask from sprite bounds
-        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 0, 0, Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE));
+        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
         // 4) Optional directional fade: multiplies in a 1→0 gradient (feathered edge)
         if (fadeDir) {
-            const w = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
-            const h = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
+            const w = Game.shade_canvases[key].width;
+            const h = Game.shade_canvases[key].height;
             let grad = null;
             switch (fadeDir) {
                 case "left":
@@ -25168,9 +25196,44 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
                 shCtx.fillRect(0, 0, w, h);
             }
         }
+        // 5) Optional colored outline behind the sprite
+        if (outlineColor && outlineOpacity > 0) {
+            const oW = baseW + 2;
+            const oH = baseH + 2;
+            const outlineCanvas = document.createElement("canvas");
+            outlineCanvas.width = oW;
+            outlineCanvas.height = oH;
+            const oCtx = outlineCanvas.getContext("2d");
+            const offsets = [
+                { x: -1, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: -1 },
+                { x: 0, y: 1 },
+                { x: -1, y: -1 },
+                { x: 1, y: -1 },
+                { x: -1, y: 1 },
+                { x: 1, y: 1 },
+            ];
+            for (const off of offsets) {
+                oCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 1 + off.x, 1 + off.y, baseW, baseH);
+            }
+            oCtx.globalCompositeOperation = "source-in";
+            oCtx.globalAlpha = Math.max(0, Math.min(1, outlineOpacity));
+            oCtx.fillStyle = outlineColor;
+            oCtx.fillRect(0, 0, oW, oH);
+            oCtx.globalCompositeOperation = "source-over";
+            oCtx.globalAlpha = 1;
+            shCtx.globalCompositeOperation = "destination-over";
+            shCtx.drawImage(outlineCanvas, 0, 0);
+            shCtx.globalCompositeOperation = "source-over";
+        }
     }
     // Blit the pre-shaded sprite to the main canvas at the destination position/size
-    Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE), Math.round(dY * gameConstants_1.GameConstants.TILESIZE), Math.round(dW * gameConstants_1.GameConstants.TILESIZE), Math.round(dH * gameConstants_1.GameConstants.TILESIZE));
+    Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE) -
+        (outlineColor && outlineOpacity > 0 ? 1 : 0), Math.round(dY * gameConstants_1.GameConstants.TILESIZE) -
+        (outlineColor && outlineOpacity > 0 ? 1 : 0), Math.round(dW * gameConstants_1.GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0 ? 2 : 0), Math.round(dH * gameConstants_1.GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0 ? 2 : 0));
     Game.ctx.restore(); // Restore the canvas to the previous state
 };
 /**
@@ -25191,8 +25254,8 @@ Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpaci
  * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
  * Uses entity=true so mobs use entity shade quantization.
  */
-Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
-    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
+Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0) => {
+    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity);
 };
 /**
  * Draw an item from the item sheet. Convenience wrapper.
@@ -25551,6 +25614,8 @@ GameConstants.HIT_ENEMY_TEXT_COLOR = "#76428a";
 GameConstants.HEALTH_BUFF_COLOR = "#d77bba";
 GameConstants.MISS_COLOR = "#639bff";
 GameConstants.XP_POPUP_ENABLED = true;
+GameConstants.OUTLINE_SHIELD_COLOR = "#7642ff";
+GameConstants.OUTLINE_BUFF_COLOR = "cyan";
 GameConstants.COIN_ANIMATION = true;
 GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.ITEM_AUTO_PICKUP = true;

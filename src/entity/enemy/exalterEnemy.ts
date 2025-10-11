@@ -302,6 +302,9 @@ export class ExalterEnemy extends Enemy {
         2,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     }
     Game.ctx.restore();

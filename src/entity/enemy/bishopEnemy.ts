@@ -231,6 +231,9 @@ export class BishopEnemy extends Enemy {
         2,
         this.softShadeColor,
         this.shadeAmount() * (1 + this.jumpY / 3),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     }
     if (!this.cloned) {

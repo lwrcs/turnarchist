@@ -211,6 +211,9 @@ export abstract class WizardEnemy extends Enemy {
           2,
           this.softShadeColor,
           this.shadeAmount(),
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
         );
         this.frame += 0.2 * delta;
         if (this.frame > 11) this.frame = -1;
@@ -226,6 +229,9 @@ export abstract class WizardEnemy extends Enemy {
           2,
           this.softShadeColor,
           this.shadeAmount(),
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
         );
       }
       if (!this.seenPlayer) {

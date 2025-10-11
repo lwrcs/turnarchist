@@ -214,6 +214,9 @@ export class KnightEnemy extends Enemy {
         2,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     }
     if (!this.cloned) {

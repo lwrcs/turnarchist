@@ -334,6 +334,9 @@ export class BigZombieEnemy extends Enemy {
       3,
       this.softShadeColor,
       this.shadeAmount(),
+      undefined,
+      this.outlineColor(),
+      this.outlineOpacity(),
     );
 
     if (!this.cloned) {

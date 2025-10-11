@@ -2482,6 +2482,8 @@ export class Game {
     shadeOpacity = 0,
     entity: boolean = false,
     fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
   ) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
 
@@ -2506,12 +2508,17 @@ export class Game {
       shadeColor,
       fadeDir,
     );
+    if (outlineColor && outlineOpacity > 0)
+      key += `,outline=${outlineColor}:${Math.max(0, Math.min(1, outlineOpacity))}`;
 
     if (!Game.shade_canvases[key]) {
       // First time for this shaded sprite: render it into an offscreen canvas and cache it
       Game.shade_canvases[key] = document.createElement("canvas");
-      Game.shade_canvases[key].width = Math.round(sW * GameConstants.TILESIZE);
-      Game.shade_canvases[key].height = Math.round(sH * GameConstants.TILESIZE);
+      const baseW = Math.round(sW * GameConstants.TILESIZE);
+      const baseH = Math.round(sH * GameConstants.TILESIZE);
+      const extra = outlineColor && outlineOpacity > 0 ? 2 : 0;
+      Game.shade_canvases[key].width = baseW + extra;
+      Game.shade_canvases[key].height = baseH + extra;
       let shCtx = Game.shade_canvases[key].getContext("2d");
 
       shCtx.clearRect(
@@ -2522,6 +2529,8 @@ export class Game {
       );
 
       // 1) Draw the base sprite
+      const dx = outlineColor && outlineOpacity > 0 ? 1 : 0;
+      const dy = outlineColor && outlineOpacity > 0 ? 1 : 0;
       shCtx.globalCompositeOperation = "source-over";
       shCtx.drawImage(
         set,
@@ -2529,10 +2538,10 @@ export class Game {
         Math.round(sY * GameConstants.TILESIZE),
         Math.round(sW * GameConstants.TILESIZE),
         Math.round(sH * GameConstants.TILESIZE),
-        0,
-        0,
-        Math.round(sW * GameConstants.TILESIZE),
-        Math.round(sH * GameConstants.TILESIZE),
+        dx,
+        dy,
+        baseW,
+        baseH,
       );
 
       // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
@@ -2555,16 +2564,16 @@ export class Game {
         Math.round(sY * GameConstants.TILESIZE),
         Math.round(sW * GameConstants.TILESIZE),
         Math.round(sH * GameConstants.TILESIZE),
-        0,
-        0,
-        Math.round(sW * GameConstants.TILESIZE),
-        Math.round(sH * GameConstants.TILESIZE),
+        dx,
+        dy,
+        baseW,
+        baseH,
       );
 
       // 4) Optional directional fade: multiplies in a 1→0 gradient (feathered edge)
       if (fadeDir) {
-        const w = Math.round(sW * GameConstants.TILESIZE);
-        const h = Math.round(sH * GameConstants.TILESIZE);
+        const w = Game.shade_canvases[key].width;
+        const h = Game.shade_canvases[key].height;
         let grad: CanvasGradient | null = null;
         switch (fadeDir) {
           case "left":
@@ -2594,15 +2603,63 @@ export class Game {
           shCtx.fillRect(0, 0, w, h);
         }
       }
+
+      // 5) Optional colored outline behind the sprite
+      if (outlineColor && outlineOpacity > 0) {
+        const oW = baseW + 2;
+        const oH = baseH + 2;
+        const outlineCanvas = document.createElement("canvas");
+        outlineCanvas.width = oW;
+        outlineCanvas.height = oH;
+        const oCtx = outlineCanvas.getContext("2d");
+
+        const offsets = [
+          { x: -1, y: 0 },
+          { x: 1, y: 0 },
+          { x: 0, y: -1 },
+          { x: 0, y: 1 },
+          { x: -1, y: -1 },
+          { x: 1, y: -1 },
+          { x: -1, y: 1 },
+          { x: 1, y: 1 },
+        ];
+        for (const off of offsets) {
+          oCtx.drawImage(
+            set,
+            Math.round(sX * GameConstants.TILESIZE),
+            Math.round(sY * GameConstants.TILESIZE),
+            Math.round(sW * GameConstants.TILESIZE),
+            Math.round(sH * GameConstants.TILESIZE),
+            1 + off.x,
+            1 + off.y,
+            baseW,
+            baseH,
+          );
+        }
+        oCtx.globalCompositeOperation = "source-in";
+        oCtx.globalAlpha = Math.max(0, Math.min(1, outlineOpacity));
+        oCtx.fillStyle = outlineColor;
+        oCtx.fillRect(0, 0, oW, oH);
+        oCtx.globalCompositeOperation = "source-over";
+        oCtx.globalAlpha = 1;
+
+        shCtx.globalCompositeOperation = "destination-over";
+        shCtx.drawImage(outlineCanvas, 0, 0);
+        shCtx.globalCompositeOperation = "source-over";
+      }
     }
 
     // Blit the pre-shaded sprite to the main canvas at the destination position/size
     Game.ctx.drawImage(
       Game.shade_canvases[key],
-      Math.round(dX * GameConstants.TILESIZE),
-      Math.round(dY * GameConstants.TILESIZE),
-      Math.round(dW * GameConstants.TILESIZE),
-      Math.round(dH * GameConstants.TILESIZE),
+      Math.round(dX * GameConstants.TILESIZE) -
+        (outlineColor && outlineOpacity > 0 ? 1 : 0),
+      Math.round(dY * GameConstants.TILESIZE) -
+        (outlineColor && outlineOpacity > 0 ? 1 : 0),
+      Math.round(dW * GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0 ? 2 : 0),
+      Math.round(dH * GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0 ? 2 : 0),
     );
 
     Game.ctx.restore(); // Restore the canvas to the previous state
@@ -2692,6 +2749,8 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
     fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -2707,6 +2766,8 @@ export class Game {
       shadeOpacity,
       true,
       fadeDir,
+      outlineColor,
+      outlineOpacity,
     );
   };
 

@@ -232,6 +232,9 @@ export class CrabEnemy extends Enemy {
         1 * this.crushY,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
       if (this.crushed) {
         this.crushAnim(delta);

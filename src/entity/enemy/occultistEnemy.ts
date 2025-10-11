@@ -301,6 +301,9 @@ export class OccultistEnemy extends Enemy {
         2,
         this.softShadeColor,
         this.shadeAmount(),
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     }
     Game.ctx.restore();

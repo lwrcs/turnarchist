@@ -273,6 +273,9 @@ export class MummyEnemy extends Enemy {
       2,
       this.softShadeColor,
       this.shadeAmount(),
+      undefined,
+      this.outlineColor(),
+      this.outlineOpacity(),
     );
 
     if (!this.cloned) {
