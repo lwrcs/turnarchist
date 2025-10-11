@@ -35,13 +35,11 @@ const fetchGameStats = async (
   res: Response,
 ) => {
   const { limit, cursor } = req.query;
-  const { data: unfilteredData, nextCursor } = await gameStatsDal.getGameStats({
+  const gameStats = await gameStatsDal.getGameStats({
     limit,
     cursor,
   });
-
-  const data = unfilteredData.map((val) => ({ ...val, gameState: null }));
-  return res.status(HttpStatus.OK).json({ data, nextCursor });
+  return res.status(HttpStatus.OK).json(gameStats);
 };
 
 const fetchGameStatsCount = async (req: Request, res: Response) => {
