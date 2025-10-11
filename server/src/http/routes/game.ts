@@ -11,6 +11,7 @@ import { logger } from "../../logger";
 import { gameStatsDal } from "db/dal/game-stats";
 import HttpStatus from "http-status-codes";
 import { getClientIp } from "request-ip";
+import { asyncHandler } from "../middleware/asyncHandler";
 
 const recordGameStats = async (
   req: Request<{}, {}, GameStats>,
@@ -53,14 +54,17 @@ export const getGameRouter = () => {
   gameRouter.post(
     "/stats",
     validateRequest(recordGameStatsRequestSchema),
-    recordGameStats,
+    asyncHandler<{}, {}, GameStats, {}>(recordGameStats),
   );
   gameRouter.get(
     "/stats",
     validateRequest(fetchGameStatsRequestSchema),
-    fetchGameStats,
+    asyncHandler<{}, {}, {}, FetchGameStatsParams>(fetchGameStats),
   );
-  gameRouter.get("/stats/count", fetchGameStatsCount);
+  gameRouter.get(
+    "/stats/count",
+    asyncHandler<{}, {}, {}, {}>(fetchGameStatsCount),
+  );
 
   return gameRouter;
 };
