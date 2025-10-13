@@ -289,28 +289,8 @@ export abstract class Enemy extends Entity {
         }
       }
     }
-    // Create a grid of the room
-    let grid = [];
-    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-      grid[x] = [];
-      for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-        if (this.room.roomArray[x] && this.room.roomArray[x][y])
-          grid[x][y] = this.room.roomArray[x][y];
-        else grid[x][y] = false;
-      }
-    }
-
-    // Find a path to the target player
-    let moves = astar.AStar.search(
-      grid,
-      this,
-      this.targetPlayer,
-      disablePositions,
-      false,
-      false,
-      true,
-      this.direction,
-    );
+    // Use localized pathfinding grid for performance
+    this.searchPathLocalized(this.targetPlayer, disablePositions);
   };
 
   handleSkipTurns = () => {
@@ -364,27 +344,10 @@ export abstract class Enemy extends Entity {
               }
             }
           }
-          // Create a grid of the room
-          let grid = [];
-          for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-            grid[x] = [];
-            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-              if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                grid[x][y] = this.room.roomArray[x][y];
-              else grid[x][y] = false;
-            }
-          }
-
-          // Find a path to the target player
-          let moves = astar.AStar.search(
-            grid,
-            this,
+          // Use localized pathfinding grid for performance
+          let moves = this.searchPathLocalized(
             this.targetPlayer,
             disablePositions,
-            false,
-            false,
-            true,
-            this.direction,
           );
 
           // If there are moves available
@@ -507,6 +470,130 @@ export abstract class Enemy extends Entity {
       }
     }
   };
+
+  // Build a localized search grid around enemy and target and run A*
+  protected searchPathLocalized(
+    target: { x: number; y: number },
+    disablePositions: Array<astar.Position>,
+    options?: {
+      diagonals?: boolean;
+      diagonalsOnly?: boolean;
+      allowOmni?: boolean;
+      direction?: Direction;
+      useLastPlayerPos?: boolean;
+      lastPlayerPos?: { x: number; y: number };
+    },
+  ) {
+    const pad = 3; // extra wiggle room
+    const minSide = GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+
+    const minX = Math.min(this.x, target.x);
+    const maxX = Math.max(this.x, target.x);
+    const minY = Math.min(this.y, target.y);
+    const maxY = Math.max(this.y, target.y);
+
+    let left = Math.max(this.room.roomX, minX - pad);
+    let right = Math.min(this.room.roomX + this.room.width - 1, maxX + pad);
+    let top = Math.max(this.room.roomY, minY - pad);
+    let bottom = Math.min(this.room.roomY + this.room.height - 1, maxY + pad);
+
+    // Enforce minimum rectangle size centered between enemy and target
+    const cx = Math.floor((this.x + target.x) / 2);
+    const cy = Math.floor((this.y + target.y) / 2);
+    const half = Math.floor(minSide / 2);
+    left = Math.min(left, cx - half);
+    right = Math.max(right, cx + half);
+    top = Math.min(top, cy - half);
+    bottom = Math.max(bottom, cy + half);
+
+    // Clamp to room bounds
+    left = Math.max(this.room.roomX, left);
+    right = Math.min(this.room.roomX + this.room.width - 1, right);
+    top = Math.max(this.room.roomY, top);
+    bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+
+    const w = right - left + 1;
+    const h = bottom - top + 1;
+
+    // Build subgrid
+    const grid: any[][] = [];
+    for (let gx = 0; gx < w; gx++) {
+      grid[gx] = [];
+      for (let gy = 0; gy < h; gy++) {
+        const rx = left + gx;
+        const ry = top + gy;
+        if (this.room.roomArray[rx] && this.room.roomArray[rx][ry])
+          grid[gx][gy] = this.room.roomArray[rx][ry];
+        else grid[gx][gy] = false;
+      }
+    }
+
+    // Translate disables into local grid coordinates; filter to local bounds to avoid large arrays
+    const localDisables = (disablePositions || [])
+      .filter((p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom)
+      .map((p) => ({ x: p.x - left, y: p.y - top })) as Array<astar.Position>;
+
+    // Localized start/target
+    const localStart: any = { ...this, x: this.x - left, y: this.y - top };
+    const localTarget: any = {
+      ...target,
+      x: target.x - left,
+      y: target.y - top,
+    };
+
+    // Optionally include lastPlayerPos in local space for search variants that support it
+    const localLast = options?.useLastPlayerPos
+      ? options?.lastPlayerPos
+        ? {
+            x: options.lastPlayerPos.x - left,
+            y: options.lastPlayerPos.y - top,
+          }
+        : this.targetPlayer
+          ? {
+              x: this.targetPlayer.lastX - left,
+              y: this.targetPlayer.lastY - top,
+            }
+          : undefined
+      : undefined;
+
+    // Run A* (two common signatures)
+    let moves: any[];
+    if (options?.useLastPlayerPos) {
+      // grid, start, target, disables, diagonals, diagonalsOnly, (unused), (unused), (unused), diagonalsOmni=false, lastPlayerPos
+      moves = astar.AStar.search(
+        grid,
+        localStart,
+        localTarget,
+        localDisables,
+        options?.diagonals ?? false,
+        options?.diagonalsOnly ?? false,
+        false,
+        undefined,
+        undefined,
+        false,
+        localLast,
+      );
+    } else {
+      // grid, start, target, disables, diagonals, diagonalsOnly, allowOmni, direction
+      moves = astar.AStar.search(
+        grid,
+        localStart,
+        localTarget,
+        localDisables,
+        options?.diagonals ?? false,
+        options?.diagonalsOnly ?? false,
+        options?.allowOmni ?? true,
+        options?.direction ?? this.direction,
+      );
+    }
+
+    // Map moves back to room coordinates
+    for (const m of moves) {
+      m.pos.x = m.pos.x + left;
+      m.pos.y = m.pos.y + top;
+    }
+    return moves;
+  }
 
   onHurt = (
     damage: number = 1,

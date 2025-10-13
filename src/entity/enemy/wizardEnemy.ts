@@ -45,6 +45,8 @@ export abstract class WizardEnemy extends Enemy {
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
+  // (no additional helpers required here)
+
   newLightSource = (
     x: number,
     y: number,

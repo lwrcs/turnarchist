@@ -328,6 +328,10 @@ export class Room {
   tunnelDoor: Door = null; // this is the door that connects the start room to the exit room
   active: boolean;
   onScreen: boolean;
+  private visibleTileMinX?: number;
+  private visibleTileMaxX?: number;
+  private visibleTileMinY?: number;
+  private visibleTileMaxY?: number;
   lastLightingUpdate: number;
   walls: Array<Wall>;
   decorations: Array<Decoration>;
@@ -359,6 +363,8 @@ export class Room {
   private isUpdatingLighting: boolean = false;
   // Estimated number of tiles touched during lighting for dynamic tuning
   estimatedLightingTiles: number = 0;
+  // Fast lookup for opaque entities blocking light this frame (when enabled)
+  private opaqueEntityPositions?: Set<string>;
 
   constructor(
     game: Game,
@@ -1282,7 +1288,7 @@ export class Room {
       (e) => e instanceof Enemy,
     ).length;
     for (const h of this.hitwarnings) {
-      h.tick();
+      if (this.isWithinEnemyInteractionRange(h.x, h.y)) h.tick();
     }
     for (const p of this.projectiles) {
       p.tick();
@@ -1313,6 +1319,9 @@ export class Room {
   computerTurn = () => {
     // take computer turn
     for (const e of this.entities) {
+      if (e instanceof Enemy) {
+        if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
+      }
       e.tick();
     }
     this.entities = this.entities.filter((e) => !e.dead);
@@ -1327,6 +1336,7 @@ export class Room {
     }
 
     for (const h of this.hitwarnings) {
+      if (!this.isWithinEnemyInteractionRange(h.x, h.y)) continue;
       if (
         !this.roomArray[h.x] ||
         !this.roomArray[h.x][h.y] ||
@@ -1379,6 +1389,19 @@ export class Room {
     this.turn = TurnState.playerTurn;
     this.updateLighting();
   };
+
+  private isWithinEnemyInteractionRange(x: number, y: number): boolean {
+    try {
+      const range = GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+      const player = this.game.players[this.game.localPlayerID];
+      if (!player) return true;
+      const dx = x - player.x;
+      const dy = y - player.y;
+      return dx * dx + dy * dy <= range * range;
+    } catch {
+      return true;
+    }
+  }
 
   update = () => {
     if (this.turn == TurnState.computerTurn) {
@@ -1495,8 +1518,10 @@ export class Room {
   // #region LIGHTING METHODS
 
   fadeLighting = (delta: number) => {
+    const bufferTiles = 2;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
         let flag = false;
@@ -1519,8 +1544,10 @@ export class Room {
   };
 
   fadeRgb = (delta: number) => {
+    const bufferTiles = 2;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
         const [softR, softG, softB] = this.softCol[x][y];
         const [targetR, targetG, targetB] = this.col[x][y];
 
@@ -1586,7 +1613,16 @@ export class Room {
     };
     let linkedDoors: Door[] = [];
     this.doors.forEach((d) => {
-      if (d.linkedDoor && d.room.entered) linkedDoors.push(d.linkedDoor);
+      if (
+        d.linkedDoor &&
+        d.room.entered &&
+        this.isTileOnScreen(
+          d.linkedDoor.x,
+          d.linkedDoor.y,
+          LevelConstants.LIGHTING_MAX_DISTANCE,
+        )
+      )
+        linkedDoors.push(d.linkedDoor);
     });
 
     this.doors.forEach((d) => {
@@ -1655,8 +1691,13 @@ export class Room {
     //);
   };
 
-  updateLighting = () => {
+  updateLighting = (source?: { x: number; y: number }) => {
     if (!this.onScreen) return;
+    // If a specific source is provided, skip lighting update if it's off-screen with buffer
+    if (source) {
+      const buffer = LevelConstants.LIGHTING_MAX_DISTANCE;
+      if (!this.isTileOnScreen(source.x, source.y, buffer)) return;
+    }
     if (this.isUpdatingLighting) return;
     this.isUpdatingLighting = true;
 
@@ -1711,6 +1752,25 @@ export class Room {
         return false;
       });
     } catch {}
+
+    // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
+    if (GameConstants.ENEMIES_BLOCK_LIGHT) {
+      const set = new Set<string>();
+      for (const e of this.entities) {
+        if ((e as any).opaque && this.isTileOnScreen(e.x, e.y, 7)) {
+          const w = Math.max(1, (e as any).w || 1);
+          const h = Math.max(1, (e as any).h || 1);
+          for (let dx = 0; dx < w; dx++) {
+            for (let dy = 0; dy < h; dy++) {
+              set.add(`${e.x + dx},${e.y + dy}`);
+            }
+          }
+        }
+      }
+      this.opaqueEntityPositions = set;
+    } else {
+      this.opaqueEntityPositions = undefined;
+    }
 
     for (const l of this.lightSources) {
       if (l.shouldUpdate()) {
@@ -1814,6 +1874,16 @@ export class Room {
   };
 
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {
+    if (
+      lightSource &&
+      this.isTileOnScreen(
+        lightSource.x,
+        lightSource.y,
+        LevelConstants.LIGHTING_MAX_DISTANCE,
+      ) === false
+    )
+      return;
+
     this.oldCol = [];
     this.oldVis = [];
     this.oldCol = this.col;
@@ -1925,12 +1995,9 @@ export class Room {
         this.renderBuffer[currentX][currentY] = [];
       }
 
-      if (GameConstants.ENEMIES_BLOCK_LIGHT) {
-        //begin processing opaque entities
-        const entity = this.entities.find(
-          (e) => e.x === currentX && e.y === currentY && e.opaque,
-        );
-        if (entity) {
+      if (GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
+        // O(1) membership check instead of scanning entities
+        if (this.opaqueEntityPositions.has(`${currentX},${currentY}`)) {
           //intensity = intensity * (1 - entity.opacity);
           // Set the intensity for this tile and then terminate to create shadow effect
           const weightedLinearColor: [number, number, number, number] = [
@@ -2201,9 +2268,11 @@ export class Room {
     const offsetX = this.blurOffsetX;
     const offsetY = this.blurOffsetY;
 
-    // Draw all color rectangles without any filters
+    // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
+    const bufferTiles = 3;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
 
@@ -2353,9 +2422,11 @@ export class Room {
 
     let lastFillStyle = "";
 
-    // Draw all shade rectangles without any filters
+    // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
+    const shadeBufferTiles = 4;
     for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
       for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+        if (!this.isTileOnScreen(x, y, shadeBufferTiles)) continue;
         const tile = this.roomArray[x]?.[y];
         //if (!tile) return;
 
@@ -2942,6 +3013,22 @@ export class Room {
       this.particles,
       this.items,
     );
+
+    // Filter out drawables that are completely off-screen (with a small tile buffer)
+    drawables = drawables.filter((d) => {
+      const dx = (d as any).x;
+      const dy = (d as any).y;
+      if (typeof dx !== "number" || typeof dy !== "number") return true;
+      const dw = Math.max(1, Math.ceil((d as any)?.w || 1));
+      const dh = Math.max(1, Math.ceil((d as any)?.h || 1));
+      const bufferTiles = 3;
+      for (let ox = 0; ox < dw; ox++) {
+        for (let oy = 0; oy < dh; oy++) {
+          if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles)) return true;
+        }
+      }
+      return false;
+    });
 
     for (const i in this.game.players) {
       if ((this.game.players[i] as any).getRoom?.() === this) {
@@ -4122,6 +4209,60 @@ export class Room {
     );
 
     this.onScreen = isOverlapping;
+  }
+
+  // Returns true if a given tile coordinate is on screen, with optional buffer in tiles
+  public isTileOnScreen(
+    x: number,
+    y: number,
+    bufferTiles: number = 0,
+  ): boolean {
+    const tileSize = GameConstants.TILESIZE;
+
+    // Convert player position from tiles to pixels
+    const playerPosX = this.game.players[this.game.localPlayerID]
+      ? this.game.players[this.game.localPlayerID].x * tileSize
+      : 0;
+    const playerPosY = this.game.players[this.game.localPlayerID]
+      ? this.game.players[this.game.localPlayerID].y * tileSize
+      : 0;
+
+    // Use same camera computation as roomOnScreen
+    const cameraX =
+      playerPosX -
+      (this.game.players[this.game.localPlayerID]?.drawX || 0) +
+      0.5 * tileSize -
+      0.5 * GameConstants.WIDTH -
+      this.game.screenShakeX;
+    const cameraY =
+      playerPosY -
+      (this.game.players[this.game.localPlayerID]?.drawY || 0) +
+      0.5 * tileSize -
+      0.5 * GameConstants.HEIGHT -
+      this.game.screenShakeY;
+    const cameraWidth = GameConstants.WIDTH;
+    const cameraHeight = GameConstants.HEIGHT;
+
+    const bufferPx = bufferTiles * tileSize;
+    const cameraLeft = cameraX - bufferPx;
+    const cameraRight = cameraX + cameraWidth + bufferPx;
+    const cameraTop = cameraY - bufferPx;
+    const cameraBottom = cameraY + cameraHeight + bufferPx;
+
+    // Tile bounds in pixels
+    const tileLeft = x * tileSize;
+    const tileRight = tileLeft + tileSize;
+    const tileTop = y * tileSize;
+    const tileBottom = tileTop + tileSize;
+
+    // Axis-aligned rectangle intersection test
+    const intersects = !(
+      tileRight < cameraLeft ||
+      tileLeft > cameraRight ||
+      tileBottom < cameraTop ||
+      tileTop > cameraBottom
+    );
+    return intersects;
   }
 
   private setReverb() {

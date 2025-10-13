@@ -125,26 +125,16 @@ export class BishopEnemy extends Enemy {
               }
             }
           }
-          let grid = [];
-          for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-            grid[x] = [];
-            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-              if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                grid[x][y] = this.room.roomArray[x][y];
-              else grid[x][y] = false;
-            }
-          }
+          // Localized pathfinding
           disablePositions.push({ x: this.x + 1, y: this.y } as astar.Position);
           disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y } as astar.Position);
-          let moves = astar.AStar.search(
-            grid,
-            this,
+          let moves = this.searchPathLocalized(
             this.targetPlayer,
             disablePositions,
-            true, //diagonals
+            { diagonals: true, allowOmni: true },
           );
           moves = moves.filter((move) => {
             const dx = Math.abs(move.pos.x - this.x);

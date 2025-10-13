@@ -29,6 +29,7 @@ import { XPPopup } from "../particle/xpPopup";
 import { Tile } from "../tile/tile";
 import { BeamEffect } from "../projectile/beamEffect";
 import { Lighting } from "../lighting/lighting";
+import { Enemy } from "./enemy/enemy";
 
 export enum EntityDirection {
   DOWN,
@@ -1477,7 +1478,7 @@ export class Entity extends Drawable {
     arrowsOnly: boolean = false,
     directionOverride: null | "diagonal" | "orthogonal" | "forward" = null,
   ) => {
-    if (this.unconscious) return;
+    if (this.unconscious || (this.isEnemy && !(this as any).seenPlayer)) return;
     const player: Player = this.getPlayer();
     const isPlayerOnTile = player.x === hx && player.y === hy;
     const cullFactor = isPlayerOnTile ? 0 : 0.45;

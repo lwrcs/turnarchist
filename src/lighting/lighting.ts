@@ -1,5 +1,6 @@
 import { LightSource } from "./lightSource";
 import { Room } from "../room/room";
+import { LevelConstants } from "../level/levelConstants";
 
 export class Lighting {
   static momentaryLight = (
@@ -12,6 +13,10 @@ export class Lighting {
     brightness: number,
     delay: number,
   ) => {
+    if (
+      room.isTileOnScreen(x, y, LevelConstants.LIGHTING_MAX_DISTANCE) === false
+    )
+      return;
     const lightSource = Lighting.newLightSource(
       x,
       y,

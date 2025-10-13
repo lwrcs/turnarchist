@@ -33,7 +33,7 @@ export class EnemySpawnAnimation extends Projectile {
       1,
     );
     this.room.lightSources.push(this.lightSource);
-    this.room.updateLighting();
+    this.room.updateLighting({ x: this.x, y: this.y });
   }
 
   tick = () => {

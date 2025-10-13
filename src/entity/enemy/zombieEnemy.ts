@@ -97,27 +97,10 @@ export class ZombieEnemy extends Enemy {
             }
           }
 
-          // Create a grid of the room
-          let grid = [];
-          for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-            grid[x] = [];
-            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-              if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                grid[x][y] = this.room.roomArray[x][y];
-              else grid[x][y] = false;
-            }
-          }
-
-          // Find a path to the target player
-          let moves = astar.AStar.search(
-            grid,
-            this,
+          // Find a path to the target player (localized)
+          const moves = this.searchPathLocalized(
             this.targetPlayer,
             disablePositions,
-            false,
-            false,
-            true,
-            this.direction,
           );
 
           // If there are moves available

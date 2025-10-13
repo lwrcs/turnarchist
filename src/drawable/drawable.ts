@@ -1,5 +1,7 @@
 export class Drawable {
   drawableY = 0;
+  x = 0;
+  y = 0;
   // When true, this drawable should be rendered above the Player
   shouldDrawAbovePlayer: boolean = false;
 

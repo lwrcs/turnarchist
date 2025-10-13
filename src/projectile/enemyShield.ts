@@ -51,7 +51,7 @@ export class EnemyShield extends Projectile {
       this.parent.room.projectiles.push(this);
       this.autoRegistered = true;
     }
-    this.parent.room.updateLighting();
+    this.parent.room.updateLighting({ x: this.x, y: this.y });
   }
 
   remove = () => {

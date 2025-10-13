@@ -36,6 +36,8 @@ export class EnergyWizardEnemy extends WizardEnemy {
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
+  // (no pathfinding; placeholder removed)
+
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();

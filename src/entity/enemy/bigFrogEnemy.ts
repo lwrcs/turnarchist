@@ -267,28 +267,11 @@ export class BigFrogEnemy extends Enemy {
               this.rumbling = false;
               return;
             }
-            // Build pathfinding grid only if we didn't jump over
-            let grid = [];
-            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-              grid[x] = [];
-              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                  grid[x][y] = this.room.roomArray[x][y];
-                else grid[x][y] = false;
-              }
-            }
-            let moves = astar.AStar.search(
-              grid,
-              this,
+            // Build localized path only if we didn't jump over
+            const moves = this.searchPathLocalized(
               targetPosition,
               disablePositions,
-              false,
-              false,
-              false,
-              undefined,
-              undefined,
-              false,
-              this.lastPlayerPos,
+              { useLastPlayerPos: true, allowOmni: false },
             );
             console.log(moves); //DON'T REMOVE THIS
 

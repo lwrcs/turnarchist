@@ -319,15 +319,7 @@ export class SpiderEnemy extends Enemy {
               }
             }
 
-            let grid = [];
-            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-              grid[x] = [];
-              for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                  grid[x][y] = this.room.roomArray[x][y];
-                else grid[x][y] = false;
-              }
-            }
+            // Use localized pathfinding for performance
             this.target =
               this.getAverageLuminance() > 0
                 ? this.targetPlayer
@@ -380,18 +372,10 @@ export class SpiderEnemy extends Enemy {
             // First, try to use A* first/second step and extend to length 2 if possible
             let finalX = this.x;
             let finalY = this.y;
-            const moves = astar.AStar.search(
-              grid,
-              this,
+            const moves = this.searchPathLocalized(
               targetPosition,
               disablePositions,
-              false,
-              false,
-              false,
-              undefined,
-              undefined,
-              false,
-              this.lastPlayerPos,
+              { useLastPlayerPos: true, allowOmni: false },
             );
             if (moves.length > 0) {
               let step = moves[0];

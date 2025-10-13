@@ -87,20 +87,9 @@ export class BoltcasterEnemy extends Enemy {
 
     if (candidates.length === 0) return null;
 
-    // Choose shortest path candidate using A*
+    // Choose shortest path candidate using localized A*
     let best: { x: number; y: number } | null = null;
     let bestLen = Infinity;
-
-    // Build nav grid
-    let grid: any[][] = [];
-    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-      grid[x] = [];
-      for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-        if (this.room.roomArray[x] && this.room.roomArray[x][y])
-          grid[x][y] = this.room.roomArray[x][y];
-        else grid[x][y] = false;
-      }
-    }
 
     const disablePositions: Array<astar.Position> = [];
     for (const e of this.room.entities) {
@@ -119,16 +108,9 @@ export class BoltcasterEnemy extends Enemy {
     }
 
     for (const c of candidates) {
-      const fakeTarget: any = { x: c.x, y: c.y };
-      const moves = astar.AStar.search(
-        grid,
-        this,
-        fakeTarget,
+      const moves = this.searchPathLocalized(
+        { x: c.x, y: c.y },
         disablePositions,
-        false,
-        false,
-        true,
-        this.direction,
       );
       if (moves && moves.length > 0 && moves.length < bestLen) {
         best = c;
@@ -325,17 +307,6 @@ export class BoltcasterEnemy extends Enemy {
         }
 
         // Otherwise, pathfind to nearest inline tile with clear LOS
-        // Build nav grid
-        let grid: any[][] = [];
-        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-          grid[x] = [];
-          for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-            if (this.room.roomArray[x] && this.room.roomArray[x][y])
-              grid[x][y] = this.room.roomArray[x][y];
-            else grid[x][y] = false;
-          }
-        }
-
         const disablePositions: Array<astar.Position> = [];
         for (const e of this.room.entities) {
           if (e !== this)
@@ -355,15 +326,9 @@ export class BoltcasterEnemy extends Enemy {
         const target = this.findNearestInlineTile();
 
         if (target) {
-          const moves = astar.AStar.search(
-            grid,
-            this,
-            { x: target.x, y: target.y } as any,
+          const moves = this.searchPathLocalized(
+            { x: target.x, y: target.y },
             disablePositions,
-            false,
-            false,
-            true,
-            this.direction,
           );
 
           if (moves && moves.length > 0) {
@@ -388,16 +353,7 @@ export class BoltcasterEnemy extends Enemy {
           }
         } else {
           // Default fallback: pursue player normally
-          const moves = astar.AStar.search(
-            grid,
-            this,
-            player,
-            disablePositions,
-            false,
-            false,
-            true,
-            this.direction,
-          );
+          const moves = this.searchPathLocalized(player, disablePositions);
           if (moves && moves.length > 0) {
             const moveX = moves[0].pos.x;
             const moveY = moves[0].pos.y;

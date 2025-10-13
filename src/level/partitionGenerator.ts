@@ -296,14 +296,26 @@ export class PartitionGenerator {
         attempts * 0.1,
       );
 
-      await this.generateCaveCandidate(
-        partialLevel,
-        mapWidth,
-        mapHeight,
-        numRooms,
-        branching,
-        loopiness,
-      );
+      if (opts.giantCentralRoom) {
+        await this.generateCaveCandidateWithGiantCenter(
+          partialLevel,
+          mapWidth,
+          mapHeight,
+          numRooms,
+          branching,
+          loopiness,
+          opts.giantRoomScale ?? 0.65,
+        );
+      } else {
+        await this.generateCaveCandidate(
+          partialLevel,
+          mapWidth,
+          mapHeight,
+          numRooms,
+          branching,
+          loopiness,
+        );
+      }
 
       validationResult = this.validator.validateCavePartitions(
         partialLevel.partitions,
@@ -501,6 +513,163 @@ export class PartitionGenerator {
     await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
     await this.addCaveLoops(partialLevel, loopiness);
     await this.calculateDistances(partialLevel, spawn);
+  }
+
+  // Variant that creates a giant central room and smaller surrounding rooms connected to it
+  private async generateCaveCandidateWithGiantCenter(
+    partialLevel: PartialLevel,
+    map_w: number,
+    map_h: number,
+    num_rooms: number,
+    branching: number = 0.5,
+    loopiness: number = 0.5,
+    giantScale: number = 0.65,
+  ) {
+    const CAVE_OFFSET = 100;
+    partialLevel.partitions = [];
+
+    // Create the giant center room
+    const gW = Math.max(
+      6,
+      Math.floor(map_w * Math.max(0.4, Math.min(0.9, giantScale))),
+    );
+    const gH = Math.max(
+      6,
+      Math.floor(map_h * Math.max(0.4, Math.min(0.9, giantScale))),
+    );
+    const gx = CAVE_OFFSET + Math.floor((map_w - gW) / 2);
+    const gy = CAVE_OFFSET + Math.floor((map_h - gH) / 2);
+    const center = new Partition(gx, gy, gW, gH, "white");
+    center.type = RoomType.CAVE; // central hub is not the entry; entry will be a smaller room
+    partialLevel.partitions.push(center);
+
+    // Create peripheral rooms ADJACENT to the center on one side (to ensure valid door coords)
+    const targetCount = Math.max(4, num_rooms - 1);
+    let attempts = 0;
+    while (partialLevel.partitions.length < targetCount + 1 && attempts < 400) {
+      attempts++;
+      const w = Math.max(
+        3,
+        Math.floor(Random.rand() * Math.max(3, map_w * 0.25) + 3),
+      );
+      const h = Math.max(
+        3,
+        Math.floor(Random.rand() * Math.max(3, map_h * 0.25) + 3),
+      );
+
+      // pick a side to attach: 0=left,1=right,2=top,3=bottom
+      const side = Math.floor(Random.rand() * 4);
+      let x = 0;
+      let y = 0;
+      if (side === 0) {
+        // attach to left: p.x + p.w === center.x - 1
+        x = center.x - 1 - w;
+        const minY = Math.max(CAVE_OFFSET, center.y - h + 1);
+        const maxY = Math.min(CAVE_OFFSET + map_h - h, center.y + center.h - 1);
+        if (minY > maxY) continue;
+        y =
+          CAVE_OFFSET +
+          Game.rand(minY - CAVE_OFFSET, maxY - CAVE_OFFSET, Random.rand);
+      } else if (side === 1) {
+        // attach to right: p.x === center.x + center.w + 1
+        x = center.x + center.w + 1;
+        const minY = Math.max(CAVE_OFFSET, center.y - h + 1);
+        const maxY = Math.min(CAVE_OFFSET + map_h - h, center.y + center.h - 1);
+        if (minY > maxY) continue;
+        y =
+          CAVE_OFFSET +
+          Game.rand(minY - CAVE_OFFSET, maxY - CAVE_OFFSET, Random.rand);
+      } else if (side === 2) {
+        // attach to top: p.y + p.h === center.y - 1
+        y = center.y - 1 - h;
+        const minX = Math.max(CAVE_OFFSET, center.x - w + 1);
+        const maxX = Math.min(CAVE_OFFSET + map_w - w, center.x + center.w - 1);
+        if (minX > maxX) continue;
+        x =
+          CAVE_OFFSET +
+          Game.rand(minX - CAVE_OFFSET, maxX - CAVE_OFFSET, Random.rand);
+      } else {
+        // attach to bottom: p.y === center.y + center.h + 1
+        y = center.y + center.h + 1;
+        const minX = Math.max(CAVE_OFFSET, center.x - w + 1);
+        const maxX = Math.min(CAVE_OFFSET + map_w - w, center.x + center.w - 1);
+        if (minX > maxX) continue;
+        x =
+          CAVE_OFFSET +
+          Game.rand(minX - CAVE_OFFSET, maxX - CAVE_OFFSET, Random.rand);
+      }
+
+      // Bounds check
+      if (x < CAVE_OFFSET || y < CAVE_OFFSET) continue;
+      if (x + w > CAVE_OFFSET + map_w || y + h > CAVE_OFFSET + map_h) continue;
+
+      const p = new Partition(x, y, w, h, "white");
+      p.type = RoomType.CAVE;
+      // Ensure no overlap with existing
+      if (!partialLevel.partitions.some((other) => other.overlaps(p))) {
+        partialLevel.partitions.push(p);
+      }
+    }
+
+    // Connect all rooms to the center using boundary coords compatible with addDoor()
+    for (let i = 1; i < partialLevel.partitions.length; i++) {
+      const p = partialLevel.partitions[i];
+      let cx = 0;
+      let cy = 0;
+      if (p.x + p.w === center.x - 1) {
+        // left of center
+        cx = center.x - 1; // shared boundary column
+        cy = Math.max(
+          center.y,
+          Math.min(p.y + Math.floor(p.h / 2), center.y + center.h - 1),
+        );
+      } else if (p.x === center.x + center.w + 1) {
+        // right of center
+        cx = center.x + center.w; // shared boundary column
+        cy = Math.max(
+          center.y,
+          Math.min(p.y + Math.floor(p.h / 2), center.y + center.h - 1),
+        );
+      } else if (p.y + p.h === center.y - 1) {
+        // above center
+        cy = center.y - 1; // shared boundary row
+        cx = Math.max(
+          center.x,
+          Math.min(p.x + Math.floor(p.w / 2), center.x + center.w - 1),
+        );
+      } else if (p.y === center.y + center.h + 1) {
+        // below center
+        cy = center.y + center.h; // shared boundary row
+        cx = Math.max(
+          center.x,
+          Math.min(p.x + Math.floor(p.w / 2), center.x + center.w - 1),
+        );
+      } else {
+        // not adjacent; skip
+        continue;
+      }
+      center.connections.push(new PartitionConnection(cx, cy, p));
+      p.connections.push(new PartitionConnection(cx, cy, center));
+    }
+
+    // Select a small peripheral room as the ROPECAVE (entry) if any exist
+    const peripherals = partialLevel.partitions.filter((p) => p !== center);
+    if (peripherals.length > 0) {
+      let entry = peripherals[0];
+      for (let i = 1; i < peripherals.length; i++) {
+        if (peripherals[i].area() < entry.area()) entry = peripherals[i];
+      }
+      entry.type = RoomType.ROPECAVE;
+    } else {
+      // Fallback: if no peripherals created, use center as entry
+      center.type = RoomType.ROPECAVE;
+    }
+
+    // Add additional connections/loops using existing helpers for some variety
+    await this.addCaveLoops(partialLevel, loopiness);
+
+    // Distances from center
+    await this.calculateDistances(partialLevel, center);
   }
 
   private async splitPartitions(

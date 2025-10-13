@@ -100,18 +100,10 @@ export class CrabEnemy extends Enemy {
                 ? this.targetPlayer
                 : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                     .darkest;
-            let moves = astar.AStar.search(
-              grid,
-              this,
-              this.target,
+            const moves = this.searchPathLocalized(
+              this.target as any,
               disablePositions,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              this.lastPlayerPos,
+              { useLastPlayerPos: true, allowOmni: true },
             );
             if (moves.length > 0) {
               let hitPlayer = false;

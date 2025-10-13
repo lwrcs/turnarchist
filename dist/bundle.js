@@ -9774,6 +9774,8 @@ exports.Drawable = void 0;
 class Drawable {
     constructor() {
         this.drawableY = 0;
+        this.x = 0;
+        this.y = 0;
         // When true, this drawable should be rendered above the Player
         this.shouldDrawAbovePlayer = false;
         this.draw = (delta) => { };
@@ -10133,7 +10135,6 @@ exports.DownladderMaker = DownladderMaker;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArmoredSkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -10226,17 +10227,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction, undefined, undefined);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -10429,7 +10420,6 @@ exports.ArmoredzombieEnemy = void 0;
 // src/entity/enemy/armoredzombieEnemy.ts
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class ArmoredzombieEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
@@ -10466,17 +10456,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -10651,7 +10631,6 @@ ArmoredzombieEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BeetleEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -10892,16 +10871,6 @@ class BeetleEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
                             this.target =
                                 this.getAverageLuminance() > 0
                                     ? this.targetPlayer
@@ -10947,7 +10916,7 @@ class BeetleEnemy extends enemy_1.Enemy {
                             // First, try to use A* first/second step and extend up to length 3 if possible
                             let finalX = this.x;
                             let finalY = this.y;
-                            const moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             if (moves.length > 0) {
                                 let step = moves[0];
                                 const candidate2 = moves[1];
@@ -11260,7 +11229,6 @@ BeetleEnemy.tileY = 4;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigFrogEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
@@ -11469,18 +11437,8 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                 this.rumbling = false;
                                 return;
                             }
-                            // Build pathfinding grid only if we didn't jump over
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            let moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            // Build localized path only if we didn't jump over
+                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             console.log(moves); //DON'T REMOVE THIS
                             if (moves[1]) {
                                 const wouldHit = (player, moveX, moveY) => {
@@ -11803,7 +11761,6 @@ const spear_1 = __webpack_require__(/*! ../../item/weapon/spear */ "./src/item/w
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class BigKnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
@@ -11877,19 +11834,8 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            // Build grid
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            // A* pathfinding like BigZombieEnemy
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                            // Localized A* pathfinding like BigZombieEnemy
+                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                             if (moves.length > 0) {
                                 const moveX = moves[0].pos.x;
                                 const moveY = moves[0].pos.y;
@@ -12069,7 +12015,6 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 class BigSkullEnemy extends enemy_1.Enemy {
@@ -12187,17 +12132,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction, undefined, undefined);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -12414,7 +12349,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BigZombieEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class BigZombieEnemy extends enemy_1.Enemy {
@@ -12491,19 +12425,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        // Create a grid of the room
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        // Find a path to the target player
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        // Localized pathfinding for performance
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -12709,7 +12632,6 @@ BigZombieEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BishopEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -12797,22 +12719,13 @@ class BishopEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
+                        // Localized pathfinding
                         disablePositions.push({ x: this.x + 1, y: this.y });
                         disablePositions.push({ x: this.x - 1, y: this.y });
                         disablePositions.push({ x: this.x, y: this.y + 1 });
                         disablePositions.push({ x: this.x, y: this.y - 1 });
                         disablePositions.push({ x: this.x, y: this.y });
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, true);
+                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true, allowOmni: true });
                         moves = moves.filter((move) => {
                             const dx = Math.abs(move.pos.x - this.x);
                             const dy = Math.abs(move.pos.y - this.y);
@@ -12933,7 +12846,6 @@ BishopEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BoltcasterEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
@@ -12999,20 +12911,9 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             }
             if (candidates.length === 0)
                 return null;
-            // Choose shortest path candidate using A*
+            // Choose shortest path candidate using localized A*
             let best = null;
             let bestLen = Infinity;
-            // Build nav grid
-            let grid = [];
-            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                grid[x] = [];
-                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                        grid[x][y] = this.room.roomArray[x][y];
-                    else
-                        grid[x][y] = false;
-                }
-            }
             const disablePositions = [];
             for (const e of this.room.entities) {
                 if (e !== this)
@@ -13027,8 +12928,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 }
             }
             for (const c of candidates) {
-                const fakeTarget = { x: c.x, y: c.y };
-                const moves = astarclass_1.astar.AStar.search(grid, this, fakeTarget, disablePositions, false, false, true, this.direction);
+                const moves = this.searchPathLocalized({ x: c.x, y: c.y }, disablePositions);
                 if (moves && moves.length > 0 && moves.length < bestLen) {
                     best = c;
                     bestLen = moves.length;
@@ -13198,17 +13098,6 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                         return;
                     }
                     // Otherwise, pathfind to nearest inline tile with clear LOS
-                    // Build nav grid
-                    let grid = [];
-                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                        grid[x] = [];
-                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                grid[x][y] = this.room.roomArray[x][y];
-                            else
-                                grid[x][y] = false;
-                        }
-                    }
                     const disablePositions = [];
                     for (const e of this.room.entities) {
                         if (e !== this)
@@ -13224,7 +13113,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     }
                     const target = this.findNearestInlineTile();
                     if (target) {
-                        const moves = astarclass_1.astar.AStar.search(grid, this, { x: target.x, y: target.y }, disablePositions, false, false, true, this.direction);
+                        const moves = this.searchPathLocalized({ x: target.x, y: target.y }, disablePositions);
                         if (moves && moves.length > 0) {
                             const moveX = moves[0].pos.x;
                             const moveY = moves[0].pos.y;
@@ -13248,7 +13137,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     }
                     else {
                         // Default fallback: pursue player normally
-                        const moves = astarclass_1.astar.AStar.search(grid, this, player, disablePositions, false, false, true, this.direction);
+                        const moves = this.searchPathLocalized(player, disablePositions);
                         if (moves && moves.length > 0) {
                             const moveX = moves[0].pos.x;
                             const moveY = moves[0].pos.y;
@@ -13568,7 +13457,6 @@ ChargeEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CrabEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -13624,7 +13512,7 @@ class CrabEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -13790,7 +13678,6 @@ CrabEnemy.tileY = 4;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CrusherEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
@@ -13895,22 +13782,12 @@ class CrusherEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
                             this.target =
                                 this.getAverageLuminance() > 0 // 0.8
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
                                 this.setDrawXY(oldX, oldY);
@@ -14282,19 +14159,8 @@ class Enemy extends entity_1.Entity {
                     }
                 }
             }
-            // Create a grid of the room
-            let grid = [];
-            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                grid[x] = [];
-                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                        grid[x][y] = this.room.roomArray[x][y];
-                    else
-                        grid[x][y] = false;
-                }
-            }
-            // Find a path to the target player
-            let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+            // Use localized pathfinding grid for performance
+            this.searchPathLocalized(this.targetPlayer, disablePositions);
         };
         this.handleSkipTurns = () => {
             if (this.skipNextTurns > 0) {
@@ -14344,19 +14210,8 @@ class Enemy extends entity_1.Entity {
                                 }
                             }
                         }
-                        // Create a grid of the room
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        // Find a path to the target player
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        // Use localized pathfinding grid for performance
+                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -14699,6 +14554,88 @@ class Enemy extends entity_1.Entity {
     get damage() {
         return this.buffed ? 2 * this.baseDamage : this.baseDamage;
     }
+    // Build a localized search grid around enemy and target and run A*
+    searchPathLocalized(target, disablePositions, options) {
+        const pad = 3; // extra wiggle room
+        const minSide = gameplaySettings_1.GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+        const minX = Math.min(this.x, target.x);
+        const maxX = Math.max(this.x, target.x);
+        const minY = Math.min(this.y, target.y);
+        const maxY = Math.max(this.y, target.y);
+        let left = Math.max(this.room.roomX, minX - pad);
+        let right = Math.min(this.room.roomX + this.room.width - 1, maxX + pad);
+        let top = Math.max(this.room.roomY, minY - pad);
+        let bottom = Math.min(this.room.roomY + this.room.height - 1, maxY + pad);
+        // Enforce minimum rectangle size centered between enemy and target
+        const cx = Math.floor((this.x + target.x) / 2);
+        const cy = Math.floor((this.y + target.y) / 2);
+        const half = Math.floor(minSide / 2);
+        left = Math.min(left, cx - half);
+        right = Math.max(right, cx + half);
+        top = Math.min(top, cy - half);
+        bottom = Math.max(bottom, cy + half);
+        // Clamp to room bounds
+        left = Math.max(this.room.roomX, left);
+        right = Math.min(this.room.roomX + this.room.width - 1, right);
+        top = Math.max(this.room.roomY, top);
+        bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+        const w = right - left + 1;
+        const h = bottom - top + 1;
+        // Build subgrid
+        const grid = [];
+        for (let gx = 0; gx < w; gx++) {
+            grid[gx] = [];
+            for (let gy = 0; gy < h; gy++) {
+                const rx = left + gx;
+                const ry = top + gy;
+                if (this.room.roomArray[rx] && this.room.roomArray[rx][ry])
+                    grid[gx][gy] = this.room.roomArray[rx][ry];
+                else
+                    grid[gx][gy] = false;
+            }
+        }
+        // Translate disables into local grid coordinates; filter to local bounds to avoid large arrays
+        const localDisables = (disablePositions || [])
+            .filter((p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom)
+            .map((p) => ({ x: p.x - left, y: p.y - top }));
+        // Localized start/target
+        const localStart = { ...this, x: this.x - left, y: this.y - top };
+        const localTarget = {
+            ...target,
+            x: target.x - left,
+            y: target.y - top,
+        };
+        // Optionally include lastPlayerPos in local space for search variants that support it
+        const localLast = options?.useLastPlayerPos
+            ? options?.lastPlayerPos
+                ? {
+                    x: options.lastPlayerPos.x - left,
+                    y: options.lastPlayerPos.y - top,
+                }
+                : this.targetPlayer
+                    ? {
+                        x: this.targetPlayer.lastX - left,
+                        y: this.targetPlayer.lastY - top,
+                    }
+                    : undefined
+            : undefined;
+        // Run A* (two common signatures)
+        let moves;
+        if (options?.useLastPlayerPos) {
+            // grid, start, target, disables, diagonals, diagonalsOnly, (unused), (unused), (unused), diagonalsOmni=false, lastPlayerPos
+            moves = astarclass_1.astar.AStar.search(grid, localStart, localTarget, localDisables, options?.diagonals ?? false, options?.diagonalsOnly ?? false, false, undefined, undefined, false, localLast);
+        }
+        else {
+            // grid, start, target, disables, diagonals, diagonalsOnly, allowOmni, direction
+            moves = astarclass_1.astar.AStar.search(grid, localStart, localTarget, localDisables, options?.diagonals ?? false, options?.diagonalsOnly ?? false, options?.allowOmni ?? true, options?.direction ?? this.direction);
+        }
+        // Map moves back to room coordinates
+        for (const m of moves) {
+            m.pos.x = m.pos.x + left;
+            m.pos.y = m.pos.y + top;
+        }
+        return moves;
+    }
     get lastPlayerPos() {
         return {
             x: this.targetPlayer.lastX,
@@ -14737,6 +14674,7 @@ var WizardState;
 class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
+        // (no pathfinding; placeholder removed)
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -14813,7 +14751,6 @@ const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./s
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class ExalterEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
@@ -14860,19 +14797,8 @@ class ExalterEnemy extends enemy_1.Enemy {
                             }
                         }
                     }
-                    // Build grid
-                    let grid = [];
-                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                        grid[x] = [];
-                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                grid[x][y] = this.room.roomArray[x][y];
-                            else
-                                grid[x][y] = false;
-                        }
-                    }
-                    // A* toward the target enemy
-                    const moves = astarclass_1.astar.AStar.search(grid, this, targetEnemy, disablePositions, false, false, true, this.direction);
+                    // Localized A* toward the target enemy
+                    const moves = this.searchPathLocalized({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
                     if (moves.length > 0) {
                         const oldX = this.x;
                         const oldY = this.y;
@@ -15258,7 +15184,6 @@ FireWizardEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FrogEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
@@ -15307,16 +15232,6 @@ class FrogEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
                             let targetPosition = {
                                 x: this.targetPlayer.x,
                                 y: this.targetPlayer.y,
@@ -15339,7 +15254,7 @@ class FrogEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             //console.log(moves); //DON'T REMOVE THIS
                             if (moves[1]) {
                                 let hitPlayer = false;
@@ -15606,7 +15521,7 @@ class GlowBugEnemy extends entity_1.Entity {
                 this.wander();
                 this.lightSource.x = this.x + 0.5;
                 this.lightSource.y = this.y + 0.5;
-                this.room.updateLighting();
+                this.room.updateLighting({ x: this.x, y: this.y });
             }
         };
         this.draw = (delta) => {
@@ -15688,7 +15603,6 @@ GlowBugEnemy.tileY = 4;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.KingEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class KingEnemy extends enemy_1.Enemy {
@@ -15742,19 +15656,7 @@ class KingEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, true, //diagonals
-                        false, //diagonalsOnly
-                        undefined, undefined, undefined, false);
+                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true, diagonalsOnly: false });
                         if (this.justHurt) {
                             this.retreat(oldX, oldY);
                         }
@@ -15887,7 +15789,6 @@ KingEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.KnightEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class KnightEnemy extends enemy_1.Enemy {
@@ -15940,17 +15841,7 @@ class KnightEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -16095,7 +15986,6 @@ KnightEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MummyEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class MummyEnemy extends enemy_1.Enemy {
@@ -16151,19 +16041,8 @@ class MummyEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        // Create a grid of the room
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        // Find a path to the target player
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        // Find a path to the target player using localized grid
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -16348,7 +16227,6 @@ const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./s
 const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 class OccultistEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
@@ -16395,19 +16273,8 @@ class OccultistEnemy extends enemy_1.Enemy {
                             }
                         }
                     }
-                    // Build grid
-                    let grid = [];
-                    for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                        grid[x] = [];
-                        for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                            if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                grid[x][y] = this.room.roomArray[x][y];
-                            else
-                                grid[x][y] = false;
-                        }
-                    }
-                    // A* toward the target enemy
-                    const moves = astarclass_1.astar.AStar.search(grid, this, targetEnemy, disablePositions, false, false, true, this.direction);
+                    // Localized A* toward the target enemy
+                    const moves = this.searchPathLocalized({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
                     if (moves.length > 0) {
                         const oldX = this.x;
                         const oldY = this.y;
@@ -16595,7 +16462,6 @@ OccultistEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PawnEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
@@ -16689,20 +16555,7 @@ class PawnEnemy extends enemy_1.Enemy {
                         }
                         else if (!this.unconscious) {
                             // Build grid like rookEnemy and use A* with orthogonal-only movement
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
-                            const moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, // diagonals
-                            false, // diagonalsOnly
-                            undefined, undefined, undefined, false, // diagonalsOmni
-                            this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
                                 const moveX = moves[0].pos.x;
                                 const moveY = moves[0].pos.y;
@@ -16812,7 +16665,6 @@ PawnEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueenEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class QueenEnemy extends enemy_1.Enemy {
@@ -16866,19 +16718,7 @@ class QueenEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, true, //diagonals
-                        false, //diagonalsOnly
-                        undefined, undefined, undefined, false);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true });
                         if (this.justHurt) {
                             this.retreat(oldX, oldY);
                         }
@@ -17009,7 +16849,6 @@ QueenEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RookEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class RookEnemy extends enemy_1.Enemy {
@@ -17059,20 +16898,7 @@ class RookEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, //diagonals
-                        false, //diagonalsOnly
-                        undefined, undefined, undefined, false, //diagonalsOmni
-                        this.lastPlayerPos);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
                         if (this.justHurt) {
                             //this.retreat(oldX, oldY);
                             //this.stun();
@@ -17187,7 +17013,6 @@ RookEnemy.tileY = 8;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SkullEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const imageParticle_1 = __webpack_require__(/*! ../../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -17272,17 +17097,7 @@ class SkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction, undefined, undefined);
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -17829,7 +17644,6 @@ Spawner.tileY = 4;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpiderEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
@@ -18049,16 +17863,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
+                            // Use localized pathfinding for performance
                             this.target =
                                 this.getAverageLuminance() > 0
                                     ? this.targetPlayer
@@ -18104,7 +17909,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                             // First, try to use A* first/second step and extend to length 2 if possible
                             let finalX = this.x;
                             let finalY = this.y;
-                            const moves = astarclass_1.astar.AStar.search(grid, this, targetPosition, disablePositions, false, false, false, undefined, undefined, false, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             if (moves.length > 0) {
                                 let step = moves[0];
                                 const candidate2 = moves[1];
@@ -18364,7 +18169,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WardenEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
@@ -18511,22 +18315,12 @@ class WardenEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let grid = [];
-                            for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                                grid[x] = [];
-                                for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                    if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                        grid[x][y] = this.room.roomArray[x][y];
-                                    else
-                                        grid[x][y] = false;
-                                }
-                            }
                             this.target =
                                 this.getAverageLuminance() > 0 // 0.8
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            let moves = astarclass_1.astar.AStar.search(grid, this, this.target, disablePositions, undefined, undefined, undefined, undefined, undefined, undefined, this.lastPlayerPos);
+                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -18716,6 +18510,7 @@ class WizardEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
         this.ATTACK_RADIUS = 5;
+        // (no additional helpers required here)
         this.newLightSource = (x, y, radius, color, brightness) => {
             this.lightSource = new lightSource_1.LightSource(x, y, radius, color, brightness);
         };
@@ -18891,7 +18686,6 @@ WizardEnemy.tileY = 0;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ZombieEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const astarclass_1 = __webpack_require__(/*! ../../utility/astarclass */ "./src/utility/astarclass.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 class ZombieEnemy extends enemy_1.Enemy {
@@ -18938,19 +18732,8 @@ class ZombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        // Create a grid of the room
-                        let grid = [];
-                        for (let x = 0; x < this.room.roomX + this.room.width; x++) {
-                            grid[x] = [];
-                            for (let y = 0; y < this.room.roomY + this.room.height; y++) {
-                                if (this.room.roomArray[x] && this.room.roomArray[x][y])
-                                    grid[x][y] = this.room.roomArray[x][y];
-                                else
-                                    grid[x][y] = false;
-                            }
-                        }
-                        // Find a path to the target player
-                        let moves = astarclass_1.astar.AStar.search(grid, this, this.targetPlayer, disablePositions, false, false, true, this.direction);
+                        // Find a path to the target player (localized)
+                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -20119,7 +19902,7 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.makeHitWarnings = (hx = this.x, hy = this.y, arrowsOnly = false, directionOverride = null) => {
-            if (this.unconscious)
+            if (this.unconscious || (this.isEnemy && !this.seenPlayer))
                 return;
             const player = this.getPlayer();
             const isPlayerOnTile = player.x === hx && player.y === hy;
@@ -23780,7 +23563,7 @@ class Game {
                 case "killall":
                     for (const i in this.players) {
                         this.players[i].game.room.entities.forEach((e) => {
-                            e.kill();
+                            e.kill(this.players[i]);
                         });
                     }
                     break;
@@ -28243,6 +28026,17 @@ GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.TUTORIAL_ENABLED = false;
+GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
+// === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
+GameplaySettings.ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
+GameplaySettings.ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating
+GameplaySettings.ORGANIC_TUNNELS_DEBUG = true; // verbose console logging for organic tunnel generation
+GameplaySettings.ORGANIC_TUNNELS_SPOOF_ENABLED = true; // add synthetic entries on walls without doors
+GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MIN = 1; // min synthetic entries per doorless wall
+GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX = 2; // max synthetic entries per doorless wall
+GameplaySettings.ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN = 2; // keep synthetic entries away from corners
+// === DEBUG ===
+GameplaySettings.LIGHTING_DEBUG = true; // log visible tile bounds and counts
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
@@ -39736,7 +39530,12 @@ class PartitionGenerator {
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
-            await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
+            if (opts.giantCentralRoom) {
+                await this.generateCaveCandidateWithGiantCenter(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, opts.giantRoomScale ?? 0.65);
+            }
+            else {
+                await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
+            }
             validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numRooms);
             // Update visualization state
             this.visualizer.setVisualizationState(partialLevel.partitions, mapWidth / 2, mapHeight / 2, "validating cave", 0.8);
@@ -39841,6 +39640,136 @@ class PartitionGenerator {
         await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
         await this.addCaveLoops(partialLevel, loopiness);
         await this.calculateDistances(partialLevel, spawn);
+    }
+    // Variant that creates a giant central room and smaller surrounding rooms connected to it
+    async generateCaveCandidateWithGiantCenter(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5, giantScale = 0.65) {
+        const CAVE_OFFSET = 100;
+        partialLevel.partitions = [];
+        // Create the giant center room
+        const gW = Math.max(6, Math.floor(map_w * Math.max(0.4, Math.min(0.9, giantScale))));
+        const gH = Math.max(6, Math.floor(map_h * Math.max(0.4, Math.min(0.9, giantScale))));
+        const gx = CAVE_OFFSET + Math.floor((map_w - gW) / 2);
+        const gy = CAVE_OFFSET + Math.floor((map_h - gH) / 2);
+        const center = new Partition(gx, gy, gW, gH, "white");
+        center.type = room_1.RoomType.CAVE; // central hub is not the entry; entry will be a smaller room
+        partialLevel.partitions.push(center);
+        // Create peripheral rooms ADJACENT to the center on one side (to ensure valid door coords)
+        const targetCount = Math.max(4, num_rooms - 1);
+        let attempts = 0;
+        while (partialLevel.partitions.length < targetCount + 1 && attempts < 400) {
+            attempts++;
+            const w = Math.max(3, Math.floor(random_1.Random.rand() * Math.max(3, map_w * 0.25) + 3));
+            const h = Math.max(3, Math.floor(random_1.Random.rand() * Math.max(3, map_h * 0.25) + 3));
+            // pick a side to attach: 0=left,1=right,2=top,3=bottom
+            const side = Math.floor(random_1.Random.rand() * 4);
+            let x = 0;
+            let y = 0;
+            if (side === 0) {
+                // attach to left: p.x + p.w === center.x - 1
+                x = center.x - 1 - w;
+                const minY = Math.max(CAVE_OFFSET, center.y - h + 1);
+                const maxY = Math.min(CAVE_OFFSET + map_h - h, center.y + center.h - 1);
+                if (minY > maxY)
+                    continue;
+                y =
+                    CAVE_OFFSET +
+                        game_1.Game.rand(minY - CAVE_OFFSET, maxY - CAVE_OFFSET, random_1.Random.rand);
+            }
+            else if (side === 1) {
+                // attach to right: p.x === center.x + center.w + 1
+                x = center.x + center.w + 1;
+                const minY = Math.max(CAVE_OFFSET, center.y - h + 1);
+                const maxY = Math.min(CAVE_OFFSET + map_h - h, center.y + center.h - 1);
+                if (minY > maxY)
+                    continue;
+                y =
+                    CAVE_OFFSET +
+                        game_1.Game.rand(minY - CAVE_OFFSET, maxY - CAVE_OFFSET, random_1.Random.rand);
+            }
+            else if (side === 2) {
+                // attach to top: p.y + p.h === center.y - 1
+                y = center.y - 1 - h;
+                const minX = Math.max(CAVE_OFFSET, center.x - w + 1);
+                const maxX = Math.min(CAVE_OFFSET + map_w - w, center.x + center.w - 1);
+                if (minX > maxX)
+                    continue;
+                x =
+                    CAVE_OFFSET +
+                        game_1.Game.rand(minX - CAVE_OFFSET, maxX - CAVE_OFFSET, random_1.Random.rand);
+            }
+            else {
+                // attach to bottom: p.y === center.y + center.h + 1
+                y = center.y + center.h + 1;
+                const minX = Math.max(CAVE_OFFSET, center.x - w + 1);
+                const maxX = Math.min(CAVE_OFFSET + map_w - w, center.x + center.w - 1);
+                if (minX > maxX)
+                    continue;
+                x =
+                    CAVE_OFFSET +
+                        game_1.Game.rand(minX - CAVE_OFFSET, maxX - CAVE_OFFSET, random_1.Random.rand);
+            }
+            // Bounds check
+            if (x < CAVE_OFFSET || y < CAVE_OFFSET)
+                continue;
+            if (x + w > CAVE_OFFSET + map_w || y + h > CAVE_OFFSET + map_h)
+                continue;
+            const p = new Partition(x, y, w, h, "white");
+            p.type = room_1.RoomType.CAVE;
+            // Ensure no overlap with existing
+            if (!partialLevel.partitions.some((other) => other.overlaps(p))) {
+                partialLevel.partitions.push(p);
+            }
+        }
+        // Connect all rooms to the center using boundary coords compatible with addDoor()
+        for (let i = 1; i < partialLevel.partitions.length; i++) {
+            const p = partialLevel.partitions[i];
+            let cx = 0;
+            let cy = 0;
+            if (p.x + p.w === center.x - 1) {
+                // left of center
+                cx = center.x - 1; // shared boundary column
+                cy = Math.max(center.y, Math.min(p.y + Math.floor(p.h / 2), center.y + center.h - 1));
+            }
+            else if (p.x === center.x + center.w + 1) {
+                // right of center
+                cx = center.x + center.w; // shared boundary column
+                cy = Math.max(center.y, Math.min(p.y + Math.floor(p.h / 2), center.y + center.h - 1));
+            }
+            else if (p.y + p.h === center.y - 1) {
+                // above center
+                cy = center.y - 1; // shared boundary row
+                cx = Math.max(center.x, Math.min(p.x + Math.floor(p.w / 2), center.x + center.w - 1));
+            }
+            else if (p.y === center.y + center.h + 1) {
+                // below center
+                cy = center.y + center.h; // shared boundary row
+                cx = Math.max(center.x, Math.min(p.x + Math.floor(p.w / 2), center.x + center.w - 1));
+            }
+            else {
+                // not adjacent; skip
+                continue;
+            }
+            center.connections.push(new PartitionConnection(cx, cy, p));
+            p.connections.push(new PartitionConnection(cx, cy, center));
+        }
+        // Select a small peripheral room as the ROPECAVE (entry) if any exist
+        const peripherals = partialLevel.partitions.filter((p) => p !== center);
+        if (peripherals.length > 0) {
+            let entry = peripherals[0];
+            for (let i = 1; i < peripherals.length; i++) {
+                if (peripherals[i].area() < entry.area())
+                    entry = peripherals[i];
+            }
+            entry.type = room_1.RoomType.ROPECAVE;
+        }
+        else {
+            // Fallback: if no peripherals created, use center as entry
+            center.type = room_1.RoomType.ROPECAVE;
+        }
+        // Add additional connections/loops using existing helpers for some variety
+        await this.addCaveLoops(partialLevel, loopiness);
+        // Distances from center
+        await this.calculateDistances(partialLevel, center);
     }
     async splitPartitions(partitions, prob) {
         for (let partition of partitions) {
@@ -41179,10 +41108,13 @@ exports.LightSource = LightSource;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Lighting = void 0;
 const lightSource_1 = __webpack_require__(/*! ./lightSource */ "./src/lighting/lightSource.ts");
+const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 class Lighting {
 }
 exports.Lighting = Lighting;
 Lighting.momentaryLight = (room, x, y, radius, color, duration, brightness, delay) => {
+    if (room.isTileOnScreen(x, y, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE) === false)
+        return;
     const lightSource = Lighting.newLightSource(x, y, color, radius, brightness);
     setTimeout(() => {
         room.updateLightSources(lightSource);
@@ -44758,7 +44690,7 @@ class EnemyShield extends projectile_1.Projectile {
             this.parent.room.projectiles.push(this);
             this.autoRegistered = true;
         }
-        this.parent.room.updateLighting();
+        this.parent.room.updateLighting({ x: this.x, y: this.y });
     }
 }
 exports.EnemyShield = EnemyShield;
@@ -44826,7 +44758,7 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
         this.bloomOffsetY = -0.5;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 1, [0, 50, 150], 1);
         this.room.lightSources.push(this.lightSource);
-        this.room.updateLighting();
+        this.room.updateLighting({ x: this.x, y: this.y });
     }
 }
 exports.EnemySpawnAnimation = EnemySpawnAnimation;
@@ -45763,7 +45695,8 @@ class Room {
             this.syncKeyPathParticles();
             this.lastEnemyCount = this.entities.filter((e) => e instanceof enemy_1.Enemy).length;
             for (const h of this.hitwarnings) {
-                h.tick();
+                if (this.isWithinEnemyInteractionRange(h.x, h.y))
+                    h.tick();
             }
             for (const p of this.projectiles) {
                 p.tick();
@@ -45786,6 +45719,10 @@ class Room {
         this.computerTurn = () => {
             // take computer turn
             for (const e of this.entities) {
+                if (e instanceof enemy_1.Enemy) {
+                    if (!this.isWithinEnemyInteractionRange(e.x, e.y))
+                        continue;
+                }
                 e.tick();
             }
             this.entities = this.entities.filter((e) => !e.dead);
@@ -45799,6 +45736,8 @@ class Room {
                 }
             }
             for (const h of this.hitwarnings) {
+                if (!this.isWithinEnemyInteractionRange(h.x, h.y))
+                    continue;
                 if (!this.roomArray[h.x] ||
                     !this.roomArray[h.x][h.y] ||
                     this.roomArray[h.x][h.y].isSolid()) {
@@ -45937,8 +45876,11 @@ class Room {
         // #endregion
         // #region LIGHTING METHODS
         this.fadeLighting = (delta) => {
+            const bufferTiles = 2;
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                    if (!this.isTileOnScreen(x, y, bufferTiles))
+                        continue;
                     let visDiff = this.softVis[x][y] - this.vis[x][y];
                     let softVis = this.softVis[x][y];
                     let flag = false;
@@ -45958,8 +45900,11 @@ class Room {
             }
         };
         this.fadeRgb = (delta) => {
+            const bufferTiles = 2;
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                    if (!this.isTileOnScreen(x, y, bufferTiles))
+                        continue;
                     const [softR, softG, softB] = this.softCol[x][y];
                     const [targetR, targetG, targetB] = this.col[x][y];
                     // Calculate differences
@@ -46024,7 +45969,9 @@ class Room {
             };
             let linkedDoors = [];
             this.doors.forEach((d) => {
-                if (d.linkedDoor && d.room.entered)
+                if (d.linkedDoor &&
+                    d.room.entered &&
+                    this.isTileOnScreen(d.linkedDoor.x, d.linkedDoor.y, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE))
                     linkedDoors.push(d.linkedDoor);
             });
             this.doors.forEach((d) => {
@@ -46079,9 +46026,15 @@ class Room {
             //  `Estimated lighting tiles: ${this.estimatedLightingTiles} (room: ${roomTiles}, rays: ${estimatedRayTiles}, players: ${playersInRoom})`,
             //);
         };
-        this.updateLighting = () => {
+        this.updateLighting = (source) => {
             if (!this.onScreen)
                 return;
+            // If a specific source is provided, skip lighting update if it's off-screen with buffer
+            if (source) {
+                const buffer = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE;
+                if (!this.isTileOnScreen(source.x, source.y, buffer))
+                    return;
+            }
             if (this.isUpdatingLighting)
                 return;
             this.isUpdatingLighting = true;
@@ -46131,6 +46084,25 @@ class Room {
                 });
             }
             catch { }
+            // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
+            if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
+                const set = new Set();
+                for (const e of this.entities) {
+                    if (e.opaque && this.isTileOnScreen(e.x, e.y, 7)) {
+                        const w = Math.max(1, e.w || 1);
+                        const h = Math.max(1, e.h || 1);
+                        for (let dx = 0; dx < w; dx++) {
+                            for (let dy = 0; dy < h; dy++) {
+                                set.add(`${e.x + dx},${e.y + dy}`);
+                            }
+                        }
+                    }
+                }
+                this.opaqueEntityPositions = set;
+            }
+            else {
+                this.opaqueEntityPositions = undefined;
+            }
             for (const l of this.lightSources) {
                 if (l.shouldUpdate()) {
                     for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
@@ -46215,6 +46187,9 @@ class Room {
             this.isUpdatingLighting = false;
         };
         this.updateLightSources = (lightSource, remove) => {
+            if (lightSource &&
+                this.isTileOnScreen(lightSource.x, lightSource.y, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE) === false)
+                return;
             this.oldCol = [];
             this.oldVis = [];
             this.oldCol = this.col;
@@ -46295,10 +46270,9 @@ class Room {
                 if (!this.renderBuffer[currentX][currentY]) {
                     this.renderBuffer[currentX][currentY] = [];
                 }
-                if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
-                    //begin processing opaque entities
-                    const entity = this.entities.find((e) => e.x === currentX && e.y === currentY && e.opaque);
-                    if (entity) {
+                if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
+                    // O(1) membership check instead of scanning entities
+                    if (this.opaqueEntityPositions.has(`${currentX},${currentY}`)) {
                         //intensity = intensity * (1 - entity.opacity);
                         // Set the intensity for this tile and then terminate to create shadow effect
                         const weightedLinearColor = [
@@ -46470,9 +46444,12 @@ class Room {
             // Match original shade layer positioning using the blur offsets
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
-            // Draw all color rectangles without any filters
+            // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
+            const bufferTiles = 3;
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                    if (!this.isTileOnScreen(x, y, bufferTiles))
+                        continue;
                     const [r, g, b] = this.softCol[x][y];
                     if (r === 0 && g === 0 && b === 0)
                         continue; // Skip if no color
@@ -46558,9 +46535,12 @@ class Room {
             const offsetX = this.shadeSliceBorderTiles;
             const offsetY = this.shadeSliceBorderTiles;
             let lastFillStyle = "";
-            // Draw all shade rectangles without any filters
+            // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
+            const shadeBufferTiles = 4;
             for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
                 for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+                    if (!this.isTileOnScreen(x, y, shadeBufferTiles))
+                        continue;
                     const tile = this.roomArray[x]?.[y];
                     //if (!tile) return;
                     let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
@@ -47033,6 +47013,23 @@ class Room {
             let entities = new Array();
             entities = entities.concat(this.entities, this.deadEntities);
             drawables = drawables.concat(tiles, this.decorations, entities, this.hitwarnings, this.projectiles, this.particles, this.items);
+            // Filter out drawables that are completely off-screen (with a small tile buffer)
+            drawables = drawables.filter((d) => {
+                const dx = d.x;
+                const dy = d.y;
+                if (typeof dx !== "number" || typeof dy !== "number")
+                    return true;
+                const dw = Math.max(1, Math.ceil(d?.w || 1));
+                const dh = Math.max(1, Math.ceil(d?.h || 1));
+                const bufferTiles = 3;
+                for (let ox = 0; ox < dw; ox++) {
+                    for (let oy = 0; oy < dh; oy++) {
+                        if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles))
+                            return true;
+                    }
+                }
+                return false;
+            });
             for (const i in this.game.players) {
                 if (this.game.players[i].getRoom?.() === this) {
                     if (!(skipLocalPlayer &&
@@ -48452,6 +48449,20 @@ class Room {
                 break;
         }
     }
+    isWithinEnemyInteractionRange(x, y) {
+        try {
+            const range = gameplaySettings_1.GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+            const player = this.game.players[this.game.localPlayerID];
+            if (!player)
+                return true;
+            const dx = x - player.x;
+            const dy = y - player.y;
+            return dx * dx + dy * dy <= range * range;
+        }
+        catch {
+            return true;
+        }
+    }
     /**
      * Applies Gaussian blur to the specified offscreen canvas.
      *
@@ -48689,6 +48700,46 @@ class Room {
             roomTop > cameraBottom);
         this.onScreen = isOverlapping;
     }
+    // Returns true if a given tile coordinate is on screen, with optional buffer in tiles
+    isTileOnScreen(x, y, bufferTiles = 0) {
+        const tileSize = gameConstants_1.GameConstants.TILESIZE;
+        // Convert player position from tiles to pixels
+        const playerPosX = this.game.players[this.game.localPlayerID]
+            ? this.game.players[this.game.localPlayerID].x * tileSize
+            : 0;
+        const playerPosY = this.game.players[this.game.localPlayerID]
+            ? this.game.players[this.game.localPlayerID].y * tileSize
+            : 0;
+        // Use same camera computation as roomOnScreen
+        const cameraX = playerPosX -
+            (this.game.players[this.game.localPlayerID]?.drawX || 0) +
+            0.5 * tileSize -
+            0.5 * gameConstants_1.GameConstants.WIDTH -
+            this.game.screenShakeX;
+        const cameraY = playerPosY -
+            (this.game.players[this.game.localPlayerID]?.drawY || 0) +
+            0.5 * tileSize -
+            0.5 * gameConstants_1.GameConstants.HEIGHT -
+            this.game.screenShakeY;
+        const cameraWidth = gameConstants_1.GameConstants.WIDTH;
+        const cameraHeight = gameConstants_1.GameConstants.HEIGHT;
+        const bufferPx = bufferTiles * tileSize;
+        const cameraLeft = cameraX - bufferPx;
+        const cameraRight = cameraX + cameraWidth + bufferPx;
+        const cameraTop = cameraY - bufferPx;
+        const cameraBottom = cameraY + cameraHeight + bufferPx;
+        // Tile bounds in pixels
+        const tileLeft = x * tileSize;
+        const tileRight = tileLeft + tileSize;
+        const tileTop = y * tileSize;
+        const tileBottom = tileTop + tileSize;
+        // Axis-aligned rectangle intersection test
+        const intersects = !(tileRight < cameraLeft ||
+            tileLeft > cameraRight ||
+            tileBottom < cameraTop ||
+            tileTop > cameraBottom);
+        return intersects;
+    }
     setReverb() {
         const roomArea = this.roomArea;
         if (roomArea < 10) {
@@ -48787,6 +48838,7 @@ exports.Room = Room;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RoomBuilder = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const floor_1 = __webpack_require__(/*! ../tile/floor */ "./src/tile/floor.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
@@ -48908,6 +48960,364 @@ class RoomBuilder {
             });
         }
     }
+    // --- Organic tunnels variant ---
+    // Fills interior with walls, then carves organic tunnels that connect all doors,
+    // with variable-width passages and pockets.
+    addWallBlocksOrganicTunnels(rand) {
+        const debug = gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG === true;
+        if (debug)
+            console.log("[OrganicTunnels] start", { room: this.room.globalId });
+        // Step 1: fill interior with walls we can carve from
+        this.fillInteriorWithWalls();
+        // Step 2: compute entry points just inside each door
+        const entries = this.getDoorEntryPoints(rand);
+        if (debug)
+            console.log("[OrganicTunnels] entries", entries);
+        if (entries.length === 0)
+            return; // nothing to connect
+        if (entries.length === 1) {
+            // Single-door room: carve a few meandering pockets from the entry
+            const origin = entries[0];
+            const targets = this.generatePocketTargets(origin, 4, rand);
+            for (const t of targets) {
+                this.carveOrganicPath(origin.x, origin.y, t.x, t.y, rand, {
+                    baseRadius: 1.2,
+                    radiusJitter: 1.0,
+                    pocketChance: 0.25,
+                    pocketRadius: [2, 3],
+                });
+            }
+            return;
+        }
+        // Step 3: create central spoof hubs and connect entries to hubs, hubs to each other
+        const hubs = this.getCenterSpoofEntries(rand, [1, 2]);
+        if (debug)
+            console.log("[OrganicTunnels] hubs", hubs);
+        if (hubs.length === 0) {
+            // Fallback: single hub at true center
+            const cx = Math.floor(this.room.roomX + this.room.width / 2);
+            const cy = Math.floor(this.room.roomY + this.room.height / 2);
+            if (this.isInterior(cx, cy))
+                hubs.push({ x: cx, y: cy });
+        }
+        // Connect every door entry to its nearest hub
+        for (const entry of entries) {
+            let bestHub = hubs[0];
+            let bestD = this.distance(entry, bestHub);
+            for (let i = 1; i < hubs.length; i++) {
+                const d = this.distance(entry, hubs[i]);
+                if (d < bestD) {
+                    bestD = d;
+                    bestHub = hubs[i];
+                }
+            }
+            this.carveOrganicPath(entry.x, entry.y, bestHub.x, bestHub.y, rand, {
+                baseRadius: 1.3,
+                radiusJitter: 1.2,
+                pocketChance: 0.2,
+                pocketRadius: [2, 4],
+            });
+        }
+        // Connect hubs together (MST across hubs)
+        if (hubs.length > 1) {
+            const hubEdges = this.minimumSpanningEdges(hubs);
+            if (debug)
+                console.log("[OrganicTunnels] hub edges", hubEdges);
+            for (const e of hubEdges) {
+                this.carveOrganicPath(e.a.x, e.a.y, e.b.x, e.b.y, rand, {
+                    baseRadius: 1.4,
+                    radiusJitter: 1.1,
+                    pocketChance: 0.25,
+                    pocketRadius: [2, 5],
+                });
+            }
+        }
+        // Step 4: optional extra pockets along the network
+        const extraPockets = game_1.Game.randTable([0, 0, 1, 2], rand);
+        for (let i = 0; i < extraPockets; i++) {
+            const pivot = entries[game_1.Game.rand(0, entries.length - 1, rand)];
+            const t = this.randomInteriorPointNear(pivot, 6, rand);
+            this.carveDisk(t.x, t.y, game_1.Game.randTable([2, 3, 3, 4], rand));
+        }
+        // Clean up jagged wall spurs
+        const pruned = this.pruneWallsWithSingleNeighbor(true);
+        if (debug)
+            console.log("[OrganicTunnels] pruned single-neighbor walls:", pruned);
+        if (debug)
+            console.log("[OrganicTunnels] done");
+    }
+    // --- helpers ---
+    isInterior(x, y) {
+        return (x > this.room.roomX &&
+            y > this.room.roomY &&
+            x < this.room.roomX + this.room.width - 1 &&
+            y < this.room.roomY + this.room.height - 1);
+    }
+    fillInteriorWithWalls() {
+        for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+            for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+                if (!(this.room.roomArray[x][y] instanceof wall_1.Wall)) {
+                    const w = new wall_1.Wall(this.room, x, y);
+                    this.room.roomArray[x][y] = w;
+                    this.room.innerWalls.push(w);
+                }
+            }
+        }
+    }
+    carveDisk(cx, cy, radius) {
+        const r2 = radius * radius;
+        const minX = Math.floor(cx - radius);
+        const maxX = Math.ceil(cx + radius);
+        const minY = Math.floor(cy - radius);
+        const maxY = Math.ceil(cy + radius);
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                if (!this.isInterior(x, y))
+                    continue;
+                const dx = x - cx;
+                const dy = y - cy;
+                if (dx * dx + dy * dy <= r2) {
+                    if (this.room.roomArray[x][y] instanceof wall_1.Wall) {
+                        this.room.removeWall(x, y);
+                    }
+                    this.room.roomArray[x][y] = new floor_1.Floor(this.room, x, y);
+                    this.room.innerWalls = this.room.innerWalls.filter((w) => w.x !== x || w.y !== y);
+                }
+            }
+        }
+    }
+    getDoorEntryPoints(rand) {
+        const entries = [];
+        const left = this.room.roomX;
+        const right = this.room.roomX + this.room.width - 1;
+        const top = this.room.roomY;
+        const bottom = this.room.roomY + this.room.height - 1;
+        for (const d of this.room.doors || []) {
+            const x = d.x;
+            const y = d.y;
+            if (x === left && this.isInterior(x + 1, y))
+                entries.push({ x: x + 1, y });
+            else if (x === right && this.isInterior(x - 1, y))
+                entries.push({ x: x - 1, y });
+            else if (y === top && this.isInterior(x, y + 1))
+                entries.push({ x, y: y + 1 });
+            else if (y === bottom && this.isInterior(x, y - 1))
+                entries.push({ x, y: y - 1 });
+        }
+        // Spoof synthetic entries on doorless walls if enabled
+        if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_SPOOF_ENABLED && rand) {
+            const margin = Math.max(1, gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN | 0);
+            const hasLeft = entries.some((e) => e.x === left + 1);
+            const hasRight = entries.some((e) => e.x === right - 1);
+            const hasTop = entries.some((e) => e.y === top + 1);
+            const hasBottom = entries.some((e) => e.y === bottom - 1);
+            const addOnWall = (orientation, count) => {
+                for (let i = 0; i < count; i++) {
+                    if (orientation === "left") {
+                        const y = game_1.Game.rand(top + margin, bottom - margin, rand);
+                        if (this.isInterior(left + 1, y))
+                            entries.push({ x: left + 1, y });
+                    }
+                    else if (orientation === "right") {
+                        const y = game_1.Game.rand(top + margin, bottom - margin, rand);
+                        if (this.isInterior(right - 1, y))
+                            entries.push({ x: right - 1, y });
+                    }
+                    else if (orientation === "top") {
+                        const x = game_1.Game.rand(left + margin, right - margin, rand);
+                        if (this.isInterior(x, top + 1))
+                            entries.push({ x, y: top + 1 });
+                    }
+                    else if (orientation === "bottom") {
+                        const x = game_1.Game.rand(left + margin, right - margin, rand);
+                        if (this.isInterior(x, bottom - 1))
+                            entries.push({ x, y: bottom - 1 });
+                    }
+                }
+            };
+            const minSpoof = Math.max(0, gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MIN | 0);
+            const maxSpoof = Math.max(minSpoof, gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX | 0);
+            const roll = () => game_1.Game.rand(minSpoof, maxSpoof, rand);
+            if (!hasLeft)
+                addOnWall("left", roll());
+            if (!hasRight)
+                addOnWall("right", roll());
+            if (!hasTop)
+                addOnWall("top", roll());
+            if (!hasBottom)
+                addOnWall("bottom", roll());
+        }
+        return entries;
+    }
+    distance(a, b) {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    minimumSpanningEdges(points) {
+        if (points.length <= 1)
+            return [];
+        const connected = [points[0]];
+        const remaining = points.slice(1);
+        const edges = [];
+        while (remaining.length > 0) {
+            let bestI = -1;
+            let bestJ = -1;
+            let bestD = Infinity;
+            for (let i = 0; i < connected.length; i++) {
+                for (let j = 0; j < remaining.length; j++) {
+                    const d = this.distance(connected[i], remaining[j]);
+                    if (d < bestD) {
+                        bestD = d;
+                        bestI = i;
+                        bestJ = j;
+                    }
+                }
+            }
+            const a = connected[bestI];
+            const b = remaining[bestJ];
+            edges.push({ a, b });
+            connected.push(b);
+            remaining.splice(bestJ, 1);
+        }
+        return edges;
+    }
+    carveOrganicPath(ax, ay, bx, by, rand, opts) {
+        const baseRadius = opts?.baseRadius ?? 1.2;
+        const radiusJitter = opts?.radiusJitter ?? 1.0;
+        const pocketChance = opts?.pocketChance ?? 0.15;
+        const pocketRadius = opts?.pocketRadius ?? [2, 3];
+        let dx = bx - ax;
+        let dy = by - ay;
+        const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+        dx /= len;
+        dy /= len;
+        let px = -dy;
+        let py = dx;
+        let lateral = 0;
+        const maxLateral = 2.5;
+        const step = 0.6;
+        const steps = Math.ceil(len / step);
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            lateral += (rand() - 0.5) * 0.6;
+            if (lateral > maxLateral)
+                lateral = maxLateral;
+            if (lateral < -maxLateral)
+                lateral = -maxLateral;
+            const cx = ax + dx * (t * len) + px * lateral;
+            const cy = ay + dy * (t * len) + py * lateral;
+            const r = baseRadius + (rand() - 0.5) * radiusJitter;
+            this.carveDisk(cx, cy, Math.max(1, r));
+            if (rand() < pocketChance) {
+                const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
+                const pocketCx = cx + px * (lateral + (rand() - 0.5) * 2);
+                const pocketCy = cy + py * (lateral + (rand() - 0.5) * 2);
+                this.carveDisk(pocketCx, pocketCy, pr);
+            }
+        }
+    }
+    randomInteriorPointNear(pivot, radius, rand) {
+        for (let tries = 0; tries < 16; tries++) {
+            const dx = game_1.Game.rand(-radius, radius, rand);
+            const dy = game_1.Game.rand(-radius, radius, rand);
+            const x = pivot.x + dx;
+            const y = pivot.y + dy;
+            if (this.isInterior(x, y))
+                return { x, y };
+        }
+        return { x: pivot.x, y: pivot.y };
+    }
+    generatePocketTargets(origin, count, rand) {
+        const targets = [];
+        for (let i = 0; i < count; i++) {
+            const angle = rand() * Math.PI * 2;
+            const dist = game_1.Game.rand(4, Math.max(6, Math.min(this.room.width, this.room.height) - 4), rand);
+            const x = Math.round(origin.x + Math.cos(angle) * dist * (0.5 + rand()));
+            const y = Math.round(origin.y + Math.sin(angle) * dist * (0.5 + rand()));
+            const tx = Math.max(this.room.roomX + 1, Math.min(x, this.room.roomX + this.room.width - 2));
+            const ty = Math.max(this.room.roomY + 1, Math.min(y, this.room.roomY + this.room.height - 2));
+            targets.push({ x: tx, y: ty });
+        }
+        return targets;
+    }
+    // Choose 1-2 spoofed hub points in the central 2x2 squares (i.e., 25%-75% in both axes)
+    getCenterSpoofEntries(rand, countRange = [1, 2]) {
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        if (maxX <= minX || maxY <= minY)
+            return [];
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        const qx = Math.floor(w / 4);
+        const qy = Math.floor(h / 4);
+        const cxMin = minX + qx;
+        const cxMax = maxX - qx;
+        const cyMin = minY + qy;
+        const cyMax = maxY - qy;
+        const hubs = [];
+        const num = game_1.Game.rand(countRange[0], countRange[1], rand);
+        for (let i = 0; i < num; i++) {
+            // try up to N times to find a unique-ish hub
+            let created = false;
+            for (let t = 0; t < 16 && !created; t++) {
+                const x = game_1.Game.rand(cxMin, cxMax, rand);
+                const y = game_1.Game.rand(cyMin, cyMax, rand);
+                if (!this.isInterior(x, y))
+                    continue;
+                if (hubs.some((p) => Math.abs(p.x - x) + Math.abs(p.y - y) <= 2))
+                    continue;
+                hubs.push({ x, y });
+                created = true;
+            }
+        }
+        return hubs;
+    }
+    // Remove interior walls that have exactly one neighboring wall (orthogonal by default).
+    // Iterates until no such walls remain. Returns the total number of walls removed.
+    pruneWallsWithSingleNeighbor(orthogonalOnly = true) {
+        let totalRemoved = 0;
+        while (true) {
+            const toRemove = [];
+            for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+                for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+                    if (!(this.room.roomArray[x][y] instanceof wall_1.Wall))
+                        continue;
+                    const n = orthogonalOnly
+                        ? this.countOrthogonalWallNeighborsAt(x, y)
+                        : this.countWallNeighbors(this.room.roomArray[x][y]);
+                    if (n === 1)
+                        toRemove.push({ x, y });
+                }
+            }
+            if (toRemove.length === 0)
+                break;
+            for (const { x, y } of toRemove) {
+                if (this.room.roomArray[x][y] instanceof wall_1.Wall) {
+                    this.room.removeWall(x, y);
+                }
+                this.room.roomArray[x][y] = new floor_1.Floor(this.room, x, y);
+                this.room.innerWalls = this.room.innerWalls.filter((w) => w.x !== x || w.y !== y);
+            }
+            totalRemoved += toRemove.length;
+        }
+        return totalRemoved;
+    }
+    // Count only N/E/S/W neighboring walls
+    countOrthogonalWallNeighborsAt(x, y) {
+        let c = 0;
+        if (this.room.roomArray[x - 1]?.[y] instanceof wall_1.Wall)
+            c++;
+        if (this.room.roomArray[x + 1]?.[y] instanceof wall_1.Wall)
+            c++;
+        if (this.room.roomArray[x]?.[y - 1] instanceof wall_1.Wall)
+            c++;
+        if (this.room.roomArray[x]?.[y + 1] instanceof wall_1.Wall)
+            c++;
+        return c;
+    }
 }
 exports.RoomBuilder = RoomBuilder;
 
@@ -49017,11 +49427,31 @@ class Populator {
             console.log(`Adding downladder with ${this.numRooms()} rooms`);
             if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
                 this.level.depth !== 0) {
-                this.addDownladder({
-                    caveRooms: this.numRooms(),
+                let sidePathOptions = {
+                    caveRooms: 5,
                     locked: true,
-                    linearity: 1,
-                });
+                    linearity: 0,
+                    mapWidth: 100,
+                    mapHeight: 100,
+                    giantCentralRoom: true,
+                    giantRoomScale: 0.4,
+                };
+                switch (this.level.depth) {
+                    case 1:
+                        sidePathOptions.caveRooms = this.numRooms();
+                        sidePathOptions.mapWidth = 50;
+                        sidePathOptions.mapHeight = 50;
+                        sidePathOptions.giantRoomScale = 0.3;
+                        sidePathOptions.linearity = 0.5;
+                        break;
+                    case 2:
+                        sidePathOptions.caveRooms = this.numRooms();
+                        sidePathOptions.mapWidth = 75;
+                        sidePathOptions.mapHeight = 75;
+                        sidePathOptions.giantRoomScale = 0.4;
+                        break;
+                }
+                this.addDownladder(sidePathOptions);
             }
             else if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
                 this.level.depth === 0 &&
@@ -50524,6 +50954,15 @@ class Populator {
         if (room.envType === environmentTypes_1.EnvType.TUTORIAL) {
             this.addTorchesByArea(room);
         }
+        if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_FORCE &&
+            room.type !== room_1.RoomType.START &&
+            room.type !== room_1.RoomType.DOWNLADDER &&
+            room.type !== room_1.RoomType.UPLADDER &&
+            room.type !== room_1.RoomType.ROPEHOLE) {
+            if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+                console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
+            room.builder.addWallBlocksOrganicTunnels(rand);
+        }
         switch (room.type) {
             case room_1.RoomType.START:
                 if (room.depth !== 0) {
@@ -50543,15 +50982,27 @@ class Populator {
                 if (room.envType === environmentTypes_1.EnvType.TUTORIAL) {
                     return;
                 }
-                if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
-                    this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
-                    this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                    if (factor < 20)
-                        room.builder.addWallBlocksVariant(rand);
+                if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_FORCE) {
+                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+                        console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
+                    room.builder.addWallBlocksOrganicTunnels(rand);
                 }
-                else {
-                    if (factor < 20)
-                        room.builder.addWallBlocks(rand);
+                else if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_ENABLED) {
+                    if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
+                        this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
+                        this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                        if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+                            console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
+                        if (room.height > 15 || room.width > 15) {
+                            room.builder.addWallBlocksOrganicTunnels(rand);
+                        }
+                        else if (factor < 15) {
+                            room.builder.addWallBlocksVariant(rand);
+                        }
+                        else if (factor < 20) {
+                            room.builder.addWallBlocks(rand);
+                        }
+                    }
                 }
                 if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
                     if (factor < 12)
@@ -50580,12 +51031,17 @@ class Populator {
                 if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                    if (factor < 20)
+                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+                        console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
+                    if (room.height > 15 || room.width > 15) {
+                        room.builder.addWallBlocksOrganicTunnels(rand);
+                    }
+                    else if (factor < 15) {
                         room.builder.addWallBlocksVariant(rand);
-                }
-                else {
-                    if (factor < 20)
+                    }
+                    else if (factor < 20) {
                         room.builder.addWallBlocks(rand);
+                    }
                 }
                 if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
                     if (factor < 12)

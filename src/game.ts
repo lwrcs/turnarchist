@@ -1155,7 +1155,7 @@ export class Game {
       case "killall":
         for (const i in this.players) {
           this.players[i].game.room.entities.forEach((e) => {
-            e.kill();
+            e.kill(this.players[i]);
           });
         }
         break;

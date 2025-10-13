@@ -14,6 +14,8 @@ export interface SidePathOptions {
   linearity?: number;
   branching?: number; // 0..1 probability of adding a second branch door
   loopiness?: number; // 0..1 scale for number of loop connections
+  giantCentralRoom?: boolean; // enable giant central room layout
+  giantRoomScale?: number; // 0..1 fraction of width/height for central room size (default ~0.65)
 }
 
 /**

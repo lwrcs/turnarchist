@@ -9,6 +9,19 @@ export class GameplaySettings {
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
   static readonly TUTORIAL_ENABLED = false;
+  static readonly MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
+
+  // === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
+  static ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
+  static ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating
+  static ORGANIC_TUNNELS_DEBUG = true; // verbose console logging for organic tunnel generation
+  static ORGANIC_TUNNELS_SPOOF_ENABLED = true; // add synthetic entries on walls without doors
+  static ORGANIC_TUNNELS_SPOOF_PER_WALL_MIN = 1; // min synthetic entries per doorless wall
+  static ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX = 2; // max synthetic entries per doorless wall
+  static ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN = 2; // keep synthetic entries away from corners
+
+  // === DEBUG ===
+  static LIGHTING_DEBUG = true; // log visible tile bounds and counts
 
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;

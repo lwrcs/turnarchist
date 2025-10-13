@@ -143,11 +143,31 @@ export class Populator {
       this.level.environment.type === EnvType.DUNGEON &&
       this.level.depth !== 0
     ) {
-      this.addDownladder({
-        caveRooms: this.numRooms(),
+      let sidePathOptions: SidePathOptions = {
+        caveRooms: 5, //this.numRooms(),
         locked: true,
-        linearity: 1,
-      });
+        linearity: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        giantCentralRoom: true,
+        giantRoomScale: 0.4,
+      };
+      switch (this.level.depth) {
+        case 1:
+          sidePathOptions.caveRooms = this.numRooms();
+          sidePathOptions.mapWidth = 50;
+          sidePathOptions.mapHeight = 50;
+          sidePathOptions.giantRoomScale = 0.3;
+          sidePathOptions.linearity = 0.5;
+          break;
+        case 2:
+          sidePathOptions.caveRooms = this.numRooms();
+          sidePathOptions.mapWidth = 75;
+          sidePathOptions.mapHeight = 75;
+          sidePathOptions.giantRoomScale = 0.4;
+          break;
+      }
+      this.addDownladder(sidePathOptions);
     } else if (
       this.level.environment.type === EnvType.DUNGEON &&
       this.level.depth === 0 &&
@@ -1990,6 +2010,18 @@ export class Populator {
       this.addTorchesByArea(room);
     }
 
+    if (
+      GameplaySettings.ORGANIC_TUNNELS_FORCE &&
+      room.type !== RoomType.START &&
+      room.type !== RoomType.DOWNLADDER &&
+      room.type !== RoomType.UPLADDER &&
+      room.type !== RoomType.ROPEHOLE
+    ) {
+      if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+        console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
+      room.builder.addWallBlocksOrganicTunnels(rand);
+    }
+
     switch (room.type) {
       case RoomType.START:
         if (room.depth !== 0) {
@@ -2014,14 +2046,34 @@ export class Populator {
         if (room.envType === EnvType.TUTORIAL) {
           return;
         }
-        if (
-          this.level.environment.type === EnvType.CAVE ||
-          this.level.environment.type === EnvType.MAGMA_CAVE ||
-          this.level.environment.type === EnvType.FOREST
-        ) {
-          if (factor < 20) room.builder.addWallBlocksVariant(rand);
-        } else {
-          if (factor < 20) room.builder.addWallBlocks(rand);
+
+        if (GameplaySettings.ORGANIC_TUNNELS_FORCE) {
+          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+            console.log(
+              "[OrganicTunnels] FORCED in DUNGEON room",
+              room.globalId,
+            );
+          room.builder.addWallBlocksOrganicTunnels(rand);
+        } else if (GameplaySettings.ORGANIC_TUNNELS_ENABLED) {
+          if (
+            this.level.environment.type === EnvType.CAVE ||
+            this.level.environment.type === EnvType.MAGMA_CAVE ||
+            this.level.environment.type === EnvType.FOREST
+          ) {
+            if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+              console.log(
+                "[OrganicTunnels] enabled in env",
+                this.level.environment.type,
+                room.globalId,
+              );
+            if (room.height > 15 || room.width > 15) {
+              room.builder.addWallBlocksOrganicTunnels(rand);
+            } else if (factor < 15) {
+              room.builder.addWallBlocksVariant(rand);
+            } else if (factor < 20) {
+              room.builder.addWallBlocks(rand);
+            }
+          }
         }
 
         if (room.envType !== EnvType.CASTLE) {
@@ -2058,9 +2110,19 @@ export class Populator {
           this.level.environment.type === EnvType.MAGMA_CAVE ||
           this.level.environment.type === EnvType.FOREST
         ) {
-          if (factor < 20) room.builder.addWallBlocksVariant(rand);
-        } else {
-          if (factor < 20) room.builder.addWallBlocks(rand);
+          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+            console.log(
+              "[OrganicTunnels] enabled in env",
+              this.level.environment.type,
+              room.globalId,
+            );
+          if (room.height > 15 || room.width > 15) {
+            room.builder.addWallBlocksOrganicTunnels(rand);
+          } else if (factor < 15) {
+            room.builder.addWallBlocksVariant(rand);
+          } else if (factor < 20) {
+            room.builder.addWallBlocks(rand);
+          }
         }
 
         if (room.envType !== EnvType.CASTLE) {

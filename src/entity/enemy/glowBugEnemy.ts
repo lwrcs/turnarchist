@@ -82,7 +82,7 @@ export class GlowBugEnemy extends Entity {
 
       this.lightSource.x = this.x + 0.5;
       this.lightSource.y = this.y + 0.5;
-      this.room.updateLighting();
+      this.room.updateLighting({ x: this.x, y: this.y });
     }
   };
 
