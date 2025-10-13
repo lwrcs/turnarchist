@@ -8,6 +8,7 @@ export class GameplaySettings {
   static UNBREAKABLE_ITEMGROUP_LOOT = false;
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
+  static readonly TUTORIAL_ENABLED = false;
 
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;

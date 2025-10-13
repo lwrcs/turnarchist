@@ -112,6 +112,8 @@ export class GameConstants {
   static readonly XP_POPUP_ENABLED = true;
   static readonly OUTLINE_SHIELD_COLOR = "#7642ff";
   static readonly OUTLINE_BUFF_COLOR = "cyan";
+  static readonly PLAYER_SHIELD_COLOR = "#5b6ee1";
+  static readonly PLAYER_DAMAGE_BUFF_COLOR = "#ff0000";
 
   static readonly COIN_ANIMATION = true;
   static readonly COIN_AUTO_PICKUP = true;

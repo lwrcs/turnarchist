@@ -18,7 +18,7 @@ import { Level } from "../level/level";
 import { Random } from "../utility/random";
 import { Utils } from "../utility/utils";
 import { ClusteringOptions, PropClusterer } from "./propClusterer";
-import { Room, RoomType } from "./room";
+import { EnemyType, Room, RoomType } from "./room";
 import { DownladderMaker } from "../entity/downladderMaker";
 import { Enemy } from "../entity/enemy/enemy";
 import { Direction } from "../game";
@@ -81,7 +81,6 @@ import { Window } from "../tile/window";
 import { SidePathOptions } from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
-
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
 for (const [enemyClass, id] of enemyClassToId.entries()) {
@@ -120,7 +119,7 @@ export class Populator {
     // populate each room by environment (enemies added here)
     this.level.rooms.forEach((room) => {
       if (
-        room.type === RoomType.START ||
+        //room.type === RoomType.START ||
         room.type === RoomType.DOWNLADDER ||
         room.type === RoomType.UPLADDER ||
         room.type === RoomType.ROPEHOLE ||
@@ -137,14 +136,30 @@ export class Populator {
       this.populateBoss(furthestFromUpLadder, Random.rand);
     }
 
-    if (this.level.depth === 0) return;
+    //if (this.level.depth === 0) return;
 
     console.log(`Adding downladder with ${this.numRooms()} rooms`);
-    if (this.level.environment.type === EnvType.DUNGEON) {
+    if (
+      this.level.environment.type === EnvType.DUNGEON &&
+      this.level.depth !== 0
+    ) {
       this.addDownladder({
         caveRooms: this.numRooms(),
         locked: true,
         linearity: 1,
+      });
+    } else if (
+      this.level.environment.type === EnvType.DUNGEON &&
+      this.level.depth === 0 &&
+      GameplaySettings.TUTORIAL_ENABLED
+    ) {
+      this.addDownladder({
+        caveRooms: 5,
+        locked: true,
+        envType: EnvType.TUTORIAL,
+        linearity: 1,
+        mapWidth: 20,
+        mapHeight: 10,
       });
     }
 
@@ -201,6 +216,8 @@ export class Populator {
   };
 
   populateByEnvironment = (room: Room) => {
+    if (room.type === RoomType.START) return;
+
     switch (room.envType) {
       case EnvType.CAVE:
         this.populateCaveEnvironment(room);
@@ -213,6 +230,9 @@ export class Populator {
         break;
       case EnvType.CASTLE:
         this.populateCastleEnvironment(room);
+        break;
+      case EnvType.TUTORIAL:
+        this.populateTutorialEnvironment(room);
         break;
       default:
         this.populateDefaultEnvironment(room);
@@ -268,16 +288,25 @@ export class Populator {
   addDownladder = (opts: SidePathOptions) => {
     const rooms = this.level.rooms.filter(
       (room) =>
-        room.type !== RoomType.START &&
-        room.type !== RoomType.DOWNLADDER &&
-        room.type !== RoomType.UPLADDER &&
-        room.type !== RoomType.ROPEHOLE &&
-        room.type !== RoomType.BOSS,
+        (room.type !== RoomType.START &&
+          room.type !== RoomType.DOWNLADDER &&
+          room.type !== RoomType.UPLADDER &&
+          room.type !== RoomType.ROPEHOLE &&
+          room.type !== RoomType.BOSS) ||
+        (room.type === RoomType.START && room.depth === 0),
     );
 
-    const downLadderRoom = this.level.isMainPath
+    let downLadderRoom = this.level.isMainPath
       ? rooms[Math.floor(Random.rand() * rooms.length)]
       : this.level.getFurthestFromLadder("up");
+
+    // On depth 0, always place the downladder in the START room
+    if (this.level.depth === 0) {
+      const startRoom = this.level.rooms.find(
+        (room) => room.type === RoomType.START,
+      );
+      if (startRoom) downLadderRoom = startRoom;
+    }
 
     console.log(
       `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
@@ -291,7 +320,10 @@ export class Populator {
       return;
     }
 
-    const position = downLadderRoom.getRandomEmptyPosition(validTiles);
+    const position = downLadderRoom.getRandomEmptyPosition(
+      validTiles,
+      undefined,
+    );
     if (
       position === null ||
       position.x === undefined ||
@@ -329,11 +361,15 @@ export class Populator {
       opts,
       lockOverride,
     );
+    let room;
+    if (downLadderRoom.depth === 0) {
+      room = downLadderRoom;
+    }
 
     downLadderRoom.roomArray[position.x][position.y] = dl;
     if (dl.lockable.isLocked()) {
       console.log("adding key to downladder");
-      this.level.distributeKey(dl);
+      this.level.distributeKey(dl, room);
     }
   };
 
@@ -443,6 +479,44 @@ export class Populator {
           if (idx !== -1) tiles.splice(idx, 1);
         }
       }
+    }
+  }
+
+  private populateTutorialEnvironment(room: Room) {
+    const numProps = Math.floor((this.getNumProps(room) + 1) / 4);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
+    //this.addRandomEnemies(room, 1, true);
+    const startRoom = room.path().find((r) => r.hasUpladder());
+    const index = startRoom?.path().indexOf(room);
+
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        room.addNewEnemy(EnemyType.crab);
+        break;
+      case 2:
+        room.addNewEnemy(EnemyType.zombie);
+        break;
+      case 3:
+        room.addNewEnemy(EnemyType.crab);
+        room.addNewEnemy(EnemyType.skull);
+
+        break;
+      case 4:
+        room.addNewEnemy(EnemyType.crab);
+        room.addNewEnemy(EnemyType.skull);
+        room.addNewEnemy(EnemyType.zombie);
+        const entities = room.entities.filter((e) => e instanceof Enemy);
+        entities[1].drops = [new Heart(room, entities[1].x, entities[1].y)];
+    }
+    for (const door of room.doors) {
+      door.guard();
     }
   }
 
@@ -1105,9 +1179,16 @@ export class Populator {
     }
   }
 
-  private addRandomEnemies(room: Room, multiplier: number = 1) {
+  private addRandomEnemies(
+    room: Room,
+    multiplier: number = 1,
+    addByIndex: boolean = false,
+  ) {
     const numEmptyTiles = room.getEmptyTiles().length;
     const meanValue = (room.roomArea + numEmptyTiles) / 2;
+
+    const startRoom = room.path().find((r) => r.hasUpladder());
+    const indexAdd = addByIndex ? startRoom?.path().indexOf(room) : 1;
 
     const factor = Math.min(
       (room.depth + GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
@@ -1124,8 +1205,9 @@ export class Populator {
 
     // Cap at the number of empty tiles (hard limit)
     const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
+    const numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
 
-    this.addEnemiesUnified(room, numEnemies * multiplier, room.envType);
+    this.addEnemiesUnified(room, numEnemiesToAdd, room.envType);
   }
 
   private addSpawners(room: Room, rand: () => number, numSpawners?: number) {
@@ -1223,7 +1305,11 @@ export class Populator {
   }
 
   private addBosses(room: Room, depth: number) {
-    if (GameplaySettings.NO_ENEMIES === true) return;
+    if (
+      GameplaySettings.NO_ENEMIES === true ||
+      room.envType === EnvType.TUTORIAL
+    )
+      return;
     let tiles = room.getEmptyTiles();
     if (tiles.length === 0) {
       //console.log(`No tiles left to spawn spawners`);
@@ -1787,6 +1873,10 @@ export class Populator {
         break;
       case EnvType.CASTLE:
         message = "Castle";
+        break;
+      case EnvType.TUTORIAL:
+        message = "Tutorial";
+        break;
     }
     room.name = message;
     const { x, y } = room.getRoomCenter();
@@ -1796,7 +1886,8 @@ export class Populator {
     room.roomArray[x][y] = upLadder;
     if (room.envType === EnvType.CAVE)
       this.placeVendingMachineInWall(room, new Pickaxe(room, 0, 0));
-    else this.placeVendingMachineInWall(room);
+    else if (room.envType !== EnvType.TUTORIAL)
+      this.placeVendingMachineInWall(room);
 
     room.removeDoorObstructions();
   };
@@ -1843,6 +1934,7 @@ export class Populator {
   }
 
   private addTorchesByArea = (room: Room) => {
+    const factor = room.envType === EnvType.TUTORIAL ? 2 : 1;
     let numTorches = Math.max(
       1,
       Math.floor(Math.sqrt(room.roomArea) / 3) -
@@ -1862,7 +1954,7 @@ export class Populator {
         numTorches = 0;
       }
     }
-    this.addTorches(room, numTorches, Random.rand);
+    this.addTorches(room, numTorches * factor, Random.rand);
   };
 
   private addWindowsByArea = (room: Room) => {
@@ -1894,6 +1986,10 @@ export class Populator {
   private addEnvironmentalFeatures(room: Room, rand: () => number) {
     const factor = Game.rand(1, 36, rand);
 
+    if (room.envType === EnvType.TUTORIAL) {
+      this.addTorchesByArea(room);
+    }
+
     switch (room.type) {
       case RoomType.START:
         if (room.depth !== 0) {
@@ -1915,6 +2011,9 @@ export class Populator {
         break;
 
       case RoomType.DUNGEON:
+        if (room.envType === EnvType.TUTORIAL) {
+          return;
+        }
         if (
           this.level.environment.type === EnvType.CAVE ||
           this.level.environment.type === EnvType.MAGMA_CAVE ||

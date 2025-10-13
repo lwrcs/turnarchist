@@ -60,9 +60,14 @@ import { DarkPillar } from "../entity/object/darkPillar";
 import { DarkCrate } from "../entity/object/darkCrate";
 import { DarkPot } from "../entity/object/darkPot";
 import { DarkVase } from "../entity/object/darkVase";
+import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
+import { Enemy } from "../entity/enemy/enemy";
 
 // Enemy ID mapping for integration with level progression system
-export const enemyClassToId: Map<any, number> = new Map([
+export const enemyClassToId: Map<typeof Enemy, number> = new Map<
+  typeof Enemy,
+  number
+>([
   [CrabEnemy, 1],
   [FrogEnemy, 2],
   [ZombieEnemy, 3],
@@ -84,6 +89,7 @@ export const enemyClassToId: Map<any, number> = new Map([
   [BigFrogEnemy, 19],
   [BeetleEnemy, 20],
   [KingEnemy, 21],
+  [BoltcasterEnemy, 22],
 ]);
 
 export class Environment {
@@ -92,6 +98,9 @@ export class Environment {
   constructor(type: EnvType) {
     this.type = type;
     this.skin = this.type as unknown as SkinType;
+    if (this.type === EnvType.TUTORIAL) {
+      this.skin = SkinType.DUNGEON as SkinType;
+    }
   }
 }
 
@@ -155,6 +164,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
       { class: PawnEnemy, weight: 1.0, minDepth: 1 },
       { class: KingEnemy, weight: 0.25, minDepth: 3 },
+      { class: BoltcasterEnemy, weight: 0.25, minDepth: 4 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -399,6 +409,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
       { class: QueenEnemy, weight: 0.35, minDepth: 2 },
       { class: KingEnemy, weight: 0.125, minDepth: 2 },
+      { class: BoltcasterEnemy, weight: 0.25, minDepth: 1 },
 
       // Court mages
       { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
@@ -489,7 +500,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
       { class: PawnEnemy, weight: 1.0, minDepth: 1 },
-      { class: KingEnemy, weight: 0.25, minDepth: 3 },
+      { class: KingEnemy, weight: 0.2, minDepth: 3 },
+      { class: BoltcasterEnemy, weight: 0.25, minDepth: 1 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -524,6 +536,32 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
       },
+    ],
+  },
+  [EnvType.TUTORIAL]: {
+    props: [
+      { class: Crate, weight: 1 },
+      //{ class: Barrel, weight: 1 },
+      //{ class: TombStone, weight: 0.01, additionalParams: [1] },
+      //{ class: TombStone, weight: 0.01, additionalParams: [0] },
+      { class: Pumpkin, weight: 0.01 },
+      { class: Block, weight: 1 },
+      { class: Pot, weight: 1 },
+      //{ class: PottedPlant, weight: 1 },
+      //{ class: Mushrooms, weight: 0.1 },
+      //{ class: Bush, weight: 0.1 },
+      //{ class: Sprout, weight: 0.025 },
+      //{ class: Chest, weight: 0.025 },
+      //{ class: DecoBlock, weight: 0.05 },
+      //{ class: Furnace, weight: 0.05 },
+    ],
+    enemies: [
+      // Early game enemies (depth 0+)
+      { class: CrabEnemy, weight: 1.0, minDepth: 0 },
+      { class: ZombieEnemy, weight: 1.2, minDepth: 0 },
+      { class: SkullEnemy, weight: 1.0, minDepth: 0 },
+      //{ class: MummyEnemy, weight: 1.0, minDepth: 2 },
+      { class: PawnEnemy, weight: 1.0, minDepth: 1 },
     ],
   },
 };

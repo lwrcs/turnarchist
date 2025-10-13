@@ -9728,6 +9728,7 @@ var EnvType;
     EnvType[EnvType["DESERT"] = 7] = "DESERT";
     EnvType[EnvType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
     EnvType[EnvType["DARK_DUNGEON"] = 9] = "DARK_DUNGEON";
+    EnvType[EnvType["TUTORIAL"] = 10] = "TUTORIAL";
 })(EnvType = exports.EnvType || (exports.EnvType = {}));
 const getEnvTypeName = (envType) => {
     switch (envType) {
@@ -9751,6 +9752,8 @@ const getEnvTypeName = (envType) => {
             return "MAGMA_CAVE";
         case EnvType.DARK_DUNGEON:
             return "DARK_DUNGEON";
+        case EnvType.TUTORIAL:
+            return "TUTORIAL";
     }
 };
 exports.getEnvTypeName = getEnvTypeName;
@@ -25616,6 +25619,8 @@ GameConstants.MISS_COLOR = "#639bff";
 GameConstants.XP_POPUP_ENABLED = true;
 GameConstants.OUTLINE_SHIELD_COLOR = "#7642ff";
 GameConstants.OUTLINE_BUFF_COLOR = "cyan";
+GameConstants.PLAYER_SHIELD_COLOR = "#5b6ee1";
+GameConstants.PLAYER_DAMAGE_BUFF_COLOR = "#ff0000";
 GameConstants.COIN_ANIMATION = true;
 GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.ITEM_AUTO_PICKUP = true;
@@ -28237,6 +28242,7 @@ GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
+GameplaySettings.TUTORIAL_ENABLED = false;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
@@ -37244,6 +37250,7 @@ const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/ent
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
+const tile_1 = __webpack_require__(/*! ../tile/tile */ "./src/tile/tile.ts");
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
@@ -37290,6 +37297,7 @@ const darkPillar_1 = __webpack_require__(/*! ../entity/object/darkPillar */ "./s
 const darkCrate_1 = __webpack_require__(/*! ../entity/object/darkCrate */ "./src/entity/object/darkCrate.ts");
 const darkPot_1 = __webpack_require__(/*! ../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
 const darkVase_1 = __webpack_require__(/*! ../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
+const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -37313,11 +37321,15 @@ exports.enemyClassToId = new Map([
     [bigFrogEnemy_1.BigFrogEnemy, 19],
     [beetleEnemy_1.BeetleEnemy, 20],
     [kingEnemy_1.KingEnemy, 21],
+    [boltcasterEnemy_1.BoltcasterEnemy, 22],
 ]);
 class Environment {
     constructor(type) {
         this.type = type;
         this.skin = this.type;
+        if (this.type === environmentTypes_1.EnvType.TUTORIAL) {
+            this.skin = tile_1.SkinType.DUNGEON;
+        }
     }
 }
 exports.Environment = Environment;
@@ -37355,6 +37367,7 @@ const environmentData = {
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
             { class: kingEnemy_1.KingEnemy, weight: 0.25, minDepth: 3 },
+            { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 4 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -37587,6 +37600,7 @@ const environmentData = {
             { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.35, minDepth: 2 },
             { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 2 },
+            { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
             // Court mages
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.35, minDepth: 2 },
@@ -37674,7 +37688,8 @@ const environmentData = {
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
-            { class: kingEnemy_1.KingEnemy, weight: 0.25, minDepth: 3 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.2, minDepth: 3 },
+            { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
@@ -37707,6 +37722,32 @@ const environmentData = {
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
             },
+        ],
+    },
+    [environmentTypes_1.EnvType.TUTORIAL]: {
+        props: [
+            { class: crate_1.Crate, weight: 1 },
+            //{ class: Barrel, weight: 1 },
+            //{ class: TombStone, weight: 0.01, additionalParams: [1] },
+            //{ class: TombStone, weight: 0.01, additionalParams: [0] },
+            { class: pumpkin_1.Pumpkin, weight: 0.01 },
+            { class: block_1.Block, weight: 1 },
+            { class: pot_1.Pot, weight: 1 },
+            //{ class: PottedPlant, weight: 1 },
+            //{ class: Mushrooms, weight: 0.1 },
+            //{ class: Bush, weight: 0.1 },
+            //{ class: Sprout, weight: 0.025 },
+            //{ class: Chest, weight: 0.025 },
+            //{ class: DecoBlock, weight: 0.05 },
+            //{ class: Furnace, weight: 0.05 },
+        ],
+        enemies: [
+            // Early game enemies (depth 0+)
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: zombieEnemy_1.ZombieEnemy, weight: 1.2, minDepth: 0 },
+            { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
+            //{ class: MummyEnemy, weight: 1.0, minDepth: 2 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
         ],
     },
 };
@@ -38241,7 +38282,7 @@ class Level {
         }
         return null;
     }
-    distributeKey(downLadder) {
+    distributeKey(downLadder, room) {
         if (this.skipPopulation)
             return;
         const disableCoords = {
@@ -38255,19 +38296,20 @@ class Level {
             return;
         }
         const randomRoom = this.getFurthestFromLadders(downLadder.room);
-        let emptyTiles = randomRoom.getEmptyTiles();
-        if (disableCoords.disableRoom === randomRoom) {
+        const roomToDistributeKey = room ? room : randomRoom;
+        let emptyTiles = roomToDistributeKey.getEmptyTiles();
+        if (disableCoords.disableRoom === roomToDistributeKey) {
             emptyTiles = emptyTiles.filter((t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY);
         }
         if (emptyTiles.length === 0) {
-            console.error(`No empty tiles found in room ${randomRoom.id} for key placement, unlocking downladder ${downLadder.room.id}`, downLadder.lockable.removeLock());
+            console.error(`No empty tiles found in room ${roomToDistributeKey.id} for key placement, unlocking downladder ${downLadder.room.id}`, downLadder.lockable.removeLock());
             return;
         }
         const randomIndex = Math.floor(random_1.Random.rand() * emptyTiles.length);
         const randomTile = emptyTiles[randomIndex];
-        const key = new key_1.Key(randomRoom, randomTile.x, randomTile.y);
+        const key = new key_1.Key(roomToDistributeKey, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
-        randomRoom.items.push(key);
+        roomToDistributeKey.items.push(key);
         //console.log("Key successfully distributed and linked to down ladder");
         //this.game.player.inventory.addItem(key);
     }
@@ -43656,6 +43698,45 @@ class PlayerRenderer {
         this.hurtShield = () => {
             this.hurtingShield = true;
         };
+        this.outlineColor = () => {
+            let color = "black";
+            const buffed = this.player.damageBonus > 0;
+            const shielded = this.player.inventory.getArmor() &&
+                this.player.inventory.getArmor().health > 0;
+            if (buffed) {
+                color = gameConstants_1.GameConstants.PLAYER_DAMAGE_BUFF_COLOR;
+            }
+            /*
+            if (shielded) {
+              color = GameConstants.PLAYER_SHIELD_COLOR;
+            }
+            if (buffed && shielded) {
+              color =
+                Math.floor(this.frame) % 2 === 0
+                  ? GameConstants.PLAYER_DAMAGE_BUFF_COLOR
+                  : GameConstants.PLAYER_SHIELD_COLOR;
+            }
+                  */
+            return color;
+        };
+        this.outlineOpacity = () => {
+            let opacity = 0;
+            const buffed = this.player.damageBonus > 0;
+            const shielded = this.player.inventory.getArmor() &&
+                this.player.inventory.getArmor().health > 0;
+            if (buffed) {
+                opacity = 0.25; //Math.sin(Date.now() / 100) * 0.1 + 0.25;
+            }
+            /*
+            if (shielded) {
+              opacity = 0.25;
+            }
+            if (buffed && shielded) {
+              opacity = 0.5;
+            }
+              */
+            return opacity;
+        };
         this.flash = () => {
             this.flashing = true;
         };
@@ -43699,7 +43780,7 @@ class PlayerRenderer {
             const player = this.player;
             game_1.Game.ctx.save(); // Save the current canvas state
             if (this.drawSmear()) {
-                game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+                game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
                 this.mouseDiagonal() &&
@@ -43714,13 +43795,13 @@ class PlayerRenderer {
                     diagonalTile = { x: 2, y: 18 };
                 if (angle > 120 && angle <= 150)
                     diagonalTile = { x: 1, y: 18 };
-                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else {
                 this.frame += 0.1 * delta;
                 if (this.frame >= 4)
                     this.frame = 0;
-                game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * 2, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor());
+                game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * 2, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
                 // TODO draw armor
@@ -45632,7 +45713,7 @@ class Room {
                 for (let i = this.roomX; i < this.roomX + this.width; i++) {
                     for (let j = this.roomY; j < this.roomY + this.height; j++) {
                         const tile = this.roomArray[i]?.[j];
-                        if (tile instanceof downLadder_1.DownLadder) {
+                        if (tile instanceof downLadder_1.DownLadder && !tile.lockable.isLocked()) {
                             x = tile.x;
                             y = tile.y;
                         }
@@ -47467,12 +47548,15 @@ class Room {
         };
         this.checkForNoEnemies = () => {
             if (this.hasNoEnemies()) {
+                const isBoss = this.type === RoomType.BOSS;
                 let bossFlag = false;
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
-                        d.unGuard();
+                        d.unGuard(isBoss);
                         bossFlag = true;
-                        this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
+                        if (isBoss) {
+                            this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
+                        }
                     }
                 });
                 if (bossFlag) {
@@ -47500,6 +47584,9 @@ class Room {
                     obstacle = null;
                 }
             }
+        };
+        this.hasUpladder = () => {
+            return this.roomArray.some((row) => row.some((tile) => tile instanceof upLadder_1.UpLadder));
         };
         // avoid blocking doorways with unbreakable entities
         this.findPath = (startTile, targetTile, additionalBlockedPositions) => {
@@ -47931,6 +48018,9 @@ class Room {
         //initialize the skin for the given environment
         this.envType = envType;
         this.skin = envType;
+        if (this.envType === environmentTypes_1.EnvType.TUTORIAL) {
+            this.skin = tile_1.SkinType.DUNGEON;
+        }
         /*
         if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
           this.skin = SkinType.CAVE;
@@ -48845,6 +48935,7 @@ const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/ran
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/propClusterer.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
+const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
@@ -48908,8 +48999,9 @@ class Populator {
             }
             // populate each room by environment (enemies added here)
             this.level.rooms.forEach((room) => {
-                if (room.type === room_1.RoomType.START ||
-                    room.type === room_1.RoomType.DOWNLADDER ||
+                if (
+                //room.type === RoomType.START ||
+                room.type === room_1.RoomType.DOWNLADDER ||
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE ||
                     room.type === room_1.RoomType.ROPECAVE)
@@ -48921,14 +49013,26 @@ class Populator {
             if (furthestFromUpLadder && !this.level.isMainPath) {
                 this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
             }
-            if (this.level.depth === 0)
-                return;
+            //if (this.level.depth === 0) return;
             console.log(`Adding downladder with ${this.numRooms()} rooms`);
-            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON) {
+            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
+                this.level.depth !== 0) {
                 this.addDownladder({
                     caveRooms: this.numRooms(),
                     locked: true,
                     linearity: 1,
+                });
+            }
+            else if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
+                this.level.depth === 0 &&
+                gameplaySettings_1.GameplaySettings.TUTORIAL_ENABLED) {
+                this.addDownladder({
+                    caveRooms: 5,
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.TUTORIAL,
+                    linearity: 1,
+                    mapWidth: 20,
+                    mapHeight: 10,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
@@ -48969,6 +49073,8 @@ class Populator {
             //this.level.distributeKeys();
         };
         this.populateByEnvironment = (room) => {
+            if (room.type === room_1.RoomType.START)
+                return;
             switch (room.envType) {
                 case environmentTypes_1.EnvType.CAVE:
                     this.populateCaveEnvironment(room);
@@ -48981,6 +49087,9 @@ class Populator {
                     break;
                 case environmentTypes_1.EnvType.CASTLE:
                     this.populateCastleEnvironment(room);
+                    break;
+                case environmentTypes_1.EnvType.TUTORIAL:
+                    this.populateTutorialEnvironment(room);
                     break;
                 default:
                     this.populateDefaultEnvironment(room);
@@ -49019,14 +49128,21 @@ class Populator {
             room.roomArray[position.x][position.y] = dl;
         };
         this.addDownladder = (opts) => {
-            const rooms = this.level.rooms.filter((room) => room.type !== room_1.RoomType.START &&
+            const rooms = this.level.rooms.filter((room) => (room.type !== room_1.RoomType.START &&
                 room.type !== room_1.RoomType.DOWNLADDER &&
                 room.type !== room_1.RoomType.UPLADDER &&
                 room.type !== room_1.RoomType.ROPEHOLE &&
-                room.type !== room_1.RoomType.BOSS);
-            const downLadderRoom = this.level.isMainPath
+                room.type !== room_1.RoomType.BOSS) ||
+                (room.type === room_1.RoomType.START && room.depth === 0));
+            let downLadderRoom = this.level.isMainPath
                 ? rooms[Math.floor(random_1.Random.rand() * rooms.length)]
                 : this.level.getFurthestFromLadder("up");
+            // On depth 0, always place the downladder in the START room
+            if (this.level.depth === 0) {
+                const startRoom = this.level.rooms.find((room) => room.type === room_1.RoomType.START);
+                if (startRoom)
+                    downLadderRoom = startRoom;
+            }
             console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -49034,7 +49150,7 @@ class Populator {
                 console.warn("No valid positions for downladder that don't block doors");
                 return;
             }
-            const position = downLadderRoom.getRandomEmptyPosition(validTiles);
+            const position = downLadderRoom.getRandomEmptyPosition(validTiles, undefined);
             if (position === null ||
                 position.x === undefined ||
                 position.y === undefined)
@@ -49054,10 +49170,14 @@ class Populator {
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;
             const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts, lockOverride);
+            let room;
+            if (downLadderRoom.depth === 0) {
+                room = downLadderRoom;
+            }
             downLadderRoom.roomArray[position.x][position.y] = dl;
             if (dl.lockable.isLocked()) {
                 console.log("adding key to downladder");
-                this.level.distributeKey(dl);
+                this.level.distributeKey(dl, room);
             }
         };
         this.populateByType = (room) => { };
@@ -49287,6 +49407,10 @@ class Populator {
                     break;
                 case environmentTypes_1.EnvType.CASTLE:
                     message = "Castle";
+                    break;
+                case environmentTypes_1.EnvType.TUTORIAL:
+                    message = "Tutorial";
+                    break;
             }
             room.name = message;
             const { x, y } = room.getRoomCenter();
@@ -49296,7 +49420,7 @@ class Populator {
             room.roomArray[x][y] = upLadder;
             if (room.envType === environmentTypes_1.EnvType.CAVE)
                 this.placeVendingMachineInWall(room, new pickaxe_1.Pickaxe(room, 0, 0));
-            else
+            else if (room.envType !== environmentTypes_1.EnvType.TUTORIAL)
                 this.placeVendingMachineInWall(room);
             room.removeDoorObstructions();
         };
@@ -49310,6 +49434,7 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.addTorchesByArea = (room) => {
+            const factor = room.envType === environmentTypes_1.EnvType.TUTORIAL ? 2 : 1;
             let numTorches = Math.max(1, Math.floor(Math.sqrt(room.roomArea) / 3) -
                 Math.floor(Math.sqrt(room.depth)));
             if (room.depth === 0) {
@@ -49326,7 +49451,7 @@ class Populator {
                     numTorches = 0;
                 }
             }
-            this.addTorches(room, numTorches, random_1.Random.rand);
+            this.addTorches(room, numTorches * factor, random_1.Random.rand);
         };
         this.addWindowsByArea = (room) => {
             // Only place windows in castle-themed rooms
@@ -49503,6 +49628,41 @@ class Populator {
                         tiles.splice(idx, 1);
                 }
             }
+        }
+    }
+    populateTutorialEnvironment(room) {
+        const numProps = Math.floor((this.getNumProps(room) + 1) / 4);
+        this.addPropsWithClustering(room, numProps, room.envType, {
+            falloffExponent: 2,
+            baseScore: 0.1,
+            maxInfluenceDistance: 12,
+            useSeedPosition: false,
+        });
+        //this.addRandomEnemies(room, 1, true);
+        const startRoom = room.path().find((r) => r.hasUpladder());
+        const index = startRoom?.path().indexOf(room);
+        switch (index) {
+            case 0:
+                break;
+            case 1:
+                room.addNewEnemy(room_1.EnemyType.crab);
+                break;
+            case 2:
+                room.addNewEnemy(room_1.EnemyType.zombie);
+                break;
+            case 3:
+                room.addNewEnemy(room_1.EnemyType.crab);
+                room.addNewEnemy(room_1.EnemyType.skull);
+                break;
+            case 4:
+                room.addNewEnemy(room_1.EnemyType.crab);
+                room.addNewEnemy(room_1.EnemyType.skull);
+                room.addNewEnemy(room_1.EnemyType.zombie);
+                const entities = room.entities.filter((e) => e instanceof enemy_1.Enemy);
+                entities[1].drops = [new heart_1.Heart(room, entities[1].x, entities[1].y)];
+        }
+        for (const door of room.doors) {
+            door.guard();
         }
     }
     populateDungeonEnvironment(room) {
@@ -49999,15 +50159,18 @@ class Populator {
             }
         }
     }
-    addRandomEnemies(room, multiplier = 1) {
+    addRandomEnemies(room, multiplier = 1, addByIndex = false) {
         const numEmptyTiles = room.getEmptyTiles().length;
         const meanValue = (room.roomArea + numEmptyTiles) / 2;
+        const startRoom = room.path().find((r) => r.hasUpladder());
+        const indexAdd = addByIndex ? startRoom?.path().indexOf(room) : 1;
         const factor = Math.min((room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
             gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER, gameplaySettings_1.GameplaySettings.MAX_ENEMY_DENSITY);
         const baseEnemyCount = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, meanValue * factor), meanValue * factor));
         // Cap at the number of empty tiles (hard limit)
         const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
-        this.addEnemiesUnified(room, numEnemies * multiplier, room.envType);
+        const numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+        this.addEnemiesUnified(room, numEnemiesToAdd, room.envType);
     }
     addSpawners(room, rand, numSpawners) {
         let tiles = room.getEmptyTiles();
@@ -50080,7 +50243,8 @@ class Populator {
         return lastOccultist;
     }
     addBosses(room, depth) {
-        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true ||
+            room.envType === environmentTypes_1.EnvType.TUTORIAL)
             return;
         let tiles = room.getEmptyTiles();
         if (tiles.length === 0) {
@@ -50357,6 +50521,9 @@ class Populator {
      */
     addEnvironmentalFeatures(room, rand) {
         const factor = game_1.Game.rand(1, 36, rand);
+        if (room.envType === environmentTypes_1.EnvType.TUTORIAL) {
+            this.addTorchesByArea(room);
+        }
         switch (room.type) {
             case room_1.RoomType.START:
                 if (room.depth !== 0) {
@@ -50373,6 +50540,9 @@ class Populator {
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
                 break;
             case room_1.RoomType.DUNGEON:
+                if (room.envType === environmentTypes_1.EnvType.TUTORIAL) {
+                    return;
+                }
                 if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
@@ -51688,15 +51858,16 @@ class Door extends passageway_1.Passageway {
                 this.unlocking = true;
             }
         };
-        this.unGuard = () => {
+        this.unGuard = (isBoss = true) => {
             if (this.type === DoorType.GUARDEDDOOR) {
                 this.removeLock();
                 sound_1.Sound.unlock();
                 this.game.tutorialActive = false;
             }
+            const timeout = isBoss ? 1000 : 100;
             setTimeout(() => {
                 this.removeLockIcon();
-            }, 1000);
+            }, timeout);
         };
         this.link = (other) => {
             this.linkedDoor = other;

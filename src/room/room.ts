@@ -482,6 +482,9 @@ export class Room {
     //initialize the skin for the given environment
     this.envType = envType;
     this.skin = envType as unknown as SkinType;
+    if (this.envType === EnvType.TUTORIAL) {
+      this.skin = SkinType.DUNGEON as SkinType;
+    }
     /*
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;
@@ -1221,7 +1224,7 @@ export class Room {
       for (let i = this.roomX; i < this.roomX + this.width; i++) {
         for (let j = this.roomY; j < this.roomY + this.height; j++) {
           const tile = this.roomArray[i]?.[j];
-          if (tile instanceof DownLadder) {
+          if (tile instanceof DownLadder && !tile.lockable.isLocked()) {
             x = tile.x;
             y = tile.y;
           }
@@ -3605,16 +3608,19 @@ export class Room {
 
   checkForNoEnemies = () => {
     if (this.hasNoEnemies()) {
+      const isBoss = this.type === RoomType.BOSS;
       let bossFlag = false;
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
-          d.unGuard();
+          d.unGuard(isBoss);
           bossFlag = true;
-          this.game.startCameraAnimation(
-            this.getBossDoor().x,
-            this.getBossDoor().y,
-            175,
-          );
+          if (isBoss) {
+            this.game.startCameraAnimation(
+              this.getBossDoor().x,
+              this.getBossDoor().y,
+              175,
+            );
+          }
         }
       });
       if (bossFlag) {
@@ -3752,6 +3758,12 @@ export class Room {
         obstacle = null;
       }
     }
+  };
+
+  hasUpladder = () => {
+    return this.roomArray.some((row) =>
+      row.some((tile) => tile instanceof UpLadder),
+    );
   };
 
   // avoid blocking doorways with unbreakable entities

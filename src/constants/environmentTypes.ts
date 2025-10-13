@@ -9,6 +9,7 @@ export enum EnvType {
   DESERT = 7,
   MAGMA_CAVE = 8,
   DARK_DUNGEON = 9,
+  TUTORIAL = 10,
 }
 
 export const getEnvTypeName = (envType: EnvType): string => {
@@ -33,5 +34,7 @@ export const getEnvTypeName = (envType: EnvType): string => {
       return "MAGMA_CAVE";
     case EnvType.DARK_DUNGEON:
       return "DARK_DUNGEON";
+    case EnvType.TUTORIAL:
+      return "TUTORIAL";
   }
 };

@@ -223,16 +223,18 @@ export class Door extends Passageway {
     }
   };
 
-  unGuard = () => {
+  unGuard = (isBoss: boolean = true) => {
     if (this.type === DoorType.GUARDEDDOOR) {
       this.removeLock();
       Sound.unlock();
 
       this.game.tutorialActive = false;
     }
+
+    const timeout = isBoss ? 1000 : 100;
     setTimeout(() => {
       this.removeLockIcon();
-    }, 1000);
+    }, timeout);
   };
 
   link = (other: Door) => {

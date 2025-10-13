@@ -63,6 +63,52 @@ export class PlayerRenderer {
     this.hurtingShield = true;
   };
 
+  outlineColor = () => {
+    let color = "black";
+    const buffed = this.player.damageBonus > 0;
+    const shielded =
+      this.player.inventory.getArmor() &&
+      this.player.inventory.getArmor().health > 0;
+
+    if (buffed) {
+      color = GameConstants.PLAYER_DAMAGE_BUFF_COLOR;
+    }
+    /*
+    if (shielded) {
+      color = GameConstants.PLAYER_SHIELD_COLOR;
+    }
+    if (buffed && shielded) {
+      color =
+        Math.floor(this.frame) % 2 === 0
+          ? GameConstants.PLAYER_DAMAGE_BUFF_COLOR
+          : GameConstants.PLAYER_SHIELD_COLOR;
+    }
+          */
+    return color;
+  };
+
+  outlineOpacity = () => {
+    let opacity = 0;
+
+    const buffed = this.player.damageBonus > 0;
+    const shielded =
+      this.player.inventory.getArmor() &&
+      this.player.inventory.getArmor().health > 0;
+
+    if (buffed) {
+      opacity = 0.25; //Math.sin(Date.now() / 100) * 0.1 + 0.25;
+    }
+    /*
+    if (shielded) {
+      opacity = 0.25;
+    }
+    if (buffed && shielded) {
+      opacity = 0.5;
+    }
+      */
+    return opacity;
+  };
+
   flash = () => {
     this.flashing = true;
   };
@@ -120,6 +166,10 @@ export class PlayerRenderer {
         1,
         2,
         this.shadeColor(),
+        undefined,
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     } else if (
       this.player.inputHandler.mostRecentMoveInput === "mouse" &&
@@ -143,6 +193,10 @@ export class PlayerRenderer {
         1,
         2,
         this.shadeColor(),
+        undefined,
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     } else {
       this.frame += 0.1 * delta;
@@ -157,6 +211,10 @@ export class PlayerRenderer {
         1,
         2,
         this.shadeColor(),
+        undefined,
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
       );
     }
     if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
