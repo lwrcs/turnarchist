@@ -23154,8 +23154,14 @@ class Game {
             if (!this.chatOpen) {
                 switch (key.toUpperCase()) {
                     case "M":
-                        sound_1.Sound.toggleMute();
-                        this.pushMessage(sound_1.Sound.audioMuted ? "Audio muted" : "Audio unmuted");
+                        // Toggle full-screen map. If open, close; if closed, open.
+                        {
+                            const player = this.players[this.localPlayerID];
+                            if (player?.map) {
+                                player.map.toggleMapOpen();
+                                return;
+                            }
+                        }
                         return;
                     case "C":
                         this.chatOpen = true;
@@ -28016,6 +28022,8 @@ exports.GameplaySettings = void 0;
 class GameplaySettings {
 }
 exports.GameplaySettings = GameplaySettings;
+// === MAP ===
+GameplaySettings.LEGACY_MINIMAP = true; // when true, use pre-existing minimap behavior and layout
 GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
@@ -29626,6 +29634,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Map = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 class Map {
@@ -29636,9 +29645,26 @@ class Map {
         this.offsetY = 0;
         this.softOffsetX = 0;
         this.softOffsetY = 0;
+        // Offscreen buffer for masking minimap without affecting main canvas
+        this.bufferCanvas = null;
+        this.bufferCtx = null;
+        this.mapOpen = false;
+        // Animation state for full-screen map
+        this.mapOpenProgress = 0; // 0 closed, 1 open
+        this.mapAnimationSpeed = 0.18; // progress step per frame (scaled by delta)
+        // Internal: suppress per-room fog draw; use single mask pass instead
+        this.suppressPerRoomFog = false;
+        // Per-frame caches to avoid repeated calculations
+        this.framePlayerX = 0;
+        this.framePlayerY = 0;
+        this.effectiveRadius = 0;
+        this.effectiveRadiusSq = 0;
+        this.currentSeenTiles = null;
+        this.frameDiscoveredBounds = null;
         // Fog of war properties - now stored per mapGroup
         this.seenTilesByMapGroup = new globalThis.Map();
         this.visibilityRadius = 4;
+        this.drawRadius = 25;
         // Add helper method to collect down ladders from room array
         this.getDownLaddersFromRoom = (room) => {
             const downLadders = [];
@@ -29702,17 +29728,195 @@ class Map {
             this.oldMapData = [...this.mapData];
         };
         this.renderMap = (delta) => {
-            game_1.Game.ctx.save(); // Save the current canvas state
-            this.setInitialCanvasSettings(1);
-            this.translateCanvas(0);
-            for (const data of this.mapData) {
-                this.drawRoom(data, delta);
+            // Update open/close animation
+            this.updateMapAnimation(delta);
+            // Prepare per-frame caches
+            this.prepareFrameCaches();
+            if (this.mapOpen) {
+                // === Opening: first draw gameplay backdrop fade, then composite full map ===
+                const eased = this.easeInOut(this.mapOpenProgress);
+                // Backdrop behind the map should be drawn before compositing the buffer
+                game_1.Game.ctx.save();
+                this.drawBackdrop(eased);
+                game_1.Game.ctx.restore();
+                // Render full map directly (no fog)
+                game_1.Game.ctx.save();
+                this.setInitialCanvasSettings(1);
+                const oldScale = this.scale;
+                this.scale = 1 + eased; // animate to 2x scale when fully open
+                this.translateCanvas(0);
+                for (const data of this.mapData)
+                    this.drawRoom(data, delta);
+                this.resetCanvasTransform();
+                this.scale = oldScale;
+                game_1.Game.ctx.restore();
             }
-            /*for (const data of this.oldMapData) {
-              this.drawRoom(data);
-            }*/
-            this.resetCanvasTransform();
-            game_1.Game.ctx.restore(); // Restore the canvas state
+            else if (this.mapOpenProgress > 0) {
+                // === In-transition: render to buffer (to keep masking off main canvas), then composite over a fading backdrop ===
+                const eased = this.easeInOut(this.mapOpenProgress);
+                this.ensureBufferCanvas();
+                if (!this.bufferCanvas || !this.bufferCtx)
+                    return;
+                const originalCtx = game_1.Game.ctx;
+                const oldScale = this.scale;
+                // Prepare buffer
+                this.bufferCtx.save();
+                this.bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+                this.bufferCtx.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
+                this.bufferCtx.imageSmoothingEnabled = false;
+                game_1.Game.ctx = this.bufferCtx;
+                this.setInitialCanvasSettings(1);
+                this.scale = 1 + eased; // animate scale while drawing into buffer
+                this.translateCanvas(0);
+                this.suppressPerRoomFog = true;
+                for (const data of this.mapData)
+                    this.drawRoom(data, delta);
+                // Apply single fog-of-war mask over entire buffer
+                this.applyFogOfWarAllRooms();
+                this.suppressPerRoomFog = false;
+                this.resetCanvasTransform();
+                this.scale = oldScale;
+                this.bufferCtx.restore();
+                // Restore main ctx and composite buffer over gameplay (no backdrop during closing)
+                game_1.Game.ctx = originalCtx;
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                game_1.Game.ctx.drawImage(this.bufferCanvas, 0, 0);
+                game_1.Game.ctx.restore();
+            }
+            else if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                // === New behavior: render to offscreen buffer, then mask with fog and composite ===
+                this.ensureBufferCanvas();
+                if (!this.bufferCanvas || !this.bufferCtx)
+                    return;
+                const originalCtx = game_1.Game.ctx;
+                const s = this.scale;
+                // Prepare buffer
+                this.bufferCtx.save();
+                this.bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+                this.bufferCtx.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
+                this.bufferCtx.imageSmoothingEnabled = false;
+                // Temporarily redirect drawing to buffer
+                // All existing draw methods use Game.ctx, so swap it
+                game_1.Game.ctx = this.bufferCtx;
+                this.setInitialCanvasSettings(1);
+                this.translateCanvas(0);
+                this.suppressPerRoomFog = true;
+                for (const data of this.mapData)
+                    this.drawRoom(data, delta);
+                this.applyFogOfWarAllRooms();
+                this.suppressPerRoomFog = false;
+                this.resetCanvasTransform();
+                this.bufferCtx.restore();
+                // Restore main ctx and composite buffer onto it
+                game_1.Game.ctx = originalCtx;
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                game_1.Game.ctx.drawImage(this.bufferCanvas, 0, 0);
+                game_1.Game.ctx.restore();
+            }
+            else {
+                // === Legacy behavior: draw directly to main canvas ===
+                game_1.Game.ctx.save();
+                this.setInitialCanvasSettings(1);
+                this.translateCanvas(0);
+                for (const data of this.mapData) {
+                    this.drawRoom(data, delta);
+                }
+                this.resetCanvasTransform();
+                game_1.Game.ctx.restore();
+            }
+        };
+        this.prepareFrameCaches = () => {
+            this.framePlayerX = Math.floor(this.player.x);
+            this.framePlayerY = Math.floor(this.player.y);
+            this.effectiveRadius = this.getEffectiveDrawRadius();
+            this.effectiveRadiusSq = this.effectiveRadius * this.effectiveRadius;
+            // seen tiles
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
+                seenTiles = this.mapData[0].seenTiles;
+            }
+            this.currentSeenTiles = seenTiles ?? null;
+            // cache bounds center for translate when needed
+            const b = this.getDiscoveredBounds();
+            this.frameDiscoveredBounds = { centerX: b.centerX, centerY: b.centerY };
+        };
+        this.ensureBufferCanvas = () => {
+            const width = gameConstants_1.GameConstants.WIDTH;
+            const height = gameConstants_1.GameConstants.HEIGHT;
+            if (!this.bufferCanvas) {
+                this.bufferCanvas = document.createElement("canvas");
+                this.bufferCanvas.width = width;
+                this.bufferCanvas.height = height;
+                this.bufferCtx = this.bufferCanvas.getContext("2d", {
+                    alpha: true,
+                });
+            }
+            else if (this.bufferCanvas.width !== width ||
+                this.bufferCanvas.height !== height) {
+                this.bufferCanvas.width = width;
+                this.bufferCanvas.height = height;
+                this.bufferCtx = this.bufferCanvas.getContext("2d", {
+                    alpha: true,
+                });
+            }
+        };
+        this.toggleMapOpen = () => {
+            this.mapOpen = !this.mapOpen;
+        };
+        this.getSeenTilesForCurrentGroup = () => {
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
+                seenTiles = this.mapData[0].seenTiles;
+            }
+            return seenTiles ?? new Set();
+        };
+        this.getDiscoveredBounds = () => {
+            const seen = this.getSeenTilesForCurrentGroup();
+            if (seen.size === 0) {
+                const px = Math.floor(this.player.x);
+                const py = Math.floor(this.player.y);
+                return {
+                    minX: px,
+                    minY: py,
+                    maxX: px,
+                    maxY: py,
+                    width: 1,
+                    height: 1,
+                    centerX: px,
+                    centerY: py,
+                };
+            }
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const key of seen) {
+                const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+                if (sx < minX)
+                    minX = sx;
+                if (sy < minY)
+                    minY = sy;
+                if (sx > maxX)
+                    maxX = sx;
+                if (sy > maxY)
+                    maxY = sy;
+            }
+            const width = Math.max(1, maxX - minX + 1);
+            const height = Math.max(1, maxY - minY + 1);
+            const centerX = Math.floor(minX + width / 2);
+            const centerY = Math.floor(minY + height / 2);
+            return { minX, minY, maxX, maxY, width, height, centerX, centerY };
+        };
+        this.computeFullMapScale = (bounds) => {
+            const maxWidthPixels = Math.floor(gameConstants_1.GameConstants.WIDTH * 0.9);
+            const maxHeightPixels = Math.floor(gameConstants_1.GameConstants.HEIGHT * 0.9);
+            const scaleX = Math.floor(maxWidthPixels / Math.max(1, bounds.width));
+            const scaleY = Math.floor(maxHeightPixels / Math.max(1, bounds.height));
+            const fit = Math.max(1, Math.min(scaleX, scaleY));
+            return fit;
         };
         this.updateOffsetXY = () => {
             let diffX = this.offsetX - this.softOffsetX;
@@ -29752,12 +29956,10 @@ class Map {
             }
         };
         this.isTileSeen = (x, y) => {
-            const currentMapGroup = this.game.room.mapGroup.toString();
-            const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
-            if (!seenTiles)
+            if (!this.currentSeenTiles)
                 return false;
             const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
-            return seenTiles.has(tileKey);
+            return this.currentSeenTiles.has(tileKey);
         };
         this.draw = (delta) => {
             this.updateSeenTiles(); // Update fog of war
@@ -29769,51 +29971,227 @@ class Map {
             game_1.Game.ctx.globalCompositeOperation = "source-over";
         };
         this.translateCanvas = (offset) => {
-            game_1.Game.ctx.translate(Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH) -
-                //this.game.room.roomX -
-                //Math.floor(0.5 * this.game.room.width) +
-                15 * this.scale -
-                Math.floor(this.softOffsetX), Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT) -
-                //this.game.room.roomY -
-                //Math.floor(0.5 * this.game.room.height) -
-                1 * this.scale -
-                offset -
-                Math.floor(this.softOffsetY));
+            const s = this.scale;
+            if (this.mapOpen || this.mapOpenProgress > 0) {
+                // Interpolate from minimap anchor + player tile to screen center + discovered center
+                const t = this.easeInOut(this.mapOpenProgress);
+                const startAnchorX = Math.floor((5 / 6) * gameConstants_1.GameConstants.WIDTH);
+                const startAnchorY = Math.floor((1 / 6) * gameConstants_1.GameConstants.HEIGHT);
+                const endAnchorX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2);
+                const endAnchorY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2);
+                const bounds = this.getDiscoveredBounds();
+                const startTileX = this.player.x;
+                const startTileY = this.player.y;
+                const endTileX = bounds.centerX;
+                const endTileY = bounds.centerY;
+                const anchorX = Math.floor(startAnchorX + (endAnchorX - startAnchorX) * t);
+                const anchorY = Math.floor(startAnchorY + (endAnchorY - startAnchorY) * t);
+                const focusTileX = startTileX + (endTileX - startTileX) * t;
+                const focusTileY = startTileY + (endTileY - startTileY) * t;
+                game_1.Game.ctx.translate(anchorX - Math.floor(focusTileX * s), anchorY - Math.floor(focusTileY * s) - offset);
+            }
+            else if (gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                // Legacy behavior: original top-right anchored, room-offset based translation
+                game_1.Game.ctx.translate(Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH) -
+                    15 * s -
+                    Math.floor(this.softOffsetX), Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT) -
+                    1 * s -
+                    offset -
+                    Math.floor(this.softOffsetY));
+            }
+            else {
+                // New behavior: player-centered with the player's map position inset 1/6 from right and 1/6 from top
+                const anchorX = Math.floor((5 / 6) * gameConstants_1.GameConstants.WIDTH); // 1/6 in from right
+                const anchorY = Math.floor((1 / 6) * gameConstants_1.GameConstants.HEIGHT); // 1/6 in from top
+                game_1.Game.ctx.translate(anchorX - Math.floor(this.player.x * s), anchorY - Math.floor(this.player.y * s) - offset);
+            }
+        };
+        this.drawBackdrop = (progress) => {
+            const alpha = Math.max(0, Math.min(1, progress)) * 0.25; // 25% max opacity
+            if (alpha <= 0.001)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = alpha;
+            game_1.Game.ctx.fillStyle = "#808080"; // 50% gray
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            game_1.Game.ctx.restore();
+        };
+        this.updateMapAnimation = (delta) => {
+            const target = this.mapOpen ? 1 : 0;
+            const step = this.mapAnimationSpeed * (delta || 1);
+            if (this.mapOpenProgress < target) {
+                this.mapOpenProgress = Math.min(1, this.mapOpenProgress + step);
+            }
+            else if (this.mapOpenProgress > target) {
+                this.mapOpenProgress = Math.max(0, this.mapOpenProgress - step);
+            }
+        };
+        this.easeInOut = (t) => {
+            // Quadratic ease-in-out
+            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         };
         this.drawRoom = (data, delta) => {
-            //this.drawUnderRoomPlayers(data.players, delta);
-            this.drawRoomOutline(data.room);
+            // In legacy mode, render base room outline and fog overlay
+            if (gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                this.drawRoomOutline(data.room);
+            }
+            // In new mode, draw floor per-tile within radius so background isn't transparent
+            if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                this.drawRoomFloorTiles(data.room);
+            }
             this.drawRoomWalls(data.walls);
             this.drawRoomDoors(data.doors);
             this.drawRoomEntities(data.entities);
             this.drawRoomItems(data.items);
             this.drawRoomPlayers(data.players, delta);
             this.drawRoomDownLadders(data.downLadders);
-            // Render fog of war on top of everything
-            this.drawFogOfWar(data.room);
+            // Draw fog-of-war using mode-specific behavior (skip if using single mask pass)
+            if (!this.suppressPerRoomFog)
+                this.drawFogOfWar(data.room);
         };
-        // Add fog of war overlay method
-        this.drawFogOfWar = (room) => {
+        // Single-pass fog-of-war over all rooms to avoid intermediate unmasked states
+        this.applyFogOfWarAllRooms = () => {
+            if (this.mapOpen)
+                return; // no fog when full map is open
             const s = this.scale;
-            game_1.Game.ctx.save();
-            game_1.Game.ctx.fillStyle = "#1a1a1a";
-            // Use the seen tiles from the current mapData if available
             const currentMapGroup = this.game.room.mapGroup.toString();
             let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
-            // If we have mapData, use the seen tiles from there (for consistency)
             if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
                 seenTiles = this.mapData[0].seenTiles;
             }
-            // Draw fog over all tiles in the room that haven't been seen
-            for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                    const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
-                    if (!seenTiles || !seenTiles.has(tileKey)) {
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalCompositeOperation = gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP
+                ? "source-over"
+                : "destination-out";
+            game_1.Game.ctx.fillStyle = gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP
+                ? "#1a1a1a"
+                : "rgba(0,0,0,1)";
+            for (const data of this.mapData) {
+                const room = data.room;
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP &&
+                            !this.isWithinDrawRadius(x, y))
+                            continue;
+                        const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+                        if (!seenTiles || !seenTiles.has(tileKey)) {
+                            game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                        }
+                    }
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawRoomFloorTiles = (room) => {
+            const s = this.scale;
+            game_1.Game.ctx.save();
+            // Restrict iteration to bounding box around effective radius
+            const minX = Math.max(room.roomX, this.framePlayerX - this.effectiveRadius);
+            const maxX = Math.min(room.roomX + room.width - 1, this.framePlayerX + this.effectiveRadius);
+            const minY = Math.max(room.roomY, this.framePlayerY - this.effectiveRadius);
+            const maxY = Math.min(room.roomY + room.height - 1, this.framePlayerY + this.effectiveRadius);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
+                    if (this.shouldDrawTile(x, y)) {
+                        const isPerimeter = x === room.roomX ||
+                            x === room.roomX + room.width - 1 ||
+                            y === room.roomY ||
+                            y === room.roomY + room.height - 1;
+                        game_1.Game.ctx.fillStyle = isPerimeter ? "#5A5A5A" : "#0a0a0a";
                         game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
                     }
                 }
             }
             game_1.Game.ctx.restore();
+        };
+        // Helper checks for new minimap behavior
+        this.getEffectiveDrawRadius = () => {
+            // Always apply a circular radius; while opening, expand it up to a very large value
+            const t = this.easeInOut?.(this.mapOpenProgress ?? 0) ?? 0;
+            const maxRadius = 10000; // effectively infinite for our purposes
+            return Math.floor(this.drawRadius + (maxRadius - this.drawRadius) * t);
+        };
+        this.isWithinDrawRadius = (x, y) => {
+            const dx = Math.floor(x) - this.framePlayerX;
+            const dy = Math.floor(y) - this.framePlayerY;
+            return dx * dx + dy * dy <= this.effectiveRadiusSq;
+        };
+        this.shouldDrawTile = (x, y) => {
+            if (gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP)
+                return true;
+            const within = this.isWithinDrawRadius(x, y);
+            if (!within)
+                return false;
+            // During full-open, only draw discovered tiles; during transition and minimap, draw regardless of seen
+            if (this.mapOpen)
+                return this.isTileSeen(x, y);
+            return true;
+        };
+        // Add fog of war overlay/erase method
+        this.drawFogOfWar = (room) => {
+            if (this.mapOpen)
+                return; // full map: no mask; during transition, still apply mask
+            const s = this.scale;
+            // Use the seen tiles from the current mapData if available
+            const currentMapGroup = this.game.room.mapGroup.toString();
+            let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
+            if (this.mapData.length > 0 && this.mapData[0].seenTiles) {
+                seenTiles = this.mapData[0].seenTiles;
+            }
+            if (gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                // Legacy: paint a dark overlay on unseen tiles
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.fillStyle = "#1a1a1a";
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+                        if (!seenTiles || !seenTiles.has(tileKey)) {
+                            game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                        }
+                    }
+                }
+                game_1.Game.ctx.restore();
+            }
+            else {
+                // New: erase unseen tiles so the game canvas shows through
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "destination-out";
+                game_1.Game.ctx.fillStyle = "rgba(0,0,0,1)";
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        if (!this.isWithinDrawRadius(x, y))
+                            continue; // uses effective radius during transition
+                        const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
+                        if (!seenTiles || !seenTiles.has(tileKey)) {
+                            game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
+                        }
+                    }
+                }
+                game_1.Game.ctx.restore();
+            }
+        };
+        // Minimap bounds for click/tap hit-testing (non-legacy mode)
+        this.getMinimapAnchor = () => {
+            const s = this.scale;
+            if (gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                // Approximate legacy anchor near top-right
+                const x = Math.floor(0.95 * gameConstants_1.GameConstants.WIDTH);
+                const y = Math.floor(0.05 * gameConstants_1.GameConstants.HEIGHT);
+                return { x, y, radiusPx: this.drawRadius * s };
+            }
+            const x = Math.floor((5 / 6) * gameConstants_1.GameConstants.WIDTH);
+            const y = Math.floor((1 / 6) * gameConstants_1.GameConstants.HEIGHT);
+            return { x, y, radiusPx: this.drawRadius * s };
+        };
+        this.isPointInMinimapBounds = (screenX, screenY) => {
+            if (this.mapOpen)
+                return false;
+            const { x, y, radiusPx } = this.getMinimapAnchor();
+            const dx = screenX - x;
+            const dy = screenY - y;
+            return dx * dx + dy * dy <= radiusPx * radiusPx;
         };
         this.drawRoomOutline = (level) => {
             const s = this.scale;
@@ -29830,8 +30208,10 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const wall of walls) {
-                game_1.Game.ctx.fillStyle = "#404040";
-                game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
+                if (this.shouldDrawTile(wall.x, wall.y)) {
+                    game_1.Game.ctx.fillStyle = "#404040";
+                    game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
+                }
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -29839,6 +30219,8 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const door of doors) {
+                if (!this.shouldDrawTile(door.x, door.y))
+                    continue;
                 if (door.opened === false)
                     game_1.Game.ctx.fillStyle = "#5A5A5A";
                 if (door.opened === true) {
@@ -29856,7 +30238,9 @@ class Map {
                 game_1.Game.ctx.fillStyle = "white";
                 if (this.game.levels[players[i].depth].rooms[players[i].levelID]
                     .mapGroup === this.game.room.mapGroup) {
-                    game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
+                    if (this.shouldDrawTile(players[i].x, players[i].y)) {
+                        game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
+                    }
                 }
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
@@ -29887,6 +30271,8 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const enemy of entities) {
+                if (!this.shouldDrawTile(enemy.x, enemy.y))
+                    continue;
                 this.setEntityColor(enemy);
                 game_1.Game.ctx.fillRect(enemy.x * s, enemy.y * s, 1 * s, 1 * s);
             }
@@ -29896,6 +30282,8 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const downLadder of downLadders) {
+                if (!this.shouldDrawTile(downLadder.x, downLadder.y))
+                    continue;
                 game_1.Game.ctx.fillStyle = "#00FFFF";
                 game_1.Game.ctx.fillRect(downLadder.x * s, downLadder.y * s, 1 * s, 1 * s);
             }
@@ -29920,11 +30308,13 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const item of items) {
-                let x = item.x;
-                let y = item.y;
+                const x = item.x;
+                const y = item.y;
+                if (!this.shouldDrawTile(x, y))
+                    continue;
                 game_1.Game.ctx.fillStyle = "#ac3232";
                 if (!item.pickedUp) {
-                    game_1.Game.ctx.fillRect(item.x * s, item.y * s, 1 * s, 1 * s);
+                    game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
                 }
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
@@ -43136,6 +43526,12 @@ class PlayerInputHandler {
             return;
         }
         this.setMostRecentInput("mouse");
+        // If full-screen map is open, any click closes it and consumes input
+        if (player.map?.mapOpen) {
+            player.map.toggleMapOpen();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         if (player.dead) {
             this.handleDeathScreenInput(x, y);
             input_1.Input.mouseDownHandled = true;
@@ -43175,6 +43571,12 @@ class PlayerInputHandler {
         // Check if click is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
             this.handleMenuButtonClick();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Check if click is on minimap region to open full map
+        if (player.map && player.map.isPointInMinimapBounds(x, y)) {
+            player.map.toggleMapOpen();
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -45621,9 +46023,9 @@ class Room {
             this.syncKeyPathParticles();
             this.alertEnemiesOnEntry();
             this.message = this.name;
-            player.map.saveMapData();
             this.setReverb();
             this.active = true;
+            player.map.saveMapData();
             //this.invalidateBlurCache(); // Invalidate cache when room becomes active
             this.updateLighting();
         };
@@ -45877,10 +46279,9 @@ class Room {
         // #region LIGHTING METHODS
         this.fadeLighting = (delta) => {
             const bufferTiles = 2;
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    if (!this.isTileOnScreen(x, y, bufferTiles))
-                        continue;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
                     let visDiff = this.softVis[x][y] - this.vis[x][y];
                     let softVis = this.softVis[x][y];
                     let flag = false;
@@ -45901,10 +46302,9 @@ class Room {
         };
         this.fadeRgb = (delta) => {
             const bufferTiles = 2;
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    if (!this.isTileOnScreen(x, y, bufferTiles))
-                        continue;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
                     const [softR, softG, softB] = this.softCol[x][y];
                     const [targetR, targetG, targetB] = this.col[x][y];
                     // Calculate differences
@@ -46446,10 +46846,9 @@ class Room {
             const offsetY = this.blurOffsetY;
             // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
             const bufferTiles = 3;
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    if (!this.isTileOnScreen(x, y, bufferTiles))
-                        continue;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
                     const [r, g, b] = this.softCol[x][y];
                     if (r === 0 && g === 0 && b === 0)
                         continue; // Skip if no color
@@ -46677,8 +47076,11 @@ class Room {
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
             let lastFillStyle = "";
-            for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
-                for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+            // Respect on-screen bounds with a small buffer to accommodate blur spill
+            const shadeBufferTiles = 4;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(shadeBufferTiles);
+            for (let x = Math.max(this.roomX - 2, minX); x <= Math.min(this.roomX + this.width + 3, maxX); x++) {
+                for (let y = Math.max(this.roomY - 2, minY); y <= Math.min(this.roomY + this.height + 3, maxY); y++) {
                     const tile = this.roomArray[x]?.[y];
                     let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
                     if (tile instanceof wallTorch_1.WallTorch)
@@ -46929,8 +47331,10 @@ class Room {
                             e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
                     }
                 }
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
+            const shadeBufferTiles = 4;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(shadeBufferTiles);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
                     if (this.roomArray[x][y].hasBloom) {
                         this.roomArray[x][y].updateBloom(delta);
                         this.bloomOffscreenCtx.globalAlpha =
@@ -47002,8 +47406,11 @@ class Room {
                 shadeSrc = this.getBlurredShadeSourceForSlicing();
             }
             let tiles = [];
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
+            // Iterate only within the currently visible tile bounds (with a small buffer)
+            const tileBuffer = 3;
+            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
                     const tile = this.roomArray[x][y];
                     tile.drawUnderPlayer(delta);
                     tiles.push(tile);
@@ -48740,6 +49147,56 @@ class Room {
             tileTop > cameraBottom);
         return intersects;
     }
+    // Returns inclusive bounds for tiles visible on screen with an optional buffer.
+    // The bounds are clamped to the room tile rectangle.
+    getVisibleTileBounds(bufferTiles = 0) {
+        const tileSize = gameConstants_1.GameConstants.TILESIZE;
+        // Convert player position from tiles to pixels
+        const playerPosX = this.game.players[this.game.localPlayerID]
+            ? this.game.players[this.game.localPlayerID].x * tileSize
+            : 0;
+        const playerPosY = this.game.players[this.game.localPlayerID]
+            ? this.game.players[this.game.localPlayerID].y * tileSize
+            : 0;
+        // Compute camera in pixels (top-left origin)
+        const cameraX = playerPosX -
+            (this.game.players[this.game.localPlayerID]?.drawX || 0) +
+            0.5 * tileSize -
+            0.5 * gameConstants_1.GameConstants.WIDTH -
+            this.game.screenShakeX;
+        const cameraY = playerPosY -
+            (this.game.players[this.game.localPlayerID]?.drawY || 0) +
+            0.5 * tileSize -
+            0.5 * gameConstants_1.GameConstants.HEIGHT -
+            this.game.screenShakeY;
+        const cameraWidth = gameConstants_1.GameConstants.WIDTH;
+        const cameraHeight = gameConstants_1.GameConstants.HEIGHT;
+        // Expand by buffer in pixels
+        const bufferPx = bufferTiles * tileSize;
+        const cameraLeft = cameraX - bufferPx;
+        const cameraRight = cameraX + cameraWidth + bufferPx;
+        const cameraTop = cameraY - bufferPx;
+        const cameraBottom = cameraY + cameraHeight + bufferPx;
+        // Convert to tile indices (inclusive). Use floor for min, ceil for max.
+        let minX = Math.floor(cameraLeft / tileSize);
+        let maxX = Math.ceil(cameraRight / tileSize) - 1;
+        let minY = Math.floor(cameraTop / tileSize);
+        let maxY = Math.ceil(cameraBottom / tileSize) - 1;
+        // Clamp to room bounds
+        const roomMinX = this.roomX;
+        const roomMaxX = this.roomX + this.width - 1;
+        const roomMinY = this.roomY;
+        const roomMaxY = this.roomY + this.height - 1;
+        if (minX < roomMinX)
+            minX = roomMinX;
+        if (maxX > roomMaxX)
+            maxX = roomMaxX;
+        if (minY < roomMinY)
+            minY = roomMinY;
+        if (maxY > roomMaxY)
+            maxY = roomMaxY;
+        return { minX, maxX, minY, maxY };
+    }
     setReverb() {
         const roomArea = this.roomArea;
         if (roomArea < 10) {
@@ -49439,9 +49896,9 @@ class Populator {
                 switch (this.level.depth) {
                     case 1:
                         sidePathOptions.caveRooms = this.numRooms();
-                        sidePathOptions.mapWidth = 50;
-                        sidePathOptions.mapHeight = 50;
-                        sidePathOptions.giantRoomScale = 0.3;
+                        sidePathOptions.mapWidth = 200;
+                        sidePathOptions.mapHeight = 200;
+                        sidePathOptions.giantRoomScale = 0.6;
                         sidePathOptions.linearity = 0.5;
                         break;
                     case 2:

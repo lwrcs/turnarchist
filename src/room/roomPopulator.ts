@@ -155,9 +155,9 @@ export class Populator {
       switch (this.level.depth) {
         case 1:
           sidePathOptions.caveRooms = this.numRooms();
-          sidePathOptions.mapWidth = 50;
-          sidePathOptions.mapHeight = 50;
-          sidePathOptions.giantRoomScale = 0.3;
+          sidePathOptions.mapWidth = 200;
+          sidePathOptions.mapHeight = 200;
+          sidePathOptions.giantRoomScale = 0.6;
           sidePathOptions.linearity = 0.5;
           break;
         case 2:

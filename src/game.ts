@@ -660,8 +660,14 @@ export class Game {
     if (!this.chatOpen) {
       switch (key.toUpperCase()) {
         case "M":
-          Sound.toggleMute();
-          this.pushMessage(Sound.audioMuted ? "Audio muted" : "Audio unmuted");
+          // Toggle full-screen map. If open, close; if closed, open.
+          {
+            const player = this.players[this.localPlayerID];
+            if (player?.map) {
+              player.map.toggleMapOpen();
+              return;
+            }
+          }
           return;
 
         case "C":

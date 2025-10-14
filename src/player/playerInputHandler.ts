@@ -386,6 +386,13 @@ export class PlayerInputHandler {
 
     this.setMostRecentInput("mouse");
 
+    // If full-screen map is open, any click closes it and consumes input
+    if (player.map?.mapOpen) {
+      player.map.toggleMapOpen();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     if (player.dead) {
       this.handleDeathScreenInput(x, y);
       Input.mouseDownHandled = true;
@@ -432,6 +439,13 @@ export class PlayerInputHandler {
     // Check if click is on menu button
     if (this.isPointInMenuButtonBounds(x, y)) {
       this.handleMenuButtonClick();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Check if click is on minimap region to open full map
+    if (player.map && player.map.isPointInMinimapBounds(x, y)) {
+      player.map.toggleMapOpen();
       Input.mouseDownHandled = true;
       return;
     }

@@ -1198,9 +1198,10 @@ export class Room {
 
     this.alertEnemiesOnEntry();
     this.message = this.name;
-    player.map.saveMapData();
     this.setReverb();
     this.active = true;
+    player.map.saveMapData();
+
     //this.invalidateBlurCache(); // Invalidate cache when room becomes active
 
     this.updateLighting();
@@ -1519,9 +1520,9 @@ export class Room {
 
   fadeLighting = (delta: number) => {
     const bufferTiles = 2;
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
+    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         let visDiff = this.softVis[x][y] - this.vis[x][y];
         let softVis = this.softVis[x][y];
         let flag = false;
@@ -1545,9 +1546,9 @@ export class Room {
 
   fadeRgb = (delta: number) => {
     const bufferTiles = 2;
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
+    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         const [softR, softG, softB] = this.softCol[x][y];
         const [targetR, targetG, targetB] = this.col[x][y];
 
@@ -2270,9 +2271,9 @@ export class Room {
 
     // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
     const bufferTiles = 3;
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        if (!this.isTileOnScreen(x, y, bufferTiles)) continue;
+    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         const [r, g, b] = this.softCol[x][y];
         if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
 
@@ -2599,8 +2600,20 @@ export class Room {
 
     let lastFillStyle = "";
 
-    for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
-      for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+    // Respect on-screen bounds with a small buffer to accommodate blur spill
+    const shadeBufferTiles = 4;
+    const { minX, maxX, minY, maxY } =
+      this.getVisibleTileBounds(shadeBufferTiles);
+    for (
+      let x = Math.max(this.roomX - 2, minX);
+      x <= Math.min(this.roomX + this.width + 3, maxX);
+      x++
+    ) {
+      for (
+        let y = Math.max(this.roomY - 2, minY);
+        y <= Math.min(this.roomY + this.height + 3, maxY);
+        y++
+      ) {
         const tile = this.roomArray[x]?.[y];
         let alpha =
           this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
@@ -2880,8 +2893,11 @@ export class Room {
         }
       }
 
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+    const shadeBufferTiles = 4;
+    const { minX, maxX, minY, maxY } =
+      this.getVisibleTileBounds(shadeBufferTiles);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         if (this.roomArray[x][y].hasBloom) {
           this.roomArray[x][y].updateBloom(delta);
           this.bloomOffscreenCtx.globalAlpha =
@@ -2992,8 +3008,11 @@ export class Room {
     }
 
     let tiles = [];
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+    // Iterate only within the currently visible tile bounds (with a small buffer)
+    const tileBuffer = 3;
+    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         const tile = this.roomArray[x][y];
         tile.drawUnderPlayer(delta);
         tiles.push(tile);
@@ -4263,6 +4282,67 @@ export class Room {
       tileTop > cameraBottom
     );
     return intersects;
+  }
+
+  // Returns inclusive bounds for tiles visible on screen with an optional buffer.
+  // The bounds are clamped to the room tile rectangle.
+  public getVisibleTileBounds(bufferTiles: number = 0): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } {
+    const tileSize = GameConstants.TILESIZE;
+
+    // Convert player position from tiles to pixels
+    const playerPosX = this.game.players[this.game.localPlayerID]
+      ? this.game.players[this.game.localPlayerID].x * tileSize
+      : 0;
+    const playerPosY = this.game.players[this.game.localPlayerID]
+      ? this.game.players[this.game.localPlayerID].y * tileSize
+      : 0;
+
+    // Compute camera in pixels (top-left origin)
+    const cameraX =
+      playerPosX -
+      (this.game.players[this.game.localPlayerID]?.drawX || 0) +
+      0.5 * tileSize -
+      0.5 * GameConstants.WIDTH -
+      this.game.screenShakeX;
+    const cameraY =
+      playerPosY -
+      (this.game.players[this.game.localPlayerID]?.drawY || 0) +
+      0.5 * tileSize -
+      0.5 * GameConstants.HEIGHT -
+      this.game.screenShakeY;
+    const cameraWidth = GameConstants.WIDTH;
+    const cameraHeight = GameConstants.HEIGHT;
+
+    // Expand by buffer in pixels
+    const bufferPx = bufferTiles * tileSize;
+    const cameraLeft = cameraX - bufferPx;
+    const cameraRight = cameraX + cameraWidth + bufferPx;
+    const cameraTop = cameraY - bufferPx;
+    const cameraBottom = cameraY + cameraHeight + bufferPx;
+
+    // Convert to tile indices (inclusive). Use floor for min, ceil for max.
+    let minX = Math.floor(cameraLeft / tileSize);
+    let maxX = Math.ceil(cameraRight / tileSize) - 1;
+    let minY = Math.floor(cameraTop / tileSize);
+    let maxY = Math.ceil(cameraBottom / tileSize) - 1;
+
+    // Clamp to room bounds
+    const roomMinX = this.roomX;
+    const roomMaxX = this.roomX + this.width - 1;
+    const roomMinY = this.roomY;
+    const roomMaxY = this.roomY + this.height - 1;
+
+    if (minX < roomMinX) minX = roomMinX;
+    if (maxX > roomMaxX) maxX = roomMaxX;
+    if (minY < roomMinY) minY = roomMinY;
+    if (maxY > roomMaxY) maxY = roomMaxY;
+
+    return { minX, maxX, minY, maxY };
   }
 
   private setReverb() {
