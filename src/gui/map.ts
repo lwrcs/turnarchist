@@ -35,6 +35,11 @@ export class Map {
   effectiveRadiusSq: number = 0;
   currentSeenTiles: Set<string> | null = null;
   frameDiscoveredBounds: { centerX: number; centerY: number } | null = null;
+  // Mask bounds in world tiles (for square 50x50 mask at top-right)
+  frameMaskMinX: number = 0;
+  frameMaskMaxX: number = 0;
+  frameMaskMinY: number = 0;
+  frameMaskMaxY: number = 0;
 
   // Fog of war properties - now stored per mapGroup
   seenTilesByMapGroup: globalThis.Map<string, Set<string>> =
@@ -227,14 +232,47 @@ export class Map {
       Game.ctx.drawImage(this.bufferCanvas, 0, 0);
       Game.ctx.restore();
     } else {
-      // === Legacy behavior: draw directly to main canvas ===
-      Game.ctx.save();
+      // === Legacy behavior with fixed 50x50px top-right mask ===
+      this.ensureBufferCanvas();
+      if (!this.bufferCanvas || !this.bufferCtx) return;
+
+      const originalCtx = Game.ctx;
+
+      // Prepare buffer
+      this.bufferCtx.save();
+      this.bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+      this.bufferCtx.clearRect(
+        0,
+        0,
+        this.bufferCanvas.width,
+        this.bufferCanvas.height,
+      );
+      this.bufferCtx.imageSmoothingEnabled = false;
+      (Game as any).ctx = this.bufferCtx;
       this.setInitialCanvasSettings(1);
       this.translateCanvas(0);
       for (const data of this.mapData) {
         this.drawRoom(data, delta);
       }
       this.resetCanvasTransform();
+
+      // Apply square mask: keep only 50x50px at top-right
+      this.bufferCtx.globalCompositeOperation = "destination-in";
+      const maskWidth = 50;
+      const maskHeight = 50;
+      const maskX = GameConstants.WIDTH - maskWidth;
+      const maskY = 0;
+      this.bufferCtx.fillStyle = "rgba(0,0,0,1)";
+      this.bufferCtx.fillRect(maskX, maskY, maskWidth, maskHeight);
+      this.bufferCtx.globalCompositeOperation = "source-over";
+      this.bufferCtx.restore();
+
+      // Restore main ctx and composite buffer onto it
+      (Game as any).ctx = originalCtx;
+      Game.ctx.save();
+      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.imageSmoothingEnabled = false;
+      Game.ctx.drawImage(this.bufferCanvas, 0, 0);
       Game.ctx.restore();
     }
   };
@@ -254,6 +292,40 @@ export class Map {
     // cache bounds center for translate when needed
     const b = this.getDiscoveredBounds();
     this.frameDiscoveredBounds = { centerX: b.centerX, centerY: b.centerY };
+
+    // Compute tile bounds for 50x50px mask for non-legacy minimap mode
+    if (
+      !GameplaySettings.LEGACY_MINIMAP &&
+      !this.mapOpen &&
+      this.mapOpenProgress === 0
+    ) {
+      const s = this.scale || 1;
+      const maskW = 50;
+      const maskH = 50;
+      const maskX = GameConstants.WIDTH - maskW;
+      const maskY = 0;
+      const anchorX = maskX + Math.floor(maskW / 2);
+      const anchorY = maskY + Math.floor(maskH / 2);
+      // invert screen->world for tile bounds
+      const minTileX = Math.floor(this.player.x + (maskX - anchorX) / s);
+      const maxTileX = Math.floor(
+        this.player.x + (maskX + maskW - 1 - anchorX) / s,
+      );
+      const minTileY = Math.floor(this.player.y + (maskY - anchorY) / s);
+      const maxTileY = Math.floor(
+        this.player.y + (maskY + maskH - 1 - anchorY) / s,
+      );
+      this.frameMaskMinX = Math.min(minTileX, maxTileX);
+      this.frameMaskMaxX = Math.max(minTileX, maxTileX);
+      this.frameMaskMinY = Math.min(minTileY, maxTileY);
+      this.frameMaskMaxY = Math.max(minTileY, maxTileY);
+    } else {
+      // reset to wide open when not using minimap mask
+      this.frameMaskMinX = Number.NEGATIVE_INFINITY;
+      this.frameMaskMaxX = Number.POSITIVE_INFINITY;
+      this.frameMaskMinY = Number.NEGATIVE_INFINITY;
+      this.frameMaskMaxY = Number.POSITIVE_INFINITY;
+    }
   };
 
   ensureBufferCanvas = () => {
@@ -279,7 +351,12 @@ export class Map {
   };
 
   toggleMapOpen = () => {
-    this.mapOpen = !this.mapOpen;
+    const opening = !this.mapOpen;
+    this.mapOpen = opening;
+    if (opening) {
+      // Ensure map data is up to date when opening even if disabled
+      this.saveMapData();
+    }
   };
 
   getSeenTilesForCurrentGroup = (): Set<string> => {
@@ -378,6 +455,13 @@ export class Map {
   };
 
   draw = (delta: number) => {
+    // Skip all work when map disabled and not forced open
+    if (
+      !GameConstants.MAP_ENABLED &&
+      !this.mapOpen &&
+      this.mapOpenProgress === 0
+    )
+      return;
     this.updateSeenTiles(); // Update fog of war
     this.updateOffsetXY();
     this.renderMap(delta);
@@ -507,11 +591,21 @@ export class Map {
       const room = data.room;
       for (let x = room.roomX; x < room.roomX + room.width; x++) {
         for (let y = room.roomY; y < room.roomY + room.height; y++) {
-          if (
-            !GameplaySettings.LEGACY_MINIMAP &&
-            !this.isWithinDrawRadius(x, y)
-          )
-            continue;
+          // In non-legacy minimap, also restrict mask to square bounds for performance
+          if (!GameplaySettings.LEGACY_MINIMAP && this.mapOpenProgress === 0) {
+            const ix = Math.floor(x);
+            const iy = Math.floor(y);
+            if (
+              ix < this.frameMaskMinX ||
+              ix > this.frameMaskMaxX ||
+              iy < this.frameMaskMinY ||
+              iy > this.frameMaskMaxY
+            )
+              continue;
+          } else if (!GameplaySettings.LEGACY_MINIMAP) {
+            // During transition, still respect expanding radius
+            if (!this.isWithinDrawRadius(x, y)) continue;
+          }
           const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
           if (!seenTiles || !seenTiles.has(tileKey)) {
             Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
@@ -525,16 +619,22 @@ export class Map {
   drawRoomFloorTiles = (room) => {
     const s = this.scale;
     Game.ctx.save();
-    // Restrict iteration to bounding box around effective radius
-    const minX = Math.max(room.roomX, this.framePlayerX - this.effectiveRadius);
+    // Restrict iteration to bounding box around mask/radius
+    const minX = Math.max(
+      room.roomX,
+      Math.min(this.framePlayerX - this.effectiveRadius, this.frameMaskMinX),
+    );
     const maxX = Math.min(
       room.roomX + room.width - 1,
-      this.framePlayerX + this.effectiveRadius,
+      Math.max(this.framePlayerX + this.effectiveRadius, this.frameMaskMaxX),
     );
-    const minY = Math.max(room.roomY, this.framePlayerY - this.effectiveRadius);
+    const minY = Math.max(
+      room.roomY,
+      Math.min(this.framePlayerY - this.effectiveRadius, this.frameMaskMinY),
+    );
     const maxY = Math.min(
       room.roomY + room.height - 1,
-      this.framePlayerY + this.effectiveRadius,
+      Math.max(this.framePlayerY + this.effectiveRadius, this.frameMaskMaxY),
     );
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
@@ -561,6 +661,21 @@ export class Map {
   };
 
   isWithinDrawRadius = (x: number, y: number): boolean => {
+    // In non-legacy minimap mode (not mapOpen), use square 50x50 mask bounds instead of radius
+    if (
+      !GameplaySettings.LEGACY_MINIMAP &&
+      !this.mapOpen &&
+      this.mapOpenProgress === 0
+    ) {
+      const ix = Math.floor(x);
+      const iy = Math.floor(y);
+      return (
+        ix >= this.frameMaskMinX &&
+        ix <= this.frameMaskMaxX &&
+        iy >= this.frameMaskMinY &&
+        iy <= this.frameMaskMaxY
+      );
+    }
     const dx = Math.floor(x) - this.framePlayerX;
     const dy = Math.floor(y) - this.framePlayerY;
     return dx * dx + dy * dy <= this.effectiveRadiusSq;
@@ -664,10 +779,10 @@ export class Map {
     const s = this.scale;
     Game.ctx.save(); // Save the current canvas state
     for (const wall of walls) {
-      if (this.shouldDrawTile(wall.x, wall.y)) {
-        Game.ctx.fillStyle = "#404040";
-        Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
-      }
+      // Skip if outside mask/radius bounds to reduce work
+      if (!this.shouldDrawTile(wall.x, wall.y)) continue;
+      Game.ctx.fillStyle = "#404040";
+      Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
     }
     Game.ctx.restore(); // Restore the canvas state
   };

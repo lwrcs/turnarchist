@@ -1354,6 +1354,11 @@ export class Game {
           while (this.room.getEmptyTiles().length > 0) {
             this.room.addNewEnemy(command.slice(5) as EnemyType);
           }
+        } else if (command === "map") {
+          const { GameConstants } = require("./game/gameConstants");
+          GameConstants.MAP_ENABLED = !GameConstants.MAP_ENABLED;
+          const enabled = GameConstants.MAP_ENABLED ? "enabled" : "disabled";
+          this.pushMessage(`Minimap is now ${enabled}`);
         }
         break;
     }

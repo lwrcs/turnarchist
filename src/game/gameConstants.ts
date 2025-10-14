@@ -114,6 +114,8 @@ export class GameConstants {
   static readonly OUTLINE_BUFF_COLOR = "cyan";
   static readonly PLAYER_SHIELD_COLOR = "#5b6ee1";
   static readonly PLAYER_DAMAGE_BUFF_COLOR = "#ff0000";
+  // Map toggle - when false, skip all minimap calculations unless map is open
+  static MAP_ENABLED = true;
 
   static readonly COIN_ANIMATION = true;
   static readonly COIN_AUTO_PICKUP = true;

@@ -23752,6 +23752,12 @@ class Game {
                             this.room.addNewEnemy(command.slice(5));
                         }
                     }
+                    else if (command === "map") {
+                        const { GameConstants } = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
+                        GameConstants.MAP_ENABLED = !GameConstants.MAP_ENABLED;
+                        const enabled = GameConstants.MAP_ENABLED ? "enabled" : "disabled";
+                        this.pushMessage(`Minimap is now ${enabled}`);
+                    }
                     break;
             }
         };
@@ -25410,6 +25416,8 @@ GameConstants.OUTLINE_SHIELD_COLOR = "#7642ff";
 GameConstants.OUTLINE_BUFF_COLOR = "cyan";
 GameConstants.PLAYER_SHIELD_COLOR = "#5b6ee1";
 GameConstants.PLAYER_DAMAGE_BUFF_COLOR = "#ff0000";
+// Map toggle - when false, skip all minimap calculations unless map is open
+GameConstants.MAP_ENABLED = true;
 GameConstants.COIN_ANIMATION = true;
 GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.ITEM_AUTO_PICKUP = true;
@@ -28023,7 +28031,7 @@ class GameplaySettings {
 }
 exports.GameplaySettings = GameplaySettings;
 // === MAP ===
-GameplaySettings.LEGACY_MINIMAP = true; // when true, use pre-existing minimap behavior and layout
+GameplaySettings.LEGACY_MINIMAP = false; // when true, use pre-existing minimap behavior and layout
 GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
@@ -29661,6 +29669,11 @@ class Map {
         this.effectiveRadiusSq = 0;
         this.currentSeenTiles = null;
         this.frameDiscoveredBounds = null;
+        // Mask bounds in world tiles (for square 50x50 mask at top-right)
+        this.frameMaskMinX = 0;
+        this.frameMaskMaxX = 0;
+        this.frameMaskMinY = 0;
+        this.frameMaskMaxY = 0;
         // Fog of war properties - now stored per mapGroup
         this.seenTilesByMapGroup = new globalThis.Map();
         this.visibilityRadius = 4;
@@ -29818,14 +29831,39 @@ class Map {
                 game_1.Game.ctx.restore();
             }
             else {
-                // === Legacy behavior: draw directly to main canvas ===
-                game_1.Game.ctx.save();
+                // === Legacy behavior with fixed 50x50px top-right mask ===
+                this.ensureBufferCanvas();
+                if (!this.bufferCanvas || !this.bufferCtx)
+                    return;
+                const originalCtx = game_1.Game.ctx;
+                // Prepare buffer
+                this.bufferCtx.save();
+                this.bufferCtx.setTransform(1, 0, 0, 1, 0, 0);
+                this.bufferCtx.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
+                this.bufferCtx.imageSmoothingEnabled = false;
+                game_1.Game.ctx = this.bufferCtx;
                 this.setInitialCanvasSettings(1);
                 this.translateCanvas(0);
                 for (const data of this.mapData) {
                     this.drawRoom(data, delta);
                 }
                 this.resetCanvasTransform();
+                // Apply square mask: keep only 50x50px at top-right
+                this.bufferCtx.globalCompositeOperation = "destination-in";
+                const maskWidth = 50;
+                const maskHeight = 50;
+                const maskX = gameConstants_1.GameConstants.WIDTH - maskWidth;
+                const maskY = 0;
+                this.bufferCtx.fillStyle = "rgba(0,0,0,1)";
+                this.bufferCtx.fillRect(maskX, maskY, maskWidth, maskHeight);
+                this.bufferCtx.globalCompositeOperation = "source-over";
+                this.bufferCtx.restore();
+                // Restore main ctx and composite buffer onto it
+                game_1.Game.ctx = originalCtx;
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                game_1.Game.ctx.drawImage(this.bufferCanvas, 0, 0);
                 game_1.Game.ctx.restore();
             }
         };
@@ -29844,6 +29882,34 @@ class Map {
             // cache bounds center for translate when needed
             const b = this.getDiscoveredBounds();
             this.frameDiscoveredBounds = { centerX: b.centerX, centerY: b.centerY };
+            // Compute tile bounds for 50x50px mask for non-legacy minimap mode
+            if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP &&
+                !this.mapOpen &&
+                this.mapOpenProgress === 0) {
+                const s = this.scale || 1;
+                const maskW = 50;
+                const maskH = 50;
+                const maskX = gameConstants_1.GameConstants.WIDTH - maskW;
+                const maskY = 0;
+                const anchorX = maskX + Math.floor(maskW / 2);
+                const anchorY = maskY + Math.floor(maskH / 2);
+                // invert screen->world for tile bounds
+                const minTileX = Math.floor(this.player.x + (maskX - anchorX) / s);
+                const maxTileX = Math.floor(this.player.x + (maskX + maskW - 1 - anchorX) / s);
+                const minTileY = Math.floor(this.player.y + (maskY - anchorY) / s);
+                const maxTileY = Math.floor(this.player.y + (maskY + maskH - 1 - anchorY) / s);
+                this.frameMaskMinX = Math.min(minTileX, maxTileX);
+                this.frameMaskMaxX = Math.max(minTileX, maxTileX);
+                this.frameMaskMinY = Math.min(minTileY, maxTileY);
+                this.frameMaskMaxY = Math.max(minTileY, maxTileY);
+            }
+            else {
+                // reset to wide open when not using minimap mask
+                this.frameMaskMinX = Number.NEGATIVE_INFINITY;
+                this.frameMaskMaxX = Number.POSITIVE_INFINITY;
+                this.frameMaskMinY = Number.NEGATIVE_INFINITY;
+                this.frameMaskMaxY = Number.POSITIVE_INFINITY;
+            }
         };
         this.ensureBufferCanvas = () => {
             const width = gameConstants_1.GameConstants.WIDTH;
@@ -29866,7 +29932,12 @@ class Map {
             }
         };
         this.toggleMapOpen = () => {
-            this.mapOpen = !this.mapOpen;
+            const opening = !this.mapOpen;
+            this.mapOpen = opening;
+            if (opening) {
+                // Ensure map data is up to date when opening even if disabled
+                this.saveMapData();
+            }
         };
         this.getSeenTilesForCurrentGroup = () => {
             const currentMapGroup = this.game.room.mapGroup.toString();
@@ -29962,6 +30033,11 @@ class Map {
             return this.currentSeenTiles.has(tileKey);
         };
         this.draw = (delta) => {
+            // Skip all work when map disabled and not forced open
+            if (!gameConstants_1.GameConstants.MAP_ENABLED &&
+                !this.mapOpen &&
+                this.mapOpenProgress === 0)
+                return;
             this.updateSeenTiles(); // Update fog of war
             this.updateOffsetXY();
             this.renderMap(delta);
@@ -30071,9 +30147,21 @@ class Map {
                 const room = data.room;
                 for (let x = room.roomX; x < room.roomX + room.width; x++) {
                     for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                        if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP &&
-                            !this.isWithinDrawRadius(x, y))
-                            continue;
+                        // In non-legacy minimap, also restrict mask to square bounds for performance
+                        if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP && this.mapOpenProgress === 0) {
+                            const ix = Math.floor(x);
+                            const iy = Math.floor(y);
+                            if (ix < this.frameMaskMinX ||
+                                ix > this.frameMaskMaxX ||
+                                iy < this.frameMaskMinY ||
+                                iy > this.frameMaskMaxY)
+                                continue;
+                        }
+                        else if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP) {
+                            // During transition, still respect expanding radius
+                            if (!this.isWithinDrawRadius(x, y))
+                                continue;
+                        }
                         const tileKey = `${Math.floor(x)},${Math.floor(y)}`;
                         if (!seenTiles || !seenTiles.has(tileKey)) {
                             game_1.Game.ctx.fillRect(x * s, y * s, 1 * s, 1 * s);
@@ -30086,11 +30174,11 @@ class Map {
         this.drawRoomFloorTiles = (room) => {
             const s = this.scale;
             game_1.Game.ctx.save();
-            // Restrict iteration to bounding box around effective radius
-            const minX = Math.max(room.roomX, this.framePlayerX - this.effectiveRadius);
-            const maxX = Math.min(room.roomX + room.width - 1, this.framePlayerX + this.effectiveRadius);
-            const minY = Math.max(room.roomY, this.framePlayerY - this.effectiveRadius);
-            const maxY = Math.min(room.roomY + room.height - 1, this.framePlayerY + this.effectiveRadius);
+            // Restrict iteration to bounding box around mask/radius
+            const minX = Math.max(room.roomX, Math.min(this.framePlayerX - this.effectiveRadius, this.frameMaskMinX));
+            const maxX = Math.min(room.roomX + room.width - 1, Math.max(this.framePlayerX + this.effectiveRadius, this.frameMaskMaxX));
+            const minY = Math.max(room.roomY, Math.min(this.framePlayerY - this.effectiveRadius, this.frameMaskMinY));
+            const maxY = Math.min(room.roomY + room.height - 1, Math.max(this.framePlayerY + this.effectiveRadius, this.frameMaskMaxY));
             for (let x = minX; x <= maxX; x++) {
                 for (let y = minY; y <= maxY; y++) {
                     if (this.shouldDrawTile(x, y)) {
@@ -30113,6 +30201,17 @@ class Map {
             return Math.floor(this.drawRadius + (maxRadius - this.drawRadius) * t);
         };
         this.isWithinDrawRadius = (x, y) => {
+            // In non-legacy minimap mode (not mapOpen), use square 50x50 mask bounds instead of radius
+            if (!gameplaySettings_1.GameplaySettings.LEGACY_MINIMAP &&
+                !this.mapOpen &&
+                this.mapOpenProgress === 0) {
+                const ix = Math.floor(x);
+                const iy = Math.floor(y);
+                return (ix >= this.frameMaskMinX &&
+                    ix <= this.frameMaskMaxX &&
+                    iy >= this.frameMaskMinY &&
+                    iy <= this.frameMaskMaxY);
+            }
             const dx = Math.floor(x) - this.framePlayerX;
             const dy = Math.floor(y) - this.framePlayerY;
             return dx * dx + dy * dy <= this.effectiveRadiusSq;
@@ -30208,10 +30307,11 @@ class Map {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
             for (const wall of walls) {
-                if (this.shouldDrawTile(wall.x, wall.y)) {
-                    game_1.Game.ctx.fillStyle = "#404040";
-                    game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
-                }
+                // Skip if outside mask/radius bounds to reduce work
+                if (!this.shouldDrawTile(wall.x, wall.y))
+                    continue;
+                game_1.Game.ctx.fillStyle = "#404040";
+                game_1.Game.ctx.fillRect(wall.x * s, wall.y * s, 1 * s, 1 * s);
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -49896,8 +49996,8 @@ class Populator {
                 switch (this.level.depth) {
                     case 1:
                         sidePathOptions.caveRooms = this.numRooms();
-                        sidePathOptions.mapWidth = 200;
-                        sidePathOptions.mapHeight = 200;
+                        sidePathOptions.mapWidth = 50;
+                        sidePathOptions.mapHeight = 50;
                         sidePathOptions.giantRoomScale = 0.6;
                         sidePathOptions.linearity = 0.5;
                         break;
@@ -49905,7 +50005,7 @@ class Populator {
                         sidePathOptions.caveRooms = this.numRooms();
                         sidePathOptions.mapWidth = 75;
                         sidePathOptions.mapHeight = 75;
-                        sidePathOptions.giantRoomScale = 0.4;
+                        sidePathOptions.giantRoomScale = 0.8;
                         break;
                 }
                 this.addDownladder(sidePathOptions);
