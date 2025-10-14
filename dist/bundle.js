@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.1c9cbb4132c140cc6bf9.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.102e0c4c4dc10917db76.png";
+module.exports = __webpack_require__.p + "assets/objset.0c45bdca4b6f509e1339.png";
 
 /***/ }),
 
@@ -10064,16 +10064,18 @@ class Shadow {
      * - width, height: footprint size in tiles; default 1x1. Larger values scale the shadow ellipse.
      * - radiusPx: optional blur radius in pixels; defaults to current behavior (~3px).
      */
-    static draw(x, y, width = 1, height = 1) {
+    static draw(x, y, width = 1, height = 1, extendShadow = false, opacity = 0.3) {
         const tileSize = gameConstants_1.GameConstants.TILESIZE;
         game_1.Game.ctx.save();
-        game_1.Game.ctx.globalAlpha = 0.3;
+        game_1.Game.ctx.globalAlpha = opacity;
         if (width > 1 || height > 1) {
             game_1.Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
         }
-        else {
+        else if (!extendShadow) {
             game_1.Game.drawFX(30, 1, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
         }
+        else
+            game_1.Game.drawFX(30, 3, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
         game_1.Game.ctx.restore();
     }
 }
@@ -18972,6 +18974,8 @@ class Entity extends drawable_1.Drawable {
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
         this.beamIds = [];
+        this.extendShadow = false;
+        this.shadowOpacity = 0.3;
         this.hoverText = () => {
             return this.name;
         };
@@ -19144,7 +19148,8 @@ class Entity extends drawable_1.Drawable {
                         this.drawX += 1 * (closestTile.x - entity.x);
                         this.drawY += 1 * (closestTile.y - entity.y);
                     }
-                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                    const distanceToPlayer = utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y);
+                    this.game.shakeScreen(10 * this.drawX * (1 / distanceToPlayer), 10 * this.drawY * (1 / distanceToPlayer), true);
                     flag = this.canCrushOthers ? false : true;
                 }
                 return flag;
@@ -19705,7 +19710,7 @@ class Entity extends drawable_1.Drawable {
         this.drawShadow = (delta) => {
             if (this.cloned)
                 return;
-            shadow_1.Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h);
+            shadow_1.Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h, this.extendShadow, this.shadowOpacity);
         };
         this.tick = () => {
             this.behavior();
@@ -20067,6 +20072,7 @@ class Entity extends drawable_1.Drawable {
         this.canDestroyOthers = false;
         this.canCrushOthers = false;
         this.beamIds = [];
+        this.extendShadow = false;
         if (this.drop)
             this.drops.push(this.drop);
     }
@@ -20591,6 +20597,63 @@ class Candelabra extends entity_1.Entity {
     }
 }
 exports.Candelabra = Candelabra;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/caveBlock.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/caveBlock.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CaveBlock = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const resource_1 = __webpack_require__(/*! ../resource/resource */ "./src/entity/resource/resource.ts");
+class CaveBlock extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY, 2, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 18;
+        this.tileY = 8;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "cave rock";
+        this.imageParticleX = 6;
+        this.imageParticleY = 24;
+        this.opaque = true;
+        this.hitSound = sound_1.Sound.breakRock;
+        this.extendShadow = true;
+        this.shadowOpacity = 0.5;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_1.EntityType.PROP;
+    }
+}
+exports.CaveBlock = CaveBlock;
 
 
 /***/ }),
@@ -21434,6 +21497,8 @@ class ObsidianBlock extends resource_1.Resource {
         this.imageParticleY = 24;
         this.opaque = true;
         this.hitSound = sound_1.Sound.breakRock;
+        this.extendShadow = true;
+        this.shadowOpacity = 0.5;
         //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
@@ -22419,6 +22484,40 @@ class AmberResource extends resource_1.Resource {
     }
 }
 exports.AmberResource = AmberResource;
+
+
+/***/ }),
+
+/***/ "./src/entity/resource/caveRockResource.ts":
+/*!*************************************************!*\
+  !*** ./src/entity/resource/caveRockResource.ts ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CaveRock = void 0;
+const resource_1 = __webpack_require__(/*! ./resource */ "./src/entity/resource/resource.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class CaveRock extends resource_1.Resource {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.room = room;
+        this.health = 2;
+        this.tileX = 10;
+        this.tileY = 6;
+        this.hasShadow = false;
+        this.chainPushable = false;
+        this.name = "cave rock";
+        if (random_1.Random.rand() < 0.05) {
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+        }
+        //this.drops.push(new Stone(this.room, this.x, this.y));
+    }
+}
+exports.CaveRock = CaveRock;
 
 
 /***/ }),
@@ -37582,6 +37681,8 @@ const darkCrate_1 = __webpack_require__(/*! ../entity/object/darkCrate */ "./src
 const darkPot_1 = __webpack_require__(/*! ../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
 const darkVase_1 = __webpack_require__(/*! ../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
+const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
+const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -37689,17 +37790,17 @@ const environmentData = {
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
             { class: NullProp, weight: 1 },
-            { class: coalResource_1.CoalResource, weight: 1 },
-            { class: goldResource_1.GoldResource, weight: 0.1 },
-            { class: emeraldResource_1.EmeraldResource, weight: 0.01 },
-            { class: garnetResource_1.GarnetResource, weight: 0.01 },
-            { class: zirconResource_1.ZirconResource, weight: 0.01 },
-            { class: amberResource_1.AmberResource, weight: 0.01 },
-            { class: block_1.Block, weight: 0.2 },
-            { class: rockResource_1.Rock, weight: 0.4 },
-            { class: mushrooms_1.Mushrooms, weight: 0.3 },
-            { class: pot_1.Pot, weight: 0.2 },
-            { class: chest_1.Chest, weight: 0.1 },
+            { class: coalResource_1.CoalResource, weight: 0.25 },
+            { class: goldResource_1.GoldResource, weight: 0.01 },
+            { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
+            { class: garnetResource_1.GarnetResource, weight: 0.001 },
+            { class: zirconResource_1.ZirconResource, weight: 0.001 },
+            { class: amberResource_1.AmberResource, weight: 0.001 },
+            { class: caveRockResource_1.CaveRock, weight: 0.2 },
+            { class: mushrooms_1.Mushrooms, weight: 0.02 },
+            { class: pot_1.Pot, weight: 0.01 },
+            { class: chest_1.Chest, weight: 0.01 },
+            { class: caveBlock_1.CaveBlock, weight: 0.5 },
         ],
         enemies: [
             // Cave-dwelling creatures
@@ -37731,9 +37832,9 @@ const environmentData = {
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
             { class: bush_1.Bush, weight: 2 },
             { class: sprout_1.Sprout, weight: 0.05 },
-            { class: mushrooms_1.Mushrooms, weight: 0.2 },
+            { class: mushrooms_1.Mushrooms, weight: 0.05 },
             { class: rockResource_1.Rock, weight: 0.1 },
-            { class: chest_1.Chest, weight: 0.05 },
+            { class: chest_1.Chest, weight: 0.01 },
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
             { class: tree_1.Tree, weight: 0.1 },
             { class: succulent_1.Succulent, weight: 0.1 },

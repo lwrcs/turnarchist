@@ -10,16 +10,16 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
 import { Resource } from "../resource/resource";
 
-export class ObsidianBlock extends Resource {
+export class CaveBlock extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
     this.tileX = 18;
-    this.tileY = 6;
+    this.tileY = 8;
     this.hasShadow = true;
     this.chainPushable = false;
-    this.name = "obsidian block";
+    this.name = "cave rock";
     this.imageParticleX = 6;
     this.imageParticleY = 24;
     this.opaque = true;

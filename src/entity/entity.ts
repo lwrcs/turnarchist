@@ -153,6 +153,8 @@ export class Entity extends Drawable {
   canDestroyOthers: boolean = false;
   canCrushOthers: boolean = false;
   beamIds: string[] = [];
+  extendShadow: boolean = false;
+  shadowOpacity: number = 0.3;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -237,6 +239,7 @@ export class Entity extends Drawable {
     this.canDestroyOthers = false;
     this.canCrushOthers = false;
     this.beamIds = [];
+    this.extendShadow = false;
     if (this.drop) this.drops.push(this.drop);
   }
 
@@ -537,7 +540,17 @@ export class Entity extends Drawable {
           this.drawX += 1 * (closestTile.x - entity.x);
           this.drawY += 1 * (closestTile.y - entity.y);
         }
-        this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+        const distanceToPlayer = Utils.distance(
+          this.x,
+          this.y,
+          this.game.players[this.game.localPlayerID].x,
+          this.game.players[this.game.localPlayerID].y,
+        );
+        this.game.shakeScreen(
+          10 * this.drawX * (1 / distanceToPlayer),
+          10 * this.drawY * (1 / distanceToPlayer),
+          true,
+        );
 
         flag = this.canCrushOthers ? false : true;
       }
@@ -1182,7 +1195,14 @@ export class Entity extends Drawable {
   // Draw a soft blurred shadow under the entity using the shared Shadow utility
   drawShadow = (delta: number) => {
     if (this.cloned) return;
-    Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h);
+    Shadow.draw(
+      this.x - this.drawX,
+      this.y - this.drawY,
+      this.w,
+      this.h,
+      this.extendShadow,
+      this.shadowOpacity,
+    );
   };
 
   tick = () => {

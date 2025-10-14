@@ -13,15 +13,22 @@ export class Shadow {
    * - width, height: footprint size in tiles; default 1x1. Larger values scale the shadow ellipse.
    * - radiusPx: optional blur radius in pixels; defaults to current behavior (~3px).
    */
-  static draw(x: number, y: number, width: number = 1, height: number = 1) {
+  static draw(
+    x: number,
+    y: number,
+    width: number = 1,
+    height: number = 1,
+    extendShadow: boolean = false,
+    opacity: number = 0.3,
+  ) {
     const tileSize = GameConstants.TILESIZE;
     Game.ctx.save();
-    Game.ctx.globalAlpha = 0.3;
+    Game.ctx.globalAlpha = opacity;
     if (width > 1 || height > 1) {
       Game.drawFX(30, 3, 2, 2, x, y + 0.5, 2, 2, "black");
-    } else {
+    } else if (!extendShadow) {
       Game.drawFX(30, 1, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
-    }
+    } else Game.drawFX(30, 3, 2, 2, x - 0.5, y - 0.5, 2, 2, "black");
     Game.ctx.restore();
   }
 }

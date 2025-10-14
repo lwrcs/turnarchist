@@ -62,6 +62,8 @@ import { DarkPot } from "../entity/object/darkPot";
 import { DarkVase } from "../entity/object/darkVase";
 import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { Enemy } from "../entity/enemy/enemy";
+import { CaveRock } from "../entity/resource/caveRockResource";
+import { CaveBlock } from "../entity/object/caveBlock";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -204,17 +206,17 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.CAVE]: {
     props: [
       { class: NullProp, weight: 1 },
-      { class: CoalResource, weight: 1 },
-      { class: GoldResource, weight: 0.1 },
-      { class: EmeraldResource, weight: 0.01 },
-      { class: GarnetResource, weight: 0.01 },
-      { class: ZirconResource, weight: 0.01 },
-      { class: AmberResource, weight: 0.01 },
-      { class: Block, weight: 0.2 },
-      { class: Rock, weight: 0.4 },
-      { class: Mushrooms, weight: 0.3 },
-      { class: Pot, weight: 0.2 },
-      { class: Chest, weight: 0.1 },
+      { class: CoalResource, weight: 0.25 },
+      { class: GoldResource, weight: 0.01 },
+      { class: EmeraldResource, weight: 0.001 },
+      { class: GarnetResource, weight: 0.001 },
+      { class: ZirconResource, weight: 0.001 },
+      { class: AmberResource, weight: 0.001 },
+      { class: CaveRock, weight: 0.2 },
+      { class: Mushrooms, weight: 0.02 },
+      { class: Pot, weight: 0.01 },
+      { class: Chest, weight: 0.01 },
+      { class: CaveBlock, weight: 0.5 },
     ],
     enemies: [
       // Cave-dwelling creatures
@@ -248,9 +250,9 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Pumpkin, weight: 0.05 },
       { class: Bush, weight: 2 },
       { class: Sprout, weight: 0.05 },
-      { class: Mushrooms, weight: 0.2 },
+      { class: Mushrooms, weight: 0.05 },
       { class: Rock, weight: 0.1 },
-      { class: Chest, weight: 0.05 },
+      { class: Chest, weight: 0.01 },
       { class: GlowBugEnemy, weight: 0.05 },
       { class: Tree, weight: 0.1 },
       { class: Succulent, weight: 0.1 },
