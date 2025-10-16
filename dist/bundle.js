@@ -11964,9 +11964,9 @@ class BigKnightEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 6;
-        this.maxHealth = 6;
-        this.defaultMaxHealth = 6;
+        this.health = 4;
+        this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 29;
         this.tileY = 0;
         this.seenPlayer = false;
@@ -12048,7 +12048,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
             console.log("health", this.health);
             console.log("damage", damage);
             this.playHitSound();
-            if (this.health === 2) {
+            if (this.health === 1) {
                 this.unconscious = true;
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 3, 28);
             }
@@ -12070,12 +12070,12 @@ class BigSkullEnemy extends enemy_1.Enemy {
             if (!this.dead) {
                 if (this.handleSkipTurns())
                     return;
-                if (this.health <= 2) {
+                if (this.health <= 1) {
                     this.unconscious = true;
                     this.ticksSinceFirstHit++;
                     if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
                         this.healthBar.hurt();
-                        this.health = 4;
+                        this.health = 2;
                         this.unconscious = false;
                     }
                     this.ticks++;
@@ -12269,7 +12269,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                 this.updateDrawXY(delta);
                 this.tileX = 33;
                 this.tileY = 12;
-                if (this.health <= 2 || this.cloned) {
+                if (this.health <= 1 || this.cloned) {
                     this.tileX = 35;
                     this.tileY = 12;
                     if (this.ticksSinceFirstHit >= 3) {
@@ -12304,9 +12304,9 @@ class BigSkullEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 6;
-        this.maxHealth = 6;
-        this.defaultMaxHealth = 6;
+        this.health = 4;
+        this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
         this.tileX = 33;
         this.tileY = 12;
         this.seenPlayer = false;
@@ -12592,9 +12592,9 @@ class BigZombieEnemy extends enemy_1.Enemy {
         this.h = 2;
         this.ticks = 0;
         this.frame = 0;
-        this.health = 4;
-        this.maxHealth = 4;
-        this.defaultMaxHealth = 4;
+        this.health = 3;
+        this.maxHealth = 3;
+        this.defaultMaxHealth = 3;
         this.tileX = 31;
         this.tileY = 12;
         this.seenPlayer = false;
@@ -33265,6 +33265,7 @@ const woodenShield_1 = __webpack_require__(/*! ./woodenShield */ "./src/item/woo
 const crossbowStock_1 = __webpack_require__(/*! ./weapon/crossbowStock */ "./src/item/weapon/crossbowStock.ts");
 const crossbowLimb_1 = __webpack_require__(/*! ./weapon/crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ./weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const quarterStaff_1 = __webpack_require__(/*! ./weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -33272,6 +33273,7 @@ exports.ItemTypeMap = {
     spellbook: spellbook_1.Spellbook,
     greataxe: greataxe_1.Greataxe,
     scythe: scythe_1.Scythe,
+    quarterstaff: quarterStaff_1.QuarterStaff,
     hourglass: hourglass_1.Hourglass,
     fishingrod: fishingRod_1.FishingRod,
     crossbowstock: crossbowStock_1.CrossbowStock,
@@ -33341,6 +33343,12 @@ DropTable.drops = [
         unique: true,
     },
     {
+        itemType: "quarterstaff",
+        dropRate: 100,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
+    {
         itemType: "scythe",
         dropRate: 500,
         category: ["reaper"],
@@ -33396,7 +33404,7 @@ DropTable.drops = [
     },
     {
         itemType: "woodenshield",
-        dropRate: 20,
+        dropRate: 50,
         category: ["shield"],
         unique: false,
     },
@@ -36402,6 +36410,40 @@ class Greataxe extends weapon_1.Weapon {
 }
 exports.Greataxe = Greataxe;
 Greataxe.itemName = "greataxe";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/quarterStaff.ts":
+/*!*****************************************!*\
+  !*** ./src/item/weapon/quarterStaff.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QuarterStaff = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class QuarterStaff extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.swing();
+            sound_1.Sound.hit();
+        };
+        this.tileX = 22;
+        this.tileY = 4;
+        this.damage = 1;
+        this.name = "quarterstaff";
+        this.useCost = 1;
+        this.degradeable = false;
+        this.knockbackDistance = 1;
+    }
+}
+exports.QuarterStaff = QuarterStaff;
+QuarterStaff.itemName = "staff";
 
 
 /***/ }),

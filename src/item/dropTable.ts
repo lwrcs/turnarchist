@@ -40,6 +40,7 @@ import { WoodenShield } from "./woodenShield";
 import { CrossbowStock } from "./weapon/crossbowStock";
 import { CrossbowLimb } from "./weapon/crossbowLimb";
 import { CrossbowBolt } from "./weapon/crossbowBolt";
+import { QuarterStaff } from "./weapon/quarterStaff";
 
 interface Drop {
   itemType: string;
@@ -56,6 +57,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   spellbook: Spellbook,
   greataxe: Greataxe,
   scythe: Scythe,
+  quarterstaff: QuarterStaff,
   hourglass: Hourglass,
   fishingrod: FishingRod,
 
@@ -132,6 +134,12 @@ export class DropTable {
       unique: true,
     },
     {
+      itemType: "quarterstaff",
+      dropRate: 100,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
+    {
       itemType: "scythe",
       dropRate: 500,
       category: ["reaper"],
@@ -190,7 +198,7 @@ export class DropTable {
 
     {
       itemType: "woodenshield",
-      dropRate: 20,
+      dropRate: 50,
       category: ["shield"],
       unique: false,
     },

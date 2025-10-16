@@ -36,9 +36,9 @@ export class BigZombieEnemy extends Enemy {
 
     this.ticks = 0;
     this.frame = 0;
-    this.health = 4;
-    this.maxHealth = 4;
-    this.defaultMaxHealth = 4;
+    this.health = 3;
+    this.maxHealth = 3;
+    this.defaultMaxHealth = 3;
     this.tileX = 31;
     this.tileY = 12;
     this.seenPlayer = false;

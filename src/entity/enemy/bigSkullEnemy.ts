@@ -39,9 +39,9 @@ export class BigSkullEnemy extends Enemy {
     this.h = 2;
     this.ticks = 0;
     this.frame = 0;
-    this.health = 6;
-    this.maxHealth = 6;
-    this.defaultMaxHealth = 6;
+    this.health = 4;
+    this.maxHealth = 4;
+    this.defaultMaxHealth = 4;
     this.tileX = 33;
     this.tileY = 12;
     this.seenPlayer = false;
@@ -98,7 +98,7 @@ export class BigSkullEnemy extends Enemy {
     console.log("damage", damage);
     this.playHitSound();
 
-    if (this.health === 2) {
+    if (this.health === 1) {
       this.unconscious = true;
       ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 3, 28);
     } else {
@@ -120,12 +120,12 @@ export class BigSkullEnemy extends Enemy {
     if (!this.dead) {
       if (this.handleSkipTurns()) return;
 
-      if (this.health <= 2) {
+      if (this.health <= 1) {
         this.unconscious = true;
         this.ticksSinceFirstHit++;
         if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
           this.healthBar.hurt();
-          this.health = 4;
+          this.health = 2;
           this.unconscious = false;
         }
         this.ticks++;
@@ -337,7 +337,7 @@ export class BigSkullEnemy extends Enemy {
       this.tileX = 33;
       this.tileY = 12;
 
-      if (this.health <= 2 || this.cloned) {
+      if (this.health <= 1 || this.cloned) {
         this.tileX = 35;
         this.tileY = 12;
         if (this.ticksSinceFirstHit >= 3) {
