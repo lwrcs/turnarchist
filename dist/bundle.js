@@ -25537,6 +25537,7 @@ const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backp
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
@@ -25801,6 +25802,17 @@ GameConstants.STARTING_DEV_INVENTORY = [
     crossbowBolt_1.CrossbowBolt,
     spear_1.Spear,
     pickaxe_1.Pickaxe,
+    lantern_1.Lantern,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
+    coal_1.Coal,
     bombItem_1.BombItem,
     ironOre_1.IronOre,
     goldOre_1.GoldOre,
@@ -30138,6 +30150,12 @@ class Map {
         };
         this.toggleMapOpen = () => {
             const opening = !this.mapOpen;
+            // Prevent opening the map if the inventory UI is open
+            if (opening) {
+                const inventoryOpen = this.player?.inventory?.isOpen === true;
+                if (inventoryOpen)
+                    return;
+            }
             this.mapOpen = opening;
             if (opening) {
                 // Ensure map data is up to date when opening even if disabled
@@ -31856,8 +31874,14 @@ class Inventory {
         };
         this.open = () => {
             this.isOpen = !this.isOpen;
-            if (this.isOpen)
+            if (this.isOpen) {
                 this.openTime = Date.now();
+                // Close map if it's open when inventory opens
+                if (this.player?.map?.mapOpen) {
+                    this.player.map.mapOpen = false;
+                    this.player.map.mapOpenProgress = 0;
+                }
+            }
         };
         this.toggleOpen = () => {
             if (this.isOpen) {
@@ -34483,12 +34507,41 @@ GlowBugs.itemName = "glow bugs";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Lantern = void 0;
 const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+const coal_1 = __webpack_require__(/*! ../resource/coal */ "./src/item/resource/coal.ts");
 class Lantern extends light_1.Light {
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => {
             const percentage = Math.round((this.fuel / this.fuelCap) * 100);
             return `LANTERN - Fuel: ${percentage}%, Capacity: ${this.fuelCap / 50}`;
+        };
+        // Auto-refuel the lantern using Coal from the wielder's inventory; supports partial refuel
+        this.tryAutoRefuel = () => {
+            if (!this.wielder || !this.canRefuel)
+                return false;
+            const inventory = this.wielder.inventory;
+            const coalItem = inventory?.hasItem?.(coal_1.Coal);
+            if (!(coalItem instanceof coal_1.Coal))
+                return false;
+            const missing = Math.max(0, this.fuelCap - this.fuel);
+            if (missing <= 0)
+                return false;
+            // Each coal unit provides 25 fuel; use as many as needed up to missing
+            const fuelPerCoal = 25;
+            const availableCoalUnits = Math.max(0, coalItem.stackCount);
+            const unitsNeeded = Math.ceil(missing / fuelPerCoal);
+            const unitsToUse = Math.min(availableCoalUnits, unitsNeeded);
+            if (unitsToUse <= 0)
+                return false;
+            const fuelAdded = unitsToUse * fuelPerCoal;
+            this.fuel = Math.min(this.fuel + fuelAdded, this.fuelCap);
+            coalItem.stackCount -= unitsToUse;
+            if (coalItem.stackCount <= 0) {
+                inventory.removeItem(coalItem);
+            }
+            this.broken = this.fuel <= 0;
+            this.wielder.game.pushMessage(`You refuel your lantern with ${unitsToUse} coal.`);
+            return true;
         };
         this.fuel = 250;
         this.tileX = 29;
@@ -34598,6 +34651,17 @@ class Light extends equippable_1.Equippable {
             }
             // Handle depleted fuel
             if (this.fuel <= 0) {
+                // Attempt auto-refuel for refuelable lights (e.g., lanterns)
+                if (this.canRefuel) {
+                    const refueled = this.tryAutoRefuel?.() === true;
+                    if (refueled) {
+                        // Ensure lighting updates after refuel
+                        this.setRadius();
+                        this.setBrightness();
+                        this.updateLighting();
+                        return;
+                    }
+                }
                 if (this.stackable) {
                     this.stackCount--;
                     this.fuel = this.fuelCap;
@@ -34664,6 +34728,10 @@ class Light extends equippable_1.Equippable {
     }
     get fuelPercentage() {
         return this.fuel / this.fuelCap;
+    }
+    // Hook for auto-refuelable lights; subclasses can override
+    tryAutoRefuel() {
+        return false;
     }
 }
 exports.Light = Light;
@@ -34758,23 +34826,38 @@ class Coal extends usable_1.Usable {
         this.onUse = (player) => {
             let l = player.inventory.hasItem(lantern_1.Lantern);
             if (l instanceof lantern_1.Lantern) {
-                if (l.fuel <= l.fuelCap - 50) {
-                    player.game.pushMessage("You add some fuel to your lantern.");
-                    this.stackCount -= 1;
-                    if (this.stackCount <= 0) {
-                        player.inventory.removeItem(this);
-                    }
+                const fuelPerCoal = 25;
+                const missing = Math.max(0, l.fuelCap - l.fuel);
+                if (missing <= 0)
+                    return;
+                // Use 1 unit by default when using coal directly
+                const unitsToUse = Math.min(1, this.stackCount);
+                if (unitsToUse <= 0)
+                    return;
+                const fuelAdded = Math.min(unitsToUse * fuelPerCoal, missing);
+                l.fuel = Math.min(l.fuel + fuelAdded, l.fuelCap);
+                this.stackCount -= unitsToUse;
+                player.game.pushMessage("You add some fuel to your lantern.");
+                if (this.stackCount <= 0) {
+                    player.inventory.removeItem(this);
                 }
             }
         };
         this.useOnOther = (player, other) => {
             if (other instanceof light_1.Light) {
-                if (other.canRefuel && other.fuel <= 0 && other.broken) {
-                    let amountToRefuel = Math.min(this.stackCount * 25, other.fuelCap);
-                    other.fuel += amountToRefuel;
-                    this.stackCount -= amountToRefuel / 25;
-                    other.broken = false;
-                    this.level.game.pushMessage(`You add refuel your ${other.name} with ${amountToRefuel / 25} coal.`);
+                if (other.canRefuel) {
+                    const fuelPerCoal = 25;
+                    const missing = Math.max(0, other.fuelCap - other.fuel);
+                    if (missing <= 0)
+                        return;
+                    const unitsToUse = Math.min(this.stackCount, Math.ceil(missing / fuelPerCoal));
+                    if (unitsToUse <= 0)
+                        return;
+                    const fuelAdded = Math.min(unitsToUse * fuelPerCoal, missing);
+                    other.fuel = Math.min(other.fuel + fuelAdded, other.fuelCap);
+                    this.stackCount -= unitsToUse;
+                    other.broken = other.fuel <= 0;
+                    this.level.game.pushMessage(`You refuel your ${other.name} with ${unitsToUse} coal.`);
                     if (this.stackCount <= 0)
                         player.inventory.removeItem(this);
                 }

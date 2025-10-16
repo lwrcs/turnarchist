@@ -28,8 +28,8 @@ export abstract class Light extends Equippable {
   }
 
   updateLighting = () => {
-    const room = (this.wielder as any)?.getRoom
-      ? (this.wielder as any).getRoom()
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
       : this.wielder.game.rooms[this.wielder.levelID];
     room?.updateLighting();
   };
@@ -112,6 +112,17 @@ export abstract class Light extends Equippable {
 
     // Handle depleted fuel
     if (this.fuel <= 0) {
+      // Attempt auto-refuel for refuelable lights (e.g., lanterns)
+      if (this.canRefuel) {
+        const refueled = this.tryAutoRefuel?.() === true;
+        if (refueled) {
+          // Ensure lighting updates after refuel
+          this.setRadius();
+          this.setBrightness();
+          this.updateLighting();
+          return;
+        }
+      }
       if (this.stackable) {
         this.stackCount--;
         this.fuel = this.fuelCap;
@@ -139,6 +150,11 @@ export abstract class Light extends Equippable {
       }
     }
   };
+
+  // Hook for auto-refuelable lights; subclasses can override
+  protected tryAutoRefuel(): boolean {
+    return false;
+  }
 
   drawDurability = (x: number, y: number) => {
     if (this.fuel < this.fuelCap) {

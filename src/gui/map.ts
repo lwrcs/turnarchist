@@ -352,6 +352,11 @@ export class Map {
 
   toggleMapOpen = () => {
     const opening = !this.mapOpen;
+    // Prevent opening the map if the inventory UI is open
+    if (opening) {
+      const inventoryOpen = this.player?.inventory?.isOpen === true;
+      if (inventoryOpen) return;
+    }
     this.mapOpen = opening;
     if (opening) {
       // Ensure map data is up to date when opening even if disabled

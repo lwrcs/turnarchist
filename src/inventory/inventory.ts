@@ -125,7 +125,14 @@ export class Inventory {
 
   open = () => {
     this.isOpen = !this.isOpen;
-    if (this.isOpen) this.openTime = Date.now();
+    if (this.isOpen) {
+      this.openTime = Date.now();
+      // Close map if it's open when inventory opens
+      if (this.player?.map?.mapOpen) {
+        this.player.map.mapOpen = false;
+        this.player.map.mapOpenProgress = 0;
+      }
+    }
   };
 
   toggleOpen = () => {

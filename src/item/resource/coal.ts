@@ -25,27 +25,40 @@ export class Coal extends Usable {
   onUse = (player: Player) => {
     let l = player.inventory.hasItem(Lantern);
     if (l instanceof Lantern) {
-      if (l.fuel <= l.fuelCap - 50) {
-        player.game.pushMessage("You add some fuel to your lantern.");
-        this.stackCount -= 1;
-        if (this.stackCount <= 0) {
-          player.inventory.removeItem(this);
-        }
+      const fuelPerCoal = 25;
+      const missing = Math.max(0, l.fuelCap - l.fuel);
+      if (missing <= 0) return;
+      // Use 1 unit by default when using coal directly
+      const unitsToUse = Math.min(1, this.stackCount);
+      if (unitsToUse <= 0) return;
+      const fuelAdded = Math.min(unitsToUse * fuelPerCoal, missing);
+      l.fuel = Math.min(l.fuel + fuelAdded, l.fuelCap);
+      this.stackCount -= unitsToUse;
+      player.game.pushMessage("You add some fuel to your lantern.");
+      if (this.stackCount <= 0) {
+        player.inventory.removeItem(this);
       }
     }
   };
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Light) {
-      if (other.canRefuel && other.fuel <= 0 && other.broken) {
-        let amountToRefuel = Math.min(this.stackCount * 25, other.fuelCap);
-        other.fuel += amountToRefuel;
-        this.stackCount -= amountToRefuel / 25;
-        other.broken = false;
-        this.level.game.pushMessage(
-          `You add refuel your ${other.name} with ${amountToRefuel / 25} coal.`,
+      if (other.canRefuel) {
+        const fuelPerCoal = 25;
+        const missing = Math.max(0, other.fuelCap - other.fuel);
+        if (missing <= 0) return;
+        const unitsToUse = Math.min(
+          this.stackCount,
+          Math.ceil(missing / fuelPerCoal),
         );
-
+        if (unitsToUse <= 0) return;
+        const fuelAdded = Math.min(unitsToUse * fuelPerCoal, missing);
+        other.fuel = Math.min(other.fuel + fuelAdded, other.fuelCap);
+        this.stackCount -= unitsToUse;
+        other.broken = other.fuel <= 0;
+        this.level.game.pushMessage(
+          `You refuel your ${other.name} with ${unitsToUse} coal.`,
+        );
         if (this.stackCount <= 0) player.inventory.removeItem(this);
       }
     }
