@@ -87,6 +87,7 @@ export class Player extends Drawable {
   busyAnimating: boolean;
   lightColor: [number, number, number];
   damageBonus: number;
+  magicDamageBonus: number;
 
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
@@ -137,7 +138,7 @@ export class Player extends Drawable {
     this.dead = false;
     this.lastTickHealth = this.health;
     this.damageBonus = 0;
-
+    this.magicDamageBonus = 0;
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
     this.sightRadius = LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;

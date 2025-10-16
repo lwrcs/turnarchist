@@ -66,7 +66,7 @@ export class Scythe extends Weapon {
     }
 
     if (this.checkForPushables(newX, newY)) return true;
-
+    this.beginSwing();
     const hitSomething = this.executeAttack(
       newX,
       newY,
@@ -97,6 +97,7 @@ export class Scythe extends Weapon {
         : this.game.rooms[this.wielder.levelID];
       room.tick(this.wielder);
     }
+    this.endSwing();
 
     return !hitSomething;
   };

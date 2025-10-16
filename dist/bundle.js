@@ -25440,12 +25440,14 @@ const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godSt
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
+const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
@@ -25697,6 +25699,8 @@ GameConstants.STARTING_DEV_INVENTORY = [
     redgem_1.RedGem,
     garnetRing_1.GarnetRing,
     crossbowBolt_1.CrossbowBolt,
+    spear_1.Spear,
+    pickaxe_1.Pickaxe,
     bombItem_1.BombItem,
     ironOre_1.IronOre,
     goldOre_1.GoldOre,
@@ -31729,7 +31733,7 @@ class Inventory {
         this.openTime = Date.now();
         this.coins = 0;
         this.weapon = null;
-        this._expansion = 0;
+        this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3 : 0;
         this.grabbedItem = null;
         this._mouseDownStartX = null;
         this._mouseDownStartY = null;
@@ -34172,6 +34176,21 @@ const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equipp
 class ZirconRing extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.onEquip = () => {
+            this.wielder.magicDamageBonus = 1;
+            this.level.game.pushMessage("A magic boosting force surrounds you.");
+        };
+        this.onUnequip = () => {
+            this.wielder.magicDamageBonus = 0;
+            this.level.game.pushMessage("The magic boosting force fades away.");
+        };
+        this.onDrop = () => {
+            this.wielder.magicDamageBonus = 0;
+            if (this.equipped) {
+                this.level.game.pushMessage("The magic boosting force fades away.");
+                this.equipped = false;
+            }
+        };
         this.tileX = 13;
         this.tileY = 2;
         this.name = ZirconRing.itemName;
@@ -36255,6 +36274,7 @@ class Scythe extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
+            this.beginSwing();
             const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus, true, true, true, false);
             if (hitSomething) {
                 if (positions.length > 0) {
@@ -36272,6 +36292,7 @@ class Scythe extends weapon_1.Weapon {
                     : this.game.rooms[this.wielder.levelID];
                 room.tick(this.wielder);
             }
+            this.endSwing();
             return !hitSomething;
         };
         this.shakeScreen = () => {
@@ -36602,13 +36623,15 @@ class Shotgun extends weapon_1.Weapon {
                 return true;
             }
             if (firstNonPushable <= firstPushable) {
+                // Begin swing to deduplicate big-enemy multi-tile hits
+                this.beginSwing();
                 for (const c of enemyHitCandidates) {
                     let e = c.enemy;
                     let d = c.dist;
-                    if (d === 3)
-                        e.hurt(this.wielder, 0.5);
-                    else
-                        e.hurt(this.wielder, 1);
+                    const dmg = d === 3 ? 0.5 : 1;
+                    if (this.shouldHitEntity(e)) {
+                        e.hurt(this.wielder, dmg);
+                    }
                 }
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
@@ -36620,6 +36643,7 @@ class Shotgun extends weapon_1.Weapon {
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 this.degrade();
+                this.endSwing();
                 return false;
             }
             return true;
@@ -36823,6 +36847,8 @@ class Spear extends weapon_1.Weapon {
                 this.degrade();
                 return false;
             }
+            // Begin a deduplicated swing so big enemies aren't double-hit across tiles
+            this.beginSwing();
             // Hit all enemies at first tile (spear penetrates through)
             const enemiesAtFirstTile = entitiesAtFirstTile.filter((e) => !e.pushable && e.isEnemy);
             if (enemiesAtFirstTile.length > 0) {
@@ -36850,6 +36876,7 @@ class Spear extends weapon_1.Weapon {
                 this.shakeScreen(newX2, newY2);
                 this.degrade();
             }
+            this.endSwing();
             return !hitEnemies;
         };
         this.tileX = 24;
@@ -36956,7 +36983,7 @@ class Spellbook extends weapon_1.Weapon {
                     ? this.wielder.getRoom()
                     : this.game.rooms[this.wielder.levelID];
                 if (!room.roomArray[e.x][e.y].isSolid()) {
-                    e.hurt(this.wielder, this.damage + this.wielder.damageBonus);
+                    e.hurt(this.wielder, this.damage + this.wielder.magicDamageBonus); //don't apply damage bonus for magic weapons
                     room.projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
                     // Add to the list of actually hit targets
                     actuallyHitTargets.push(e);
@@ -37067,6 +37094,7 @@ class Sword extends weapon_1.Weapon {
             }
             if (this.checkForPushables(newX, newY))
                 return true;
+            this.beginSwing();
             const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus, true, true, true, false);
             if (hitSomething) {
                 for (const pos of positions) {
@@ -37077,6 +37105,7 @@ class Sword extends weapon_1.Weapon {
                 }
                 this.game.rooms[this.wielder.levelID].tick(this.wielder);
             }
+            this.endSwing();
             return !hitSomething;
         };
         this.shakeScreen = () => {
@@ -37295,6 +37324,8 @@ class Weapon extends equippable_1.Equippable {
             return !hitSomething;
         };
         this.attack = (enemy, damage) => {
+            if (!this.shouldHitEntity(enemy))
+                return;
             enemy.hurt(this.wielder, damage || this.damage);
             this.statusEffect(enemy);
         };
@@ -37374,6 +37405,26 @@ class Weapon extends equippable_1.Equippable {
                 }, this.hitDelay || 0);
             }
         };
+        // Begin a new weapon swing; deduplicates hits across multi-tile strikes
+        this.beginSwing = () => {
+            this._swingHitIds = new Set();
+        };
+        // End the current swing and clear tracking data
+        this.endSwing = () => {
+            this._swingHitIds = null;
+        };
+        // Check and record whether we should apply damage to this entity in the current swing
+        this.shouldHitEntity = (entity) => {
+            // If no active swing, allow hit
+            if (!this._swingHitIds)
+                return true;
+            // Prefer stable unique id if available
+            const id = entity?.globalId || `${entity.name}:${entity.x},${entity.y}`;
+            if (this._swingHitIds.has(id))
+                return false;
+            this._swingHitIds.add(id);
+            return true;
+        };
         if (level)
             this.game = level.game;
         this.canMine = false;
@@ -37389,6 +37440,7 @@ class Weapon extends equippable_1.Equippable {
         this.cooldownMax = 0;
         this.twoHanded = false;
         this.knockbackDistance = 0;
+        this._swingHitIds = null;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
@@ -43214,6 +43266,7 @@ class Player extends drawable_1.Drawable {
         this.dead = false;
         this.lastTickHealth = this.health;
         this.damageBonus = 0;
+        this.magicDamageBonus = 0;
         this.inventory = new inventory_1.Inventory(game, this);
         this.defaultSightRadius = 3;
         this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;

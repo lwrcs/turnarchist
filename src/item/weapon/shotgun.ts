@@ -93,11 +93,15 @@ export class Shotgun extends Weapon {
     }
 
     if (firstNonPushable <= firstPushable) {
+      // Begin swing to deduplicate big-enemy multi-tile hits
+      this.beginSwing();
       for (const c of enemyHitCandidates) {
         let e = c.enemy;
         let d = c.dist;
-        if (d === 3) e.hurt(this.wielder, 0.5);
-        else e.hurt(this.wielder, 1);
+        const dmg = d === 3 ? 0.5 : 1;
+        if (this.shouldHitEntity(e)) {
+          e.hurt(this.wielder, dmg);
+        }
       }
 
       this.hitSound();
@@ -137,6 +141,7 @@ export class Shotgun extends Weapon {
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
       this.shakeScreen(newX, newY);
       this.degrade();
+      this.endSwing();
 
       return false;
     }

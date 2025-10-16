@@ -17,4 +17,22 @@ export class ZirconRing extends Equippable {
     this.stackable = false;
     this.description = "A ring of zircon";
   }
+
+  onEquip = () => {
+    this.wielder.magicDamageBonus = 1;
+    this.level.game.pushMessage("A magic boosting force surrounds you.");
+  };
+
+  onUnequip = () => {
+    this.wielder.magicDamageBonus = 0;
+    this.level.game.pushMessage("The magic boosting force fades away.");
+  };
+
+  onDrop = () => {
+    this.wielder.magicDamageBonus = 0;
+    if (this.equipped) {
+      this.level.game.pushMessage("The magic boosting force fades away.");
+      this.equipped = false;
+    }
+  };
 }

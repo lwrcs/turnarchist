@@ -55,7 +55,7 @@ export class Sword extends Weapon {
     }
 
     if (this.checkForPushables(newX, newY)) return true;
-
+    this.beginSwing();
     const hitSomething = this.executeAttack(
       newX,
       newY,
@@ -79,6 +79,7 @@ export class Sword extends Weapon {
       }
       this.game.rooms[this.wielder.levelID].tick(this.wielder);
     }
+    this.endSwing();
 
     return !hitSomething;
   };

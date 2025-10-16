@@ -31,6 +31,7 @@ export abstract class Weapon extends Equippable {
   cooldownMax: number;
   twoHanded: boolean;
   knockbackDistance: number;
+  private _swingHitIds: Set<string> | null;
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -49,6 +50,7 @@ export abstract class Weapon extends Equippable {
     this.cooldownMax = 0;
     this.twoHanded = false;
     this.knockbackDistance = 0;
+    this._swingHitIds = null;
   }
   hoverText = () => {
     //return "Equip " + this.name;
@@ -163,6 +165,7 @@ export abstract class Weapon extends Equippable {
   };
 
   attack = (enemy: Entity, damage?: number) => {
+    if (!this.shouldHitEntity(enemy)) return;
     enemy.hurt(this.wielder, damage || this.damage);
     this.statusEffect(enemy);
   };
@@ -444,4 +447,27 @@ export abstract class Weapon extends Equippable {
 
     return hitSomething;
   }
+
+  // Begin a new weapon swing; deduplicates hits across multi-tile strikes
+  beginSwing = (): void => {
+    this._swingHitIds = new Set<string>();
+  };
+
+  // End the current swing and clear tracking data
+  endSwing = (): void => {
+    this._swingHitIds = null;
+  };
+
+  // Check and record whether we should apply damage to this entity in the current swing
+  protected shouldHitEntity = (entity: Entity): boolean => {
+    // If no active swing, allow hit
+    if (!this._swingHitIds) return true;
+
+    // Prefer stable unique id if available
+    const id: string =
+      (entity as any)?.globalId || `${entity.name}:${entity.x},${entity.y}`;
+    if (this._swingHitIds.has(id)) return false;
+    this._swingHitIds.add(id);
+    return true;
+  };
 }

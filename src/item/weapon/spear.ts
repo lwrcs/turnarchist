@@ -51,6 +51,9 @@ export class Spear extends Weapon {
       return false;
     }
 
+    // Begin a deduplicated swing so big enemies aren't double-hit across tiles
+    this.beginSwing();
+
     // Hit all enemies at first tile (spear penetrates through)
     const enemiesAtFirstTile = entitiesAtFirstTile.filter(
       (e) => !e.pushable && e.isEnemy,
@@ -86,6 +89,8 @@ export class Spear extends Weapon {
       this.shakeScreen(newX2, newY2);
       this.degrade();
     }
+
+    this.endSwing();
 
     return !hitEnemies;
   };
