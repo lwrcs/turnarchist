@@ -39,6 +39,7 @@ import { ShieldLeftFragment } from "./weapon/shieldLeftFragment";
 import { WoodenShield } from "./woodenShield";
 import { CrossbowStock } from "./weapon/crossbowStock";
 import { CrossbowLimb } from "./weapon/crossbowLimb";
+import { CrossbowBolt } from "./weapon/crossbowBolt";
 
 interface Drop {
   itemType: string;
@@ -60,6 +61,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 
   crossbowstock: CrossbowStock,
   crossbowlimb: CrossbowLimb,
+  crossbowbolt: CrossbowBolt,
 
   scytheblade: ScytheBlade,
   scythehandle: ScytheHandle,
@@ -168,6 +170,12 @@ export class DropTable {
     },
     {
       itemType: "crossbowlimb",
+      dropRate: 10,
+      category: ["crossbow"],
+      unique: true,
+    },
+    {
+      itemType: "crossbowbolt",
       dropRate: 10,
       category: ["crossbow"],
       unique: true,

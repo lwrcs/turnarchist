@@ -7,6 +7,7 @@ import { Utils } from "../../utility/utils";
 import { Enemy } from "./enemy";
 import { HitWarning } from "../../drawable/hitWarning";
 import { ArrowParticle } from "../../particle/arrowParticle";
+import { GameConstants } from "../../game/gameConstants";
 
 enum BoltcasterState {
   SEEK_LINE,
@@ -20,6 +21,8 @@ export class BoltcasterEnemy extends Enemy {
   loadDy: number;
   loadedPlayerX: number;
   loadedPlayerY: number;
+  loadTrailFrame: number;
+  loadTrailAlpha: number;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -36,6 +39,8 @@ export class BoltcasterEnemy extends Enemy {
     this.loadDy = 0;
     this.loadedPlayerX = 0;
     this.loadedPlayerY = 0;
+    this.loadTrailFrame = 0;
+    this.loadTrailAlpha = 1;
 
     // Drop crossbow parts similar to scythe/shield pieces
     this.getDrop(["crossbow"], false);
@@ -183,6 +188,8 @@ export class BoltcasterEnemy extends Enemy {
     let cy = this.y;
     let endX = cx;
     let endY = cy;
+    let lastFreeX = cx;
+    let lastFreeY = cy;
     let hitEntity: any = null;
     let hitPlayer = false;
 
@@ -192,8 +199,20 @@ export class BoltcasterEnemy extends Enemy {
       if (!this.room.tileInside(cx, cy)) break;
       const tile = this.room.roomArray[cx]?.[cy];
       if (!tile || tile.isSolid()) {
-        endX = cx;
-        endY = cy;
+        // Stop arrow so that its tip meets the wall boundary without drawing into the wall
+        if (dx > 0) {
+          endX = cx - 0.5; // center such that forward edge (w/2=0.5) is at wall's left edge
+          endY = lastFreeY + 0.0;
+        } else if (dx < 0) {
+          endX = cx + 1.5; // center such that forward edge (left) meets wall's right edge
+          endY = lastFreeY + 0.0;
+        } else if (dy > 0) {
+          endY = cy - 0.5; // center such that forward edge meets wall's top edge
+          endX = lastFreeX + 0.0;
+        } else if (dy < 0) {
+          endY = cy + 1.5; // center such that forward edge meets wall's bottom edge
+          endX = lastFreeX + 0.0;
+        }
         break;
       }
       // If we reach the player's current tile, hit the player
@@ -212,11 +231,20 @@ export class BoltcasterEnemy extends Enemy {
       }
       endX = cx;
       endY = cy;
+      lastFreeX = cx;
+      lastFreeY = cy;
     }
 
     // Visual arrow
+    // Align arrow vertical position with beam when firing horizontally
+    const horizontal = dx !== 0 && dy === 0;
+    const startX = this.x + 0.5;
+    const startY = horizontal ? this.y - 0.25 : this.y;
+    const finalEndX = endX + 0.5;
+    const finalEndY = horizontal ? endY - 0.25 : endY;
+
     this.room.particles.push(
-      new ArrowParticle(this.room, this.x + 0.5, this.y, endX + 0.5, endY),
+      new ArrowParticle(this.room, startX, startY, finalEndX, finalEndY),
     );
 
     // Apply damage
@@ -259,6 +287,11 @@ export class BoltcasterEnemy extends Enemy {
       if (this.alertTicks > 0) {
         this.drawExclamation(delta);
       }
+    }
+
+    // Draw loading beam similar to ChargeEnemy's charge trail
+    if (this.isLoading) {
+      this.drawLoadBeam(delta);
     }
     Game.ctx.globalAlpha = 1;
   };
@@ -364,6 +397,77 @@ export class BoltcasterEnemy extends Enemy {
           }
         }
       }
+    }
+  };
+
+  private computeLoadBeamEnd = (): { endX: number; endY: number } => {
+    // Determine direction; fall back to current facing if needed
+    let dx = this.loadDx;
+    let dy = this.loadDy;
+    if (dx === 0 && dy === 0) {
+      dx =
+        this.direction === Direction.RIGHT
+          ? 1
+          : this.direction === Direction.LEFT
+            ? -1
+            : 0;
+      dy =
+        this.direction === Direction.DOWN
+          ? 1
+          : this.direction === Direction.UP
+            ? -1
+            : 0;
+    }
+
+    let cx = this.x;
+    let cy = this.y;
+    let endX = cx;
+    let endY = cy;
+
+    // Step forward until blocked by solid tile or entity; cap length generously
+    for (let steps = 0; steps < 50; steps++) {
+      cx += dx;
+      cy += dy;
+      if (!this.room.tileInside(cx, cy)) break;
+      const tile = this.room.roomArray[cx]?.[cy];
+      if (!tile || tile.isSolid()) break;
+      // Any entity blocks the pre-fire beam visualization
+      if (this.room.entities.some((e) => e.x === cx && e.y === cy)) break;
+      endX = cx;
+      endY = cy;
+      // Optional early stop if we reached the stored player tile at load time
+      if (cx === this.loadedPlayerX && cy === this.loadedPlayerY) break;
+    }
+
+    return { endX, endY };
+  };
+
+  private drawLoadBeam = (delta: number) => {
+    this.loadTrailFrame += 0.2 * delta;
+
+    if (Math.floor(this.loadTrailFrame) % 2 === 0) {
+      // Anchor near the weapon sprite similar to charge trail offsets
+      let startX = (this.x + 0.5) * GameConstants.TILESIZE;
+      let startY = (this.y - 0.25) * GameConstants.TILESIZE;
+
+      if (this.direction === Direction.LEFT) startX -= 3;
+      else if (this.direction === Direction.RIGHT) startX += 3;
+      else if (this.direction === Direction.DOWN) startY += 2;
+      else if (this.direction === Direction.UP) startY -= 8;
+
+      const { endX, endY } = this.computeLoadBeamEnd();
+
+      Game.ctx.strokeStyle = "white";
+      Game.ctx.lineWidth = GameConstants.TILESIZE * 0.1;
+      Game.ctx.beginPath();
+      Game.ctx.moveTo(Math.round(startX), Math.round(startY));
+      Game.ctx.lineCap = "round";
+      Game.ctx.lineTo(
+        Math.round((endX + 0.5) * GameConstants.TILESIZE),
+        Math.round((endY - 0.25) * GameConstants.TILESIZE),
+      );
+      Game.ctx.stroke();
+      Game.ctx.globalAlpha = 1;
     }
   };
 }

@@ -12852,6 +12852,7 @@ const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const arrowParticle_1 = __webpack_require__(/*! ../../particle/arrowParticle */ "./src/particle/arrowParticle.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 var BoltcasterState;
 (function (BoltcasterState) {
     BoltcasterState[BoltcasterState["SEEK_LINE"] = 0] = "SEEK_LINE";
@@ -12997,6 +12998,8 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             let cy = this.y;
             let endX = cx;
             let endY = cy;
+            let lastFreeX = cx;
+            let lastFreeY = cy;
             let hitEntity = null;
             let hitPlayer = false;
             while (true) {
@@ -13006,8 +13009,23 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     break;
                 const tile = this.room.roomArray[cx]?.[cy];
                 if (!tile || tile.isSolid()) {
-                    endX = cx;
-                    endY = cy;
+                    // Stop arrow so that its tip meets the wall boundary without drawing into the wall
+                    if (dx > 0) {
+                        endX = cx - 0.5; // center such that forward edge (w/2=0.5) is at wall's left edge
+                        endY = lastFreeY + 0.0;
+                    }
+                    else if (dx < 0) {
+                        endX = cx + 1.5; // center such that forward edge (left) meets wall's right edge
+                        endY = lastFreeY + 0.0;
+                    }
+                    else if (dy > 0) {
+                        endY = cy - 0.5; // center such that forward edge meets wall's top edge
+                        endX = lastFreeX + 0.0;
+                    }
+                    else if (dy < 0) {
+                        endY = cy + 1.5; // center such that forward edge meets wall's bottom edge
+                        endX = lastFreeX + 0.0;
+                    }
                     break;
                 }
                 // If we reach the player's current tile, hit the player
@@ -13026,9 +13044,17 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 }
                 endX = cx;
                 endY = cy;
+                lastFreeX = cx;
+                lastFreeY = cy;
             }
             // Visual arrow
-            this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, this.x + 0.5, this.y, endX + 0.5, endY));
+            // Align arrow vertical position with beam when firing horizontally
+            const horizontal = dx !== 0 && dy === 0;
+            const startX = this.x + 0.5;
+            const startY = horizontal ? this.y - 0.25 : this.y;
+            const finalEndX = endX + 0.5;
+            const finalEndY = horizontal ? endY - 0.25 : endY;
+            this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, startX, startY, finalEndX, finalEndY));
             // Apply damage
             if (hitPlayer && player) {
                 player.hurt(this.hit(), this.name);
@@ -13058,6 +13084,10 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 if (this.alertTicks > 0) {
                     this.drawExclamation(delta);
                 }
+            }
+            // Draw loading beam similar to ChargeEnemy's charge trail
+            if (this.isLoading) {
+                this.drawLoadBeam(delta);
             }
             game_1.Game.ctx.globalAlpha = 1;
         };
@@ -13152,6 +13182,73 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 }
             }
         };
+        this.computeLoadBeamEnd = () => {
+            // Determine direction; fall back to current facing if needed
+            let dx = this.loadDx;
+            let dy = this.loadDy;
+            if (dx === 0 && dy === 0) {
+                dx =
+                    this.direction === game_1.Direction.RIGHT
+                        ? 1
+                        : this.direction === game_1.Direction.LEFT
+                            ? -1
+                            : 0;
+                dy =
+                    this.direction === game_1.Direction.DOWN
+                        ? 1
+                        : this.direction === game_1.Direction.UP
+                            ? -1
+                            : 0;
+            }
+            let cx = this.x;
+            let cy = this.y;
+            let endX = cx;
+            let endY = cy;
+            // Step forward until blocked by solid tile or entity; cap length generously
+            for (let steps = 0; steps < 50; steps++) {
+                cx += dx;
+                cy += dy;
+                if (!this.room.tileInside(cx, cy))
+                    break;
+                const tile = this.room.roomArray[cx]?.[cy];
+                if (!tile || tile.isSolid())
+                    break;
+                // Any entity blocks the pre-fire beam visualization
+                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                    break;
+                endX = cx;
+                endY = cy;
+                // Optional early stop if we reached the stored player tile at load time
+                if (cx === this.loadedPlayerX && cy === this.loadedPlayerY)
+                    break;
+            }
+            return { endX, endY };
+        };
+        this.drawLoadBeam = (delta) => {
+            this.loadTrailFrame += 0.2 * delta;
+            if (Math.floor(this.loadTrailFrame) % 2 === 0) {
+                // Anchor near the weapon sprite similar to charge trail offsets
+                let startX = (this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE;
+                let startY = (this.y - 0.25) * gameConstants_1.GameConstants.TILESIZE;
+                if (this.direction === game_1.Direction.LEFT)
+                    startX -= 3;
+                else if (this.direction === game_1.Direction.RIGHT)
+                    startX += 3;
+                else if (this.direction === game_1.Direction.DOWN)
+                    startY += 2;
+                else if (this.direction === game_1.Direction.UP)
+                    startY -= 8;
+                const { endX, endY } = this.computeLoadBeamEnd();
+                game_1.Game.ctx.strokeStyle = "white";
+                game_1.Game.ctx.lineWidth = gameConstants_1.GameConstants.TILESIZE * 0.1;
+                game_1.Game.ctx.beginPath();
+                game_1.Game.ctx.moveTo(Math.round(startX), Math.round(startY));
+                game_1.Game.ctx.lineCap = "round";
+                game_1.Game.ctx.lineTo(Math.round((endX + 0.5) * gameConstants_1.GameConstants.TILESIZE), Math.round((endY - 0.25) * gameConstants_1.GameConstants.TILESIZE));
+                game_1.Game.ctx.stroke();
+                game_1.Game.ctx.globalAlpha = 1;
+            }
+        };
         this.name = "boltcaster";
         this.tileX = 17 + 26; // reuse basic enemy sprite
         this.tileY = 8;
@@ -13164,6 +13261,8 @@ class BoltcasterEnemy extends enemy_1.Enemy {
         this.loadDy = 0;
         this.loadedPlayerX = 0;
         this.loadedPlayerY = 0;
+        this.loadTrailFrame = 0;
+        this.loadTrailAlpha = 1;
         // Drop crossbow parts similar to scythe/shield pieces
         this.getDrop(["crossbow"], false);
     }
@@ -21439,7 +21538,7 @@ class Mushrooms extends entity_1.Entity {
         this.tileY = 2;
         this.hasShadow = true;
         this.chainPushable = false;
-        this.name = "mushrooms";
+        this.name = Mushrooms.itemName;
         this.imageParticleX = 0;
         this.imageParticleY = 30;
         this.drops.push(new shrooms_1.Shrooms(this.room, this.x, this.y));
@@ -21449,6 +21548,7 @@ class Mushrooms extends entity_1.Entity {
     }
 }
 exports.Mushrooms = Mushrooms;
+Mushrooms.itemName = "mushrooms";
 
 
 /***/ }),
@@ -33140,6 +33240,7 @@ const shieldLeftFragment_1 = __webpack_require__(/*! ./weapon/shieldLeftFragment
 const woodenShield_1 = __webpack_require__(/*! ./woodenShield */ "./src/item/woodenShield.ts");
 const crossbowStock_1 = __webpack_require__(/*! ./weapon/crossbowStock */ "./src/item/weapon/crossbowStock.ts");
 const crossbowLimb_1 = __webpack_require__(/*! ./weapon/crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
+const crossbowBolt_1 = __webpack_require__(/*! ./weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -33151,6 +33252,7 @@ exports.ItemTypeMap = {
     fishingrod: fishingRod_1.FishingRod,
     crossbowstock: crossbowStock_1.CrossbowStock,
     crossbowlimb: crossbowLimb_1.CrossbowLimb,
+    crossbowbolt: crossbowBolt_1.CrossbowBolt,
     scytheblade: scytheBlade_1.ScytheBlade,
     scythehandle: scytheHandle_1.ScytheHandle,
     shieldleftfragment: shieldLeftFragment_1.ShieldLeftFragment,
@@ -33252,6 +33354,12 @@ DropTable.drops = [
     },
     {
         itemType: "crossbowlimb",
+        dropRate: 10,
+        category: ["crossbow"],
+        unique: true,
+    },
+    {
+        itemType: "crossbowbolt",
         dropRate: 10,
         category: ["crossbow"],
         unique: true,
@@ -35919,7 +36027,7 @@ class CrossbowBolt extends usable_1.Usable {
         this.canUseOnOther = true;
         this.description = "useful for shooting with a crossbow";
         this.stackable = true;
-        this.stackCount = 10;
+        this.stackCount = Math.ceil(random_1.Random.rand() * 10) + 5;
         this.name = CrossbowBolt.itemName;
     }
 }
@@ -37656,11 +37764,11 @@ class WoodenShield extends equippable_1.Equippable {
         this.rechargeTurnCounter = -1;
         this.tileX = 3;
         this.tileY = 2;
-        this.name = "wooden shield";
+        this.name = WoodenShield.itemName;
     }
 }
 exports.WoodenShield = WoodenShield;
-WoodenShield.itemName = "occult shield";
+WoodenShield.itemName = "wooden shield";
 
 
 /***/ }),

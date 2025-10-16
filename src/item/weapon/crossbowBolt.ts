@@ -18,7 +18,7 @@ export class CrossbowBolt extends Usable {
     this.canUseOnOther = true;
     this.description = "useful for shooting with a crossbow";
     this.stackable = true;
-    this.stackCount = 10;
+    this.stackCount = Math.ceil(Random.rand() * 10) + 5;
     this.name = CrossbowBolt.itemName;
   }
 

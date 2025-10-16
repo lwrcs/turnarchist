@@ -9,6 +9,7 @@ import { EntityType } from "../entity";
 import { ImageParticle } from "../../particle/imageParticle";
 
 export class Mushrooms extends Entity {
+  static itemName = "mushrooms";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
@@ -17,7 +18,7 @@ export class Mushrooms extends Entity {
     this.tileY = 2;
     this.hasShadow = true;
     this.chainPushable = false;
-    this.name = "mushrooms";
+    this.name = Mushrooms.itemName;
     this.imageParticleX = 0;
     this.imageParticleY = 30;
     this.drops.push(new Shrooms(this.room, this.x, this.y));

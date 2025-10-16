@@ -10,7 +10,7 @@ export class WoodenShield extends Equippable {
   health: number;
   rechargeTurnCounter: number;
   readonly RECHARGE_TURNS = 25;
-  static itemName = "occult shield";
+  static itemName = "wooden shield";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -18,7 +18,7 @@ export class WoodenShield extends Equippable {
     this.rechargeTurnCounter = -1;
     this.tileX = 3;
     this.tileY = 2;
-    this.name = "wooden shield";
+    this.name = WoodenShield.itemName;
   }
 
   coEquippable = (other: Equippable): boolean => {
