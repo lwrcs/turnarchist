@@ -214,6 +214,7 @@ export enum RoomType {
   GRAVEYARD = "GRAVEYARD",
   FOREST = "FOREST",
   ROPEUP = "ROPEUP",
+  GEMCAVE = "GEMCAVE",
 }
 
 export enum TurnState {

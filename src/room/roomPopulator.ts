@@ -81,6 +81,9 @@ import { Window } from "../tile/window";
 import { SidePathOptions } from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { GarnetResource } from "../entity/resource/garnetResource";
+import { AmberResource } from "../entity/resource/amberResource";
+import { ZirconResource } from "../entity/resource/zirconResource";
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
 for (const [enemyClass, id] of enemyClassToId.entries()) {
@@ -454,6 +457,48 @@ export class Populator {
 
     const clusterer = new PropClusterer(room, clusteringOptions);
     const positions = clusterer.generateClusteredPositions(numProps);
+    if (clusteringOptions?.debugEnabled) {
+      const report = clusterer.getLastDebugReport();
+      if (report) {
+        console.log("[PropClusterer] config:", {
+          clusterTowardsWalls: report.config.clusterTowardsWalls,
+          wallWeight: report.config.wallWeight,
+          wallMaxDistance: report.config.wallMaxDistance,
+          wallDeadzone: report.config.wallDeadzone,
+          onlyInnerWalls: report.config.onlyInnerWalls,
+          wallDistanceMetric: report.config.wallDistanceMetric,
+        });
+        console.log(
+          "[PropClusterer] walls:",
+          report.wallsFound,
+          "grid:",
+          report.wallGridStats,
+        );
+        console.log(
+          "[PropClusterer] iterations:",
+          report.iterations.length,
+          "seed:",
+          report.seedUsed,
+        );
+        if (report.iterations[0]?.top && report.iterations[0].top.length) {
+          console.log(
+            "[PropClusterer] first-iter top:",
+            report.iterations[0].top,
+          );
+        }
+        // Effectiveness summary after placements
+        const effectiveness = clusterer.analyzeEffectiveness(positions, {
+          wallScoreThresholdNormalized: 0.7,
+          neighborMaxDistance: 2,
+          neighborWeight: 1,
+          combineMode: "max",
+        });
+        console.log(
+          "[PropClusterer] effectiveness summary:",
+          effectiveness.summary,
+        );
+      }
+    }
 
     // Convert clustered single-tile seeds into valid placements for larger footprints
     let tiles = room.getEmptyTiles();
@@ -548,10 +593,21 @@ export class Populator {
     const numProps = this.getNumProps(room);
     //this.addProps(room, numProps, room.envType);
     this.addPropsWithClustering(room, numProps, room.envType, {
-      falloffExponent: 2,
-      baseScore: 0.1,
-      maxInfluenceDistance: 12,
-      useSeedPosition: false,
+      clusterTowardsWalls: true,
+      wallAdjacentOnly: true,
+      wallBandSize: 1,
+      wallDeadzone: 0,
+      wallWeight: 80,
+      seedStrategy: "bestWall",
+      baseScore: 0,
+      entityWeight: 5,
+      falloffExponent: 3,
+      maxInfluenceDistance: 1.15,
+      wallDistanceMetric: "manhattan",
+      debugEnabled: true,
+      debugCollectDetails: true,
+      debugLogToConsole: true,
+      debugTopN: 5,
     });
 
     // ADD: Enemies after props, based on remaining space
@@ -617,6 +673,18 @@ export class Populator {
       baseScore: 0.1,
       maxInfluenceDistance: 12,
       useSeedPosition: false,
+      clusterTowardsWalls: true,
+      wallWeight: 10,
+      wallDistanceMetric: "manhattan",
+      wallAdjacentOnly: true,
+      wallBandSize: 1,
+      wallDeadzone: 0,
+      seedStrategy: "bestWall",
+      entityWeight: 5,
+      debugEnabled: true,
+      debugCollectDetails: true,
+      debugLogToConsole: true,
+      debugTopN: 5,
     });
 
     // ADD: Enemies after props, based on remaining space
@@ -1552,6 +1620,20 @@ export class Populator {
     }
   }
 
+  private addGems(room: Room, numGems: number, rand: () => number) {
+    let tiles = room.getEmptyTiles();
+    for (let i = 0; i < numGems; i++) {
+      const position = room.getRandomEmptyPosition(tiles);
+      if (position === null) break;
+      const { x, y } = position;
+      const gem = Game.randTable(
+        [EmeraldResource, GarnetResource, ZirconResource, AmberResource],
+        rand,
+      );
+      gem.add(room, room.game, x, y);
+    }
+  }
+
   private addVendingMachine(
     room: Room,
     rand: () => number,
@@ -2140,13 +2222,53 @@ export class Populator {
         break;
 
       case RoomType.BIGCAVE:
-        if (factor > 15)
-          this.addSpikeTraps(
+        if (
+          this.level.environment.type === EnvType.CAVE ||
+          this.level.environment.type === EnvType.MAGMA_CAVE ||
+          this.level.environment.type === EnvType.FOREST
+        ) {
+          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+            console.log(
+              "[OrganicTunnels] enabled in env",
+              this.level.environment.type,
+              room.globalId,
+            );
+          if (room.height > 15 || room.width > 15) {
+            room.builder.addWallBlocksOrganicTunnels(rand);
+          } else if (factor < 15) {
+            room.builder.addWallBlocksVariant(rand);
+          } else if (factor < 20) {
+            room.builder.addWallBlocks(rand);
+          }
+        }
+
+        if (room.envType !== EnvType.CASTLE) {
+          if (factor < 12) this.addChasms(room, rand);
+
+          if (factor < 12) this.addPools(room, rand);
+          if (factor < 12 && room.depth > 5) this.addMagmaPools(room, rand);
+        }
+
+        if (this.level.environment.type === EnvType.CASTLE)
+          this.addTorchesByArea(room);
+        // Windows for castle cave-style rooms
+        this.addWindowsByArea(room);
+
+        // Caves don't get torches by default
+        break;
+
+      case RoomType.GEMCAVE:
+        if (
+          this.level.environment.type === EnvType.CAVE ||
+          this.level.environment.type === EnvType.MAGMA_CAVE ||
+          this.level.environment.type === EnvType.FOREST
+        ) {
+          this.addGems(
             room,
-            Game.randTable([0, 0, 0, 1, 1, 2, 5], rand),
+            Game.randTable([1, 2, 2, 2, 3, 3, 3, 4], rand),
             rand,
           );
-        // Caves don't get torches by default
+        }
         break;
 
       case RoomType.TREASURE:

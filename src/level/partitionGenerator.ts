@@ -540,7 +540,7 @@ export class PartitionGenerator {
     const gx = CAVE_OFFSET + Math.floor((map_w - gW) / 2);
     const gy = CAVE_OFFSET + Math.floor((map_h - gH) / 2);
     const center = new Partition(gx, gy, gW, gH, "white");
-    center.type = RoomType.CAVE; // central hub is not the entry; entry will be a smaller room
+    center.type = RoomType.BIGCAVE; // central hub is not the entry; entry will be a smaller room
     partialLevel.partitions.push(center);
 
     // Create peripheral rooms ADJACENT to the center on one side (to ensure valid door coords)
@@ -660,6 +660,14 @@ export class PartitionGenerator {
         if (peripherals[i].area() < entry.area()) entry = peripherals[i];
       }
       entry.type = RoomType.ROPECAVE;
+      // Random chance to convert a different peripheral into a GEMCAVE
+      if (peripherals.length > 1 && Random.rand() < 0.33) {
+        const candidates = peripherals.filter((p) => p !== entry);
+        if (candidates.length > 0) {
+          const gemIndex = Game.rand(0, candidates.length - 1, Random.rand);
+          candidates[gemIndex].type = RoomType.GEMCAVE;
+        }
+      }
     } else {
       // Fallback: if no peripherals created, use center as entry
       center.type = RoomType.ROPECAVE;

@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.1c9cbb4132c140cc6bf9.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.0c45bdca4b6f509e1339.png";
+module.exports = __webpack_require__.p + "assets/objset.fc31fc7f6183056a1943.png";
 
 /***/ }),
 
@@ -22543,6 +22543,8 @@ class CoalResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 1;
         this.name = "coal";
+        this.extendShadow = true;
+        this.shadowOpacity = 0.5;
         if (random_1.Random.rand() < 0.1) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
@@ -40242,7 +40244,7 @@ class PartitionGenerator {
         const gx = CAVE_OFFSET + Math.floor((map_w - gW) / 2);
         const gy = CAVE_OFFSET + Math.floor((map_h - gH) / 2);
         const center = new Partition(gx, gy, gW, gH, "white");
-        center.type = room_1.RoomType.CAVE; // central hub is not the entry; entry will be a smaller room
+        center.type = room_1.RoomType.BIGCAVE; // central hub is not the entry; entry will be a smaller room
         partialLevel.partitions.push(center);
         // Create peripheral rooms ADJACENT to the center on one side (to ensure valid door coords)
         const targetCount = Math.max(4, num_rooms - 1);
@@ -40352,6 +40354,14 @@ class PartitionGenerator {
                     entry = peripherals[i];
             }
             entry.type = room_1.RoomType.ROPECAVE;
+            // Random chance to convert a different peripheral into a GEMCAVE
+            if (peripherals.length > 1 && random_1.Random.rand() < 0.33) {
+                const candidates = peripherals.filter((p) => p !== entry);
+                if (candidates.length > 0) {
+                    const gemIndex = game_1.Game.rand(0, candidates.length - 1, random_1.Random.rand);
+                    candidates[gemIndex].type = room_1.RoomType.GEMCAVE;
+                }
+            }
         }
         else {
             // Fallback: if no peripherals created, use center as entry
@@ -45684,6 +45694,7 @@ exports.WizardFireball = WizardFireball;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PropClusterer = void 0;
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 /**
  * Handles clustering logic for prop placement
  */
@@ -45691,6 +45702,8 @@ class PropClusterer {
     constructor(room, options = {}) {
         this.placedPositions = [];
         this.availableTiles = [];
+        this.wallProximityScoreGrid = null; // indexed by [x][y] in room-local coords
+        this.debugReport = null;
         this.room = room;
         this.options = {
             falloffExponent: options.falloffExponent ?? 2,
@@ -45698,6 +45711,20 @@ class PropClusterer {
             maxInfluenceDistance: options.maxInfluenceDistance ?? 10,
             useSeedPosition: options.useSeedPosition ?? false,
             seedPosition: options.seedPosition ?? { x: 0, y: 0 },
+            clusterTowardsWalls: options.clusterTowardsWalls ?? false,
+            wallMaxDistance: options.wallMaxDistance ?? 10,
+            wallWeight: options.wallWeight ?? 1,
+            wallDeadzone: options.wallDeadzone ?? 0,
+            onlyInnerWalls: options.onlyInnerWalls ?? false,
+            wallDistanceMetric: options.wallDistanceMetric ?? "euclidean",
+            debugEnabled: options.debugEnabled ?? false,
+            debugLogToConsole: options.debugLogToConsole ?? false,
+            debugCollectDetails: options.debugCollectDetails ?? false,
+            debugTopN: options.debugTopN ?? 5,
+            entityWeight: options.entityWeight ?? 1,
+            seedStrategy: options.seedStrategy ?? "random",
+            wallAdjacentOnly: options.wallAdjacentOnly ?? false,
+            wallBandSize: options.wallBandSize ?? undefined,
         };
     }
     /**
@@ -45706,6 +45733,22 @@ class PropClusterer {
     generateClusteredPositions(numProps) {
         this.placedPositions = [];
         this.availableTiles = this.getAvailableTiles();
+        if (this.options.debugEnabled) {
+            this.debugReport = {
+                config: this.options,
+                seedUsed: null,
+                wallsFound: 0,
+                wallGridStats: undefined,
+                iterations: [],
+            };
+        }
+        else {
+            this.debugReport = null;
+        }
+        // Precompute wall proximity grid once per run if requested
+        this.wallProximityScoreGrid = this.options.clusterTowardsWalls
+            ? this.computeWallProximityScores()
+            : null;
         if (this.availableTiles.length === 0) {
             return [];
         }
@@ -45713,15 +45756,45 @@ class PropClusterer {
         if (this.options.useSeedPosition &&
             this.isValidPosition(this.options.seedPosition)) {
             this.placePosition(this.options.seedPosition);
+            if (this.debugReport)
+                this.debugReport.seedUsed = { ...this.options.seedPosition };
         }
         else if (this.availableTiles.length > 0) {
-            const randomIndex = Math.floor(random_1.Random.rand() * this.availableTiles.length);
-            const randomPosition = this.availableTiles.splice(randomIndex, 1)[0];
-            this.placedPositions.push(randomPosition);
+            if (this.options.seedStrategy === "bestWall" &&
+                this.wallProximityScoreGrid) {
+                let best = null;
+                let bestScore = -Infinity;
+                for (const tile of this.availableTiles) {
+                    const lx = tile.x - this.room.roomX;
+                    const ly = tile.y - this.room.roomY;
+                    if (lx >= 0 &&
+                        ly >= 0 &&
+                        lx < this.wallProximityScoreGrid.length &&
+                        ly < this.wallProximityScoreGrid[0].length) {
+                        const s = this.wallProximityScoreGrid[lx][ly];
+                        if (s > bestScore) {
+                            best = tile;
+                            bestScore = s;
+                        }
+                    }
+                }
+                const seed = best ||
+                    this.availableTiles[Math.floor(random_1.Random.rand() * this.availableTiles.length)];
+                this.placePosition(seed);
+                if (this.debugReport)
+                    this.debugReport.seedUsed = { ...seed };
+            }
+            else {
+                const randomIndex = Math.floor(random_1.Random.rand() * this.availableTiles.length);
+                const randomPosition = this.availableTiles.splice(randomIndex, 1)[0];
+                this.placedPositions.push(randomPosition);
+                if (this.debugReport)
+                    this.debugReport.seedUsed = { ...randomPosition };
+            }
         }
         // Generate remaining positions
         for (let i = 1; i < numProps && this.availableTiles.length > 0; i++) {
-            const position = this.selectNextPosition();
+            const position = this.selectNextPosition(i);
             if (position) {
                 this.placePosition(position);
             }
@@ -45754,7 +45827,7 @@ class PropClusterer {
     /**
      * Selects the next position based on clustering algorithm
      */
-    selectNextPosition() {
+    selectNextPosition(iteration) {
         if (this.availableTiles.length === 0) {
             return null;
         }
@@ -45768,7 +45841,9 @@ class PropClusterer {
         if (totalScore <= 0) {
             // Fallback to uniform distribution if all scores are 0
             const randomIndex = Math.floor(random_1.Random.rand() * this.availableTiles.length);
-            return this.availableTiles.splice(randomIndex, 1)[0];
+            const fallback = this.availableTiles.splice(randomIndex, 1)[0];
+            this.captureDebugIteration(iteration, totalScore, true, fallback, scoredTiles);
+            return fallback;
         }
         // Perform weighted random selection
         const randomValue = random_1.Random.rand() * totalScore;
@@ -45776,23 +45851,39 @@ class PropClusterer {
         for (const tile of scoredTiles) {
             cumulativeScore += tile.score;
             if (cumulativeScore >= randomValue) {
+                this.captureDebugIteration(iteration, totalScore, false, tile.position, scoredTiles);
                 return tile.position;
             }
         }
         // Fallback to last tile
-        return scoredTiles[scoredTiles.length - 1].position;
+        const last = scoredTiles[scoredTiles.length - 1].position;
+        this.captureDebugIteration(iteration, totalScore, true, last, scoredTiles);
+        return last;
     }
     /**
      * Calculates the score for a tile based on its proximity to placed entities
      */
     calculateTileScore(tile) {
         let score = this.options.baseScore;
+        let entitiesInfluence = 0;
         for (const placed of this.placedPositions) {
             const distance = this.calculateDistance(tile, placed);
             if (distance <= this.options.maxInfluenceDistance) {
-                // Use inverse power function for falloff
-                const influence = 1 / Math.pow(distance, this.options.falloffExponent);
-                score += influence;
+                entitiesInfluence +=
+                    1 / Math.pow(distance, this.options.falloffExponent);
+            }
+        }
+        if (entitiesInfluence > 0)
+            score += entitiesInfluence * this.options.entityWeight;
+        // Add wall proximity bias (quadratic falloff toward walls)
+        if (this.wallProximityScoreGrid) {
+            const lx = tile.x - this.room.roomX;
+            const ly = tile.y - this.room.roomY;
+            if (lx >= 0 &&
+                ly >= 0 &&
+                lx < this.wallProximityScoreGrid.length &&
+                ly < this.wallProximityScoreGrid[0].length) {
+                score += this.wallProximityScoreGrid[lx][ly];
             }
         }
         return score;
@@ -45804,6 +45895,333 @@ class PropClusterer {
         const dx = pos1.x - pos2.x;
         const dy = pos1.y - pos2.y;
         return Math.sqrt(dx * dx + dy * dy);
+    }
+    /**
+     * Builds a room-local grid [x][y] of scores in [0, wallWeight] based on
+     * proximity to the nearest wall tile, using quadratic falloff.
+     */
+    computeWallProximityScores() {
+        const startX = this.room.roomX;
+        const startY = this.room.roomY;
+        const width = this.room.width;
+        const height = this.room.height;
+        // Collect wall tiles within room bounds
+        const walls = [];
+        for (let gx = startX; gx < startX + width; gx++) {
+            const col = this.room.roomArray[gx];
+            if (!col)
+                continue;
+            for (let gy = startY; gy < startY + height; gy++) {
+                const t = col[gy];
+                if (t instanceof wall_1.Wall) {
+                    if (this.options.onlyInnerWalls ? t.isInnerWall() : true) {
+                        walls.push(t);
+                    }
+                }
+            }
+        }
+        const targets = [];
+        if (this.options.wallAdjacentOnly) {
+            for (let gx = startX; gx < startX + width; gx++) {
+                const col = this.room.roomArray[gx];
+                if (!col)
+                    continue;
+                for (let gy = startY; gy < startY + height; gy++) {
+                    const t = col[gy];
+                    if (!t || t.isSolid())
+                        continue;
+                    const left = this.room.roomArray[gx - 1]?.[gy];
+                    const right = this.room.roomArray[gx + 1]?.[gy];
+                    const up = this.room.roomArray[gx]?.[gy - 1];
+                    const down = this.room.roomArray[gx]?.[gy + 1];
+                    if ((left instanceof wall_1.Wall &&
+                        (!this.options.onlyInnerWalls || left.isInnerWall())) ||
+                        (right instanceof wall_1.Wall &&
+                            (!this.options.onlyInnerWalls || right.isInnerWall())) ||
+                        (up instanceof wall_1.Wall &&
+                            (!this.options.onlyInnerWalls || up.isInnerWall())) ||
+                        (down instanceof wall_1.Wall &&
+                            (!this.options.onlyInnerWalls || down.isInnerWall()))) {
+                        targets.push({ x: gx, y: gy });
+                    }
+                }
+            }
+        }
+        const grid = new Array(width);
+        for (let lx = 0; lx < width; lx++) {
+            grid[lx] = new Array(height);
+            for (let ly = 0; ly < height; ly++) {
+                const gx = startX + lx;
+                const gy = startY + ly;
+                const score = this.wallScoreForGlobalTile(gx, gy, walls, targets);
+                grid[lx][ly] = score;
+            }
+        }
+        if (this.debugReport) {
+            this.debugReport.wallsFound = walls.length;
+            this.debugReport.wallTargetMode = this.options.wallAdjacentOnly
+                ? "adjacentFloor"
+                : "wall";
+            if (this.options.debugCollectDetails) {
+                let min = Number.POSITIVE_INFINITY;
+                let max = Number.NEGATIVE_INFINITY;
+                let sum = 0;
+                let count = 0;
+                for (let lx = 0; lx < width; lx++) {
+                    for (let ly = 0; ly < height; ly++) {
+                        const v = grid[lx][ly];
+                        if (v > 0) {
+                            if (v < min)
+                                min = v;
+                            if (v > max)
+                                max = v;
+                            sum += v;
+                            count++;
+                        }
+                    }
+                }
+                this.debugReport.wallGridStats = {
+                    min: count ? min : 0,
+                    max: count ? max : 0,
+                    avg: count ? sum / count : 0,
+                    nonZeroCount: count,
+                };
+            }
+            if (this.options.debugLogToConsole) {
+                console.log("[PropClusterer] walls:", walls.length, "gridStats:", this.debugReport.wallGridStats);
+            }
+        }
+        return grid;
+    }
+    /** Returns the precomputed wall proximity grid (room-local [x][y]). */
+    getWallProximityScores() {
+        return this.wallProximityScoreGrid;
+    }
+    /** Returns the last debug report for external inspection. */
+    getLastDebugReport() {
+        return this.debugReport;
+    }
+    wallScoreForGlobalTile(gx, gy, walls, adjacentTargets) {
+        if (walls.length === 0)
+            return 0;
+        let minDist = Number.POSITIVE_INFINITY;
+        if (this.options.wallAdjacentOnly) {
+            for (let i = 0; i < adjacentTargets.length; i++) {
+                const p = adjacentTargets[i];
+                const dx = gx - p.x;
+                const dy = gy - p.y;
+                const d = this.options.wallDistanceMetric === "manhattan"
+                    ? Math.abs(dx) + Math.abs(dy)
+                    : Math.sqrt(dx * dx + dy * dy);
+                if (d < minDist)
+                    minDist = d;
+            }
+        }
+        else {
+            for (let i = 0; i < walls.length; i++) {
+                const w = walls[i];
+                const dx = gx - w.x;
+                const dy = gy - w.y;
+                const d = this.options.wallDistanceMetric === "manhattan"
+                    ? Math.abs(dx) + Math.abs(dy)
+                    : Math.sqrt(dx * dx + dy * dy);
+                if (d < minDist)
+                    minDist = d;
+            }
+        }
+        const maxD = Math.max(0.0001, this.options.wallMaxDistance);
+        const deadzone = Math.max(0, this.options.wallDeadzone);
+        if (minDist > maxD)
+            return 0;
+        if (minDist < deadzone)
+            return 0;
+        // If a tighter band is requested, use band-limited quadratic
+        const band = this.options.wallBandSize;
+        if (band && band > 0) {
+            const normBand = Math.min(1, Math.max(0, (minDist - deadzone) / band));
+            const quadBand = 1 - normBand * normBand;
+            return this.options.wallWeight * Math.max(0, quadBand);
+        }
+        // Default quadratic over [deadzone, maxD]
+        const norm = (minDist - deadzone) / (maxD - deadzone);
+        const quadFalloff = 1 - norm * norm;
+        return this.options.wallWeight * Math.max(0, quadFalloff);
+    }
+    /**
+     * Analyze how well placements adhere to walls or to props near walls.
+     * Returns per-prop scores (0..1) and a concise summary.
+     */
+    analyzeEffectiveness(placements, options = {}) {
+        const usedPlacements = placements && placements.length ? placements : this.placedPositions;
+        const analysisOptions = {
+            wallScoreThresholdNormalized: options.wallScoreThresholdNormalized ?? 0.7,
+            neighborMaxDistance: options.neighborMaxDistance ?? 2,
+            neighborWeight: options.neighborWeight ?? 1,
+            combineMode: options.combineMode ?? "max",
+        };
+        // Ensure we have a wall proximity grid reflecting current options
+        const grid = this.wallProximityScoreGrid || this.computeWallProximityScores();
+        const wallWeight = Math.max(1e-6, this.options.wallWeight);
+        const perProp = [];
+        // Precompute normalized wall scores for all placements
+        const normWallScores = usedPlacements.map((p) => {
+            const lx = p.x - this.room.roomX;
+            const ly = p.y - this.room.roomY;
+            const g = lx >= 0 && ly >= 0 && grid && lx < grid.length && ly < grid[0].length
+                ? grid[lx][ly]
+                : 0;
+            return Math.max(0, Math.min(1, g / wallWeight));
+        });
+        // Identify which props are considered near wall
+        const isWallAdjacent = normWallScores.map((n) => n >= analysisOptions.wallScoreThresholdNormalized);
+        // For each prop, find nearest wall-adjacent neighbor and compute neighborScore (0..1)
+        for (let i = 0; i < usedPlacements.length; i++) {
+            const p = usedPlacements[i];
+            const wallScoreNormalized = normWallScores[i];
+            let bestNeighborDist = Number.POSITIVE_INFINITY;
+            for (let j = 0; j < usedPlacements.length; j++) {
+                if (i === j)
+                    continue;
+                if (!isWallAdjacent[j])
+                    continue;
+                const q = usedPlacements[j];
+                const d = this.calculateDistance(p, q);
+                if (d < bestNeighborDist)
+                    bestNeighborDist = d;
+            }
+            let neighborScore = 0;
+            if (bestNeighborDist !== Number.POSITIVE_INFINITY) {
+                const maxD = Math.max(analysisOptions.neighborMaxDistance, 1e-6);
+                if (bestNeighborDist <= maxD) {
+                    const norm = Math.max(0, Math.min(1, bestNeighborDist / maxD));
+                    neighborScore = 1 - norm * norm; // quadratic falloff
+                }
+            }
+            // Combine wall and neighbor components
+            let combined;
+            if (analysisOptions.combineMode === "sum") {
+                combined = Math.min(1, wallScoreNormalized + neighborScore * analysisOptions.neighborWeight);
+            }
+            else {
+                combined = Math.max(wallScoreNormalized, neighborScore * analysisOptions.neighborWeight);
+            }
+            perProp.push({
+                position: { x: p.x, y: p.y },
+                wallScoreNormalized,
+                neighborScore,
+                combinedScore: combined,
+            });
+        }
+        // Summaries
+        const avg = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+        const avgWall = avg(perProp.map((r) => r.wallScoreNormalized));
+        const avgNeighbor = avg(perProp.map((r) => r.neighborScore));
+        const avgCombined = avg(perProp.map((r) => r.combinedScore));
+        const threshold = analysisOptions.wallScoreThresholdNormalized;
+        const pctNearWall = perProp.filter((r) => r.wallScoreNormalized >= threshold).length /
+            Math.max(1, perProp.length);
+        const pctCombinedHigh = perProp.filter((r) => r.combinedScore >= threshold).length /
+            Math.max(1, perProp.length);
+        const report = {
+            total: perProp.length,
+            params: {
+                ...analysisOptions,
+                wallWeightUsed: wallWeight,
+                wallTargetMode: this.options.wallAdjacentOnly
+                    ? "adjacentFloor"
+                    : "wall",
+            },
+            perProp,
+            summary: {
+                avgWall,
+                avgNeighbor,
+                avgCombined,
+                pctNearWall,
+                pctCombinedHigh,
+            },
+        };
+        if (this.options.debugLogToConsole) {
+            console.log("[PropClusterer] effectiveness:", {
+                total: report.total,
+                params: report.params,
+                summary: {
+                    avgWall: Number(avgWall.toFixed(3)),
+                    avgNeighbor: Number(avgNeighbor.toFixed(3)),
+                    avgCombined: Number(avgCombined.toFixed(3)),
+                    pctNearWall: Number((pctNearWall * 100).toFixed(1)) + "%",
+                    pctCombinedHigh: Number((pctCombinedHigh * 100).toFixed(1)) + "%",
+                },
+            });
+        }
+        return report;
+    }
+    captureDebugIteration(iteration, totalScore, usedFallback, selected, scoredTiles) {
+        if (!this.options.debugEnabled || !this.debugReport)
+            return;
+        const entry = {
+            iteration,
+            availableTiles: this.availableTiles.length,
+            placedSoFar: this.placedPositions.length,
+            totalScore,
+            usedFallback,
+            selected,
+        };
+        if (this.options.debugCollectDetails) {
+            const topN = Math.max(0, this.options.debugTopN || 0);
+            if (topN > 0) {
+                // Copy and sort descending by score to get top candidates
+                const sorted = scoredTiles
+                    .slice(0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, topN);
+                entry.top = sorted.map((t) => {
+                    const breakdown = this.breakdownTileScore(t.position);
+                    return {
+                        position: { ...t.position },
+                        total: breakdown.total,
+                        base: breakdown.base,
+                        entities: breakdown.entities,
+                        wall: breakdown.wall,
+                    };
+                });
+            }
+        }
+        this.debugReport.iterations.push(entry);
+        if (this.options.debugLogToConsole) {
+            const top0 = entry.top && entry.top[0];
+            console.log("[PropClusterer] iter", iteration, "avail=", entry.availableTiles, "placed=", entry.placedSoFar, "totalScore=", totalScore.toFixed(3), usedFallback ? "(fallback)" : "", top0
+                ? {
+                    topPos: top0.position,
+                    base: Number(top0.base.toFixed(3)),
+                    entities: Number(top0.entities.toFixed(3)),
+                    wall: Number(top0.wall.toFixed(3)),
+                    total: Number(top0.total.toFixed(3)),
+                }
+                : undefined);
+        }
+    }
+    breakdownTileScore(tile) {
+        const base = this.options.baseScore;
+        let entities = 0;
+        for (const placed of this.placedPositions) {
+            const distance = this.calculateDistance(tile, placed);
+            if (distance <= this.options.maxInfluenceDistance) {
+                entities += 1 / Math.pow(distance, this.options.falloffExponent);
+            }
+        }
+        let wall = 0;
+        if (this.wallProximityScoreGrid) {
+            const lx = tile.x - this.room.roomX;
+            const ly = tile.y - this.room.roomY;
+            if (lx >= 0 &&
+                ly >= 0 &&
+                lx < this.wallProximityScoreGrid.length &&
+                ly < this.wallProximityScoreGrid[0].length) {
+                wall = this.wallProximityScoreGrid[lx][ly];
+            }
+        }
+        const total = base + entities * this.options.entityWeight + wall;
+        return { base, entities, wall, total };
     }
 }
 exports.PropClusterer = PropClusterer;
@@ -46009,6 +46427,7 @@ var RoomType;
     RoomType["GRAVEYARD"] = "GRAVEYARD";
     RoomType["FOREST"] = "FOREST";
     RoomType["ROPEUP"] = "ROPEUP";
+    RoomType["GEMCAVE"] = "GEMCAVE";
 })(RoomType = exports.RoomType || (exports.RoomType = {}));
 var TurnState;
 (function (TurnState) {
@@ -50044,6 +50463,9 @@ const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
+const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
+const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -50678,6 +51100,32 @@ class Populator {
             : environment_1.environmentData[room.level.environment.type];
         const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
         const positions = clusterer.generateClusteredPositions(numProps);
+        if (clusteringOptions?.debugEnabled) {
+            const report = clusterer.getLastDebugReport();
+            if (report) {
+                console.log("[PropClusterer] config:", {
+                    clusterTowardsWalls: report.config.clusterTowardsWalls,
+                    wallWeight: report.config.wallWeight,
+                    wallMaxDistance: report.config.wallMaxDistance,
+                    wallDeadzone: report.config.wallDeadzone,
+                    onlyInnerWalls: report.config.onlyInnerWalls,
+                    wallDistanceMetric: report.config.wallDistanceMetric,
+                });
+                console.log("[PropClusterer] walls:", report.wallsFound, "grid:", report.wallGridStats);
+                console.log("[PropClusterer] iterations:", report.iterations.length, "seed:", report.seedUsed);
+                if (report.iterations[0]?.top && report.iterations[0].top.length) {
+                    console.log("[PropClusterer] first-iter top:", report.iterations[0].top);
+                }
+                // Effectiveness summary after placements
+                const effectiveness = clusterer.analyzeEffectiveness(positions, {
+                    wallScoreThresholdNormalized: 0.7,
+                    neighborMaxDistance: 2,
+                    neighborWeight: 1,
+                    combineMode: "max",
+                });
+                console.log("[PropClusterer] effectiveness summary:", effectiveness.summary);
+            }
+        }
         // Convert clustered single-tile seeds into valid placements for larger footprints
         let tiles = room.getEmptyTiles();
         for (const seed of positions) {
@@ -50760,10 +51208,21 @@ class Populator {
         const numProps = this.getNumProps(room);
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
-            falloffExponent: 2,
-            baseScore: 0.1,
-            maxInfluenceDistance: 12,
-            useSeedPosition: false,
+            clusterTowardsWalls: true,
+            wallAdjacentOnly: true,
+            wallBandSize: 1,
+            wallDeadzone: 0,
+            wallWeight: 80,
+            seedStrategy: "bestWall",
+            baseScore: 0,
+            entityWeight: 5,
+            falloffExponent: 3,
+            maxInfluenceDistance: 1.15,
+            wallDistanceMetric: "manhattan",
+            debugEnabled: true,
+            debugCollectDetails: true,
+            debugLogToConsole: true,
+            debugTopN: 5,
         });
         // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
@@ -50820,6 +51279,18 @@ class Populator {
             baseScore: 0.1,
             maxInfluenceDistance: 12,
             useSeedPosition: false,
+            clusterTowardsWalls: true,
+            wallWeight: 10,
+            wallDistanceMetric: "manhattan",
+            wallAdjacentOnly: true,
+            wallBandSize: 1,
+            wallDeadzone: 0,
+            seedStrategy: "bestWall",
+            entityWeight: 5,
+            debugEnabled: true,
+            debugCollectDetails: true,
+            debugLogToConsole: true,
+            debugTopN: 5,
         });
         // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
@@ -51541,6 +52012,17 @@ class Populator {
                 emeraldResource_1.EmeraldResource.add(room, room.game, x, y);
         }
     }
+    addGems(room, numGems, rand) {
+        let tiles = room.getEmptyTiles();
+        for (let i = 0; i < numGems; i++) {
+            const position = room.getRandomEmptyPosition(tiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
+            const gem = game_1.Game.randTable([emeraldResource_1.EmeraldResource, garnetResource_1.GarnetResource, zirconResource_1.ZirconResource, amberResource_1.AmberResource], rand);
+            gem.add(room, room.game, x, y);
+        }
+    }
     addVendingMachine(room, rand, placeX, placeY, item) {
         const pos = room.getRandomEmptyPosition(room.getEmptyTiles());
         if (pos === null)
@@ -51715,9 +52197,41 @@ class Populator {
                 this.addWindowsByArea(room);
                 break;
             case room_1.RoomType.BIGCAVE:
-                if (factor > 15)
-                    this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
+                if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
+                        console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
+                    if (room.height > 15 || room.width > 15) {
+                        room.builder.addWallBlocksOrganicTunnels(rand);
+                    }
+                    else if (factor < 15) {
+                        room.builder.addWallBlocksVariant(rand);
+                    }
+                    else if (factor < 20) {
+                        room.builder.addWallBlocks(rand);
+                    }
+                }
+                if (room.envType !== environmentTypes_1.EnvType.CASTLE) {
+                    if (factor < 12)
+                        this.addChasms(room, rand);
+                    if (factor < 12)
+                        this.addPools(room, rand);
+                    if (factor < 12 && room.depth > 5)
+                        this.addMagmaPools(room, rand);
+                }
+                if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE)
+                    this.addTorchesByArea(room);
+                // Windows for castle cave-style rooms
+                this.addWindowsByArea(room);
                 // Caves don't get torches by default
+                break;
+            case room_1.RoomType.GEMCAVE:
+                if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
+                    this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
+                    this.addGems(room, game_1.Game.randTable([1, 2, 2, 2, 3, 3, 3, 4], rand), rand);
+                }
                 break;
             case room_1.RoomType.TREASURE:
                 this.addTorchesByArea(room);
