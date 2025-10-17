@@ -2495,6 +2495,8 @@ export class Game {
     fadeDir?: "left" | "right" | "up" | "down",
     outlineColor?: string,
     outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
   ) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
 
@@ -2521,13 +2523,24 @@ export class Game {
     );
     if (outlineColor && outlineOpacity > 0)
       key += `,outline=${outlineColor}:${Math.max(0, Math.min(1, outlineOpacity))}`;
+    if (outlineColor && outlineOpacity > 0 && outlineOffset)
+      key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
+    if (outlineColor && outlineOpacity > 0 && outlineManhattan)
+      key += `,outlineStyle=manhattan`;
 
     if (!Game.shade_canvases[key]) {
       // First time for this shaded sprite: render it into an offscreen canvas and cache it
       Game.shade_canvases[key] = document.createElement("canvas");
       const baseW = Math.round(sW * GameConstants.TILESIZE);
       const baseH = Math.round(sH * GameConstants.TILESIZE);
-      const extra = outlineColor && outlineOpacity > 0 ? 2 : 0;
+      const outlinePad =
+        outlineColor && outlineOpacity > 0
+          ? 1 + Math.max(0, Math.floor(outlineOffset))
+          : 0; // pixels
+      const extra =
+        outlineColor && outlineOpacity > 0
+          ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+          : 0;
       Game.shade_canvases[key].width = baseW + extra;
       Game.shade_canvases[key].height = baseH + extra;
       let shCtx = Game.shade_canvases[key].getContext("2d");
@@ -2540,8 +2553,8 @@ export class Game {
       );
 
       // 1) Draw the base sprite
-      const dx = outlineColor && outlineOpacity > 0 ? 1 : 0;
-      const dy = outlineColor && outlineOpacity > 0 ? 1 : 0;
+      const dx = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
+      const dy = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
       shCtx.globalCompositeOperation = "source-over";
       shCtx.drawImage(
         set,
@@ -2617,36 +2630,56 @@ export class Game {
 
       // 5) Optional colored outline behind the sprite
       if (outlineColor && outlineOpacity > 0) {
-        const oW = baseW + 2;
-        const oH = baseH + 2;
+        const ringOuter = 1 + Math.max(0, Math.floor(outlineOffset)); // outer radius in px
+        const oPad = ringOuter; // padding on each side
+        const oW = baseW + 2 * oPad;
+        const oH = baseH + 2 * oPad;
         const outlineCanvas = document.createElement("canvas");
         outlineCanvas.width = oW;
         outlineCanvas.height = oH;
         const oCtx = outlineCanvas.getContext("2d");
 
-        const offsets = [
-          { x: -1, y: 0 },
-          { x: 1, y: 0 },
-          { x: 0, y: -1 },
-          { x: 0, y: 1 },
-          { x: -1, y: -1 },
-          { x: 1, y: -1 },
-          { x: -1, y: 1 },
-          { x: 1, y: 1 },
-        ];
-        for (const off of offsets) {
-          oCtx.drawImage(
-            set,
-            Math.round(sX * GameConstants.TILESIZE),
-            Math.round(sY * GameConstants.TILESIZE),
-            Math.round(sW * GameConstants.TILESIZE),
-            Math.round(sH * GameConstants.TILESIZE),
-            1 + off.x,
-            1 + off.y,
-            baseW,
-            baseH,
-          );
+        // Helper to draw a dilated silhouette of the sprite using chosen metric
+        const drawDilated = (
+          ctx: CanvasRenderingContext2D,
+          r: number,
+          useManhattan: boolean,
+        ) => {
+          for (let offY = -r; offY <= r; offY++) {
+            for (let offX = -r; offX <= r; offX++) {
+              if (useManhattan && Math.abs(offX) + Math.abs(offY) > r) continue;
+              ctx.drawImage(
+                set,
+                Math.round(sX * GameConstants.TILESIZE),
+                Math.round(sY * GameConstants.TILESIZE),
+                Math.round(sW * GameConstants.TILESIZE),
+                Math.round(sH * GameConstants.TILESIZE),
+                oPad + offX,
+                oPad + offY,
+                baseW,
+                baseH,
+              );
+            }
+          }
+        };
+
+        // Build outer mask (expanded by ringOuter)
+        oCtx.globalCompositeOperation = "source-over";
+        drawDilated(oCtx, ringOuter, outlineManhattan);
+
+        // Subtract inner mask (expanded by ringOuter - 1) to create a 1px ring offset outward
+        if (ringOuter - 1 >= 0) {
+          const innerCanvas = document.createElement("canvas");
+          innerCanvas.width = oW;
+          innerCanvas.height = oH;
+          const iCtx = innerCanvas.getContext("2d");
+          drawDilated(iCtx, Math.max(0, ringOuter - 1), outlineManhattan);
+          oCtx.globalCompositeOperation = "destination-out";
+          oCtx.drawImage(innerCanvas, 0, 0);
+          oCtx.globalCompositeOperation = "source-over";
         }
+
+        // Tint the ring
         oCtx.globalCompositeOperation = "source-in";
         oCtx.globalAlpha = Math.max(0, Math.min(1, outlineOpacity));
         oCtx.fillStyle = outlineColor;
@@ -2654,8 +2687,10 @@ export class Game {
         oCtx.globalCompositeOperation = "source-over";
         oCtx.globalAlpha = 1;
 
+        // Place the outline behind the shaded sprite in the precomposited canvas
         shCtx.globalCompositeOperation = "destination-over";
-        shCtx.drawImage(outlineCanvas, 0, 0);
+        // Align top-left: shaded sprite started at dx,dy = outlinePad
+        shCtx.drawImage(outlineCanvas, dx - oPad, dy - oPad);
         shCtx.globalCompositeOperation = "source-over";
       }
     }
@@ -2664,13 +2699,21 @@ export class Game {
     Game.ctx.drawImage(
       Game.shade_canvases[key],
       Math.round(dX * GameConstants.TILESIZE) -
-        (outlineColor && outlineOpacity > 0 ? 1 : 0),
+        (outlineColor && outlineOpacity > 0
+          ? 1 + Math.max(0, Math.floor(outlineOffset))
+          : 0),
       Math.round(dY * GameConstants.TILESIZE) -
-        (outlineColor && outlineOpacity > 0 ? 1 : 0),
+        (outlineColor && outlineOpacity > 0
+          ? 1 + Math.max(0, Math.floor(outlineOffset))
+          : 0),
       Math.round(dW * GameConstants.TILESIZE) +
-        (outlineColor && outlineOpacity > 0 ? 2 : 0),
+        (outlineColor && outlineOpacity > 0
+          ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+          : 0),
       Math.round(dH * GameConstants.TILESIZE) +
-        (outlineColor && outlineOpacity > 0 ? 2 : 0),
+        (outlineColor && outlineOpacity > 0
+          ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+          : 0),
     );
 
     Game.ctx.restore(); // Restore the canvas to the previous state
@@ -2762,6 +2805,8 @@ export class Game {
     fadeDir?: "left" | "right" | "up" | "down",
     outlineColor?: string,
     outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -2779,6 +2824,8 @@ export class Game {
       fadeDir,
       outlineColor,
       outlineOpacity,
+      outlineOffset,
+      outlineManhattan,
     );
   };
 
@@ -2798,6 +2845,10 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
     fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
   ) => {
     Game.drawHelper(
       Game.itemset,
@@ -2813,6 +2864,10 @@ export class Game {
       shadeOpacity,
       true,
       fadeDir,
+      outlineColor,
+      outlineOpacity,
+      outlineOffset,
+      outlineManhattan,
     );
   };
 

@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.feef5fcb3d58cf858171.png";
+module.exports = __webpack_require__.p + "assets/itemset.61b80c2fd8b463c4b260.png";
 
 /***/ }),
 
@@ -25123,7 +25123,7 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  * @param entity If true, uses entity shade quantization levels
  * @param fadeDir Optional directional fade mask (left/right/up/down)
  */
-Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0) => {
+Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
     // Snap to nearest shading increment
     const shadeLevel = entity
@@ -25138,19 +25138,28 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
     let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor, fadeDir);
     if (outlineColor && outlineOpacity > 0)
         key += `,outline=${outlineColor}:${Math.max(0, Math.min(1, outlineOpacity))}`;
+    if (outlineColor && outlineOpacity > 0 && outlineOffset)
+        key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
+    if (outlineColor && outlineOpacity > 0 && outlineManhattan)
+        key += `,outlineStyle=manhattan`;
     if (!Game.shade_canvases[key]) {
         // First time for this shaded sprite: render it into an offscreen canvas and cache it
         Game.shade_canvases[key] = document.createElement("canvas");
         const baseW = Math.round(sW * gameConstants_1.GameConstants.TILESIZE);
         const baseH = Math.round(sH * gameConstants_1.GameConstants.TILESIZE);
-        const extra = outlineColor && outlineOpacity > 0 ? 2 : 0;
+        const outlinePad = outlineColor && outlineOpacity > 0
+            ? 1 + Math.max(0, Math.floor(outlineOffset))
+            : 0; // pixels
+        const extra = outlineColor && outlineOpacity > 0
+            ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+            : 0;
         Game.shade_canvases[key].width = baseW + extra;
         Game.shade_canvases[key].height = baseH + extra;
         let shCtx = Game.shade_canvases[key].getContext("2d");
         shCtx.clearRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         // 1) Draw the base sprite
-        const dx = outlineColor && outlineOpacity > 0 ? 1 : 0;
-        const dy = outlineColor && outlineOpacity > 0 ? 1 : 0;
+        const dx = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
+        const dy = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
         shCtx.globalCompositeOperation = "source-over";
         shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
         // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
@@ -25197,42 +25206,66 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         }
         // 5) Optional colored outline behind the sprite
         if (outlineColor && outlineOpacity > 0) {
-            const oW = baseW + 2;
-            const oH = baseH + 2;
+            const ringOuter = 1 + Math.max(0, Math.floor(outlineOffset)); // outer radius in px
+            const oPad = ringOuter; // padding on each side
+            const oW = baseW + 2 * oPad;
+            const oH = baseH + 2 * oPad;
             const outlineCanvas = document.createElement("canvas");
             outlineCanvas.width = oW;
             outlineCanvas.height = oH;
             const oCtx = outlineCanvas.getContext("2d");
-            const offsets = [
-                { x: -1, y: 0 },
-                { x: 1, y: 0 },
-                { x: 0, y: -1 },
-                { x: 0, y: 1 },
-                { x: -1, y: -1 },
-                { x: 1, y: -1 },
-                { x: -1, y: 1 },
-                { x: 1, y: 1 },
-            ];
-            for (const off of offsets) {
-                oCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), 1 + off.x, 1 + off.y, baseW, baseH);
+            // Helper to draw a dilated silhouette of the sprite using chosen metric
+            const drawDilated = (ctx, r, useManhattan) => {
+                for (let offY = -r; offY <= r; offY++) {
+                    for (let offX = -r; offX <= r; offX++) {
+                        if (useManhattan && Math.abs(offX) + Math.abs(offY) > r)
+                            continue;
+                        ctx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), oPad + offX, oPad + offY, baseW, baseH);
+                    }
+                }
+            };
+            // Build outer mask (expanded by ringOuter)
+            oCtx.globalCompositeOperation = "source-over";
+            drawDilated(oCtx, ringOuter, outlineManhattan);
+            // Subtract inner mask (expanded by ringOuter - 1) to create a 1px ring offset outward
+            if (ringOuter - 1 >= 0) {
+                const innerCanvas = document.createElement("canvas");
+                innerCanvas.width = oW;
+                innerCanvas.height = oH;
+                const iCtx = innerCanvas.getContext("2d");
+                drawDilated(iCtx, Math.max(0, ringOuter - 1), outlineManhattan);
+                oCtx.globalCompositeOperation = "destination-out";
+                oCtx.drawImage(innerCanvas, 0, 0);
+                oCtx.globalCompositeOperation = "source-over";
             }
+            // Tint the ring
             oCtx.globalCompositeOperation = "source-in";
             oCtx.globalAlpha = Math.max(0, Math.min(1, outlineOpacity));
             oCtx.fillStyle = outlineColor;
             oCtx.fillRect(0, 0, oW, oH);
             oCtx.globalCompositeOperation = "source-over";
             oCtx.globalAlpha = 1;
+            // Place the outline behind the shaded sprite in the precomposited canvas
             shCtx.globalCompositeOperation = "destination-over";
-            shCtx.drawImage(outlineCanvas, 0, 0);
+            // Align top-left: shaded sprite started at dx,dy = outlinePad
+            shCtx.drawImage(outlineCanvas, dx - oPad, dy - oPad);
             shCtx.globalCompositeOperation = "source-over";
         }
     }
     // Blit the pre-shaded sprite to the main canvas at the destination position/size
     Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE) -
-        (outlineColor && outlineOpacity > 0 ? 1 : 0), Math.round(dY * gameConstants_1.GameConstants.TILESIZE) -
-        (outlineColor && outlineOpacity > 0 ? 1 : 0), Math.round(dW * gameConstants_1.GameConstants.TILESIZE) +
-        (outlineColor && outlineOpacity > 0 ? 2 : 0), Math.round(dH * gameConstants_1.GameConstants.TILESIZE) +
-        (outlineColor && outlineOpacity > 0 ? 2 : 0));
+        (outlineColor && outlineOpacity > 0
+            ? 1 + Math.max(0, Math.floor(outlineOffset))
+            : 0), Math.round(dY * gameConstants_1.GameConstants.TILESIZE) -
+        (outlineColor && outlineOpacity > 0
+            ? 1 + Math.max(0, Math.floor(outlineOffset))
+            : 0), Math.round(dW * gameConstants_1.GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0
+            ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+            : 0), Math.round(dH * gameConstants_1.GameConstants.TILESIZE) +
+        (outlineColor && outlineOpacity > 0
+            ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
+            : 0));
     Game.ctx.restore(); // Restore the canvas to the previous state
 };
 /**
@@ -25253,15 +25286,15 @@ Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpaci
  * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
  * Uses entity=true so mobs use entity shade quantization.
  */
-Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0) => {
-    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity);
+Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
+    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
 };
 /**
  * Draw an item from the item sheet. Convenience wrapper.
  * Uses entity=true so items use entity shade quantization.
  */
-Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
-    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
+Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
+    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
 };
 /**
  * Draw an FX frame from the FX sheet. Convenience wrapper.
@@ -34017,6 +34050,14 @@ class Item extends drawable_1.Drawable {
                 game_1.Game.ctx.globalAlpha = 1.0;
             }
         };
+        this.outline = () => {
+            return {
+                color: "white",
+                opacity: 0,
+                offset: 0,
+                manhattan: false,
+            };
+        };
         // Function to draw the item's icon
         this.drawIcon = (delta, x, y, opacity = 1, count) => {
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -34031,7 +34072,7 @@ class Item extends drawable_1.Drawable {
             if (this.cooldown > 0) {
                 game_1.Game.ctx.globalAlpha = 0.35;
             }
-            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h);
+            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h, undefined, undefined, undefined, this.outline().color, this.outline().opacity, this.outline().offset, this.outline().manhattan);
             game_1.Game.ctx.globalAlpha = 1;
             let countToUse = count ? count : this.stackCount;
             let countText = countToUse <= 1 ? "" : "" + countToUse;
@@ -34379,6 +34420,7 @@ class Key extends usable_1.Usable {
         };
         this.onUse = (player) => {
             this.showPath = !this.showPath;
+            this.tileX = this.showPath ? 2 : 1;
             const message = this.showPath ? "Showing path" : "Path hidden";
             this.room.syncKeyPathParticles();
             this.room.game.pushMessage(message);
@@ -34387,8 +34429,29 @@ class Key extends usable_1.Usable {
             //this.updatePathToDoor();
         };
         this.onDrop = () => {
+            this.showPath = false;
+            this.tileX = this.showPath ? 2 : 1;
             this.room.syncKeyPathParticles();
         };
+        /*
+        outline = () => {
+          if (this.showPath) {
+            return {
+              color: "red",
+              opacity: 0.4,
+              offset: 1,
+              manhattan: true,
+            };
+          } else {
+            return {
+              color: "white",
+              opacity: 0,
+              offset: 0,
+              manhattan: false,
+            };
+          }
+        };
+      */
         this.updatePathToDoor = () => {
             try {
                 const player = this.level.game.players[this.level.game.localPlayerID];

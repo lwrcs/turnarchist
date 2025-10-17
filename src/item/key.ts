@@ -47,6 +47,7 @@ export class Key extends Usable {
 
   onUse = (player: Player) => {
     this.showPath = !this.showPath;
+    this.tileX = this.showPath ? 2 : 1;
     const message = this.showPath ? "Showing path" : "Path hidden";
     this.room.syncKeyPathParticles();
 
@@ -58,9 +59,30 @@ export class Key extends Usable {
   };
 
   onDrop = () => {
+    this.showPath = false;
+    this.tileX = this.showPath ? 2 : 1;
+
     this.room.syncKeyPathParticles();
   };
-
+  /*
+  outline = () => {
+    if (this.showPath) {
+      return {
+        color: "red",
+        opacity: 0.4,
+        offset: 1,
+        manhattan: true,
+      };
+    } else {
+      return {
+        color: "white",
+        opacity: 0,
+        offset: 0,
+        manhattan: false,
+      };
+    }
+  };
+*/
   updatePathToDoor = () => {
     try {
       const player = this.level.game.players[this.level.game.localPlayerID];

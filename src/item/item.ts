@@ -425,6 +425,15 @@ export class Item extends Drawable {
       Game.ctx.globalAlpha = 1.0;
     }
   };
+
+  outline = () => {
+    return {
+      color: "white",
+      opacity: 0,
+      offset: 0,
+      manhattan: false,
+    };
+  };
   // Function to draw the item's icon
   drawIcon = (delta: number, x: number, y: number, opacity = 1, count?) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
@@ -449,6 +458,13 @@ export class Item extends Drawable {
       y - 1 + this.iconOffset,
       this.w,
       this.h,
+      undefined,
+      undefined,
+      undefined,
+      this.outline().color,
+      this.outline().opacity,
+      this.outline().offset,
+      this.outline().manhattan,
     );
     Game.ctx.globalAlpha = 1;
 
