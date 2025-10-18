@@ -84,6 +84,7 @@ import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 import { GarnetResource } from "../entity/resource/garnetResource";
 import { AmberResource } from "../entity/resource/amberResource";
 import { ZirconResource } from "../entity/resource/zirconResource";
+import { ObsidianBlock } from "../entity/object/obsidianBlock";
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
 for (const [enemyClass, id] of enemyClassToId.entries()) {
@@ -210,7 +211,12 @@ export class Populator {
         caveRooms: this.numRooms() * 2,
         locked: true,
         envType: EnvType.MAGMA_CAVE,
-        linearity: 0.5,
+        linearity: 1,
+
+        giantCentralRoom: true,
+        mapWidth: 75,
+        mapHeight: 75,
+        giantRoomScale: 0.8,
       });
     }
 
@@ -629,13 +635,25 @@ export class Populator {
   }
 
   private populateMagmaCaveEnvironment(room: Room) {
-    const numProps = this.getNumProps(room);
-    this.addPropsWithClustering(room, numProps, room.envType, {
-      falloffExponent: 2,
-      baseScore: 0.1,
-      maxInfluenceDistance: 12,
-      useSeedPosition: false,
+    const numProps = this.getNumProps(room, 0.25);
+    const cappedNumProps = Math.min(
+      numProps * 1.25,
+      room.getEmptyTiles().length,
+    );
+    this.addPropsWithClustering(room, cappedNumProps, room.envType, {
+      clusterTowardsWalls: true,
+      wallAdjacentOnly: true,
+      wallBandSize: 1,
+      wallDeadzone: 0,
+      wallWeight: 80,
+      seedStrategy: "bestWall",
+      baseScore: 0,
+      entityWeight: 5,
+      falloffExponent: 3,
+      maxInfluenceDistance: 1.15,
+      wallDistanceMetric: "manhattan",
     });
+    this.replaceEdgeWalls(room, ObsidianBlock, 0.75);
 
     // ADD: Enemies after props, based on remaining space
     this.addRandomEnemies(room);
@@ -978,6 +996,84 @@ export class Populator {
       if (position === null) break;
       const { x, y } = position;
       room.roomArray[x][y] = new SpikeTrap(room, x, y);
+    }
+  }
+
+  private replaceEdgeWalls(
+    room: Room,
+    EntityClass?: {
+      add?: (
+        room: Room,
+        game: any,
+        x: number,
+        y: number,
+        ...args: any[]
+      ) => any;
+    },
+    weight: number = 0.25,
+  ) {
+    // Ensure wall metadata is up to date
+    room.calculateWallInfo();
+
+    // First pass: collect all edge inner walls (do not mutate while collecting)
+    const edgeWalls: Array<{ x: number; y: number }> = [];
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const tile = room.roomArray[x]?.[y];
+        if (!(tile instanceof Wall)) continue;
+        const info = room.wallInfo.get(`${x},${y}`);
+        if (!info?.isInnerWall) continue; // only operate on inner walls
+
+        // Check four-neighbor adjacency for a floor-type tile
+        const neighbors = [
+          room.roomArray[x]?.[y - 1],
+          room.roomArray[x]?.[y + 1],
+          room.roomArray[x - 1]?.[y],
+          room.roomArray[x + 1]?.[y],
+        ];
+        const touchesFloor = neighbors.some(
+          (n) => n instanceof Floor || n instanceof SpawnFloor,
+        );
+        if (touchesFloor) edgeWalls.push({ x, y });
+      }
+    }
+
+    // Second pass: roll and replace
+    for (const pos of edgeWalls) {
+      if (Random.rand() <= weight) {
+        const { x, y } = pos;
+        room.roomArray[x][y] = new Floor(room, x, y);
+
+        if (EntityClass && typeof EntityClass.add === "function") {
+          try {
+            EntityClass.add(room, room.game, x, y);
+          } catch (e) {
+            // ignore optional args requirement
+          }
+        }
+      }
+    }
+
+    // After replacements, remove floating singular inner walls with no wall neighbors
+    room.calculateWallInfo();
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const tile = room.roomArray[x]?.[y];
+        if (!(tile instanceof Wall)) continue;
+        const info = room.wallInfo.get(`${x},${y}`);
+        if (!info?.isInnerWall) continue; // keep perimeter walls intact
+
+        const up = room.roomArray[x]?.[y - 1];
+        const down = room.roomArray[x]?.[y + 1];
+        const left = room.roomArray[x - 1]?.[y];
+        const right = room.roomArray[x + 1]?.[y];
+        const neighborWalls = [up, down, left, right].filter(
+          (n) => n instanceof Wall,
+        ).length;
+        if (neighborWalls === 0) {
+          room.roomArray[x][y] = new Floor(room, x, y);
+        }
+      }
     }
   }
   // #endregion
