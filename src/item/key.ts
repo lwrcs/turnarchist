@@ -46,11 +46,31 @@ export class Key extends Usable {
   };
 
   onUse = (player: Player) => {
-    this.showPath = !this.showPath;
-    this.tileX = this.showPath ? 2 : 1;
-    const message = this.showPath ? "Showing path" : "Path hidden";
-    this.room.syncKeyPathParticles();
+    // A key can only be toggled on the floor it belongs to
+    if (this.depth === null) this.depth = player.depth;
+    if (this.depth !== player.depth) {
+      this.room.game.pushMessage("This key doesn't fit on this floor.");
+      return;
+    }
 
+    // Toggle this key, and ensure all other keys are turned off
+    const togglingOn = !this.showPath;
+
+    for (const p of Object.values(this.room.game.players)) {
+      for (const it of p.inventory.items) {
+        if (it instanceof Key && it !== this) {
+          it.showPath = false;
+          (it as Key).tileX = 1;
+        }
+      }
+    }
+
+    this.showPath = togglingOn;
+    this.tileX = this.showPath ? 2 : 1;
+
+    const message = this.showPath ? "Showing path" : "Path hidden";
+    // Pass this key and the player context so only this key's path is considered
+    this.room.syncKeyPathParticles(this, player);
     this.room.game.pushMessage(message);
   };
 
@@ -83,9 +103,10 @@ export class Key extends Usable {
     }
   };
 */
-  updatePathToDoor = () => {
+  updatePathToDoor = (playerCtx?: Player) => {
     try {
-      const player = this.level.game.players[this.level.game.localPlayerID];
+      const player =
+        playerCtx || this.level.game.players[this.level.game.localPlayerID];
       const playerRoom = (player as any)?.getRoom?.() || this.level;
       if (!playerRoom) return;
 

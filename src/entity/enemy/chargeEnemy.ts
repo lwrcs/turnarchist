@@ -45,6 +45,8 @@ export class ChargeEnemy extends Enemy {
     this.deathParticleColor = "#ffffff";
     this.lastX = this.x;
     this.lastY = this.y;
+    this.imageParticleX = 3;
+    this.imageParticleY = 29;
     this.name = "charge knight";
 
     this.state = ChargeEnemyState.IDLE;

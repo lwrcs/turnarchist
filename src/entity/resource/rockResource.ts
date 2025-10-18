@@ -21,6 +21,8 @@ export class Rock extends Resource {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "rock";
+    this.imageParticleX = 0;
+    this.imageParticleY = 25;
     if (Random.rand() < 0.05) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }

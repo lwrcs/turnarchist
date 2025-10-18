@@ -452,6 +452,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
       { class: KnightEnemy, weight: 0.7, minDepth: 1 },
       { class: RookEnemy, weight: 0.6, minDepth: 1 },
+      { class: BoltcasterEnemy, weight: 0.25, minDepth: 1 },
 
       // Depth 2 enemies
       { class: ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },

@@ -20,8 +20,8 @@ export class CaveBlock extends Resource {
     this.hasShadow = true;
     this.chainPushable = false;
     this.name = "cave rock";
-    this.imageParticleX = 6;
-    this.imageParticleY = 24;
+    this.imageParticleX = 9;
+    this.imageParticleY = 25;
     this.opaque = true;
     this.hitSound = Sound.breakRock;
     this.extendShadow = true;

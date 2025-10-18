@@ -1429,22 +1429,47 @@ export class Room {
    * Aligns KeyPathParticles with `this.keyPathDots`. Adds particles for any
    * positions missing a live particle and marks particles not on the path as dead.
    */
-  syncKeyPathParticles = () => {
-    let hasKey = false;
-    let showPath = false;
-    for (const player of Object.values(this.game.players)) {
-      for (const i of player.inventory.items) {
-        if (i instanceof Key) {
-          i.updatePathToDoor();
-          hasKey = true;
-          showPath = i.showPath;
+  syncKeyPathParticles = (activeKey?: Key, activePlayer?: Player) => {
+    // Determine which key (if any) is the active one. Only one key may be active.
+    let selectedKey: Key | null = null;
+    let selectedPlayer: Player | null = null;
+
+    if (activeKey && activePlayer) {
+      selectedKey = activeKey;
+      selectedPlayer = activePlayer;
+    } else {
+      // Fallback: find the first key with showPath=true on the current floor
+      for (const p of Object.values(this.game.players)) {
+        for (const i of p.inventory.items) {
+          if (i instanceof Key && i.showPath) {
+            if (i.depth === null) i.depth = p.depth;
+            if (i.depth === p.depth) {
+              selectedKey = i;
+              selectedPlayer = p;
+              break;
+            }
+          }
         }
+        if (selectedKey) break;
       }
     }
 
-    if (!hasKey) {
+    // If no active key on this floor, clear path particles and exit
+    if (!selectedKey || !selectedPlayer) {
+      let had = false;
+      for (const p of this.particles) {
+        if (p.constructor?.name === "KeyPathParticle") {
+          p.dead = true;
+          had = true;
+        }
+      }
       return;
     }
+
+    // Update this room's path dots using only the selected key and player
+    selectedKey.updatePathToDoor(selectedPlayer);
+
+    const showPath = selectedKey.showPath === true;
     const path = this.keyPathDots as
       | Array<{ x: number; y: number }>
       | undefined;
@@ -1457,7 +1482,7 @@ export class Room {
           had = true;
         }
       }
-      if (had || !showPath) return;
+      return;
     }
 
     // Mark any existing KeyPathParticles not on the current path as dead
@@ -1485,7 +1510,6 @@ export class Room {
       }
       return false;
     };
-    if (!path || !showPath) return;
     for (const pos of path) {
       if (!hasParticleAt(pos.x, pos.y)) {
         const particle =

@@ -22,8 +22,8 @@ export class Resource extends Entity {
     this.health = 1;
     this.chainPushable = false;
     this.name = "resource";
-    this.imageParticleX = 0;
-    this.imageParticleY = 25;
+    this.imageParticleX = 6;
+    this.imageParticleY = 24;
   }
 
   get type() {

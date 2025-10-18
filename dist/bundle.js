@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.7602f00f94cc44b5d3b8.png";
+module.exports = __webpack_require__.p + "assets/fxset.a2a4d884ade5e1d02b05.png";
 
 /***/ }),
 
@@ -13532,6 +13532,8 @@ class ChargeEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#ffffff";
         this.lastX = this.x;
         this.lastY = this.y;
+        this.imageParticleX = 3;
+        this.imageParticleY = 29;
         this.name = "charge knight";
         this.state = ChargeEnemyState.IDLE;
         if (drop)
@@ -20740,8 +20742,8 @@ class CaveBlock extends resource_1.Resource {
         this.hasShadow = true;
         this.chainPushable = false;
         this.name = "cave rock";
-        this.imageParticleX = 6;
-        this.imageParticleY = 24;
+        this.imageParticleX = 9;
+        this.imageParticleY = 25;
         this.opaque = true;
         this.hitSound = sound_1.Sound.breakRock;
         this.extendShadow = true;
@@ -22610,6 +22612,8 @@ class CaveRock extends resource_1.Resource {
         this.tileY = 6;
         this.hasShadow = false;
         this.chainPushable = false;
+        this.imageParticleX = 9;
+        this.imageParticleY = 24;
         this.name = "cave rock";
         if (random_1.Random.rand() < 0.05) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
@@ -22902,8 +22906,8 @@ class Resource extends entity_1.Entity {
         this.health = 1;
         this.chainPushable = false;
         this.name = "resource";
-        this.imageParticleX = 0;
-        this.imageParticleY = 25;
+        this.imageParticleX = 6;
+        this.imageParticleY = 24;
     }
     get type() {
         return entity_2.EntityType.RESOURCE;
@@ -22937,6 +22941,8 @@ class Rock extends resource_1.Resource {
         this.hasShadow = false;
         this.chainPushable = false;
         this.name = "rock";
+        this.imageParticleX = 0;
+        this.imageParticleY = 25;
         if (random_1.Random.rand() < 0.05) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
@@ -34419,10 +34425,28 @@ class Key extends usable_1.Usable {
             }
         };
         this.onUse = (player) => {
-            this.showPath = !this.showPath;
+            // A key can only be toggled on the floor it belongs to
+            if (this.depth === null)
+                this.depth = player.depth;
+            if (this.depth !== player.depth) {
+                this.room.game.pushMessage("This key doesn't fit on this floor.");
+                return;
+            }
+            // Toggle this key, and ensure all other keys are turned off
+            const togglingOn = !this.showPath;
+            for (const p of Object.values(this.room.game.players)) {
+                for (const it of p.inventory.items) {
+                    if (it instanceof Key && it !== this) {
+                        it.showPath = false;
+                        it.tileX = 1;
+                    }
+                }
+            }
+            this.showPath = togglingOn;
             this.tileX = this.showPath ? 2 : 1;
             const message = this.showPath ? "Showing path" : "Path hidden";
-            this.room.syncKeyPathParticles();
+            // Pass this key and the player context so only this key's path is considered
+            this.room.syncKeyPathParticles(this, player);
             this.room.game.pushMessage(message);
         };
         this.tickInInventory = () => {
@@ -34452,9 +34476,9 @@ class Key extends usable_1.Usable {
           }
         };
       */
-        this.updatePathToDoor = () => {
+        this.updatePathToDoor = (playerCtx) => {
             try {
-                const player = this.level.game.players[this.level.game.localPlayerID];
+                const player = playerCtx || this.level.game.players[this.level.game.localPlayerID];
                 const playerRoom = player?.getRoom?.() || this.level;
                 if (!playerRoom)
                     return;
@@ -38374,6 +38398,7 @@ const environmentData = {
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
             { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
+            { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
             // Depth 2 enemies
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
             {
@@ -47170,21 +47195,46 @@ class Room {
          * Aligns KeyPathParticles with `this.keyPathDots`. Adds particles for any
          * positions missing a live particle and marks particles not on the path as dead.
          */
-        this.syncKeyPathParticles = () => {
-            let hasKey = false;
-            let showPath = false;
-            for (const player of Object.values(this.game.players)) {
-                for (const i of player.inventory.items) {
-                    if (i instanceof key_1.Key) {
-                        i.updatePathToDoor();
-                        hasKey = true;
-                        showPath = i.showPath;
+        this.syncKeyPathParticles = (activeKey, activePlayer) => {
+            // Determine which key (if any) is the active one. Only one key may be active.
+            let selectedKey = null;
+            let selectedPlayer = null;
+            if (activeKey && activePlayer) {
+                selectedKey = activeKey;
+                selectedPlayer = activePlayer;
+            }
+            else {
+                // Fallback: find the first key with showPath=true on the current floor
+                for (const p of Object.values(this.game.players)) {
+                    for (const i of p.inventory.items) {
+                        if (i instanceof key_1.Key && i.showPath) {
+                            if (i.depth === null)
+                                i.depth = p.depth;
+                            if (i.depth === p.depth) {
+                                selectedKey = i;
+                                selectedPlayer = p;
+                                break;
+                            }
+                        }
                     }
+                    if (selectedKey)
+                        break;
                 }
             }
-            if (!hasKey) {
+            // If no active key on this floor, clear path particles and exit
+            if (!selectedKey || !selectedPlayer) {
+                let had = false;
+                for (const p of this.particles) {
+                    if (p.constructor?.name === "KeyPathParticle") {
+                        p.dead = true;
+                        had = true;
+                    }
+                }
                 return;
             }
+            // Update this room's path dots using only the selected key and player
+            selectedKey.updatePathToDoor(selectedPlayer);
+            const showPath = selectedKey.showPath === true;
             const path = this.keyPathDots;
             if (!path || path.length === 0 || !showPath) {
                 // When no path, mark existing key-path particles as dead
@@ -47195,8 +47245,7 @@ class Room {
                         had = true;
                     }
                 }
-                if (had || !showPath)
-                    return;
+                return;
             }
             // Mark any existing KeyPathParticles not on the current path as dead
             const positions = new Set((path || []).map((p) => `${p.x},${p.y}`));
@@ -47221,8 +47270,6 @@ class Room {
                 }
                 return false;
             };
-            if (!path || !showPath)
-                return;
             for (const pos of path) {
                 if (!hasParticleAt(pos.x, pos.y)) {
                     const particle = new ((__webpack_require__(/*! ../particle/keyPathParticle */ "./src/particle/keyPathParticle.ts").KeyPathParticle))(pos.x, pos.y);
