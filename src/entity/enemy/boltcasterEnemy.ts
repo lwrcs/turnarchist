@@ -264,13 +264,18 @@ export class BoltcasterEnemy extends Enemy {
     if (this.frame >= 4) this.frame = 0;
     if (this.hasShadow) this.drawShadow(delta);
 
+    // Shake while loading (like Crab)
+    this.rumbling = this.isLoading;
+    let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
+    let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
+
     Game.drawMob(
       this.tileX, // + Math.floor(this.frame),
       this.tileY, // + this.direction * 2,
       1,
       2,
-      this.x - this.drawX,
-      this.y - this.drawYOffset - this.drawY - this.jumpY,
+      this.x - this.drawX + rumbleX,
+      this.y - this.drawYOffset - this.drawY - this.jumpY + rumbleY,
       1,
       2,
       this.softShadeColor,
@@ -323,6 +328,7 @@ export class BoltcasterEnemy extends Enemy {
         // If currently loading, fire this turn
         if (this.isLoading) {
           this.isLoading = false;
+          this.rumbling = false;
           this.fireLoadedShot();
           return;
         }
@@ -335,6 +341,7 @@ export class BoltcasterEnemy extends Enemy {
           this.loadedPlayerY = player.y;
           this.facePlayer(player);
           this.isLoading = true;
+          this.rumbling = true;
           this.makeLineHitWarnings(player.x, player.y);
           return;
         }

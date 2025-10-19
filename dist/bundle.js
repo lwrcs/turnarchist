@@ -13074,9 +13074,13 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
+            // Shake while loading (like Crab)
+            this.rumbling = this.isLoading;
+            let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
+            let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
             game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
             this.tileY, // + this.direction * 2,
-            1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            1, 2, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY - this.jumpY + rumbleY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -13115,6 +13119,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     // If currently loading, fire this turn
                     if (this.isLoading) {
                         this.isLoading = false;
+                        this.rumbling = false;
                         this.fireLoadedShot();
                         return;
                     }
@@ -13126,6 +13131,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                         this.loadedPlayerY = player.y;
                         this.facePlayer(player);
                         this.isLoading = true;
+                        this.rumbling = true;
                         this.makeLineHitWarnings(player.x, player.y);
                         return;
                     }
@@ -25605,7 +25611,7 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "Alpha v0.3.0"; //"v0.6.3";
+GameConstants.VERSION = "Alpha v0.4.0"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
@@ -25690,7 +25696,7 @@ GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 GameConstants.USE_OPTIMIZED_SHADING = false;
-GameConstants.SMOOTH_LIGHTING = false;
+GameConstants.SMOOTH_LIGHTING = true;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
