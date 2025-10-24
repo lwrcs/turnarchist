@@ -25611,7 +25611,7 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "Alpha v0.4.0"; //"v0.6.3";
+GameConstants.VERSION = "Alpha v0.3.1"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;

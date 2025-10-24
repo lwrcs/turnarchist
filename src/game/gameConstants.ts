@@ -51,7 +51,7 @@ import { CrossbowBolt } from "../item/weapon/crossbowBolt";
 import { Crossbow } from "../item/weapon/crossbow";
 
 export class GameConstants {
-  static readonly VERSION = "Alpha v0.4.0"; //"v0.6.3";
+  static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static isMobile = false;
   static isIOS = false;
