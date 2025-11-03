@@ -64,6 +64,7 @@ import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { Enemy } from "../entity/enemy/enemy";
 import { CaveRock } from "../entity/resource/caveRockResource";
 import { CaveBlock } from "../entity/object/caveBlock";
+import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -92,6 +93,7 @@ export const enemyClassToId: Map<typeof Enemy, number> = new Map<
   [BeetleEnemy, 20],
   [KingEnemy, 21],
   [BoltcasterEnemy, 22],
+  [EarthWizardEnemy, 23],
 ]);
 
 export class Environment {
@@ -193,6 +195,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
       { class: FireWizardEnemy, weight: 0.1, minDepth: 2 },
+      { class: EarthWizardEnemy, weight: 0.1, minDepth: 2 },
       { class: ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
       {
         class: BigFrogEnemy,
@@ -207,7 +210,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     props: [
       { class: NullProp, weight: 1 },
       { class: CoalResource, weight: 0.25 },
-      { class: GoldResource, weight: 0.01 },
+      { class: GoldResource, weight: 0.05 },
       { class: EmeraldResource, weight: 0.001 },
       { class: GarnetResource, weight: 0.001 },
       { class: ZirconResource, weight: 0.001 },
@@ -271,7 +274,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SkullEnemy, weight: 0.1, minDepth: 0 }, // Ancient forest spirits
 
       // Rare magical forest creatures
-      { class: EnergyWizardEnemy, weight: 0.4, minDepth: 1 }, // Forest wizards
+      { class: EnergyWizardEnemy, weight: 0.2, minDepth: 1 }, // Forest wizards
+      { class: EarthWizardEnemy, weight: 0.2, minDepth: 1 },
       //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
       {
         class: BigFrogEnemy,

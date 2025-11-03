@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.a2a4d884ade5e1d02b05.png";
+module.exports = __webpack_require__.p + "assets/fxset.ef5168369cd9bfc5fe5c.png";
 
 /***/ }),
 
@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.a2a4d884ade5e1d02b05.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.61b80c2fd8b463c4b260.png";
+module.exports = __webpack_require__.p + "assets/itemset.ada0faaae4bbea537505.png";
 
 /***/ }),
 
@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.61b80c2fd8b463c4b260.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.1c9cbb4132c140cc6bf9.png";
+module.exports = __webpack_require__.p + "assets/mobset.cc8f5f88c99be1adf170.png";
 
 /***/ }),
 
@@ -14066,6 +14066,218 @@ exports.CrusherEnemy = CrusherEnemy;
 CrusherEnemy.difficulty = 1;
 CrusherEnemy.tileX = 8;
 CrusherEnemy.tileY = 4;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/earthWizard.ts":
+/*!*****************************************!*\
+  !*** ./src/entity/enemy/earthWizard.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EarthWizardEnemy = exports.WizardState = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
+const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+var WizardState;
+(function (WizardState) {
+    WizardState[WizardState["idle"] = 0] = "idle";
+    WizardState[WizardState["attack"] = 1] = "attack";
+    WizardState[WizardState["justAttacked"] = 2] = "justAttacked";
+    WizardState[WizardState["teleport"] = 3] = "teleport";
+})(WizardState = exports.WizardState || (exports.WizardState = {}));
+class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.ATTACK_RADIUS = 5;
+        this.hit = () => {
+            return 1;
+        };
+        this.withinAttackingRangeOfPlayer = () => {
+            let withinRange = false;
+            for (const i in this.game.players) {
+                if ((this.x - this.game.players[i].x) ** 2 +
+                    (this.y - this.game.players[i].y) ** 2 <=
+                    this.ATTACK_RADIUS ** 2) {
+                    withinRange = true;
+                }
+            }
+            return withinRange;
+        };
+        this.shuffle = (a) => {
+            let j, x, i;
+            for (i = a.length - 1; i > 0; i--) {
+                j = Math.floor(random_1.Random.rand() * (i + 1));
+                x = a[i];
+                a[i] = a[j];
+                a[j] = x;
+            }
+            return a;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.handleSkipTurns())
+                    return;
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    this.alertTicks = Math.max(0, this.alertTicks - 1);
+                    switch (this.state) {
+                        case WizardState.attack:
+                            // Phase 1: radius-2 ring (square perimeter around the wizard)
+                            this.attemptProjectilePlacement([
+                                // left edge
+                                { x: -2, y: -2 },
+                                { x: -2, y: -1 },
+                                { x: -2, y: 0 },
+                                { x: -2, y: 1 },
+                                { x: -2, y: 2 },
+                                // right edge
+                                { x: 2, y: -2 },
+                                { x: 2, y: -1 },
+                                { x: 2, y: 0 },
+                                { x: 2, y: 1 },
+                                { x: 2, y: 2 },
+                                // top edge
+                                { x: -1, y: -2 },
+                                { x: 0, y: -2 },
+                                { x: 1, y: -2 },
+                                // bottom edge
+                                { x: -1, y: 2 },
+                                { x: 0, y: 2 },
+                                { x: 1, y: 2 },
+                            ], wizardFireball_1.WizardFireball, false);
+                            this.state = WizardState.justAttacked;
+                            break;
+                        case WizardState.justAttacked:
+                            // Phase 2: radius-1 ring (surrounding 8 tiles)
+                            this.attemptProjectilePlacement([
+                                { x: -1, y: 0 },
+                                { x: 1, y: 0 },
+                                { x: 0, y: -1 },
+                                { x: 0, y: 1 },
+                                { x: -1, y: -1 },
+                                { x: 1, y: 1 },
+                                { x: 1, y: -1 },
+                                { x: -1, y: 1 },
+                            ], wizardFireball_1.WizardFireball, false);
+                            this.state = WizardState.idle;
+                            break;
+                        case WizardState.teleport:
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let min = 100000;
+                            let bestPos;
+                            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
+                            emptyTiles = emptyTiles.filter((tile) => !this.room.projectiles.some((projectile) => projectile.x === tile.x && projectile.y === tile.y));
+                            if (emptyTiles.length === 0 ||
+                                Object.keys(this.game.players).length === 0) {
+                                this.state = WizardState.idle;
+                                break;
+                            }
+                            let optimalDist = game_1.Game.randTable([2, 2, 3, 3, 3, 3, 3], random_1.Random.rand);
+                            let player_ids = [];
+                            for (const i in this.game.players)
+                                player_ids.push(i);
+                            let target_player_id = game_1.Game.randTable(player_ids, random_1.Random.rand);
+                            if (!this.game.players[target_player_id]) {
+                                this.state = WizardState.idle;
+                                break;
+                            }
+                            for (let t of emptyTiles) {
+                                let newPos = t;
+                                let dist = Math.abs(newPos.x - this.game.players[target_player_id].x) +
+                                    Math.abs(newPos.y - this.game.players[target_player_id].y);
+                                if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
+                                    min = dist;
+                                    bestPos = newPos;
+                                }
+                            }
+                            if (!bestPos) {
+                                bestPos = emptyTiles[0];
+                            }
+                            this.tryMove(bestPos.x, bestPos.y);
+                            this.drawX = this.x - oldX;
+                            this.drawY = this.y - oldY;
+                            this.frame = 0;
+                            this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
+                            if (this.withinAttackingRangeOfPlayer()) {
+                                this.state = WizardState.attack;
+                            }
+                            else {
+                                this.state = WizardState.idle;
+                            }
+                            break;
+                        case WizardState.idle:
+                            this.state = WizardState.teleport;
+                            break;
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                if (this.state === WizardState.attack)
+                    this.tileX = 38;
+                else
+                    this.tileX = 37;
+                if (this.hasShadow && this.state !== WizardState.idle)
+                    this.drawShadow(delta);
+                if (this.frame >= 0) {
+                    game_1.Game.drawMob(Math.floor(this.frame) + 5, 20, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    this.frame += 0.4 * delta;
+                    if (this.frame > 12)
+                        this.frame = -1;
+                }
+                else {
+                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                }
+                if (!this.cloned) {
+                    if (!this.seenPlayer) {
+                        this.drawSleepingZs(delta);
+                    }
+                    if (this.alertTicks > 0) {
+                        this.drawExclamation(delta);
+                    }
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 35;
+        this.tileY = 8;
+        this.frame = 0;
+        this.state = WizardState.attack;
+        this.seenPlayer = false;
+        this.alertTicks = 0;
+        this.name = "earth wizard";
+        this.projectileColor = [0, 200, 0];
+        if (drop)
+            this.drop = drop;
+        this.jumpHeight = 0.5;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+}
+exports.EarthWizardEnemy = EarthWizardEnemy;
+EarthWizardEnemy.difficulty = 3;
+EarthWizardEnemy.tileX = 37;
+EarthWizardEnemy.tileY = 8;
 
 
 /***/ }),
@@ -38063,6 +38275,7 @@ const darkVase_1 = __webpack_require__(/*! ../entity/object/darkVase */ "./src/e
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
+const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -38087,6 +38300,7 @@ exports.enemyClassToId = new Map([
     [beetleEnemy_1.BeetleEnemy, 20],
     [kingEnemy_1.KingEnemy, 21],
     [boltcasterEnemy_1.BoltcasterEnemy, 22],
+    [earthWizard_1.EarthWizardEnemy, 23],
 ]);
 class Environment {
     constructor(type) {
@@ -38157,6 +38371,7 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 2 },
+            { class: earthWizard_1.EarthWizardEnemy, weight: 0.1, minDepth: 2 },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.5, minDepth: 2 },
             {
                 class: bigFrogEnemy_1.BigFrogEnemy,
@@ -38171,7 +38386,7 @@ const environmentData = {
         props: [
             { class: NullProp, weight: 1 },
             { class: coalResource_1.CoalResource, weight: 0.25 },
-            { class: goldResource_1.GoldResource, weight: 0.01 },
+            { class: goldResource_1.GoldResource, weight: 0.05 },
             { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
             { class: garnetResource_1.GarnetResource, weight: 0.001 },
             { class: zirconResource_1.ZirconResource, weight: 0.001 },
@@ -38231,7 +38446,8 @@ const environmentData = {
             { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 0 },
             { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 0 },
             // Rare magical forest creatures
-            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.4, minDepth: 1 },
+            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.2, minDepth: 1 },
+            { class: earthWizard_1.EarthWizardEnemy, weight: 0.2, minDepth: 1 },
             //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
             {
                 class: bigFrogEnemy_1.BigFrogEnemy,
@@ -46046,6 +46262,17 @@ class WizardFireball extends projectile_1.Projectile {
             }
         };
         this.tileY = parent.name === "wizard bomber" ? 7 : 8;
+        switch (parent.name) {
+            case "wizard bomber":
+                this.tileY = 7;
+                break;
+            case "fire wizard":
+                this.tileY = 8;
+                break;
+            case "earth wizard":
+                this.tileY = 10;
+                break;
+        }
         this.parent = parent;
         this.frame = 0;
         this.state = 0; // this.distanceToParent;
@@ -46698,6 +46925,7 @@ const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
+const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -46738,6 +46966,7 @@ var EnemyType;
     EnemyType["king"] = "king";
     EnemyType["chest"] = "chest";
     EnemyType["boltcaster"] = "boltcaster";
+    EnemyType["earthwizard"] = "earthwizard";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -46777,6 +47006,7 @@ exports.EnemyTypeMap = {
     [EnemyType.king]: kingEnemy_1.KingEnemy,
     [EnemyType.chest]: chest_1.Chest,
     [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,
+    [EnemyType.earthwizard]: earthWizard_1.EarthWizardEnemy,
     // Add other enemy mappings here
 };
 var RoomType;

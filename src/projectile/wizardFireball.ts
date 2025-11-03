@@ -24,6 +24,17 @@ export class WizardFireball extends Projectile {
   constructor(parent: WizardEnemy, x: number, y: number) {
     super(parent, x, y);
     this.tileY = parent.name === "wizard bomber" ? 7 : 8;
+    switch (parent.name) {
+      case "wizard bomber":
+        this.tileY = 7;
+        break;
+      case "fire wizard":
+        this.tileY = 8;
+        break;
+      case "earth wizard":
+        this.tileY = 10;
+        break;
+    }
     this.parent = parent;
     this.frame = 0;
     this.state = 0; // this.distanceToParent;
