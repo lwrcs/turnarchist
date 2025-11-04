@@ -23464,6 +23464,47 @@ class Alert {
         this.cachedWidth = -1;
     }
 }
+class Pointer {
+    constructor(opts) {
+        // Dismissal/fade state
+        this.dismissStartTime = null;
+        this.cachedLines = null;
+        this.cachedWidth = -1;
+        this.id = opts.id;
+        this.text = opts.text;
+        this.resolver = opts.resolver;
+        this.until = opts.until;
+        this.safety = opts.safety ?? [];
+        this.timeoutMs = opts.timeoutMs;
+        this.createdAt = Date.now();
+        this.arrowDirection = opts.arrowDirection ?? "auto";
+        this.textDx = opts.textDx ?? 0;
+        this.textDy = opts.textDy ?? 0;
+        this.color = opts.color ?? gameConstants_1.GameConstants.POINTER_TEXT_COLOR;
+        this.outlineColor =
+            opts.outlineColor ?? gameConstants_1.GameConstants.POINTER_OUTLINE_COLOR;
+        this.maxWidthRatio =
+            opts.maxWidthRatio ?? gameConstants_1.GameConstants.POINTER_MAX_WIDTH_RATIO;
+        this.zIndex = opts.zIndex ?? 0;
+        this.bobPx = opts.bobPx ?? gameConstants_1.GameConstants.POINTER_BOB_PX;
+        this.bobPeriodMs = opts.bobPeriodMs ?? gameConstants_1.GameConstants.POINTER_BOB_PERIOD_MS;
+        this.tags = opts.tags ?? [];
+        this.dismissDurationMs =
+            opts.dismissDurationMs ?? gameConstants_1.GameConstants.POINTER_FADE_TIME;
+    }
+    getWrappedLines(maxWidth) {
+        if (this.cachedLines && this.cachedWidth === maxWidth)
+            return this.cachedLines;
+        const temp = new ChatMessage(this.text);
+        this.cachedLines = temp.getWrappedLines(maxWidth);
+        this.cachedWidth = maxWidth;
+        return this.cachedLines;
+    }
+    clearCache() {
+        this.cachedLines = null;
+        this.cachedWidth = -1;
+    }
+}
 let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor, fadeDir) => {
     return (set.src +
         "," +
@@ -23516,6 +23557,9 @@ class Game {
         this.wasStarted = false;
         this.lastChatWidth = 0;
         this.lastAlertWidth = 0;
+        this.lastPointerWidth = 0;
+        this.hasInitializedTutorialPointers = false;
+        this.hasShownOpenInventoryPointer = false;
         this.savedGameState = null;
         // Start screen menu (optional)
         this.startMenu = null;
@@ -23906,6 +23950,22 @@ class Game {
             }
             // No active alert: just push
             this.alerts.push(new Alert(message, options));
+        };
+        // Pointer API
+        this.addPointer = (opts) => {
+            const id = opts.id ?? IdGenerator_1.IdGenerator.generate("PTR");
+            const pointer = new Pointer({ ...opts, id });
+            this.pointers.set(id, pointer);
+            return id;
+        };
+        this.removePointer = (id) => {
+            this.pointers.delete(id);
+        };
+        this.removePointersByTag = (tag) => {
+            for (const [id, p] of this.pointers) {
+                if (p.tags?.includes(tag))
+                    this.pointers.delete(id);
+            }
         };
         // Add this helper function before the commandHandler
         this.convertSeedToNumber = (seed) => {
@@ -24395,6 +24455,12 @@ class Game {
                 this.alertGhosts?.forEach((g) => g.alert.clearCache());
                 this.lastAlertWidth = newAlertWidth;
             }
+            // Clear pointer cache if width changed
+            const newPointerWidth = Math.floor(gameConstants_1.GameConstants.WIDTH * gameConstants_1.GameConstants.POINTER_MAX_WIDTH_RATIO);
+            if (newPointerWidth !== this.lastPointerWidth) {
+                this.pointers?.forEach((p) => p.clearCache());
+                this.lastPointerWidth = newPointerWidth;
+            }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
             if (gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED) {
@@ -24678,6 +24744,18 @@ class Game {
                 this.players[this.localPlayerID].drawGUI(delta);
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
+            // Initialize tutorial pointers on first IN_LEVEL frame
+            if (this.levelState === LevelState.IN_LEVEL &&
+                !this.startMenuActive &&
+                !this.hasInitializedTutorialPointers) {
+                try {
+                    this.setupInitialPointers();
+                }
+                catch { }
+                this.hasInitializedTutorialPointers = true;
+            }
+            // Draw pointers over GUI elements
+            this.drawPointers(delta);
             this.drawChat(delta);
             this.drawAlerts(delta);
             // game version
@@ -24701,6 +24779,242 @@ class Game {
             }
             mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawPointers = (delta) => {
+            if (!this.pointers || this.pointers.size === 0)
+                return;
+            // Only show in-level and when no start menu overlays
+            if (this.levelState !== LevelState.IN_LEVEL)
+                return;
+            const list = Array.from(this.pointers.values()).sort((a, b) => a.zIndex - b.zIndex);
+            const now = Date.now();
+            const toDelete = [];
+            for (const p of list) {
+                // Begin fade-out when dismissal conditions are met
+                const triggerDismiss = p.until?.() === true ||
+                    p.safety?.some((fn) => fn()) === true ||
+                    (p.timeoutMs && now - p.createdAt > p.timeoutMs);
+                if (triggerDismiss && p.dismissStartTime === null) {
+                    p.dismissStartTime = now;
+                }
+                const rect = p.resolver?.();
+                if (!rect)
+                    continue;
+                // Determine arrow direction
+                let dir = p.arrowDirection;
+                if (dir === "auto")
+                    dir = "down";
+                // Compute text placement based on direction
+                const LINE_HEIGHT = Game.letter_height + 1;
+                const maxWidth = Math.max(1, Math.floor(gameConstants_1.GameConstants.WIDTH *
+                    (p.maxWidthRatio || gameConstants_1.GameConstants.POINTER_MAX_WIDTH_RATIO)));
+                const lines = p.getWrappedLines(maxWidth);
+                const blockHeight = lines.length * LINE_HEIGHT;
+                const margin = 4;
+                // Compute max line width for horizontal clamping
+                let blockWidth = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    const w = Game.measureText(lines[i]).width;
+                    if (w > blockWidth)
+                        blockWidth = w;
+                }
+                let textX = 0;
+                let textY = 0;
+                if (dir === "down") {
+                    textX = Math.floor(rect.x + rect.w / 2);
+                    textY = Math.floor(rect.y - margin - blockHeight);
+                }
+                else if (dir === "up") {
+                    textX = Math.floor(rect.x + rect.w / 2);
+                    textY = Math.floor(rect.y + rect.h + margin);
+                }
+                else if (dir === "left") {
+                    textX = Math.floor(rect.x + rect.w + margin);
+                    textY = Math.floor(rect.y - Math.floor(blockHeight / 2));
+                }
+                else {
+                    // right
+                    textX = Math.floor(rect.x - margin);
+                    textY = Math.floor(rect.y - Math.floor(blockHeight / 2));
+                }
+                // Apply offsets and bob animation
+                const t = Math.sin(((now % p.bobPeriodMs) / p.bobPeriodMs) * Math.PI * 2);
+                const bob = Math.round(t * p.bobPx);
+                textX += p.textDx;
+                textY += p.textDy + (dir === "down" ? -bob : bob);
+                // Clamp text block within screen bounds
+                const minXCenter = margin + Math.floor(blockWidth / 2);
+                const maxXCenter = gameConstants_1.GameConstants.WIDTH - margin - Math.floor(blockWidth / 2);
+                if (textX < minXCenter)
+                    textX = minXCenter;
+                if (textX > maxXCenter)
+                    textX = maxXCenter;
+                const minYTop = margin;
+                const maxYTop = gameConstants_1.GameConstants.HEIGHT - margin - blockHeight;
+                if (textY < minYTop)
+                    textY = minYTop;
+                if (textY > maxYTop)
+                    textY = maxYTop;
+                // Compute alpha for fade-out
+                let alpha = 1;
+                if (p.dismissStartTime !== null) {
+                    const dt = now - p.dismissStartTime;
+                    alpha = 1 - Math.max(0, Math.min(1, dt / p.dismissDurationMs));
+                    if (dt >= p.dismissDurationMs) {
+                        toDelete.push(p.id);
+                    }
+                }
+                // Draw text block centered around textX horizontally
+                let y = textY;
+                Game.ctx.globalAlpha = alpha;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const w = Game.measureText(line).width;
+                    const x = Math.floor(textX - w / 2);
+                    Game.fillTextOutline(line, x, y, p.outlineColor, p.color);
+                    y += LINE_HEIGHT;
+                }
+                // Draw small triangle arrow with APEX fixed at target (rect edge)
+                const drawArrowAtApex = (apx, apy, d) => {
+                    Game.ctx.fillStyle = gameConstants_1.GameConstants.POINTER_ARROW_COLOR;
+                    const s = Math.max(2, gameConstants_1.GameConstants.POINTER_ARROW_SIZE);
+                    if (d === "down") {
+                        // Apex at (apx, apy). Grow upward
+                        for (let i = 0; i < s; i++) {
+                            const w = 1 + 2 * i;
+                            Game.ctx.fillRect(apx - (w - 1) / 2, apy - i, w, 1);
+                        }
+                    }
+                    else if (d === "up") {
+                        // Apex at (apx, apy). Grow downward
+                        for (let i = 0; i < s; i++) {
+                            const w = 1 + 2 * i;
+                            Game.ctx.fillRect(apx - (w - 1) / 2, apy + i, w, 1);
+                        }
+                    }
+                    else if (d === "left") {
+                        // Apex at (apx, apy). Grow right
+                        for (let i = 0; i < s; i++) {
+                            const h = 1 + 2 * i;
+                            Game.ctx.fillRect(apx + i, apy - (h - 1) / 2, 1, h);
+                        }
+                    }
+                    else {
+                        // right: Apex at (apx, apy). Grow left
+                        for (let i = 0; i < s; i++) {
+                            const h = 1 + 2 * i;
+                            Game.ctx.fillRect(apx - i, apy - (h - 1) / 2, 1, h);
+                        }
+                    }
+                };
+                // Arrow anchored at the target rect edge (apex fixed), independent of text clamping
+                Game.ctx.globalAlpha = alpha;
+                if (dir === "down") {
+                    const apx = Math.floor(rect.x + rect.w / 2);
+                    const apy = Math.max(margin, rect.y - 1);
+                    drawArrowAtApex(apx, apy, "down");
+                }
+                else if (dir === "up") {
+                    const apx = Math.floor(rect.x + rect.w / 2);
+                    const apy = Math.min(gameConstants_1.GameConstants.HEIGHT - margin, rect.y + rect.h + 1);
+                    drawArrowAtApex(apx, apy, "up");
+                }
+                else if (dir === "left") {
+                    const apx = Math.min(gameConstants_1.GameConstants.WIDTH - margin, rect.x + rect.w + 1);
+                    const apy = Math.floor(rect.y + rect.h / 2);
+                    drawArrowAtApex(apx, apy, "left");
+                }
+                else {
+                    const apx = Math.max(margin, rect.x - 1);
+                    const apy = Math.floor(rect.y + rect.h / 2);
+                    drawArrowAtApex(apx, apy, "right");
+                }
+                Game.ctx.globalAlpha = 1;
+            }
+            // Cleanup fully faded pointers
+            for (const id of toDelete)
+                this.pointers.delete(id);
+        };
+        this.setupInitialPointers = () => {
+            // Only for normal mode
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE)
+                return;
+            const player = this.players?.[this.localPlayerID];
+            if (!player)
+                return;
+            const inv = player.inventory;
+            if (!inv)
+                return;
+            // Pointer to quickbar slot 2 (index 1)
+            const id = "equip-candle";
+            if (this.pointers.has(id))
+                return;
+            const resolver = () => {
+                return inv.getQuickbarSlotRect(1);
+            };
+            const until = () => {
+                // Dismiss if candle equipped (by name to avoid import cycles)
+                try {
+                    const items = inv.items;
+                    for (const it of items) {
+                        if (it?.equipped && it?.name === "candle") {
+                            return true;
+                        }
+                    }
+                }
+                catch { }
+                return false;
+            };
+            const safety = [
+                // dismiss if player dies or leaves gameplay context
+                () => this.levelState !== LevelState.IN_LEVEL,
+                () => player.dead,
+            ];
+            this.addPointer({
+                id,
+                text: gameConstants_1.GameConstants.isMobile
+                    ? "Tap or press 2 to equip your candle"
+                    : "Click or press 2 to equip your candle",
+                resolver,
+                until,
+                safety,
+                arrowDirection: "down",
+                textDy: -2,
+                timeoutMs: 60000,
+                tags: ["tutorial"],
+                zIndex: 10,
+            });
+        };
+        // Show a pointer prompting the user to open the inventory when quickbar is full
+        this.maybeShowOpenInventoryPointer = () => {
+            if (this.hasShownOpenInventoryPointer)
+                return;
+            if (this.levelState !== LevelState.IN_LEVEL)
+                return;
+            const player = this.players?.[this.localPlayerID];
+            const inv = player?.inventory;
+            if (!inv || typeof inv.getInventoryButtonRect !== "function")
+                return;
+            const id = "open-inventory";
+            const resolver = () => inv.getInventoryButtonRect();
+            const until = () => inv.isOpen === true;
+            const safety = [
+                () => this.levelState !== LevelState.IN_LEVEL,
+                () => player.dead,
+            ];
+            this.addPointer({
+                id,
+                text: this.isMobile ? "Tap to open inventory" : "Click to open inventory",
+                resolver,
+                until,
+                safety,
+                arrowDirection: "down",
+                textDy: -2,
+                timeoutMs: 45000,
+                tags: ["tutorial"],
+                zIndex: 10,
+            });
+            this.hasShownOpenInventoryPointer = true;
         };
         this.drawAlerts = (delta) => {
             // Draw ghosts first (behind the main alert)
@@ -25061,6 +25375,7 @@ class Game {
             this.chatTextBox = new textbox_1.TextBox(chatElement);
             this.alerts = [];
             this.alertGhosts = [];
+            this.pointers = new Map();
             this.chatTextBox.setEnterCallback(() => {
                 if (this.chatTextBox.text.length > 0) {
                     this.chat.push(new ChatMessage(this.chatTextBox.text));
@@ -25223,6 +25538,8 @@ class Game {
                     this.levels = [];
                     this.encounteredEnemies = [];
                     this.newGame();
+                    // Defer pointer initialization until first IN_LEVEL frame
+                    this.hasInitializedTutorialPointers = false;
                     // If a save exists, build a start-screen menu to choose Continue/New
                     try {
                         const { getCookie } = __webpack_require__(/*! ./utility/cookies */ "./src/utility/cookies.ts");
@@ -25995,6 +26312,15 @@ GameConstants.ALERT_OUTLINE_COLOR = "black";
 // When replacing an active alert, fade the old one while floating up
 GameConstants.ALERT_REPLACE_FLOAT_TIME = 600; // ms
 GameConstants.ALERT_REPLACE_FLOAT_PX = 12; // pixels to float up over time
+// Pointer defaults
+GameConstants.POINTER_MAX_WIDTH_RATIO = 0.6;
+GameConstants.POINTER_TEXT_COLOR = "white";
+GameConstants.POINTER_OUTLINE_COLOR = "black";
+GameConstants.POINTER_ARROW_COLOR = "white";
+GameConstants.POINTER_ARROW_SIZE = 4; // px
+GameConstants.POINTER_BOB_PX = 1; // px
+GameConstants.POINTER_BOB_PERIOD_MS = 1200; // ms
+GameConstants.POINTER_FADE_TIME = 500; // ms fade-out for dismissed pointers
 GameConstants.ANIMATION_SPEED = 1;
 GameConstants.REPLAY_STEP_MS = 10; // base time between replayed inputs
 GameConstants.REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
@@ -32268,6 +32594,7 @@ class Inventory {
         this.usingItem = null;
         this.usingItemIndex = null;
         this.mostRecentInput = "keyboard";
+        this.initializedItems = false;
         this.clear = () => {
             this.items.fill(null);
             this.equipAnimAmount.fill(0);
@@ -32612,10 +32939,22 @@ class Inventory {
                     }
                 }
             }
+            // Determine if quickbar was already full before this add (i.e., this is 6th+ pickup)
+            const preQuickbarFull = this.items
+                .slice(0, this.cols)
+                .every((it) => it !== null);
             if (!this.isFull()) {
                 for (let i = 0; i < this.items.length; i++) {
                     if (this.items[i] === null) {
                         this.items[i] = item;
+                        // If quickbar was already full before this insertion and we're past startup,
+                        // prompt the user to open inventory (first time only)
+                        if (this.initializedItems && preQuickbarFull) {
+                            try {
+                                this.game.maybeShowOpenInventoryPointer?.();
+                            }
+                            catch { }
+                        }
                         return true;
                     }
                 }
@@ -33183,12 +33522,40 @@ class Inventory {
             game_1.Game.drawFX(0, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
+        this.getInventoryButtonRect = () => {
+            // Mirror drawInventoryButton positioning logic
+            let bx = gameConstants_1.GameConstants.WIDTH / gameConstants_1.GameConstants.TILESIZE - 1.25;
+            let by = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
+            if (gameConstants_1.GameConstants.WIDTH < 145)
+                by -= 1.25;
+            const x = Math.round(bx * gameConstants_1.GameConstants.TILESIZE);
+            const y = Math.round(by * gameConstants_1.GameConstants.TILESIZE);
+            const w = gameConstants_1.GameConstants.TILESIZE;
+            const h = gameConstants_1.GameConstants.TILESIZE;
+            return { x, y, w, h };
+        };
         this.getQuickbarStartX = () => {
             const s = 18; // size of box
             const b = 2; // border
             const g = -2; // gap
             const width = Math.floor(this.cols * (s + 2 * b + g) - g);
             return Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width);
+        };
+        this.getQuickbarSlotRect = (slotIndex) => {
+            if (slotIndex < 0 || slotIndex >= this.cols)
+                return null;
+            const s = 18; // size of box
+            const b = 2; // border
+            const g = -2; // gap
+            const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+            const startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width);
+            const height = s + 2 * b;
+            const startY = Math.floor(gameConstants_1.GameConstants.HEIGHT - height - 2);
+            const x = Math.floor(startX + slotIndex * (s + 2 * b + g) + b);
+            const y = Math.floor(startY + b);
+            const w = Math.floor(s);
+            const h = Math.floor(s);
+            return { x, y, w, h };
         };
         this.handleMouseDown = (x, y, button) => {
             if (this.player.menu.open)
@@ -33329,6 +33696,8 @@ class Inventory {
         startingInv.forEach((item) => {
             a(new item({ game: this.game }, 0, 0));
         });
+        // Mark that initial inventory population is complete
+        this.initializedItems = true;
     }
     get isDragging() {
         return this._isDragging;

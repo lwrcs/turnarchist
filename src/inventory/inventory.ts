@@ -67,6 +67,7 @@ export class Inventory {
   // Static variables for inventory button position
   private buttonY: number;
   private buttonX: number;
+  private initializedItems: boolean = false;
 
   constructor(game: Game, player: Player) {
     this.globalId = IdGenerator.generate("INV");
@@ -112,6 +113,8 @@ export class Inventory {
     startingInv.forEach((item) => {
       a(new item({ game: this.game } as Room, 0, 0));
     });
+    // Mark that initial inventory population is complete
+    this.initializedItems = true;
   }
 
   clear = () => {
@@ -513,10 +516,21 @@ export class Inventory {
         }
       }
     }
+    // Determine if quickbar was already full before this add (i.e., this is 6th+ pickup)
+    const preQuickbarFull = this.items
+      .slice(0, this.cols)
+      .every((it) => it !== null);
     if (!this.isFull()) {
       for (let i = 0; i < this.items.length; i++) {
         if (this.items[i] === null) {
           this.items[i] = item;
+          // If quickbar was already full before this insertion and we're past startup,
+          // prompt the user to open inventory (first time only)
+          if (this.initializedItems && preQuickbarFull) {
+            try {
+              (this.game as any).maybeShowOpenInventoryPointer?.();
+            } catch {}
+          }
           return true;
         }
       }
@@ -1288,12 +1302,48 @@ export class Inventory {
     Game.ctx.restore(); // Restore the canvas state
   };
 
+  getInventoryButtonRect = (): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } => {
+    // Mirror drawInventoryButton positioning logic
+    let bx = GameConstants.WIDTH / GameConstants.TILESIZE - 1.25;
+    let by = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
+    if (GameConstants.WIDTH < 145) by -= 1.25;
+    const x = Math.round(bx * GameConstants.TILESIZE);
+    const y = Math.round(by * GameConstants.TILESIZE);
+    const w = GameConstants.TILESIZE;
+    const h = GameConstants.TILESIZE;
+    return { x, y, w, h };
+  };
+
   getQuickbarStartX = () => {
     const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
     const width = Math.floor(this.cols * (s + 2 * b + g) - g);
     return Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+  };
+
+  getQuickbarSlotRect = (
+    slotIndex: number,
+  ): { x: number; y: number; w: number; h: number } | null => {
+    if (slotIndex < 0 || slotIndex >= this.cols) return null;
+    const s = 18; // size of box
+    const b = 2; // border
+    const g = -2; // gap
+    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+    const height = s + 2 * b;
+    const startY = Math.floor(GameConstants.HEIGHT - height - 2);
+
+    const x = Math.floor(startX + slotIndex * (s + 2 * b + g) + b);
+    const y = Math.floor(startY + b);
+    const w = Math.floor(s);
+    const h = Math.floor(s);
+    return { x, y, w, h };
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {

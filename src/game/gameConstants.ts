@@ -94,6 +94,15 @@ export class GameConstants {
   // When replacing an active alert, fade the old one while floating up
   static readonly ALERT_REPLACE_FLOAT_TIME = 600; // ms
   static readonly ALERT_REPLACE_FLOAT_PX = 12; // pixels to float up over time
+  // Pointer defaults
+  static readonly POINTER_MAX_WIDTH_RATIO = 0.6;
+  static readonly POINTER_TEXT_COLOR = "white";
+  static readonly POINTER_OUTLINE_COLOR = "black";
+  static readonly POINTER_ARROW_COLOR = "white";
+  static readonly POINTER_ARROW_SIZE = 4; // px
+  static readonly POINTER_BOB_PX = 1; // px
+  static readonly POINTER_BOB_PERIOD_MS = 1200; // ms
+  static readonly POINTER_FADE_TIME = 500; // ms fade-out for dismissed pointers
   static ANIMATION_SPEED = 1;
   static readonly REPLAY_STEP_MS = 10; // base time between replayed inputs
   static readonly REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
