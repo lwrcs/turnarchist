@@ -85,6 +85,15 @@ export class GameConstants {
 
   static readonly CHAT_APPEAR_TIME = 1000;
   static readonly CHAT_FADE_TIME = 2000;
+  // Center-screen alert system
+  static readonly ALERT_HOLD_TIME = 1000; // ms fully visible
+  static readonly ALERT_FADE_TIME = 600; // ms fade-out
+  static readonly ALERT_MAX_WIDTH_RATIO = 0.8; // of canvas width
+  static readonly ALERT_TEXT_COLOR = "white";
+  static readonly ALERT_OUTLINE_COLOR = "black";
+  // When replacing an active alert, fade the old one while floating up
+  static readonly ALERT_REPLACE_FLOAT_TIME = 600; // ms
+  static readonly ALERT_REPLACE_FLOAT_PX = 12; // pixels to float up over time
   static ANIMATION_SPEED = 1;
   static readonly REPLAY_STEP_MS = 10; // base time between replayed inputs
   static readonly REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay

@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.ef5168369cd9bfc5fe5c.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.ada0faaae4bbea537505.png";
+module.exports = __webpack_require__.p + "assets/itemset.19c72adea1b6ab129b78.png";
 
 /***/ }),
 
@@ -23437,6 +23437,33 @@ class ChatMessage {
     }
 }
 exports.ChatMessage = ChatMessage;
+class Alert {
+    constructor(message, opts) {
+        this.cachedLines = null;
+        this.cachedWidth = -1;
+        this.message = message;
+        this.timestamp = Date.now();
+        this.holdMs = opts?.holdMs ?? gameConstants_1.GameConstants.ALERT_HOLD_TIME;
+        this.fadeMs = opts?.fadeMs ?? gameConstants_1.GameConstants.ALERT_FADE_TIME;
+        this.color = opts?.color ?? gameConstants_1.GameConstants.ALERT_TEXT_COLOR;
+        this.outlineColor = opts?.outlineColor ?? gameConstants_1.GameConstants.ALERT_OUTLINE_COLOR;
+        this.maxWidthRatio =
+            opts?.maxWidthRatio ?? gameConstants_1.GameConstants.ALERT_MAX_WIDTH_RATIO;
+    }
+    getWrappedLines(maxWidth) {
+        if (this.cachedLines && this.cachedWidth === maxWidth)
+            return this.cachedLines;
+        // Reuse ChatMessage wrapping by delegating via a temp instance
+        const temp = new ChatMessage(this.message);
+        this.cachedLines = temp.getWrappedLines(maxWidth);
+        this.cachedWidth = maxWidth;
+        return this.cachedLines;
+    }
+    clearCache() {
+        this.cachedLines = null;
+        this.cachedWidth = -1;
+    }
+}
 let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor, fadeDir) => {
     return (set.src +
         "," +
@@ -23488,6 +23515,7 @@ class Game {
         this.wasMuted = false;
         this.wasStarted = false;
         this.lastChatWidth = 0;
+        this.lastAlertWidth = 0;
         this.savedGameState = null;
         // Start screen menu (optional)
         this.startMenu = null;
@@ -23848,6 +23876,36 @@ class Game {
         };
         this.pushMessage = (message) => {
             this.chat.push(new ChatMessage(message));
+        };
+        this.pushAlert = (message, options) => {
+            // If an alert is active
+            if (this.alerts.length > 0) {
+                const current = this.alerts[0];
+                if (current.message === message) {
+                    // Same text: reset timer
+                    current.timestamp = Date.now();
+                    return;
+                }
+                // Different text: spawn a fading/floating ghost of the current alert
+                const ghost = new Alert(current.message, {
+                    color: current.color,
+                    outlineColor: current.outlineColor,
+                    maxWidthRatio: current.maxWidthRatio,
+                    holdMs: 0,
+                    fadeMs: gameConstants_1.GameConstants.ALERT_REPLACE_FLOAT_TIME,
+                });
+                ghost.timestamp = Date.now();
+                this.alertGhosts.push({
+                    alert: ghost,
+                    startTime: Date.now(),
+                    duration: gameConstants_1.GameConstants.ALERT_REPLACE_FLOAT_TIME,
+                });
+                // Overwrite current with new
+                this.alerts[0] = new Alert(message, options);
+                return;
+            }
+            // No active alert: just push
+            this.alerts.push(new Alert(message, options));
         };
         // Add this helper function before the commandHandler
         this.convertSeedToNumber = (seed) => {
@@ -24330,6 +24388,13 @@ class Game {
                 this.chat.forEach((msg) => msg.clearCache());
                 this.lastChatWidth = newChatWidth;
             }
+            // Clear alert cache if width changed
+            const newAlertWidth = Math.floor(gameConstants_1.GameConstants.WIDTH * gameConstants_1.GameConstants.ALERT_MAX_WIDTH_RATIO);
+            if (newAlertWidth !== this.lastAlertWidth) {
+                this.alerts?.forEach((a) => a.clearCache());
+                this.alertGhosts?.forEach((g) => g.alert.clearCache());
+                this.lastAlertWidth = newAlertWidth;
+            }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
             if (gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED) {
@@ -24614,6 +24679,7 @@ class Game {
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             this.drawChat(delta);
+            this.drawAlerts(delta);
             // game version
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
                 Game.ctx.globalAlpha = 0.1;
@@ -24635,6 +24701,72 @@ class Game {
             }
             mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
             Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawAlerts = (delta) => {
+            // Draw ghosts first (behind the main alert)
+            if (this.alertGhosts && this.alertGhosts.length > 0) {
+                const now = Date.now();
+                // Keep only active ghosts
+                this.alertGhosts = this.alertGhosts.filter((g) => now - g.startTime <= g.duration);
+                for (const g of this.alertGhosts) {
+                    const age = now - g.startTime;
+                    const t = Math.min(1, Math.max(0, age / g.duration));
+                    const alpha = 1 - t;
+                    if (alpha <= 0)
+                        continue;
+                    const maxWidth = Math.max(1, Math.floor(gameConstants_1.GameConstants.WIDTH *
+                        (g.alert.maxWidthRatio || gameConstants_1.GameConstants.ALERT_MAX_WIDTH_RATIO)));
+                    const lines = g.alert.getWrappedLines(maxWidth);
+                    const LINE_HEIGHT = Game.letter_height + 1;
+                    const totalHeight = lines.length * LINE_HEIGHT;
+                    const baseY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2 - totalHeight / 2);
+                    const yOffset = -Math.floor(t * gameConstants_1.GameConstants.ALERT_REPLACE_FLOAT_PX);
+                    let y = baseY + yOffset;
+                    Game.ctx.globalAlpha = alpha;
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        const w = Game.measureText(line).width;
+                        const x = Math.floor(gameConstants_1.GameConstants.WIDTH / 2 - w / 2);
+                        Game.fillTextOutline(line, x, y, g.alert.outlineColor, g.alert.color);
+                        y += LINE_HEIGHT;
+                    }
+                    Game.ctx.globalAlpha = 1;
+                }
+            }
+            if (!this.alerts || this.alerts.length === 0)
+                return;
+            const alert = this.alerts[0];
+            const maxWidth = Math.max(1, Math.floor(gameConstants_1.GameConstants.WIDTH *
+                (alert.maxWidthRatio || gameConstants_1.GameConstants.ALERT_MAX_WIDTH_RATIO)));
+            const lines = alert.getWrappedLines(maxWidth);
+            const LINE_HEIGHT = Game.letter_height + 1;
+            const age = Date.now() - alert.timestamp;
+            let alpha = 1;
+            if (age <= alert.holdMs) {
+                alpha = 1;
+            }
+            else if (age <= alert.holdMs + alert.fadeMs) {
+                alpha = 1 - (age - alert.holdMs) / alert.fadeMs;
+            }
+            else {
+                // Remove and try next alert
+                this.alerts.shift();
+                return this.drawAlerts(delta);
+            }
+            if (alpha <= 0)
+                return;
+            // Compute total height for vertical centering
+            const totalHeight = lines.length * LINE_HEIGHT;
+            let y = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2 - totalHeight / 2);
+            Game.ctx.globalAlpha = alpha;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const w = Game.measureText(line).width;
+                const x = Math.floor(gameConstants_1.GameConstants.WIDTH / 2 - w / 2);
+                Game.fillTextOutline(line, x, y, alert.outlineColor, alert.color);
+                y += LINE_HEIGHT;
+            }
+            Game.ctx.globalAlpha = 1;
         };
         this.drawChat = (delta) => {
             const CHAT_X = 5;
@@ -24927,6 +25059,8 @@ class Game {
             }, { once: true });
             this.chat = [];
             this.chatTextBox = new textbox_1.TextBox(chatElement);
+            this.alerts = [];
+            this.alertGhosts = [];
             this.chatTextBox.setEnterCallback(() => {
                 if (this.chatTextBox.text.length > 0) {
                     this.chat.push(new ChatMessage(this.chatTextBox.text));
@@ -25852,6 +25986,15 @@ GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
 GameConstants.SCREEN_SHAKE_ENABLED = true;
 GameConstants.CHAT_APPEAR_TIME = 1000;
 GameConstants.CHAT_FADE_TIME = 2000;
+// Center-screen alert system
+GameConstants.ALERT_HOLD_TIME = 1000; // ms fully visible
+GameConstants.ALERT_FADE_TIME = 600; // ms fade-out
+GameConstants.ALERT_MAX_WIDTH_RATIO = 0.8; // of canvas width
+GameConstants.ALERT_TEXT_COLOR = "white";
+GameConstants.ALERT_OUTLINE_COLOR = "black";
+// When replacing an active alert, fade the old one while floating up
+GameConstants.ALERT_REPLACE_FLOAT_TIME = 600; // ms
+GameConstants.ALERT_REPLACE_FLOAT_PX = 12; // pixels to float up over time
 GameConstants.ANIMATION_SPEED = 1;
 GameConstants.REPLAY_STEP_MS = 10; // base time between replayed inputs
 GameConstants.REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay

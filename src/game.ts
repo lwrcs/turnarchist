@@ -119,6 +119,54 @@ export class ChatMessage {
   }
 }
 
+class Alert {
+  message: string;
+  timestamp: number;
+  holdMs: number;
+  fadeMs: number;
+  color: string;
+  outlineColor: string;
+  maxWidthRatio: number;
+
+  private cachedLines: string[] | null = null;
+  private cachedWidth: number = -1;
+
+  constructor(
+    message: string,
+    opts?: {
+      holdMs?: number;
+      fadeMs?: number;
+      color?: string;
+      outlineColor?: string;
+      maxWidthRatio?: number;
+    },
+  ) {
+    this.message = message;
+    this.timestamp = Date.now();
+    this.holdMs = opts?.holdMs ?? GameConstants.ALERT_HOLD_TIME;
+    this.fadeMs = opts?.fadeMs ?? GameConstants.ALERT_FADE_TIME;
+    this.color = opts?.color ?? GameConstants.ALERT_TEXT_COLOR;
+    this.outlineColor = opts?.outlineColor ?? GameConstants.ALERT_OUTLINE_COLOR;
+    this.maxWidthRatio =
+      opts?.maxWidthRatio ?? GameConstants.ALERT_MAX_WIDTH_RATIO;
+  }
+
+  getWrappedLines(maxWidth: number): string[] {
+    if (this.cachedLines && this.cachedWidth === maxWidth)
+      return this.cachedLines;
+    // Reuse ChatMessage wrapping by delegating via a temp instance
+    const temp = new ChatMessage(this.message);
+    this.cachedLines = temp.getWrappedLines(maxWidth);
+    this.cachedWidth = maxWidth;
+    return this.cachedLines;
+  }
+
+  clearCache(): void {
+    this.cachedLines = null;
+    this.cachedWidth = -1;
+  }
+}
+
 let getShadeCanvasKey = (
   set: HTMLImageElement,
   sX: number,
@@ -193,6 +241,13 @@ export class Game {
   chat: Array<ChatMessage>;
   chatOpen: boolean;
   chatTextBox: TextBox;
+  alerts: Array<Alert>;
+  // Alerts that are fading/floating after being replaced
+  private alertGhosts: Array<{
+    alert: Alert;
+    startTime: number;
+    duration: number;
+  }>;
   private keyboardHeightPx: number = 0;
   previousFrameTimestamp: number;
   player: Player;
@@ -271,6 +326,7 @@ export class Game {
   private wasStarted = false;
 
   private lastChatWidth: number = 0;
+  private lastAlertWidth: number = 0;
   private savedGameState: GameState | null = null;
   // Start screen menu (optional)
   startMenu: any = null;
@@ -323,6 +379,8 @@ export class Game {
 
       this.chat = [];
       this.chatTextBox = new TextBox(chatElement);
+      this.alerts = [];
+      this.alertGhosts = [];
       this.chatTextBox.setEnterCallback(() => {
         if (this.chatTextBox.text.length > 0) {
           this.chat.push(new ChatMessage(this.chatTextBox.text));
@@ -988,6 +1046,48 @@ export class Game {
     this.chat.push(new ChatMessage(message));
   };
 
+  pushAlert = (
+    message: string,
+    options?: {
+      holdMs?: number;
+      fadeMs?: number;
+      color?: string;
+      outlineColor?: string;
+      maxWidthRatio?: number;
+      replace?: boolean;
+    },
+  ) => {
+    // If an alert is active
+    if (this.alerts.length > 0) {
+      const current = this.alerts[0];
+      if (current.message === message) {
+        // Same text: reset timer
+        current.timestamp = Date.now();
+        return;
+      }
+      // Different text: spawn a fading/floating ghost of the current alert
+      const ghost = new Alert(current.message, {
+        color: current.color,
+        outlineColor: current.outlineColor,
+        maxWidthRatio: current.maxWidthRatio,
+        holdMs: 0,
+        fadeMs: GameConstants.ALERT_REPLACE_FLOAT_TIME,
+      });
+      ghost.timestamp = Date.now();
+      this.alertGhosts.push({
+        alert: ghost,
+        startTime: Date.now(),
+        duration: GameConstants.ALERT_REPLACE_FLOAT_TIME,
+      });
+      // Overwrite current with new
+      this.alerts[0] = new Alert(message, options);
+      return;
+    }
+
+    // No active alert: just push
+    this.alerts.push(new Alert(message, options));
+  };
+
   // Add this helper function before the commandHandler
   private convertSeedToNumber = (seed: string): number => {
     // If it's already a number, parse and return it
@@ -1643,6 +1743,16 @@ export class Game {
       this.chat.forEach((msg) => msg.clearCache());
       this.lastChatWidth = newChatWidth;
     }
+
+    // Clear alert cache if width changed
+    const newAlertWidth = Math.floor(
+      GameConstants.WIDTH * GameConstants.ALERT_MAX_WIDTH_RATIO,
+    );
+    if (newAlertWidth !== this.lastAlertWidth) {
+      this.alerts?.forEach((a) => a.clearCache());
+      this.alertGhosts?.forEach((g) => g.alert.clearCache());
+      this.lastAlertWidth = newAlertWidth;
+    }
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = false) => {
@@ -2134,6 +2244,7 @@ export class Game {
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
     this.drawChat(delta);
+    this.drawAlerts(delta);
 
     // game version
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
@@ -2161,6 +2272,87 @@ export class Game {
 
     MouseCursor.getInstance().draw(delta, this.isMobile);
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  private drawAlerts = (delta: number) => {
+    // Draw ghosts first (behind the main alert)
+    if (this.alertGhosts && this.alertGhosts.length > 0) {
+      const now = Date.now();
+      // Keep only active ghosts
+      this.alertGhosts = this.alertGhosts.filter(
+        (g) => now - g.startTime <= g.duration,
+      );
+      for (const g of this.alertGhosts) {
+        const age = now - g.startTime;
+        const t = Math.min(1, Math.max(0, age / g.duration));
+        const alpha = 1 - t;
+        if (alpha <= 0) continue;
+        const maxWidth = Math.max(
+          1,
+          Math.floor(
+            GameConstants.WIDTH *
+              (g.alert.maxWidthRatio || GameConstants.ALERT_MAX_WIDTH_RATIO),
+          ),
+        );
+        const lines = g.alert.getWrappedLines(maxWidth);
+        const LINE_HEIGHT = Game.letter_height + 1;
+        const totalHeight = lines.length * LINE_HEIGHT;
+        const baseY = Math.floor(GameConstants.HEIGHT / 2 - totalHeight / 2);
+        const yOffset = -Math.floor(t * GameConstants.ALERT_REPLACE_FLOAT_PX);
+        let y = baseY + yOffset;
+
+        Game.ctx.globalAlpha = alpha;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const w = Game.measureText(line).width;
+          const x = Math.floor(GameConstants.WIDTH / 2 - w / 2);
+          Game.fillTextOutline(line, x, y, g.alert.outlineColor, g.alert.color);
+          y += LINE_HEIGHT;
+        }
+        Game.ctx.globalAlpha = 1;
+      }
+    }
+
+    if (!this.alerts || this.alerts.length === 0) return;
+    const alert = this.alerts[0];
+
+    const maxWidth = Math.max(
+      1,
+      Math.floor(
+        GameConstants.WIDTH *
+          (alert.maxWidthRatio || GameConstants.ALERT_MAX_WIDTH_RATIO),
+      ),
+    );
+    const lines = alert.getWrappedLines(maxWidth);
+    const LINE_HEIGHT = Game.letter_height + 1;
+
+    const age = Date.now() - alert.timestamp;
+    let alpha = 1;
+    if (age <= alert.holdMs) {
+      alpha = 1;
+    } else if (age <= alert.holdMs + alert.fadeMs) {
+      alpha = 1 - (age - alert.holdMs) / alert.fadeMs;
+    } else {
+      // Remove and try next alert
+      this.alerts.shift();
+      return this.drawAlerts(delta);
+    }
+
+    if (alpha <= 0) return;
+
+    // Compute total height for vertical centering
+    const totalHeight = lines.length * LINE_HEIGHT;
+    let y = Math.floor(GameConstants.HEIGHT / 2 - totalHeight / 2);
+
+    Game.ctx.globalAlpha = alpha;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const w = Game.measureText(line).width;
+      const x = Math.floor(GameConstants.WIDTH / 2 - w / 2);
+      Game.fillTextOutline(line, x, y, alert.outlineColor, alert.color);
+      y += LINE_HEIGHT;
+    }
+    Game.ctx.globalAlpha = 1;
   };
 
   drawChat = (delta: number) => {
