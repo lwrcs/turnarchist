@@ -22549,6 +22549,50 @@ class VendingMachine extends entity_1.Entity {
                     this.playerOpened.openVendingMachine !== this)
                     this.playerOpened.openVendingMachine.close();
                 this.playerOpened.openVendingMachine = this;
+                // Show one-time pointer guidance on how to buy
+                try {
+                    const isLocal = this.playerOpened === this.game.players[this.game.localPlayerID];
+                    if (isLocal &&
+                        this.game?.tutorialFlags &&
+                        this.game.tutorialFlags.purchasedFromVendingMachine === false) {
+                        const resolver = () => {
+                            // Mirror drawTopLayer geometry to locate the BUY slot rect
+                            const screenCenterX = gameConstants_1.GameConstants.WIDTH / 2;
+                            const screenCenterY = gameConstants_1.GameConstants.HEIGHT / 2;
+                            const offsetX = (this.x - this.playerOpened.x) * gameConstants_1.GameConstants.TILESIZE;
+                            const offsetY = (this.y - this.playerOpened.y) * gameConstants_1.GameConstants.TILESIZE;
+                            const shopScreenX = screenCenterX + offsetX - this.playerOpened.drawX;
+                            const shopScreenY = screenCenterY + offsetY - this.playerOpened.drawY;
+                            const s = 18; // size of box
+                            const b = 2; // border
+                            const g = -2; // gap
+                            const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+                            const height = s + 2 * b + g - g;
+                            const cx = shopScreenX;
+                            const cy = shopScreenY - 2 * gameConstants_1.GameConstants.TILESIZE;
+                            const slotIndex = this.costItems.length; // BUY slot drawn at this index
+                            const slotX = Math.round(cx - 0.5 * width + slotIndex * (s + 2 * b + g));
+                            const slotY = Math.round(cy - 0.5 * height);
+                            return { x: slotX + b, y: slotY + b, w: s, h: s };
+                        };
+                        const text = this.game.isMobile
+                            ? "Tap or press space to buy"
+                            : "Click or press space to buy";
+                        this.game.addPointer({
+                            id: "vm-buy-pointer",
+                            text,
+                            resolver,
+                            until: () => !this.open,
+                            safety: [() => this.playerOpened?.dead === true],
+                            arrowDirection: "down",
+                            textDy: -2,
+                            timeoutMs: 15000,
+                            tags: ["tutorial"],
+                            zIndex: 10,
+                        });
+                    }
+                }
+                catch { }
             }
         };
         this.close = () => {
@@ -22605,6 +22649,13 @@ class VendingMachine extends entity_1.Entity {
                 // Notify the player of the successful purchase
                 this.game.pushMessage(`Purchased ${newItem.constructor.itemName} for ${cost} ${this.costItems[0].constructor.itemName}${pluralLetter}`);
                 this.game.pushMessage(`${this.quantity} available to buy.`);
+                // Mark tutorial flag only on successful purchase
+                try {
+                    const isLocal = this.playerOpened === this.game.players[this.game.localPlayerID];
+                    if (isLocal && this.game?.tutorialFlags)
+                        this.game.tutorialFlags.purchasedFromVendingMachine = true;
+                }
+                catch { }
                 // Handle visual feedback and screen shake
                 this.buyAnimAmount = 0.99;
                 if (this.playerOpened === this.game.players[this.game.localPlayerID])
@@ -23368,6 +23419,8 @@ const itemsetUrl = __webpack_require__(/*! ../res/itemset.png */ "./res/itemset.
 const fxsetUrl = __webpack_require__(/*! ../res/fxset.png */ "./res/fxset.png");
 const fontUrl = __webpack_require__(/*! ../res/font.png */ "./res/font.png");
 const feedbackButton_1 = __webpack_require__(/*! ./gui/feedbackButton */ "./src/gui/feedbackButton.ts");
+const oneTimeEventTracker_1 = __webpack_require__(/*! ./game/oneTimeEventTracker */ "./src/game/oneTimeEventTracker.ts");
+const tutorialFlags_1 = __webpack_require__(/*! ./game/tutorialFlags */ "./src/game/tutorialFlags.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -24745,14 +24798,14 @@ class Game {
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
             // Initialize tutorial pointers on first IN_LEVEL frame
-            if (this.levelState === LevelState.IN_LEVEL &&
-                !this.startMenuActive &&
-                !this.hasInitializedTutorialPointers) {
-                try {
-                    this.setupInitialPointers();
+            if (this.levelState === LevelState.IN_LEVEL && !this.startMenuActive) {
+                if (!this.tutorialFlags.initPointers) {
+                    try {
+                        this.setupInitialPointers();
+                    }
+                    catch { }
+                    this.tutorialFlags.initPointers = true;
                 }
-                catch { }
-                this.hasInitializedTutorialPointers = true;
             }
             // Draw pointers over GUI elements
             this.drawPointers(delta);
@@ -24973,8 +25026,8 @@ class Game {
             this.addPointer({
                 id,
                 text: gameConstants_1.GameConstants.isMobile
-                    ? "Tap or press 2 to equip your candle"
-                    : "Click or press 2 to equip your candle",
+                    ? "Tap equip your candle"
+                    : "Equip your candle",
                 resolver,
                 until,
                 safety,
@@ -24987,7 +25040,7 @@ class Game {
         };
         // Show a pointer prompting the user to open the inventory when quickbar is full
         this.maybeShowOpenInventoryPointer = () => {
-            if (this.hasShownOpenInventoryPointer)
+            if (this.tutorialFlags.openInventoryShown)
                 return;
             if (this.levelState !== LevelState.IN_LEVEL)
                 return;
@@ -25014,7 +25067,7 @@ class Game {
                 tags: ["tutorial"],
                 zIndex: 10,
             });
-            this.hasShownOpenInventoryPointer = true;
+            this.tutorialFlags.openInventoryShown = true;
         };
         this.drawAlerts = (delta) => {
             // Draw ghosts first (behind the main alert)
@@ -25337,6 +25390,8 @@ class Game {
                 this.pushMessage("Game resumed");
             }
         };
+        this.oneTime = new oneTimeEventTracker_1.OneTimeEventTracker();
+        this.tutorialFlags = new tutorialFlags_1.TutorialFlags();
         this.globalId = IdGenerator_1.IdGenerator.generate("G");
         this.roomsById = new Map();
         this.levelsById = new Map();
@@ -29533,6 +29588,45 @@ window.document
 
 /***/ }),
 
+/***/ "./src/game/oneTimeEventTracker.ts":
+/*!*****************************************!*\
+  !*** ./src/game/oneTimeEventTracker.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OneTimeEventTracker = void 0;
+class OneTimeEventTracker {
+    constructor() {
+        this.done = new Set();
+    }
+    has(key) {
+        return this.done.has(key);
+    }
+    mark(key) {
+        this.done.add(key);
+    }
+    clear(key) {
+        this.done.delete(key);
+    }
+    ensure(key, fn) {
+        if (this.done.has(key))
+            return;
+        try {
+            fn();
+        }
+        finally {
+            this.done.add(key);
+        }
+    }
+}
+exports.OneTimeEventTracker = OneTimeEventTracker;
+
+
+/***/ }),
+
 /***/ "./src/game/replayManager.ts":
 /*!***********************************!*\
   !*** ./src/game/replayManager.ts ***!
@@ -30264,6 +30358,28 @@ class TextBox {
     }
 }
 exports.TextBox = TextBox;
+
+
+/***/ }),
+
+/***/ "./src/game/tutorialFlags.ts":
+/*!***********************************!*\
+  !*** ./src/game/tutorialFlags.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TutorialFlags = void 0;
+class TutorialFlags {
+    constructor() {
+        this.initPointers = false;
+        this.openInventoryShown = false;
+        this.purchasedFromVendingMachine = false;
+    }
+}
+exports.TutorialFlags = TutorialFlags;
 
 
 /***/ }),
@@ -32628,6 +32744,11 @@ class Inventory {
             }
             this.usingItem = null;
             this.usingItemIndex = null;
+            // Dismiss any inventory-related tip (e.g., "open inventory" pointer)
+            try {
+                this.game.removePointer?.("open-inventory");
+            }
+            catch { }
         };
         this.left = () => {
             if (this.selX > 0) {

@@ -189,6 +189,61 @@ export class VendingMachine extends Entity {
       )
         this.playerOpened.openVendingMachine.close();
       this.playerOpened.openVendingMachine = this;
+
+      // Show one-time pointer guidance on how to buy
+      try {
+        const isLocal =
+          this.playerOpened === this.game.players[this.game.localPlayerID];
+        if (
+          isLocal &&
+          this.game?.tutorialFlags &&
+          this.game.tutorialFlags.purchasedFromVendingMachine === false
+        ) {
+          const resolver = () => {
+            // Mirror drawTopLayer geometry to locate the BUY slot rect
+            const screenCenterX = GameConstants.WIDTH / 2;
+            const screenCenterY = GameConstants.HEIGHT / 2;
+            const offsetX =
+              (this.x - this.playerOpened.x) * GameConstants.TILESIZE;
+            const offsetY =
+              (this.y - this.playerOpened.y) * GameConstants.TILESIZE;
+            const shopScreenX =
+              screenCenterX + offsetX - this.playerOpened.drawX;
+            const shopScreenY =
+              screenCenterY + offsetY - this.playerOpened.drawY;
+            const s = 18; // size of box
+            const b = 2; // border
+            const g = -2; // gap
+            const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+            const height = s + 2 * b + g - g;
+            const cx = shopScreenX;
+            const cy = shopScreenY - 2 * GameConstants.TILESIZE;
+            const slotIndex = this.costItems.length; // BUY slot drawn at this index
+            const slotX = Math.round(
+              cx - 0.5 * width + slotIndex * (s + 2 * b + g),
+            );
+            const slotY = Math.round(cy - 0.5 * height);
+            return { x: slotX + b, y: slotY + b, w: s, h: s };
+          };
+
+          const text = this.game.isMobile
+            ? "Tap or press space to buy"
+            : "Click or press space to buy";
+
+          this.game.addPointer({
+            id: "vm-buy-pointer",
+            text,
+            resolver,
+            until: () => !this.open,
+            safety: [() => this.playerOpened?.dead === true],
+            arrowDirection: "down",
+            textDy: -2,
+            timeoutMs: 15000,
+            tags: ["tutorial"],
+            zIndex: 10,
+          });
+        }
+      } catch {}
     }
   };
 
@@ -266,6 +321,14 @@ export class VendingMachine extends Entity {
         `Purchased ${(newItem.constructor as any).itemName} for ${cost} ${(this.costItems[0].constructor as any).itemName}${pluralLetter}`,
       );
       this.game.pushMessage(`${this.quantity} available to buy.`);
+
+      // Mark tutorial flag only on successful purchase
+      try {
+        const isLocal =
+          this.playerOpened === this.game.players[this.game.localPlayerID];
+        if (isLocal && this.game?.tutorialFlags)
+          this.game.tutorialFlags.purchasedFromVendingMachine = true;
+      } catch {}
 
       // Handle visual feedback and screen shake
       this.buyAnimAmount = 0.99;

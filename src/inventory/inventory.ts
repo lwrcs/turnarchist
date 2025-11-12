@@ -155,6 +155,11 @@ export class Inventory {
     }
     this.usingItem = null;
     this.usingItemIndex = null;
+
+    // Dismiss any inventory-related tip (e.g., "open inventory" pointer)
+    try {
+      (this.game as any).removePointer?.("open-inventory");
+    } catch {}
   };
 
   left = () => {

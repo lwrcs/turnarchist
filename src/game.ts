@@ -40,6 +40,8 @@ import itemsetUrl = require("../res/itemset.png");
 import fxsetUrl = require("../res/fxset.png");
 import fontUrl = require("../res/font.png");
 import { FeedbackButton } from "./gui/feedbackButton";
+import { OneTimeEventTracker } from "./game/oneTimeEventTracker";
+import { TutorialFlags } from "./game/tutorialFlags";
 
 export enum LevelState {
   IN_LEVEL,
@@ -422,6 +424,8 @@ export class Game {
   private lastPointerWidth: number = 0;
   private hasInitializedTutorialPointers: boolean = false;
   private hasShownOpenInventoryPointer: boolean = false;
+  oneTime: OneTimeEventTracker;
+  tutorialFlags: TutorialFlags;
   private savedGameState: GameState | null = null;
   // Start screen menu (optional)
   startMenu: any = null;
@@ -430,6 +434,8 @@ export class Game {
   feedbackButton: FeedbackButton = null;
 
   constructor() {
+    this.oneTime = new OneTimeEventTracker();
+    this.tutorialFlags = new TutorialFlags();
     this.globalId = IdGenerator.generate("G");
     this.roomsById = new Map();
     this.levelsById = new Map();
@@ -2386,15 +2392,13 @@ export class Game {
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
     // Initialize tutorial pointers on first IN_LEVEL frame
-    if (
-      this.levelState === LevelState.IN_LEVEL &&
-      !this.startMenuActive &&
-      !this.hasInitializedTutorialPointers
-    ) {
-      try {
-        this.setupInitialPointers();
-      } catch {}
-      this.hasInitializedTutorialPointers = true;
+    if (this.levelState === LevelState.IN_LEVEL && !this.startMenuActive) {
+      if (!this.tutorialFlags.initPointers) {
+        try {
+          this.setupInitialPointers();
+        } catch {}
+        this.tutorialFlags.initPointers = true;
+      }
     }
     // Draw pointers over GUI elements
     this.drawPointers(delta);
@@ -2625,8 +2629,8 @@ export class Game {
     this.addPointer({
       id,
       text: GameConstants.isMobile
-        ? "Tap or press 2 to equip your candle"
-        : "Click or press 2 to equip your candle",
+        ? "Tap equip your candle"
+        : "Equip your candle",
       resolver,
       until,
       safety,
@@ -2640,7 +2644,7 @@ export class Game {
 
   // Show a pointer prompting the user to open the inventory when quickbar is full
   public maybeShowOpenInventoryPointer = () => {
-    if (this.hasShownOpenInventoryPointer) return;
+    if (this.tutorialFlags.openInventoryShown) return;
     if (this.levelState !== LevelState.IN_LEVEL) return;
     const player = this.players?.[this.localPlayerID];
     const inv = player?.inventory;
@@ -2666,7 +2670,7 @@ export class Game {
       tags: ["tutorial"],
       zIndex: 10,
     });
-    this.hasShownOpenInventoryPointer = true;
+    this.tutorialFlags.openInventoryShown = true;
   };
 
   private drawAlerts = (delta: number) => {
