@@ -155,6 +155,7 @@ export class Entity extends Drawable {
   beamIds: string[] = [];
   extendShadow: boolean = false;
   shadowOpacity: number = 0.3;
+  lootDropped: boolean = false;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -830,6 +831,7 @@ export class Entity extends Drawable {
   };
 
   protected dropLoot = () => {
+    if (this.lootDropped) return;
     let coordX: number;
     let coordY: number;
     if (this.crushed) {
@@ -911,6 +913,7 @@ export class Entity extends Drawable {
         });
       }
     }
+    this.lootDropped = true;
   };
 
   kill = (player?: Player) => {

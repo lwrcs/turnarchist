@@ -136,8 +136,33 @@ export class Populator {
 
     // add boss to furthest room from upladder if not main path
     const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
+    const drops: Item[] = [];
+    switch (furthestFromUpLadder?.envType) {
+      case EnvType.CASTLE:
+        drops.push(new Sword(furthestFromUpLadder, 1, 1));
+        break;
+      case EnvType.FOREST:
+        //drops.push(new Spear(furthestFromUpLadder, 1, 1));
+        break;
+      case EnvType.MAGMA_CAVE:
+        drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
+        break;
+    }
     if (furthestFromUpLadder && !this.level.isMainPath) {
-      this.populateBoss(furthestFromUpLadder, Random.rand);
+      this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+
+      let tiles = furthestFromUpLadder.getEmptyTiles();
+      const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
+      if (position === null) return;
+      const { x, y } = position;
+      const chest = Chest.add(
+        furthestFromUpLadder,
+        furthestFromUpLadder.game,
+        x,
+        y,
+      );
+      chest.drops.push(...drops);
+      //furthestFromUpLadder.entities.push(chest);
     }
 
     //if (this.level.depth === 0) return;
@@ -1488,7 +1513,8 @@ export class Populator {
     return lastOccultist;
   }
 
-  private addBosses(room: Room, depth: number) {
+  private addBosses(room: Room, depth: number, drops?: Item[]) {
+    drops = drops || [];
     if (
       GameplaySettings.NO_ENEMIES === true ||
       room.envType === EnvType.TUTORIAL
@@ -1499,6 +1525,8 @@ export class Populator {
       //console.log(`No tiles left to spawn spawners`);
       return;
     }
+    let chosenBoss = null;
+
     if (!GameplaySettings.PRESET_BOSSES) {
       let bosses = [
         "reaper",
@@ -1539,6 +1567,7 @@ export class Populator {
       switch (boss) {
         case "reaper":
           const spawner = this.addSpawners(room, Random.rand, 1);
+          chosenBoss = spawner;
           spawner.dropTable = ["weapon", "equipment"];
           spawner.dropChance = 1;
           break;
@@ -1546,6 +1575,7 @@ export class Populator {
           const queen = QueenEnemy.add(room, room.game, x, y);
           queen.dropTable = ["weapon", "equipment"];
           queen.dropChance = 1;
+          chosenBoss = queen;
           break;
         case "bigskullenemy":
           const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
@@ -1556,13 +1586,13 @@ export class Populator {
             "gem",
             "tool",
           ];
-
+          chosenBoss = bigSkull;
           break;
         case "occultist":
           const occultist = this.addOccultists(room, Random.rand, 1);
           occultist.dropTable = ["weapon", "equipment"];
           occultist.dropChance = 1;
-
+          chosenBoss = occultist;
           break;
         case "bigzombieenemy":
           const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
@@ -1574,11 +1604,13 @@ export class Populator {
             "tool",
           ];
           bigZombie.dropChance = 1;
+          chosenBoss = bigZombie;
           break;
         case "warden":
           const warden = WardenEnemy.add(room, room.game, x, y);
           warden.dropTable = ["weapon", "equipment"];
           warden.dropChance = 1;
+          chosenBoss = warden;
           break;
         case "bigfrogenemy":
           const bigFrog = BigFrogEnemy.add(room, room.game, x, y);
@@ -1589,11 +1621,13 @@ export class Populator {
             "gem",
             "tool",
           ];
+          chosenBoss = bigFrog;
           break;
         case "exalter":
           const exalter = ExalterEnemy.add(room, room.game, x, y);
           exalter.dropTable = ["weapon", "equipment"];
           exalter.dropChance = 1;
+          chosenBoss = exalter;
           break;
       }
     } else {
@@ -1611,11 +1645,11 @@ export class Populator {
             "tool",
           ];
           bigZombie.dropChance = 1;
-
+          chosenBoss = bigZombie;
           const queen = QueenEnemy.add(room, room.game, x, y);
           queen.dropTable = ["weapon", "equipment"];
           queen.dropChance = 1;
-
+          chosenBoss = queen;
           break;
         case 1:
           const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
@@ -1626,19 +1660,21 @@ export class Populator {
             "gem",
             "tool",
           ];
-
+          chosenBoss = bigSkull;
           const spawner = this.addSpawners(room, Random.rand, 1);
           //spawner.dropTable = ["weapon", "equipment"];
           spawner.dropChance = 1;
+          chosenBoss = spawner;
           break;
         case 2:
           const spawner2 = this.addSpawners(room, Random.rand, 1);
           //spawner.dropTable = ["weapon", "equipment"];
           spawner2.dropChance = 1;
-
+          chosenBoss = spawner2;
           const occultist = this.addOccultists(room, Random.rand, 1);
           //occultist.dropTable = ["weapon", "equipment"];
           occultist.dropChance = 1;
+          chosenBoss = occultist;
           break;
         case 3:
           const bigZombie2 = BigZombieEnemy.add(room, room.game, x, y);
@@ -1650,7 +1686,7 @@ export class Populator {
             "tool",
           ];
           bigZombie2.dropChance = 1;
-
+          chosenBoss = bigZombie2;
           const bigZombie3 = BigZombieEnemy.add(room, room.game, x, y);
           bigZombie3.dropTable = [
             "weapon",
@@ -1660,20 +1696,23 @@ export class Populator {
             "tool",
           ];
           bigZombie3.dropChance = 1;
-
+          chosenBoss = bigZombie3;
           const occultist2 = this.addOccultists(room, Random.rand, 1);
           //occultist.dropTable = ["weapon", "equipment"];
           occultist2.dropChance = 1;
+          chosenBoss = occultist2;
           break;
         case 4:
           const warden = WardenEnemy.add(room, room.game, x, y);
           warden.dropTable = ["weapon", "equipment"];
           warden.dropChance = 1;
+          chosenBoss = warden;
           break;
         case 5:
           break;
       }
     }
+    chosenBoss.drops.push(...drops);
   }
 
   private addChests(room: Room, numChests: number, rand: () => number) {
@@ -1908,7 +1947,7 @@ export class Populator {
 
     let tiles: Tile[] = room.getEmptyTiles();
     let positions: { x: number; y: number }[] = [];
-    if (room.depth === 0) positions = this.populateWeaponGroup(room, tiles);
+    //if (room.depth === 0) positions = this.populateWeaponGroup(room, tiles);
     tiles = tiles.filter(
       (tile) =>
         !positions.some(

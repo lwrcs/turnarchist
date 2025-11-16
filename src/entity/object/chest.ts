@@ -74,6 +74,7 @@ export class Chest extends Entity {
     }
   };
   uniqueKillBehavior = () => {
+    if (this.cloned) return;
     if (this.health === 3) {
       this.open();
     }

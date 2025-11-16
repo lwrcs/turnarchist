@@ -43,7 +43,7 @@ export class Inventory {
   coins: number = 0;
   equipAnimAmount: Array<number>;
   weapon: Weapon | null = null;
-  private _expansion: number = GameConstants.DEVELOPER_MODE ? 3 : 0;
+  private _expansion: number = GameConstants.DEVELOPER_MODE ? 0 : 0;
   grabbedItem: Item | null = null;
   private _mouseDownStartX: number | null = null;
   private _mouseDownStartY: number | null = null;

@@ -8,9 +8,16 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
+/**
+ * Create a bound version of a function with a specified `this` context
+ *
+ * @param {Function} fn - The function to bind
+ * @param {*} thisArg - The value to be passed as the `this` parameter
+ * @returns {Function} A new function that will call the original function with the specified `this` context
+ */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1263,7 +1270,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   * @returns {void}
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2229,27 +2236,38 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure) {
-      const cookie = [name + '=' + encodeURIComponent(value)];
+    write(name, value, expires, path, domain, secure, sameSite) {
+      if (typeof document === 'undefined') return;
 
-      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+      const cookie = [`${name}=${encodeURIComponent(value)}`];
 
-      utils$1.isString(path) && cookie.push('path=' + path);
-
-      utils$1.isString(domain) && cookie.push('domain=' + domain);
-
-      secure === true && cookie.push('secure');
+      if (utils$1.isNumber(expires)) {
+        cookie.push(`expires=${new Date(expires).toUTCString()}`);
+      }
+      if (utils$1.isString(path)) {
+        cookie.push(`path=${path}`);
+      }
+      if (utils$1.isString(domain)) {
+        cookie.push(`domain=${domain}`);
+      }
+      if (secure === true) {
+        cookie.push('secure');
+      }
+      if (utils$1.isString(sameSite)) {
+        cookie.push(`SameSite=${sameSite}`);
+      }
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
-      return (match ? decodeURIComponent(match[3]) : null);
+      if (typeof document === 'undefined') return null;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000);
+      this.write(name, '', Date.now() - 86400000, '/');
     }
   }
 
@@ -2338,11 +2356,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop , caseless) {
+  function mergeDeepProperties(a, b, prop, caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop , caseless);
+      return getMergedValue(a, b, prop, caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop , caseless);
+      return getMergedValue(undefined, a, prop, caseless);
     }
   }
 
@@ -2400,7 +2418,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3040,7 +3058,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = config ? config.env : {};
+  let env = (config && config.env) || {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3063,6 +3081,15 @@ const getFetch = (config) => {
 
 getFetch();
 
+/**
+ * Known adapters mapping.
+ * Provides environment-specific adapters for Axios:
+ * - `http` for Node.js
+ * - `xhr` for browsers
+ * - `fetch` for fetch API-based requests
+ * 
+ * @type {Object<string, Function|Object>}
+ */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3071,71 +3098,107 @@ const knownAdapters = {
   }
 };
 
+// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', {value});
+      Object.defineProperty(fn, 'name', { value });
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', {value});
+    Object.defineProperty(fn, 'adapterName', { value });
   }
 });
 
+/**
+ * Render a rejection reason string for unknown or unsupported adapters
+ * 
+ * @param {string} reason
+ * @returns {string}
+ */
 const renderReason = (reason) => `- ${reason}`;
 
+/**
+ * Check if the adapter is resolved (function, null, or false)
+ * 
+ * @param {Function|null|false} adapter
+ * @returns {boolean}
+ */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-var adapters = {
-  getAdapter: (adapters, config) => {
-    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+/**
+ * Get the first suitable adapter from the provided list.
+ * Tries each adapter in order until a supported one is found.
+ * Throws an AxiosError if no adapter is suitable.
+ * 
+ * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
+ * @param {Object} config - Axios request configuration
+ * @throws {AxiosError} If no suitable adapter is available
+ * @returns {Function} The resolved adapter function
+ */
+function getAdapter(adapters, config) {
+  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-    const {length} = adapters;
-    let nameOrAdapter;
-    let adapter;
+  const { length } = adapters;
+  let nameOrAdapter;
+  let adapter;
 
-    const rejectedReasons = {};
+  const rejectedReasons = {};
 
-    for (let i = 0; i < length; i++) {
-      nameOrAdapter = adapters[i];
-      let id;
+  for (let i = 0; i < length; i++) {
+    nameOrAdapter = adapters[i];
+    let id;
 
-      adapter = nameOrAdapter;
+    adapter = nameOrAdapter;
 
-      if (!isResolvedHandle(nameOrAdapter)) {
-        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+    if (!isResolvedHandle(nameOrAdapter)) {
+      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
 
-        if (adapter === undefined) {
-          throw new AxiosError(`Unknown adapter '${id}'`);
-        }
+      if (adapter === undefined) {
+        throw new AxiosError(`Unknown adapter '${id}'`);
       }
-
-      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-        break;
-      }
-
-      rejectedReasons[id || '#' + i] = adapter;
     }
 
-    if (!adapter) {
+    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+      break;
+    }
 
-      const reasons = Object.entries(rejectedReasons)
-        .map(([id, state]) => `adapter ${id} ` +
-          (state === false ? 'is not supported by the environment' : 'is not available in the build')
-        );
+    rejectedReasons[id || '#' + i] = adapter;
+  }
 
-      let s = length ?
-        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-        'as no adapter specified';
-
-      throw new AxiosError(
-        `There is no suitable adapter to dispatch the request ` + s,
-        'ERR_NOT_SUPPORT'
+  if (!adapter) {
+    const reasons = Object.entries(rejectedReasons)
+      .map(([id, state]) => `adapter ${id} ` +
+        (state === false ? 'is not supported by the environment' : 'is not available in the build')
       );
-    }
 
-    return adapter;
-  },
+    let s = length ?
+      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+      'as no adapter specified';
+
+    throw new AxiosError(
+      `There is no suitable adapter to dispatch the request ` + s,
+      'ERR_NOT_SUPPORT'
+    );
+  }
+
+  return adapter;
+}
+
+/**
+ * Exports Axios adapters and utility to resolve an adapter
+ */
+var adapters = {
+  /**
+   * Resolve an adapter from a list of adapter names or functions.
+   * @type {Function}
+   */
+  getAdapter,
+
+  /**
+   * Exposes all known adapters
+   * @type {Object<string, Function|Object>}
+   */
   adapters: knownAdapters
 };
 
@@ -3212,7 +3275,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.12.2";
+const VERSION = "1.13.2";
 
 const validators$1 = {};
 
@@ -3771,6 +3834,12 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
+  WebServerIsDown: 521,
+  ConnectionTimedOut: 522,
+  OriginIsUnreachable: 523,
+  TimeoutOccurred: 524,
+  SslHandshakeFailed: 525,
+  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -19295,6 +19364,7 @@ class Entity extends drawable_1.Drawable {
         this.beamIds = [];
         this.extendShadow = false;
         this.shadowOpacity = 0.3;
+        this.lootDropped = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -19707,6 +19777,8 @@ class Entity extends drawable_1.Drawable {
             imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, particleX, particleY);
         };
         this.dropLoot = () => {
+            if (this.lootDropped)
+                return;
             let coordX;
             let coordY;
             if (this.crushed) {
@@ -19779,6 +19851,7 @@ class Entity extends drawable_1.Drawable {
                     });
                 }
             }
+            this.lootDropped = true;
         };
         this.kill = (player) => {
             this.dead = true;
@@ -21018,6 +21091,8 @@ class Chest extends entity_1.Entity {
             }
         };
         this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
             if (this.health === 3) {
                 this.open();
             }
@@ -32693,7 +32768,7 @@ class Inventory {
         this.openTime = Date.now();
         this.coins = 0;
         this.weapon = null;
-        this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3 : 0;
+        this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 0 : 0;
         this.grabbedItem = null;
         this._mouseDownStartX = null;
         this._mouseDownStartY = null;
@@ -38978,7 +39053,7 @@ const environmentData = {
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
-            { class: kingEnemy_1.KingEnemy, weight: 0.25, minDepth: 3 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.1, minDepth: 2 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 4 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -40180,7 +40255,7 @@ class LevelGenerator {
             if (!overlapValidation.isValid) {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
-            let mainEnvType = depth > 4 ? environmentTypes_1.EnvType.DARK_DUNGEON : environmentTypes_1.EnvType.DUNGEON;
+            let mainEnvType = depth > 2 ? environmentTypes_1.EnvType.DARK_DUNGEON : environmentTypes_1.EnvType.DUNGEON;
             let envType = !isSidePath ? mainEnvType : environment;
             // if (depth > 4) {
             //   envType = EnvType.MAGMA_CAVE;
@@ -51766,8 +51841,28 @@ class Populator {
             });
             // add boss to furthest room from upladder if not main path
             const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
+            const drops = [];
+            switch (furthestFromUpLadder?.envType) {
+                case environmentTypes_1.EnvType.CASTLE:
+                    drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
+                    break;
+                case environmentTypes_1.EnvType.FOREST:
+                    //drops.push(new Spear(furthestFromUpLadder, 1, 1));
+                    break;
+                case environmentTypes_1.EnvType.MAGMA_CAVE:
+                    drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
+                    break;
+            }
             if (furthestFromUpLadder && !this.level.isMainPath) {
-                this.populateBoss(furthestFromUpLadder, random_1.Random.rand);
+                this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+                let tiles = furthestFromUpLadder.getEmptyTiles();
+                const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
+                if (position === null)
+                    return;
+                const { x, y } = position;
+                const chest = chest_1.Chest.add(furthestFromUpLadder, furthestFromUpLadder.game, x, y);
+                chest.drops.push(...drops);
+                //furthestFromUpLadder.entities.push(chest);
             }
             //if (this.level.depth === 0) return;
             console.log(`Adding downladder with ${this.numRooms()} rooms`);
@@ -52051,8 +52146,7 @@ class Populator {
             const numChests = Math.ceil(random_1.Random.rand() * 5);
             let tiles = room.getEmptyTiles();
             let positions = [];
-            if (room.depth === 0)
-                positions = this.populateWeaponGroup(room, tiles);
+            //if (room.depth === 0) positions = this.populateWeaponGroup(room, tiles);
             tiles = tiles.filter((tile) => !positions.some((position) => position.x === tile.x && position.y === tile.y));
             tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
             let weaponDropped = false;
@@ -53141,7 +53235,8 @@ class Populator {
         }
         return lastOccultist;
     }
-    addBosses(room, depth) {
+    addBosses(room, depth, drops) {
+        drops = drops || [];
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true ||
             room.envType === environmentTypes_1.EnvType.TUTORIAL)
             return;
@@ -53150,6 +53245,7 @@ class Populator {
             //console.log(`No tiles left to spawn spawners`);
             return;
         }
+        let chosenBoss = null;
         if (!gameplaySettings_1.GameplaySettings.PRESET_BOSSES) {
             let bosses = [
                 "reaper",
@@ -53183,6 +53279,7 @@ class Populator {
             switch (boss) {
                 case "reaper":
                     const spawner = this.addSpawners(room, random_1.Random.rand, 1);
+                    chosenBoss = spawner;
                     spawner.dropTable = ["weapon", "equipment"];
                     spawner.dropChance = 1;
                     break;
@@ -53190,6 +53287,7 @@ class Populator {
                     const queen = queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
                     queen.dropTable = ["weapon", "equipment"];
                     queen.dropChance = 1;
+                    chosenBoss = queen;
                     break;
                 case "bigskullenemy":
                     const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
@@ -53200,11 +53298,13 @@ class Populator {
                         "gem",
                         "tool",
                     ];
+                    chosenBoss = bigSkull;
                     break;
                 case "occultist":
                     const occultist = this.addOccultists(room, random_1.Random.rand, 1);
                     occultist.dropTable = ["weapon", "equipment"];
                     occultist.dropChance = 1;
+                    chosenBoss = occultist;
                     break;
                 case "bigzombieenemy":
                     const bigZombie = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
@@ -53216,11 +53316,13 @@ class Populator {
                         "tool",
                     ];
                     bigZombie.dropChance = 1;
+                    chosenBoss = bigZombie;
                     break;
                 case "warden":
                     const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
                     warden.dropTable = ["weapon", "equipment"];
                     warden.dropChance = 1;
+                    chosenBoss = warden;
                     break;
                 case "bigfrogenemy":
                     const bigFrog = bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, x, y);
@@ -53231,11 +53333,13 @@ class Populator {
                         "gem",
                         "tool",
                     ];
+                    chosenBoss = bigFrog;
                     break;
                 case "exalter":
                     const exalter = exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
                     exalter.dropTable = ["weapon", "equipment"];
                     exalter.dropChance = 1;
+                    chosenBoss = exalter;
                     break;
             }
         }
@@ -53255,9 +53359,11 @@ class Populator {
                         "tool",
                     ];
                     bigZombie.dropChance = 1;
+                    chosenBoss = bigZombie;
                     const queen = queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
                     queen.dropTable = ["weapon", "equipment"];
                     queen.dropChance = 1;
+                    chosenBoss = queen;
                     break;
                 case 1:
                     const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
@@ -53268,17 +53374,21 @@ class Populator {
                         "gem",
                         "tool",
                     ];
+                    chosenBoss = bigSkull;
                     const spawner = this.addSpawners(room, random_1.Random.rand, 1);
                     //spawner.dropTable = ["weapon", "equipment"];
                     spawner.dropChance = 1;
+                    chosenBoss = spawner;
                     break;
                 case 2:
                     const spawner2 = this.addSpawners(room, random_1.Random.rand, 1);
                     //spawner.dropTable = ["weapon", "equipment"];
                     spawner2.dropChance = 1;
+                    chosenBoss = spawner2;
                     const occultist = this.addOccultists(room, random_1.Random.rand, 1);
                     //occultist.dropTable = ["weapon", "equipment"];
                     occultist.dropChance = 1;
+                    chosenBoss = occultist;
                     break;
                 case 3:
                     const bigZombie2 = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
@@ -53290,6 +53400,7 @@ class Populator {
                         "tool",
                     ];
                     bigZombie2.dropChance = 1;
+                    chosenBoss = bigZombie2;
                     const bigZombie3 = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
                     bigZombie3.dropTable = [
                         "weapon",
@@ -53299,19 +53410,23 @@ class Populator {
                         "tool",
                     ];
                     bigZombie3.dropChance = 1;
+                    chosenBoss = bigZombie3;
                     const occultist2 = this.addOccultists(room, random_1.Random.rand, 1);
                     //occultist.dropTable = ["weapon", "equipment"];
                     occultist2.dropChance = 1;
+                    chosenBoss = occultist2;
                     break;
                 case 4:
                     const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
                     warden.dropTable = ["weapon", "equipment"];
                     warden.dropChance = 1;
+                    chosenBoss = warden;
                     break;
                 case 5:
                     break;
             }
         }
+        chosenBoss.drops.push(...drops);
     }
     addChests(room, numChests, rand) {
         // add chests
