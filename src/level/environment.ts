@@ -111,12 +111,23 @@ export class Environment {
 // Import the enemy minimum depth from level.ts
 //export { enemyMinimumDepth } from "./level";
 
+export interface PropBlobOptions {
+  enabled?: boolean;
+  /** Rough fraction (0-1) of the room blobs should cover */
+  weight?: number;
+  /** Diameter, in tiles, of blob clusters */
+  diameter?: number;
+  /** Optional cap on number of blobs */
+  maxBlobs?: number;
+}
+
 interface PropInfo {
   class: any; // The class constructor
   weight?: number; // Spawn weight
   blacklistedEnvironments?: EnvType[]; // Environments where this prop shouldn't spawn
   additionalParams?: any[]; // Extra constructor parameters if needed
   size?: { w: number; h: number }; // Optional footprint size in tiles
+  blob?: boolean | PropBlobOptions; // Optional blob placement config
 }
 
 interface EnemyInfo {
@@ -248,16 +259,33 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.FOREST]: {
     props: [
       { class: NullProp, weight: 2 },
-      { class: TombStone, weight: 0.035, additionalParams: [1] },
-      { class: TombStone, weight: 0.035, additionalParams: [0] },
+      {
+        class: TombStone,
+        weight: 1,
+        additionalParams: [1],
+        blob: { enabled: true, weight: 0.03, diameter: 5 },
+      },
+      {
+        class: TombStone,
+        weight: 1,
+        additionalParams: [0],
+        blob: { enabled: true, weight: 0.03, diameter: 5 },
+      },
       { class: Pumpkin, weight: 0.05 },
-      { class: Bush, weight: 2 },
+      {
+        class: Bush,
+        weight: 2,
+      },
       { class: Sprout, weight: 0.05 },
       { class: Mushrooms, weight: 0.05 },
       { class: Rock, weight: 0.1 },
       { class: Chest, weight: 0.01 },
       { class: GlowBugEnemy, weight: 0.05 },
-      { class: Tree, weight: 0.1 },
+      {
+        class: Tree,
+        weight: 1,
+        blob: { enabled: true, weight: 0.1, diameter: 12 },
+      },
       { class: Succulent, weight: 0.1 },
       { class: SmallBush, weight: 0.5 },
     ],

@@ -19,8 +19,8 @@ export class Spellbook extends Weapon {
     this.canMine = true;
     this.name = Spellbook.itemName;
     this.isTargeting = false;
-    this.durability = 15;
-    this.durabilityMax = 15;
+    this.durability = 10;
+    this.durabilityMax = 10;
     this.description = "Hits multiple enemies within a range of 4 tiles.";
     this.degradeable = true;
     this.cooldownMax = 25;

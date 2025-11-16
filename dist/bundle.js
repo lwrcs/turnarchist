@@ -22461,7 +22461,7 @@ class TombStone extends entity_1.Entity {
         this.chainPushable = false;
         this.name = "tombstone";
         let dropProb = random_1.Random.rand();
-        if (dropProb < 0.25)
+        if (dropProb < 0.1)
             this.drops.push(new spellbook_1.Spellbook(this.room, this.x, this.y));
         this.hasBloom = true;
         this.bloomColor = "#05FF05";
@@ -38306,8 +38306,8 @@ class Spellbook extends weapon_1.Weapon {
         this.canMine = true;
         this.name = Spellbook.itemName;
         this.isTargeting = false;
-        this.durability = 15;
-        this.durabilityMax = 15;
+        this.durability = 10;
+        this.durabilityMax = 10;
         this.description = "Hits multiple enemies within a range of 4 tiles.";
         this.degradeable = true;
         this.cooldownMax = 25;
@@ -39153,16 +39153,33 @@ const environmentData = {
     [environmentTypes_1.EnvType.FOREST]: {
         props: [
             { class: NullProp, weight: 2 },
-            { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [1] },
-            { class: tombStone_1.TombStone, weight: 0.035, additionalParams: [0] },
+            {
+                class: tombStone_1.TombStone,
+                weight: 1,
+                additionalParams: [1],
+                blob: { enabled: true, weight: 0.03, diameter: 5 },
+            },
+            {
+                class: tombStone_1.TombStone,
+                weight: 1,
+                additionalParams: [0],
+                blob: { enabled: true, weight: 0.03, diameter: 5 },
+            },
             { class: pumpkin_1.Pumpkin, weight: 0.05 },
-            { class: bush_1.Bush, weight: 2 },
+            {
+                class: bush_1.Bush,
+                weight: 2,
+            },
             { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.05 },
             { class: rockResource_1.Rock, weight: 0.1 },
             { class: chest_1.Chest, weight: 0.01 },
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
-            { class: tree_1.Tree, weight: 0.1 },
+            {
+                class: tree_1.Tree,
+                weight: 1,
+                blob: { enabled: true, weight: 0.1, diameter: 12 },
+            },
             { class: succulent_1.Succulent, weight: 0.1 },
             { class: smallBush_1.SmallBush, weight: 0.5 },
         ],
@@ -51842,6 +51859,11 @@ const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
     enemyIdToName[id] = enemyClass.name;
 }
+const DEFAULT_BLOB_OPTIONS = {
+    enabled: true,
+    weight: 0.25,
+    diameter: 6,
+};
 class Populator {
     constructor(level, skipPopulation = false) {
         this.props = [];
@@ -52494,6 +52516,8 @@ class Populator {
             : environment_1.environmentData[room.level.environment.type];
         const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
         const positions = clusterer.generateClusteredPositions(numProps);
+        const blobField = this.generateBlobField(room, clusteringOptions?.blobOptions);
+        const propBlobFieldCache = new Map();
         if (clusteringOptions?.debugEnabled) {
             const report = clusterer.getLastDebugReport();
             if (report) {
@@ -52547,6 +52571,14 @@ class Populator {
             if (!pos)
                 continue;
             const { x, y } = pos;
+            const propBlobOptions = this.getPropBlobOptions(selectedProp.blob, clusteringOptions?.blobOptions);
+            const effectiveBlobField = propBlobOptions
+                ? this.getBlobFieldFromCache(room, propBlobOptions, propBlobFieldCache)
+                : blobField;
+            if (effectiveBlobField &&
+                !this.isPlacementWithinBlobField(effectiveBlobField, x, y, size.w, size.h)) {
+                continue;
+            }
             if (selectedProp.class && selectedProp.class.add) {
                 const args = selectedProp.additionalParams || [];
                 selectedProp.class.add(room, room.game, x, y, ...args);
@@ -52559,6 +52591,107 @@ class Populator {
                 }
             }
         }
+    }
+    generateBlobField(room, options) {
+        if (!options || options.enabled === false)
+            return null;
+        const weight = Math.max(0, Math.min(1, options.weight ?? DEFAULT_BLOB_OPTIONS.weight));
+        if (weight <= 0)
+            return null;
+        const emptyTiles = room.getEmptyTiles();
+        if (!emptyTiles.length)
+            return null;
+        const rawDiameter = Math.max(1, Math.floor(options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter));
+        const radius = Math.max(1, Math.floor(rawDiameter / 2));
+        const radiusSq = radius * radius;
+        const roomArea = room.width * room.height;
+        const blobArea = Math.max(1, Math.PI * radiusSq);
+        let blobCount = Math.round((weight * roomArea) / blobArea);
+        if (options.maxBlobs !== undefined) {
+            blobCount = Math.min(blobCount, Math.max(1, options.maxBlobs));
+        }
+        blobCount = Math.max(blobCount, 1);
+        const candidates = emptyTiles.slice();
+        const blobCenters = [];
+        for (let i = 0; i < blobCount && candidates.length > 0; i++) {
+            const idx = Math.floor(random_1.Random.rand() * candidates.length);
+            const picked = candidates.splice(idx, 1)[0];
+            blobCenters.push({ x: picked.x, y: picked.y });
+        }
+        const allowedTiles = new Set();
+        for (const tile of emptyTiles) {
+            if (this.pointInsideAnyBlob(tile.x, tile.y, blobCenters, radiusSq)) {
+                allowedTiles.add(this.coordKey(tile.x, tile.y));
+            }
+        }
+        if (!allowedTiles.size) {
+            return null;
+        }
+        return { allowedTiles };
+    }
+    pointInsideAnyBlob(x, y, blobs, radiusSq) {
+        for (const blob of blobs) {
+            const dx = x - blob.x;
+            const dy = y - blob.y;
+            if (dx * dx + dy * dy <= radiusSq) {
+                return true;
+            }
+        }
+        return false;
+    }
+    isPlacementWithinBlobField(blobField, x, y, width, height) {
+        for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+                if (!blobField.allowedTiles.has(this.coordKey(x + dx, y + dy))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    coordKey(x, y) {
+        return `${x},${y}`;
+    }
+    getPropBlobOptions(propBlob, fallback) {
+        if (!propBlob)
+            return null;
+        const defaults = this.getDefaultBlobOptions();
+        if (typeof propBlob === "boolean") {
+            if (!propBlob)
+                return null;
+            return {
+                ...defaults,
+                ...fallback,
+                enabled: true,
+            };
+        }
+        if (propBlob.enabled === false) {
+            return null;
+        }
+        return {
+            enabled: true,
+            weight: propBlob.weight ?? fallback?.weight ?? defaults.weight,
+            diameter: propBlob.diameter ?? fallback?.diameter ?? defaults.diameter,
+            maxBlobs: propBlob.maxBlobs ?? fallback?.maxBlobs,
+        };
+    }
+    getBlobFieldFromCache(room, options, cache) {
+        const key = this.getBlobOptionsKey(options);
+        if (cache.has(key)) {
+            return cache.get(key) ?? null;
+        }
+        const field = this.generateBlobField(room, options);
+        cache.set(key, field);
+        return field;
+    }
+    getBlobOptionsKey(options) {
+        const weight = options.weight ?? DEFAULT_BLOB_OPTIONS.weight;
+        const diameter = options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter;
+        const maxBlobs = options.maxBlobs ?? "auto";
+        return `${weight}|${diameter}|${maxBlobs}`;
+    }
+    getDefaultBlobOptions() {
+        return { ...DEFAULT_BLOB_OPTIONS };
     }
     populateTutorialEnvironment(room) {
         const numProps = Math.floor((this.getNumProps(room) + 1) / 4);

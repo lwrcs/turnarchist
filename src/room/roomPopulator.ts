@@ -10,6 +10,7 @@ import {
   enemyClassToId,
   //enemyMinimumDepth,
   EnemyInfo,
+  PropBlobOptions,
 } from "../level/environment";
 import { DownLadder } from "../tile/downLadder";
 import { EnvType } from "../constants/environmentTypes";
@@ -90,6 +91,35 @@ const enemyIdToName: Record<number, string> = {};
 for (const [enemyClass, id] of enemyClassToId.entries()) {
   enemyIdToName[id] = enemyClass.name;
 }
+
+interface BlobPlacementOptions {
+  enabled?: boolean;
+  /**
+   * Rough fraction (0-1) of the room we expect blobs to cover.
+   * Lower weight => rarer blobs.
+   */
+  weight?: number;
+  /** Diameter, in tiles, for each blob (minimum 1). */
+  diameter?: number;
+  /** Optional cap on number of blobs that can spawn. */
+  maxBlobs?: number;
+}
+
+type BlobField = {
+  allowedTiles: Set<string>;
+};
+
+type PopulatorClusteringOptions = ClusteringOptions & {
+  blobOptions?: BlobPlacementOptions;
+};
+
+const DEFAULT_BLOB_OPTIONS: Required<
+  Pick<BlobPlacementOptions, "weight" | "diameter">
+> & { enabled: true } = {
+  enabled: true,
+  weight: 0.25,
+  diameter: 6,
+};
 
 export class Populator {
   level: Level;
@@ -480,7 +510,7 @@ export class Populator {
     room: Room,
     numProps: number,
     envType?: EnvType,
-    clusteringOptions?: ClusteringOptions,
+    clusteringOptions?: PopulatorClusteringOptions,
   ) {
     const envData = envType
       ? environmentData[envType]
@@ -488,6 +518,11 @@ export class Populator {
 
     const clusterer = new PropClusterer(room, clusteringOptions);
     const positions = clusterer.generateClusteredPositions(numProps);
+    const blobField = this.generateBlobField(
+      room,
+      clusteringOptions?.blobOptions,
+    );
+    const propBlobFieldCache = new Map<string, BlobField | null>();
     if (clusteringOptions?.debugEnabled) {
       const report = clusterer.getLastDebugReport();
       if (report) {
@@ -564,6 +599,27 @@ export class Populator {
       if (!pos) continue;
       const { x, y } = pos;
 
+      const propBlobOptions = this.getPropBlobOptions(
+        selectedProp.blob,
+        clusteringOptions?.blobOptions,
+      );
+      const effectiveBlobField = propBlobOptions
+        ? this.getBlobFieldFromCache(room, propBlobOptions, propBlobFieldCache)
+        : blobField;
+
+      if (
+        effectiveBlobField &&
+        !this.isPlacementWithinBlobField(
+          effectiveBlobField,
+          x,
+          y,
+          size.w,
+          size.h,
+        )
+      ) {
+        continue;
+      }
+
       if (selectedProp.class && selectedProp.class.add) {
         const args = selectedProp.additionalParams || [];
         selectedProp.class.add(room, room.game, x, y, ...args);
@@ -576,6 +632,147 @@ export class Populator {
         }
       }
     }
+  }
+
+  private generateBlobField(
+    room: Room,
+    options?: BlobPlacementOptions,
+  ): BlobField | null {
+    if (!options || options.enabled === false) return null;
+    const weight = Math.max(
+      0,
+      Math.min(1, options.weight ?? DEFAULT_BLOB_OPTIONS.weight),
+    );
+    if (weight <= 0) return null;
+
+    const emptyTiles = room.getEmptyTiles();
+    if (!emptyTiles.length) return null;
+
+    const rawDiameter = Math.max(
+      1,
+      Math.floor(options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter),
+    );
+    const radius = Math.max(1, Math.floor(rawDiameter / 2));
+    const radiusSq = radius * radius;
+    const roomArea = room.width * room.height;
+    const blobArea = Math.max(1, Math.PI * radiusSq);
+
+    let blobCount = Math.round((weight * roomArea) / blobArea);
+    if (options.maxBlobs !== undefined) {
+      blobCount = Math.min(blobCount, Math.max(1, options.maxBlobs));
+    }
+    blobCount = Math.max(blobCount, 1);
+
+    const candidates = emptyTiles.slice();
+    const blobCenters: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < blobCount && candidates.length > 0; i++) {
+      const idx = Math.floor(Random.rand() * candidates.length);
+      const picked = candidates.splice(idx, 1)[0];
+      blobCenters.push({ x: picked.x, y: picked.y });
+    }
+
+    const allowedTiles = new Set<string>();
+    for (const tile of emptyTiles) {
+      if (this.pointInsideAnyBlob(tile.x, tile.y, blobCenters, radiusSq)) {
+        allowedTiles.add(this.coordKey(tile.x, tile.y));
+      }
+    }
+
+    if (!allowedTiles.size) {
+      return null;
+    }
+
+    return { allowedTiles };
+  }
+
+  private pointInsideAnyBlob(
+    x: number,
+    y: number,
+    blobs: Array<{ x: number; y: number }>,
+    radiusSq: number,
+  ) {
+    for (const blob of blobs) {
+      const dx = x - blob.x;
+      const dy = y - blob.y;
+      if (dx * dx + dy * dy <= radiusSq) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private isPlacementWithinBlobField(
+    blobField: { allowedTiles: Set<string> },
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) {
+    for (let dx = 0; dx < width; dx++) {
+      for (let dy = 0; dy < height; dy++) {
+        if (!blobField.allowedTiles.has(this.coordKey(x + dx, y + dy))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private coordKey(x: number, y: number) {
+    return `${x},${y}`;
+  }
+
+  private getPropBlobOptions(
+    propBlob: boolean | PropBlobOptions | undefined,
+    fallback?: BlobPlacementOptions,
+  ): BlobPlacementOptions | null {
+    if (!propBlob) return null;
+
+    const defaults = this.getDefaultBlobOptions();
+    if (typeof propBlob === "boolean") {
+      if (!propBlob) return null;
+      return {
+        ...defaults,
+        ...fallback,
+        enabled: true,
+      };
+    }
+
+    if (propBlob.enabled === false) {
+      return null;
+    }
+
+    return {
+      enabled: true,
+      weight: propBlob.weight ?? fallback?.weight ?? defaults.weight,
+      diameter: propBlob.diameter ?? fallback?.diameter ?? defaults.diameter,
+      maxBlobs: propBlob.maxBlobs ?? fallback?.maxBlobs,
+    };
+  }
+
+  private getBlobFieldFromCache(
+    room: Room,
+    options: BlobPlacementOptions,
+    cache: Map<string, BlobField | null>,
+  ): BlobField | null {
+    const key = this.getBlobOptionsKey(options);
+    if (cache.has(key)) {
+      return cache.get(key) ?? null;
+    }
+    const field = this.generateBlobField(room, options);
+    cache.set(key, field);
+    return field;
+  }
+
+  private getBlobOptionsKey(options: BlobPlacementOptions) {
+    const weight = options.weight ?? DEFAULT_BLOB_OPTIONS.weight;
+    const diameter = options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter;
+    const maxBlobs = options.maxBlobs ?? "auto";
+    return `${weight}|${diameter}|${maxBlobs}`;
+  }
+
+  private getDefaultBlobOptions(): BlobPlacementOptions {
+    return { ...DEFAULT_BLOB_OPTIONS };
   }
 
   private populateTutorialEnvironment(room: Room) {
