@@ -180,6 +180,28 @@ export class Menu {
       this,
     );
     this.addButton(hoverTextButton);
+    const slowInputsNearEnemiesButton = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      "Slow Inputs Near Enemies",
+      () => {
+        GameConstants.SLOW_INPUTS_NEAR_ENEMIES =
+          !GameConstants.SLOW_INPUTS_NEAR_ENEMIES;
+        const enabled = GameConstants.SLOW_INPUTS_NEAR_ENEMIES
+          ? "enabled"
+          : "disabled";
+        try {
+          const { saveSettings } = require("../game/settingsPersistence");
+          saveSettings(this.game);
+        } catch {}
+        this.game.pushMessage(`Slow inputs near enemies is now ${enabled}`);
+      },
+      false,
+      this,
+    );
+    this.addButton(slowInputsNearEnemiesButton);
 
     const saveBtn = new guiButton(
       0,

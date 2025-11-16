@@ -3729,7 +3729,7 @@ export class Room {
   };
 
   hasEnemyInRadius = (x: number, y: number): boolean => {
-    const radius = 2;
+    const radius = 3;
     const radiusSquared = radius * radius; // Calculate once
 
     for (let dx = -radius; dx <= radius; dx++) {

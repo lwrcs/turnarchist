@@ -12,6 +12,7 @@ type Settings = {
   smoothLighting?: boolean;
   hoverText?: boolean;
   screenShake?: boolean;
+  slowInputsNearEnemies?: boolean;
 };
 
 export const saveSettings = (game: Game) => {
@@ -22,6 +23,7 @@ export const saveSettings = (game: Game) => {
     smoothLighting: GameConstants.SMOOTH_LIGHTING,
     hoverText: GameConstants.HOVER_TEXT_ENABLED,
     screenShake: GameConstants.SCREEN_SHAKE_ENABLED,
+    slowInputsNearEnemies: GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
   };
   setCookie(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -47,6 +49,9 @@ export const loadSettings = (game: Game) => {
     }
     if (typeof s.screenShake === "boolean") {
       GameConstants.SCREEN_SHAKE_ENABLED = s.screenShake;
+    }
+    if (typeof s.slowInputsNearEnemies === "boolean") {
+      GameConstants.SLOW_INPUTS_NEAR_ENEMIES = s.slowInputsNearEnemies;
     }
   } catch (e) {
     console.warn("Failed to parse settings cookie", e);

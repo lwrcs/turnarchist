@@ -33,7 +33,9 @@ export class PlayerMovement {
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
-      this.queueMove(x, y, direction);
+      if (!this.enemyTurnInputLockActive()) {
+        this.queueMove(x, y, direction);
+      }
     }
   }
 
@@ -52,7 +54,9 @@ export class PlayerMovement {
       this.player.direction = direction;
       this.player.tryMove(x, y);
     } else {
-      this.queueMove(x, y, direction);
+      if (!this.enemyTurnInputLockActive()) {
+        this.queueMove(x, y, direction);
+      }
     }
   }
   //unused
@@ -98,15 +102,7 @@ export class PlayerMovement {
   canMove(): boolean {
     if (this.player.busyAnimating) return false;
     if (this.inventoryClosedRecently()) return false;
-
-    // Only block movement during computer turn if slow inputs setting is enabled
-    if (
-      GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
-      this.player.game.room.turn === TurnState.computerTurn &&
-      this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
-    ) {
-      return false;
-    }
+    if (this.enemyTurnInputLockActive()) return false;
 
     const now = Date.now();
     let cooldown = GameConstants.MOVEMENT_COOLDOWN;
@@ -128,10 +124,12 @@ export class PlayerMovement {
   canQueue(): boolean {
     if (this.player.busyAnimating) return false;
     if (this.inventoryClosedRecently()) return false;
+    if (this.enemyTurnInputLockActive()) return false;
     const now = Date.now();
     let cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
 
     // Apply slower queue cooldown when enemies are nearby and setting is enabled
+
     if (
       GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
       this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)
@@ -203,4 +201,12 @@ export class PlayerMovement {
 
     this.animationFrameId = requestAnimationFrame(this.queueHandler);
   };
+
+  private enemyTurnInputLockActive(): boolean {
+    if (!GameConstants.SLOW_INPUTS_NEAR_ENEMIES) return false;
+    const room = this.player?.game?.room;
+    if (!room) return false;
+    if (room.turn !== TurnState.computerTurn) return false;
+    return room.hasEnemyInRadius(this.player.x, this.player.y);
+  }
 }

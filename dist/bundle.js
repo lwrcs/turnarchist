@@ -30051,6 +30051,7 @@ const saveSettings = (game) => {
         smoothLighting: gameConstants_1.GameConstants.SMOOTH_LIGHTING,
         hoverText: gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
         screenShake: gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED,
+        slowInputsNearEnemies: gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
     };
     (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -30079,6 +30080,9 @@ const loadSettings = (game) => {
         }
         if (typeof s.screenShake === "boolean") {
             gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED = s.screenShake;
+        }
+        if (typeof s.slowInputsNearEnemies === "boolean") {
+            gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES = s.slowInputsNearEnemies;
         }
     }
     catch (e) {
@@ -31734,6 +31738,20 @@ class Menu {
             catch { }
         }, false, this);
         this.addButton(hoverTextButton);
+        const slowInputsNearEnemiesButton = new guiButton_1.guiButton(0, 0, 0, 0, "Slow Inputs Near Enemies", () => {
+            gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES =
+                !gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES;
+            const enabled = gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES
+                ? "enabled"
+                : "disabled";
+            try {
+                const { saveSettings } = __webpack_require__(/*! ../game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+                saveSettings(this.game);
+            }
+            catch { }
+            this.game.pushMessage(`Slow inputs near enemies is now ${enabled}`);
+        }, false, this);
+        this.addButton(slowInputsNearEnemiesButton);
         const saveBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Save Game", () => {
             try {
                 const { saveToCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
@@ -45434,7 +45452,9 @@ class PlayerMovement {
             this.player.tryMove(x, y);
         }
         else {
-            this.queueMove(x, y, direction);
+            if (!this.enemyTurnInputLockActive()) {
+                this.queueMove(x, y, direction);
+            }
         }
     }
     moveMouse(direction, targetX, targetY) {
@@ -45454,7 +45474,9 @@ class PlayerMovement {
             this.player.tryMove(x, y);
         }
         else {
-            this.queueMove(x, y, direction);
+            if (!this.enemyTurnInputLockActive()) {
+                this.queueMove(x, y, direction);
+            }
         }
     }
     getTargetCoords(direction, x, y) {
@@ -45484,12 +45506,8 @@ class PlayerMovement {
             return false;
         if (this.inventoryClosedRecently())
             return false;
-        // Only block movement during computer turn if slow inputs setting is enabled
-        if (gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES &&
-            this.player.game.room.turn === room_1.TurnState.computerTurn &&
-            this.player.game.room.hasEnemyInRadius(this.player.x, this.player.y)) {
+        if (this.enemyTurnInputLockActive())
             return false;
-        }
         const now = Date.now();
         let cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
         // Apply slower cooldown when enemies are nearby and setting is enabled
@@ -45506,6 +45524,8 @@ class PlayerMovement {
         if (this.player.busyAnimating)
             return false;
         if (this.inventoryClosedRecently())
+            return false;
+        if (this.enemyTurnInputLockActive())
             return false;
         const now = Date.now();
         let cooldown = gameConstants_1.GameConstants.MOVEMENT_QUEUE_COOLDOWN;
@@ -45547,6 +45567,16 @@ class PlayerMovement {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
+    }
+    enemyTurnInputLockActive() {
+        if (!gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES)
+            return false;
+        const room = this.player?.game?.room;
+        if (!room)
+            return false;
+        if (room.turn !== room_1.TurnState.computerTurn)
+            return false;
+        return room.hasEnemyInRadius(this.player.x, this.player.y);
     }
 }
 exports.PlayerMovement = PlayerMovement;
@@ -49940,7 +49970,7 @@ class Room {
             return true;
         };
         this.hasEnemyInRadius = (x, y) => {
-            const radius = 2;
+            const radius = 3;
             const radiusSquared = radius * radius; // Calculate once
             for (let dx = -radius; dx <= radius; dx++) {
                 for (let dy = -radius; dy <= radius; dy++) {
