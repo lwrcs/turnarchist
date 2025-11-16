@@ -173,7 +173,9 @@ export class FrogEnemy extends Enemy {
               }
             }
             this.rumbling = false;
+            this.unconscious = true;
           } else {
+            this.unconscious = false;
             this.makeHitWarnings();
             this.rumbling = true;
             this.tileX = 3;
@@ -229,6 +231,7 @@ export class FrogEnemy extends Enemy {
   };
 
   makeHitWarnings = () => {
+    if (this.unconscious) return;
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

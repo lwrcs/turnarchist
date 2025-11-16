@@ -1329,7 +1329,16 @@ export class Room {
       }
       e.tick();
     }
+
     this.entities = this.entities.filter((e) => !e.dead);
+
+    for (const e of this.entities) {
+      if (e instanceof Enemy) {
+        if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
+      }
+      e.makeHitWarnings();
+    }
+
     for (const i of this.items) {
       i.tick();
     }

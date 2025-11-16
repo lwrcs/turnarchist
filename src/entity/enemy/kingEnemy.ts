@@ -132,7 +132,12 @@ export class KingEnemy extends Enemy {
             }
           }
 
-          if (this.ticks % 2 !== 0) this.makeHitWarnings();
+          if (this.ticks % 2 !== 0) {
+            this.unconscious = false;
+            this.makeHitWarnings();
+          } else {
+            this.unconscious = true;
+          }
         }
 
         let targetPlayerOffline =

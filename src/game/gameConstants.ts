@@ -344,7 +344,7 @@ export class GameConstants {
     Dagger,
     Torch,
     Sword,
-    Crossbow,
+    QuarterStaff,
     GodStone,
     Spellbook,
     FishingRod,
@@ -361,6 +361,8 @@ export class GameConstants {
     Spear,
     Pickaxe,
     Lantern,
+    WeaponBlood,
+
     Coal,
     Coal,
     Coal,

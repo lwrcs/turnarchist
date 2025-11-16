@@ -129,8 +129,10 @@ export class KnightEnemy extends Enemy {
               }
             }
             this.rumbling = false;
+            this.unconscious = true;
           } else {
             this.rumbling = true;
+            this.unconscious = false;
             this.makeHitWarnings();
           }
         }

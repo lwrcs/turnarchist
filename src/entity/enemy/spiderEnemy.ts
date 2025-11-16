@@ -288,7 +288,6 @@ export class SpiderEnemy extends Enemy {
 
     if (!this.dead) {
       if (this.handleSkipTurns()) return;
-
       this.rumbling = this.ticks % 2 === 1;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {
@@ -459,9 +458,10 @@ export class SpiderEnemy extends Enemy {
               }
             }
             this.rumbling = false;
+            this.unconscious = true;
           } else {
             this.rumbling = true;
-
+            this.unconscious = false;
             this.makeHitWarnings();
           }
         }
@@ -496,6 +496,7 @@ export class SpiderEnemy extends Enemy {
   };
 
   makeHitWarnings = () => {
+    if (this.unconscious) return;
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

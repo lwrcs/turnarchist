@@ -543,8 +543,10 @@ export class BeetleEnemy extends Enemy {
               }
             }
             this.rumbling = false;
+            this.unconscious = true;
           } else {
             this.rumbling = true;
+            this.unconscious = false;
             /*
             if (
               (this.target.x === this.targetPlayer.x &&
@@ -603,6 +605,7 @@ export class BeetleEnemy extends Enemy {
   };
 
   makeHitWarnings = () => {
+    if (this.unconscious) return;
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

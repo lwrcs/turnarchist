@@ -11078,9 +11078,11 @@ class BeetleEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
+                            this.unconscious = true;
                         }
                         else {
                             this.rumbling = true;
+                            this.unconscious = false;
                             /*
                             if (
                               (this.target.x === this.targetPlayer.x &&
@@ -11134,6 +11136,8 @@ class BeetleEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
+            if (this.unconscious)
+                return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
@@ -13720,9 +13724,11 @@ class CrabEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
+                            this.unconscious = true;
                         }
                         else {
                             this.rumbling = true;
+                            this.unconscious = false;
                             /*
                             if (
                               (this.target.x === this.targetPlayer.x &&
@@ -15683,8 +15689,10 @@ class FrogEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
+                            this.unconscious = true;
                         }
                         else {
+                            this.unconscious = false;
                             this.makeHitWarnings();
                             this.rumbling = true;
                             this.tileX = 3;
@@ -15735,6 +15743,8 @@ class FrogEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
+            if (this.unconscious)
+                return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
@@ -16076,8 +16086,13 @@ class KingEnemy extends enemy_1.Enemy {
                                 this.setDrawXY(oldX, oldY);
                             }
                         }
-                        if (this.ticks % 2 !== 0)
+                        if (this.ticks % 2 !== 0) {
+                            this.unconscious = false;
                             this.makeHitWarnings();
+                        }
+                        else {
+                            this.unconscious = true;
+                        }
                     }
                     let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
                         -1;
@@ -16261,9 +16276,11 @@ class KnightEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
+                            this.unconscious = true;
                         }
                         else {
                             this.rumbling = true;
+                            this.unconscious = false;
                             this.makeHitWarnings();
                         }
                     }
@@ -18358,9 +18375,11 @@ class SpiderEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
+                            this.unconscious = true;
                         }
                         else {
                             this.rumbling = true;
+                            this.unconscious = false;
                             this.makeHitWarnings();
                         }
                     }
@@ -18390,6 +18409,8 @@ class SpiderEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
+            if (this.unconscious)
+                return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
@@ -26377,6 +26398,7 @@ const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/reso
 const godStone_1 = __webpack_require__(/*! ../item/godStone */ "./src/item/godStone.ts");
 const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
+const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
@@ -26396,8 +26418,8 @@ const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
+const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
-const crossbow_1 = __webpack_require__(/*! ../item/weapon/crossbow */ "./src/item/weapon/crossbow.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -26642,7 +26664,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
     sword_1.Sword,
-    crossbow_1.Crossbow,
+    quarterStaff_1.QuarterStaff,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
     fishingRod_1.FishingRod,
@@ -26659,6 +26681,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     spear_1.Spear,
     pickaxe_1.Pickaxe,
     lantern_1.Lantern,
+    weaponBlood_1.WeaponBlood,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -32768,7 +32791,7 @@ class Inventory {
         this.openTime = Date.now();
         this.coins = 0;
         this.weapon = null;
-        this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 0 : 0;
+        this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3 : 0;
         this.grabbedItem = null;
         this._mouseDownStartX = null;
         this._mouseDownStartY = null;
@@ -48066,6 +48089,13 @@ class Room {
                 e.tick();
             }
             this.entities = this.entities.filter((e) => !e.dead);
+            for (const e of this.entities) {
+                if (e instanceof enemy_1.Enemy) {
+                    if (!this.isWithinEnemyInteractionRange(e.x, e.y))
+                        continue;
+                }
+                e.makeHitWarnings();
+            }
             for (const i of this.items) {
                 i.tick();
             }
