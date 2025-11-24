@@ -223,8 +223,6 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CoalResource, weight: 0.25 },
       { class: GoldResource, weight: 0.05 },
       { class: EmeraldResource, weight: 0.001 },
-      { class: GarnetResource, weight: 0.001 },
-      { class: ZirconResource, weight: 0.001 },
       { class: AmberResource, weight: 0.001 },
       { class: CaveRock, weight: 0.2 },
       { class: Mushrooms, weight: 0.02 },
@@ -276,6 +274,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         class: Bush,
         weight: 2,
       },
+      { class: ZirconResource, weight: 0.001 },
       { class: Sprout, weight: 0.05 },
       { class: Mushrooms, weight: 0.05 },
       { class: Rock, weight: 0.1 },
@@ -475,6 +474,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: GarnetResource, weight: 0.025 },
       { class: ZirconResource, weight: 0.025 },
       { class: AmberResource, weight: 0.025 },
+      { class: GarnetResource, weight: 0.001 },
     ],
     enemies: [
       // Only high-level, late-game threats
@@ -535,7 +535,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
       { class: PawnEnemy, weight: 1.0, minDepth: 1 },
-      { class: KingEnemy, weight: 0.2, minDepth: 3 },
+      { class: KingEnemy, weight: 0.2, minDepth: 2 },
       { class: BoltcasterEnemy, weight: 0.25, minDepth: 1 },
 
       // Mid game enemies (depth 1+)

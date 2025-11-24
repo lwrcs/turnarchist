@@ -171,8 +171,8 @@ export class Populator {
       case EnvType.CASTLE:
         drops.push(new Sword(furthestFromUpLadder, 1, 1));
         break;
-      case EnvType.FOREST:
-        //drops.push(new Spear(furthestFromUpLadder, 1, 1));
+      case EnvType.CAVE:
+        drops.push(new Spear(furthestFromUpLadder, 1, 1));
         break;
       case EnvType.MAGMA_CAVE:
         drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
@@ -1958,10 +1958,18 @@ export class Populator {
       const position = room.getRandomEmptyPosition(tiles);
       if (position === null) break;
       const { x, y } = position;
-      const gem = Game.randTable(
-        [EmeraldResource, GarnetResource, ZirconResource, AmberResource],
-        rand,
-      );
+      let gem;
+      if (room.envType === EnvType.CAVE) {
+        gem = Game.randTable([EmeraldResource, AmberResource], rand);
+        gem.add(room, room.game, x, y);
+      }
+      if (room.envType === EnvType.FOREST) {
+        gem = Game.randTable([ZirconResource], rand);
+        gem.add(room, room.game, x, y);
+      }
+      if (room.envType === EnvType.MAGMA_CAVE) {
+        gem = Game.randTable([GarnetResource, ZirconResource], rand);
+      }
       gem.add(room, room.game, x, y);
     }
   }

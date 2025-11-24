@@ -117,7 +117,7 @@ export class DropTable {
     },
     {
       itemType: "spear",
-      dropRate: 150,
+      dropRate: 250,
       category: ["weapon", "melee"],
       unique: true,
     },

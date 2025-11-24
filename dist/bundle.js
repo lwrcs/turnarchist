@@ -34332,7 +34332,7 @@ DropTable.drops = [
     },
     {
         itemType: "spear",
-        dropRate: 150,
+        dropRate: 250,
         category: ["weapon", "melee"],
         unique: true,
     },
@@ -39137,8 +39137,6 @@ const environmentData = {
             { class: coalResource_1.CoalResource, weight: 0.25 },
             { class: goldResource_1.GoldResource, weight: 0.05 },
             { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
-            { class: garnetResource_1.GarnetResource, weight: 0.001 },
-            { class: zirconResource_1.ZirconResource, weight: 0.001 },
             { class: amberResource_1.AmberResource, weight: 0.001 },
             { class: caveRockResource_1.CaveRock, weight: 0.2 },
             { class: mushrooms_1.Mushrooms, weight: 0.02 },
@@ -39188,6 +39186,7 @@ const environmentData = {
                 class: bush_1.Bush,
                 weight: 2,
             },
+            { class: zirconResource_1.ZirconResource, weight: 0.001 },
             { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.05 },
             { class: rockResource_1.Rock, weight: 0.1 },
@@ -39377,6 +39376,7 @@ const environmentData = {
             { class: garnetResource_1.GarnetResource, weight: 0.025 },
             { class: zirconResource_1.ZirconResource, weight: 0.025 },
             { class: amberResource_1.AmberResource, weight: 0.025 },
+            { class: garnetResource_1.GarnetResource, weight: 0.001 },
         ],
         enemies: [
             // Only high-level, late-game threats
@@ -39436,7 +39436,7 @@ const environmentData = {
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
-            { class: kingEnemy_1.KingEnemy, weight: 0.2, minDepth: 3 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.2, minDepth: 2 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
@@ -48140,8 +48140,8 @@ class Room {
                 if (e instanceof enemy_1.Enemy) {
                     if (!this.isWithinEnemyInteractionRange(e.x, e.y))
                         continue;
+                    e.makeHitWarnings();
                 }
-                e.makeHitWarnings();
             }
             for (const i of this.items) {
                 i.tick();
@@ -51928,8 +51928,8 @@ class Populator {
                 case environmentTypes_1.EnvType.CASTLE:
                     drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
                     break;
-                case environmentTypes_1.EnvType.FOREST:
-                    //drops.push(new Spear(furthestFromUpLadder, 1, 1));
+                case environmentTypes_1.EnvType.CAVE:
+                    drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
                     break;
                 case environmentTypes_1.EnvType.MAGMA_CAVE:
                     drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
@@ -53667,7 +53667,18 @@ class Populator {
             if (position === null)
                 break;
             const { x, y } = position;
-            const gem = game_1.Game.randTable([emeraldResource_1.EmeraldResource, garnetResource_1.GarnetResource, zirconResource_1.ZirconResource, amberResource_1.AmberResource], rand);
+            let gem;
+            if (room.envType === environmentTypes_1.EnvType.CAVE) {
+                gem = game_1.Game.randTable([emeraldResource_1.EmeraldResource, amberResource_1.AmberResource], rand);
+                gem.add(room, room.game, x, y);
+            }
+            if (room.envType === environmentTypes_1.EnvType.FOREST) {
+                gem = game_1.Game.randTable([zirconResource_1.ZirconResource], rand);
+                gem.add(room, room.game, x, y);
+            }
+            if (room.envType === environmentTypes_1.EnvType.MAGMA_CAVE) {
+                gem = game_1.Game.randTable([garnetResource_1.GarnetResource, zirconResource_1.ZirconResource], rand);
+            }
             gem.add(room, room.game, x, y);
         }
     }

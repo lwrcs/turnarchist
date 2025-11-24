@@ -1335,8 +1335,8 @@ export class Room {
     for (const e of this.entities) {
       if (e instanceof Enemy) {
         if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
+        e.makeHitWarnings();
       }
-      e.makeHitWarnings();
     }
 
     for (const i of this.items) {
