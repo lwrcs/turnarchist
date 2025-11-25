@@ -15,7 +15,7 @@ export class CoalResource extends Resource {
     this.name = "coal";
     this.extendShadow = true;
     this.shadowOpacity = 0.5;
-    if (Random.rand() < 0.1) {
+    if (Random.rand() < 0.01) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     this.drops.push(new Coal(this.room, this.x, this.y));

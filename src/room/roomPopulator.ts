@@ -86,6 +86,9 @@ import { GarnetResource } from "../entity/resource/garnetResource";
 import { AmberResource } from "../entity/resource/amberResource";
 import { ZirconResource } from "../entity/resource/zirconResource";
 import { ObsidianBlock } from "../entity/object/obsidianBlock";
+import { Backpack } from "../item/backpack";
+import { Coal } from "../item/resource/coal";
+import { Lantern } from "../item/light/lantern";
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName: Record<number, string> = {};
 for (const [enemyClass, id] of enemyClassToId.entries()) {
@@ -1989,8 +1992,9 @@ export class Populator {
     let table =
       room.depth > 0
         ? [
-            1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-            5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+            1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
+            4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9,
+            10, 10, 10,
           ]
         : [1, 1, 1];
     let type = Game.randTable(table, rand);
@@ -2020,6 +2024,14 @@ export class Populator {
       case 7:
         VendingMachine.add(room, room.game, x, y, new Hammer(room, x, y));
         break;
+      case 8:
+        VendingMachine.add(room, room.game, x, y, new Backpack(room, x, y));
+        break;
+      case 9:
+        VendingMachine.add(room, room.game, x, y, new Lantern(room, x, y));
+        break;
+      case 10:
+        VendingMachine.add(room, room.game, x, y, new Coal(room, x, y));
     }
   }
 

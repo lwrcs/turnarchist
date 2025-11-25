@@ -18,7 +18,7 @@ export class IronResource extends Resource {
     this.tileY = 0;
     this.health = 2;
     this.name = "iron";
-    if (Random.rand() < 0.025) {
+    if (Random.rand() < 0.005) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
 

@@ -111,19 +111,19 @@ export class DropTable {
     },
     {
       itemType: "warhammer",
-      dropRate: 250,
+      dropRate: 750,
       category: ["weapon", "melee"],
       unique: true,
     },
     {
       itemType: "spear",
-      dropRate: 250,
+      dropRate: 750,
       category: ["weapon", "melee"],
       unique: true,
     },
     {
       itemType: "spellbook",
-      dropRate: 250,
+      dropRate: 500,
       category: ["weapon", "magic"],
       unique: true,
     },
@@ -242,10 +242,10 @@ export class DropTable {
     { itemType: "lantern", dropRate: 500, category: ["light"] },
 
     // Gems and minerals
-    { itemType: "redgem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "gold", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {

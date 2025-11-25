@@ -13,7 +13,7 @@ export class GoldResource extends Resource {
     this.tileY = 0;
     this.health = 2;
     this.name = "gold";
-    if (Random.rand() < 0.2) {
+    if (Random.rand() < 0.005) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
 

@@ -23,7 +23,7 @@ export class Rock extends Resource {
     this.name = "rock";
     this.imageParticleX = 0;
     this.imageParticleY = 25;
-    if (Random.rand() < 0.05) {
+    if (Random.rand() < 0.005) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     //this.drops.push(new Stone(this.room, this.x, this.y));

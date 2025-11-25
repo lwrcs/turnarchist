@@ -104,6 +104,8 @@ import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 import { KingEnemy } from "../entity/enemy/kingEnemy";
 import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
+import { Backpack } from "../item/backpack";
+import { Coal } from "../item/resource/coal";
 
 // #endregion
 
@@ -1082,8 +1084,8 @@ export class Room {
     let table =
       this.depth > 0
         ? [
-            1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-            5, 5,
+            1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
+            4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7,
           ]
         : [1, 1, 1];
     let type = Game.randTable(table, rand);
@@ -1106,6 +1108,15 @@ export class Room {
         break;
       case 5:
         VendingMachine.add(this, this.game, x, y, new Torch(this, x, y));
+        break;
+      case 6:
+        VendingMachine.add(this, this.game, x, y, new Backpack(this, x, y));
+        break;
+      case 7:
+        VendingMachine.add(this, this.game, x, y, new Lantern(this, x, y));
+        break;
+      case 8:
+        VendingMachine.add(this, this.game, x, y, new Coal(this, x, y));
         break;
     }
   }

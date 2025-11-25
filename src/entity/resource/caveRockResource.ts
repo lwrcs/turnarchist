@@ -23,7 +23,7 @@ export class CaveRock extends Resource {
     this.imageParticleX = 9;
     this.imageParticleY = 24;
     this.name = "cave rock";
-    if (Random.rand() < 0.05) {
+    if (Random.rand() < 0.005) {
       this.drops.push(new Geode(this.room, this.x, this.y));
     }
     //this.drops.push(new Stone(this.room, this.x, this.y));

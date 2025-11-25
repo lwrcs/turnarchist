@@ -22563,6 +22563,7 @@ exports.VendingMachine = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const coal_1 = __webpack_require__(/*! ../../item/resource/coal */ "./src/item/resource/coal.ts");
 const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const shotgun_1 = __webpack_require__(/*! ../../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
@@ -22583,6 +22584,7 @@ const pickaxe_1 = __webpack_require__(/*! ../../item/tool/pickaxe */ "./src/item
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const fishingRod_1 = __webpack_require__(/*! ../../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const hammer_1 = __webpack_require__(/*! ../../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const backpack_1 = __webpack_require__(/*! ../../item/backpack */ "./src/item/backpack.ts");
 let OPEN_TIME = 150;
 let FILL_COLOR = "#5a595b";
 let OUTLINE_COLOR = "#292c36";
@@ -22853,7 +22855,7 @@ class VendingMachine extends entity_1.Entity {
             this.setCost(3); // Uses default random cost
         }
         else if (this.item instanceof lantern_1.Lantern) {
-            this.setCost(2); // Uses default random cost
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(350, 750)]); // Uses default random cost
         }
         else if (this.item instanceof warhammer_1.Warhammer) {
             this.setCost(2); // Uses default random cost
@@ -22875,6 +22877,12 @@ class VendingMachine extends entity_1.Entity {
         }
         else if (this.item instanceof hammer_1.Hammer) {
             this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(15, 25)]);
+        }
+        else if (this.item instanceof backpack_1.Backpack) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(150, 250)]);
+        }
+        else if (this.item instanceof coal_1.Coal) {
+            this.setCost(1, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(3, 7)], utils_1.Utils.randomNormalInt(5, 25));
         }
     }
     get type() {
@@ -22980,7 +22988,7 @@ class CaveRock extends resource_1.Resource {
         this.imageParticleX = 9;
         this.imageParticleY = 24;
         this.name = "cave rock";
-        if (random_1.Random.rand() < 0.05) {
+        if (random_1.Random.rand() < 0.005) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         //this.drops.push(new Stone(this.room, this.x, this.y));
@@ -23014,7 +23022,7 @@ class CoalResource extends resource_1.Resource {
         this.name = "coal";
         this.extendShadow = true;
         this.shadowOpacity = 0.5;
-        if (random_1.Random.rand() < 0.1) {
+        if (random_1.Random.rand() < 0.01) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new coal_1.Coal(this.room, this.x, this.y));
@@ -23125,7 +23133,7 @@ class GoldResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 2;
         this.name = "gold";
-        if (random_1.Random.rand() < 0.2) {
+        if (random_1.Random.rand() < 0.005) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new goldOre_1.GoldOre(this.room, this.x, this.y));
@@ -23157,7 +23165,7 @@ class IronResource extends resource_1.Resource {
         this.tileY = 0;
         this.health = 2;
         this.name = "iron";
-        if (random_1.Random.rand() < 0.025) {
+        if (random_1.Random.rand() < 0.005) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         this.drops.push(new ironOre_1.IronOre(this.room, this.x, this.y));
@@ -23308,7 +23316,7 @@ class Rock extends resource_1.Resource {
         this.name = "rock";
         this.imageParticleX = 0;
         this.imageParticleY = 25;
-        if (random_1.Random.rand() < 0.05) {
+        if (random_1.Random.rand() < 0.005) {
             this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
         }
         //this.drops.push(new Stone(this.room, this.x, this.y));
@@ -34326,19 +34334,19 @@ DropTable.drops = [
     },
     {
         itemType: "warhammer",
-        dropRate: 250,
+        dropRate: 750,
         category: ["weapon", "melee"],
         unique: true,
     },
     {
         itemType: "spear",
-        dropRate: 250,
+        dropRate: 750,
         category: ["weapon", "melee"],
         unique: true,
     },
     {
         itemType: "spellbook",
-        dropRate: 250,
+        dropRate: 500,
         category: ["weapon", "magic"],
         unique: true,
     },
@@ -34445,10 +34453,10 @@ DropTable.drops = [
     { itemType: "torch", dropRate: 250, category: ["light"] },
     { itemType: "lantern", dropRate: 500, category: ["light"] },
     // Gems and minerals
-    { itemType: "redgem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "bluegem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "greengem", dropRate: 500, category: ["gem", "resource"] },
-    { itemType: "geode", dropRate: 350, category: ["gem", "resource"] },
+    { itemType: "redgem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "bluegem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "greengem", dropRate: 750, category: ["gem", "resource"] },
+    { itemType: "geode", dropRate: 500, category: ["gem", "resource"] },
     { itemType: "gold", dropRate: 350, category: ["resource"] },
     { itemType: "stone", dropRate: 200, category: ["resource"] },
     {
@@ -47661,6 +47669,7 @@ const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 const rockResource_1 = __webpack_require__(/*! ../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
 const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
@@ -47704,6 +47713,8 @@ const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
+const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -50866,8 +50877,8 @@ class Room {
         let y = placeY ? placeY : pos.y;
         let table = this.depth > 0
             ? [
-                1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-                5, 5,
+                1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
+                4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7,
             ]
             : [1, 1, 1];
         let type = game_1.Game.randTable(table, rand);
@@ -50890,6 +50901,15 @@ class Room {
                 break;
             case 5:
                 vendingMachine_1.VendingMachine.add(this, this.game, x, y, new torch_1.Torch(this, x, y));
+                break;
+            case 6:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new backpack_1.Backpack(this, x, y));
+                break;
+            case 7:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new lantern_1.Lantern(this, x, y));
+                break;
+            case 8:
+                vendingMachine_1.VendingMachine.add(this, this.game, x, y, new coal_1.Coal(this, x, y));
                 break;
         }
     }
@@ -51884,6 +51904,9 @@ const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResour
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
 const obsidianBlock_1 = __webpack_require__(/*! ../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
+const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
+const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
+const lantern_1 = __webpack_require__(/*! ../item/light/lantern */ "./src/item/light/lantern.ts");
 // Add after the imports, create a reverse mapping from ID to enemy name
 const enemyIdToName = {};
 for (const [enemyClass, id] of environment_1.enemyClassToId.entries()) {
@@ -53690,8 +53713,9 @@ class Populator {
         let y = placeY ? placeY : pos.y;
         let table = room.depth > 0
             ? [
-                1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3, 4, 5, 5, 5,
-                5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
+                4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9,
+                10, 10, 10,
             ]
             : [1, 1, 1];
         let type = game_1.Game.randTable(table, rand);
@@ -53721,6 +53745,14 @@ class Populator {
             case 7:
                 vendingMachine_1.VendingMachine.add(room, room.game, x, y, new hammer_1.Hammer(room, x, y));
                 break;
+            case 8:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new backpack_1.Backpack(room, x, y));
+                break;
+            case 9:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new lantern_1.Lantern(room, x, y));
+                break;
+            case 10:
+                vendingMachine_1.VendingMachine.add(room, room.game, x, y, new coal_1.Coal(room, x, y));
         }
     }
     // Many populate methods start with adding torches using the same pattern
