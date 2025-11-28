@@ -22849,7 +22849,7 @@ class VendingMachine extends entity_1.Entity {
             this.setCost(2); // Uses default random cost
         }
         else if (this.item instanceof armor_1.Armor) {
-            this.setCost(3); // Uses default random cost
+            this.setCost(3, [new coin_1.Coin(room, 0, 0)], [utils_1.Utils.randomNormalInt(450, 950)]); // Uses default random cost
         }
         else if (this.item instanceof dualdagger_1.DualDagger) {
             this.setCost(3); // Uses default random cost
@@ -24944,6 +24944,8 @@ class Game {
             if (this.levelState !== LevelState.IN_LEVEL)
                 return;
             const list = Array.from(this.pointers.values()).sort((a, b) => a.zIndex - b.zIndex);
+            // Track placed text bounds so we can avoid overlapping messages
+            const placedTextRects = [];
             const now = Date.now();
             const toDelete = [];
             for (const p of list) {
@@ -24999,6 +25001,39 @@ class Game {
                 const bob = Math.round(t * p.bobPx);
                 textX += p.textDx;
                 textY += p.textDy + (dir === "down" ? -bob : bob);
+                // Avoid overlapping with previously placed pointer texts by nudging vertically
+                const step = LINE_HEIGHT;
+                const maxAdjustIterations = 25;
+                const overlaps = (a, b) => {
+                    return !(a.x + a.w <= b.x ||
+                        b.x + b.w <= a.x ||
+                        a.y + a.h <= b.y ||
+                        b.y + b.h <= a.y);
+                };
+                let adjustCount = 0;
+                while (adjustCount < maxAdjustIterations) {
+                    const blockX = Math.floor(textX - blockWidth / 2);
+                    const blockY = textY;
+                    const candidate = {
+                        x: blockX,
+                        y: blockY,
+                        w: blockWidth,
+                        h: blockHeight,
+                    };
+                    if (!placedTextRects.some((r) => overlaps(candidate, r))) {
+                        break;
+                    }
+                    // Direction-aware vertical stacking:
+                    // - For 'down' (text above target), move text further up.
+                    // - For others, move text down.
+                    if (dir === "down") {
+                        textY -= step;
+                    }
+                    else {
+                        textY += step;
+                    }
+                    adjustCount++;
+                }
                 // Clamp text block within screen bounds
                 const minXCenter = margin + Math.floor(blockWidth / 2);
                 const maxXCenter = gameConstants_1.GameConstants.WIDTH - margin - Math.floor(blockWidth / 2);
@@ -25012,6 +25047,13 @@ class Game {
                     textY = minYTop;
                 if (textY > maxYTop)
                     textY = maxYTop;
+                // Remember the final text block rect for future overlap checks
+                placedTextRects.push({
+                    x: Math.floor(textX - blockWidth / 2),
+                    y: textY,
+                    w: blockWidth,
+                    h: blockHeight,
+                });
                 // Compute alpha for fade-out
                 let alpha = 1;
                 if (p.dismissStartTime !== null) {
@@ -25129,9 +25171,7 @@ class Game {
             ];
             this.addPointer({
                 id,
-                text: gameConstants_1.GameConstants.isMobile
-                    ? "Tap equip your candle"
-                    : "Equip your candle",
+                text: "Equip Candle",
                 resolver,
                 until,
                 safety,
@@ -25141,6 +25181,47 @@ class Game {
                 tags: ["tutorial"],
                 zIndex: 10,
             });
+            // Pointer to quickbar slot 3 (index 2) when the wooden shield is in inventory
+            const shieldId = "equip-wooden-shield";
+            if (!this.pointers.has(shieldId)) {
+                let hasWoodenShield = false;
+                try {
+                    for (const it of inv.items) {
+                        if (it?.name === "wooden shield") {
+                            hasWoodenShield = true;
+                            break;
+                        }
+                    }
+                }
+                catch { }
+                if (hasWoodenShield) {
+                    const shieldResolver = () => inv.getQuickbarSlotRect(2);
+                    const shieldUntil = () => {
+                        try {
+                            for (const it of inv.items) {
+                                if (it?.equipped &&
+                                    it?.name === "wooden shield") {
+                                    return true;
+                                }
+                            }
+                        }
+                        catch { }
+                        return false;
+                    };
+                    this.addPointer({
+                        id: shieldId,
+                        text: "Equip Shield",
+                        resolver: shieldResolver,
+                        until: shieldUntil,
+                        safety,
+                        arrowDirection: "down",
+                        textDy: -2,
+                        timeoutMs: 60000,
+                        tags: ["tutorial"],
+                        zIndex: 10,
+                    });
+                }
+            }
         };
         // Show a pointer prompting the user to open the inventory when quickbar is full
         this.maybeShowOpenInventoryPointer = () => {
@@ -29136,6 +29217,7 @@ class GameplaySettings {
 exports.GameplaySettings = GameplaySettings;
 // === MAP ===
 GameplaySettings.LEGACY_MINIMAP = false; // when true, use pre-existing minimap behavior and layout
+GameplaySettings.STARTING_HEALTH = 2;
 GameplaySettings.LIMIT_ENEMY_TYPES = true;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
@@ -36705,6 +36787,7 @@ class Shrooms extends usable_1.Usable {
         };
         this.tileX = 6;
         this.tileY = 0;
+        this.name = Shrooms.itemName;
         this.stackable = true;
     }
 }
@@ -37498,14 +37581,14 @@ class QuarterStaff extends weapon_1.Weapon {
         this.tileX = 22;
         this.tileY = 4;
         this.damage = 1;
-        this.name = "quarterstaff";
+        this.name = QuarterStaff.itemName;
         this.useCost = 1;
         this.degradeable = false;
         this.knockbackDistance = 1;
     }
 }
 exports.QuarterStaff = QuarterStaff;
-QuarterStaff.itemName = "staff";
+QuarterStaff.itemName = "quarterstaff";
 
 
 /***/ }),
@@ -43897,6 +43980,7 @@ const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/d
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -44577,8 +44661,8 @@ class Player extends drawable_1.Drawable {
         this.menu = new menu_1.Menu(this);
         this.busyAnimating = false;
         this.mapToggled = true;
-        this.health = 2;
-        this.maxHealth = 2;
+        this.health = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
+        this.maxHealth = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
         this.healthBar = new healthbar_1.HealthBar();
         this.dead = false;
         this.lastTickHealth = this.health;
@@ -45957,7 +46041,8 @@ class PlayerRenderer {
                 for (let i = 0; i < this.player.maxHealth; i++) {
                     let shake = 0;
                     let shakeY = 0;
-                    if (this.player.health <= 1) {
+                    if (this.player.health <= 1 &&
+                        this.player.health !== this.player.maxHealth) {
                         shake =
                             Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
                                 2 /

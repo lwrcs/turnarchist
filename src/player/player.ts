@@ -28,6 +28,7 @@ import { DownLadder } from "../tile/downLadder";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export enum PlayerDirection {
   DOWN,
@@ -132,8 +133,8 @@ export class Player extends Drawable {
     this.busyAnimating = false;
 
     this.mapToggled = true;
-    this.health = 2;
-    this.maxHealth = 2;
+    this.health = GameplaySettings.STARTING_HEALTH;
+    this.maxHealth = GameplaySettings.STARTING_HEALTH;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.lastTickHealth = this.health;

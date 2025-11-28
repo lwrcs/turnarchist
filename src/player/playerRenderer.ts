@@ -489,7 +489,10 @@ export class PlayerRenderer {
       for (let i = 0; i < this.player.maxHealth; i++) {
         let shake = 0;
         let shakeY = 0;
-        if (this.player.health <= 1) {
+        if (
+          this.player.health <= 1 &&
+          this.player.health !== this.player.maxHealth
+        ) {
           shake =
             Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
             2 /

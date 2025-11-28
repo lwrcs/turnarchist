@@ -14,6 +14,7 @@ export class Shrooms extends Usable {
 
     this.tileX = 6;
     this.tileY = 0;
+    this.name = Shrooms.itemName;
 
     this.stackable = true;
   }

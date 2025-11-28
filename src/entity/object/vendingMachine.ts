@@ -63,7 +63,11 @@ export class VendingMachine extends Entity {
     } else if (this.item instanceof Spear) {
       this.setCost(2); // Uses default random cost
     } else if (this.item instanceof Armor) {
-      this.setCost(3); // Uses default random cost
+      this.setCost(
+        3,
+        [new Coin(room, 0, 0)],
+        [Utils.randomNormalInt(450, 950)],
+      ); // Uses default random cost
     } else if (this.item instanceof DualDagger) {
       this.setCost(3); // Uses default random cost
     } else if (this.item instanceof Lantern) {

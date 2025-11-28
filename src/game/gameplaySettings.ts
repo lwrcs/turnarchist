@@ -1,6 +1,7 @@
 export class GameplaySettings {
   // === MAP ===
   static LEGACY_MINIMAP = false; // when true, use pre-existing minimap behavior and layout
+  static STARTING_HEALTH = 2;
 
   static readonly LIMIT_ENEMY_TYPES = true;
   static readonly MEDIAN_ROOM_DENSITY = 0.25;

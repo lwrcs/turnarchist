@@ -2441,6 +2441,9 @@ export class Game {
     const list = Array.from(this.pointers.values()).sort(
       (a, b) => a.zIndex - b.zIndex,
     );
+    // Track placed text bounds so we can avoid overlapping messages
+    const placedTextRects: { x: number; y: number; w: number; h: number }[] =
+      [];
     const now = Date.now();
     const toDelete: string[] = [];
     for (const p of list) {
@@ -2502,6 +2505,45 @@ export class Game {
       textX += p.textDx;
       textY += p.textDy + (dir === "down" ? -bob : bob);
 
+      // Avoid overlapping with previously placed pointer texts by nudging vertically
+      const step = LINE_HEIGHT;
+      const maxAdjustIterations = 25;
+      const overlaps = (
+        a: { x: number; y: number; w: number; h: number },
+        b: { x: number; y: number; w: number; h: number },
+      ) => {
+        return !(
+          a.x + a.w <= b.x ||
+          b.x + b.w <= a.x ||
+          a.y + a.h <= b.y ||
+          b.y + b.h <= a.y
+        );
+      };
+
+      let adjustCount = 0;
+      while (adjustCount < maxAdjustIterations) {
+        const blockX = Math.floor(textX - blockWidth / 2);
+        const blockY = textY;
+        const candidate = {
+          x: blockX,
+          y: blockY,
+          w: blockWidth,
+          h: blockHeight,
+        };
+        if (!placedTextRects.some((r) => overlaps(candidate, r))) {
+          break;
+        }
+        // Direction-aware vertical stacking:
+        // - For 'down' (text above target), move text further up.
+        // - For others, move text down.
+        if (dir === "down") {
+          textY -= step;
+        } else {
+          textY += step;
+        }
+        adjustCount++;
+      }
+
       // Clamp text block within screen bounds
       const minXCenter = margin + Math.floor(blockWidth / 2);
       const maxXCenter =
@@ -2512,6 +2554,14 @@ export class Game {
       const maxYTop = GameConstants.HEIGHT - margin - blockHeight;
       if (textY < minYTop) textY = minYTop;
       if (textY > maxYTop) textY = maxYTop;
+
+      // Remember the final text block rect for future overlap checks
+      placedTextRects.push({
+        x: Math.floor(textX - blockWidth / 2),
+        y: textY,
+        w: blockWidth,
+        h: blockHeight,
+      });
 
       // Compute alpha for fade-out
       let alpha = 1;
@@ -2628,9 +2678,7 @@ export class Game {
 
     this.addPointer({
       id,
-      text: GameConstants.isMobile
-        ? "Tap equip your candle"
-        : "Equip your candle",
+      text: "Equip Candle",
       resolver,
       until,
       safety,
@@ -2640,6 +2688,51 @@ export class Game {
       tags: ["tutorial"],
       zIndex: 10,
     });
+
+    // Pointer to quickbar slot 3 (index 2) when the wooden shield is in inventory
+    const shieldId = "equip-wooden-shield";
+    if (!this.pointers.has(shieldId)) {
+      let hasWoodenShield = false;
+      try {
+        for (const it of inv.items) {
+          if ((it as any)?.name === "wooden shield") {
+            hasWoodenShield = true;
+            break;
+          }
+        }
+      } catch {}
+
+      if (hasWoodenShield) {
+        const shieldResolver: PointerAnchorResolver = () =>
+          inv.getQuickbarSlotRect(2);
+        const shieldUntil = () => {
+          try {
+            for (const it of inv.items) {
+              if (
+                (it as any)?.equipped &&
+                (it as any)?.name === "wooden shield"
+              ) {
+                return true;
+              }
+            }
+          } catch {}
+          return false;
+        };
+
+        this.addPointer({
+          id: shieldId,
+          text: "Equip Shield",
+          resolver: shieldResolver,
+          until: shieldUntil,
+          safety,
+          arrowDirection: "down",
+          textDy: -2,
+          timeoutMs: 60000,
+          tags: ["tutorial"],
+          zIndex: 10,
+        });
+      }
+    }
   };
 
   // Show a pointer prompting the user to open the inventory when quickbar is full
