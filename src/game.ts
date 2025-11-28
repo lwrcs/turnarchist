@@ -316,6 +316,12 @@ export class Game {
   players: Record<string, Player>;
   offlinePlayers: Record<string, Player>;
   levelState: LevelState;
+  waterOverlayOffsetX: number = 0;
+  waterOverlayOffsetY: number = 0;
+  private pendingWaterOffsetX: number = 0;
+  private pendingWaterOffsetY: number = 0;
+  private currentCameraOriginX: number = 0;
+  private currentCameraOriginY: number = 0;
   transitionStartTime: number;
   transitionX: number;
   transitionY: number;
@@ -941,6 +947,14 @@ export class Game {
         (this.players[this.localPlayerID].x - oldX) * GameConstants.TILESIZE;
       this.transitionY =
         (this.players[this.localPlayerID].y - oldY) * GameConstants.TILESIZE;
+      this.pendingWaterOffsetX =
+        this.transitionX !== 0
+          ? Math.sign(this.transitionX) * GameConstants.TILESIZE
+          : 0;
+      this.pendingWaterOffsetY =
+        this.transitionY !== 0
+          ? Math.sign(this.transitionY) * GameConstants.TILESIZE
+          : 0;
 
       this.upwardTransition = false;
       this.sideTransition = false;
@@ -1106,6 +1120,7 @@ export class Game {
         LevelConstants.LEVEL_TRANSITION_TIME
       ) {
         this.levelState = LevelState.IN_LEVEL;
+        this.applyWaterOverlayGapCompensation();
       }
     }
     if (this.levelState === LevelState.TRANSITIONING_LADDER) {
@@ -1140,6 +1155,56 @@ export class Game {
         }
       }
     }
+  };
+
+  private applyWaterOverlayGapCompensation = () => {
+    if (this.transitionX) {
+      const dirX = Math.sign(this.transitionX);
+      if (dirX !== 0) {
+        this.waterOverlayOffsetX += dirX * GameConstants.TILESIZE;
+      }
+    }
+
+    if (this.transitionY) {
+      const dirY = Math.sign(this.transitionY);
+      if (dirY !== 0) {
+        this.waterOverlayOffsetY += dirY * GameConstants.TILESIZE;
+      }
+    }
+    this.pendingWaterOffsetX = 0;
+    this.pendingWaterOffsetY = 0;
+  };
+
+  getWaterOverlayOrigin = () => {
+    const progress = this.getWaterTransitionProgress();
+    const dynamicOffsetX = this.pendingWaterOffsetX * progress;
+    const dynamicOffsetY = this.pendingWaterOffsetY * progress;
+    return {
+      x: Math.round(
+        this.currentCameraOriginX -
+          (this.waterOverlayOffsetX ?? 0) -
+          dynamicOffsetX,
+      ),
+      y: Math.round(
+        this.currentCameraOriginY -
+          (this.waterOverlayOffsetY ?? 0) -
+          dynamicOffsetY,
+      ),
+    };
+  };
+
+  private getWaterTransitionProgress = () => {
+    if (this.levelState === LevelState.TRANSITIONING) {
+      const elapsed = Date.now() - this.transitionStartTime;
+      const duration = LevelConstants.LEVEL_TRANSITION_TIME;
+      return Math.max(0, Math.min(1, elapsed / duration));
+    }
+    if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+      const elapsed = Date.now() - this.transitionStartTime;
+      const duration = LevelConstants.LEVEL_TRANSITION_TIME_LADDER;
+      return Math.max(0, Math.min(1, elapsed / duration));
+    }
+    return 0;
   };
 
   lerp = (a: number, b: number, t: number): number => {
@@ -2177,10 +2242,16 @@ export class Game {
           0.5) *
         GameConstants.TILESIZE;
 
-      Game.ctx.translate(
-        -Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-        -Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT),
+      const transitionCameraX = Math.round(
+        playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH,
       );
+      const transitionCameraY = Math.round(
+        playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT,
+      );
+      this.currentCameraOriginX = transitionCameraX;
+      this.currentCameraOriginY = transitionCameraY;
+
+      Game.ctx.translate(-transitionCameraX, -transitionCameraY);
 
       let extraTileLerp = Math.floor(
         this.lerp(
@@ -2275,10 +2346,7 @@ export class Game {
 
       Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
 
-      Game.ctx.translate(
-        Math.round(playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH),
-        Math.round(playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT),
-      );
+      Game.ctx.translate(transitionCameraX, transitionCameraY);
 
       this.players[this.localPlayerID].drawGUI(delta);
       this.justTransitioned = true;
@@ -2296,10 +2364,12 @@ export class Game {
           0.5) *
         GameConstants.TILESIZE;
 
-      Game.ctx.translate(
-        -Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-        -Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
-      );
+      const ladderCameraX = Math.round(playerCX - 0.5 * GameConstants.WIDTH);
+      const ladderCameraY = Math.round(playerCY - 0.5 * GameConstants.HEIGHT);
+      this.currentCameraOriginX = ladderCameraX;
+      this.currentCameraOriginY = ladderCameraY;
+
+      Game.ctx.translate(-ladderCameraX, -ladderCameraY);
 
       let deadFrames = 6;
       let ditherFrame = Math.floor(
@@ -2307,10 +2377,7 @@ export class Game {
           LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
       );
 
-      Game.ctx.translate(
-        Math.round(playerCX - 0.5 * GameConstants.WIDTH),
-        Math.round(playerCY - 0.5 * GameConstants.HEIGHT),
-      );
+      Game.ctx.translate(ladderCameraX, ladderCameraY);
 
       if (ditherFrame < 7) {
         this.drawRooms(delta);
@@ -3036,6 +3103,8 @@ export class Game {
 
     const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
     const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
+    this.currentCameraOriginX = roundedCameraX;
+    this.currentCameraOriginY = roundedCameraY;
 
     return {
       cameraX: roundedCameraX,

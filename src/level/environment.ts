@@ -599,6 +599,14 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: PawnEnemy, weight: 1.0, minDepth: 1 },
     ],
   },
+  [EnvType.FLOODED_CAVE]: {
+    props: [
+      { class: NullProp, weight: 1 },
+      { class: Crate, weight: 1 },
+      { class: Barrel, weight: 1 },
+    ],
+    enemies: [],
+  },
 };
 
 export { environmentData, PropInfo, EnemyInfo, EnvironmentData };

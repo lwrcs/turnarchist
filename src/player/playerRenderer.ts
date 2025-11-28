@@ -799,7 +799,18 @@ export class PlayerRenderer {
         this.player.game.hasRecordedStats = true;
       }
     }
-    PostProcessor.draw(delta);
+
+    const game = this.player?.game;
+    const cameraOrigin = game?.getWaterOverlayOrigin?.() ?? {
+      x: 0,
+      y: 0,
+    };
+
+    PostProcessor.draw(
+      delta,
+      this.player?.getRoom()?.underwater ?? false,
+      cameraOrigin,
+    );
     if (this.hurting) this.drawHurt(delta);
 
     if (this.player.mapToggled === true) this.player.map.draw(delta);

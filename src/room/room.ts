@@ -350,6 +350,8 @@ export class Room {
   envType: EnvType;
   keyPathDots: Array<{ x: number; y: number }>;
 
+  underwater: boolean = false;
+
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
 
@@ -416,6 +418,7 @@ export class Room {
     this.lastLightingUpdate = 0;
     this.walls = Array<Wall>();
     this.decorations = Array<Decoration>();
+    this.underwater = envType === EnvType.FLOODED_CAVE;
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
     this.colorOffscreenCanvas.width =
@@ -3221,6 +3224,23 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         //if (this.softVis[x][y] < 1) this.roomArray[x][y].drawAbovePlayer(delta);
       }
+    }
+  };
+
+  drawUnderwater = (delta: number) => {
+    if (!this.onScreen) return;
+    if (!this.underwater) {
+      Game.ctx.save();
+      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.globalAlpha = 0.3;
+      Game.ctx.fillStyle = "#003B6F";
+      Game.ctx.fillRect(
+        (this.roomX + 0.5) * GameConstants.TILESIZE,
+        this.roomY * GameConstants.TILESIZE,
+        (this.width - 1) * GameConstants.TILESIZE,
+        (this.height - 0.5) * GameConstants.TILESIZE,
+      );
+      Game.ctx.restore();
     }
   };
 

@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -9798,6 +9729,7 @@ var EnvType;
     EnvType[EnvType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
     EnvType[EnvType["DARK_DUNGEON"] = 9] = "DARK_DUNGEON";
     EnvType[EnvType["TUTORIAL"] = 10] = "TUTORIAL";
+    EnvType[EnvType["FLOODED_CAVE"] = 11] = "FLOODED_CAVE";
 })(EnvType = exports.EnvType || (exports.EnvType = {}));
 const getEnvTypeName = (envType) => {
     switch (envType) {
@@ -9823,6 +9755,8 @@ const getEnvTypeName = (envType) => {
             return "DARK_DUNGEON";
         case EnvType.TUTORIAL:
             return "TUTORIAL";
+        case EnvType.FLOODED_CAVE:
+            return "FLOODED_CAVE";
     }
 };
 exports.getEnvTypeName = getEnvTypeName;
@@ -23692,6 +23626,12 @@ class Game {
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
         this.localPlayerID = "localplayer";
+        this.waterOverlayOffsetX = 0;
+        this.waterOverlayOffsetY = 0;
+        this.pendingWaterOffsetX = 0;
+        this.pendingWaterOffsetY = 0;
+        this.currentCameraOriginX = 0;
+        this.currentCameraOriginY = 0;
         this.keyboardHeightPx = 0;
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
@@ -23906,6 +23846,14 @@ class Game {
                     (this.players[this.localPlayerID].x - oldX) * gameConstants_1.GameConstants.TILESIZE;
                 this.transitionY =
                     (this.players[this.localPlayerID].y - oldY) * gameConstants_1.GameConstants.TILESIZE;
+                this.pendingWaterOffsetX =
+                    this.transitionX !== 0
+                        ? Math.sign(this.transitionX) * gameConstants_1.GameConstants.TILESIZE
+                        : 0;
+                this.pendingWaterOffsetY =
+                    this.transitionY !== 0
+                        ? Math.sign(this.transitionY) * gameConstants_1.GameConstants.TILESIZE
+                        : 0;
                 this.upwardTransition = false;
                 this.sideTransition = false;
                 this.sideTransitionDirection = side;
@@ -24043,6 +23991,7 @@ class Game {
                 if (Date.now() - this.transitionStartTime >=
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME) {
                     this.levelState = LevelState.IN_LEVEL;
+                    this.applyWaterOverlayGapCompensation();
                 }
             }
             if (this.levelState === LevelState.TRANSITIONING_LADDER) {
@@ -24071,6 +24020,48 @@ class Game {
                     }
                 }
             }
+        };
+        this.applyWaterOverlayGapCompensation = () => {
+            if (this.transitionX) {
+                const dirX = Math.sign(this.transitionX);
+                if (dirX !== 0) {
+                    this.waterOverlayOffsetX += dirX * gameConstants_1.GameConstants.TILESIZE;
+                }
+            }
+            if (this.transitionY) {
+                const dirY = Math.sign(this.transitionY);
+                if (dirY !== 0) {
+                    this.waterOverlayOffsetY += dirY * gameConstants_1.GameConstants.TILESIZE;
+                }
+            }
+            this.pendingWaterOffsetX = 0;
+            this.pendingWaterOffsetY = 0;
+        };
+        this.getWaterOverlayOrigin = () => {
+            const progress = this.getWaterTransitionProgress();
+            const dynamicOffsetX = this.pendingWaterOffsetX * progress;
+            const dynamicOffsetY = this.pendingWaterOffsetY * progress;
+            return {
+                x: Math.round(this.currentCameraOriginX -
+                    (this.waterOverlayOffsetX ?? 0) -
+                    dynamicOffsetX),
+                y: Math.round(this.currentCameraOriginY -
+                    (this.waterOverlayOffsetY ?? 0) -
+                    dynamicOffsetY),
+            };
+        };
+        this.getWaterTransitionProgress = () => {
+            if (this.levelState === LevelState.TRANSITIONING) {
+                const elapsed = Date.now() - this.transitionStartTime;
+                const duration = levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME;
+                return Math.max(0, Math.min(1, elapsed / duration));
+            }
+            if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+                const elapsed = Date.now() - this.transitionStartTime;
+                const duration = levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER;
+                return Math.max(0, Math.min(1, elapsed / duration));
+            }
+            return 0;
         };
         this.lerp = (a, b, t) => {
             return (1 - t) * a + t * b;
@@ -24760,7 +24751,11 @@ class Game {
                     this.players[this.localPlayerID].drawY +
                     0.5) *
                     gameConstants_1.GameConstants.TILESIZE;
-                Game.ctx.translate(-Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), -Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
+                const transitionCameraX = Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH);
+                const transitionCameraY = Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
+                this.currentCameraOriginX = transitionCameraX;
+                this.currentCameraOriginY = transitionCameraY;
+                Game.ctx.translate(-transitionCameraX, -transitionCameraY);
                 let extraTileLerp = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, gameConstants_1.GameConstants.TILESIZE));
                 let newLevelOffsetX = playerOffsetX;
@@ -24827,7 +24822,7 @@ class Game {
                 }
                 //this.drawStuff(delta);
                 Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-                Game.ctx.translate(Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
+                Game.ctx.translate(transitionCameraX, transitionCameraY);
                 this.players[this.localPlayerID].drawGUI(delta);
                 this.justTransitioned = true;
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
@@ -24841,11 +24836,15 @@ class Game {
                     this.players[this.localPlayerID].drawY +
                     0.5) *
                     gameConstants_1.GameConstants.TILESIZE;
-                Game.ctx.translate(-Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH), -Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
+                const ladderCameraX = Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH);
+                const ladderCameraY = Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
+                this.currentCameraOriginX = ladderCameraX;
+                this.currentCameraOriginY = ladderCameraY;
+                Game.ctx.translate(-ladderCameraX, -ladderCameraY);
                 let deadFrames = 6;
                 let ditherFrame = Math.floor(((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
                     levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER);
-                Game.ctx.translate(Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH), Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT));
+                Game.ctx.translate(ladderCameraX, ladderCameraY);
                 if (ditherFrame < 7) {
                     this.drawRooms(delta);
                     this.drawRoomShadeAndColor(delta);
@@ -25466,6 +25465,8 @@ class Game {
             this.updateCamera(delta);
             const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
             const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
+            this.currentCameraOriginX = roundedCameraX;
+            this.currentCameraOriginY = roundedCameraY;
             return {
                 cameraX: roundedCameraX,
                 cameraY: roundedCameraY,
@@ -26622,6 +26623,7 @@ GameConstants.SMOOTH_LIGHTING = true;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
+GameConstants.USE_WEBGL_WATER_OVERLAY = true;
 GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
 GameConstants.BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
 GameConstants.ENEMIES_BLOCK_LIGHT = true;
@@ -26703,6 +26705,11 @@ GameConstants.TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
 GameConstants.TOGGLE_USE_WEBGL_BLUR = () => {
     GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
     console.log(`WebGL blur is now ${GameConstants.USE_WEBGL_BLUR ? "enabled" : "disabled"}`);
+};
+GameConstants.TOGGLE_WEBGL_WATER_OVERLAY = () => {
+    GameConstants.USE_WEBGL_WATER_OVERLAY =
+        !GameConstants.USE_WEBGL_WATER_OVERLAY;
+    console.log(`WebGL water overlay is now ${GameConstants.USE_WEBGL_WATER_OVERLAY ? "enabled" : "disabled"}`);
 };
 GameConstants.TOGGLE_HIGH_QUALITY_BLUR = () => {
     GameConstants.HIGH_QUALITY_BLUR = !GameConstants.HIGH_QUALITY_BLUR;
@@ -32380,40 +32387,297 @@ exports.MuteButton = MuteButton;
 
 "use strict";
 
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostProcessor = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const waterOverlay_1 = __webpack_require__(/*! ./waterOverlay */ "./src/gui/waterOverlay.ts");
 class PostProcessor {
+    static applyDefaultLayer() {
+        game_1.Game.ctx.globalAlpha = PostProcessor.settings.globalAlpha;
+        game_1.Game.ctx.globalCompositeOperation =
+            PostProcessor.settings.globalCompositeOperation;
+        game_1.Game.ctx.fillStyle = PostProcessor.settings.fillStyle;
+    }
+    static applyUnderwaterLayer() {
+        game_1.Game.ctx.globalAlpha = PostProcessor.settings.underwaterBaseAlpha;
+        game_1.Game.ctx.globalCompositeOperation =
+            PostProcessor.settings.underwaterCompositeOperation;
+        game_1.Game.ctx.fillStyle = PostProcessor.settings.underwaterFillStyle;
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+    }
 }
 exports.PostProcessor = PostProcessor;
+_a = PostProcessor;
 PostProcessor.settings = {
     enabled: true,
     globalAlpha: 0.15,
     fillStyle: "#006A6E",
     globalCompositeOperation: "screen",
+    underwaterBaseAlpha: 0.2,
+    underwaterFillStyle: "#002631",
+    underwaterCompositeOperation: "source-over",
 };
-PostProcessor.underwater = false;
-PostProcessor.draw = (delta) => {
+PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
     if (!PostProcessor.settings.enabled)
         return;
-    if (PostProcessor.underwater) {
-        PostProcessor.settings.globalAlpha = 0.3;
-        PostProcessor.settings.fillStyle = "#003B6F"; //deep underwater blue
-        PostProcessor.settings.globalCompositeOperation = "source-over";
-    }
     game_1.Game.ctx.save();
-    game_1.Game.ctx.globalAlpha = PostProcessor.settings.globalAlpha;
-    game_1.Game.ctx.globalCompositeOperation =
-        PostProcessor.settings.globalCompositeOperation;
-    // GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation; //"soft-light";
-    game_1.Game.ctx.fillStyle = PostProcessor.settings.fillStyle;
-    //Game.ctx.fillStyle = "#003B6F"; //deep underwater blue
-    //Game.ctx.fillStyle = "#2F2F2F"; //smoky fog prison
-    //Game.ctx.fillStyle = "#4a6c4b"; //darker muddy green
-    //Game.ctx.fillStyle = "#800000"; // lighter red for dungeon hell theme
+    if (underwater) {
+        game_1.Game.ctx.save();
+        PostProcessor.applyUnderwaterLayer();
+        waterOverlay_1.WaterOverlay.draw(game_1.Game.ctx, delta, cameraOrigin);
+        game_1.Game.ctx.fillStyle = _a.settings.underwaterFillStyle;
+        game_1.Game.ctx.globalCompositeOperation =
+            _a.settings.underwaterCompositeOperation;
+        game_1.Game.ctx.globalAlpha = _a.settings.underwaterBaseAlpha;
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        PostProcessor.applyDefaultLayer();
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        game_1.Game.ctx.restore();
+        return;
+    }
+    PostProcessor.applyDefaultLayer();
     game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
     game_1.Game.ctx.restore();
+};
+
+
+/***/ }),
+
+/***/ "./src/gui/waterOverlay.ts":
+/*!*********************************!*\
+  !*** ./src/gui/waterOverlay.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WaterOverlay = void 0;
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const webglWaterOverlayRenderer_1 = __webpack_require__(/*! ./webglWaterOverlayRenderer */ "./src/gui/webglWaterOverlayRenderer.ts");
+const waterOverlayConfig = {
+    overlayAlpha: 0.55,
+    shimmerAmplitude: 0.18,
+    shimmerSpeed: 0.45,
+    scrollSpeedX: 12,
+    scrollSpeedY: -9,
+    canvasPadding: 128,
+    layers: [
+        {
+            color: "#02182a",
+            seed: 37,
+            scale: 65,
+            holeRadius: 0.85,
+            sharpness: 1.35,
+            opacity: 0.75,
+            speedX: 5,
+            speedY: -5,
+            offsetX: 0,
+            offsetY: 0,
+        },
+        {
+            color: "#042c3a",
+            seed: 91,
+            scale: 80,
+            holeRadius: 0.75,
+            sharpness: 1.15,
+            opacity: 0.75,
+            speedX: -2,
+            speedY: 2,
+            offsetX: 200,
+            offsetY: 100,
+        },
+    ],
+};
+class WaterOverlay {
+    static draw(ctx, delta, cameraOrigin) {
+        const deltaSeconds = delta / gameConstants_1.GameConstants.FPS;
+        WaterOverlay.time += deltaSeconds;
+        WaterOverlay.scrollX += WaterOverlay.config.scrollSpeedX * deltaSeconds;
+        WaterOverlay.scrollY += WaterOverlay.config.scrollSpeedY * deltaSeconds;
+        const shimmer = 1 +
+            Math.sin(WaterOverlay.time * WaterOverlay.config.shimmerSpeed * Math.PI * 2) *
+                WaterOverlay.config.shimmerAmplitude;
+        const overlayAlpha = clamp(WaterOverlay.config.overlayAlpha * shimmer, 0, 1);
+        const padding = WaterOverlay.config.canvasPadding;
+        const width = gameConstants_1.GameConstants.WIDTH + padding * 2;
+        const height = gameConstants_1.GameConstants.HEIGHT + padding * 2;
+        const anchorX = cameraOrigin?.x ?? 0;
+        const anchorY = cameraOrigin?.y ?? 0;
+        const originX = anchorX - padding + WaterOverlay.scrollX;
+        const originY = anchorY - padding + WaterOverlay.scrollY;
+        if (WaterOverlay.canUseWebgl()) {
+            const webglCanvas = WaterOverlay.renderWithWebgl(width, height, originX, originY);
+            if (webglCanvas) {
+                WaterOverlay.drawBuffer(ctx, webglCanvas, overlayAlpha);
+                return;
+            }
+        }
+        if (!WaterOverlay.ensureCpuBuffer(width, height))
+            return;
+        WaterOverlay.renderCpuTexture(originX, originY);
+        WaterOverlay.drawBuffer(ctx, WaterOverlay.cpuBuffer, overlayAlpha);
+    }
+    static canUseWebgl() {
+        return (gameConstants_1.GameConstants.USE_WEBGL_WATER_OVERLAY &&
+            !WaterOverlay.webglFailed &&
+            webglWaterOverlayRenderer_1.WebGLWaterOverlayRenderer.isSupported());
+    }
+    static renderWithWebgl(width, height, originX, originY) {
+        try {
+            const renderer = webglWaterOverlayRenderer_1.WebGLWaterOverlayRenderer.getInstance();
+            const layerUniforms = WaterOverlay.layers.map((layer) => ({
+                color: [
+                    layer.colorRgb.r / 255,
+                    layer.colorRgb.g / 255,
+                    layer.colorRgb.b / 255,
+                ],
+                seed: layer.seed,
+                scale: layer.scale,
+                holeRadius: layer.holeRadius,
+                sharpness: layer.sharpness,
+                opacity: layer.opacity,
+                speed: [layer.speedX, layer.speedY],
+                offset: [layer.offsetX, layer.offsetY],
+            }));
+            return renderer.render({
+                width,
+                height,
+                layers: layerUniforms,
+                time: WaterOverlay.time,
+                originX,
+                originY,
+            });
+        }
+        catch (error) {
+            console.warn("[WaterOverlay] WebGL renderer failed – falling back to Canvas2D", error);
+            WaterOverlay.webglFailed = true;
+            return null;
+        }
+    }
+    static drawBuffer(ctx, source, overlayAlpha) {
+        ctx.save();
+        ctx.globalAlpha = overlayAlpha;
+        ctx.globalCompositeOperation = "screen";
+        ctx.drawImage(source, -WaterOverlay.config.canvasPadding, -WaterOverlay.config.canvasPadding);
+        ctx.restore();
+    }
+    static ensureCpuBuffer(width, height) {
+        if (WaterOverlay.cpuBuffer &&
+            WaterOverlay.cpuBufferCtx &&
+            WaterOverlay.cpuFrameData &&
+            WaterOverlay.cpuBuffer.width === width &&
+            WaterOverlay.cpuBuffer.height === height) {
+            return true;
+        }
+        if (typeof document === "undefined")
+            return false;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx)
+            return false;
+        WaterOverlay.cpuBuffer = canvas;
+        WaterOverlay.cpuBufferCtx = ctx;
+        WaterOverlay.cpuFrameData = ctx.createImageData(width, height);
+        return true;
+    }
+    static renderCpuTexture(originX, originY) {
+        if (!WaterOverlay.cpuBufferCtx || !WaterOverlay.cpuFrameData)
+            return;
+        const { data, width, height } = WaterOverlay.cpuFrameData;
+        for (let y = 0; y < height; y++) {
+            const worldY = originY + y;
+            for (let x = 0; x < width; x++) {
+                const worldX = originX + x;
+                let accumR = 0;
+                let accumG = 0;
+                let accumB = 0;
+                let accumA = 0;
+                for (const layer of WaterOverlay.layers) {
+                    const distance = WaterOverlay.sampleVoronoiLayer(layer, worldX, worldY);
+                    const normalized = clamp(distance / layer.holeRadius, 0, 1);
+                    const fill = Math.pow(normalized, layer.sharpness) * layer.opacity;
+                    const layerAlpha = clamp(fill, 0, 1);
+                    accumR += layer.colorRgb.r * layerAlpha;
+                    accumG += layer.colorRgb.g * layerAlpha;
+                    accumB += layer.colorRgb.b * layerAlpha;
+                    accumA += layerAlpha;
+                }
+                const idx = (y * width + x) * 4;
+                data[idx] = clamp(Math.round(accumR), 0, 255);
+                data[idx + 1] = clamp(Math.round(accumG), 0, 255);
+                data[idx + 2] = clamp(Math.round(accumB), 0, 255);
+                data[idx + 3] = clamp(Math.round(accumA * 255), 0, 255);
+            }
+        }
+        WaterOverlay.cpuBufferCtx.putImageData(WaterOverlay.cpuFrameData, 0, 0);
+    }
+    static sampleVoronoiLayer(layer, worldX, worldY) {
+        const offsetX = layer.offsetX + WaterOverlay.time * layer.speedX;
+        const offsetY = layer.offsetY + WaterOverlay.time * layer.speedY;
+        const scaledX = (worldX + offsetX) / layer.scale;
+        const scaledY = (worldY + offsetY) / layer.scale;
+        return worleyNoise(scaledX, scaledY, layer.seed);
+    }
+}
+exports.WaterOverlay = WaterOverlay;
+WaterOverlay.cpuBuffer = null;
+WaterOverlay.cpuBufferCtx = null;
+WaterOverlay.cpuFrameData = null;
+WaterOverlay.time = 0;
+WaterOverlay.scrollX = 0;
+WaterOverlay.scrollY = 0;
+WaterOverlay.webglFailed = false;
+WaterOverlay.config = waterOverlayConfig;
+WaterOverlay.layers = waterOverlayConfig.layers.map((layer) => ({
+    ...layer,
+    colorRgb: hexToRgb(layer.color),
+}));
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+function hexToRgb(hex) {
+    const normalized = hex.replace("#", "");
+    const value = normalized.length === 3
+        ? parseInt(normalized
+            .split("")
+            .map((char) => char + char)
+            .join(""), 16)
+        : parseInt(normalized, 16);
+    return {
+        r: (value >> 16) & 0xff,
+        g: (value >> 8) & 0xff,
+        b: value & 0xff,
+    };
+}
+const UINT32_MAX = 0xffffffff;
+const hash2d = (x, y, seed) => {
+    let h = (x * 374761393 + y * 668265263 + seed * 362437) | 0;
+    h = (h ^ (h >> 13)) >>> 0;
+    h = (h * 1274126177) >>> 0;
+    return h / UINT32_MAX;
+};
+const worleyNoise = (x, y, seed) => {
+    const cellX = Math.floor(x);
+    const cellY = Math.floor(y);
+    let minDistance = Infinity;
+    for (let offsetY = -1; offsetY <= 1; offsetY++) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+            const neighborX = cellX + offsetX;
+            const neighborY = cellY + offsetY;
+            const pointX = neighborX + hash2d(neighborX, neighborY, seed);
+            const pointY = neighborY + hash2d(neighborX, neighborY, seed + 1337);
+            const dx = pointX - x;
+            const dy = pointY - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < minDistance) {
+                minDistance = distance;
+            }
+        }
+    }
+    return clamp(minDistance / Math.SQRT2, 0, 1);
 };
 
 
@@ -32816,6 +33080,295 @@ class WebGLBlurRenderer {
     }
 }
 exports.WebGLBlurRenderer = WebGLBlurRenderer;
+
+
+/***/ }),
+
+/***/ "./src/gui/webglWaterOverlayRenderer.ts":
+/*!**********************************************!*\
+  !*** ./src/gui/webglWaterOverlayRenderer.ts ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WebGLWaterOverlayRenderer = void 0;
+const MAX_LAYERS = 4;
+class WebGLWaterOverlayRenderer {
+    static isSupported() {
+        if (WebGLWaterOverlayRenderer.supportCache !== null) {
+            return WebGLWaterOverlayRenderer.supportCache;
+        }
+        if (typeof document === "undefined") {
+            WebGLWaterOverlayRenderer.supportCache = false;
+            return false;
+        }
+        const canvas = document.createElement("canvas");
+        const gl = canvas.getContext("webgl", { alpha: true }) ||
+            canvas.getContext("experimental-webgl", { alpha: true });
+        WebGLWaterOverlayRenderer.supportCache = !!gl;
+        return WebGLWaterOverlayRenderer.supportCache;
+    }
+    static getInstance() {
+        if (!WebGLWaterOverlayRenderer.instance) {
+            WebGLWaterOverlayRenderer.instance = new WebGLWaterOverlayRenderer();
+        }
+        return WebGLWaterOverlayRenderer.instance;
+    }
+    constructor() {
+        this.layerColorLocations = [];
+        this.layerSeedLocations = [];
+        this.layerScaleLocations = [];
+        this.layerHoleLocations = [];
+        this.layerSharpnessLocations = [];
+        this.layerOpacityLocations = [];
+        this.layerSpeedLocations = [];
+        this.layerOffsetLocations = [];
+        this.currentWidth = 0;
+        this.currentHeight = 0;
+        if (typeof document === "undefined") {
+            throw new Error("WebGL water overlay requires a browser environment.");
+        }
+        this.canvas = document.createElement("canvas");
+        const context = this.canvas.getContext("webgl", {
+            alpha: true,
+            depth: false,
+            stencil: false,
+            antialias: false,
+            preserveDrawingBuffer: false,
+            premultipliedAlpha: false,
+            powerPreference: "high-performance",
+        }) ||
+            this.canvas.getContext("experimental-webgl", {
+                alpha: true,
+                depth: false,
+                stencil: false,
+                antialias: false,
+                preserveDrawingBuffer: false,
+                premultipliedAlpha: false,
+                powerPreference: "high-performance",
+            });
+        if (!context) {
+            throw new Error("Unable to initialize WebGL for water overlay.");
+        }
+        this.gl = context;
+        this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.disable(this.gl.CULL_FACE);
+        this.gl.disable(this.gl.STENCIL_TEST);
+        this.gl.disable(this.gl.BLEND);
+        const vertexShader = this.createShader(this.gl.VERTEX_SHADER, `
+        precision mediump float;
+        attribute vec2 a_position;
+        uniform vec2 u_resolution;
+        void main() {
+          vec2 zeroToOne = a_position / u_resolution;
+          vec2 zeroToTwo = zeroToOne * 2.0;
+          vec2 clipSpace = zeroToTwo - 1.0;
+          gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
+        }
+      `);
+        const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, `
+        precision mediump float;
+        #define MAX_LAYERS ${MAX_LAYERS}
+
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform int u_layerCount;
+        uniform vec3 u_layerColor[MAX_LAYERS];
+        uniform float u_layerSeed[MAX_LAYERS];
+        uniform float u_layerScale[MAX_LAYERS];
+        uniform float u_layerHoleRadius[MAX_LAYERS];
+        uniform float u_layerSharpness[MAX_LAYERS];
+        uniform float u_layerOpacity[MAX_LAYERS];
+        uniform vec2 u_layerSpeed[MAX_LAYERS];
+        uniform vec2 u_layerOffset[MAX_LAYERS];
+        uniform vec2 u_origin;
+
+        float hash(vec2 p, float seed) {
+          vec3 p3 = fract(vec3(p.x, p.y, p.x) * 0.1031 + seed);
+          p3 += dot(p3, p3.yzx + 33.33);
+          return fract((p3.x + p3.y) * p3.z);
+        }
+
+        float worley(vec2 p, float seed) {
+          vec2 cell = floor(p);
+          float minDistance = 1.41421356237;
+
+          for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+              vec2 neighbor = cell + vec2(float(x), float(y));
+              vec2 jitter = vec2(
+                hash(neighbor + vec2(0.17, 0.53), seed),
+                hash(neighbor + vec2(0.73, 0.19), seed + 19.0)
+              );
+              vec2 featurePoint = neighbor + jitter;
+              float distanceToFeature = distance(p, featurePoint);
+              if (distanceToFeature < minDistance) {
+                minDistance = distanceToFeature;
+              }
+            }
+          }
+
+          return minDistance;
+        }
+
+        void main() {
+          vec2 pixel = vec2(gl_FragCoord.x, u_resolution.y - gl_FragCoord.y);
+          vec2 world = u_origin + pixel;
+          vec4 color = vec4(0.0);
+
+          for (int i = 0; i < MAX_LAYERS; i++) {
+            if (i >= u_layerCount) {
+              break;
+            }
+
+            float scale = max(u_layerScale[i], 0.001);
+            vec2 animatedOffset = u_layerOffset[i] + u_layerSpeed[i] * u_time;
+            vec2 samplePoint = (world + animatedOffset) / scale;
+            float distanceToFeature = worley(samplePoint, u_layerSeed[i]);
+            float normalized = clamp(distanceToFeature / u_layerHoleRadius[i], 0.0, 1.0);
+            float fill = pow(normalized, u_layerSharpness[i]);
+            float layerAlpha = clamp(fill * u_layerOpacity[i], 0.0, 1.0);
+
+            color.rgb += u_layerColor[i] * layerAlpha;
+            color.a += layerAlpha;
+          }
+
+          color.rgb = clamp(color.rgb, 0.0, 1.5);
+          color.a = clamp(color.a, 0.0, 1.0);
+          gl_FragColor = color;
+        }
+      `);
+        this.program = this.createProgram(vertexShader, fragmentShader);
+        this.gl.useProgram(this.program);
+        this.positionBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]), this.gl.DYNAMIC_DRAW);
+        const positionLocation = this.gl.getAttribLocation(this.program, "a_position");
+        this.gl.enableVertexAttribArray(positionLocation);
+        this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+        this.resolutionLocation = this.getUniform("u_resolution");
+        this.timeLocation = this.getUniform("u_time");
+        this.layerCountLocation = this.getUniform("u_layerCount");
+        this.originLocation = this.getUniform("u_origin");
+        for (let i = 0; i < MAX_LAYERS; i++) {
+            this.layerColorLocations.push(this.getUniform(`u_layerColor[${i}]`));
+            this.layerSeedLocations.push(this.getUniform(`u_layerSeed[${i}]`));
+            this.layerScaleLocations.push(this.getUniform(`u_layerScale[${i}]`));
+            this.layerHoleLocations.push(this.getUniform(`u_layerHoleRadius[${i}]`));
+            this.layerSharpnessLocations.push(this.getUniform(`u_layerSharpness[${i}]`));
+            this.layerOpacityLocations.push(this.getUniform(`u_layerOpacity[${i}]`));
+            this.layerSpeedLocations.push(this.getUniform(`u_layerSpeed[${i}]`));
+            this.layerOffsetLocations.push(this.getUniform(`u_layerOffset[${i}]`));
+        }
+    }
+    createShader(type, source) {
+        const shader = this.gl.createShader(type);
+        if (!shader) {
+            throw new Error("Failed to create shader.");
+        }
+        this.gl.shaderSource(shader, source);
+        this.gl.compileShader(shader);
+        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+            const info = this.gl.getShaderInfoLog(shader);
+            this.gl.deleteShader(shader);
+            throw new Error(`Failed to compile shader: ${info || "unknown error"}`);
+        }
+        return shader;
+    }
+    createProgram(vertexShader, fragmentShader) {
+        const program = this.gl.createProgram();
+        if (!program) {
+            throw new Error("Failed to create shader program.");
+        }
+        this.gl.attachShader(program, vertexShader);
+        this.gl.attachShader(program, fragmentShader);
+        this.gl.linkProgram(program);
+        if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+            const info = this.gl.getProgramInfoLog(program);
+            throw new Error(`Failed to link shader program: ${info || "unknown error"}`);
+        }
+        return program;
+    }
+    getUniform(name) {
+        const location = this.gl.getUniformLocation(this.program, name);
+        if (!location) {
+            throw new Error(`Uniform ${name} not found.`);
+        }
+        return location;
+    }
+    ensureCanvasSize(width, height) {
+        if (this.currentWidth === width && this.currentHeight === height) {
+            return;
+        }
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.currentWidth = width;
+        this.currentHeight = height;
+        this.gl.viewport(0, 0, width, height);
+        // Update quad to match new dimensions
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([
+            0,
+            0,
+            width,
+            0,
+            0,
+            height,
+            0,
+            height,
+            width,
+            0,
+            width,
+            height,
+        ]), this.gl.STATIC_DRAW);
+        const positionLocation = this.gl.getAttribLocation(this.program, "a_position");
+        this.gl.enableVertexAttribArray(positionLocation);
+        this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+    }
+    render(params) {
+        const layerCount = Math.min(params.layers.length, MAX_LAYERS);
+        this.ensureCanvasSize(params.width, params.height);
+        this.gl.useProgram(this.program);
+        this.gl.uniform2f(this.resolutionLocation, params.width, params.height);
+        this.gl.uniform1f(this.timeLocation, params.time);
+        this.gl.uniform1i(this.layerCountLocation, layerCount);
+        this.gl.uniform2f(this.originLocation, params.originX, params.originY);
+        for (let i = 0; i < layerCount; i++) {
+            const layer = params.layers[i];
+            this.gl.uniform3fv(this.layerColorLocations[i], new Float32Array(layer.color));
+            this.gl.uniform1f(this.layerSeedLocations[i], layer.seed);
+            this.gl.uniform1f(this.layerScaleLocations[i], layer.scale);
+            this.gl.uniform1f(this.layerHoleLocations[i], layer.holeRadius);
+            this.gl.uniform1f(this.layerSharpnessLocations[i], layer.sharpness);
+            this.gl.uniform1f(this.layerOpacityLocations[i], layer.opacity);
+            this.gl.uniform2fv(this.layerSpeedLocations[i], new Float32Array(layer.speed));
+            this.gl.uniform2fv(this.layerOffsetLocations[i], new Float32Array(layer.offset));
+        }
+        // Zero out unused uniforms to avoid stale data affecting rendering when layer count shrinks.
+        for (let i = layerCount; i < MAX_LAYERS; i++) {
+            this.gl.uniform3fv(this.layerColorLocations[i], new Float32Array([0, 0, 0]));
+            this.gl.uniform1f(this.layerSeedLocations[i], 0);
+            this.gl.uniform1f(this.layerScaleLocations[i], 1);
+            this.gl.uniform1f(this.layerHoleLocations[i], 1);
+            this.gl.uniform1f(this.layerSharpnessLocations[i], 1);
+            this.gl.uniform1f(this.layerOpacityLocations[i], 0);
+            this.gl.uniform2fv(this.layerSpeedLocations[i], new Float32Array([0, 0]));
+            this.gl.uniform2fv(this.layerOffsetLocations[i], new Float32Array([0, 0]));
+        }
+        this.gl.clearColor(0, 0, 0, 0);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        return this.canvas;
+    }
+    getCanvas() {
+        return this.canvas;
+    }
+}
+exports.WebGLWaterOverlayRenderer = WebGLWaterOverlayRenderer;
+WebGLWaterOverlayRenderer.instance = null;
+WebGLWaterOverlayRenderer.supportCache = null;
 
 
 /***/ }),
@@ -39589,6 +40142,14 @@ const environmentData = {
             { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
         ],
     },
+    [environmentTypes_1.EnvType.FLOODED_CAVE]: {
+        props: [
+            { class: NullProp, weight: 1 },
+            { class: crate_1.Crate, weight: 1 },
+            { class: barrel_1.Barrel, weight: 1 },
+        ],
+        enemies: [],
+    },
 };
 exports.environmentData = environmentData;
 
@@ -46251,7 +46812,12 @@ class PlayerRenderer {
                     this.player.game.hasRecordedStats = true;
                 }
             }
-            postProcess_1.PostProcessor.draw(delta);
+            const game = this.player?.game;
+            const cameraOrigin = game?.getWaterOverlayOrigin?.() ?? {
+                x: 0,
+                y: 0,
+            };
+            postProcess_1.PostProcessor.draw(delta, this.player?.getRoom()?.underwater ?? false, cameraOrigin);
             if (this.hurting)
                 this.drawHurt(delta);
             if (this.player.mapToggled === true)
@@ -47942,6 +48508,7 @@ class Room {
         this.lastDraw = 0;
         this.drawTimestamp = 0;
         this.drawInterval = 4;
+        this.underwater = false;
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
         // Add this property to track created mask canvases
@@ -49695,6 +50262,18 @@ class Room {
                 }
             }
         };
+        this.drawUnderwater = (delta) => {
+            if (!this.onScreen)
+                return;
+            if (!this.underwater) {
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.globalCompositeOperation = "source-over";
+                game_1.Game.ctx.globalAlpha = 0.3;
+                game_1.Game.ctx.fillStyle = "#003B6F";
+                game_1.Game.ctx.fillRect((this.roomX + 0.5) * gameConstants_1.GameConstants.TILESIZE, this.roomY * gameConstants_1.GameConstants.TILESIZE, (this.width - 1) * gameConstants_1.GameConstants.TILESIZE, (this.height - 0.5) * gameConstants_1.GameConstants.TILESIZE);
+                game_1.Game.ctx.restore();
+            }
+        };
         this.drawShade = (delta) => {
             if (!this.onScreen)
                 return;
@@ -50485,6 +51064,7 @@ class Room {
         this.lastLightingUpdate = 0;
         this.walls = Array();
         this.decorations = Array();
+        this.underwater = envType === environmentTypes_1.EnvType.FLOODED_CAVE;
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
         this.colorOffscreenCanvas.width =
@@ -56214,6 +56794,8 @@ var SkinType;
     SkinType[SkinType["DESERT"] = 7] = "DESERT";
     SkinType[SkinType["MAGMA_CAVE"] = 8] = "MAGMA_CAVE";
     SkinType[SkinType["DARK_DUNGEON"] = 9] = "DARK_DUNGEON";
+    SkinType[SkinType["TUTORIAL"] = 10] = "TUTORIAL";
+    SkinType[SkinType["FLOODED_CAVE"] = 11] = "FLOODED_CAVE";
 })(SkinType = exports.SkinType || (exports.SkinType = {}));
 class Tile extends drawable_1.Drawable {
     constructor(room, x, y) {

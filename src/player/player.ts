@@ -29,6 +29,7 @@ import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { GameplaySettings } from "../game/gameplaySettings";
+import { Room } from "../room/room";
 
 export enum PlayerDirection {
   DOWN,
@@ -171,7 +172,7 @@ export class Player extends Drawable {
     this.deathScreenPageCount = 1;
   }
 
-  getRoom = () => {
+  getRoom = (): Room => {
     const byId = (this.game as any).getRoomById?.(this.roomGID);
     return byId || this.game.levels[this.depth].rooms[this.levelID];
   };

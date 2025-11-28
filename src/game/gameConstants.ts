@@ -175,6 +175,7 @@ export class GameConstants {
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
   static USE_WEBGL_BLUR = false;
+  static USE_WEBGL_WATER_OVERLAY = true;
   static HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
   static BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
   static ENEMIES_BLOCK_LIGHT = true;
@@ -281,6 +282,16 @@ export class GameConstants {
     GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
     console.log(
       `WebGL blur is now ${GameConstants.USE_WEBGL_BLUR ? "enabled" : "disabled"}`,
+    );
+  };
+
+  static readonly TOGGLE_WEBGL_WATER_OVERLAY = () => {
+    GameConstants.USE_WEBGL_WATER_OVERLAY =
+      !GameConstants.USE_WEBGL_WATER_OVERLAY;
+    console.log(
+      `WebGL water overlay is now ${
+        GameConstants.USE_WEBGL_WATER_OVERLAY ? "enabled" : "disabled"
+      }`,
     );
   };
 
