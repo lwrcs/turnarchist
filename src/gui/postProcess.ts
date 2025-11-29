@@ -20,7 +20,7 @@ export class PostProcessor {
     globalCompositeOperation: "screen",
     underwaterBaseAlpha: 0.2,
     underwaterFillStyle: "#002631",
-    underwaterCompositeOperation: "source-over",
+    underwaterCompositeOperation: "screen",
   };
 
   static draw = (

@@ -12,6 +12,7 @@ import { VendingMachine } from "../entity/object/vendingMachine";
 import { Drawable } from "../drawable/drawable";
 import { Entity } from "../entity/entity";
 import { Item } from "../item/item";
+import { DivingHelmet } from "../item/divingHelmet";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -90,6 +91,12 @@ export class Player extends Drawable {
   lightColor: [number, number, number];
   damageBonus: number;
   magicDamageBonus: number;
+  isDrowning: boolean;
+  private drowningTurnsUntilDamage: number;
+  private drowningIntervalIndex: number;
+  private readonly drowningDamageSteps = [5, 4, 3, 2, 1];
+  private readonly drowningDamageAmount = 0.5;
+  private readonly divingHelmetRefillPerTurn = 12;
 
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
@@ -141,6 +148,9 @@ export class Player extends Drawable {
     this.lastTickHealth = this.health;
     this.damageBonus = 0;
     this.magicDamageBonus = 0;
+    this.isDrowning = false;
+    this.drowningTurnsUntilDamage = 0;
+    this.drowningIntervalIndex = 0;
     this.inventory = new Inventory(game, this);
     this.defaultSightRadius = 3;
     this.sightRadius = LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
@@ -175,6 +185,15 @@ export class Player extends Drawable {
   getRoom = (): Room => {
     const byId = (this.game as any).getRoomById?.(this.roomGID);
     return byId || this.game.levels[this.depth].rooms[this.levelID];
+  };
+
+  getEquippedDivingHelmet = (): DivingHelmet | null => {
+    const helmet = this.inventory.items.find(
+      (item): item is DivingHelmet =>
+        item instanceof DivingHelmet && item.equipped,
+    );
+
+    return helmet ?? null;
   };
 
   get hitX() {
@@ -919,6 +938,7 @@ export class Player extends Drawable {
   finishTick = () => {
     this.turnCount += 1;
     this.inventory.tick();
+    this.handleUnderwater();
 
     this.renderer.disableFlash();
 
@@ -934,6 +954,76 @@ export class Player extends Drawable {
 
     //this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
+  };
+
+  private handleUnderwater = () => {
+    const room = this.getRoom();
+    if (!room) return;
+
+    const helmet = this.getEquippedDivingHelmet();
+    const underwater = room.underwater === true;
+
+    if (!underwater) {
+      if (helmet && helmet.currentAir < helmet.maxAir) {
+        helmet.restoreAir(this.divingHelmetRefillPerTurn);
+      }
+      if (this.isDrowning) this.exitDrowningState();
+      return;
+    }
+
+    if (helmet && helmet.hasAir()) {
+      helmet.consumeAir();
+      if (this.isDrowning) this.exitDrowningState();
+      return;
+    }
+
+    this.applyDrowningTick();
+  };
+
+  private applyDrowningTick = () => {
+    this.enterDrowningState();
+    this.drowningTurnsUntilDamage -= 1;
+
+    if (this.drowningTurnsUntilDamage <= 0) {
+      this.hurt(this.drowningDamageAmount, "drowning");
+      this.advanceDrowningWindow();
+    }
+  };
+
+  private enterDrowningState = () => {
+    if (this.isDrowning) {
+      if (this.drowningTurnsUntilDamage <= 0) {
+        this.drowningTurnsUntilDamage =
+          this.drowningDamageSteps[this.drowningIntervalIndex] ?? 1;
+      }
+      return;
+    }
+    this.isDrowning = true;
+    this.drowningIntervalIndex = 0;
+    this.drowningTurnsUntilDamage = this.drowningDamageSteps[0];
+    this.game.pushMessage("You are drowning!");
+  };
+
+  private advanceDrowningWindow = () => {
+    if (this.drowningIntervalIndex < this.drowningDamageSteps.length - 1) {
+      this.drowningIntervalIndex += 1;
+      this.drowningTurnsUntilDamage =
+        this.drowningDamageSteps[this.drowningIntervalIndex];
+    } else {
+      this.drowningTurnsUntilDamage = 1;
+    }
+  };
+
+  private exitDrowningState = () => {
+    if (!this.isDrowning) return;
+    this.isDrowning = false;
+    this.drowningTurnsUntilDamage = 0;
+    this.drowningIntervalIndex = 0;
+    this.game.pushMessage("You catch your breath.");
+  };
+
+  getDrowningTurnsUntilDamage = (): number => {
+    return this.drowningTurnsUntilDamage;
   };
 
   draw = (delta: number) => {

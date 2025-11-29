@@ -556,6 +556,7 @@ export class PlayerRenderer {
         }
       }
       //this.drawCooldownBar();
+      this.drawBreathStatus(quickbarStartX);
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
       if (!transitioning) this.player.inventory.draw(delta);
       const inventoryOpen = this.player.inventory.isOpen;
@@ -820,6 +821,46 @@ export class PlayerRenderer {
     //this.drawInventoryButton(delta);
     if (this.player.menu.open) this.player.menu.draw();
     Game.ctx.restore();
+  };
+
+  private drawBreathStatus = (quickbarStartX: number) => {
+    const helmet = this.player.getEquippedDivingHelmet();
+    const barWidth = 64;
+    const barHeight = 6;
+    const barX = Math.max(8, quickbarStartX - 16);
+    const barY = GameConstants.HEIGHT - 28;
+
+    if (helmet) {
+      const ratio = Math.max(0, helmet.currentAir / helmet.maxAir);
+      Game.ctx.fillStyle = "rgba(8, 20, 32, 0.65)";
+      Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+      Game.ctx.fillStyle = "#2bd6ff";
+      Game.ctx.fillRect(
+        barX + 1,
+        barY + 1,
+        Math.max(0, (barWidth - 2) * ratio),
+        barHeight - 2,
+      );
+      Game.fillTextOutline(
+        `Air ${Math.ceil(helmet.currentAir)}/${helmet.maxAir}`,
+        barX,
+        barY - 2,
+        GameConstants.OUTLINE,
+        "white",
+      );
+      return;
+    }
+
+    if (!this.player.isDrowning) return;
+
+    const turns = Math.max(0, this.player.getDrowningTurnsUntilDamage());
+    Game.fillTextOutline(
+      `Drowning ${turns}t`,
+      barX,
+      barY - 2,
+      GameConstants.OUTLINE,
+      GameConstants.WARNING_RED,
+    );
   };
 
   drawCooldownBar = () => {

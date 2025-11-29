@@ -426,7 +426,7 @@ export class Populator {
     const env = opts?.envType
       ? opts.envType
       : downLadderRoom.depth < 2
-        ? EnvType.FOREST
+        ? EnvType.FLOODED_CAVE //FOREST
         : downLadderRoom.depth > 2
           ? Random.rand() < 0.5
             ? EnvType.FOREST

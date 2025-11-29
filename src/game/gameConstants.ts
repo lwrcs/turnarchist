@@ -49,6 +49,8 @@ import { QuarterStaff } from "../item/weapon/quarterStaff";
 import { Slingshot } from "../item/weapon/slingshot";
 import { CrossbowBolt } from "../item/weapon/crossbowBolt";
 import { Crossbow } from "../item/weapon/crossbow";
+import { GlowStick } from "../item/light/glowStick";
+import { DivingHelmet } from "../item/divingHelmet";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -355,7 +357,7 @@ export class GameConstants {
     Dagger,
     Torch,
     Sword,
-    QuarterStaff,
+    GlowStick,
     GodStone,
     Spellbook,
     FishingRod,
@@ -372,6 +374,7 @@ export class GameConstants {
     Spear,
     Pickaxe,
     Lantern,
+    DivingHelmet,
     WeaponBlood,
 
     Coal,

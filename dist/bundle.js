@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.ef5168369cd9bfc5fe5c.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.19c72adea1b6ab129b78.png";
+module.exports = __webpack_require__.p + "assets/itemset.03615d4c4de25539580e.png";
 
 /***/ }),
 
@@ -9621,7 +9621,7 @@ module.exports = __webpack_require__.p + "assets/objset.fc31fc7f6183056a1943.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.37d8b4d6374ea714339d.png";
+module.exports = __webpack_require__.p + "assets/tileset.ed82dd24ab8797956df3.png";
 
 /***/ }),
 
@@ -26508,8 +26508,9 @@ const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
-const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
+const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -26760,7 +26761,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
     sword_1.Sword,
-    quarterStaff_1.QuarterStaff,
+    glowStick_1.GlowStick,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
     fishingRod_1.FishingRod,
@@ -26777,6 +26778,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     spear_1.Spear,
     pickaxe_1.Pickaxe,
     lantern_1.Lantern,
+    divingHelmet_1.DivingHelmet,
     weaponBlood_1.WeaponBlood,
     coal_1.Coal,
     coal_1.Coal,
@@ -32417,7 +32419,7 @@ PostProcessor.settings = {
     globalCompositeOperation: "screen",
     underwaterBaseAlpha: 0.2,
     underwaterFillStyle: "#002631",
-    underwaterCompositeOperation: "source-over",
+    underwaterCompositeOperation: "screen",
 };
 PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
     if (!PostProcessor.settings.enabled)
@@ -34864,6 +34866,80 @@ Coin.itemName = "coin";
 
 /***/ }),
 
+/***/ "./src/item/divingHelmet.ts":
+/*!**********************************!*\
+  !*** ./src/item/divingHelmet.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DivingHelmet = void 0;
+const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+/**
+ * Diving helmet keeps track of an internal air supply that only depletes when
+ * the wielder is underwater. Player logic is responsible for deciding when to
+ * consume or replenish air each turn.
+ */
+class DivingHelmet extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return `DIVING HELMET\nStores ${this.maxAir} turns of air for underwater travel.`;
+        };
+        this.coEquippable = (other) => {
+            // Only prevent multiple diving helmets from being active at once.
+            return !(other instanceof DivingHelmet);
+        };
+        this.hasAir = () => {
+            return this.currentAir > 0;
+        };
+        this.consumeAir = (amount = this.airDrainPerTurn) => {
+            if (!this.hasAir())
+                return false;
+            this.currentAir = this.currentAir - amount;
+            if (this.currentAir <= 0) {
+                this.currentAir = 0;
+                this.level.game.pushMessage("Your diving helmet runs out of air!");
+            }
+            return this.hasAir();
+        };
+        this.restoreAir = (amount) => {
+            if (amount <= 0)
+                return;
+            const previousAir = this.currentAir;
+            this.currentAir = Math.min(this.maxAir, this.currentAir + amount);
+            if (previousAir === 0 && this.currentAir > 0) {
+                this.level.game.pushMessage("The diving helmet refills with air.");
+            }
+        };
+        this.refillCompletely = () => {
+            this.currentAir = this.maxAir;
+        };
+        this.tickInInventory = () => { };
+        this.tileX = 4;
+        this.tileY = 2;
+        this.name = DivingHelmet.itemName;
+        this.degradeable = false;
+        this.iconOffset = 0.1; //default 0
+        this.maxAir = 60;
+        this._air = this.maxAir;
+        this.airDrainPerTurn = 1;
+    }
+    get currentAir() {
+        return this._air;
+    }
+    set currentAir(value) {
+        this._air = Math.min(Math.max(value, 0), this.maxAir);
+    }
+}
+exports.DivingHelmet = DivingHelmet;
+DivingHelmet.itemName = "diving helmet";
+
+
+/***/ }),
+
 /***/ "./src/item/dropTable.ts":
 /*!*******************************!*\
   !*** ./src/item/dropTable.ts ***!
@@ -34915,6 +34991,7 @@ const crossbowStock_1 = __webpack_require__(/*! ./weapon/crossbowStock */ "./src
 const crossbowLimb_1 = __webpack_require__(/*! ./weapon/crossbowLimb */ "./src/item/weapon/crossbowLimb.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ./weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const quarterStaff_1 = __webpack_require__(/*! ./weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
+const divingHelmet_1 = __webpack_require__(/*! ./divingHelmet */ "./src/item/divingHelmet.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -34923,6 +35000,7 @@ exports.ItemTypeMap = {
     greataxe: greataxe_1.Greataxe,
     scythe: scythe_1.Scythe,
     quarterstaff: quarterStaff_1.QuarterStaff,
+    divinghelmet: divingHelmet_1.DivingHelmet,
     hourglass: hourglass_1.Hourglass,
     fishingrod: fishingRod_1.FishingRod,
     crossbowstock: crossbowStock_1.CrossbowStock,
@@ -35059,6 +35137,12 @@ DropTable.drops = [
     },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
+    {
+        itemType: "divinghelmet",
+        dropRate: 400,
+        category: ["equipment", "underwater"],
+        unique: true,
+    },
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
     { itemType: "hammer", dropRate: 25, category: ["tool"] },
@@ -36185,7 +36269,7 @@ class GlowBugs extends light_1.Light {
         this.fuel = 100; //how many turns before it burns out
         this.tileX = 27;
         this.tileY = 2;
-        this.name = "glow bugs";
+        this.name = GlowBugs.itemName;
         this.fuelCap = 100;
         this.radius = 6;
         this.stackable = true;
@@ -36197,6 +36281,38 @@ class GlowBugs extends light_1.Light {
 }
 exports.GlowBugs = GlowBugs;
 GlowBugs.itemName = "glow bugs";
+
+
+/***/ }),
+
+/***/ "./src/item/light/glowStick.ts":
+/*!*************************************!*\
+  !*** ./src/item/light/glowStick.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GlowStick = void 0;
+const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
+class GlowStick extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.fuel = 100; //how many turns before it burns out
+        this.tileX = 27;
+        this.tileY = 2;
+        this.name = GlowStick.itemName;
+        this.fuelCap = 100;
+        this.radius = 10;
+        this.stackable = true;
+        this.maxBrightness = 2;
+        //teal blue green rgb 0-255
+        this.color = [5, 150, 50];
+    }
+}
+exports.GlowStick = GlowStick;
+GlowStick.itemName = "glow stick";
 
 
 /***/ }),
@@ -40143,12 +40259,11 @@ const environmentData = {
         ],
     },
     [environmentTypes_1.EnvType.FLOODED_CAVE]: {
-        props: [
-            { class: NullProp, weight: 1 },
-            { class: crate_1.Crate, weight: 1 },
-            { class: barrel_1.Barrel, weight: 1 },
+        props: [{ class: NullProp, weight: 1 }],
+        enemies: [
+            { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: frogEnemy_1.FrogEnemy, weight: 1.0, minDepth: 0 },
         ],
-        enemies: [],
     },
 };
 exports.environmentData = environmentData;
@@ -44528,6 +44643,7 @@ const map_1 = __webpack_require__(/*! ../gui/map */ "./src/gui/map.ts");
 const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
+const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
@@ -44557,12 +44673,19 @@ var DrawDirection;
 class Player extends drawable_1.Drawable {
     constructor(game, x, y, isLocalPlayer) {
         super();
+        this.drowningDamageSteps = [5, 4, 3, 2, 1];
+        this.drowningDamageAmount = 0.5;
+        this.divingHelmetRefillPerTurn = 12;
         this.drawMoveQueue = [];
         this.seenEnemies = new Set();
         this.bestiary = null;
         this.getRoom = () => {
             const byId = this.game.getRoomById?.(this.roomGID);
             return byId || this.game.levels[this.depth].rooms[this.levelID];
+        };
+        this.getEquippedDivingHelmet = () => {
+            const helmet = this.inventory.items.find((item) => item instanceof divingHelmet_1.DivingHelmet && item.equipped);
+            return helmet ?? null;
         };
         this.setHitXY = (newX, newY, distance = 0.5) => {
             this.renderer.hitX = distance * (this.x - newX);
@@ -45165,6 +45288,7 @@ class Player extends drawable_1.Drawable {
         this.finishTick = () => {
             this.turnCount += 1;
             this.inventory.tick();
+            this.handleUnderwater();
             this.renderer.disableFlash();
             let totalHealthDiff = this.health - this.lastTickHealth;
             this.lastTickHealth = this.health; // update last tick health
@@ -45176,6 +45300,70 @@ class Player extends drawable_1.Drawable {
             this.moveDistance = 0;
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
+        };
+        this.handleUnderwater = () => {
+            const room = this.getRoom();
+            if (!room)
+                return;
+            const helmet = this.getEquippedDivingHelmet();
+            const underwater = room.underwater === true;
+            if (!underwater) {
+                if (helmet && helmet.currentAir < helmet.maxAir) {
+                    helmet.restoreAir(this.divingHelmetRefillPerTurn);
+                }
+                if (this.isDrowning)
+                    this.exitDrowningState();
+                return;
+            }
+            if (helmet && helmet.hasAir()) {
+                helmet.consumeAir();
+                if (this.isDrowning)
+                    this.exitDrowningState();
+                return;
+            }
+            this.applyDrowningTick();
+        };
+        this.applyDrowningTick = () => {
+            this.enterDrowningState();
+            this.drowningTurnsUntilDamage -= 1;
+            if (this.drowningTurnsUntilDamage <= 0) {
+                this.hurt(this.drowningDamageAmount, "drowning");
+                this.advanceDrowningWindow();
+            }
+        };
+        this.enterDrowningState = () => {
+            if (this.isDrowning) {
+                if (this.drowningTurnsUntilDamage <= 0) {
+                    this.drowningTurnsUntilDamage =
+                        this.drowningDamageSteps[this.drowningIntervalIndex] ?? 1;
+                }
+                return;
+            }
+            this.isDrowning = true;
+            this.drowningIntervalIndex = 0;
+            this.drowningTurnsUntilDamage = this.drowningDamageSteps[0];
+            this.game.pushMessage("You are drowning!");
+        };
+        this.advanceDrowningWindow = () => {
+            if (this.drowningIntervalIndex < this.drowningDamageSteps.length - 1) {
+                this.drowningIntervalIndex += 1;
+                this.drowningTurnsUntilDamage =
+                    this.drowningDamageSteps[this.drowningIntervalIndex];
+            }
+            else {
+                this.drowningTurnsUntilDamage = 1;
+            }
+        };
+        this.exitDrowningState = () => {
+            if (!this.isDrowning)
+                return;
+            this.isDrowning = false;
+            this.drowningTurnsUntilDamage = 0;
+            this.drowningIntervalIndex = 0;
+            this.game.pushMessage("You catch your breath.");
+        };
+        this.getDrowningTurnsUntilDamage = () => {
+            return this.drowningTurnsUntilDamage;
         };
         this.draw = (delta) => {
             this.renderer.draw(delta);
@@ -45229,6 +45417,9 @@ class Player extends drawable_1.Drawable {
         this.lastTickHealth = this.health;
         this.damageBonus = 0;
         this.magicDamageBonus = 0;
+        this.isDrowning = false;
+        this.drowningTurnsUntilDamage = 0;
+        this.drowningIntervalIndex = 0;
         this.inventory = new inventory_1.Inventory(game, this);
         this.defaultSightRadius = 3;
         this.sightRadius = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE; //this.defaultSightRadius;
@@ -46639,6 +46830,7 @@ class PlayerRenderer {
                     }
                 }
                 //this.drawCooldownBar();
+                this.drawBreathStatus(quickbarStartX);
                 if (armor)
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 if (!transitioning)
@@ -46828,6 +47020,26 @@ class PlayerRenderer {
             if (this.player.menu.open)
                 this.player.menu.draw();
             game_1.Game.ctx.restore();
+        };
+        this.drawBreathStatus = (quickbarStartX) => {
+            const helmet = this.player.getEquippedDivingHelmet();
+            const barWidth = 64;
+            const barHeight = 6;
+            const barX = Math.max(8, quickbarStartX - 16);
+            const barY = gameConstants_1.GameConstants.HEIGHT - 28;
+            if (helmet) {
+                const ratio = Math.max(0, helmet.currentAir / helmet.maxAir);
+                game_1.Game.ctx.fillStyle = "rgba(8, 20, 32, 0.65)";
+                game_1.Game.ctx.fillRect(barX, barY, barWidth, barHeight);
+                game_1.Game.ctx.fillStyle = "#2bd6ff";
+                game_1.Game.ctx.fillRect(barX + 1, barY + 1, Math.max(0, (barWidth - 2) * ratio), barHeight - 2);
+                game_1.Game.fillTextOutline(`Air ${Math.ceil(helmet.currentAir)}/${helmet.maxAir}`, barX, barY - 2, gameConstants_1.GameConstants.OUTLINE, "white");
+                return;
+            }
+            if (!this.player.isDrowning)
+                return;
+            const turns = Math.max(0, this.player.getDrowningTurnsUntilDamage());
+            game_1.Game.fillTextOutline(`Drowning ${turns}t`, barX, barY - 2, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
         };
         this.drawCooldownBar = () => {
             game_1.Game.ctx.save();
@@ -52805,7 +53017,7 @@ class Populator {
             const env = opts?.envType
                 ? opts.envType
                 : downLadderRoom.depth < 2
-                    ? environmentTypes_1.EnvType.FOREST
+                    ? environmentTypes_1.EnvType.FLOODED_CAVE //FOREST
                     : downLadderRoom.depth > 2
                         ? random_1.Random.rand() < 0.5
                             ? environmentTypes_1.EnvType.FOREST
