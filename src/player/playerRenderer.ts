@@ -33,6 +33,7 @@ export class PlayerRenderer {
   private slowMotionTickDuration: number;
   private lowHealthFrame: number;
   private flashing: boolean;
+  private lightingDirectionBucket: number | null;
 
   constructor(player: Player) {
     this.player = player;
@@ -53,6 +54,7 @@ export class PlayerRenderer {
     this.flashing = false;
     this.lowHealthFrame = 0;
     this.frame = 0;
+    this.lightingDirectionBucket = null;
   }
 
   hurt = () => {
@@ -233,6 +235,52 @@ export class PlayerRenderer {
     return false;
   };
 
+  private trackMouseLightingDirection = () => {
+    if (
+      !GameConstants.NARROWED_LIGHTING_FOV ||
+      GameConstants.isMobile ||
+      !GameConstants.MOVE_WITH_MOUSE
+    ) {
+      this.lightingDirectionBucket = null;
+      return;
+    }
+
+    const room = (this.player as any).getRoom
+      ? (this.player as any).getRoom()
+      : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
+
+    if (!room?.underwater) {
+      this.lightingDirectionBucket = null;
+      return;
+    }
+
+    const inputHandler = this.player.inputHandler;
+    if (inputHandler?.mostRecentMoveInput !== "mouse") {
+      this.lightingDirectionBucket = null;
+      return;
+    }
+
+    const angleDegrees = this.normalizeDegrees(
+      (inputHandler.mouseAngle() * 180) / Math.PI,
+    );
+    const bucket = this.getMouseDirectionBucket(angleDegrees);
+
+    if (bucket === this.lightingDirectionBucket) return;
+
+    this.lightingDirectionBucket = bucket;
+    room.updateLighting({ x: this.player.x, y: this.player.y });
+  };
+
+  private getMouseDirectionBucket = (angle: number): number => {
+    const normalized = this.normalizeDegrees(angle);
+    return Math.floor((normalized + 22.5) / 45) % 8;
+  };
+
+  private normalizeDegrees = (angle: number): number => {
+    const normalized = angle % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+  };
+
   drawSmear = () => {
     if (this.player.direction === this.player.lastDirection) return false;
     let t = 100;
@@ -344,6 +392,7 @@ export class PlayerRenderer {
   draw = (delta: number) => {
     const player = this.player;
     Game.ctx.save();
+    this.trackMouseLightingDirection();
     this.updateDrawXY(delta);
     player.drawableY = player.y;
     this.flashingFrame += (delta * 12) / GameConstants.FPS;

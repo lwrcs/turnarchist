@@ -1030,7 +1030,12 @@ export class Game {
     //delta = 0.1;
     // Render the frame with capped delta
 
-    this.draw(delta * GameConstants.ANIMATION_SPEED * 1);
+    this.draw(
+      delta *
+        GameConstants.ANIMATION_SPEED *
+        1 *
+        (this.room?.underwater ? 0.75 : 1),
+    );
 
     // Request the next frame
     window.requestAnimationFrame(this.run);

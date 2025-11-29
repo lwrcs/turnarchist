@@ -163,6 +163,9 @@ export class GameConstants {
   static readonly INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE = true;
   static readonly IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE = true;
   static readonly VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE = true;
+  static NARROWED_LIGHTING_FOV = true;
+  static readonly DEFAULT_LIGHTING_FOV_DEGREES = 360;
+  static readonly UNDERWATER_LIGHTING_FOV_DEGREES = 120;
 
   static CUSTOM_SHADER_COLOR_ENABLED = false;
   static get SHADE_ENABLED() {
@@ -278,6 +281,13 @@ export class GameConstants {
 
   static readonly TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
     GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+  };
+
+  static readonly TOGGLE_NARROWED_LIGHTING_FOV = () => {
+    GameConstants.NARROWED_LIGHTING_FOV = !GameConstants.NARROWED_LIGHTING_FOV;
+    console.log(
+      `Narrowed lighting FoV is now ${GameConstants.NARROWED_LIGHTING_FOV ? "enabled" : "disabled"}`,
+    );
   };
 
   static readonly TOGGLE_USE_WEBGL_BLUR = () => {

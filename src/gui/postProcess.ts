@@ -20,7 +20,7 @@ export class PostProcessor {
     globalCompositeOperation: "screen",
     underwaterBaseAlpha: 0.2,
     underwaterFillStyle: "#002631",
-    underwaterCompositeOperation: "screen",
+    underwaterCompositeOperation: "source-over",
   };
 
   static draw = (
@@ -41,9 +41,12 @@ export class PostProcessor {
       Game.ctx.globalAlpha = this.settings.underwaterBaseAlpha;
 
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+      this.settings.globalCompositeOperation = "lighten";
       PostProcessor.applyDefaultLayer();
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
       Game.ctx.restore();
+      this.settings.globalCompositeOperation = "screen";
+
       return;
     }
 

@@ -1847,47 +1847,43 @@ export class Room {
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if ((player as any).getRoom?.() === this) {
-        //console.log(`i: ${player.angle}`);
-        for (let i = 0; i < 360; i += lightingAngleStep) {
-          let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-          let lightBrightness = 5;
-          if (player.lightEquipped) {
-            lightColor = player.lightColor;
-            lightBrightness = player.lightBrightness;
-          }
-          let offsetX = 0;
-          let offsetY = 0;
-          switch (player.direction) {
-            case Direction.UP:
-              offsetY = -0;
-              break;
-            case Direction.DOWN:
-              offsetY = 0;
-              break;
-            case Direction.LEFT:
-              offsetX = -0;
-              break;
-            case Direction.RIGHT:
-              offsetX = 0;
-          }
-          this.castTintAtAngle(
-            i,
-            player.x + 0.5 + offsetX,
-            player.y + 0.5 + offsetY,
-            /*
-            Math.min(
-              Math.max(
-                player.sightRadius - this.depth + 2,
-                Player.minSightRadius,
-              ),
-              10,
-            ),
-            */
-            LevelConstants.LIGHTING_MAX_DISTANCE,
-            lightColor, // RGB color in sRGB
-            lightBrightness *
-              LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, // intensity
+        let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+        let lightBrightness = 5;
+        if (player.lightEquipped) {
+          lightColor = player.lightColor;
+          lightBrightness = player.lightBrightness;
+        }
+
+        const playerFov = this.getPlayerLightingFov(player);
+        const facingAngle =
+          playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
+            ? this.getPlayerFacingAngle(player)
+            : null;
+
+        if (
+          playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
+          facingAngle !== null
+        ) {
+          this.castDirectionalPlayerLight(
+            player,
+            facingAngle,
+            playerFov,
+            lightingAngleStep,
+            lightColor,
+            lightBrightness,
           );
+        } else {
+          for (let i = 0; i < 360; i += lightingAngleStep) {
+            this.castTintAtAngle(
+              i,
+              player.x + 0.5,
+              player.y + 0.5,
+              LevelConstants.LIGHTING_MAX_DISTANCE,
+              lightColor,
+              lightBrightness *
+                LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+            );
+          }
         }
       }
     }
@@ -1923,6 +1919,100 @@ export class Room {
     // Bump lighting update version so blur cache can detect changes
     this.lastLightingUpdate++;
     this.isUpdatingLighting = false;
+  };
+
+  private castDirectionalPlayerLight = (
+    player: Player,
+    facingAngle: number,
+    fovDegrees: number,
+    angleStep: number,
+    lightColor: [number, number, number],
+    lightBrightness: number,
+  ) => {
+    const originX = player.x + 0.5;
+    const originY = player.y + 0.5;
+    const halfFov = fovDegrees / 2;
+    const span = Math.max(fovDegrees, angleStep);
+
+    for (let offset = 0; offset <= span; offset += angleStep) {
+      const angle = this.normalizeDegrees(facingAngle - halfFov + offset);
+      this.castTintAtAngle(
+        angle,
+        originX,
+        originY,
+        LevelConstants.LIGHTING_MAX_DISTANCE,
+        lightColor,
+        lightBrightness * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+      );
+    }
+  };
+
+  private getPlayerLightingFov = (player: Player): number => {
+    if (
+      GameConstants.NARROWED_LIGHTING_FOV &&
+      this.underwater &&
+      !player.dead
+    ) {
+      return GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES;
+    }
+    return GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+  };
+
+  private getPlayerFacingAngle = (player: Player): number | null => {
+    const mouseAngle = this.getMouseFacingAngle(player);
+    if (mouseAngle !== null) return mouseAngle;
+    return this.directionToDegrees(player.direction);
+  };
+
+  private getMouseFacingAngle = (player: Player): number | null => {
+    const inputHandler = player.inputHandler;
+    if (
+      !inputHandler ||
+      inputHandler.mostRecentMoveInput !== "mouse" ||
+      GameConstants.isMobile ||
+      !GameConstants.MOVE_WITH_MOUSE
+    ) {
+      return null;
+    }
+
+    const angleDegrees = this.normalizeDegrees(
+      (inputHandler.mouseAngle() * 180) / Math.PI,
+    );
+    const octant = this.getOctantFromAngle(angleDegrees);
+    return octant * 45;
+  };
+
+  private directionToDegrees = (direction?: Direction): number | null => {
+    switch (direction) {
+      case Direction.RIGHT:
+        return 0;
+      case Direction.DOWN_RIGHT:
+        return 45;
+      case Direction.DOWN:
+        return 90;
+      case Direction.DOWN_LEFT:
+        return 135;
+      case Direction.LEFT:
+        return 180;
+      case Direction.UP_LEFT:
+        return 225;
+      case Direction.UP:
+        return 270;
+      case Direction.UP_RIGHT:
+        return 315;
+      default:
+        return null;
+    }
+  };
+
+  private getOctantFromAngle = (angle: number): number => {
+    const normalized = this.normalizeDegrees(angle);
+    return Math.floor((normalized + 22.5) / 45) % 8;
+  };
+
+  private normalizeDegrees = (angle: number): number => {
+    const normalized = angle % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
   };
 
   updateLightSources = (lightSource?: LightSource, remove?: boolean) => {

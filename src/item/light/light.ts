@@ -12,6 +12,7 @@ export abstract class Light extends Equippable {
   maxBrightness: number;
   minBrightness: number;
   canRefuel: boolean = false;
+  waterproof: boolean;
   color: [number, number, number];
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -25,6 +26,7 @@ export abstract class Light extends Equippable {
     this.radius = 6;
     this.equipped = false;
     this.color = LevelConstants.TORCH_LIGHT_COLOR;
+    this.waterproof = false;
   }
 
   updateLighting = () => {
@@ -63,7 +65,13 @@ export abstract class Light extends Equippable {
 
   toggleEquip = () => {
     if (this.fuel > 0) {
+      if (this.enforceUnderwaterRestrictions()) {
+        this.wielder.game.pushMessage?.("You can't use this underwater.");
+
+        return;
+      }
       this.equipped = !this.equipped;
+
       if (this.isIgnited()) {
         //this.setRadius();
         this.setBrightness();
@@ -97,6 +105,10 @@ export abstract class Light extends Equippable {
   };
 
   burn = () => {
+    if (this.enforceUnderwaterRestrictions()) {
+      return;
+    }
+
     // Handle active burning, don't burn fuel in empty rooms
     if (this.isIgnited()) {
       const room = (this.wielder as any)?.getRoom
@@ -196,4 +208,35 @@ export abstract class Light extends Equippable {
   getDescription = () => {
     return `${this.name}: ${Math.ceil(this.fuelPercentage * 100)}%`;
   };
+
+  protected getCurrentRoom(): Room | undefined {
+    if (!this.wielder) {
+      return undefined;
+    }
+    const wielderAny = this.wielder as any;
+    if (typeof wielderAny.getRoom === "function") {
+      return wielderAny.getRoom();
+    }
+    return this.wielder.game.rooms[this.wielder.levelID];
+  }
+
+  protected enforceUnderwaterRestrictions(): boolean {
+    if (!this.wielder || this.waterproof) {
+      return false;
+    }
+
+    const room = this.getCurrentRoom();
+    const underwater = room?.underwater === true;
+
+    if (underwater && this.equipped) {
+      this.equipped = false;
+      this.resetRadius();
+      this.resetBrightness();
+      this.wielder.lightEquipped = false;
+      this.wielder.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+      this.wielder.game.pushMessage?.(`${this.name} fizzles out underwater.`);
+      this.updateLighting();
+    }
+    return underwater;
+  }
 }

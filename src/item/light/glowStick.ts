@@ -22,5 +22,6 @@ export class GlowStick extends Light {
     this.maxBrightness = 2;
     //teal blue green rgb 0-255
     this.color = [5, 150, 50];
+    this.waterproof = true;
   }
 }

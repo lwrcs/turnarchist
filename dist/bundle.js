@@ -23916,7 +23916,10 @@ class Game {
             }
             //delta = 0.1;
             // Render the frame with capped delta
-            this.draw(delta * gameConstants_1.GameConstants.ANIMATION_SPEED * 1);
+            this.draw(delta *
+                gameConstants_1.GameConstants.ANIMATION_SPEED *
+                1 *
+                (this.room?.underwater ? 0.75 : 1));
             // Request the next frame
             window.requestAnimationFrame(this.run);
             // Update the previous frame timestamp
@@ -26614,6 +26617,9 @@ GameConstants.HOVER_TEXT_FOLLOWS_MOUSE = true;
 GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE = true;
 GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE = true;
 GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE = true;
+GameConstants.NARROWED_LIGHTING_FOV = true;
+GameConstants.DEFAULT_LIGHTING_FOV_DEGREES = 360;
+GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES = 120;
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
@@ -26702,6 +26708,10 @@ GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
 };
 GameConstants.TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
     GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
+};
+GameConstants.TOGGLE_NARROWED_LIGHTING_FOV = () => {
+    GameConstants.NARROWED_LIGHTING_FOV = !GameConstants.NARROWED_LIGHTING_FOV;
+    console.log(`Narrowed lighting FoV is now ${GameConstants.NARROWED_LIGHTING_FOV ? "enabled" : "disabled"}`);
 };
 GameConstants.TOGGLE_USE_WEBGL_BLUR = () => {
     GameConstants.USE_WEBGL_BLUR = !GameConstants.USE_WEBGL_BLUR;
@@ -32419,7 +32429,7 @@ PostProcessor.settings = {
     globalCompositeOperation: "screen",
     underwaterBaseAlpha: 0.2,
     underwaterFillStyle: "#002631",
-    underwaterCompositeOperation: "screen",
+    underwaterCompositeOperation: "source-over",
 };
 PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
     if (!PostProcessor.settings.enabled)
@@ -32434,9 +32444,11 @@ PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
             _a.settings.underwaterCompositeOperation;
         game_1.Game.ctx.globalAlpha = _a.settings.underwaterBaseAlpha;
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        _a.settings.globalCompositeOperation = "lighten";
         PostProcessor.applyDefaultLayer();
         game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
         game_1.Game.ctx.restore();
+        _a.settings.globalCompositeOperation = "screen";
         return;
     }
     PostProcessor.applyDefaultLayer();
@@ -32471,8 +32483,8 @@ const waterOverlayConfig = {
             color: "#02182a",
             seed: 37,
             scale: 65,
-            holeRadius: 0.85,
-            sharpness: 1.35,
+            holeRadius: 1.15,
+            sharpness: 1.5,
             opacity: 0.75,
             speedX: 5,
             speedY: -5,
@@ -32483,9 +32495,9 @@ const waterOverlayConfig = {
             color: "#042c3a",
             seed: 91,
             scale: 80,
-            holeRadius: 0.75,
+            holeRadius: 1.25,
             sharpness: 1.15,
-            opacity: 0.75,
+            opacity: 0.5,
             speedX: -2,
             speedY: 2,
             offsetX: 200,
@@ -36309,6 +36321,7 @@ class GlowStick extends light_1.Light {
         this.maxBrightness = 2;
         //teal blue green rgb 0-255
         this.color = [5, 150, 50];
+        this.waterproof = true;
     }
 }
 exports.GlowStick = GlowStick;
@@ -36428,6 +36441,10 @@ class Light extends equippable_1.Equippable {
         };
         this.toggleEquip = () => {
             if (this.fuel > 0) {
+                if (this.enforceUnderwaterRestrictions()) {
+                    this.wielder.game.pushMessage?.("You can't use this underwater.");
+                    return;
+                }
                 this.equipped = !this.equipped;
                 if (this.isIgnited()) {
                     //this.setRadius();
@@ -36457,6 +36474,9 @@ class Light extends equippable_1.Equippable {
             this.wielder.lightBrightness = 0.5;
         };
         this.burn = () => {
+            if (this.enforceUnderwaterRestrictions()) {
+                return;
+            }
             // Handle active burning, don't burn fuel in empty rooms
             if (this.isIgnited()) {
                 const room = this.wielder?.getRoom
@@ -36546,6 +36566,7 @@ class Light extends equippable_1.Equippable {
         this.radius = 6;
         this.equipped = false;
         this.color = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
+        this.waterproof = false;
     }
     get fuelPercentage() {
         return this.fuel / this.fuelCap;
@@ -36553,6 +36574,33 @@ class Light extends equippable_1.Equippable {
     // Hook for auto-refuelable lights; subclasses can override
     tryAutoRefuel() {
         return false;
+    }
+    getCurrentRoom() {
+        if (!this.wielder) {
+            return undefined;
+        }
+        const wielderAny = this.wielder;
+        if (typeof wielderAny.getRoom === "function") {
+            return wielderAny.getRoom();
+        }
+        return this.wielder.game.rooms[this.wielder.levelID];
+    }
+    enforceUnderwaterRestrictions() {
+        if (!this.wielder || this.waterproof) {
+            return false;
+        }
+        const room = this.getCurrentRoom();
+        const underwater = room?.underwater === true;
+        if (underwater && this.equipped) {
+            this.equipped = false;
+            this.resetRadius();
+            this.resetBrightness();
+            this.wielder.lightEquipped = false;
+            this.wielder.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+            this.wielder.game.pushMessage?.(`${this.name} fizzles out underwater.`);
+            this.updateLighting();
+        }
+        return underwater;
     }
 }
 exports.Light = Light;
@@ -46583,6 +46631,40 @@ class PlayerRenderer {
                 return true;
             return false;
         };
+        this.trackMouseLightingDirection = () => {
+            if (!gameConstants_1.GameConstants.NARROWED_LIGHTING_FOV ||
+                gameConstants_1.GameConstants.isMobile ||
+                !gameConstants_1.GameConstants.MOVE_WITH_MOUSE) {
+                this.lightingDirectionBucket = null;
+                return;
+            }
+            const room = this.player.getRoom
+                ? this.player.getRoom()
+                : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
+            if (!room?.underwater) {
+                this.lightingDirectionBucket = null;
+                return;
+            }
+            const inputHandler = this.player.inputHandler;
+            if (inputHandler?.mostRecentMoveInput !== "mouse") {
+                this.lightingDirectionBucket = null;
+                return;
+            }
+            const angleDegrees = this.normalizeDegrees((inputHandler.mouseAngle() * 180) / Math.PI);
+            const bucket = this.getMouseDirectionBucket(angleDegrees);
+            if (bucket === this.lightingDirectionBucket)
+                return;
+            this.lightingDirectionBucket = bucket;
+            room.updateLighting({ x: this.player.x, y: this.player.y });
+        };
+        this.getMouseDirectionBucket = (angle) => {
+            const normalized = this.normalizeDegrees(angle);
+            return Math.floor((normalized + 22.5) / 45) % 8;
+        };
+        this.normalizeDegrees = (angle) => {
+            const normalized = angle % 360;
+            return normalized < 0 ? normalized + 360 : normalized;
+        };
         this.drawSmear = () => {
             if (this.player.direction === this.player.lastDirection)
                 return false;
@@ -46684,6 +46766,7 @@ class PlayerRenderer {
         this.draw = (delta) => {
             const player = this.player;
             game_1.Game.ctx.save();
+            this.trackMouseLightingDirection();
             this.updateDrawXY(delta);
             player.drawableY = player.y;
             this.flashingFrame += (delta * 12) / gameConstants_1.GameConstants.FPS;
@@ -47149,6 +47232,7 @@ class PlayerRenderer {
         this.flashing = false;
         this.lowHealthFrame = 0;
         this.frame = 0;
+        this.lightingDirectionBucket = null;
     }
 }
 exports.PlayerRenderer = PlayerRenderer;
@@ -49429,42 +49513,25 @@ class Room {
             for (const p in this.game.players) {
                 let player = this.game.players[p];
                 if (player.getRoom?.() === this) {
-                    //console.log(`i: ${player.angle}`);
-                    for (let i = 0; i < 360; i += lightingAngleStep) {
-                        let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
-                        let lightBrightness = 5;
-                        if (player.lightEquipped) {
-                            lightColor = player.lightColor;
-                            lightBrightness = player.lightBrightness;
+                    let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+                    let lightBrightness = 5;
+                    if (player.lightEquipped) {
+                        lightColor = player.lightColor;
+                        lightBrightness = player.lightBrightness;
+                    }
+                    const playerFov = this.getPlayerLightingFov(player);
+                    const facingAngle = playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
+                        ? this.getPlayerFacingAngle(player)
+                        : null;
+                    if (playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
+                        facingAngle !== null) {
+                        this.castDirectionalPlayerLight(player, facingAngle, playerFov, lightingAngleStep, lightColor, lightBrightness);
+                    }
+                    else {
+                        for (let i = 0; i < 360; i += lightingAngleStep) {
+                            this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness *
+                                levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
                         }
-                        let offsetX = 0;
-                        let offsetY = 0;
-                        switch (player.direction) {
-                            case game_1.Direction.UP:
-                                offsetY = -0;
-                                break;
-                            case game_1.Direction.DOWN:
-                                offsetY = 0;
-                                break;
-                            case game_1.Direction.LEFT:
-                                offsetX = -0;
-                                break;
-                            case game_1.Direction.RIGHT:
-                                offsetX = 0;
-                        }
-                        this.castTintAtAngle(i, player.x + 0.5 + offsetX, player.y + 0.5 + offsetY, 
-                        /*
-                        Math.min(
-                          Math.max(
-                            player.sightRadius - this.depth + 2,
-                            Player.minSightRadius,
-                          ),
-                          10,
-                        ),
-                        */
-                        levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, // RGB color in sRGB
-                        lightBrightness *
-                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
                     }
                 }
             }
@@ -49497,6 +49564,72 @@ class Room {
             // Bump lighting update version so blur cache can detect changes
             this.lastLightingUpdate++;
             this.isUpdatingLighting = false;
+        };
+        this.castDirectionalPlayerLight = (player, facingAngle, fovDegrees, angleStep, lightColor, lightBrightness) => {
+            const originX = player.x + 0.5;
+            const originY = player.y + 0.5;
+            const halfFov = fovDegrees / 2;
+            const span = Math.max(fovDegrees, angleStep);
+            for (let offset = 0; offset <= span; offset += angleStep) {
+                const angle = this.normalizeDegrees(facingAngle - halfFov + offset);
+                this.castTintAtAngle(angle, originX, originY, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
+            }
+        };
+        this.getPlayerLightingFov = (player) => {
+            if (gameConstants_1.GameConstants.NARROWED_LIGHTING_FOV &&
+                this.underwater &&
+                !player.dead) {
+                return gameConstants_1.GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES;
+            }
+            return gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+        };
+        this.getPlayerFacingAngle = (player) => {
+            const mouseAngle = this.getMouseFacingAngle(player);
+            if (mouseAngle !== null)
+                return mouseAngle;
+            return this.directionToDegrees(player.direction);
+        };
+        this.getMouseFacingAngle = (player) => {
+            const inputHandler = player.inputHandler;
+            if (!inputHandler ||
+                inputHandler.mostRecentMoveInput !== "mouse" ||
+                gameConstants_1.GameConstants.isMobile ||
+                !gameConstants_1.GameConstants.MOVE_WITH_MOUSE) {
+                return null;
+            }
+            const angleDegrees = this.normalizeDegrees((inputHandler.mouseAngle() * 180) / Math.PI);
+            const octant = this.getOctantFromAngle(angleDegrees);
+            return octant * 45;
+        };
+        this.directionToDegrees = (direction) => {
+            switch (direction) {
+                case game_1.Direction.RIGHT:
+                    return 0;
+                case game_1.Direction.DOWN_RIGHT:
+                    return 45;
+                case game_1.Direction.DOWN:
+                    return 90;
+                case game_1.Direction.DOWN_LEFT:
+                    return 135;
+                case game_1.Direction.LEFT:
+                    return 180;
+                case game_1.Direction.UP_LEFT:
+                    return 225;
+                case game_1.Direction.UP:
+                    return 270;
+                case game_1.Direction.UP_RIGHT:
+                    return 315;
+                default:
+                    return null;
+            }
+        };
+        this.getOctantFromAngle = (angle) => {
+            const normalized = this.normalizeDegrees(angle);
+            return Math.floor((normalized + 22.5) / 45) % 8;
+        };
+        this.normalizeDegrees = (angle) => {
+            const normalized = angle % 360;
+            return normalized < 0 ? normalized + 360 : normalized;
         };
         this.updateLightSources = (lightSource, remove) => {
             if (lightSource &&
@@ -53953,9 +54086,13 @@ class Populator {
         this.addRectangularTileArea(room, rand, chasm_1.Chasm);
     }
     addMagmaPools(room, rand) {
+        if (room.underwater)
+            return;
         this.addRectangularTileArea(room, rand, magmaPool_1.MagmaPool);
     }
     addPools(room, rand) {
+        if (room.underwater)
+            return;
         this.addRectangularTileArea(room, rand, pool_1.Pool);
     }
     addSpikeTraps(room, numSpikes, rand) {
@@ -54127,12 +54264,14 @@ class Populator {
      */
     addSpecialEnemies(room) {
         // Spawner logic - now based on room area and probability
-        if (room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
-            this.addSpawners(room, random_1.Random.rand);
-        }
-        // Occultist logic - now based on room area and probability
-        if (room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
-            this.addOccultists(room, random_1.Random.rand);
+        if (!room.underwater) {
+            if (room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
+                this.addSpawners(room, random_1.Random.rand);
+            }
+            // Occultist logic - now based on room area and probability
+            if (room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
+                this.addOccultists(room, random_1.Random.rand);
+            }
         }
     }
     // === ENEMY POOL GENERATION LOGIC (moved from Level) ===

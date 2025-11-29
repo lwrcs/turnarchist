@@ -1201,10 +1201,12 @@ export class Populator {
   }
 
   private addMagmaPools(room: Room, rand: () => number) {
+    if (room.underwater) return;
     this.addRectangularTileArea(room, rand, MagmaPool);
   }
 
   private addPools(room: Room, rand: () => number) {
+    if (room.underwater) return;
     this.addRectangularTileArea(room, rand, Pool);
   }
 
@@ -1422,13 +1424,15 @@ export class Populator {
    */
   private addSpecialEnemies(room: Room) {
     // Spawner logic - now based on room area and probability
-    if (room.depth > GameplaySettings.SPAWNER_MIN_DEPTH) {
-      this.addSpawners(room, Random.rand);
-    }
+    if (!room.underwater) {
+      if (room.depth > GameplaySettings.SPAWNER_MIN_DEPTH) {
+        this.addSpawners(room, Random.rand);
+      }
 
-    // Occultist logic - now based on room area and probability
-    if (room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH) {
-      this.addOccultists(room, Random.rand);
+      // Occultist logic - now based on room area and probability
+      if (room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH) {
+        this.addOccultists(room, Random.rand);
+      }
     }
   }
 
