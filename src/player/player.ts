@@ -33,7 +33,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { Room } from "../room/room";
 import { BubbleImageParticle } from "../particle/imageParticle";
 import { Random } from "../utility/random";
-import { OxygenLine } from "./oxygenLine";
+import { AnchorOptions, OxygenLine } from "./oxygenLine";
 
 export enum PlayerDirection {
   DOWN,
@@ -232,21 +232,34 @@ export class Player extends Drawable {
     return this.oxygenLine;
   };
 
-  attachOxygenLine = (anchorRoom: Room, x: number, y: number) => {
-    this.oxygenLine.attach(anchorRoom, x, y);
-    this.oxygenLine.attachStartToPlayer();
+  attachOxygenLine = (
+    anchorRoom: Room,
+    x: number,
+    y: number,
+    options?: AnchorOptions,
+  ) => {
+    this.oxygenLine.attach(anchorRoom, x, y, options);
   };
 
   detachOxygenLine = () => {
     this.oxygenLine.detach();
   };
 
-  anchorOxygenLineToTile = (room: Room, x: number, y: number) => {
-    this.oxygenLine.attachStartToTile(room, x, y);
+  anchorOxygenLineToTile = (
+    room: Room,
+    x: number,
+    y: number,
+    options?: AnchorOptions,
+  ) => {
+    this.oxygenLine.attachStartToTile(room, x, y, options);
   };
 
-  anchorOxygenLineToPlayer = () => {
-    this.oxygenLine.attachStartToPlayer();
+  anchorOxygenLineToPlayer = (angle?: number) => {
+    this.oxygenLine.attachStartToPlayer(angle);
+  };
+
+  recordOxygenDoorTraversal = (exitDoor: Door, entryDoor: Door) => {
+    this.oxygenLine.recordDoorTraversal(exitDoor, entryDoor);
   };
 
   getJumpY = (): number => {

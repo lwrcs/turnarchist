@@ -94,7 +94,10 @@ export class DownLadder extends Passageway {
         this.sidePathManager.switchToPathBeforeTransition(this);
         for (const i in this.game.players) {
           const pl = this.game.players[i];
-          pl.anchorOxygenLineToTile(this.room, this.x, this.y);
+          pl.anchorOxygenLineToTile(this.room, this.x, this.y, {
+            kind: "downLadder",
+            angle: Math.PI / 2,
+          });
           pl.getOxygenLine()?.update(true);
           this.game.changeLevelThroughLadder(this.game.players[i], this);
         }

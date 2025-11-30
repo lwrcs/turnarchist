@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.03615d4c4de25539580e.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.970a8bc9190a12249dae.png";
+module.exports = __webpack_require__.p + "assets/mobset.402070b8d44b09b19b64.png";
 
 /***/ }),
 
@@ -24690,6 +24690,14 @@ class Game {
                     room.drawOverShade(delta);
                 }
             }
+            for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
+                const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
+                if (shouldDrawTop) {
+                    room.drawTopBeams(delta);
+                }
+            }
         };
         this.drawStartScreen = (delta) => {
             let startString = "Welcome to Turnarchist";
@@ -37776,6 +37784,8 @@ class WeaponPoison extends usable_1.Usable {
         this.tileY = 4;
         this.offsetY = -0.3;
         this.canUseOnOther = true;
+        this.name = WeaponPoison.itemName;
+        this.description = "Can be applied to weapons to deal poison damage";
     }
 }
 exports.WeaponPoison = WeaponPoison;
@@ -44752,6 +44762,7 @@ exports.XPPopup = XPPopup;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OxygenLine = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 class OxygenLine {
@@ -44761,30 +44772,115 @@ class OxygenLine {
         this.beamRoomMap = new Map();
         this.totalLength = 0;
         this.connected = false;
+        this.doorHistory = [];
+        this.disconnected = false;
         this.startAnchor = { mode: "player" };
         this.player = player;
     }
-    attach(anchorRoom, x, y) {
+    attach(anchorRoom, x, y, options) {
+        this.resetDoorHistory();
+        this.disconnected = false;
+        this.disconnectTile = undefined;
         this.anchor = {
             room: anchorRoom,
             roomGID: anchorRoom?.globalId ?? "",
             x,
             y,
+            kind: options?.kind,
+            angle: options?.angle,
         };
         this.update(true);
     }
-    attachStartToPlayer() {
-        this.startAnchor = { mode: "player" };
+    attachStartToPlayer(angle) {
+        this.startAnchor = {
+            mode: "player",
+            angle: angle ?? -Math.PI / 2,
+        };
     }
-    attachStartToTile(room, x, y) {
-        this.startAnchor = { mode: "tile", room, x, y };
+    attachStartToTile(room, x, y, options) {
+        this.startAnchor = {
+            mode: "tile",
+            room,
+            x,
+            y,
+            kind: options?.kind,
+            angle: options?.angle,
+        };
     }
     detach() {
         this.anchor = undefined;
         this.totalLength = 0;
         this.connected = false;
+        this.disconnected = false;
+        this.disconnectTile = undefined;
         this.segmentsByRoom.clear();
+        this.resetDoorHistory();
         this.clearBeams();
+    }
+    recordDoorTraversal(exitDoor, entryDoor) {
+        if (!this.anchor || !exitDoor || !entryDoor)
+            return;
+        const currentRoom = this.player.getRoom();
+        if (!currentRoom || !currentRoom.underwater)
+            return;
+        if (this.disconnected)
+            return;
+        if (this.anchor.room === entryDoor.room) {
+            this.resetDoorHistory();
+            return;
+        }
+        const traversal = { from: exitDoor, to: entryDoor };
+        this.doorHistory.push(traversal);
+    }
+    resetDoorHistory() {
+        this.doorHistory = [];
+    }
+    handleDisconnection() {
+        const room = this.player.getRoom();
+        if (!room)
+            return;
+        const dropX = this.player.lastX ?? this.player.x;
+        const dropY = this.player.lastY ?? this.player.y;
+        const pos = { x: dropX, y: dropY };
+        this.disconnected = true;
+        this.connected = false;
+        this.disconnectTile = {
+            roomGID: room?.globalId ?? "",
+            x: pos.x,
+            y: pos.y,
+        };
+        const lastTraversal = this.doorHistory[this.doorHistory.length - 1];
+        if (lastTraversal) {
+            const fromDoor = lastTraversal.from;
+            const fromRoomId = fromDoor.room?.globalId;
+            if (fromDoor.room &&
+                fromRoomId === this.disconnectTile.roomGID &&
+                fromDoor.x === pos.x &&
+                fromDoor.y === pos.y) {
+                this.doorHistory.pop();
+            }
+        }
+        this.attachStartToTile(room, pos.x, pos.y, {
+            kind: "player",
+            angle: Math.PI / 2,
+        });
+    }
+    tryReconnect() {
+        if (!this.disconnectTile)
+            return false;
+        const room = this.player.getRoom();
+        if (!room)
+            return false;
+        if (room?.globalId !== this.disconnectTile.roomGID)
+            return false;
+        if (this.player.x !== this.disconnectTile.x ||
+            this.player.y !== this.disconnectTile.y) {
+            return false;
+        }
+        this.disconnected = false;
+        this.disconnectTile = undefined;
+        this.attachStartToPlayer(-Math.PI / 2);
+        return true;
     }
     isAttached() {
         return !!this.anchor;
@@ -44800,6 +44896,12 @@ class OxygenLine {
         return this.totalLength;
     }
     update(force = false) {
+        if (this.disconnected) {
+            if (!this.tryReconnect()) {
+                this.connected = false;
+                return;
+            }
+        }
         if (!this.anchor || !this.startAnchor) {
             this.clearBeams();
             this.connected = false;
@@ -44827,9 +44929,11 @@ class OxygenLine {
             this.clearBeams();
             return;
         }
-        this.connected =
-            this.anchor !== undefined &&
-                this.totalLength <= gameplaySettings_1.GameplaySettings.OXYGEN_LINE_MAX_LENGTH;
+        if (this.totalLength > gameplaySettings_1.GameplaySettings.OXYGEN_LINE_MAX_LENGTH) {
+            this.handleDisconnection();
+            return;
+        }
+        this.connected = true;
         if (force || rebuildSucceeded) {
             this.syncBeamsWithSegments();
         }
@@ -44839,54 +44943,39 @@ class OxygenLine {
             return false;
         const anchorRoom = this.anchor.room;
         const newSegments = new Map();
-        let totalLength = 0;
-        const addSegments = (room, segments, length) => {
+        const addSegments = (room, segments) => {
             if (segments.length > 0) {
                 const key = room?.globalId ?? room.id?.toString() ?? "";
                 const existing = newSegments.get(key) ?? [];
                 existing.push(...segments);
                 newSegments.set(key, existing);
             }
-            totalLength += length;
         };
         const startPoint = this.resolveStartEndpoint(currentRoom);
-        if (currentRoom === anchorRoom) {
-            const result = this.buildRoomSegments(currentRoom, startPoint, this.anchorEndpoint());
-            addSegments(currentRoom, result.segments, result.length);
+        const anchorEndpoint = this.anchorEndpoint();
+        let pathStackUsed = [];
+        if (currentRoom === anchorRoom && this.doorHistory.length === 0) {
+            const result = this.buildRoomSegments(currentRoom, startPoint, anchorEndpoint);
+            addSegments(currentRoom, result.segments);
         }
         else {
-            const doorPath = currentRoom.findShortestDoorPathTo(anchorRoom, true) ?? null;
-            if (!doorPath) {
-                return false;
+            const effectiveStack = this.getEffectiveDoorStack();
+            let success = false;
+            if (effectiveStack.length > 0) {
+                success = this.buildSegmentsFromDoorHistory(currentRoom, anchorRoom, startPoint, addSegments, effectiveStack);
+                if (success)
+                    pathStackUsed = effectiveStack.slice();
             }
-            let roomCursor = currentRoom;
-            let cursorPoint = startPoint;
-            for (const door of doorPath) {
-                const doorTarget = {
-                    room: roomCursor,
-                    x: door.x,
-                    y: door.y,
-                    attachment: "tile",
-                };
-                const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
-                addSegments(roomCursor, chunk.segments, chunk.length);
-                const linkedDoor = door.linkedDoor;
-                if (!linkedDoor || !linkedDoor.room) {
+            if (!success) {
+                const bfsStack = this.buildSegmentsViaBfs(currentRoom, anchorRoom, startPoint, addSegments);
+                if (!bfsStack)
                     return false;
-                }
-                roomCursor = linkedDoor.room;
-                cursorPoint = {
-                    room: roomCursor,
-                    x: linkedDoor.x,
-                    y: linkedDoor.y,
-                    attachment: "tile",
-                };
+                pathStackUsed = bfsStack.slice();
+                this.doorHistory = bfsStack.slice();
             }
-            const finalChunk = this.buildRoomSegments(roomCursor, cursorPoint, this.anchorEndpoint());
-            addSegments(roomCursor, finalChunk.segments, finalChunk.length);
         }
         this.segmentsByRoom = newSegments;
-        this.totalLength = totalLength;
+        this.totalLength = this.computeLengthFromDoorHistory(startPoint, anchorEndpoint, pathStackUsed);
         return true;
     }
     resolveStartEndpoint(room) {
@@ -44896,6 +44985,8 @@ class OxygenLine {
                 x: this.player.x,
                 y: this.player.y,
                 attachment: "player",
+                kind: "player",
+                angle: this.startAnchor.angle,
             };
         }
         return {
@@ -44903,16 +44994,11 @@ class OxygenLine {
             x: this.startAnchor.x,
             y: this.startAnchor.y,
             attachment: "tile",
+            kind: this.startAnchor.kind,
+            angle: this.startAnchor.angle,
         };
     }
     buildRoomSegments(room, start, end) {
-        let path = [];
-        try {
-            path = room.buildTilePathPositions(start.x, start.y, end.x, end.y) ?? [];
-        }
-        catch {
-            path = [];
-        }
         return {
             segments: [
                 {
@@ -44921,7 +45007,6 @@ class OxygenLine {
                     end,
                 },
             ],
-            length: path.length,
         };
     }
     syncBeamsWithSegments() {
@@ -44947,6 +45032,7 @@ class OxygenLine {
                 const beam = existingBeams[idx];
                 if (!beam)
                     return;
+                beam.setAttachmentControls(this.buildAttachmentControl(segment.start), this.buildAttachmentControl(segment.end));
                 const start = this.resolveEndpoint(segment.start);
                 const end = this.resolveEndpoint(segment.end);
                 beam.setTarget(start.x, start.y, end.x, end.y);
@@ -44971,6 +45057,10 @@ class OxygenLine {
         beam.compositeOperation = "source-over";
         beam.startAttachment = segment.start.attachment;
         beam.endAttachment = segment.end.attachment;
+        beam.setAttachmentControls(this.buildAttachmentControl(segment.start), this.buildAttachmentControl(segment.end));
+        beam.setHostRoom(segment.room);
+        beam.drawOnTop = true;
+        beam.setHostRoom(segment.room);
         beam.setPhysics(0.15, // gravity
         0.35, // motion influence
         0.05, // turbulence
@@ -45024,10 +45114,187 @@ class OxygenLine {
             x: this.anchor.x,
             y: this.anchor.y,
             attachment: "tile",
+            kind: this.anchor.kind,
+            angle: this.anchor.angle,
         };
+    }
+    buildAttachmentControl(endpoint) {
+        if (endpoint.attachment === "player") {
+            return {
+                angle: endpoint.angle ?? -Math.PI / 2,
+                weight: 1,
+                influence: 1,
+                influenceDistance: 1.5,
+            };
+        }
+        if (endpoint.angle === undefined)
+            return undefined;
+        const defaults = this.getAttachmentDefaults(endpoint.kind);
+        return {
+            angle: endpoint.angle,
+            weight: defaults.weight,
+            influence: defaults.influence,
+            influenceDistance: defaults.influenceDistance,
+            lengthScale: defaults.lengthScale,
+        };
+    }
+    getAttachmentDefaults(kind) {
+        switch (kind) {
+            case "door":
+                return {
+                    weight: 1,
+                    influence: 1,
+                    influenceDistance: 2,
+                    lengthScale: 1,
+                };
+            case "upLadder":
+                return {
+                    weight: 1,
+                    influence: 3,
+                    influenceDistance: 5,
+                    lengthScale: 1,
+                };
+            case "downLadder":
+                return {
+                    weight: 0.6,
+                    influence: 3,
+                    influenceDistance: 5,
+                    lengthScale: 1,
+                };
+            case "oxygenNode":
+                return {
+                    weight: 0.55,
+                    influence: 2,
+                    influenceDistance: 5,
+                    lengthScale: 1,
+                };
+            default:
+                return {
+                    weight: 0.5,
+                    influence: 2,
+                    influenceDistance: 2,
+                    lengthScale: 1,
+                };
+        }
+    }
+    getDoorAngle(door) {
+        switch (door.doorDir) {
+            case game_1.Direction.UP:
+                return Math.PI / 2;
+            case game_1.Direction.DOWN:
+                return -Math.PI / 2;
+            case game_1.Direction.LEFT:
+                return Math.PI;
+            case game_1.Direction.RIGHT:
+                return 0;
+            default:
+                return 0;
+        }
     }
     samePosition(a, b) {
         return a.x === b.x && a.y === b.y;
+    }
+    computeLengthFromDoorHistory(start, anchor, doorStack) {
+        let length = 0;
+        let currentX = start.x;
+        let currentY = start.y;
+        if (doorStack.length === 0) {
+            return (length +
+                this.distanceBetweenPoints(currentX, currentY, anchor.x, anchor.y));
+        }
+        for (let i = doorStack.length - 1; i >= 0; i--) {
+            const traversal = doorStack[i];
+            const entryDoor = traversal.to;
+            length += this.distanceBetweenPoints(currentX, currentY, entryDoor.x, entryDoor.y);
+            const exitDoor = traversal.from;
+            currentX = exitDoor.x;
+            currentY = exitDoor.y;
+        }
+        length += this.distanceBetweenPoints(currentX, currentY, anchor.x, anchor.y);
+        return length;
+    }
+    distanceBetweenPoints(x1, y1, x2, y2) {
+        return Math.abs(x2 - x1) + Math.abs(y2 - y1);
+    }
+    getEffectiveDoorStack() {
+        return this.doorHistory.slice();
+    }
+    buildSegmentsFromDoorHistory(currentRoom, anchorRoom, startPoint, addSegments, doorStack) {
+        if (doorStack.length === 0)
+            return false;
+        let roomCursor = currentRoom;
+        let cursorPoint = startPoint;
+        for (let i = doorStack.length - 1; i >= 0; i--) {
+            const traversal = doorStack[i];
+            const entryDoor = traversal.to;
+            if (entryDoor.room !== roomCursor) {
+                return false;
+            }
+            const doorTarget = {
+                room: roomCursor,
+                x: entryDoor.x,
+                y: entryDoor.y,
+                attachment: "tile",
+                kind: "door",
+                angle: this.getDoorAngle(entryDoor),
+            };
+            const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
+            addSegments(roomCursor, chunk.segments);
+            const fromDoor = traversal.from;
+            if (!fromDoor || !fromDoor.room)
+                return false;
+            roomCursor = fromDoor.room;
+            cursorPoint = {
+                room: roomCursor,
+                x: fromDoor.x,
+                y: fromDoor.y,
+                attachment: "tile",
+                kind: "door",
+                angle: this.getDoorAngle(fromDoor),
+            };
+        }
+        const anchorTarget = this.anchorEndpoint();
+        if (roomCursor !== anchorTarget.room)
+            return false;
+        const finalChunk = this.buildRoomSegments(roomCursor, cursorPoint, anchorTarget);
+        addSegments(roomCursor, finalChunk.segments);
+        return true;
+    }
+    buildSegmentsViaBfs(startRoom, anchorRoom, startPoint, addSegments) {
+        const doorPath = startRoom.findShortestDoorPathTo(anchorRoom, true) ?? null;
+        if (!doorPath)
+            return null;
+        let roomCursor = startRoom;
+        let cursorPoint = startPoint;
+        const traversals = [];
+        for (const door of doorPath) {
+            const doorTarget = {
+                room: roomCursor,
+                x: door.x,
+                y: door.y,
+                attachment: "tile",
+                kind: "door",
+                angle: this.getDoorAngle(door),
+            };
+            const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
+            addSegments(roomCursor, chunk.segments);
+            const linkedDoor = door.linkedDoor;
+            if (!linkedDoor || !linkedDoor.room)
+                return null;
+            traversals.push({ from: door, to: linkedDoor });
+            roomCursor = linkedDoor.room;
+            cursorPoint = {
+                room: roomCursor,
+                x: linkedDoor.x,
+                y: linkedDoor.y,
+                attachment: "tile",
+                kind: "door",
+                angle: this.getDoorAngle(linkedDoor),
+            };
+        }
+        const finalChunk = this.buildRoomSegments(roomCursor, cursorPoint, this.anchorEndpoint());
+        addSegments(roomCursor, finalChunk.segments);
+        return traversals;
     }
 }
 exports.OxygenLine = OxygenLine;
@@ -45117,18 +45384,20 @@ class Player extends drawable_1.Drawable {
         this.getOxygenLine = () => {
             return this.oxygenLine;
         };
-        this.attachOxygenLine = (anchorRoom, x, y) => {
-            this.oxygenLine.attach(anchorRoom, x, y);
-            this.oxygenLine.attachStartToPlayer();
+        this.attachOxygenLine = (anchorRoom, x, y, options) => {
+            this.oxygenLine.attach(anchorRoom, x, y, options);
         };
         this.detachOxygenLine = () => {
             this.oxygenLine.detach();
         };
-        this.anchorOxygenLineToTile = (room, x, y) => {
-            this.oxygenLine.attachStartToTile(room, x, y);
+        this.anchorOxygenLineToTile = (room, x, y, options) => {
+            this.oxygenLine.attachStartToTile(room, x, y, options);
         };
-        this.anchorOxygenLineToPlayer = () => {
-            this.oxygenLine.attachStartToPlayer();
+        this.anchorOxygenLineToPlayer = (angle) => {
+            this.oxygenLine.attachStartToPlayer(angle);
+        };
+        this.recordOxygenDoorTraversal = (exitDoor, entryDoor) => {
+            this.oxygenLine.recordDoorTraversal(exitDoor, entryDoor);
         };
         this.getJumpY = () => {
             return this.renderer?.getJumpOffset?.() ?? 0;
@@ -47731,11 +48000,14 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 class BeamEffect extends projectile_1.Projectile {
     constructor(x1, y1, x2, y2, parent) {
         super(parent, x1, y1);
         this.active = true;
         this.time = 0;
+        this.attachmentInfluence = [];
+        this.drawOnTop = false;
         this.alpha = 1;
         this.gravity = BeamEffect.GRAVITY;
         this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
@@ -47755,7 +48027,13 @@ class BeamEffect extends projectile_1.Projectile {
         };
         this.draw = (delta) => {
             this.drawableY = this.y - 0.01;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation);
+            const skipDrawing = this.drawOnTop === true;
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, skipDrawing, true);
+        };
+        this.drawTopLayer = (delta) => {
+            if (!this.drawOnTop)
+                return;
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, false, false);
         };
         const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -47772,6 +48050,141 @@ class BeamEffect extends projectile_1.Projectile {
         this.prevEndY = endY;
         this.color = "cyan";
         this.compositeOperation = "source-over";
+    }
+    applyAttachmentControl(isStart, anchorX, anchorY, segmentLength) {
+        const control = isStart ? this.startControl : this.endControl;
+        if (!control)
+            return;
+        const dirX = Math.cos(control.angle);
+        const dirY = Math.sin(control.angle);
+        const baseWeight = this.clamp01(control.weight ?? 0.6);
+        const scale = control.lengthScale ?? 1;
+        const influenceTiles = control.influenceDistance ??
+            (control.influence !== undefined ? control.influence : 3);
+        const influenceDistancePx = influenceTiles * gameConstants_1.GameConstants.TILESIZE;
+        if (influenceDistancePx <= 0)
+            return;
+        const maxSegments = Math.min(this.points.length - 2, Math.max(1, Math.floor(influenceDistancePx / Math.max(segmentLength, 1e-4))));
+        for (let i = 1; i <= maxSegments; i++) {
+            const idx = isStart ? i : this.points.length - 1 - i;
+            if (idx <= 0 || idx >= this.points.length - 1)
+                continue;
+            const distanceAlong = segmentLength * i;
+            const ratio = Math.min(1, distanceAlong / influenceDistancePx);
+            const falloff = Math.pow(1 - ratio, 2);
+            const weight = baseWeight * falloff;
+            if (weight <= 0)
+                continue;
+            const targetX = anchorX + dirX * distanceAlong * scale;
+            const targetY = anchorY + dirY * distanceAlong * scale;
+            const prevInfluence = this.attachmentInfluence[idx] ?? 0;
+            if (weight <= prevInfluence)
+                continue;
+            this.attachmentInfluence[idx] = weight;
+            this.points[idx].x = this.lerp(this.points[idx].x, targetX, weight);
+            this.points[idx].y = this.lerp(this.points[idx].y, targetY, weight);
+        }
+    }
+    clamp01(value) {
+        if (value < 0)
+            return 0;
+        if (value > 1)
+            return 1;
+        return value;
+    }
+    lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+    resetAttachmentInfluence() {
+        if (this.attachmentInfluence.length !== this.points.length) {
+            this.attachmentInfluence = new Array(this.points.length).fill(0);
+        }
+        else {
+            this.attachmentInfluence.fill(0);
+        }
+    }
+    getBrightnessAt(px, py) {
+        if (!this.hostRoom)
+            return 1;
+        const tileX = Math.floor(px / gameConstants_1.GameConstants.TILESIZE);
+        const tileY = Math.floor(py / gameConstants_1.GameConstants.TILESIZE);
+        let bestVis = this.sampleVisibility(this.hostRoom, tileX, tileY);
+        const door = this.hostRoom.roomArray?.[tileX]?.[tileY];
+        if (door instanceof door_1.Door && door.linkedDoor?.room) {
+            const linkedRoom = door.linkedDoor.room;
+            const linkedVis = this.sampleVisibility(linkedRoom, door.linkedDoor.x, door.linkedDoor.y);
+            bestVis = Math.min(bestVis, linkedVis);
+        }
+        return 1 - bestVis;
+    }
+    sampleVisibility(room, x, y) {
+        const visRow = room.softVis?.[x];
+        if (!visRow)
+            return 1;
+        const vis = visRow[y];
+        if (vis === undefined)
+            return 1;
+        return Math.max(0, Math.min(1, vis));
+    }
+    getColorWithBrightness(baseColor, brightness, alpha) {
+        const comps = this.getColorComponents(baseColor);
+        const clampB = this.clamp01(brightness);
+        const r = Math.round(comps.r * clampB);
+        const g = Math.round(comps.g * clampB);
+        const b = Math.round(comps.b * clampB);
+        const finalAlpha = comps.a * alpha;
+        return `rgba(${r},${g},${b},${finalAlpha})`;
+    }
+    getColorComponents(color) {
+        if (this.colorCache && this.colorCache.source === color) {
+            return this.colorCache;
+        }
+        let r = 135;
+        let g = 206;
+        let b = 235;
+        let a = 1;
+        const normalized = (color || "").trim().toLowerCase();
+        if (normalized.startsWith("#")) {
+            const hex = normalized.slice(1);
+            if (hex.length === 3) {
+                r = parseInt(hex[0] + hex[0], 16);
+                g = parseInt(hex[1] + hex[1], 16);
+                b = parseInt(hex[2] + hex[2], 16);
+            }
+            else if (hex.length === 6 || hex.length === 8) {
+                r = parseInt(hex.slice(0, 2), 16);
+                g = parseInt(hex.slice(2, 4), 16);
+                b = parseInt(hex.slice(4, 6), 16);
+                if (hex.length === 8) {
+                    a = parseInt(hex.slice(6, 8), 16) / 255;
+                }
+            }
+        }
+        else if (normalized.startsWith("rgba")) {
+            const parts = normalized
+                .replace("rgba", "")
+                .replace("(", "")
+                .replace(")", "")
+                .split(",")
+                .map((p) => p.trim());
+            r = parseFloat(parts[0]) || r;
+            g = parseFloat(parts[1]) || g;
+            b = parseFloat(parts[2]) || b;
+            a = parseFloat(parts[3]) || a;
+        }
+        else if (normalized.startsWith("rgb")) {
+            const parts = normalized
+                .replace("rgb", "")
+                .replace("(", "")
+                .replace(")", "")
+                .split(",")
+                .map((p) => p.trim());
+            r = parseFloat(parts[0]) || r;
+            g = parseFloat(parts[1]) || g;
+            b = parseFloat(parts[2]) || b;
+        }
+        this.colorCache = { source: color, r, g, b, a };
+        return this.colorCache;
     }
     /**
      * Sets the physics properties for the beam effect.
@@ -47801,32 +48214,48 @@ class BeamEffect extends projectile_1.Projectile {
         this.iterations = iterations ?? BeamEffect.ITERATIONS;
         this.segments = segments ?? BeamEffect.SEGMENTS;
     }
+    setAttachmentControls(start, end) {
+        this.startControl = start;
+        this.endControl = end;
+    }
+    setHostRoom(room) {
+        this.hostRoom = room;
+    }
     setTarget(x, y, x2, y2) {
         this.x = x;
         this.y = y;
         this.targetX = x2;
         this.targetY = y2;
     }
-    render(x1, y1, x2, y2, color = this.color, lineWidth = 2, delta = 1 / 60, compositeOperation = this.compositeOperation) {
+    render(x1, y1, x2, y2, color = this.color, lineWidth = 2, delta = 1 / 60, compositeOperation = this.compositeOperation, skipDrawing = false, simulate = true) {
         const startX = this.x * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const startY = this.y * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const endX = this.targetX * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const endY = this.targetY * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
-        const startForceX = (startX - this.prevStartX) * this.motionInfluence * delta;
-        const startForceY = (startY - this.prevStartY) * this.motionInfluence * delta;
-        const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
-        const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
-        for (let i = 1; i < 4; i++) {
-            const influence = 1 - i / 4;
-            this.points[i].x += startForceX * influence;
-            this.points[i].y += startForceY * influence;
+        if (simulate) {
+            const startForceX = (startX - this.prevStartX) * this.motionInfluence * delta;
+            const startForceY = (startY - this.prevStartY) * this.motionInfluence * delta;
+            const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+            const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
+            for (let i = 1; i < 4; i++) {
+                const influence = 1 - i / 4;
+                this.points[i].x += startForceX * influence;
+                this.points[i].y += startForceY * influence;
+            }
+            for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
+                const influence = 1 - (this.points.length - i) / 4;
+                this.points[i].x += endForceX * influence;
+                this.points[i].y += endForceY * influence;
+            }
+            this.simulateRope(startX, startY, endX, endY, delta);
         }
-        for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
-            const influence = 1 - (this.points.length - i) / 4;
-            this.points[i].x += endForceX * influence;
-            this.points[i].y += endForceY * influence;
+        if (skipDrawing) {
+            this.prevStartX = startX;
+            this.prevStartY = startY;
+            this.prevEndX = endX;
+            this.prevEndY = endY;
+            return;
         }
-        this.simulateRope(startX, startY, endX, endY, delta);
         const ctx = game_1.Game.ctx;
         ctx.save();
         game_1.Game.ctx.globalCompositeOperation =
@@ -47842,9 +48271,11 @@ class BeamEffect extends projectile_1.Projectile {
             let x = p1.x;
             let y = p1.y;
             for (let step = 0; step <= steps; step++) {
+                const brightness = this.getBrightnessAt(x, y);
+                const adjustedColor = this.getColorWithBrightness(color, brightness, this.alpha);
                 for (let w = 0; w < lineWidth; w++) {
                     for (let h = 0; h < lineWidth; h++) {
-                        ctx.fillStyle = color;
+                        ctx.fillStyle = adjustedColor;
                         ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
                     }
                 }
@@ -47916,6 +48347,9 @@ class BeamEffect extends projectile_1.Projectile {
             }
             const segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
                 (this.segments - 1);
+            this.resetAttachmentInfluence();
+            this.applyAttachmentControl(true, startX, startY, segmentLength);
+            this.applyAttachmentControl(false, endX, endY, segmentLength);
             for (let constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
                 for (let i = 0; i < this.points.length - 1; i++) {
                     const p1 = this.points[i];
@@ -49500,7 +49934,7 @@ class Room {
                 }
             }
             player.moveSnap(x, y);
-            player.anchorOxygenLineToPlayer();
+            player.anchorOxygenLineToPlayer(-Math.PI / 2);
             this.onEnterRoom(player);
             this.playMusic();
             const ladderUsed = this.game.transitioningLadder;
@@ -49508,7 +49942,11 @@ class Room {
                 if (this.underwater) {
                     const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
                     if (anchorCoords) {
-                        player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y);
+                        player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
+                            kind: "upLadder",
+                            angle: Math.PI / 2,
+                        });
+                        player.anchorOxygenLineToPlayer(-Math.PI / 2);
                     }
                     else {
                         player.detachOxygenLine();
@@ -49547,7 +49985,7 @@ class Room {
                 player.moveNoSmooth(door.x + side, door.y);
             }
             this.onEnterRoom(player);
-            player.anchorOxygenLineToPlayer();
+            player.anchorOxygenLineToPlayer(-Math.PI / 2);
             if (!this.underwater) {
                 player.detachOxygenLine();
             }
@@ -51119,10 +51557,14 @@ class Room {
                 for (const projectile of this.projectiles) {
                     if (projectile instanceof beamEffect_1.BeamEffect &&
                         projectile.type === "oxygen-line" &&
-                        projectile.parent === player &&
-                        projectile.startAttachment === "player") {
-                        projectile.x = startX;
-                        projectile.y = startY;
+                        projectile.parent === player) {
+                        const startIsPlayer = projectile.startAttachment === "player" ||
+                            this.isNear(projectile.x, projectile.y, startX, startY);
+                        if (startIsPlayer) {
+                            projectile.startAttachment = "player";
+                            projectile.x = startX;
+                            projectile.y = startY;
+                        }
                     }
                 }
             }
@@ -51221,6 +51663,21 @@ class Room {
             game_1.Game.fillText(this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(this.name).width / 2, 5);
             game_1.Game.ctx.font = old;
             game_1.Game.ctx.restore();
+        };
+        this.drawTopBeams = (delta) => {
+            for (const projectile of this.projectiles) {
+                if (projectile instanceof beamEffect_1.BeamEffect && projectile.drawOnTop) {
+                    projectile.drawTopLayer(delta);
+                }
+            }
+        };
+        this.hasTopBeams = () => {
+            for (const projectile of this.projectiles) {
+                if (projectile instanceof beamEffect_1.BeamEffect && projectile.drawOnTop) {
+                    return true;
+                }
+            }
+            return false;
         };
         // src/room.ts
         this.createWallMask = () => {
@@ -52497,6 +52954,9 @@ class Room {
             r = 0;
         // Apply StackBlur
         //StackBlur.canvasRGBA(canvas, 0, 0, width, height, Math.floor(r / 2));
+    }
+    isNear(x1, y1, x2, y2, epsilon = 0.05) {
+        return Math.abs(x1 - x2) <= epsilon && Math.abs(y1 - y2) <= epsilon;
     }
     //calculate wall info for proper wall rendering
     calculateWallInfo() {
@@ -56801,7 +57261,12 @@ class Door extends passageway_1.Passageway {
             }
             this.opened = true;
             this.linkedDoor.opened = true;
-            player.anchorOxygenLineToTile(this.room, this.x, this.y);
+            const doorAngle = this.getAnchorAngle();
+            player.anchorOxygenLineToTile(this.room, this.x, this.y, {
+                kind: "door",
+                angle: doorAngle,
+            });
+            player.recordOxygenDoorTraversal(this, this.linkedDoor);
             player.getOxygenLine()?.update(true);
             if (this.doorDir === game_1.Direction.UP || this.doorDir === game_1.Direction.DOWN) {
                 this.game.changeLevelThroughDoor(player, this.linkedDoor);
@@ -56928,6 +57393,19 @@ class Door extends passageway_1.Passageway {
                 break;
         }
     }
+    getAnchorAngle() {
+        switch (this.doorDir) {
+            case game_1.Direction.UP:
+                return -Math.PI / 2;
+            case game_1.Direction.DOWN:
+                return Math.PI / 2;
+            case game_1.Direction.LEFT:
+                return Math.PI;
+            case game_1.Direction.RIGHT:
+            default:
+                return 0;
+        }
+    }
 }
 exports.Door = Door;
 
@@ -56987,7 +57465,10 @@ class DownLadder extends passageway_1.Passageway {
                     this.sidePathManager.switchToPathBeforeTransition(this);
                     for (const i in this.game.players) {
                         const pl = this.game.players[i];
-                        pl.anchorOxygenLineToTile(this.room, this.x, this.y);
+                        pl.anchorOxygenLineToTile(this.room, this.x, this.y, {
+                            kind: "downLadder",
+                            angle: Math.PI / 2,
+                        });
                         pl.getOxygenLine()?.update(true);
                         this.game.changeLevelThroughLadder(this.game.players[i], this);
                     }
@@ -57824,7 +58305,10 @@ class UpLadder extends passageway_1.Passageway {
                 if (this.isRope && this.linkedRoom) {
                     this.game.currentPathId = this.linkedRoom.pathId || "main";
                 }
-                player.anchorOxygenLineToTile(this.room, this.x, this.y);
+                player.anchorOxygenLineToTile(this.room, this.x, this.y, {
+                    kind: "upLadder",
+                    angle: Math.PI / 2,
+                });
                 player.getOxygenLine()?.update(true);
                 this.game.changeLevelThroughLadder(player, this);
                 if (exitPos && this.linkedRoom) {

@@ -13,6 +13,8 @@ export class WeaponPoison extends Usable {
     this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
+    this.name = WeaponPoison.itemName;
+    this.description = "Can be applied to weapons to deal poison damage";
   }
 
   onUse = (player: Player) => {

@@ -2054,6 +2054,15 @@ export class Game {
         room.drawOverShade(delta);
       }
     }
+
+    for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
+      const shouldDrawTop =
+        room === this.room || room.active || (room.entered && room.onScreen);
+      if (shouldDrawTop) {
+        room.drawTopBeams(delta);
+      }
+    }
   };
 
   static measureText = (text: string): { width: number; height: number } => {

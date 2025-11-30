@@ -6,6 +6,7 @@ import { Projectile } from "./projectile";
 import { Room } from "../room/room";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import { Door } from "../tile/door";
 
 interface Point {
   x: number;
@@ -15,6 +16,14 @@ interface Point {
   velocityX: number;
   velocityY: number;
   angle: number;
+}
+
+export interface BeamAttachmentControl {
+  angle: number;
+  weight?: number;
+  influence?: number;
+  lengthScale?: number;
+  influenceDistance?: number;
 }
 
 export class BeamEffect extends Projectile {
@@ -69,6 +78,16 @@ export class BeamEffect extends Projectile {
   private prevEndY: number;
   private active: boolean = true;
   private time: number = 0;
+  private attachmentInfluence: number[] = [];
+  private hostRoom?: Room;
+  private colorCache?: {
+    source: string;
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+  };
+  drawOnTop: boolean = false;
   alpha: number = 1;
   targetX: number;
   targetY: number;
@@ -76,6 +95,8 @@ export class BeamEffect extends Projectile {
   compositeOperation: string;
   startAttachment?: "player" | "tile";
   endAttachment?: "player" | "tile";
+  startControl?: BeamAttachmentControl;
+  endControl?: BeamAttachmentControl;
   gravity: number = BeamEffect.GRAVITY;
   motionInfluence: number = BeamEffect.MOTION_INFLUENCE;
   turbulence: number = BeamEffect.TURBULENCE;
@@ -106,6 +127,166 @@ export class BeamEffect extends Projectile {
     this.prevEndY = endY;
     this.color = "cyan";
     this.compositeOperation = "source-over";
+  }
+
+  private applyAttachmentControl(
+    isStart: boolean,
+    anchorX: number,
+    anchorY: number,
+    segmentLength: number,
+  ) {
+    const control = isStart ? this.startControl : this.endControl;
+    if (!control) return;
+
+    const dirX = Math.cos(control.angle);
+    const dirY = Math.sin(control.angle);
+    const baseWeight = this.clamp01(control.weight ?? 0.6);
+    const scale = control.lengthScale ?? 1;
+
+    const influenceTiles =
+      control.influenceDistance ??
+      (control.influence !== undefined ? control.influence : 3);
+    const influenceDistancePx = influenceTiles * GameConstants.TILESIZE;
+
+    if (influenceDistancePx <= 0) return;
+
+    const maxSegments = Math.min(
+      this.points.length - 2,
+      Math.max(
+        1,
+        Math.floor(influenceDistancePx / Math.max(segmentLength, 1e-4)),
+      ),
+    );
+
+    for (let i = 1; i <= maxSegments; i++) {
+      const idx = isStart ? i : this.points.length - 1 - i;
+      if (idx <= 0 || idx >= this.points.length - 1) continue;
+
+      const distanceAlong = segmentLength * i;
+      const ratio = Math.min(1, distanceAlong / influenceDistancePx);
+      const falloff = Math.pow(1 - ratio, 2);
+      const weight = baseWeight * falloff;
+      if (weight <= 0) continue;
+
+      const targetX = anchorX + dirX * distanceAlong * scale;
+      const targetY = anchorY + dirY * distanceAlong * scale;
+
+      const prevInfluence = this.attachmentInfluence[idx] ?? 0;
+      if (weight <= prevInfluence) continue;
+      this.attachmentInfluence[idx] = weight;
+
+      this.points[idx].x = this.lerp(this.points[idx].x, targetX, weight);
+      this.points[idx].y = this.lerp(this.points[idx].y, targetY, weight);
+    }
+  }
+
+  private clamp01(value: number): number {
+    if (value < 0) return 0;
+    if (value > 1) return 1;
+    return value;
+  }
+
+  private lerp(a: number, b: number, t: number): number {
+    return a + (b - a) * t;
+  }
+
+  private resetAttachmentInfluence() {
+    if (this.attachmentInfluence.length !== this.points.length) {
+      this.attachmentInfluence = new Array(this.points.length).fill(0);
+    } else {
+      this.attachmentInfluence.fill(0);
+    }
+  }
+
+  private getBrightnessAt(px: number, py: number): number {
+    if (!this.hostRoom) return 1;
+    const tileX = Math.floor(px / GameConstants.TILESIZE);
+    const tileY = Math.floor(py / GameConstants.TILESIZE);
+
+    let bestVis = this.sampleVisibility(this.hostRoom, tileX, tileY);
+    const door = this.hostRoom.roomArray?.[tileX]?.[tileY];
+    if (door instanceof Door && door.linkedDoor?.room) {
+      const linkedRoom = door.linkedDoor.room;
+      const linkedVis = this.sampleVisibility(
+        linkedRoom,
+        door.linkedDoor.x,
+        door.linkedDoor.y,
+      );
+      bestVis = Math.min(bestVis, linkedVis);
+    }
+
+    return 1 - bestVis;
+  }
+
+  private sampleVisibility(room: Room, x: number, y: number): number {
+    const visRow = room.softVis?.[x];
+    if (!visRow) return 1;
+    const vis = visRow[y];
+    if (vis === undefined) return 1;
+    return Math.max(0, Math.min(1, vis));
+  }
+
+  private getColorWithBrightness(
+    baseColor: string,
+    brightness: number,
+    alpha: number,
+  ): string {
+    const comps = this.getColorComponents(baseColor);
+    const clampB = this.clamp01(brightness);
+    const r = Math.round(comps.r * clampB);
+    const g = Math.round(comps.g * clampB);
+    const b = Math.round(comps.b * clampB);
+    const finalAlpha = comps.a * alpha;
+    return `rgba(${r},${g},${b},${finalAlpha})`;
+  }
+
+  private getColorComponents(color: string) {
+    if (this.colorCache && this.colorCache.source === color) {
+      return this.colorCache;
+    }
+    let r = 135;
+    let g = 206;
+    let b = 235;
+    let a = 1;
+    const normalized = (color || "").trim().toLowerCase();
+    if (normalized.startsWith("#")) {
+      const hex = normalized.slice(1);
+      if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } else if (hex.length === 6 || hex.length === 8) {
+        r = parseInt(hex.slice(0, 2), 16);
+        g = parseInt(hex.slice(2, 4), 16);
+        b = parseInt(hex.slice(4, 6), 16);
+        if (hex.length === 8) {
+          a = parseInt(hex.slice(6, 8), 16) / 255;
+        }
+      }
+    } else if (normalized.startsWith("rgba")) {
+      const parts = normalized
+        .replace("rgba", "")
+        .replace("(", "")
+        .replace(")", "")
+        .split(",")
+        .map((p) => p.trim());
+      r = parseFloat(parts[0]) || r;
+      g = parseFloat(parts[1]) || g;
+      b = parseFloat(parts[2]) || b;
+      a = parseFloat(parts[3]) || a;
+    } else if (normalized.startsWith("rgb")) {
+      const parts = normalized
+        .replace("rgb", "")
+        .replace("(", "")
+        .replace(")", "")
+        .split(",")
+        .map((p) => p.trim());
+      r = parseFloat(parts[0]) || r;
+      g = parseFloat(parts[1]) || g;
+      b = parseFloat(parts[2]) || b;
+    }
+    this.colorCache = { source: color, r, g, b, a };
+    return this.colorCache;
   }
   /**
    * Sets the physics properties for the beam effect.
@@ -148,6 +329,18 @@ export class BeamEffect extends Projectile {
     this.segments = segments ?? BeamEffect.SEGMENTS;
   }
 
+  setAttachmentControls(
+    start?: BeamAttachmentControl,
+    end?: BeamAttachmentControl,
+  ) {
+    this.startControl = start;
+    this.endControl = end;
+  }
+
+  setHostRoom(room: Room) {
+    this.hostRoom = room;
+  }
+
   setTarget(x: number, y: number, x2: number, y2: number) {
     this.x = x;
     this.y = y;
@@ -164,6 +357,8 @@ export class BeamEffect extends Projectile {
     lineWidth: number = 2,
     delta: number = 1 / 60,
     compositeOperation: string = this.compositeOperation,
+    skipDrawing: boolean = false,
+    simulate: boolean = true,
   ): void {
     const startX =
       this.x * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
@@ -174,25 +369,35 @@ export class BeamEffect extends Projectile {
     const endY =
       this.targetY * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
 
-    const startForceX =
-      (startX - this.prevStartX) * this.motionInfluence * delta;
-    const startForceY =
-      (startY - this.prevStartY) * this.motionInfluence * delta;
-    const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
-    const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
+    if (simulate) {
+      const startForceX =
+        (startX - this.prevStartX) * this.motionInfluence * delta;
+      const startForceY =
+        (startY - this.prevStartY) * this.motionInfluence * delta;
+      const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+      const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
 
-    for (let i = 1; i < 4; i++) {
-      const influence = 1 - i / 4;
-      this.points[i].x += startForceX * influence;
-      this.points[i].y += startForceY * influence;
-    }
-    for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
-      const influence = 1 - (this.points.length - i) / 4;
-      this.points[i].x += endForceX * influence;
-      this.points[i].y += endForceY * influence;
+      for (let i = 1; i < 4; i++) {
+        const influence = 1 - i / 4;
+        this.points[i].x += startForceX * influence;
+        this.points[i].y += startForceY * influence;
+      }
+      for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
+        const influence = 1 - (this.points.length - i) / 4;
+        this.points[i].x += endForceX * influence;
+        this.points[i].y += endForceY * influence;
+      }
+
+      this.simulateRope(startX, startY, endX, endY, delta);
     }
 
-    this.simulateRope(startX, startY, endX, endY, delta);
+    if (skipDrawing) {
+      this.prevStartX = startX;
+      this.prevStartY = startY;
+      this.prevEndX = endX;
+      this.prevEndY = endY;
+      return;
+    }
 
     const ctx = Game.ctx;
     ctx.save();
@@ -213,9 +418,15 @@ export class BeamEffect extends Projectile {
       let y = p1.y;
 
       for (let step = 0; step <= steps; step++) {
+        const brightness = this.getBrightnessAt(x, y);
+        const adjustedColor = this.getColorWithBrightness(
+          color,
+          brightness,
+          this.alpha,
+        );
         for (let w = 0; w < lineWidth; w++) {
           for (let h = 0; h < lineWidth; h++) {
-            ctx.fillStyle = color;
+            ctx.fillStyle = adjustedColor;
             ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
           }
         }
@@ -329,6 +540,10 @@ export class BeamEffect extends Projectile {
         Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
         (this.segments - 1);
 
+      this.resetAttachmentInfluence();
+      this.applyAttachmentControl(true, startX, startY, segmentLength);
+      this.applyAttachmentControl(false, endX, endY, segmentLength);
+
       for (
         let constraintIteration = 0;
         constraintIteration < 2;
@@ -370,6 +585,7 @@ export class BeamEffect extends Projectile {
 
   draw = (delta: number) => {
     this.drawableY = this.y - 0.01;
+    const skipDrawing = this.drawOnTop === true;
     this.render(
       this.targetX,
       this.targetY,
@@ -379,6 +595,24 @@ export class BeamEffect extends Projectile {
       2,
       delta,
       this.compositeOperation,
+      skipDrawing,
+      true,
+    );
+  };
+
+  drawTopLayer = (delta: number) => {
+    if (!this.drawOnTop) return;
+    this.render(
+      this.targetX,
+      this.targetY,
+      this.x,
+      this.y,
+      this.color,
+      2,
+      delta,
+      this.compositeOperation,
+      false,
+      false,
     );
   };
 

@@ -1,16 +1,35 @@
+import { Direction } from "../game";
 import { GameplaySettings } from "../game/gameplaySettings";
-import { BeamEffect } from "../projectile/beamEffect";
+import { BeamAttachmentControl, BeamEffect } from "../projectile/beamEffect";
 import type { Room } from "../room/room";
 import type { Door } from "../tile/door";
 import type { Player } from "./player";
 
 type EndpointAttachment = "tile" | "player";
+type OxygenAnchorKind =
+  | "player"
+  | "door"
+  | "upLadder"
+  | "downLadder"
+  | "oxygenNode";
+
+export interface AnchorOptions {
+  kind?: OxygenAnchorKind;
+  angle?: number;
+}
 
 interface SegmentEndpoint {
   room: Room;
   x: number;
   y: number;
   attachment: EndpointAttachment;
+  kind?: OxygenAnchorKind;
+  angle?: number;
+}
+
+interface DoorTraversal {
+  from: Door;
+  to: Door;
 }
 
 interface OxygenSegment {
@@ -24,11 +43,12 @@ interface AnchorPoint {
   roomGID: string;
   x: number;
   y: number;
+  kind?: OxygenAnchorKind;
+  angle?: number;
 }
 
 interface RoomSegmentResult {
   segments: OxygenSegment[];
-  length: number;
 }
 
 export class OxygenLine {
@@ -39,38 +59,138 @@ export class OxygenLine {
   private beamRoomMap: Map<BeamEffect, Room> = new Map();
   private totalLength: number = 0;
   private connected: boolean = false;
+  private doorHistory: DoorTraversal[] = [];
+  private disconnected: boolean = false;
+  private disconnectTile?:
+    | {
+        roomGID: string;
+        x: number;
+        y: number;
+      }
+    | undefined;
   private startAnchor:
-    | { mode: "player" }
-    | { mode: "tile"; room: Room; x: number; y: number } = { mode: "player" };
+    | { mode: "player"; angle?: number }
+    | {
+        mode: "tile";
+        room: Room;
+        x: number;
+        y: number;
+        kind?: OxygenAnchorKind;
+        angle?: number;
+      } = { mode: "player" };
 
   constructor(player: Player) {
     this.player = player;
   }
 
-  attach(anchorRoom: Room, x: number, y: number) {
+  attach(anchorRoom: Room, x: number, y: number, options?: AnchorOptions) {
+    this.resetDoorHistory();
+    this.disconnected = false;
+    this.disconnectTile = undefined;
     this.anchor = {
       room: anchorRoom,
       roomGID: (anchorRoom as any)?.globalId ?? "",
       x,
       y,
+      kind: options?.kind,
+      angle: options?.angle,
     };
     this.update(true);
   }
 
-  attachStartToPlayer() {
-    this.startAnchor = { mode: "player" };
+  attachStartToPlayer(angle?: number) {
+    this.startAnchor = {
+      mode: "player",
+      angle: angle ?? -Math.PI / 2,
+    };
   }
 
-  attachStartToTile(room: Room, x: number, y: number) {
-    this.startAnchor = { mode: "tile", room, x, y };
+  attachStartToTile(room: Room, x: number, y: number, options?: AnchorOptions) {
+    this.startAnchor = {
+      mode: "tile",
+      room,
+      x,
+      y,
+      kind: options?.kind,
+      angle: options?.angle,
+    };
   }
 
   detach() {
     this.anchor = undefined;
     this.totalLength = 0;
     this.connected = false;
+    this.disconnected = false;
+    this.disconnectTile = undefined;
     this.segmentsByRoom.clear();
+    this.resetDoorHistory();
     this.clearBeams();
+  }
+
+  recordDoorTraversal(exitDoor: Door, entryDoor: Door) {
+    if (!this.anchor || !exitDoor || !entryDoor) return;
+    const currentRoom = this.player.getRoom();
+    if (!currentRoom || !currentRoom.underwater) return;
+    if (this.disconnected) return;
+    if (this.anchor.room === entryDoor.room) {
+      this.resetDoorHistory();
+      return;
+    }
+    const traversal = { from: exitDoor, to: entryDoor };
+    this.doorHistory.push(traversal);
+  }
+
+  private resetDoorHistory() {
+    this.doorHistory = [];
+  }
+
+  private handleDisconnection() {
+    const room = this.player.getRoom();
+    if (!room) return;
+    const dropX = this.player.lastX ?? this.player.x;
+    const dropY = this.player.lastY ?? this.player.y;
+    const pos = { x: dropX, y: dropY };
+    this.disconnected = true;
+    this.connected = false;
+    this.disconnectTile = {
+      roomGID: (room as any)?.globalId ?? "",
+      x: pos.x,
+      y: pos.y,
+    };
+    const lastTraversal = this.doorHistory[this.doorHistory.length - 1];
+    if (lastTraversal) {
+      const fromDoor = lastTraversal.from;
+      const fromRoomId = (fromDoor.room as any)?.globalId;
+      if (
+        fromDoor.room &&
+        fromRoomId === this.disconnectTile.roomGID &&
+        fromDoor.x === pos.x &&
+        fromDoor.y === pos.y
+      ) {
+        this.doorHistory.pop();
+      }
+    }
+    this.attachStartToTile(room, pos.x, pos.y, {
+      kind: "player",
+      angle: Math.PI / 2,
+    });
+  }
+
+  private tryReconnect(): boolean {
+    if (!this.disconnectTile) return false;
+    const room = this.player.getRoom();
+    if (!room) return false;
+    if ((room as any)?.globalId !== this.disconnectTile.roomGID) return false;
+    if (
+      this.player.x !== this.disconnectTile.x ||
+      this.player.y !== this.disconnectTile.y
+    ) {
+      return false;
+    }
+    this.disconnected = false;
+    this.disconnectTile = undefined;
+    this.attachStartToPlayer(-Math.PI / 2);
+    return true;
   }
 
   isAttached(): boolean {
@@ -88,6 +208,13 @@ export class OxygenLine {
   }
 
   update(force: boolean = false) {
+    if (this.disconnected) {
+      if (!this.tryReconnect()) {
+        this.connected = false;
+        return;
+      }
+    }
+
     if (!this.anchor || !this.startAnchor) {
       this.clearBeams();
       this.connected = false;
@@ -120,9 +247,12 @@ export class OxygenLine {
       return;
     }
 
-    this.connected =
-      this.anchor !== undefined &&
-      this.totalLength <= GameplaySettings.OXYGEN_LINE_MAX_LENGTH;
+    if (this.totalLength > GameplaySettings.OXYGEN_LINE_MAX_LENGTH) {
+      this.handleDisconnection();
+      return;
+    }
+
+    this.connected = true;
 
     if (force || rebuildSucceeded) {
       this.syncBeamsWithSegments();
@@ -134,77 +264,59 @@ export class OxygenLine {
 
     const anchorRoom = this.anchor.room;
     const newSegments = new Map<string, OxygenSegment[]>();
-    let totalLength = 0;
 
-    const addSegments = (
-      room: Room,
-      segments: OxygenSegment[],
-      length: number,
-    ) => {
+    const addSegments = (room: Room, segments: OxygenSegment[]) => {
       if (segments.length > 0) {
         const key = (room as any)?.globalId ?? room.id?.toString() ?? "";
         const existing = newSegments.get(key) ?? [];
         existing.push(...segments);
         newSegments.set(key, existing);
       }
-      totalLength += length;
     };
 
     const startPoint = this.resolveStartEndpoint(currentRoom);
+    const anchorEndpoint = this.anchorEndpoint();
+    let pathStackUsed: DoorTraversal[] = [];
 
-    if (currentRoom === anchorRoom) {
+    if (currentRoom === anchorRoom && this.doorHistory.length === 0) {
       const result = this.buildRoomSegments(
         currentRoom,
         startPoint,
-        this.anchorEndpoint(),
+        anchorEndpoint,
       );
-      addSegments(currentRoom, result.segments, result.length);
+      addSegments(currentRoom, result.segments);
     } else {
-      const doorPath: Door[] | null =
-        currentRoom.findShortestDoorPathTo(anchorRoom, true) ?? null;
-      if (!doorPath) {
-        return false;
-      }
-
-      let roomCursor: Room = currentRoom;
-      let cursorPoint: SegmentEndpoint = startPoint;
-      for (const door of doorPath) {
-        const doorTarget: SegmentEndpoint = {
-          room: roomCursor,
-          x: door.x,
-          y: door.y,
-          attachment: "tile",
-        };
-        const chunk = this.buildRoomSegments(
-          roomCursor,
-          cursorPoint,
-          doorTarget,
+      const effectiveStack = this.getEffectiveDoorStack();
+      let success = false;
+      if (effectiveStack.length > 0) {
+        success = this.buildSegmentsFromDoorHistory(
+          currentRoom,
+          anchorRoom,
+          startPoint,
+          addSegments,
+          effectiveStack,
         );
-        addSegments(roomCursor, chunk.segments, chunk.length);
-
-        const linkedDoor = door.linkedDoor;
-        if (!linkedDoor || !linkedDoor.room) {
-          return false;
-        }
-        roomCursor = linkedDoor.room;
-        cursorPoint = {
-          room: roomCursor,
-          x: linkedDoor.x,
-          y: linkedDoor.y,
-          attachment: "tile",
-        };
+        if (success) pathStackUsed = effectiveStack.slice();
       }
-
-      const finalChunk = this.buildRoomSegments(
-        roomCursor,
-        cursorPoint,
-        this.anchorEndpoint(),
-      );
-      addSegments(roomCursor, finalChunk.segments, finalChunk.length);
+      if (!success) {
+        const bfsStack = this.buildSegmentsViaBfs(
+          currentRoom,
+          anchorRoom,
+          startPoint,
+          addSegments,
+        );
+        if (!bfsStack) return false;
+        pathStackUsed = bfsStack.slice();
+        this.doorHistory = bfsStack.slice();
+      }
     }
 
     this.segmentsByRoom = newSegments;
-    this.totalLength = totalLength;
+    this.totalLength = this.computeLengthFromDoorHistory(
+      startPoint,
+      anchorEndpoint,
+      pathStackUsed,
+    );
     return true;
   }
 
@@ -215,6 +327,8 @@ export class OxygenLine {
         x: this.player.x,
         y: this.player.y,
         attachment: "player",
+        kind: "player",
+        angle: this.startAnchor.angle,
       };
     }
     return {
@@ -222,6 +336,8 @@ export class OxygenLine {
       x: this.startAnchor.x,
       y: this.startAnchor.y,
       attachment: "tile",
+      kind: this.startAnchor.kind,
+      angle: this.startAnchor.angle,
     };
   }
 
@@ -230,13 +346,6 @@ export class OxygenLine {
     start: SegmentEndpoint,
     end: SegmentEndpoint,
   ): RoomSegmentResult {
-    let path: Array<{ x: number; y: number }> = [];
-    try {
-      path = room.buildTilePathPositions(start.x, start.y, end.x, end.y) ?? [];
-    } catch {
-      path = [];
-    }
-
     return {
       segments: [
         {
@@ -245,7 +354,6 @@ export class OxygenLine {
           end,
         },
       ],
-      length: path.length,
     };
   }
 
@@ -275,6 +383,10 @@ export class OxygenLine {
       segments.forEach((segment, idx) => {
         const beam = existingBeams[idx];
         if (!beam) return;
+        beam.setAttachmentControls(
+          this.buildAttachmentControl(segment.start),
+          this.buildAttachmentControl(segment.end),
+        );
         const start = this.resolveEndpoint(segment.start);
         const end = this.resolveEndpoint(segment.end);
         beam.setTarget(start.x, start.y, end.x, end.y);
@@ -307,6 +419,13 @@ export class OxygenLine {
     beam.compositeOperation = "source-over";
     beam.startAttachment = segment.start.attachment;
     beam.endAttachment = segment.end.attachment;
+    beam.setAttachmentControls(
+      this.buildAttachmentControl(segment.start),
+      this.buildAttachmentControl(segment.end),
+    );
+    beam.setHostRoom(segment.room);
+    beam.drawOnTop = true;
+    beam.setHostRoom(segment.room);
     beam.setPhysics(
       0.15, // gravity
       0.35, // motion influence
@@ -365,10 +484,244 @@ export class OxygenLine {
       x: this.anchor.x,
       y: this.anchor.y,
       attachment: "tile",
+      kind: this.anchor.kind,
+      angle: this.anchor.angle,
     };
+  }
+
+  private buildAttachmentControl(
+    endpoint: SegmentEndpoint,
+  ): BeamAttachmentControl | undefined {
+    if (endpoint.attachment === "player") {
+      return {
+        angle: endpoint.angle ?? -Math.PI / 2,
+        weight: 1,
+        influence: 1,
+        influenceDistance: 1.5,
+      };
+    }
+    if (endpoint.angle === undefined) return undefined;
+
+    const defaults = this.getAttachmentDefaults(endpoint.kind);
+    return {
+      angle: endpoint.angle,
+      weight: defaults.weight,
+      influence: defaults.influence,
+      influenceDistance: defaults.influenceDistance,
+      lengthScale: defaults.lengthScale,
+    };
+  }
+
+  private getAttachmentDefaults(kind?: OxygenAnchorKind) {
+    switch (kind) {
+      case "door":
+        return {
+          weight: 1,
+          influence: 1,
+          influenceDistance: 2,
+          lengthScale: 1,
+        };
+      case "upLadder":
+        return {
+          weight: 1,
+          influence: 3,
+          influenceDistance: 5,
+          lengthScale: 1,
+        };
+      case "downLadder":
+        return {
+          weight: 0.6,
+          influence: 3,
+          influenceDistance: 5,
+          lengthScale: 1,
+        };
+      case "oxygenNode":
+        return {
+          weight: 0.55,
+          influence: 2,
+          influenceDistance: 5,
+          lengthScale: 1,
+        };
+      default:
+        return {
+          weight: 0.5,
+          influence: 2,
+          influenceDistance: 2,
+          lengthScale: 1,
+        };
+    }
+  }
+
+  private getDoorAngle(door: Door): number {
+    switch (door.doorDir) {
+      case Direction.UP:
+        return Math.PI / 2;
+      case Direction.DOWN:
+        return -Math.PI / 2;
+      case Direction.LEFT:
+        return Math.PI;
+      case Direction.RIGHT:
+        return 0;
+      default:
+        return 0;
+    }
   }
 
   private samePosition(a: SegmentEndpoint, b: SegmentEndpoint): boolean {
     return a.x === b.x && a.y === b.y;
+  }
+
+  private computeLengthFromDoorHistory(
+    start: SegmentEndpoint,
+    anchor: SegmentEndpoint,
+    doorStack: DoorTraversal[],
+  ): number {
+    let length = 0;
+    let currentX = start.x;
+    let currentY = start.y;
+
+    if (doorStack.length === 0) {
+      return (
+        length +
+        this.distanceBetweenPoints(currentX, currentY, anchor.x, anchor.y)
+      );
+    }
+
+    for (let i = doorStack.length - 1; i >= 0; i--) {
+      const traversal = doorStack[i];
+      const entryDoor = traversal.to;
+      length += this.distanceBetweenPoints(
+        currentX,
+        currentY,
+        entryDoor.x,
+        entryDoor.y,
+      );
+      const exitDoor = traversal.from;
+      currentX = exitDoor.x;
+      currentY = exitDoor.y;
+    }
+
+    length += this.distanceBetweenPoints(
+      currentX,
+      currentY,
+      anchor.x,
+      anchor.y,
+    );
+    return length;
+  }
+
+  private distanceBetweenPoints(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ): number {
+    return Math.abs(x2 - x1) + Math.abs(y2 - y1);
+  }
+
+  private getEffectiveDoorStack(): DoorTraversal[] {
+    return this.doorHistory.slice();
+  }
+
+  private buildSegmentsFromDoorHistory(
+    currentRoom: Room,
+    anchorRoom: Room,
+    startPoint: SegmentEndpoint,
+    addSegments: (room: Room, segments: OxygenSegment[]) => void,
+    doorStack: DoorTraversal[],
+  ): boolean {
+    if (doorStack.length === 0) return false;
+    let roomCursor: Room = currentRoom;
+    let cursorPoint: SegmentEndpoint = startPoint;
+
+    for (let i = doorStack.length - 1; i >= 0; i--) {
+      const traversal = doorStack[i];
+      const entryDoor = traversal.to;
+      if (entryDoor.room !== roomCursor) {
+        return false;
+      }
+      const doorTarget: SegmentEndpoint = {
+        room: roomCursor,
+        x: entryDoor.x,
+        y: entryDoor.y,
+        attachment: "tile",
+        kind: "door",
+        angle: this.getDoorAngle(entryDoor),
+      };
+      const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
+      addSegments(roomCursor, chunk.segments);
+
+      const fromDoor = traversal.from;
+      if (!fromDoor || !fromDoor.room) return false;
+      roomCursor = fromDoor.room;
+      cursorPoint = {
+        room: roomCursor,
+        x: fromDoor.x,
+        y: fromDoor.y,
+        attachment: "tile",
+        kind: "door",
+        angle: this.getDoorAngle(fromDoor),
+      };
+    }
+
+    const anchorTarget = this.anchorEndpoint();
+    if (roomCursor !== anchorTarget.room) return false;
+
+    const finalChunk = this.buildRoomSegments(
+      roomCursor,
+      cursorPoint,
+      anchorTarget,
+    );
+    addSegments(roomCursor, finalChunk.segments);
+    return true;
+  }
+
+  private buildSegmentsViaBfs(
+    startRoom: Room,
+    anchorRoom: Room,
+    startPoint: SegmentEndpoint,
+    addSegments: (room: Room, segments: OxygenSegment[]) => void,
+  ): DoorTraversal[] | null {
+    const doorPath: Door[] | null =
+      startRoom.findShortestDoorPathTo(anchorRoom, true) ?? null;
+    if (!doorPath) return null;
+
+    let roomCursor: Room = startRoom;
+    let cursorPoint: SegmentEndpoint = startPoint;
+    const traversals: DoorTraversal[] = [];
+
+    for (const door of doorPath) {
+      const doorTarget: SegmentEndpoint = {
+        room: roomCursor,
+        x: door.x,
+        y: door.y,
+        attachment: "tile",
+        kind: "door",
+        angle: this.getDoorAngle(door),
+      };
+      const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
+      addSegments(roomCursor, chunk.segments);
+
+      const linkedDoor = door.linkedDoor;
+      if (!linkedDoor || !linkedDoor.room) return null;
+      traversals.push({ from: door, to: linkedDoor });
+      roomCursor = linkedDoor.room;
+      cursorPoint = {
+        room: roomCursor,
+        x: linkedDoor.x,
+        y: linkedDoor.y,
+        attachment: "tile",
+        kind: "door",
+        angle: this.getDoorAngle(linkedDoor),
+      };
+    }
+
+    const finalChunk = this.buildRoomSegments(
+      roomCursor,
+      cursorPoint,
+      this.anchorEndpoint(),
+    );
+    addSegments(roomCursor, finalChunk.segments);
+    return traversals;
   }
 }

@@ -1259,7 +1259,7 @@ export class Room {
     }
 
     player.moveSnap(x, y);
-    player.anchorOxygenLineToPlayer();
+    player.anchorOxygenLineToPlayer(-Math.PI / 2);
     this.onEnterRoom(player);
     this.playMusic();
 
@@ -1268,7 +1268,11 @@ export class Room {
       if (this.underwater) {
         const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
         if (anchorCoords) {
-          player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y);
+          player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
+            kind: "upLadder",
+            angle: Math.PI / 2,
+          });
+          player.anchorOxygenLineToPlayer(-Math.PI / 2);
         } else {
           player.detachOxygenLine();
         }
@@ -1305,7 +1309,7 @@ export class Room {
       player.moveNoSmooth(door.x + side, door.y);
     }
     this.onEnterRoom(player);
-    player.anchorOxygenLineToPlayer();
+    player.anchorOxygenLineToPlayer(-Math.PI / 2);
     if (!this.underwater) {
       player.detachOxygenLine();
     }
@@ -3362,15 +3366,30 @@ export class Room {
         if (
           projectile instanceof BeamEffect &&
           projectile.type === "oxygen-line" &&
-          projectile.parent === player &&
-          projectile.startAttachment === "player"
+          projectile.parent === player
         ) {
-          projectile.x = startX;
-          projectile.y = startY;
+          const startIsPlayer =
+            projectile.startAttachment === "player" ||
+            this.isNear(projectile.x, projectile.y, startX, startY);
+          if (startIsPlayer) {
+            projectile.startAttachment = "player";
+            projectile.x = startX;
+            projectile.y = startY;
+          }
         }
       }
     }
   };
+
+  private isNear(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    epsilon: number = 0.05,
+  ): boolean {
+    return Math.abs(x1 - x2) <= epsilon && Math.abs(y1 - y2) <= epsilon;
+  }
 
   drawAbovePlayer = (delta: number) => {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
@@ -3488,6 +3507,23 @@ export class Room {
     );
     Game.ctx.font = old;
     Game.ctx.restore();
+  };
+
+  drawTopBeams = (delta: number) => {
+    for (const projectile of this.projectiles) {
+      if (projectile instanceof BeamEffect && projectile.drawOnTop) {
+        projectile.drawTopLayer(delta);
+      }
+    }
+  };
+
+  hasTopBeams = (): boolean => {
+    for (const projectile of this.projectiles) {
+      if (projectile instanceof BeamEffect && projectile.drawOnTop) {
+        return true;
+      }
+    }
+    return false;
   };
 
   // src/room.ts

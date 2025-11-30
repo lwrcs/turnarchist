@@ -288,7 +288,12 @@ export class Door extends Passageway {
 
     this.linkedDoor.opened = true;
 
-    player.anchorOxygenLineToTile(this.room, this.x, this.y);
+    const doorAngle = this.getAnchorAngle();
+    player.anchorOxygenLineToTile(this.room, this.x, this.y, {
+      kind: "door",
+      angle: doorAngle,
+    });
+    player.recordOxygenDoorTraversal(this, this.linkedDoor);
     player.getOxygenLine()?.update(true);
 
     if (this.doorDir === Direction.UP || this.doorDir === Direction.DOWN) {
@@ -456,4 +461,18 @@ export class Door extends Passageway {
     }
     Game.ctx.globalAlpha = 1;
   };
+
+  private getAnchorAngle(): number {
+    switch (this.doorDir) {
+      case Direction.UP:
+        return -Math.PI / 2;
+      case Direction.DOWN:
+        return Math.PI / 2;
+      case Direction.LEFT:
+        return Math.PI;
+      case Direction.RIGHT:
+      default:
+        return 0;
+    }
+  }
 }
