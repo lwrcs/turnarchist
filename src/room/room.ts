@@ -1232,6 +1232,7 @@ export class Room {
     let ladderEntry = (this as any).__entryPositionFromLadder as
       | { x: number; y: number }
       | undefined;
+    const oxygenAnchor = ladderEntry ? { ...ladderEntry } : undefined;
     if (ladderEntry) {
       delete (this as any).__entryPositionFromLadder;
     }
@@ -1258,8 +1259,26 @@ export class Room {
     }
 
     player.moveSnap(x, y);
+    player.anchorOxygenLineToPlayer();
     this.onEnterRoom(player);
     this.playMusic();
+
+    const ladderUsed = this.game.transitioningLadder;
+    if (ladderUsed instanceof DownLadder) {
+      if (this.underwater) {
+        const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
+        if (anchorCoords) {
+          player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y);
+        } else {
+          player.detachOxygenLine();
+        }
+      } else {
+        player.detachOxygenLine();
+      }
+    } else if (ladderUsed instanceof UpLadder || !this.underwater) {
+      player.detachOxygenLine();
+    }
+    player.getOxygenLine()?.update(true);
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
@@ -1286,7 +1305,25 @@ export class Room {
       player.moveNoSmooth(door.x + side, door.y);
     }
     this.onEnterRoom(player);
+    player.anchorOxygenLineToPlayer();
+    if (!this.underwater) {
+      player.detachOxygenLine();
+    }
+    player.getOxygenLine()?.update(true);
+    this.updateOxygenLineBeams();
   };
+
+  private findPrimaryUpLadderCoords(): { x: number; y: number } | undefined {
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const tile = this.roomArray[x]?.[y];
+        if (tile instanceof UpLadder) {
+          return { x: tile.x, y: tile.y };
+        }
+      }
+    }
+    return undefined;
+  }
 
   alertEnemiesOnEntry = () => {
     for (const e of this.entities) {
@@ -3137,6 +3174,8 @@ export class Room {
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
     if (!this.onScreen) return;
 
+    this.updateOxygenLineBeams();
+
     Game.ctx.save();
     // If using inline sliced shade, prepare the blurred shade source once
     let useInlineShade =
@@ -3307,6 +3346,30 @@ export class Room {
       i.drawTopLayer(delta);
     }
     Game.ctx.restore();
+  };
+
+  private updateOxygenLineBeams = () => {
+    if (!this.active) return;
+    for (const player of Object.values(this.game.players)) {
+      const playerRoom =
+        (player as any).getRoom?.() ??
+        this.game.levels[player.depth]?.rooms[player.levelID];
+      if (playerRoom !== this) continue;
+      const startPos = player.getInterpolatedTilePosition();
+      const startX = startPos.x;
+      const startY = startPos.y - player.getOxygenAttachmentOffset();
+      for (const projectile of this.projectiles) {
+        if (
+          projectile instanceof BeamEffect &&
+          projectile.type === "oxygen-line" &&
+          projectile.parent === player &&
+          projectile.startAttachment === "player"
+        ) {
+          projectile.x = startX;
+          projectile.y = startY;
+        }
+      }
+    }
   };
 
   drawAbovePlayer = (delta: number) => {

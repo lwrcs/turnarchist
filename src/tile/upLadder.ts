@@ -59,6 +59,8 @@ export class UpLadder extends Passageway {
       if (this.isRope && this.linkedRoom) {
         (this.game as any).currentPathId = this.linkedRoom.pathId || "main";
       }
+      player.anchorOxygenLineToTile(this.room, this.x, this.y);
+      player.getOxygenLine()?.update(true);
       this.game.changeLevelThroughLadder(player, this);
       if (exitPos && this.linkedRoom) {
         (this.linkedRoom as any).__entryPositionFromLadder = exitPos;

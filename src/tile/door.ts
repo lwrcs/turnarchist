@@ -288,6 +288,9 @@ export class Door extends Passageway {
 
     this.linkedDoor.opened = true;
 
+    player.anchorOxygenLineToTile(this.room, this.x, this.y);
+    player.getOxygenLine()?.update(true);
+
     if (this.doorDir === Direction.UP || this.doorDir === Direction.DOWN) {
       this.game.changeLevelThroughDoor(player, this.linkedDoor);
     } else

@@ -15,6 +15,8 @@ export class GameplaySettings {
   static readonly TUTORIAL_ENABLED = false;
   static readonly MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
 
+  static readonly OXYGEN_LINE_MAX_LENGTH = 80;
+
   // === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
   static ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
   static ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating

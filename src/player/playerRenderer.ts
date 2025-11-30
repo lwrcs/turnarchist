@@ -151,6 +151,10 @@ export class PlayerRenderer {
     if (this.slowMotionTickDuration === 0) this.slowMotionEnabled = false;
   };
 
+  getJumpOffset = (): number => {
+    return this.jumpY;
+  };
+
   /**
    * Draws the player sprite to the canvas.
    * Added `ctx.save()` at the beginning and `ctx.restore()` at the end

@@ -33,6 +33,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { Room } from "../room/room";
 import { BubbleImageParticle } from "../particle/imageParticle";
 import { Random } from "../utility/random";
+import { OxygenLine } from "./oxygenLine";
 
 export enum PlayerDirection {
   DOWN,
@@ -99,6 +100,7 @@ export class Player extends Drawable {
   private readonly drowningDamageSteps = [5, 4, 3, 2, 1];
   private readonly drowningDamageAmount = 0.5;
   private readonly divingHelmetRefillPerTurn = 12;
+  private static readonly oxygenLineBaseOffset = 1.4;
 
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
@@ -110,6 +112,7 @@ export class Player extends Drawable {
   deathScreenPageCount: number;
 
   private renderer: PlayerRenderer;
+  private oxygenLine: OxygenLine;
 
   private drawMoveQueue: {
     drawX: number;
@@ -181,6 +184,7 @@ export class Player extends Drawable {
     this.actionProcessor = new PlayerActionProcessor(this);
     this.movement = new PlayerMovement(this);
     this.renderer = new PlayerRenderer(this);
+    this.oxygenLine = new OxygenLine(this);
 
     this.bestiary = new Bestiary(this.game, this);
 
@@ -216,6 +220,46 @@ export class Player extends Drawable {
   get drawY() {
     return this.renderer?.drawY ?? 0;
   }
+
+  getInterpolatedTilePosition = (): { x: number; y: number } => {
+    return {
+      x: this.x - this.drawX,
+      y: this.y - this.drawY,
+    };
+  };
+
+  getOxygenLine = (): OxygenLine => {
+    return this.oxygenLine;
+  };
+
+  attachOxygenLine = (anchorRoom: Room, x: number, y: number) => {
+    this.oxygenLine.attach(anchorRoom, x, y);
+    this.oxygenLine.attachStartToPlayer();
+  };
+
+  detachOxygenLine = () => {
+    this.oxygenLine.detach();
+  };
+
+  anchorOxygenLineToTile = (room: Room, x: number, y: number) => {
+    this.oxygenLine.attachStartToTile(room, x, y);
+  };
+
+  anchorOxygenLineToPlayer = () => {
+    this.oxygenLine.attachStartToPlayer();
+  };
+
+  getJumpY = (): number => {
+    return this.renderer?.getJumpOffset?.() ?? 0;
+  };
+
+  getOxygenBaseOffset = (): number => {
+    return Player.oxygenLineBaseOffset;
+  };
+
+  getOxygenAttachmentOffset = (): number => {
+    return this.getJumpY() + Player.oxygenLineBaseOffset;
+  };
 
   setHitXY = (newX: number, newY: number, distance = 0.5) => {
     this.renderer.hitX = distance * (this.x - newX);
@@ -945,6 +989,7 @@ export class Player extends Drawable {
   finishTick = () => {
     this.turnCount += 1;
     this.inventory.tick();
+    this.oxygenLine.update();
     this.handleUnderwater();
 
     this.renderer.disableFlash();
@@ -969,11 +1014,20 @@ export class Player extends Drawable {
 
     const helmet = this.getEquippedDivingHelmet();
     const underwater = room.underwater === true;
+    const oxygenLineSupplying = helmet
+      ? this.oxygenLine.isSupplyingAir()
+      : false;
 
     if (!underwater) {
       if (helmet && helmet.currentAir < helmet.maxAir) {
         helmet.restoreAir(this.divingHelmetRefillPerTurn);
       }
+      if (this.isDrowning) this.exitDrowningState();
+      return;
+    }
+
+    if (oxygenLineSupplying) {
+      helmet?.refillCompletely();
       if (this.isDrowning) this.exitDrowningState();
       return;
     }

@@ -93,6 +93,9 @@ export class DownLadder extends Passageway {
         // Switch active path to this ladder's sidepath before transitioning
         this.sidePathManager.switchToPathBeforeTransition(this);
         for (const i in this.game.players) {
+          const pl = this.game.players[i];
+          pl.anchorOxygenLineToTile(this.room, this.x, this.y);
+          pl.getOxygenLine()?.update(true);
           this.game.changeLevelThroughLadder(this.game.players[i], this);
         }
       });

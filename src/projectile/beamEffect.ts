@@ -74,6 +74,8 @@ export class BeamEffect extends Projectile {
   targetY: number;
   color: string;
   compositeOperation: string;
+  startAttachment?: "player" | "tile";
+  endAttachment?: "player" | "tile";
   gravity: number = BeamEffect.GRAVITY;
   motionInfluence: number = BeamEffect.MOTION_INFLUENCE;
   turbulence: number = BeamEffect.TURBULENCE;
