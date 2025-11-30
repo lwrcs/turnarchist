@@ -246,12 +246,15 @@ export class Populator {
     }
 
     if (this.level.environment.type === EnvType.CAVE) {
-      return;
       this.addDownladder({
         caveRooms: this.numRooms(),
         locked: true,
-        envType: EnvType.MAGMA_CAVE,
-        linearity: 0.5,
+        envType: EnvType.FLOODED_CAVE,
+        linearity: 0.75,
+        mapWidth: 60,
+        mapHeight: 30,
+        giantRoomScale: 0.25,
+        giantCentralRoom: true,
       });
     }
 
@@ -426,12 +429,16 @@ export class Populator {
     const env = opts?.envType
       ? opts.envType
       : downLadderRoom.depth < 2
-        ? EnvType.FLOODED_CAVE //FOREST
-        : downLadderRoom.depth > 2
-          ? Random.rand() < 0.5
-            ? EnvType.FOREST
-            : EnvType.CAVE
-          : EnvType.CAVE;
+        ? EnvType.FOREST
+        : downLadderRoom.depth === 2
+          ? EnvType.CAVE
+          : downLadderRoom.depth === 3
+            ? EnvType.FLOODED_CAVE
+            : downLadderRoom.depth > 3
+              ? Random.rand() < 0.5
+                ? EnvType.FOREST
+                : EnvType.CAVE
+              : EnvType.CAVE;
     const lockOverride =
       opts && typeof opts.locked === "boolean"
         ? { lockType: opts.locked ? LockType.LOCKED : LockType.NONE }

@@ -31,6 +31,8 @@ import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Room } from "../room/room";
+import { BubbleImageParticle } from "../particle/imageParticle";
+import { Random } from "../utility/random";
 
 export enum PlayerDirection {
   DOWN,
@@ -113,6 +115,11 @@ export class Player extends Drawable {
     drawX: number;
     drawY: number;
   }[] = [];
+
+  private bubbleSpawnAccumulator = 0;
+  private readonly bubbleSpawnInterval = 7;
+  private bubbleBreathTimer = 0;
+  private readonly bubbleBreathPeriod = 240;
 
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
@@ -1028,6 +1035,46 @@ export class Player extends Drawable {
 
   draw = (delta: number) => {
     this.renderer.draw(delta);
+    this.emitPlayerBubbles(delta);
+  };
+
+  private emitPlayerBubbles = (delta: number) => {
+    if (!this.isLocalPlayer) return;
+
+    const room = this.getRoom();
+    if (!room || room !== this.game.room || !room.underwater) return;
+
+    this.bubbleBreathTimer += delta;
+    while (this.bubbleBreathTimer > this.bubbleBreathPeriod) {
+      this.bubbleBreathTimer -= this.bubbleBreathPeriod;
+    }
+
+    const breathPhase =
+      (this.bubbleBreathTimer / this.bubbleBreathPeriod) * Math.PI * 2;
+    const breathValue = Math.sin(breathPhase);
+
+    if (breathValue <= 0) return;
+
+    this.bubbleSpawnAccumulator += delta * breathValue;
+
+    while (this.bubbleSpawnAccumulator >= this.bubbleSpawnInterval) {
+      this.bubbleSpawnAccumulator -= this.bubbleSpawnInterval;
+
+      const jitterX = Random.rand() * 0.1 - 0.15;
+      const jitterY = Random.rand() * 0.1 - 0.05;
+      const spawnX = this.x + 0.5 + jitterX;
+      const spawnY = this.y - 0.5;
+
+      const tileXoffset = Math.floor(Random.rand() * 3);
+
+      room.particles.push(
+        new BubbleImageParticle(room, spawnX, spawnY, {
+          height: 0.02 + Random.rand() * 0.08,
+          tileX: 9 + tileXoffset,
+          tileY: 26,
+        }),
+      );
+    }
   };
 
   heal = (amount: number) => {

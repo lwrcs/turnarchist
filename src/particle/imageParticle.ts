@@ -130,12 +130,12 @@ export class ImageParticle extends Particle {
       this.tileY,
       1,
       1,
-      this.x - this.alpha / 2,
-      this.y - this.z - this.alpha / 2,
+      this.x - 0.5, // - this.alpha / 2,
+      this.y - this.z - 0.5, // - this.alpha / 2,
       1,
       1,
       this.shadeColor(),
-      this.shadeAmount(),
+      this.shadeAmount() * (1 / this.alpha),
     );
   };
 
@@ -162,6 +162,77 @@ export class ImageParticle extends Particle {
     if (this.expirationTimer <= 0) this.dead = true;
 
     if (this.dead) return;
+
+    this.drawableY = this.y;
+
+    this.render();
+  };
+}
+
+type BubbleParticleOptions = {
+  height?: number;
+  tileX?: number;
+  tileY?: number;
+  size?: number;
+  scale?: number;
+  lifetime?: number;
+};
+
+export class BubbleImageParticle extends ImageParticle {
+  private bobPhase: number;
+  private bobSpeed: number;
+  private bobRadius: number;
+  private riseSpeed: number;
+  private fadeWindow: number;
+
+  constructor(
+    room: Room,
+    x: number,
+    y: number,
+    options: BubbleParticleOptions = {},
+  ) {
+    const scaledSize = options.scale ?? 0.45 + Random.rand() * 0.25;
+    const lifeSpan = options.lifetime ?? 90 + Random.rand() * 30;
+    super(
+      room,
+      x,
+      y,
+      options.height ?? 0,
+      scaledSize,
+      0,
+      0,
+      0,
+      options.tileX ?? 9,
+      options.tileY ?? 26,
+      options.size ?? 0,
+      undefined,
+      lifeSpan,
+    );
+
+    this.bobPhase = Random.rand() * Math.PI * 2;
+    this.bobSpeed = 0.01 + Random.rand() * 0.0025;
+    this.bobRadius = 0.01 + Random.rand() * 0.002;
+    this.riseSpeed = 0.015 + Random.rand() * 0.01;
+    this.fadeWindow = 30;
+  }
+
+  draw = (delta: number) => {
+    Game.ctx.imageSmoothingEnabled = false;
+
+    this.bobPhase += this.bobSpeed * delta;
+    this.x += Math.sin(this.bobPhase) * this.bobRadius * delta;
+    this.y -= this.riseSpeed * delta;
+    this.z += (this.riseSpeed * 0.5 + 0.005) * delta;
+
+    this.expirationTimer -= delta;
+    if (this.expirationTimer <= 0) {
+      this.dead = true;
+      return;
+    }
+
+    if (this.expirationTimer < this.fadeWindow) {
+      this.alpha = Math.max(0.001, this.expirationTimer / this.fadeWindow);
+    }
 
     this.drawableY = this.y;
 

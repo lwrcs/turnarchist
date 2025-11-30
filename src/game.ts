@@ -769,6 +769,8 @@ export class Game {
     Input.touchStartListeners.length = 0;
     Input.touchEndListeners.length = 0;
 
+    this.resetTutorialState();
+
     statsTracker.resetStats();
     this.currentDepth = 0;
     this.encounteredEnemies = [];
@@ -1297,6 +1299,17 @@ export class Game {
     }
   };
 
+  private resetTutorialState = () => {
+    this.tutorialFlags = new TutorialFlags();
+    this.hasInitializedTutorialPointers = false;
+    this.hasShownOpenInventoryPointer = false;
+    if (!this.pointers) {
+      this.pointers = new Map();
+    } else {
+      this.pointers.clear();
+    }
+  };
+
   // Add this helper function before the commandHandler
   private convertSeedToNumber = (seed: string): number => {
     // If it's already a number, parse and return it
@@ -1371,7 +1384,7 @@ export class Game {
         break;
       case "down":
         let downladder: DownLadder;
-        for (const room of this.level.rooms) {
+        for (const room of this.room.path()) {
           if (room.type !== RoomType.DOWNLADDER) {
             for (let x = room.roomX; x < room.roomX + room.width; x++) {
               for (let y = room.roomY; y < room.roomY + room.height; y++) {
@@ -2717,7 +2730,7 @@ export class Game {
 
   private setupInitialPointers = () => {
     // Only for normal mode
-    if (GameConstants.DEVELOPER_MODE) return;
+    if (GameConstants.DEVELOPER_MODE === true) return;
     const player = this.players?.[this.localPlayerID];
     if (!player) return;
     const inv = player.inventory;
@@ -2732,15 +2745,28 @@ export class Game {
     };
     const until = () => {
       // Dismiss if candle equipped (by name to avoid import cycles)
+      const isCandle = (item: any) =>
+        typeof item?.name === "string" && item.name.toLowerCase() === "candle";
       try {
-        const items = inv.items;
-        for (const it of items) {
-          if ((it as any)?.equipped && (it as any)?.name === "candle") {
-            return true;
-          }
-        }
-      } catch {}
-      return false;
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        const hasEquippedCandle = items.some(
+          (it) => isCandle(it) && Boolean((it as any)?.equipped),
+        );
+        if (hasEquippedCandle) return true;
+
+        const hasAvailableCandle = items.some((it) => {
+          if (!isCandle(it)) return false;
+          const stackCount =
+            typeof (it as any)?.stackCount === "number"
+              ? (it as any).stackCount
+              : 1;
+          return stackCount > 0;
+        });
+        return !hasAvailableCandle;
+      } catch {
+        // Fail safe: if we can't inspect the inventory, dismiss the pointer.
+        return true;
+      }
     };
     const safety = [
       // dismiss if player dies or leaves gameplay context

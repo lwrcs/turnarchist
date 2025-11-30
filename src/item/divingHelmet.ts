@@ -22,7 +22,7 @@ export class DivingHelmet extends Equippable {
 
     this.degradeable = false;
     this.iconOffset = 0.1; //default 0
-    this.maxAir = 60;
+    this.maxAir = 100;
     this._air = this.maxAir;
     this.airDrainPerTurn = 1;
   }
@@ -37,6 +37,14 @@ export class DivingHelmet extends Equippable {
 
   getDescription = (): string => {
     return `DIVING HELMET\nStores ${this.maxAir} turns of air for underwater travel.`;
+  };
+
+  onEquip = () => {
+    this.refreshLighting();
+  };
+
+  onUnequip = () => {
+    this.refreshLighting();
   };
 
   coEquippable = (other: Equippable): boolean => {
@@ -74,4 +82,13 @@ export class DivingHelmet extends Equippable {
   };
 
   tickInInventory = () => {};
+
+  private refreshLighting = () => {
+    try {
+      const room =
+        (this.wielder as any)?.getRoom?.() ??
+        this.wielder?.game?.rooms?.[this.wielder?.levelID];
+      room?.updateLighting?.();
+    } catch {}
+  };
 }

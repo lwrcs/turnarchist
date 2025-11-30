@@ -35,6 +35,9 @@ export class PlayerRenderer {
   private flashing: boolean;
   private lightingDirectionBucket: number | null;
 
+  private readonly divingHelmetTileX: number = 0;
+  private readonly divingHelmetTileY: number = 12;
+
   constructor(player: Player) {
     this.player = player;
     this.jumpY = 0;
@@ -155,7 +158,15 @@ export class PlayerRenderer {
    */
   drawPlayerSprite = (delta: number) => {
     const player = this.player;
+    const divingHelmet = player.inventory.divingHelmetEquipped();
+    const tileX = divingHelmet
+      ? this.divingHelmetTileX
+      : 1 + Math.floor(this.frame);
+    const tileY = divingHelmet
+      ? this.divingHelmetTileY + player.direction * 2
+      : 8 + player.direction * 2;
     Game.ctx.save(); // Save the current canvas state
+    const divingHelmetOffsetY = divingHelmet ? 2 : 0;
 
     if (this.drawSmear()) {
       Game.drawMob(
@@ -180,10 +191,15 @@ export class PlayerRenderer {
     ) {
       const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
       let diagonalTile = { x: 1, y: 18 };
-      if (angle > -150 && angle <= -120) diagonalTile = { x: 3, y: 18 };
-      if (angle > -60 && angle <= -30) diagonalTile = { x: 4, y: 18 };
-      if (angle > 30 && angle <= 60) diagonalTile = { x: 2, y: 18 };
-      if (angle > 120 && angle <= 150) diagonalTile = { x: 1, y: 18 };
+
+      if (angle > -150 && angle <= -120)
+        diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
+      if (angle > -60 && angle <= -30)
+        diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
+      if (angle > 30 && angle <= 60)
+        diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
+      if (angle > 120 && angle <= 150)
+        diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
 
       Game.drawMob(
         diagonalTile.x,
@@ -204,8 +220,8 @@ export class PlayerRenderer {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       Game.drawMob(
-        1 + Math.floor(this.frame),
-        8 + player.direction * 2,
+        tileX,
+        tileY,
         1,
         2,
         player.x - this.drawX - this.hitX,
@@ -248,8 +264,7 @@ export class PlayerRenderer {
     const room = (this.player as any).getRoom
       ? (this.player as any).getRoom()
       : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
-
-    if (!room?.underwater) {
+    if (!room) {
       this.lightingDirectionBucket = null;
       return;
     }
@@ -303,6 +318,9 @@ export class PlayerRenderer {
     const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
     const t = 50;
 
+    const divingHelmet = this.player.inventory.divingHelmetEquipped();
+    tile.y = divingHelmet ? 20 : 18;
+
     if (
       (this.player.direction === Direction.UP &&
         this.player.lastDirection === Direction.LEFT) ||
@@ -347,6 +365,10 @@ export class PlayerRenderer {
       if (timeSince >= t && timeSince < t * 2) {
         tile.x = 1;
         tile.y = 14;
+        if (divingHelmet) {
+          tile.x = 0;
+          tile.y = 18;
+        }
       }
       if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
       return tile;
@@ -359,6 +381,10 @@ export class PlayerRenderer {
       if (timeSince >= t && timeSince < t * 2) {
         tile.x = 1;
         tile.y = 8;
+        if (divingHelmet) {
+          tile.x = 0;
+          tile.y = 12;
+        }
       }
       if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
       return tile;
@@ -371,6 +397,10 @@ export class PlayerRenderer {
       if (timeSince >= t && timeSince < t * 2) {
         tile.x = 1;
         tile.y = 12;
+        if (divingHelmet) {
+          tile.x = 0;
+          tile.y = 16;
+        }
       }
       if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 4;
       return tile;
@@ -383,6 +413,10 @@ export class PlayerRenderer {
       if (timeSince >= t && timeSince < t * 2) {
         tile.x = 1;
         tile.y = 8;
+        if (divingHelmet) {
+          tile.x = 0;
+          tile.y = 12;
+        }
       }
       if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 2;
       return tile;

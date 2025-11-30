@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.ef5168369cd9bfc5fe5c.png";
+module.exports = __webpack_require__.p + "assets/fxset.3b95116f7960a56c5a92.png";
 
 /***/ }),
 
@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.03615d4c4de25539580e.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.cc8f5f88c99be1adf170.png";
+module.exports = __webpack_require__.p + "assets/mobset.970a8bc9190a12249dae.png";
 
 /***/ }),
 
@@ -23709,6 +23709,7 @@ class Game {
             input_1.Input.mouseRightClickListeners.length = 0;
             input_1.Input.touchStartListeners.length = 0;
             input_1.Input.touchEndListeners.length = 0;
+            this.resetTutorialState();
             stats_1.statsTracker.resetStats();
             this.currentDepth = 0;
             this.encounteredEnemies = [];
@@ -24118,6 +24119,17 @@ class Game {
                     this.pointers.delete(id);
             }
         };
+        this.resetTutorialState = () => {
+            this.tutorialFlags = new tutorialFlags_1.TutorialFlags();
+            this.hasInitializedTutorialPointers = false;
+            this.hasShownOpenInventoryPointer = false;
+            if (!this.pointers) {
+                this.pointers = new Map();
+            }
+            else {
+                this.pointers.clear();
+            }
+        };
         // Add this helper function before the commandHandler
         this.convertSeedToNumber = (seed) => {
             // If it's already a number, parse and return it
@@ -24176,7 +24188,7 @@ class Game {
                     break;
                 case "down":
                     let downladder;
-                    for (const room of this.level.rooms) {
+                    for (const room of this.room.path()) {
                         if (room.type !== room_1.RoomType.DOWNLADDER) {
                             for (let x = room.roomX; x < room.roomX + room.width; x++) {
                                 for (let y = room.roomY; y < room.roomY + room.height; y++) {
@@ -25138,7 +25150,7 @@ class Game {
         };
         this.setupInitialPointers = () => {
             // Only for normal mode
-            if (gameConstants_1.GameConstants.DEVELOPER_MODE)
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE === true)
                 return;
             const player = this.players?.[this.localPlayerID];
             if (!player)
@@ -25155,16 +25167,26 @@ class Game {
             };
             const until = () => {
                 // Dismiss if candle equipped (by name to avoid import cycles)
+                const isCandle = (item) => typeof item?.name === "string" && item.name.toLowerCase() === "candle";
                 try {
-                    const items = inv.items;
-                    for (const it of items) {
-                        if (it?.equipped && it?.name === "candle") {
-                            return true;
-                        }
-                    }
+                    const items = Array.isArray(inv.items) ? inv.items : [];
+                    const hasEquippedCandle = items.some((it) => isCandle(it) && Boolean(it?.equipped));
+                    if (hasEquippedCandle)
+                        return true;
+                    const hasAvailableCandle = items.some((it) => {
+                        if (!isCandle(it))
+                            return false;
+                        const stackCount = typeof it?.stackCount === "number"
+                            ? it.stackCount
+                            : 1;
+                        return stackCount > 0;
+                    });
+                    return !hasAvailableCandle;
                 }
-                catch { }
-                return false;
+                catch {
+                    // Fail safe: if we can't inspect the inventory, dismiss the pointer.
+                    return true;
+                }
             };
             const safety = [
                 // dismiss if player dies or leaves gameplay context
@@ -33447,6 +33469,7 @@ const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator 
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
+const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -33871,6 +33894,9 @@ class Inventory {
         };
         this.getArmor = () => {
             return (this.items.find((i) => (i instanceof armor_1.Armor || i instanceof woodenShield_1.WoodenShield) && i.equipped) || null);
+        };
+        this.divingHelmetEquipped = () => {
+            return (this.items.some((i) => i instanceof divingHelmet_1.DivingHelmet && i.equipped) || false);
         };
         this.hasWeapon = () => {
             return this.weapon !== null;
@@ -34900,6 +34926,12 @@ class DivingHelmet extends equippable_1.Equippable {
         this.getDescription = () => {
             return `DIVING HELMET\nStores ${this.maxAir} turns of air for underwater travel.`;
         };
+        this.onEquip = () => {
+            this.refreshLighting();
+        };
+        this.onUnequip = () => {
+            this.refreshLighting();
+        };
         this.coEquippable = (other) => {
             // Only prevent multiple diving helmets from being active at once.
             return !(other instanceof DivingHelmet);
@@ -34930,12 +34962,20 @@ class DivingHelmet extends equippable_1.Equippable {
             this.currentAir = this.maxAir;
         };
         this.tickInInventory = () => { };
+        this.refreshLighting = () => {
+            try {
+                const room = this.wielder?.getRoom?.() ??
+                    this.wielder?.game?.rooms?.[this.wielder?.levelID];
+                room?.updateLighting?.();
+            }
+            catch { }
+        };
         this.tileX = 4;
         this.tileY = 2;
         this.name = DivingHelmet.itemName;
         this.degradeable = false;
         this.iconOffset = 0.1; //default 0
-        this.maxAir = 60;
+        this.maxAir = 100;
         this._air = this.maxAir;
         this.airDrainPerTurn = 1;
     }
@@ -44401,7 +44441,7 @@ GenericParticle.spawnCluster = (level, cx, cy, color) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ImageParticle = void 0;
+exports.BubbleImageParticle = exports.ImageParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
@@ -44415,7 +44455,9 @@ class ImageParticle extends particle_1.Particle {
             let frame = this.s > 0.5 ? 1 : 0; // Placeholder frames for large and small particles
             game_1.Game.ctx.imageSmoothingEnabled = false;
             let adjustedTileX = this.tileX + this.size;
-            game_1.Game.drawFX(adjustedTileX, this.tileY, 1, 1, this.x - this.alpha / 2, this.y - this.z - this.alpha / 2, 1, 1, this.shadeColor(), this.shadeAmount());
+            game_1.Game.drawFX(adjustedTileX, this.tileY, 1, 1, this.x - 0.5, // - this.alpha / 2,
+            this.y - this.z - 0.5, // - this.alpha / 2,
+            1, 1, this.shadeColor(), this.shadeAmount() * (1 / this.alpha));
         };
         this.draw = (delta) => {
             game_1.Game.ctx.imageSmoothingEnabled = false;
@@ -44486,6 +44528,36 @@ ImageParticle.spawnCluster = (level, cx, cy, tileX, tileY) => {
         tileX, tileY, [2, 1, 0, 1, 2, 2, 2][i]));
     }
 };
+class BubbleImageParticle extends ImageParticle {
+    constructor(room, x, y, options = {}) {
+        const scaledSize = options.scale ?? 0.45 + random_1.Random.rand() * 0.25;
+        const lifeSpan = options.lifetime ?? 90 + random_1.Random.rand() * 30;
+        super(room, x, y, options.height ?? 0, scaledSize, 0, 0, 0, options.tileX ?? 9, options.tileY ?? 26, options.size ?? 0, undefined, lifeSpan);
+        this.draw = (delta) => {
+            game_1.Game.ctx.imageSmoothingEnabled = false;
+            this.bobPhase += this.bobSpeed * delta;
+            this.x += Math.sin(this.bobPhase) * this.bobRadius * delta;
+            this.y -= this.riseSpeed * delta;
+            this.z += (this.riseSpeed * 0.5 + 0.005) * delta;
+            this.expirationTimer -= delta;
+            if (this.expirationTimer <= 0) {
+                this.dead = true;
+                return;
+            }
+            if (this.expirationTimer < this.fadeWindow) {
+                this.alpha = Math.max(0.001, this.expirationTimer / this.fadeWindow);
+            }
+            this.drawableY = this.y;
+            this.render();
+        };
+        this.bobPhase = random_1.Random.rand() * Math.PI * 2;
+        this.bobSpeed = 0.01 + random_1.Random.rand() * 0.0025;
+        this.bobRadius = 0.01 + random_1.Random.rand() * 0.002;
+        this.riseSpeed = 0.015 + random_1.Random.rand() * 0.01;
+        this.fadeWindow = 30;
+    }
+}
+exports.BubbleImageParticle = BubbleImageParticle;
 
 
 /***/ }),
@@ -44706,6 +44778,8 @@ const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator 
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -44725,6 +44799,10 @@ class Player extends drawable_1.Drawable {
         this.drowningDamageAmount = 0.5;
         this.divingHelmetRefillPerTurn = 12;
         this.drawMoveQueue = [];
+        this.bubbleSpawnAccumulator = 0;
+        this.bubbleSpawnInterval = 7;
+        this.bubbleBreathTimer = 0;
+        this.bubbleBreathPeriod = 240;
         this.seenEnemies = new Set();
         this.bestiary = null;
         this.getRoom = () => {
@@ -45415,6 +45493,36 @@ class Player extends drawable_1.Drawable {
         };
         this.draw = (delta) => {
             this.renderer.draw(delta);
+            this.emitPlayerBubbles(delta);
+        };
+        this.emitPlayerBubbles = (delta) => {
+            if (!this.isLocalPlayer)
+                return;
+            const room = this.getRoom();
+            if (!room || room !== this.game.room || !room.underwater)
+                return;
+            this.bubbleBreathTimer += delta;
+            while (this.bubbleBreathTimer > this.bubbleBreathPeriod) {
+                this.bubbleBreathTimer -= this.bubbleBreathPeriod;
+            }
+            const breathPhase = (this.bubbleBreathTimer / this.bubbleBreathPeriod) * Math.PI * 2;
+            const breathValue = Math.sin(breathPhase);
+            if (breathValue <= 0)
+                return;
+            this.bubbleSpawnAccumulator += delta * breathValue;
+            while (this.bubbleSpawnAccumulator >= this.bubbleSpawnInterval) {
+                this.bubbleSpawnAccumulator -= this.bubbleSpawnInterval;
+                const jitterX = random_1.Random.rand() * 0.1 - 0.15;
+                const jitterY = random_1.Random.rand() * 0.1 - 0.05;
+                const spawnX = this.x + 0.5 + jitterX;
+                const spawnY = this.y - 0.5;
+                const tileXoffset = Math.floor(random_1.Random.rand() * 3);
+                room.particles.push(new imageParticle_1.BubbleImageParticle(room, spawnX, spawnY, {
+                    height: 0.02 + random_1.Random.rand() * 0.08,
+                    tileX: 9 + tileXoffset,
+                    tileY: 26,
+                }));
+            }
         };
         this.heal = (amount) => {
             this.health += amount;
@@ -46502,6 +46610,8 @@ const deviceDetector_1 = __webpack_require__(/*! ../utility/deviceDetector */ ".
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 class PlayerRenderer {
     constructor(player) {
+        this.divingHelmetTileX = 0;
+        this.divingHelmetTileY = 12;
         this.hurt = () => {
             this.hurting = true;
             this.hurtAlpha = 0.25;
@@ -46589,7 +46699,15 @@ class PlayerRenderer {
          */
         this.drawPlayerSprite = (delta) => {
             const player = this.player;
+            const divingHelmet = player.inventory.divingHelmetEquipped();
+            const tileX = divingHelmet
+                ? this.divingHelmetTileX
+                : 1 + Math.floor(this.frame);
+            const tileY = divingHelmet
+                ? this.divingHelmetTileY + player.direction * 2
+                : 8 + player.direction * 2;
             game_1.Game.ctx.save(); // Save the current canvas state
+            const divingHelmetOffsetY = divingHelmet ? 2 : 0;
             if (this.drawSmear()) {
                 game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
@@ -46599,20 +46717,20 @@ class PlayerRenderer {
                 const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
                 let diagonalTile = { x: 1, y: 18 };
                 if (angle > -150 && angle <= -120)
-                    diagonalTile = { x: 3, y: 18 };
+                    diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
                 if (angle > -60 && angle <= -30)
-                    diagonalTile = { x: 4, y: 18 };
+                    diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
                 if (angle > 30 && angle <= 60)
-                    diagonalTile = { x: 2, y: 18 };
+                    diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
                 if (angle > 120 && angle <= 150)
-                    diagonalTile = { x: 1, y: 18 };
+                    diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
                 game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else {
                 this.frame += 0.1 * delta;
                 if (this.frame >= 4)
                     this.frame = 0;
-                game_1.Game.drawMob(1 + Math.floor(this.frame), 8 + player.direction * 2, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                game_1.Game.drawMob(tileX, tileY, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
                 // TODO draw armor
@@ -46641,7 +46759,7 @@ class PlayerRenderer {
             const room = this.player.getRoom
                 ? this.player.getRoom()
                 : this.player.game.levels[this.player.depth].rooms[this.player.levelID];
-            if (!room?.underwater) {
+            if (!room) {
                 this.lightingDirectionBucket = null;
                 return;
             }
@@ -46686,6 +46804,8 @@ class PlayerRenderer {
             let tile = { x: 1, y: 18 };
             const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
             const t = 50;
+            const divingHelmet = this.player.inventory.divingHelmetEquipped();
+            tile.y = divingHelmet ? 20 : 18;
             if ((this.player.direction === game_1.Direction.UP &&
                 this.player.lastDirection === game_1.Direction.LEFT) ||
                 (this.player.direction === game_1.Direction.LEFT &&
@@ -46721,6 +46841,10 @@ class PlayerRenderer {
                 if (timeSince >= t && timeSince < t * 2) {
                     tile.x = 1;
                     tile.y = 14;
+                    if (divingHelmet) {
+                        tile.x = 0;
+                        tile.y = 18;
+                    }
                 }
                 if (timeSince >= t * 2 && timeSince < t * 3)
                     tile.x = 1;
@@ -46733,6 +46857,10 @@ class PlayerRenderer {
                 if (timeSince >= t && timeSince < t * 2) {
                     tile.x = 1;
                     tile.y = 8;
+                    if (divingHelmet) {
+                        tile.x = 0;
+                        tile.y = 12;
+                    }
                 }
                 if (timeSince >= t * 2 && timeSince < t * 3)
                     tile.x = 1;
@@ -46745,6 +46873,10 @@ class PlayerRenderer {
                 if (timeSince >= t && timeSince < t * 2) {
                     tile.x = 1;
                     tile.y = 12;
+                    if (divingHelmet) {
+                        tile.x = 0;
+                        tile.y = 16;
+                    }
                 }
                 if (timeSince >= t * 2 && timeSince < t * 3)
                     tile.x = 4;
@@ -46757,6 +46889,10 @@ class PlayerRenderer {
                 if (timeSince >= t && timeSince < t * 2) {
                     tile.x = 1;
                     tile.y = 8;
+                    if (divingHelmet) {
+                        tile.x = 0;
+                        tile.y = 12;
+                    }
                 }
                 if (timeSince >= t * 2 && timeSince < t * 3)
                     tile.x = 2;
@@ -53022,9 +53158,16 @@ class Populator {
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
-                return;
-                // removed by dead control flow
-
+                this.addDownladder({
+                    caveRooms: this.numRooms(),
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.FLOODED_CAVE,
+                    linearity: 0.75,
+                    mapWidth: 60,
+                    mapHeight: 30,
+                    giantRoomScale: 0.25,
+                    giantCentralRoom: true,
+                });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.DARK_DUNGEON) {
                 this.addDownladder({
@@ -53150,12 +53293,16 @@ class Populator {
             const env = opts?.envType
                 ? opts.envType
                 : downLadderRoom.depth < 2
-                    ? environmentTypes_1.EnvType.FLOODED_CAVE //FOREST
-                    : downLadderRoom.depth > 2
-                        ? random_1.Random.rand() < 0.5
-                            ? environmentTypes_1.EnvType.FOREST
-                            : environmentTypes_1.EnvType.CAVE
-                        : environmentTypes_1.EnvType.CAVE;
+                    ? environmentTypes_1.EnvType.FOREST
+                    : downLadderRoom.depth === 2
+                        ? environmentTypes_1.EnvType.CAVE
+                        : downLadderRoom.depth === 3
+                            ? environmentTypes_1.EnvType.FLOODED_CAVE
+                            : downLadderRoom.depth > 3
+                                ? random_1.Random.rand() < 0.5
+                                    ? environmentTypes_1.EnvType.FOREST
+                                    : environmentTypes_1.EnvType.CAVE
+                                : environmentTypes_1.EnvType.CAVE;
             const lockOverride = opts && typeof opts.locked === "boolean"
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;

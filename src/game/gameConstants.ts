@@ -164,6 +164,7 @@ export class GameConstants {
   static readonly IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE = true;
   static readonly VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE = true;
   static NARROWED_LIGHTING_FOV = true;
+
   static readonly DEFAULT_LIGHTING_FOV_DEGREES = 360;
   static readonly UNDERWATER_LIGHTING_FOV_DEGREES = 120;
 

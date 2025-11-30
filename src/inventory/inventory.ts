@@ -18,6 +18,7 @@ import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { WoodenShield } from "../item/woodenShield";
+import { DivingHelmet } from "../item/divingHelmet";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -565,6 +566,14 @@ export class Inventory {
         (i): i is Armor =>
           (i instanceof Armor || i instanceof WoodenShield) && i.equipped,
       ) || null
+    );
+  };
+
+  divingHelmetEquipped = (): boolean => {
+    return (
+      this.items.some(
+        (i): i is DivingHelmet => i instanceof DivingHelmet && i.equipped,
+      ) || false
     );
   };
 
