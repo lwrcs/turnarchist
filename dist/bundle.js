@@ -29278,7 +29278,7 @@ GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.TUTORIAL_ENABLED = false;
 GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
-GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 150;
+GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
 // === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
 GameplaySettings.ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
 GameplaySettings.ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating
