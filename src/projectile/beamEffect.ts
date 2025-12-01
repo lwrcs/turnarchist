@@ -98,6 +98,7 @@ export class BeamEffect extends Projectile {
   endAttachment?: "player" | "tile";
   startControl?: BeamAttachmentControl;
   endControl?: BeamAttachmentControl;
+  oxygenTraversalIndex?: number;
   gravity: number = BeamEffect.GRAVITY;
   motionInfluence: number = BeamEffect.MOTION_INFLUENCE;
   turbulence: number = BeamEffect.TURBULENCE;

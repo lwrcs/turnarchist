@@ -1291,7 +1291,7 @@ export class Room {
       if (this.underwater) {
         const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
         if (anchorCoords) {
-          if (!lineDropped) {
+          if (!lineDropped && !oxygenLine?.isAttached?.()) {
             player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
               kind: "upLadder",
               angle: Math.PI / 2,
@@ -3395,6 +3395,8 @@ export class Room {
       if (playerRoom !== this) continue;
       const oxygenLine = (player as any).getOxygenLine?.();
       if (oxygenLine?.isDisconnectedFromPlayer?.()) continue;
+      const activeTraversalIndex =
+        oxygenLine?.getActiveTraversalIndex?.() ?? undefined;
       const startPos = player.getInterpolatedTilePosition();
       const startX = startPos.x;
       const startY = startPos.y - player.getOxygenAttachmentOffset();
@@ -3407,7 +3409,10 @@ export class Room {
           const startIsPlayer =
             projectile.startAttachment === "player" ||
             this.isNear(projectile.x, projectile.y, startX, startY);
-          if (startIsPlayer) {
+          const canAttachToPlayer =
+            projectile.oxygenTraversalIndex === undefined ||
+            projectile.oxygenTraversalIndex === activeTraversalIndex;
+          if (startIsPlayer && canAttachToPlayer) {
             projectile.startAttachment = "player";
             projectile.x = startX;
             projectile.y = startY;

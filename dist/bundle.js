@@ -29278,7 +29278,7 @@ GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.TUTORIAL_ENABLED = false;
 GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
-GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 15;
+GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 150;
 // === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
 GameplaySettings.ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
 GameplaySettings.ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating
@@ -44840,15 +44840,29 @@ class OxygenLine {
             return;
         if (this.disconnected)
             return;
-        if (this.anchor.room === entryDoor.room) {
-            this.resetDoorHistory();
+        const lastTraversal = this.doorHistory[this.doorHistory.length - 1];
+        if (lastTraversal &&
+            lastTraversal.from === entryDoor &&
+            lastTraversal.to === exitDoor) {
+            this.doorHistory.pop();
+            this.reindexDoorHistory();
             return;
         }
-        const traversal = { from: exitDoor, to: entryDoor };
+        const traversal = {
+            from: exitDoor,
+            to: entryDoor,
+        };
         this.doorHistory.push(traversal);
+        this.reindexDoorHistory();
     }
     resetDoorHistory() {
         this.doorHistory = [];
+    }
+    reindexDoorHistory() {
+        this.doorHistory = this.doorHistory.map((traversal, idx) => ({
+            ...traversal,
+            segmentIndex: idx,
+        }));
     }
     handleDisconnection() {
         const room = this.player.getRoom();
@@ -44864,17 +44878,6 @@ class OxygenLine {
             x: pos.x,
             y: pos.y,
         };
-        const lastTraversal = this.doorHistory[this.doorHistory.length - 1];
-        if (lastTraversal) {
-            const fromDoor = lastTraversal.from;
-            const fromRoomId = fromDoor.room?.globalId;
-            if (fromDoor.room &&
-                fromRoomId === this.disconnectTile.roomGID &&
-                fromDoor.x === pos.x &&
-                fromDoor.y === pos.y) {
-                this.doorHistory.pop();
-            }
-        }
         this.attachStartToTile(room, pos.x, pos.y, {
             kind: "player",
             angle: Math.PI / 2,
@@ -44883,6 +44886,7 @@ class OxygenLine {
         if (rebuilt) {
             this.syncBeamsWithSegments();
         }
+        this.pushOxygenMessage("Your oxygen line disconnects.");
     }
     onHelmetEquipped() {
         if (this.anchor || this.disconnected)
@@ -44912,6 +44916,7 @@ class OxygenLine {
         this.disconnected = false;
         this.disconnectTile = undefined;
         this.attachStartToPlayer(-Math.PI / 2);
+        this.pushOxygenMessage("Your oxygen line reconnects.");
         return true;
     }
     isAttached() {
@@ -44922,10 +44927,26 @@ class OxygenLine {
             return false;
         if (!this.player.getRoom()?.underwater)
             return false;
+        if (!this.validateDoorHistoryAgainstCurrentRoom()) {
+            this.resetDoorHistory();
+        }
         return this.connected;
     }
     isDisconnectedFromPlayer() {
         return this.disconnected;
+    }
+    getActiveTraversalIndex() {
+        if (this.doorHistory.length === 0)
+            return undefined;
+        return this.doorHistory[this.doorHistory.length - 1]?.segmentIndex;
+    }
+    ensureAnchor() {
+        if (this.anchor)
+            return true;
+        if (this.hasEquippedHelmet()) {
+            return this.tryAttachToNearestSource();
+        }
+        return false;
     }
     getTotalLength() {
         return this.totalLength;
@@ -44987,6 +45008,7 @@ class OxygenLine {
             return false;
         const anchorRoom = this.anchor.room;
         const newSegments = new Map();
+        this.reindexDoorHistory();
         const addSegments = (room, segments) => {
             if (segments.length > 0) {
                 const key = room?.globalId ?? room.id?.toString() ?? "";
@@ -45004,20 +45026,15 @@ class OxygenLine {
         }
         else {
             const effectiveStack = this.getEffectiveDoorStack();
-            let success = false;
-            if (effectiveStack.length > 0) {
-                success = this.buildSegmentsFromDoorHistory(currentRoom, anchorRoom, startPoint, addSegments, effectiveStack);
-                if (success)
-                    pathStackUsed = effectiveStack.slice();
-            }
-            if (!success) {
-                const bfsStack = this.buildSegmentsViaBfs(currentRoom, anchorRoom, startPoint, addSegments);
-                if (!bfsStack)
-                    return false;
-                const normalizedStack = this.normalizeDoorStack(bfsStack);
-                pathStackUsed = normalizedStack.slice();
-                this.doorHistory = normalizedStack.slice();
-            }
+            if (effectiveStack.length === 0)
+                return false;
+            const success = this.buildSegmentsFromDoorHistory(currentRoom, anchorRoom, startPoint, addSegments, effectiveStack);
+            if (!success)
+                return false;
+            pathStackUsed = effectiveStack.map((traversal, idx) => ({
+                ...traversal,
+                segmentIndex: idx,
+            }));
         }
         this.segmentsByRoom = newSegments;
         this.totalLength = this.computeLengthFromDoorHistory(startPoint, anchorEndpoint, pathStackUsed);
@@ -45043,13 +45060,14 @@ class OxygenLine {
             angle: this.startAnchor.angle,
         };
     }
-    buildRoomSegments(room, start, end) {
+    buildRoomSegments(room, start, end, doorTraversalIndex) {
         return {
             segments: [
                 {
                     room,
                     start,
                     end,
+                    doorTraversalIndex,
                 },
             ],
         };
@@ -45106,6 +45124,7 @@ class OxygenLine {
         beam.startAttachment = segment.start.attachment;
         beam.endAttachment = segment.end.attachment;
         beam.setAttachmentControls(this.buildAttachmentControl(segment.start), this.buildAttachmentControl(segment.end));
+        beam.oxygenTraversalIndex = segment.doorTraversalIndex;
         beam.setHostRoom(segment.room);
         beam.drawOnTop = true;
         beam.setHostRoom(segment.room);
@@ -45244,6 +45263,35 @@ class OxygenLine {
     hasEquippedHelmet() {
         return !!this.player.getEquippedDivingHelmet();
     }
+    pushOxygenMessage(message) {
+        try {
+            this.player.game.pushMessage?.(message);
+        }
+        catch {
+            // ignore if messaging unavailable
+        }
+    }
+    validateDoorHistoryAgainstCurrentRoom() {
+        if (!this.anchor)
+            return true;
+        const currentRoom = this.player.getRoom();
+        if (!currentRoom)
+            return false;
+        if (this.doorHistory.length === 0)
+            return true;
+        let roomCursor = currentRoom;
+        for (let i = this.doorHistory.length - 1; i >= 0; i--) {
+            const traversal = this.doorHistory[i];
+            if (!traversal?.to?.room || !traversal?.from?.room) {
+                return false;
+            }
+            if (traversal.to.room !== roomCursor) {
+                return false;
+            }
+            roomCursor = traversal.from.room;
+        }
+        return roomCursor === this.anchor.room;
+    }
     anchorEndpoint() {
         if (!this.anchor) {
             throw new Error("Attempted to use anchor endpoint without an anchor.");
@@ -45376,7 +45424,10 @@ class OxygenLine {
         return copy;
     }
     getEffectiveDoorStack() {
-        return this.doorHistory.slice();
+        return this.doorHistory.map((traversal, idx) => ({
+            ...traversal,
+            segmentIndex: traversal.segmentIndex ?? idx,
+        }));
     }
     buildSegmentsFromDoorHistory(currentRoom, anchorRoom, startPoint, addSegments, doorStack) {
         if (doorStack.length === 0)
@@ -45397,7 +45448,8 @@ class OxygenLine {
                 kind: "door",
                 angle: this.getDoorAngle(entryDoor),
             };
-            const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
+            const traversalIndex = traversal.segmentIndex ?? i;
+            const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget, traversalIndex);
             addSegments(roomCursor, chunk.segments);
             const fromDoor = traversal.from;
             if (!fromDoor || !fromDoor.room)
@@ -45418,42 +45470,6 @@ class OxygenLine {
         const finalChunk = this.buildRoomSegments(roomCursor, cursorPoint, anchorTarget);
         addSegments(roomCursor, finalChunk.segments);
         return true;
-    }
-    buildSegmentsViaBfs(startRoom, anchorRoom, startPoint, addSegments) {
-        const doorPath = startRoom.findShortestDoorPathTo(anchorRoom, true) ?? null;
-        if (!doorPath)
-            return null;
-        let roomCursor = startRoom;
-        let cursorPoint = startPoint;
-        const traversals = [];
-        for (const door of doorPath) {
-            const doorTarget = {
-                room: roomCursor,
-                x: door.x,
-                y: door.y,
-                attachment: "tile",
-                kind: "door",
-                angle: this.getDoorAngle(door),
-            };
-            const chunk = this.buildRoomSegments(roomCursor, cursorPoint, doorTarget);
-            addSegments(roomCursor, chunk.segments);
-            const linkedDoor = door.linkedDoor;
-            if (!linkedDoor || !linkedDoor.room)
-                return null;
-            traversals.push({ from: door, to: linkedDoor });
-            roomCursor = linkedDoor.room;
-            cursorPoint = {
-                room: roomCursor,
-                x: linkedDoor.x,
-                y: linkedDoor.y,
-                attachment: "tile",
-                kind: "door",
-                angle: this.getDoorAngle(linkedDoor),
-            };
-        }
-        const finalChunk = this.buildRoomSegments(roomCursor, cursorPoint, this.anchorEndpoint());
-        addSegments(roomCursor, finalChunk.segments);
-        return traversals;
     }
 }
 exports.OxygenLine = OxygenLine;
@@ -50123,7 +50139,7 @@ class Room {
                 if (this.underwater) {
                     const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
                     if (anchorCoords) {
-                        if (!lineDropped) {
+                        if (!lineDropped && !oxygenLine?.isAttached?.()) {
                             player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
                                 kind: "upLadder",
                                 angle: Math.PI / 2,
@@ -51744,6 +51760,7 @@ class Room {
                 const oxygenLine = player.getOxygenLine?.();
                 if (oxygenLine?.isDisconnectedFromPlayer?.())
                     continue;
+                const activeTraversalIndex = oxygenLine?.getActiveTraversalIndex?.() ?? undefined;
                 const startPos = player.getInterpolatedTilePosition();
                 const startX = startPos.x;
                 const startY = startPos.y - player.getOxygenAttachmentOffset();
@@ -51753,7 +51770,9 @@ class Room {
                         projectile.parent === player) {
                         const startIsPlayer = projectile.startAttachment === "player" ||
                             this.isNear(projectile.x, projectile.y, startX, startY);
-                        if (startIsPlayer) {
+                        const canAttachToPlayer = projectile.oxygenTraversalIndex === undefined ||
+                            projectile.oxygenTraversalIndex === activeTraversalIndex;
+                        if (startIsPlayer && canAttachToPlayer) {
                             projectile.startAttachment = "player";
                             projectile.x = startX;
                             projectile.y = startY;
@@ -54214,14 +54233,16 @@ class Populator {
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
                 this.addDownladder({
-                    caveRooms: this.numRooms(),
+                    caveRooms: this.numRooms() * 3,
                     locked: true,
                     envType: environmentTypes_1.EnvType.FLOODED_CAVE,
                     linearity: 0.75,
-                    mapWidth: 60,
+                    mapWidth: 100,
                     mapHeight: 30,
                     giantRoomScale: 0.25,
-                    giantCentralRoom: true,
+                    giantCentralRoom: false,
+                    loopiness: 1,
+                    branching: 0.5,
                 });
             }
             if (this.level.environment.type === environmentTypes_1.EnvType.DARK_DUNGEON) {

@@ -247,14 +247,16 @@ export class Populator {
 
     if (this.level.environment.type === EnvType.CAVE) {
       this.addDownladder({
-        caveRooms: this.numRooms(),
+        caveRooms: this.numRooms() * 3,
         locked: true,
         envType: EnvType.FLOODED_CAVE,
         linearity: 0.75,
-        mapWidth: 60,
+        mapWidth: 100,
         mapHeight: 30,
         giantRoomScale: 0.25,
-        giantCentralRoom: true,
+        giantCentralRoom: false,
+        loopiness: 1,
+        branching: 0.5,
       });
     }
 
