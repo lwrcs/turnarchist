@@ -1228,6 +1228,8 @@ export class Room {
   enterLevel = (player: Player, position?: { x: number; y: number }) => {
     this.game.updateLevel(this);
 
+    const ladderUsed = this.game.transitioningLadder;
+
     // Prefer explicit entry position from ladder transition, then provided arg, then center
     let ladderEntry = (this as any).__entryPositionFromLadder as
       | { x: number; y: number }
@@ -1245,44 +1247,72 @@ export class Room {
     let x = roomCenter.x;
     let y = roomCenter.y;
 
-    // If no explicit position given, try to position on a DownLadder tile if presentz
+    // If no explicit position given, choose the linked UpLadder for DownLadder transitions,
+    // otherwise fall back to spawning on an unlocked DownLadder tile.
     if (!position && !ladderEntry) {
-      for (let i = this.roomX; i < this.roomX + this.width; i++) {
-        for (let j = this.roomY; j < this.roomY + this.height; j++) {
-          const tile = this.roomArray[i]?.[j];
-          if (tile instanceof DownLadder && !tile.lockable.isLocked()) {
-            x = tile.x;
-            y = tile.y;
+      let spawnAssigned = false;
+      if (ladderUsed instanceof DownLadder) {
+        const entryCoords =
+          ladderUsed.entryUpLadderPos ?? this.findPrimaryUpLadderCoords();
+        if (entryCoords) {
+          x = entryCoords.x;
+          y = entryCoords.y;
+          spawnAssigned = true;
+        }
+      }
+
+      if (!spawnAssigned) {
+        for (let i = this.roomX; i < this.roomX + this.width; i++) {
+          for (let j = this.roomY; j < this.roomY + this.height; j++) {
+            const tile = this.roomArray[i]?.[j];
+            if (tile instanceof DownLadder && !tile.lockable.isLocked()) {
+              x = tile.x;
+              y = tile.y;
+              spawnAssigned = true;
+              break;
+            }
           }
+          if (spawnAssigned) break;
         }
       }
     }
 
     player.moveSnap(x, y);
-    player.anchorOxygenLineToPlayer(-Math.PI / 2);
+    const oxygenLine = player.getOxygenLine();
+    const lineDropped = oxygenLine?.isDisconnectedFromPlayer() ?? false;
+
+    if (!lineDropped) {
+      player.anchorOxygenLineToPlayer(-Math.PI / 2);
+    }
     this.onEnterRoom(player);
     this.playMusic();
 
-    const ladderUsed = this.game.transitioningLadder;
     if (ladderUsed instanceof DownLadder) {
       if (this.underwater) {
         const anchorCoords = oxygenAnchor ?? this.findPrimaryUpLadderCoords();
         if (anchorCoords) {
-          player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
-            kind: "upLadder",
-            angle: Math.PI / 2,
-          });
-          player.anchorOxygenLineToPlayer(-Math.PI / 2);
-        } else {
+          if (!lineDropped) {
+            player.attachOxygenLine(this, anchorCoords.x, anchorCoords.y, {
+              kind: "upLadder",
+              angle: Math.PI / 2,
+            });
+            player.anchorOxygenLineToPlayer(-Math.PI / 2);
+          }
+        } else if (!lineDropped) {
           player.detachOxygenLine();
         }
-      } else {
+      } else if (!lineDropped) {
         player.detachOxygenLine();
       }
-    } else if (ladderUsed instanceof UpLadder || !this.underwater) {
+    } else if (
+      !lineDropped &&
+      (ladderUsed instanceof UpLadder || !this.underwater)
+    ) {
       player.detachOxygenLine();
     }
-    player.getOxygenLine()?.update(true);
+    if (!lineDropped) {
+      oxygenLine?.update(true);
+    }
   };
 
   enterLevelThroughDoor = (player: Player, door: Door, side?: number) => {
@@ -1309,15 +1339,19 @@ export class Room {
       player.moveNoSmooth(door.x + side, door.y);
     }
     this.onEnterRoom(player);
-    player.anchorOxygenLineToPlayer(-Math.PI / 2);
-    if (!this.underwater) {
-      player.detachOxygenLine();
+    const oxygenLine = player.getOxygenLine();
+    const lineDropped = oxygenLine?.isDisconnectedFromPlayer() ?? false;
+    if (!lineDropped) {
+      player.anchorOxygenLineToPlayer(-Math.PI / 2);
+      if (!this.underwater) {
+        player.detachOxygenLine();
+      }
+      oxygenLine?.update(true);
     }
-    player.getOxygenLine()?.update(true);
     this.updateOxygenLineBeams();
   };
 
-  private findPrimaryUpLadderCoords(): { x: number; y: number } | undefined {
+  findPrimaryUpLadderCoords(): { x: number; y: number } | undefined {
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const tile = this.roomArray[x]?.[y];
@@ -3359,6 +3393,8 @@ export class Room {
         (player as any).getRoom?.() ??
         this.game.levels[player.depth]?.rooms[player.levelID];
       if (playerRoom !== this) continue;
+      const oxygenLine = (player as any).getOxygenLine?.();
+      if (oxygenLine?.isDisconnectedFromPlayer?.()) continue;
       const startPos = player.getInterpolatedTilePosition();
       const startX = startPos.x;
       const startY = startPos.y - player.getOxygenAttachmentOffset();

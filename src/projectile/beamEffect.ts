@@ -7,6 +7,7 @@ import { Room } from "../room/room";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { Door } from "../tile/door";
+import { Player } from "../player/player";
 
 interface Point {
   x: number;
@@ -109,7 +110,13 @@ export class BeamEffect extends Projectile {
   iterations: number = BeamEffect.ITERATIONS;
   segments: number = BeamEffect.SEGMENTS;
   type: string;
-  constructor(x1: number, y1: number, x2: number, y2: number, parent: Entity) {
+  constructor(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    parent: Entity | Player,
+  ) {
     super(parent, x1, y1);
     const startX = x1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
     const startY = y1 * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;

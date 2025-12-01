@@ -600,7 +600,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     ],
   },
   [EnvType.FLOODED_CAVE]: {
-    props: [{ class: NullProp, weight: 1 }],
+    props: [
+      { class: NullProp, weight: 1 },
+      { class: Succulent, weight: 0.1 },
+    ],
     enemies: [
       //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
       //{ class: FrogEnemy, weight: 1.0, minDepth: 0 },

@@ -2,7 +2,7 @@ import { Direction } from "../game";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { BeamAttachmentControl, BeamEffect } from "../projectile/beamEffect";
 import type { Room } from "../room/room";
-import type { Door } from "../tile/door";
+import { Door } from "../tile/door";
 import type { Player } from "./player";
 
 type EndpointAttachment = "tile" | "player";
@@ -53,6 +53,8 @@ interface RoomSegmentResult {
 
 export class OxygenLine {
   private readonly player: Player;
+  private static readonly MIN_SEGMENT_SEPARATION = 0.2;
+  private static readonly CLOSE_DISTANCE_EPSILON = 0.01;
   private anchor?: AnchorPoint;
   private segmentsByRoom: Map<string, OxygenSegment[]> = new Map();
   private beamsByRoom: Map<string, BeamEffect[]> = new Map();
@@ -84,6 +86,7 @@ export class OxygenLine {
   }
 
   attach(anchorRoom: Room, x: number, y: number, options?: AnchorOptions) {
+    if (!this.hasEquippedHelmet()) return;
     this.resetDoorHistory();
     this.disconnected = false;
     this.disconnectTile = undefined;
@@ -95,10 +98,17 @@ export class OxygenLine {
       kind: options?.kind,
       angle: options?.angle,
     };
+    console.log(
+      "[OxygenLine] attach",
+      (anchorRoom as any)?.globalId,
+      `(${x},${y})`,
+      options?.kind ?? "unknown",
+    );
     this.update(true);
   }
 
   attachStartToPlayer(angle?: number) {
+    if (!this.hasEquippedHelmet()) return;
     this.startAnchor = {
       mode: "player",
       angle: angle ?? -Math.PI / 2,
@@ -174,17 +184,31 @@ export class OxygenLine {
       kind: "player",
       angle: Math.PI / 2,
     });
+
+    const rebuilt = this.rebuildSegments(room);
+    if (rebuilt) {
+      this.syncBeamsWithSegments();
+    }
+  }
+
+  onHelmetEquipped() {
+    if (this.anchor || this.disconnected) return;
+    this.tryAttachToNearestSource();
+  }
+
+  onHelmetUnequipped() {
+    if (!this.anchor) return;
+    if (this.disconnected) return;
+    this.handleDisconnection();
   }
 
   private tryReconnect(): boolean {
+    if (!this.hasEquippedHelmet()) return false;
     if (!this.disconnectTile) return false;
     const room = this.player.getRoom();
     if (!room) return false;
     if ((room as any)?.globalId !== this.disconnectTile.roomGID) return false;
-    if (
-      this.player.x !== this.disconnectTile.x ||
-      this.player.y !== this.disconnectTile.y
-    ) {
+    if (!this.playerIsAtReconnectPosition(room)) {
       return false;
     }
     this.disconnected = false;
@@ -203,6 +227,10 @@ export class OxygenLine {
     return this.connected;
   }
 
+  isDisconnectedFromPlayer(): boolean {
+    return this.disconnected;
+  }
+
   getTotalLength(): number {
     return this.totalLength;
   }
@@ -216,6 +244,9 @@ export class OxygenLine {
     }
 
     if (!this.anchor || !this.startAnchor) {
+      if (!this.anchor && !this.disconnected && this.hasEquippedHelmet()) {
+        this.tryAttachToNearestSource();
+      }
       this.clearBeams();
       this.connected = false;
       return;
@@ -234,7 +265,15 @@ export class OxygenLine {
       return;
     }
 
-    if (!currentRoom.underwater || !this.anchor.room.underwater) {
+    if (!currentRoom.underwater) {
+      this.connected = false;
+      this.clearBeams();
+      return;
+    }
+
+    const anchorSupportsSupply =
+      this.anchor.room.underwater || this.anchor.kind === "upLadder";
+    if (!anchorSupportsSupply) {
       this.connected = false;
       this.clearBeams();
       return;
@@ -306,8 +345,9 @@ export class OxygenLine {
           addSegments,
         );
         if (!bfsStack) return false;
-        pathStackUsed = bfsStack.slice();
-        this.doorHistory = bfsStack.slice();
+        const normalizedStack = this.normalizeDoorStack(bfsStack);
+        pathStackUsed = normalizedStack.slice();
+        this.doorHistory = normalizedStack.slice();
       }
     }
 
@@ -387,8 +427,7 @@ export class OxygenLine {
           this.buildAttachmentControl(segment.start),
           this.buildAttachmentControl(segment.end),
         );
-        const start = this.resolveEndpoint(segment.start);
-        const end = this.resolveEndpoint(segment.end);
+        const { start, end } = this.resolveSegmentEndpoints(segment);
         beam.setTarget(start.x, start.y, end.x, end.y);
         beam.drawableY = Math.min(start.y, end.y);
       });
@@ -405,8 +444,12 @@ export class OxygenLine {
   }
 
   private createBeamForSegment(segment: OxygenSegment): BeamEffect {
-    const start = this.resolveEndpoint(segment.start);
-    const end = this.resolveEndpoint(segment.end);
+    const { start, end } = this.resolveSegmentEndpoints(segment);
+    console.log("[OxygenLine] createBeamForSegment", {
+      room: (segment.room as any)?.globalId ?? segment.room?.id,
+      start: { x: start.x, y: start.y, kind: segment.start.kind },
+      end: { x: end.x, y: end.y, kind: segment.end.kind },
+    });
     const beam = new BeamEffect(
       start.x,
       start.y,
@@ -473,6 +516,123 @@ export class OxygenLine {
       x: endpoint.x,
       y: endpoint.y - this.player.getOxygenBaseOffset(),
     };
+  }
+
+  private resolveSegmentEndpoints(segment: OxygenSegment): {
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+  } {
+    const start = this.resolveEndpoint(segment.start);
+    const end = this.resolveEndpoint(segment.end);
+
+    if (this.endpointsAreTooClose(start, end)) {
+      const separation = this.calculateSeparationVector(
+        segment.start,
+        segment.end,
+      );
+      start.x -= separation.x;
+      start.y -= separation.y;
+      end.x += separation.x;
+      end.y += separation.y;
+    }
+
+    return { start, end };
+  }
+
+  private endpointsAreTooClose(
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+  ): boolean {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return (
+      Math.abs(dx) < OxygenLine.CLOSE_DISTANCE_EPSILON &&
+      Math.abs(dy) < OxygenLine.CLOSE_DISTANCE_EPSILON
+    );
+  }
+
+  private calculateSeparationVector(
+    start: SegmentEndpoint,
+    end: SegmentEndpoint,
+  ): { x: number; y: number } {
+    const totalSeparation = OxygenLine.MIN_SEGMENT_SEPARATION;
+    const halfSeparation = totalSeparation / 2;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > 1e-3) {
+      return {
+        x: (dx / distance) * halfSeparation,
+        y: (dy / distance) * halfSeparation,
+      };
+    }
+
+    const referenceAngle = end.angle ?? start.angle;
+    if (referenceAngle !== undefined) {
+      return {
+        x: Math.cos(referenceAngle) * halfSeparation,
+        y: Math.sin(referenceAngle) * halfSeparation,
+      };
+    }
+
+    if (start.attachment === "player") {
+      return { x: 0, y: -halfSeparation };
+    }
+
+    return { x: 0, y: halfSeparation };
+  }
+
+  private tryAttachToNearestSource(): boolean {
+    if (!this.hasEquippedHelmet()) return false;
+    const room = this.player.getRoom();
+    if (!room || !room.underwater) return false;
+    const oxygenCoords = room.findPrimaryUpLadderCoords();
+    if (!oxygenCoords) return false;
+    this.attachStartToPlayer(-Math.PI / 2);
+    this.attach(room, oxygenCoords.x, oxygenCoords.y, {
+      kind: "upLadder",
+      angle: Math.PI / 2,
+    });
+    return true;
+  }
+
+  private playerIsAtReconnectPosition(room: Room): boolean {
+    if (!this.disconnectTile) return false;
+    if (
+      this.player.x === this.disconnectTile.x &&
+      this.player.y === this.disconnectTile.y
+    ) {
+      return true;
+    }
+    const tile =
+      room.roomArray?.[this.disconnectTile.x]?.[this.disconnectTile.y];
+    if (tile instanceof Door) {
+      const entry = this.getDoorEntryPosition(tile);
+      if (entry) {
+        return this.player.x === entry.x && this.player.y === entry.y;
+      }
+    }
+    return false;
+  }
+
+  private getDoorEntryPosition(door: Door): { x: number; y: number } | null {
+    switch (door.doorDir) {
+      case Direction.UP:
+        return { x: door.x, y: door.y + 1 };
+      case Direction.DOWN:
+        return { x: door.x, y: door.y - 1 };
+      case Direction.LEFT:
+        return { x: door.x + 1, y: door.y };
+      case Direction.RIGHT:
+        return { x: door.x - 1, y: door.y };
+      default:
+        return null;
+    }
+  }
+
+  private hasEquippedHelmet(): boolean {
+    return !!this.player.getEquippedDivingHelmet();
   }
 
   private anchorEndpoint(): SegmentEndpoint {
@@ -617,6 +777,31 @@ export class OxygenLine {
     y2: number,
   ): number {
     return Math.abs(x2 - x1) + Math.abs(y2 - y1);
+  }
+
+  private normalizeDoorStack(stack: DoorTraversal[]): DoorTraversal[] {
+    if (stack.length <= 1) return stack.slice();
+
+    const playerRoom = this.player.getRoom();
+    const copy = stack.slice();
+
+    if (playerRoom && copy[copy.length - 1]?.to?.room === playerRoom) {
+      return copy;
+    }
+
+    const flipped = copy
+      .slice()
+      .reverse()
+      .map((traversal) => ({
+        from: traversal.to,
+        to: traversal.from,
+      }));
+
+    if (playerRoom && flipped[flipped.length - 1]?.to?.room === playerRoom) {
+      return flipped;
+    }
+
+    return copy;
   }
 
   private getEffectiveDoorStack(): DoorTraversal[] {

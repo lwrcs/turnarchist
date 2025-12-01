@@ -18,7 +18,7 @@ export class PostProcessor {
     globalAlpha: 0.15,
     fillStyle: "#006A6E",
     globalCompositeOperation: "screen",
-    underwaterBaseAlpha: 0.2,
+    underwaterBaseAlpha: 0.1,
     underwaterFillStyle: "#002631",
     underwaterCompositeOperation: "source-over",
   };

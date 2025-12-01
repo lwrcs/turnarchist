@@ -134,8 +134,8 @@ export class SidePathManager {
                 room === downLadder.linkedRoom
               ) {
                 downLadder.entryUpLadderPos = {
-                  x: (tile as any).x,
-                  y: (tile as any).y,
+                  x: tile.x,
+                  y: tile.y,
                 };
               }
             }
@@ -157,6 +157,10 @@ export class SidePathManager {
           const tile = downLadder.linkedRoom.roomArray[x]?.[y];
           if (tile instanceof UpLadder) {
             this.setUpLadderLink(downLadder, tile as UpLadder);
+            downLadder.entryUpLadderPos = {
+              x: tile.x,
+              y: tile.y,
+            };
             return;
           }
         }

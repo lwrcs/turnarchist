@@ -41,10 +41,12 @@ export class DivingHelmet extends Equippable {
 
   onEquip = () => {
     this.refreshLighting();
+    this.wielder?.getOxygenLine?.().onHelmetEquipped();
   };
 
   onUnequip = () => {
     this.refreshLighting();
+    this.wielder?.getOxygenLine?.().onHelmetUnequipped();
   };
 
   coEquippable = (other: Equippable): boolean => {

@@ -8,6 +8,7 @@ import { Sound } from "../sound/sound";
 import { Lockable, LockType } from "./lockable";
 import { Passageway } from "./passageway";
 import { Shadow } from "../drawable/shadow";
+import { LightSource } from "../lighting/lightSource";
 
 export class UpLadder extends Passageway {
   linkedRoom: Room;
@@ -31,6 +32,15 @@ export class UpLadder extends Passageway {
       lockType: lockType,
       isTopDoor: true,
     });
+    if (this.room.underwater) {
+      this.lightSource = new LightSource(
+        this.x + 0.5,
+        this.y + 0.5,
+        3,
+        [150, 100, 50],
+      );
+      this.room.lightSources.push(this.lightSource);
+    }
   }
 
   onCollide = (player: Player) => {
