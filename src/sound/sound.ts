@@ -20,6 +20,7 @@ export class Sound {
   static healSound: Howl;
   static forestMusic: Howl;
   static caveMusic: Howl;
+  static castleMusic: Howl;
   static graveSound: Howl;
   static ambientSound: Howl;
   static goreSound: Howl;
@@ -67,6 +68,7 @@ export class Sound {
   static audioContextResumed: boolean = false;
   static forestMusicId: number | null = null;
   static caveMusicId: number | null = null;
+  static castleMusicId: number | null = null;
   static ambientSoundId: number | null = null;
 
   static detectMobile() {
@@ -414,6 +416,7 @@ export class Sound {
       // Ambient sounds - critical for mobile
       Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
       Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
+      Sound.castleMusic = createHowl("res/music/castle1.mp3", 0.25, true, 1);
       Sound.graveSound = createHowl(
         "res/SFX/attacks/skelespawn.mp3",
         1.0,
@@ -638,10 +641,31 @@ export class Sound {
     }
   };
 
+  static playCastleMusic = (index: number = 0) => {
+    if (Sound.audioMuted) return;
+    try {
+      // Stop any existing castle music
+      if (Sound.castleMusicId) {
+        Sound.castleMusic.stop(Sound.castleMusicId);
+      }
+
+      // Play new instance
+      Sound.castleMusicId = Sound.castleMusic.play();
+
+      // Handle mobile audio context
+      if (Sound.isMobile && !Sound.audioContextResumed) {
+        Sound.enableAudioForMobile();
+      }
+    } catch (error) {
+      console.error("Error playing castle music:", error);
+    }
+  };
+
   static stopMusic = () => {
     if (Sound.forestMusicId || Sound.caveMusicId) {
       Sound.forestMusic.stop(Sound.forestMusicId);
       Sound.caveMusic.stop(Sound.caveMusicId);
+      Sound.castleMusic.stop(Sound.castleMusicId);
     }
   };
 

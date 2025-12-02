@@ -519,6 +519,8 @@ export class Room {
       Sound.playForestMusic();
     } else if (this.envType === EnvType.CAVE) {
       Sound.playCaveMusic();
+    } else if (this.envType === EnvType.CASTLE) {
+      Sound.playCastleMusic();
     } else {
       Sound.stopMusic();
     }
@@ -3633,12 +3635,13 @@ export class Room {
           if (isInnerWall) {
             const hasWallAbove = this.getTile(x, y - 1) instanceof Wall;
             const hasWallBelow = this.getTile(x, y + 1) instanceof Wall;
+            const hasBottomWallBelow = y === this.roomY + this.height - 2;
 
-            if (!hasWallAbove && hasWallBelow) {
+            if (!hasWallAbove && (hasWallBelow || hasBottomWallBelow)) {
               innerWallType = "topInner";
-            } else if (hasWallAbove && !hasWallBelow) {
+            } else if (hasWallAbove && !hasWallBelow && !hasBottomWallBelow) {
               innerWallType = "bottomInner";
-            } else if (hasWallAbove && hasWallBelow) {
+            } else if (hasWallAbove && (hasWallBelow || hasBottomWallBelow)) {
               innerWallType = "surroundedInner";
             } else {
               innerWallType = "isolatedInner";

@@ -110,12 +110,15 @@ export class Wall extends Tile {
 
     // Only draw the bottom part of the wall if it's not at the bottom edge of the room
     const isDrawnFirst = this.getDoor()?.isDrawnFirst();
-    if (
+    const tileBelow = this.room.roomArray[this.x]?.[this.y + 1];
+    const hasWallBelow = tileBelow instanceof Wall;
+    const shouldDrawBottom =
       wallInfo.isDoorWall ||
       wallInfo.isBelowDoorWall ||
       (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
-      wallInfo.isInnerWall
-    ) {
+      (wallInfo.isInnerWall && !hasWallBelow);
+
+    if (shouldDrawBottom) {
       if (
         wallInfo.isBelowDoorWall &&
         !isDrawnFirst &&
@@ -157,8 +160,14 @@ export class Wall extends Tile {
   drawTopLayer = (delta: number) => {
     const wallInfo = this.room.wallInfo.get(`${this.x},${this.y}`);
     const room = this.room;
+
     if (!wallInfo || !room) return;
-    if (wallInfo.isBottomWall && room.active)
+    if (
+      (wallInfo.isBottomWall && room.active) ||
+      (wallInfo.innerWallType !== null &&
+        wallInfo.innerWallType !== "isolatedInner") ||
+      wallInfo.innerWallType === "topInner"
+    )
       Game.drawTile(
         2 + this.tileXOffset,
         this.skin,

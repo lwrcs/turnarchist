@@ -49924,6 +49924,9 @@ class Room {
             else if (this.envType === environmentTypes_1.EnvType.CAVE) {
                 sound_1.Sound.playCaveMusic();
             }
+            else if (this.envType === environmentTypes_1.EnvType.CASTLE) {
+                sound_1.Sound.playCastleMusic();
+            }
             else {
                 sound_1.Sound.stopMusic();
             }
@@ -53197,13 +53200,14 @@ class Room {
                     if (isInnerWall) {
                         const hasWallAbove = this.getTile(x, y - 1) instanceof wall_1.Wall;
                         const hasWallBelow = this.getTile(x, y + 1) instanceof wall_1.Wall;
-                        if (!hasWallAbove && hasWallBelow) {
+                        const hasBottomWallBelow = y === this.roomY + this.height - 2;
+                        if (!hasWallAbove && (hasWallBelow || hasBottomWallBelow)) {
                             innerWallType = "topInner";
                         }
-                        else if (hasWallAbove && !hasWallBelow) {
+                        else if (hasWallAbove && !hasWallBelow && !hasBottomWallBelow) {
                             innerWallType = "bottomInner";
                         }
-                        else if (hasWallAbove && hasWallBelow) {
+                        else if (hasWallAbove && (hasWallBelow || hasBottomWallBelow)) {
                             innerWallType = "surroundedInner";
                         }
                         else {
@@ -56967,6 +56971,7 @@ Sound.isMobile = false;
 Sound.audioContextResumed = false;
 Sound.forestMusicId = null;
 Sound.caveMusicId = null;
+Sound.castleMusicId = null;
 Sound.ambientSoundId = null;
 Sound.loadSounds = async () => {
     if (Sound.initialized)
@@ -57055,6 +57060,7 @@ Sound.loadSounds = async () => {
         // Ambient sounds - critical for mobile
         Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
         Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
+        Sound.castleMusic = createHowl("res/music/castle1.mp3", 0.25, true, 1);
         Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
         Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
         Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 2);
@@ -57210,10 +57216,30 @@ Sound.playForestMusic = (index = 0) => {
         console.error("Error playing forest music:", error);
     }
 };
+Sound.playCastleMusic = (index = 0) => {
+    if (Sound.audioMuted)
+        return;
+    try {
+        // Stop any existing castle music
+        if (Sound.castleMusicId) {
+            Sound.castleMusic.stop(Sound.castleMusicId);
+        }
+        // Play new instance
+        Sound.castleMusicId = Sound.castleMusic.play();
+        // Handle mobile audio context
+        if (Sound.isMobile && !Sound.audioContextResumed) {
+            Sound.enableAudioForMobile();
+        }
+    }
+    catch (error) {
+        console.error("Error playing castle music:", error);
+    }
+};
 Sound.stopMusic = () => {
     if (Sound.forestMusicId || Sound.caveMusicId) {
         Sound.forestMusic.stop(Sound.forestMusicId);
         Sound.caveMusic.stop(Sound.caveMusicId);
+        Sound.castleMusic.stop(Sound.castleMusicId);
     }
 };
 Sound.doorOpen = () => {
@@ -59048,10 +59074,13 @@ class Wall extends tile_1.Tile {
                     : 26;
             // Only draw the bottom part of the wall if it's not at the bottom edge of the room
             const isDrawnFirst = this.getDoor()?.isDrawnFirst();
-            if (wallInfo.isDoorWall ||
+            const tileBelow = this.room.roomArray[this.x]?.[this.y + 1];
+            const hasWallBelow = tileBelow instanceof Wall;
+            const shouldDrawBottom = wallInfo.isDoorWall ||
                 wallInfo.isBelowDoorWall ||
                 (wallInfo.isTopWall && !wallInfo.isLeftWall && !wallInfo.isRightWall) ||
-                wallInfo.isInnerWall) {
+                (wallInfo.isInnerWall && !hasWallBelow);
+            if (shouldDrawBottom) {
                 if (wallInfo.isBelowDoorWall &&
                     !isDrawnFirst &&
                     gameConstants_1.GameConstants.SMOOTH_LIGHTING)
@@ -59068,7 +59097,10 @@ class Wall extends tile_1.Tile {
             const room = this.room;
             if (!wallInfo || !room)
                 return;
-            if (wallInfo.isBottomWall && room.active)
+            if ((wallInfo.isBottomWall && room.active) ||
+                (wallInfo.innerWallType !== null &&
+                    wallInfo.innerWallType !== "isolatedInner") ||
+                wallInfo.innerWallType === "topInner")
                 game_1.Game.drawTile(2 + this.tileXOffset, this.skin, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.isDoor = false;
