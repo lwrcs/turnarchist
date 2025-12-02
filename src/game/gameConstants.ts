@@ -185,6 +185,7 @@ export class GameConstants {
   static HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
   static BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
   static ENEMIES_BLOCK_LIGHT = true;
+  static SHADING_DISABLED = false;
 
   static USE_PNG_LEVELS = true;
 

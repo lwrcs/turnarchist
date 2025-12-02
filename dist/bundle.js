@@ -17647,9 +17647,11 @@ const beetleEnemy_1 = __webpack_require__(/*! ./beetleEnemy */ "./src/entity/ene
 const bigFrogEnemy_1 = __webpack_require__(/*! ./bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const wall_1 = __webpack_require__(/*! ../../tile/wall */ "./src/tile/wall.ts");
 const kingEnemy_1 = __webpack_require__(/*! ./kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
+const boltcasterEnemy_1 = __webpack_require__(/*! ./boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
+const earthWizard_1 = __webpack_require__(/*! ./earthWizard */ "./src/entity/enemy/earthWizard.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20, 22, 23,
     ]) {
         super(room, game, x, y);
         this.hit = () => {
@@ -17768,6 +17770,12 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 21:
                                 spawned = new kingEnemy_1.KingEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 22:
+                                spawned = new boltcasterEnemy_1.BoltcasterEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 23:
+                                spawned = new earthWizard_1.EarthWizardEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             default:
                                 console.warn("spawner tried to spawn unknown enemy type", this.enemySpawnType);
@@ -19830,8 +19838,9 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.shadeAmount = () => {
-            if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
-                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
+            if ((gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) ||
+                gameConstants_1.GameConstants.SHADING_DISABLED)
                 return 0;
             if (!this.room.softVis[this.x])
                 return 0;
@@ -24290,9 +24299,9 @@ class Game {
                     this.onResize();
                     break;
                 case "shd":
-                    //GameConstants.SHADE_ENABLED = !GameConstants.SHADE_ENABLED;
-                    //enabled = GameConstants.SHADE_ENABLED ? "enabled" : "disabled";
-                    //this.pushMessage(`Shade is now ${enabled}`);
+                    gameConstants_1.GameConstants.SHADING_DISABLED = !gameConstants_1.GameConstants.SHADING_DISABLED;
+                    enabled = gameConstants_1.GameConstants.SHADING_DISABLED ? "disabled" : "enabled";
+                    this.pushMessage(`Shading is now ${enabled}`);
                     break;
                 case "shdop":
                     gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
@@ -26664,6 +26673,7 @@ GameConstants.USE_WEBGL_WATER_OVERLAY = true;
 GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 samples for performance
 GameConstants.BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
 GameConstants.ENEMIES_BLOCK_LIGHT = true;
+GameConstants.SHADING_DISABLED = false;
 GameConstants.USE_PNG_LEVELS = true;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -40065,17 +40075,63 @@ const environmentData = {
         ],
         enemies: [
             // Nature creatures (higher weights)
-            { class: glowBugEnemy_1.GlowBugEnemy, weight: 1.5, minDepth: 0 },
-            { class: frogEnemy_1.FrogEnemy, weight: 0.25, minDepth: 0 },
-            { class: beetleEnemy_1.BeetleEnemy, weight: 0.1, minDepth: 0 },
+            {
+                class: glowBugEnemy_1.GlowBugEnemy,
+                weight: 1.5,
+                minDepth: 0,
+                blob: {
+                    enabled: true,
+                    weight: 0.08,
+                    diameter: 6,
+                    maxBlobs: 6,
+                    chance: 0.6,
+                },
+            },
+            {
+                class: frogEnemy_1.FrogEnemy,
+                weight: 0.25,
+                minDepth: 0,
+                blob: { enabled: true, weight: 0.06, diameter: 7, chance: 0.5 },
+            },
+            {
+                class: beetleEnemy_1.BeetleEnemy,
+                weight: 0.1,
+                minDepth: 0,
+                blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
+            },
             //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
             // Less common forest enemies
-            { class: crabEnemy_1.CrabEnemy, weight: 0.3, minDepth: 0 },
-            { class: zombieEnemy_1.ZombieEnemy, weight: 0.2, minDepth: 0 },
-            { class: skullEnemy_1.SkullEnemy, weight: 0.1, minDepth: 0 },
+            {
+                class: crabEnemy_1.CrabEnemy,
+                weight: 0.3,
+                minDepth: 0,
+                blob: { enabled: true, weight: 0.04, diameter: 5, chance: 0.35 },
+            },
+            {
+                class: zombieEnemy_1.ZombieEnemy,
+                weight: 0.2,
+                minDepth: 0,
+                blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.3 },
+            },
+            {
+                class: skullEnemy_1.SkullEnemy,
+                weight: 0.1,
+                minDepth: 0,
+                blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.25 },
+            },
             // Rare magical forest creatures
-            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.2, minDepth: 1 },
-            { class: earthWizard_1.EarthWizardEnemy, weight: 0.2, minDepth: 1 },
+            {
+                class: energyWizard_1.EnergyWizardEnemy,
+                weight: 0.2,
+                minDepth: 1,
+                blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+            },
+            {
+                class: earthWizard_1.EarthWizardEnemy,
+                weight: 0.2,
+                minDepth: 1,
+                blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+            },
             //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
             {
                 class: bigFrogEnemy_1.BigFrogEnemy,
@@ -40083,6 +40139,13 @@ const environmentData = {
                 minDepth: 2,
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
+                blob: {
+                    enabled: true,
+                    weight: 0.04,
+                    diameter: 10,
+                    maxBlobs: 2,
+                    chance: 0.5,
+                },
             },
         ],
     },
@@ -49919,12 +49982,15 @@ class Room {
         this.estimatedLightingTiles = 0;
         this.playMusic = () => {
             if (this.envType === environmentTypes_1.EnvType.FOREST) {
+                sound_1.Sound.stopMusic();
                 sound_1.Sound.playForestMusic();
             }
             else if (this.envType === environmentTypes_1.EnvType.CAVE) {
+                sound_1.Sound.stopMusic();
                 sound_1.Sound.playCaveMusic();
             }
             else if (this.envType === environmentTypes_1.EnvType.CASTLE) {
+                sound_1.Sound.stopMusic();
                 sound_1.Sound.playCastleMusic();
             }
             else {
@@ -51129,6 +51195,8 @@ class Room {
                 return; // handled inline in drawEntities
             if (!this.onScreen)
                 return;
+            if (gameConstants_1.GameConstants.SHADING_DISABLED)
+                return;
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalCompositeOperation =
                 gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
@@ -51604,7 +51672,7 @@ class Room {
             // If using inline sliced shade, prepare the blurred shade source once
             let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED && gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
             let shadeSrc = null;
-            if (useInlineShade) {
+            if (useInlineShade && !gameConstants_1.GameConstants.SHADING_DISABLED) {
                 // Build unblurred shade and get blurred source
                 this.buildShadeOffscreenForSlicing();
                 shadeSrc = this.getBlurredShadeSourceForSlicing();
@@ -54496,6 +54564,7 @@ const DEFAULT_BLOB_OPTIONS = {
     enabled: true,
     weight: 0.25,
     diameter: 6,
+    chance: 1,
 };
 class Populator {
     constructor(level, skipPopulation = false) {
@@ -55217,10 +55286,9 @@ class Populator {
             if (!pos)
                 continue;
             const { x, y } = pos;
-            const propBlobOptions = this.getPropBlobOptions(selectedProp.blob, clusteringOptions?.blobOptions);
-            const effectiveBlobField = propBlobOptions
-                ? this.getBlobFieldFromCache(room, propBlobOptions, propBlobFieldCache)
-                : blobField;
+            const propBlobOptions = this.resolveBlobOptions(selectedProp.blob, clusteringOptions?.blobOptions);
+            const specificBlobField = this.getBlobFieldWithChance(room, propBlobOptions, propBlobFieldCache);
+            const effectiveBlobField = specificBlobField ?? blobField;
             if (effectiveBlobField &&
                 !this.isPlacementWithinBlobField(effectiveBlobField, x, y, size.w, size.h)) {
                 continue;
@@ -55298,12 +55366,12 @@ class Populator {
     coordKey(x, y) {
         return `${x},${y}`;
     }
-    getPropBlobOptions(propBlob, fallback) {
-        if (!propBlob)
+    resolveBlobOptions(blobConfig, fallback) {
+        if (!blobConfig)
             return null;
         const defaults = this.getDefaultBlobOptions();
-        if (typeof propBlob === "boolean") {
-            if (!propBlob)
+        if (typeof blobConfig === "boolean") {
+            if (!blobConfig)
                 return null;
             return {
                 ...defaults,
@@ -55311,14 +55379,16 @@ class Populator {
                 enabled: true,
             };
         }
-        if (propBlob.enabled === false) {
+        if (blobConfig.enabled === false) {
             return null;
         }
+        const chance = blobConfig.chance ?? fallback?.chance ?? defaults.chance ?? 1;
         return {
             enabled: true,
-            weight: propBlob.weight ?? fallback?.weight ?? defaults.weight,
-            diameter: propBlob.diameter ?? fallback?.diameter ?? defaults.diameter,
-            maxBlobs: propBlob.maxBlobs ?? fallback?.maxBlobs,
+            weight: blobConfig.weight ?? fallback?.weight ?? defaults.weight,
+            diameter: blobConfig.diameter ?? fallback?.diameter ?? defaults.diameter,
+            maxBlobs: blobConfig.maxBlobs ?? fallback?.maxBlobs,
+            chance: Math.max(0, Math.min(1, chance)),
         };
     }
     getBlobFieldFromCache(room, options, cache) {
@@ -55330,14 +55400,30 @@ class Populator {
         cache.set(key, field);
         return field;
     }
+    getBlobFieldWithChance(room, options, cache) {
+        if (!options)
+            return null;
+        const chance = Math.max(0, Math.min(1, options.chance ?? 1));
+        if (random_1.Random.rand() > chance) {
+            return null;
+        }
+        return this.getBlobFieldFromCache(room, options, cache);
+    }
     getBlobOptionsKey(options) {
         const weight = options.weight ?? DEFAULT_BLOB_OPTIONS.weight;
         const diameter = options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter;
         const maxBlobs = options.maxBlobs ?? "auto";
-        return `${weight}|${diameter}|${maxBlobs}`;
+        const chance = options.chance ?? DEFAULT_BLOB_OPTIONS.chance;
+        return `${weight}|${diameter}|${maxBlobs}|${chance}`;
     }
     getDefaultBlobOptions() {
         return { ...DEFAULT_BLOB_OPTIONS };
+    }
+    getEntityFootprint(info) {
+        if (info.size?.w && info.size?.h) {
+            return { w: info.size.w, h: info.size.h };
+        }
+        return { w: 1, h: 1 };
     }
     populateTutorialEnvironment(room) {
         const numProps = Math.floor((this.getNumProps(room) + 1) / 4);
@@ -55801,6 +55887,7 @@ class Populator {
         let tiles = room.getEmptyTiles();
         if (tiles.length === 0)
             return;
+        const enemyBlobFieldCache = new Map();
         // Existing door avoidance logic
         const excludedCoords = new Set();
         for (const door of room.doors) {
@@ -55815,13 +55902,40 @@ class Populator {
         for (let i = 0; i < numEnemies; i++) {
             if (tiles.length === 0)
                 break;
-            const position = room.getRandomEmptyPosition(tiles);
-            if (position === null)
-                break;
-            const { x, y } = position;
             const selectedEnemy = utils_1.Utils.randTableWeighted(enemyPool);
             if (!selectedEnemy?.class?.add)
                 continue;
+            const enemyBlobOptions = this.resolveBlobOptions(selectedEnemy.blob);
+            const blobField = this.getBlobFieldWithChance(room, enemyBlobOptions, enemyBlobFieldCache);
+            let activeBlobField = blobField;
+            let candidateTiles;
+            if (activeBlobField) {
+                candidateTiles = tiles.filter((tile) => activeBlobField.allowedTiles.has(this.coordKey(tile.x, tile.y)));
+                if (candidateTiles.length === 0) {
+                    activeBlobField = null;
+                    candidateTiles = tiles;
+                }
+            }
+            else {
+                candidateTiles = tiles;
+            }
+            if (candidateTiles.length === 0) {
+                continue;
+            }
+            const position = room.getRandomEmptyPosition(candidateTiles);
+            if (position === null)
+                break;
+            const { x, y } = position;
+            const footprint = this.getEntityFootprint(selectedEnemy);
+            const usedOriginalPool = candidateTiles === tiles;
+            if (activeBlobField &&
+                !this.isPlacementWithinBlobField(activeBlobField, x, y, footprint.w, footprint.h)) {
+                if (usedOriginalPool) {
+                    tiles.push(room.roomArray[x][y]);
+                }
+                i--;
+                continue;
+            }
             const args = selectedEnemy.additionalParams || [];
             // Handle special spawn logic
             if (selectedEnemy.specialSpawnLogic === "clearFloor") {
@@ -55832,6 +55946,9 @@ class Populator {
                     this.removeTilesForEnemy(tiles, x, y, enemy.w, enemy.h);
                 }
                 else {
+                    if (usedOriginalPool) {
+                        tiles.push(room.roomArray[x][y]);
+                    }
                     numEnemies++; // Retry
                 }
             }

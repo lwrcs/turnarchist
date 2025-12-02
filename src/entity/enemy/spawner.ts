@@ -29,6 +29,8 @@ import { BeetleEnemy } from "./beetleEnemy";
 import { BigFrogEnemy } from "./bigFrogEnemy";
 import { Wall } from "../../tile/wall";
 import { KingEnemy } from "./kingEnemy";
+import { BoltcasterEnemy } from "./boltcasterEnemy";
+import { EarthWizardEnemy } from "./earthWizard";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -47,7 +49,7 @@ export class Spawner extends Enemy {
     x: number,
     y: number,
     enemyTable: number[] = [
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20, 22, 23,
     ],
   ) {
     super(room, game, x, y);
@@ -360,6 +362,22 @@ export class Spawner extends Enemy {
               break;
             case 21:
               spawned = new KingEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 22:
+              spawned = new BoltcasterEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 23:
+              spawned = new EarthWizardEnemy(
                 this.room,
                 this.game,
                 position.x,

@@ -106,6 +106,8 @@ interface BlobPlacementOptions {
   diameter?: number;
   /** Optional cap on number of blobs that can spawn. */
   maxBlobs?: number;
+  /** Optional probability (0-1) that this blob setting applies for a spawn */
+  chance?: number;
 }
 
 type BlobField = {
@@ -117,11 +119,12 @@ type PopulatorClusteringOptions = ClusteringOptions & {
 };
 
 const DEFAULT_BLOB_OPTIONS: Required<
-  Pick<BlobPlacementOptions, "weight" | "diameter">
+  Pick<BlobPlacementOptions, "weight" | "diameter" | "chance">
 > & { enabled: true } = {
   enabled: true,
   weight: 0.25,
   diameter: 6,
+  chance: 1,
 };
 
 export class Populator {
@@ -611,13 +614,16 @@ export class Populator {
       if (!pos) continue;
       const { x, y } = pos;
 
-      const propBlobOptions = this.getPropBlobOptions(
+      const propBlobOptions = this.resolveBlobOptions(
         selectedProp.blob,
         clusteringOptions?.blobOptions,
       );
-      const effectiveBlobField = propBlobOptions
-        ? this.getBlobFieldFromCache(room, propBlobOptions, propBlobFieldCache)
-        : blobField;
+      const specificBlobField = this.getBlobFieldWithChance(
+        room,
+        propBlobOptions,
+        propBlobFieldCache,
+      );
+      const effectiveBlobField = specificBlobField ?? blobField;
 
       if (
         effectiveBlobField &&
@@ -734,15 +740,15 @@ export class Populator {
     return `${x},${y}`;
   }
 
-  private getPropBlobOptions(
-    propBlob: boolean | PropBlobOptions | undefined,
+  private resolveBlobOptions(
+    blobConfig: boolean | PropBlobOptions | undefined,
     fallback?: BlobPlacementOptions,
   ): BlobPlacementOptions | null {
-    if (!propBlob) return null;
+    if (!blobConfig) return null;
 
     const defaults = this.getDefaultBlobOptions();
-    if (typeof propBlob === "boolean") {
-      if (!propBlob) return null;
+    if (typeof blobConfig === "boolean") {
+      if (!blobConfig) return null;
       return {
         ...defaults,
         ...fallback,
@@ -750,15 +756,19 @@ export class Populator {
       };
     }
 
-    if (propBlob.enabled === false) {
+    if (blobConfig.enabled === false) {
       return null;
     }
 
+    const chance =
+      blobConfig.chance ?? fallback?.chance ?? defaults.chance ?? 1;
+
     return {
       enabled: true,
-      weight: propBlob.weight ?? fallback?.weight ?? defaults.weight,
-      diameter: propBlob.diameter ?? fallback?.diameter ?? defaults.diameter,
-      maxBlobs: propBlob.maxBlobs ?? fallback?.maxBlobs,
+      weight: blobConfig.weight ?? fallback?.weight ?? defaults.weight,
+      diameter: blobConfig.diameter ?? fallback?.diameter ?? defaults.diameter,
+      maxBlobs: blobConfig.maxBlobs ?? fallback?.maxBlobs,
+      chance: Math.max(0, Math.min(1, chance)),
     };
   }
 
@@ -776,15 +786,39 @@ export class Populator {
     return field;
   }
 
+  private getBlobFieldWithChance(
+    room: Room,
+    options: BlobPlacementOptions | null,
+    cache: Map<string, BlobField | null>,
+  ): BlobField | null {
+    if (!options) return null;
+    const chance = Math.max(0, Math.min(1, options.chance ?? 1));
+    if (Random.rand() > chance) {
+      return null;
+    }
+    return this.getBlobFieldFromCache(room, options, cache);
+  }
+
   private getBlobOptionsKey(options: BlobPlacementOptions) {
     const weight = options.weight ?? DEFAULT_BLOB_OPTIONS.weight;
     const diameter = options.diameter ?? DEFAULT_BLOB_OPTIONS.diameter;
     const maxBlobs = options.maxBlobs ?? "auto";
-    return `${weight}|${diameter}|${maxBlobs}`;
+    const chance = options.chance ?? DEFAULT_BLOB_OPTIONS.chance;
+    return `${weight}|${diameter}|${maxBlobs}|${chance}`;
   }
 
   private getDefaultBlobOptions(): BlobPlacementOptions {
     return { ...DEFAULT_BLOB_OPTIONS };
+  }
+
+  private getEntityFootprint(info: { size?: { w: number; h: number } }): {
+    w: number;
+    h: number;
+  } {
+    if (info.size?.w && info.size?.h) {
+      return { w: info.size.w, h: info.size.h };
+    }
+    return { w: 1, h: 1 };
   }
 
   private populateTutorialEnvironment(room: Room) {
@@ -1385,6 +1419,8 @@ export class Populator {
     let tiles = room.getEmptyTiles();
     if (tiles.length === 0) return;
 
+    const enemyBlobFieldCache = new Map<string, BlobField | null>();
+
     // Existing door avoidance logic
     const excludedCoords = new Set<string>();
     for (const door of room.doors) {
@@ -1399,12 +1435,57 @@ export class Populator {
     // Spawn enemies
     for (let i = 0; i < numEnemies; i++) {
       if (tiles.length === 0) break;
-      const position = room.getRandomEmptyPosition(tiles);
-      if (position === null) break;
-      const { x, y } = position;
 
       const selectedEnemy = Utils.randTableWeighted(enemyPool);
       if (!selectedEnemy?.class?.add) continue;
+
+      const enemyBlobOptions = this.resolveBlobOptions(selectedEnemy.blob);
+      const blobField = this.getBlobFieldWithChance(
+        room,
+        enemyBlobOptions,
+        enemyBlobFieldCache,
+      );
+
+      let activeBlobField = blobField;
+      let candidateTiles: Tile[];
+      if (activeBlobField) {
+        candidateTiles = tiles.filter((tile) =>
+          activeBlobField!.allowedTiles.has(this.coordKey(tile.x, tile.y)),
+        );
+        if (candidateTiles.length === 0) {
+          activeBlobField = null;
+          candidateTiles = tiles;
+        }
+      } else {
+        candidateTiles = tiles;
+      }
+
+      if (candidateTiles.length === 0) {
+        continue;
+      }
+
+      const position = room.getRandomEmptyPosition(candidateTiles);
+      if (position === null) break;
+      const { x, y } = position;
+      const footprint = this.getEntityFootprint(selectedEnemy);
+      const usedOriginalPool = candidateTiles === tiles;
+
+      if (
+        activeBlobField &&
+        !this.isPlacementWithinBlobField(
+          activeBlobField,
+          x,
+          y,
+          footprint.w,
+          footprint.h,
+        )
+      ) {
+        if (usedOriginalPool) {
+          tiles.push(room.roomArray[x][y]);
+        }
+        i--;
+        continue;
+      }
 
       const args = selectedEnemy.additionalParams || [];
 
@@ -1416,6 +1497,9 @@ export class Populator {
           this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h, enemy);
           this.removeTilesForEnemy(tiles, x, y, enemy.w, enemy.h);
         } else {
+          if (usedOriginalPool) {
+            tiles.push(room.roomArray[x][y]);
+          }
           numEnemies++; // Retry
         }
       } else {

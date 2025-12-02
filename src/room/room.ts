@@ -516,10 +516,16 @@ export class Room {
 
   playMusic = () => {
     if (this.envType === EnvType.FOREST) {
+      Sound.stopMusic();
+
       Sound.playForestMusic();
     } else if (this.envType === EnvType.CAVE) {
+      Sound.stopMusic();
+
       Sound.playCaveMusic();
     } else if (this.envType === EnvType.CASTLE) {
+      Sound.stopMusic();
+
       Sound.playCastleMusic();
     } else {
       Sound.stopMusic();
@@ -2622,6 +2628,7 @@ export class Room {
     if (GameConstants.isIOS || !GameConstants.SHADE_ENABLED) return;
     if (GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) return; // handled inline in drawEntities
     if (!this.onScreen) return;
+    if (GameConstants.SHADING_DISABLED) return;
 
     Game.ctx.save();
 
@@ -3221,7 +3228,7 @@ export class Room {
     let useInlineShade =
       GameConstants.SHADE_ENABLED && GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
     let shadeSrc: HTMLCanvasElement | null = null;
-    if (useInlineShade) {
+    if (useInlineShade && !GameConstants.SHADING_DISABLED) {
       // Build unblurred shade and get blurred source
       this.buildShadeOffscreenForSlicing();
       shadeSrc = this.getBlurredShadeSourceForSlicing();

@@ -119,6 +119,8 @@ export interface PropBlobOptions {
   diameter?: number;
   /** Optional cap on number of blobs */
   maxBlobs?: number;
+  /** Optional probability (0-1) that a placement should use blobs */
+  chance?: number;
 }
 
 interface PropInfo {
@@ -138,6 +140,7 @@ interface EnemyInfo {
   additionalParams?: any[];
   specialSpawnLogic?: "clearFloor" | "bigEnemy";
   size?: { w: number; h: number };
+  blob?: boolean | PropBlobOptions;
 }
 
 interface EnvironmentData {
@@ -290,19 +293,65 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     ],
     enemies: [
       // Nature creatures (higher weights)
-      { class: GlowBugEnemy, weight: 1.5, minDepth: 0 },
-      { class: FrogEnemy, weight: 0.25, minDepth: 0 }, // Frogs love forests
-      { class: BeetleEnemy, weight: 0.1, minDepth: 0 }, // Rare magic users
+      {
+        class: GlowBugEnemy,
+        weight: 1.5,
+        minDepth: 0,
+        blob: {
+          enabled: true,
+          weight: 0.08,
+          diameter: 6,
+          maxBlobs: 6,
+          chance: 0.6,
+        },
+      },
+      {
+        class: FrogEnemy,
+        weight: 0.25,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.06, diameter: 7, chance: 0.5 },
+      }, // Frogs love forests
+      {
+        class: BeetleEnemy,
+        weight: 0.1,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
+      }, // Rare magic users
       //{ class: SpiderEnemy, weight: 0.25, minDepth: 0 }, // Forest spiders
 
       // Less common forest enemies
-      { class: CrabEnemy, weight: 0.3, minDepth: 0 }, // Rare in forest
-      { class: ZombieEnemy, weight: 0.2, minDepth: 0 }, // Very rare undead
-      { class: SkullEnemy, weight: 0.1, minDepth: 0 }, // Ancient forest spirits
+      {
+        class: CrabEnemy,
+        weight: 0.3,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.04, diameter: 5, chance: 0.35 },
+      }, // Rare in forest
+      {
+        class: ZombieEnemy,
+        weight: 0.2,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.3 },
+      }, // Very rare undead
+      {
+        class: SkullEnemy,
+        weight: 0.1,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.25 },
+      }, // Ancient forest spirits
 
       // Rare magical forest creatures
-      { class: EnergyWizardEnemy, weight: 0.2, minDepth: 1 }, // Forest wizards
-      { class: EarthWizardEnemy, weight: 0.2, minDepth: 1 },
+      {
+        class: EnergyWizardEnemy,
+        weight: 0.2,
+        minDepth: 1,
+        blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+      }, // Forest wizards
+      {
+        class: EarthWizardEnemy,
+        weight: 0.2,
+        minDepth: 1,
+        blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+      },
       //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
       {
         class: BigFrogEnemy,
@@ -310,6 +359,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         minDepth: 2,
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
+        blob: {
+          enabled: true,
+          weight: 0.04,
+          diameter: 10,
+          maxBlobs: 2,
+          chance: 0.5,
+        },
       },
     ],
   },

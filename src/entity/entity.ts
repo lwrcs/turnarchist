@@ -946,8 +946,9 @@ export class Entity extends Drawable {
 
   shadeAmount = () => {
     if (
-      GameConstants.SMOOTH_LIGHTING &&
-      !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+      (GameConstants.SMOOTH_LIGHTING &&
+        !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) ||
+      GameConstants.SHADING_DISABLED
     )
       return 0;
     if (!this.room.softVis[this.x]) return 0;
