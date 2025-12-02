@@ -79,6 +79,7 @@ export class LevelGenerator {
     mapGroup: number,
     envType: EnvType,
     skipPopulation: boolean = false,
+    opts?: SidePathOptions,
   ) => {
     let newLevel = new Level(
       this.game,
@@ -89,6 +90,7 @@ export class LevelGenerator {
       mapGroup,
       envType,
       skipPopulation,
+      opts,
     );
     return newLevel;
   };
@@ -281,6 +283,7 @@ export class LevelGenerator {
       mapGroup,
       envType,
       skipPopulation,
+      opts,
     );
 
     if (isSidePath) {

@@ -25,6 +25,8 @@ export class GameplaySettings {
   static ORGANIC_TUNNELS_SPOOF_PER_WALL_MIN = 1; // min synthetic entries per doorless wall
   static ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX = 2; // max synthetic entries per doorless wall
   static ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN = 2; // keep synthetic entries away from corners
+  static ORGANIC_TUNNELS_PATH_MODE: "linear" | "bezier" = "linear"; // choose tunnel carving path
+  static ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT = true; // favor perimeter-biased routing by default
 
   // === DEBUG ===
   static LIGHTING_DEBUG = true; // log visible tile bounds and counts

@@ -1825,7 +1825,17 @@ export const loadGameState = (
     // Handle missing level state
     if (!gameState.level) {
       console.warn("🔄 LOAD: No level state found, creating default");
-      const tempLevel = new Level(game, 0, 1, 1, true, 0, EnvType.DUNGEON);
+      const tempLevel = new Level(
+        game,
+        0,
+        1,
+        1,
+        true,
+        0,
+        EnvType.DUNGEON,
+        false,
+        undefined,
+      );
       gameState.level = new LevelState(tempLevel);
     } else {
     }

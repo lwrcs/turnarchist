@@ -16,6 +16,7 @@ export interface SidePathOptions {
   loopiness?: number; // 0..1 scale for number of loop connections
   giantCentralRoom?: boolean; // enable giant central room layout
   giantRoomScale?: number; // 0..1 fraction of width/height for central room size (default ~0.65)
+  organicTunnelsAvoidCenter?: boolean; // favor perimeter-biased tunnel routing
 }
 
 /**

@@ -15,6 +15,7 @@ import { Key } from "../item/key";
 import { Lockable } from "../tile/lockable";
 import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
+import type { SidePathOptions } from "./sidePathManager";
 
 export interface EnemyParameters {
   enemyTables: Record<number, number[]>;
@@ -84,6 +85,8 @@ export class Level {
   mapGroup: number;
   populator: Populator;
   skipPopulation: boolean = false;
+  generationOptions?: SidePathOptions;
+  organicTunnelsAvoidCenter: boolean;
 
   constructor(
     game: Game,
@@ -94,6 +97,7 @@ export class Level {
     mapGroup: number,
     env: EnvType,
     skipPopulation: boolean = false,
+    generationOptions?: SidePathOptions,
   ) {
     this.game = game;
     this.globalId = IdGenerator.generate("L");
@@ -108,6 +112,10 @@ export class Level {
     this.environment = new Environment(env);
     this.populator = new Populator(this, skipPopulation);
     this.skipPopulation = skipPopulation;
+    this.generationOptions = generationOptions;
+    this.organicTunnelsAvoidCenter =
+      generationOptions?.organicTunnelsAvoidCenter ??
+      GameplaySettings.ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT;
 
     this.enemyParameters = this.getEnemyParameters();
     //let mainPath = this.isMainPath ? "main" : "side";

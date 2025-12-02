@@ -28596,7 +28596,7 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         // Handle missing level state
         if (!gameState.level) {
             console.warn("🔄 LOAD: No level state found, creating default");
-            const tempLevel = new level_1.Level(game, 0, 1, 1, true, 0, environmentTypes_1.EnvType.DUNGEON);
+            const tempLevel = new level_1.Level(game, 0, 1, 1, true, 0, environmentTypes_1.EnvType.DUNGEON, false, undefined);
             gameState.level = new LevelState(tempLevel);
         }
         else {
@@ -29287,6 +29287,8 @@ GameplaySettings.ORGANIC_TUNNELS_SPOOF_ENABLED = true; // add synthetic entries 
 GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MIN = 1; // min synthetic entries per doorless wall
 GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX = 2; // max synthetic entries per doorless wall
 GameplaySettings.ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN = 2; // keep synthetic entries away from corners
+GameplaySettings.ORGANIC_TUNNELS_PATH_MODE = "linear"; // choose tunnel carving path
+GameplaySettings.ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT = true; // favor perimeter-biased routing by default
 // === DEBUG ===
 GameplaySettings.LIGHTING_DEBUG = true; // log visible tile bounds and counts
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
@@ -40687,6 +40689,7 @@ exports.Level = void 0;
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/environment.ts");
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
@@ -40733,7 +40736,7 @@ interface entitySpawnData {
 }
 */
 class Level {
-    constructor(game, depth, width, height, isMainPath = true, mapGroup, env, skipPopulation = false) {
+    constructor(game, depth, width, height, isMainPath = true, mapGroup, env, skipPopulation = false, generationOptions) {
         // Group rooms by path identifier
         this.paths = new Map();
         this.pathsById = new Map();
@@ -40870,6 +40873,10 @@ class Level {
         this.environment = new environment_1.Environment(env);
         this.populator = new roomPopulator_1.Populator(this, skipPopulation);
         this.skipPopulation = skipPopulation;
+        this.generationOptions = generationOptions;
+        this.organicTunnelsAvoidCenter =
+            generationOptions?.organicTunnelsAvoidCenter ??
+                gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT;
         this.enemyParameters = this.getEnemyParameters();
         //let mainPath = this.isMainPath ? "main" : "side";
     }
@@ -41080,8 +41087,8 @@ class LevelGenerator {
                 }
             }
         };
-        this.createLevel = (depth, isMainPath = true, mapGroup, envType, skipPopulation = false) => {
-            let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType, skipPopulation);
+        this.createLevel = (depth, isMainPath = true, mapGroup, envType, skipPopulation = false, opts) => {
+            let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType, skipPopulation, opts);
             return newLevel;
         };
         this.getRooms = (partitions, depth, mapGroup, envType, pathId) => {
@@ -41194,7 +41201,7 @@ class LevelGenerator {
             //   console.warn("There are overlapping partitions.");
             // }
             // Get the levels based on the partitions
-            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType, skipPopulation);
+            let newLevel = this.createLevel(depth, !isSidePath, mapGroup, envType, skipPopulation, opts);
             if (isSidePath) {
                 // create Level object ONLY to prepare rooms, but
                 // DO NOT push to game.levels
@@ -53709,6 +53716,7 @@ class RoomBuilder {
             console.log("[OrganicTunnels] entries", entries);
         if (entries.length === 0)
             return; // nothing to connect
+        const usePerimeterRouting = this.room.level?.organicTunnelsAvoidCenter === true;
         if (entries.length === 1) {
             // Single-door room: carve a few meandering pockets from the entry
             const origin = entries[0];
@@ -53723,47 +53731,54 @@ class RoomBuilder {
             }
             return;
         }
-        // Step 3: create central spoof hubs and connect entries to hubs, hubs to each other
-        const hubs = this.getCenterSpoofEntries(rand, [1, 2]);
-        if (debug)
-            console.log("[OrganicTunnels] hubs", hubs);
-        if (hubs.length === 0) {
-            // Fallback: single hub at true center
-            const cx = Math.floor(this.room.roomX + this.room.width / 2);
-            const cy = Math.floor(this.room.roomY + this.room.height / 2);
-            if (this.isInterior(cx, cy))
-                hubs.push({ x: cx, y: cy });
-        }
-        // Connect every door entry to its nearest hub
-        for (const entry of entries) {
-            let bestHub = hubs[0];
-            let bestD = this.distance(entry, bestHub);
-            for (let i = 1; i < hubs.length; i++) {
-                const d = this.distance(entry, hubs[i]);
-                if (d < bestD) {
-                    bestD = d;
-                    bestHub = hubs[i];
-                }
-            }
-            this.carveOrganicPath(entry.x, entry.y, bestHub.x, bestHub.y, rand, {
-                baseRadius: 1.3,
-                radiusJitter: 1.2,
-                pocketChance: 0.2,
-                pocketRadius: [2, 4],
-            });
-        }
-        // Connect hubs together (MST across hubs)
-        if (hubs.length > 1) {
-            const hubEdges = this.minimumSpanningEdges(hubs);
+        if (usePerimeterRouting) {
             if (debug)
-                console.log("[OrganicTunnels] hub edges", hubEdges);
-            for (const e of hubEdges) {
-                this.carveOrganicPath(e.a.x, e.a.y, e.b.x, e.b.y, rand, {
-                    baseRadius: 1.4,
-                    radiusJitter: 1.1,
-                    pocketChance: 0.25,
-                    pocketRadius: [2, 5],
+                console.log("[OrganicTunnels] perimeter routing enabled");
+            this.buildPerimeterBiasedNetwork(entries, rand);
+        }
+        else {
+            // Step 3: create central spoof hubs and connect entries to hubs, hubs to each other
+            const hubs = this.getCenterSpoofEntries(rand, [1, 2]);
+            if (debug)
+                console.log("[OrganicTunnels] hubs", hubs);
+            if (hubs.length === 0) {
+                // Fallback: single hub at true center
+                const cx = Math.floor(this.room.roomX + this.room.width / 2);
+                const cy = Math.floor(this.room.roomY + this.room.height / 2);
+                if (this.isInterior(cx, cy))
+                    hubs.push({ x: cx, y: cy });
+            }
+            // Connect every door entry to its nearest hub
+            for (const entry of entries) {
+                let bestHub = hubs[0];
+                let bestD = this.distance(entry, bestHub);
+                for (let i = 1; i < hubs.length; i++) {
+                    const d = this.distance(entry, hubs[i]);
+                    if (d < bestD) {
+                        bestD = d;
+                        bestHub = hubs[i];
+                    }
+                }
+                this.carveOrganicPath(entry.x, entry.y, bestHub.x, bestHub.y, rand, {
+                    baseRadius: 1.3,
+                    radiusJitter: 1.2,
+                    pocketChance: 0.2,
+                    pocketRadius: [2, 4],
                 });
+            }
+            // Connect hubs together (MST across hubs)
+            if (hubs.length > 1) {
+                const hubEdges = this.minimumSpanningEdges(hubs);
+                if (debug)
+                    console.log("[OrganicTunnels] hub edges", hubEdges);
+                for (const e of hubEdges) {
+                    this.carveOrganicPath(e.a.x, e.a.y, e.b.x, e.b.y, rand, {
+                        baseRadius: 1.4,
+                        radiusJitter: 1.1,
+                        pocketChance: 0.25,
+                        pocketRadius: [2, 5],
+                    });
+                }
             }
         }
         // Step 4: optional extra pockets along the network
@@ -53916,7 +53931,281 @@ class RoomBuilder {
         }
         return edges;
     }
+    buildPerimeterBiasedNetwork(entries, rand) {
+        const avoidRect = this.getCenterAvoidRect();
+        const center = {
+            x: this.room.roomX + this.room.width / 2,
+            y: this.room.roomY + this.room.height / 2,
+        };
+        const ordered = entries
+            .slice()
+            .sort((a, b) => Math.atan2(a.y - center.y, a.x - center.x) -
+            Math.atan2(b.y - center.y, b.x - center.x));
+        const baseOpts = {
+            baseRadius: 1.25,
+            radiusJitter: 1.1,
+            pocketChance: 0.2,
+            pocketRadius: [2, 4],
+        };
+        for (let i = 0; i < ordered.length; i++) {
+            const current = ordered[i];
+            const next = ordered[(i + 1) % ordered.length];
+            this.carveAroundCenter(current, next, avoidRect, rand, baseOpts);
+        }
+        // Add a few long sweeps to keep the loop interesting while still avoiding center
+        if (ordered.length >= 4) {
+            const stride = Math.max(2, Math.floor(ordered.length / 2));
+            const extras = Math.min(ordered.length, 2);
+            for (let i = 0; i < extras; i++) {
+                const a = ordered[i];
+                const b = ordered[(i + stride) % ordered.length];
+                if (a === b)
+                    continue;
+                this.carveAroundCenter(a, b, avoidRect, rand, {
+                    baseRadius: 1.1,
+                    radiusJitter: 0.7,
+                    pocketChance: 0.1,
+                    pocketRadius: [2, 3],
+                });
+            }
+        }
+        this.ensureEntryConnectivity(ordered, rand);
+    }
+    getCenterAvoidRect() {
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        const insetX = Math.max(1, Math.floor(width * 0.25));
+        const insetY = Math.max(1, Math.floor(height * 0.25));
+        return {
+            minX: minX + insetX,
+            maxX: maxX - insetX,
+            minY: minY + insetY,
+            maxY: maxY - insetY,
+        };
+    }
+    carveAroundCenter(a, b, avoidRect, rand, opts) {
+        if (!this.segmentCrossesRect(a, b, avoidRect)) {
+            this.carveOrganicPath(a.x, a.y, b.x, b.y, rand, opts);
+            return;
+        }
+        const waypoint = this.choosePerimeterWaypoint(a, b, avoidRect, rand);
+        if (waypoint) {
+            this.carveOrganicPath(a.x, a.y, waypoint.x, waypoint.y, rand, opts);
+            this.carveOrganicPath(waypoint.x, waypoint.y, b.x, b.y, rand, opts);
+        }
+        else {
+            this.carveOrganicPath(a.x, a.y, b.x, b.y, rand, opts);
+        }
+    }
+    segmentCrossesRect(a, b, rect) {
+        const steps = Math.max(4, Math.ceil(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))));
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const x = a.x + (b.x - a.x) * t;
+            const y = a.y + (b.y - a.y) * t;
+            if (x > rect.minX && x < rect.maxX && y > rect.minY && y < rect.maxY) {
+                return true;
+            }
+        }
+        return false;
+    }
+    choosePerimeterWaypoint(a, b, rect, rand) {
+        const insetMargin = 1.5;
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        const clamp = (value, lo, hi) => Math.max(lo, Math.min(value, hi));
+        const candidates = [
+            {
+                x: clamp(rect.minX - insetMargin, minX, maxX),
+                y: clamp((a.y + b.y) / 2 + (rand() - 0.5) * 2, minY, maxY),
+            },
+            {
+                x: clamp(rect.maxX + insetMargin, minX, maxX),
+                y: clamp((a.y + b.y) / 2 + (rand() - 0.5) * 2, minY, maxY),
+            },
+            {
+                x: clamp((a.x + b.x) / 2 + (rand() - 0.5) * 2, minX, maxX),
+                y: clamp(rect.minY - insetMargin, minY, maxY),
+            },
+            {
+                x: clamp((a.x + b.x) / 2 + (rand() - 0.5) * 2, minX, maxX),
+                y: clamp(rect.maxY + insetMargin, minY, maxY),
+            },
+        ].filter((p) => this.isInterior(Math.round(p.x), Math.round(p.y)));
+        if (candidates.length === 0)
+            return null;
+        let best = candidates[0];
+        let bestDist = this.distance(best, a) + this.distance(best, b);
+        for (let i = 1; i < candidates.length; i++) {
+            const d = this.distance(candidates[i], a) + this.distance(candidates[i], b);
+            if (d < bestDist) {
+                bestDist = d;
+                best = candidates[i];
+            }
+        }
+        return best;
+    }
+    ensureEntryConnectivity(entries, rand) {
+        for (let attempt = 0; attempt < 8; attempt++) {
+            const { componentMap, boundaryByComponent } = this.computeFloorComponents();
+            if (componentMap.size === 0)
+                return;
+            const entryComponents = entries
+                .map((e) => componentMap.get(this.coordKey(e.x, e.y)))
+                .filter((id) => typeof id === "number");
+            const unique = Array.from(new Set(entryComponents));
+            if (unique.length <= 1)
+                return;
+            const bridged = this.bridgeDisconnectedComponents(unique, componentMap, boundaryByComponent, rand);
+            if (!bridged)
+                return;
+        }
+    }
+    computeFloorComponents() {
+        const componentMap = new Map();
+        const boundaryByComponent = new Map();
+        let componentId = 0;
+        for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+            for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+                const key = this.coordKey(x, y);
+                if (!componentMap.has(key) && this.isFloorTile(x, y)) {
+                    this.floodFillFloor(x, y, componentId, componentMap, boundaryByComponent);
+                    componentId++;
+                }
+            }
+        }
+        return { componentMap, boundaryByComponent };
+    }
+    floodFillFloor(startX, startY, componentId, componentMap, boundaryByComponent) {
+        const stack = [{ x: startX, y: startY }];
+        while (stack.length > 0) {
+            const { x, y } = stack.pop();
+            const key = this.coordKey(x, y);
+            if (componentMap.has(key) || !this.isFloorTile(x, y))
+                continue;
+            componentMap.set(key, componentId);
+            if (this.isBoundaryFloor(x, y)) {
+                if (!boundaryByComponent.has(componentId)) {
+                    boundaryByComponent.set(componentId, []);
+                }
+                boundaryByComponent.get(componentId).push({ x, y });
+            }
+            const neighbors = [
+                { x: x - 1, y },
+                { x: x + 1, y },
+                { x, y: y - 1 },
+                { x, y: y + 1 },
+            ];
+            for (const n of neighbors) {
+                if (!componentMap.has(this.coordKey(n.x, n.y)) &&
+                    this.isFloorTile(n.x, n.y)) {
+                    stack.push(n);
+                }
+            }
+        }
+    }
+    isFloorTile(x, y) {
+        return this.room.roomArray[x]?.[y] instanceof floor_1.Floor;
+    }
+    isBoundaryFloor(x, y) {
+        const neighbors = [
+            this.room.roomArray[x - 1]?.[y],
+            this.room.roomArray[x + 1]?.[y],
+            this.room.roomArray[x]?.[y - 1],
+            this.room.roomArray[x]?.[y + 1],
+        ];
+        return neighbors.some((tile) => tile instanceof wall_1.Wall);
+    }
+    coordKey(x, y) {
+        return `${x},${y}`;
+    }
+    bridgeDisconnectedComponents(targetComponents, componentMap, boundaryByComponent, rand) {
+        const wall = this.findAdjacentComponentWall(targetComponents, componentMap, rand);
+        if (wall) {
+            this.carveDisk(wall.x, wall.y, 1);
+            return true;
+        }
+        const pair = this.findClosestBoundaryPair(targetComponents, boundaryByComponent);
+        if (!pair)
+            return false;
+        this.carveOrganicPath(pair.a.x, pair.a.y, pair.b.x, pair.b.y, rand, {
+            baseRadius: 1.05,
+            radiusJitter: 0.4,
+            pocketChance: 0,
+            pocketRadius: [2, 3],
+        });
+        return true;
+    }
+    findAdjacentComponentWall(targetComponents, componentMap, rand) {
+        const targets = new Set(targetComponents);
+        const candidates = [];
+        for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+            for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+                if (!(this.room.roomArray[x]?.[y] instanceof wall_1.Wall))
+                    continue;
+                const neighbors = new Set();
+                const coords = [
+                    { x: x - 1, y },
+                    { x: x + 1, y },
+                    { x, y: y - 1 },
+                    { x, y: y + 1 },
+                ];
+                for (const c of coords) {
+                    const id = componentMap.get(this.coordKey(c.x, c.y));
+                    if (typeof id === "number" && targets.has(id)) {
+                        neighbors.add(id);
+                    }
+                }
+                if (neighbors.size >= 2) {
+                    candidates.push({ x, y });
+                }
+            }
+        }
+        if (candidates.length === 0)
+            return null;
+        const pick = candidates[Math.floor(rand() * candidates.length)];
+        return pick;
+    }
+    findClosestBoundaryPair(targetComponents, boundaryByComponent) {
+        let best = null;
+        let bestDist = Infinity;
+        for (let i = 0; i < targetComponents.length; i++) {
+            for (let j = i + 1; j < targetComponents.length; j++) {
+                const compA = boundaryByComponent.get(targetComponents[i]) || [];
+                const compB = boundaryByComponent.get(targetComponents[j]) || [];
+                if (compA.length === 0 || compB.length === 0)
+                    continue;
+                for (const a of compA) {
+                    for (const b of compB) {
+                        const dist = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            best = { a, b };
+                            if (dist <= 2)
+                                return best;
+                        }
+                    }
+                }
+            }
+        }
+        return best;
+    }
     carveOrganicPath(ax, ay, bx, by, rand, opts) {
+        const mode = gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_PATH_MODE;
+        if (mode === "bezier") {
+            this.carveOrganicPathBezier(ax, ay, bx, by, rand, opts);
+        }
+        else {
+            this.carveOrganicPathLinear(ax, ay, bx, by, rand, opts);
+        }
+    }
+    carveOrganicPathLinear(ax, ay, bx, by, rand, opts) {
         const baseRadius = opts?.baseRadius ?? 1.2;
         const radiusJitter = opts?.radiusJitter ?? 1.0;
         const pocketChance = opts?.pocketChance ?? 0.15;
@@ -53947,6 +54236,73 @@ class RoomBuilder {
                 const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
                 const pocketCx = cx + px * (lateral + (rand() - 0.5) * 2);
                 const pocketCy = cy + py * (lateral + (rand() - 0.5) * 2);
+                this.carveDisk(pocketCx, pocketCy, pr);
+            }
+        }
+    }
+    carveOrganicPathBezier(ax, ay, bx, by, rand, opts) {
+        const baseRadius = opts?.baseRadius ?? 1.2;
+        const radiusJitter = opts?.radiusJitter ?? 1.0;
+        const pocketChance = opts?.pocketChance ?? 0.15;
+        const pocketRadius = opts?.pocketRadius ?? [2, 3];
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+        const dirX = dx / len;
+        const dirY = dy / len;
+        const arcMagnitude = len * (0.15 + rand() * 0.15);
+        const controlOffset = () => (rand() - 0.5) * arcMagnitude;
+        const control1Offset = controlOffset();
+        const control2Offset = controlOffset();
+        const control1 = {
+            x: ax + dirX * (len * 0.25) - dirY * control1Offset,
+            y: ay + dirY * (len * 0.25) + dirX * control1Offset,
+        };
+        const control2 = {
+            x: ax + dirX * (len * 0.75) - dirY * control2Offset,
+            y: ay + dirY * (len * 0.75) + dirX * control2Offset,
+        };
+        const samplePoint = (t) => {
+            const u = 1 - t;
+            const uu = u * u;
+            const tt = t * t;
+            const uuu = uu * u;
+            const ttt = tt * t;
+            const x = uuu * ax + 3 * uu * t * control1.x + 3 * u * tt * control2.x + ttt * bx;
+            const y = uuu * ay + 3 * uu * t * control1.y + 3 * u * tt * control2.y + ttt * by;
+            return { x, y };
+        };
+        const sampleDerivative = (t) => {
+            const u = 1 - t;
+            const x = 3 * u * u * (control1.x - ax) +
+                6 * u * t * (control2.x - control1.x) +
+                3 * t * t * (bx - control2.x);
+            const y = 3 * u * u * (control1.y - ay) +
+                6 * u * t * (control2.y - control1.y) +
+                3 * t * t * (by - control2.y);
+            return { x, y };
+        };
+        const step = 0.45;
+        const steps = Math.max(4, Math.ceil(len / step));
+        for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const point = samplePoint(t);
+            const derivative = sampleDerivative(t);
+            const dLen = Math.max(0.001, Math.sqrt(derivative.x * derivative.x + derivative.y * derivative.y));
+            const tanX = derivative.x / dLen;
+            const tanY = derivative.y / dLen;
+            const perpX = -tanY;
+            const perpY = tanX;
+            const jitter = (rand() - 0.5) * Math.min(arcMagnitude * 0.25, 1.6);
+            const cx = point.x + perpX * jitter;
+            const cy = point.y + perpY * jitter;
+            const r = baseRadius + (rand() - 0.5) * radiusJitter;
+            this.carveDisk(cx, cy, Math.max(1, r));
+            if (rand() < pocketChance) {
+                const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
+                const pocketShift = (rand() - 0.5) * 2;
+                const pocketCx = cx + perpX * (jitter + pocketShift);
+                const pocketCy = cy + perpY * (jitter + pocketShift);
                 this.carveDisk(pocketCx, pocketCy, pr);
             }
         }
