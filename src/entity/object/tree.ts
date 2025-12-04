@@ -12,6 +12,8 @@ import { Sound } from "../../sound/sound";
 import { Random } from "../../utility/random";
 
 export class Tree extends Entity {
+  seeThroughAlpha: number = 1;
+  softSeeThroughAlpha: number = 1;
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;
@@ -42,6 +44,9 @@ export class Tree extends Entity {
   };
 
   draw = (delta: number) => {
+    const player = this.room.getPlayer();
+    const entity = this.room.hasEnemy(this.x, this.y - 1);
+
     this.tileX = this.health === 2 ? 14 : 16;
     if (this.cloned === true) this.tileX = 16;
     if (this.dead) return;
@@ -51,9 +56,27 @@ export class Tree extends Entity {
       if (this.hasShadow) this.drawShadow(delta);
 
       this.updateDrawXY(delta);
+      Game.ctx.save();
+      this.updateSeeThroughAlpha(delta);
+      Game.ctx.globalAlpha = this.softSeeThroughAlpha;
+
       Game.drawObj(
         this.tileX,
         this.tileY,
+        2,
+        3,
+        this.x - this.drawX - 0.5,
+        this.y - this.drawYOffset - this.drawY - 1,
+        2,
+        3,
+        this.room.shadeColor,
+        this.shadeAmount(),
+      );
+      Game.ctx.restore();
+
+      Game.drawObj(
+        this.tileX,
+        9,
         2,
         3,
         this.x - this.drawX - 0.5,

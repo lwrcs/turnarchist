@@ -106,6 +106,7 @@ import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
 import { Backpack } from "../item/backpack";
 import { Coal } from "../item/resource/coal";
+import { Passageway } from "../tile/passageway";
 
 // #endregion
 
@@ -1407,6 +1408,10 @@ export class Room {
       }
     }
 
+    for (const e of this.entities) {
+      e.shouldSeeThrough();
+    }
+
     this.turn = TurnState.computerTurn;
 
     this.playerTurnTime = Date.now();
@@ -1499,6 +1504,9 @@ export class Room {
 
     this.turn = TurnState.playerTurn;
     this.updateLighting();
+    for (const e of this.entities) {
+      e.shouldSeeThrough();
+    }
   };
 
   private isWithinEnemyInteractionRange(x: number, y: number): boolean {
@@ -3391,6 +3399,11 @@ export class Room {
     this.drawAbovePlayer(delta);
     for (const i of this.items) {
       i.drawTopLayer(delta);
+    }
+    for (const t of drawables) {
+      if (t instanceof Passageway) {
+        t.drawFloodedCaveFX();
+      }
     }
     Game.ctx.restore();
   };

@@ -174,19 +174,19 @@ export class DropTable {
 
     {
       itemType: "crossbowstock",
-      dropRate: 10,
+      dropRate: 20,
       category: ["crossbow"],
       unique: true,
     },
     {
       itemType: "crossbowlimb",
-      dropRate: 10,
+      dropRate: 20,
       category: ["crossbow"],
       unique: true,
     },
     {
       itemType: "crossbowbolt",
-      dropRate: 10,
+      dropRate: 3,
       category: ["crossbow"],
       unique: true,
     },
@@ -209,9 +209,9 @@ export class DropTable {
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
     {
       itemType: "divinghelmet",
-      dropRate: 400,
+      dropRate: 50,
       category: ["equipment", "underwater"],
-      unique: true,
+      unique: false,
     },
 
     // Tools

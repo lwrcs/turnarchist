@@ -156,6 +156,8 @@ export class Entity extends Drawable {
   extendShadow: boolean = false;
   shadowOpacity: number = 0.3;
   lootDropped: boolean = false;
+  seeThroughAlpha: number = 1;
+  softSeeThroughAlpha: number = 1;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -513,6 +515,28 @@ export class Entity extends Drawable {
   setDrawXY = (x: number, y: number) => {
     this.drawX += this.x - x;
     this.drawY += this.y - y;
+  };
+
+  shouldSeeThrough = () => {
+    const player = this.room.getPlayer();
+    const entity = this.room.hasEnemy(this.x, this.y - 1);
+    if (!(player?.x === this.x && player?.y === this.y - 1) && !entity) {
+      this.seeThroughAlpha = 1;
+    } else this.seeThroughAlpha = 0;
+  };
+
+  updateSeeThroughAlpha = (delta: number) => {
+    if (this.softSeeThroughAlpha > this.seeThroughAlpha) {
+      this.softSeeThroughAlpha -= 0.025 * delta;
+    } else if (this.softSeeThroughAlpha < this.seeThroughAlpha) {
+      this.softSeeThroughAlpha += 0.025 * delta;
+    }
+    if (this.softSeeThroughAlpha < 0.5) {
+      this.softSeeThroughAlpha = 0.5;
+    }
+    if (this.softSeeThroughAlpha > 1) {
+      this.softSeeThroughAlpha = 1;
+    }
   };
 
   readonly tryMove = (x: number, y: number, collide: boolean = true) => {

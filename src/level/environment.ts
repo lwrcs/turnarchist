@@ -65,6 +65,7 @@ import { Enemy } from "../entity/enemy/enemy";
 import { CaveRock } from "../entity/resource/caveRockResource";
 import { CaveBlock } from "../entity/object/caveBlock";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
+import { IronResource } from "../entity/resource/ironResource";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -223,8 +224,21 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   [EnvType.CAVE]: {
     props: [
       { class: NullProp, weight: 1 },
-      { class: CoalResource, weight: 0.25 },
-      { class: GoldResource, weight: 0.05 },
+      {
+        class: CoalResource,
+        weight: 0.5,
+        blob: { enabled: true, weight: 0.5, diameter: 5 },
+      },
+      {
+        class: GoldResource,
+        weight: 0.05,
+        blob: { enabled: true, weight: 0.25, diameter: 5 },
+      },
+      {
+        class: IronResource,
+        weight: 0.1,
+        blob: { enabled: true, weight: 0.25, diameter: 5 },
+      },
       { class: EmeraldResource, weight: 0.001 },
       { class: AmberResource, weight: 0.001 },
       { class: CaveRock, weight: 0.2 },

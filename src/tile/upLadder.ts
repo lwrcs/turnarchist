@@ -9,6 +9,7 @@ import { Lockable, LockType } from "./lockable";
 import { Passageway } from "./passageway";
 import { Shadow } from "../drawable/shadow";
 import { LightSource } from "../lighting/lightSource";
+import { EnvType } from "../constants/environmentTypes";
 
 export class UpLadder extends Passageway {
   linkedRoom: Room;
@@ -26,21 +27,26 @@ export class UpLadder extends Passageway {
   ) {
     super(room, game, x, y);
     this.depth = room.depth;
+    this.hasBloom = true;
+    this.bloomColor = "#966432";
+    this.bloomAlpha = 1;
+    this.softBloomAlpha = 0;
 
     // Initialize lockable with default config
     this.lockable = new Lockable(game, {
       lockType: lockType,
       isTopDoor: true,
     });
-    if (this.room.underwater) {
-      this.lightSource = new LightSource(
-        this.x + 0.5,
-        this.y + 0.5,
-        3,
-        [150, 100, 50],
-      );
-      this.room.lightSources.push(this.lightSource);
-    }
+
+    this.lightSource = new LightSource(
+      this.x + 0.5,
+      this.y + 0.5,
+      3,
+      [200, 100, 50],
+      0.25,
+    );
+    this.room.lightSources.push(this.lightSource);
+    this.room.updateLighting();
   }
 
   onCollide = (player: Player) => {

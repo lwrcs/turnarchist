@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.3b95116f7960a56c5a92.png";
+module.exports = __webpack_require__.p + "assets/fxset.4fb1f34aea24854fc6e8.png";
 
 /***/ }),
 
@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.402070b8d44b09b19b64.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.fc31fc7f6183056a1943.png";
+module.exports = __webpack_require__.p + "assets/objset.2ca263333074960c297b.png";
 
 /***/ }),
 
@@ -19328,6 +19328,8 @@ class Entity extends drawable_1.Drawable {
         this.extendShadow = false;
         this.shadowOpacity = 0.3;
         this.lootDropped = false;
+        this.seeThroughAlpha = 1;
+        this.softSeeThroughAlpha = 1;
         this.hoverText = () => {
             return this.name;
         };
@@ -19476,6 +19478,29 @@ class Entity extends drawable_1.Drawable {
         this.setDrawXY = (x, y) => {
             this.drawX += this.x - x;
             this.drawY += this.y - y;
+        };
+        this.shouldSeeThrough = () => {
+            const player = this.room.getPlayer();
+            const entity = this.room.hasEnemy(this.x, this.y - 1);
+            if (!(player?.x === this.x && player?.y === this.y - 1) && !entity) {
+                this.seeThroughAlpha = 1;
+            }
+            else
+                this.seeThroughAlpha = 0;
+        };
+        this.updateSeeThroughAlpha = (delta) => {
+            if (this.softSeeThroughAlpha > this.seeThroughAlpha) {
+                this.softSeeThroughAlpha -= 0.025 * delta;
+            }
+            else if (this.softSeeThroughAlpha < this.seeThroughAlpha) {
+                this.softSeeThroughAlpha += 0.025 * delta;
+            }
+            if (this.softSeeThroughAlpha < 0.5) {
+                this.softSeeThroughAlpha = 0.5;
+            }
+            if (this.softSeeThroughAlpha > 1) {
+                this.softSeeThroughAlpha = 1;
+            }
         };
         this.tryMove = (x, y, collide = true) => {
             const canDestroyOthers = this.canDestroyOthers;
@@ -22443,12 +22468,16 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
+        this.seeThroughAlpha = 1;
+        this.softSeeThroughAlpha = 1;
         this.uniqueKillBehavior = () => {
             if (this.cloned)
                 return;
             sound_1.Sound.playWood();
         };
         this.draw = (delta) => {
+            const player = this.room.getPlayer();
+            const entity = this.room.hasEnemy(this.x, this.y - 1);
             this.tileX = this.health === 2 ? 14 : 16;
             if (this.cloned === true)
                 this.tileX = 16;
@@ -22460,7 +22489,12 @@ class Tree extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
+                game_1.Game.ctx.save();
+                this.updateSeeThroughAlpha(delta);
+                game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
                 game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.ctx.restore();
+                game_1.Game.drawObj(this.tileX, 9, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -23104,7 +23138,7 @@ const ironOre_1 = __webpack_require__(/*! ../../item/resource/ironOre */ "./src/
 class IronResource extends resource_1.Resource {
     constructor(room, game, x, y) {
         super(room, game, x, y);
-        this.tileX = 13;
+        this.tileX = 18;
         this.tileY = 0;
         this.health = 2;
         this.name = "iron";
@@ -35182,19 +35216,19 @@ DropTable.drops = [
     },
     {
         itemType: "crossbowstock",
-        dropRate: 10,
+        dropRate: 20,
         category: ["crossbow"],
         unique: true,
     },
     {
         itemType: "crossbowlimb",
-        dropRate: 10,
+        dropRate: 20,
         category: ["crossbow"],
         unique: true,
     },
     {
         itemType: "crossbowbolt",
-        dropRate: 10,
+        dropRate: 3,
         category: ["crossbow"],
         unique: true,
     },
@@ -35214,9 +35248,9 @@ DropTable.drops = [
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
     {
         itemType: "divinghelmet",
-        dropRate: 400,
+        dropRate: 50,
         category: ["equipment", "underwater"],
-        unique: true,
+        unique: false,
     },
     // Tools
     { itemType: "pickaxe", dropRate: 25, category: ["tool"] },
@@ -36987,20 +37021,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IronBar = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const divingHelmet_1 = __webpack_require__(/*! ../divingHelmet */ "./src/item/divingHelmet.ts");
 class IronBar extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smith = (player) => {
             player.inventory.subtractItem(this, 1);
-            //player.inventory.addItem(new GoldRing(this.level, this.x, this.y));
-            this.level.game.pushMessage(`You hammer the iron bar into a ring.`);
+            player.inventory.addItem(new divingHelmet_1.DivingHelmet(this.level, this.x, this.y));
+            this.level.game.pushMessage(`You hammer the iron bar into a diving helmet.`);
             sound_1.Sound.playSmith();
         };
         this.tileX = 16;
         this.tileY = 0;
         this.name = IronBar.itemName;
         this.stackable = true;
-        this.description = "A bar of iron. Hit it with a hammer to make a ring.";
+        this.description =
+            "A bar of iron. Hit it with a hammer to make a diving helmet.";
     }
 }
 exports.IronBar = IronBar;
@@ -39898,6 +39934,7 @@ const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnem
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
+const ironResource_1 = __webpack_require__(/*! ../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -40007,8 +40044,21 @@ const environmentData = {
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
             { class: NullProp, weight: 1 },
-            { class: coalResource_1.CoalResource, weight: 0.25 },
-            { class: goldResource_1.GoldResource, weight: 0.05 },
+            {
+                class: coalResource_1.CoalResource,
+                weight: 0.5,
+                blob: { enabled: true, weight: 0.5, diameter: 5 },
+            },
+            {
+                class: goldResource_1.GoldResource,
+                weight: 0.05,
+                blob: { enabled: true, weight: 0.25, diameter: 5 },
+            },
+            {
+                class: ironResource_1.IronResource,
+                weight: 0.1,
+                blob: { enabled: true, weight: 0.25, diameter: 5 },
+            },
             { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
             { class: amberResource_1.AmberResource, weight: 0.001 },
             { class: caveRockResource_1.CaveRock, weight: 0.2 },
@@ -49820,6 +49870,7 @@ const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnem
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
+const passageway_1 = __webpack_require__(/*! ../tile/passageway */ "./src/tile/passageway.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -50302,6 +50353,9 @@ class Room {
                     this.roomArray[x][y].tick();
                 }
             }
+            for (const e of this.entities) {
+                e.shouldSeeThrough();
+            }
             this.turn = TurnState.computerTurn;
             this.playerTurnTime = Date.now();
             this.playerTicked = player;
@@ -50376,6 +50430,9 @@ class Room {
             //console.log(this.entities.filter((e) => e instanceof Enemy).length);
             this.turn = TurnState.playerTurn;
             this.updateLighting();
+            for (const e of this.entities) {
+                e.shouldSeeThrough();
+            }
         };
         this.update = () => {
             if (this.turn == TurnState.computerTurn) {
@@ -51824,6 +51881,11 @@ class Room {
             this.drawAbovePlayer(delta);
             for (const i of this.items) {
                 i.drawTopLayer(delta);
+            }
+            for (const t of drawables) {
+                if (t instanceof passageway_1.Passageway) {
+                    t.drawFloodedCaveFX();
+                }
             }
             game_1.Game.ctx.restore();
         };
@@ -58633,17 +58695,35 @@ exports.MagmaPool = MagmaPool;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Passageway = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const lightSource_1 = __webpack_require__(/*! ../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 class Passageway extends tile_1.Tile {
     constructor(room, game, x, y) {
         super(room, x, y);
+        this.isRope = false;
+        this.drawFloodedCaveFX = () => {
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = 0.25;
+            game_1.Game.ctx.globalCompositeOperation = "screen";
+            if (this.isRope) {
+                if (this.room.envType === environmentTypes_1.EnvType.FLOODED_CAVE)
+                    game_1.Game.ctx.globalAlpha = 0.5;
+                game_1.Game.drawFX(8, 18, 3, 3, this.x - 1, this.y - 1.75, 3, 3);
+            }
+            game_1.Game.ctx.restore();
+        };
         this.addLightSource = () => {
             if (this.environment === environmentTypes_1.EnvType.FOREST && !this.lockable.isLocked()) {
                 this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [0, 100, 100]);
                 this.room.lightSources.push(this.lightSource);
             }
+            else if (this.isRope) {
+                this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 5, [150, 100, 50]);
+                this.room.lightSources.push(this.lightSource);
+            }
+            this.room.updateLighting();
         };
         this.game = game;
         this.frame = 0;
@@ -59110,15 +59190,18 @@ class UpLadder extends passageway_1.Passageway {
                 game_1.Game.drawTile(16, 1, 1, 1, this.x, this.y - 1, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.depth = room.depth;
+        this.hasBloom = true;
+        this.bloomColor = "#966432";
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
         // Initialize lockable with default config
         this.lockable = new lockable_1.Lockable(game, {
             lockType: lockType,
             isTopDoor: true,
         });
-        if (this.room.underwater) {
-            this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 3, [150, 100, 50]);
-            this.room.lightSources.push(this.lightSource);
-        }
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 3, [200, 100, 50], 0.25);
+        this.room.lightSources.push(this.lightSource);
+        this.room.updateLighting();
     }
     isLocked() {
         return this.lockable.isLocked();

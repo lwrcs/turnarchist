@@ -14,7 +14,7 @@ export class IronResource extends Resource {
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 
-    this.tileX = 13;
+    this.tileX = 18;
     this.tileY = 0;
     this.health = 2;
     this.name = "iron";
