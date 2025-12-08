@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.4fb1f34aea24854fc6e8.png";
+module.exports = __webpack_require__.p + "assets/fxset.3344df30b97066f66689.png";
 
 /***/ }),
 
@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.4fb1f34aea24854fc6e8.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.03615d4c4de25539580e.png";
+module.exports = __webpack_require__.p + "assets/itemset.73ff84de81dc1f54a327.png";
 
 /***/ }),
 
@@ -22491,7 +22491,8 @@ class Tree extends entity_1.Entity {
                 this.updateDrawXY(delta);
                 game_1.Game.ctx.save();
                 this.updateSeeThroughAlpha(delta);
-                game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
+                if (!this.cloned)
+                    game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
                 game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
                 game_1.Game.ctx.restore();
                 game_1.Game.drawObj(this.tileX, 9, 2, 3, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - 1, 2, 3, this.room.shadeColor, this.shadeAmount());
@@ -36206,6 +36207,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Key = void 0;
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 class Key extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -36242,11 +36245,13 @@ class Key extends usable_1.Usable {
                     if (it instanceof Key && it !== this) {
                         it.showPath = false;
                         it.tileX = 1;
+                        it.tileY = 0;
                     }
                 }
             }
             this.showPath = togglingOn;
             this.tileX = this.showPath ? 2 : 1;
+            this.tileY = 0;
             const message = this.showPath ? "Showing path" : "Path hidden";
             // Pass this key and the player context so only this key's path is considered
             this.room.syncKeyPathParticles(this, player);
@@ -36259,6 +36264,43 @@ class Key extends usable_1.Usable {
             this.showPath = false;
             this.tileX = this.showPath ? 2 : 1;
             this.room.syncKeyPathParticles();
+        };
+        this.draw = (delta) => {
+            game_1.Game.ctx.save();
+            this.animateFrame += delta / 8;
+            if (this.animateFrame >= 8 || this.pickedUp)
+                this.animateFrame = 0;
+            if (!this.pickedUp) {
+                game_1.Game.ctx.globalAlpha = this.alpha;
+                if (this.alpha < 1)
+                    this.alpha += 0.01 * delta;
+                this.drawableY = this.y;
+                if (this.inChest) {
+                    this.chestOffsetY -= Math.abs(this.chestOffsetY + 0.5) * 0.035 * delta;
+                    if (this.chestOffsetY < -0.47) {
+                        this.chestOffsetY = -0.5;
+                    }
+                }
+                if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
+                    this.sineAnimateFactor += 0.2 * delta;
+                if (this.scaleFactor > 0) {
+                    this.scaleFactor *= 0.5 ** delta;
+                    if (this.scaleFactor < 0.01)
+                        this.scaleFactor = 0;
+                }
+                const scale = 1 / (this.scaleFactor + 1);
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                shadow_1.Shadow.draw(this.x, this.y, 1, 1);
+                //Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+                this.frame += (delta * (Math.PI * 2)) / 60;
+                game_1.Game.drawItem(Math.floor(this.tileX + this.animateFrame), this.tileY, 1, 2, this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset, this.y +
+                    this.sineAnimateFactor * Math.sin(this.frame) * 0.07 -
+                    1 +
+                    this.offsetY +
+                    this.h * (scale * -0.5 + 0.5) +
+                    this.chestOffsetY, this.w * scale, this.h * scale, this.level.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
         };
         /*
         outline = () => {
@@ -36315,13 +36357,14 @@ class Key extends usable_1.Usable {
                 // Fail quiet
             }
         };
-        this.tileX = 1;
-        this.tileY = 0;
+        this.tileX = 0;
+        this.tileY = 4;
         this.name = "key";
         this.doorID = 0;
         this.depth = null;
         this.room = level;
         this.showPath = false;
+        this.animateFrame = 0;
     }
 }
 exports.Key = Key;
@@ -37284,6 +37327,14 @@ class Hammer extends usable_1.Usable {
             else if (other.name === "fishing rod") {
                 let fishingRod = other;
                 fishingRod.disassemble();
+            }
+            else if (other.name === "iron bar") {
+                let ironBar = other;
+                ironBar.smith(player);
+            }
+            else if (other.name === "iron ore") {
+                let iron = other;
+                iron.smelt(player);
             }
         };
         this.disassemble = (player) => {

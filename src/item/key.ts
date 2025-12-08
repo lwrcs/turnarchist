@@ -6,6 +6,8 @@ import { Player } from "../player/player";
 import { DownLadder } from "src/tile/downLadder";
 import { Door } from "../tile/door";
 import { Usable } from "./usable/usable";
+import { Game } from "../game";
+import { Shadow } from "../drawable/shadow";
 
 export class Key extends Usable {
   static itemName = "key";
@@ -13,16 +15,18 @@ export class Key extends Usable {
   depth: number;
   room: Room;
   showPath: boolean;
+  animateFrame: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 1;
-    this.tileY = 0;
+    this.tileX = 0;
+    this.tileY = 4;
     this.name = "key";
     this.doorID = 0;
     this.depth = null;
     this.room = level;
     this.showPath = false;
+    this.animateFrame = 0;
   }
 
   getDescription = (): string => {
@@ -61,12 +65,14 @@ export class Key extends Usable {
         if (it instanceof Key && it !== this) {
           it.showPath = false;
           (it as Key).tileX = 1;
+          (it as Key).tileY = 0;
         }
       }
     }
 
     this.showPath = togglingOn;
     this.tileX = this.showPath ? 2 : 1;
+    this.tileY = 0;
 
     const message = this.showPath ? "Showing path" : "Path hidden";
     // Pass this key and the player context so only this key's path is considered
@@ -83,6 +89,53 @@ export class Key extends Usable {
     this.tileX = this.showPath ? 2 : 1;
 
     this.room.syncKeyPathParticles();
+  };
+
+  draw = (delta: number) => {
+    Game.ctx.save();
+    this.animateFrame += delta / 8;
+    if (this.animateFrame >= 8 || this.pickedUp) this.animateFrame = 0;
+    if (!this.pickedUp) {
+      Game.ctx.globalAlpha = this.alpha;
+      if (this.alpha < 1) this.alpha += 0.01 * delta;
+      this.drawableY = this.y;
+      if (this.inChest) {
+        this.chestOffsetY -= Math.abs(this.chestOffsetY + 0.5) * 0.035 * delta;
+
+        if (this.chestOffsetY < -0.47) {
+          this.chestOffsetY = -0.5;
+        }
+      }
+      if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
+        this.sineAnimateFactor += 0.2 * delta;
+      if (this.scaleFactor > 0) {
+        this.scaleFactor *= 0.5 ** delta;
+        if (this.scaleFactor < 0.01) this.scaleFactor = 0;
+      }
+      const scale = 1 / (this.scaleFactor + 1);
+      Game.ctx.imageSmoothingEnabled = false;
+      Shadow.draw(this.x, this.y, 1, 1);
+      //Game.drawItem(0, 0, 1, 1, this.x, this.y, 1, 1);
+      this.frame += (delta * (Math.PI * 2)) / 60;
+      Game.drawItem(
+        Math.floor(this.tileX + this.animateFrame),
+        this.tileY,
+        1,
+        2,
+        this.x + this.w * (scale * -0.5 + 0.5) + this.drawOffset,
+        this.y +
+          this.sineAnimateFactor * Math.sin(this.frame) * 0.07 -
+          1 +
+          this.offsetY +
+          this.h * (scale * -0.5 + 0.5) +
+          this.chestOffsetY,
+        this.w * scale,
+        this.h * scale,
+        this.level.shadeColor,
+        this.shadeAmount(),
+      );
+    }
+    Game.ctx.restore();
   };
   /*
   outline = () => {

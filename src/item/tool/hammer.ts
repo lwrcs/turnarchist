@@ -13,6 +13,8 @@ import { GoldBar } from "../resource/goldBar";
 import { Random } from "../../utility/random";
 import { FishingRod } from "./fishingRod";
 import { GoldOre } from "../resource/goldOre";
+import { IronOre } from "../resource/ironOre";
+import { IronBar } from "../resource/ironBar";
 export class Hammer extends Usable {
   static itemName = "hammer";
   constructor(level: Room, x: number, y: number) {
@@ -62,6 +64,12 @@ export class Hammer extends Usable {
     } else if (other.name === "fishing rod") {
       let fishingRod = other as FishingRod;
       fishingRod.disassemble();
+    } else if (other.name === "iron bar") {
+      let ironBar = other as IronBar;
+      ironBar.smith(player);
+    } else if (other.name === "iron ore") {
+      let iron = other as IronOre;
+      iron.smelt(player);
     }
   };
 

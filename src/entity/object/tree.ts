@@ -58,7 +58,7 @@ export class Tree extends Entity {
       this.updateDrawXY(delta);
       Game.ctx.save();
       this.updateSeeThroughAlpha(delta);
-      Game.ctx.globalAlpha = this.softSeeThroughAlpha;
+      if (!this.cloned) Game.ctx.globalAlpha = this.softSeeThroughAlpha;
 
       Game.drawObj(
         this.tileX,
