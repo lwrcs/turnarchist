@@ -11,6 +11,7 @@ export class Drawable {
   bloomColor: string = "#FFFFFF";
   bloomAlpha: number = 1;
   softBloomAlpha: number = 0;
+  bloomOffsetY: number = 0;
   updateBloom = (delta: number) => {
     if (this.hasBloom) {
       let diff = this.softBloomAlpha - this.bloomAlpha;

@@ -35,6 +35,10 @@ export class Wall extends Tile {
     if (!wallInfo) return false;
     return (
       (!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
+      ((wallInfo.isTopWall || wallInfo.isBottomWall) &&
+        wallInfo.isLeftWall &&
+        wallInfo.isRightWall &&
+        !wallInfo.isInnerWall) ||
       wallInfo.isLeftWall ||
       wallInfo.isRightWall
     );

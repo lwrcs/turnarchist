@@ -32,6 +32,7 @@ export class WallTorch extends Wall {
     this.bloomColor = "#FFA500";
     this.bloomAlpha = 1;
     this.softBloomAlpha = 0;
+    this.bloomOffsetY = this.torchOffset;
   }
 
   isSolid = (): boolean => {

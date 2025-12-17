@@ -6,6 +6,7 @@ export class LightSource {
   r: number;
   c: [number, number, number];
   b: number = 1;
+  falloffDecay: number;
 
   oldX: number;
   oldY: number;
@@ -21,12 +22,14 @@ export class LightSource {
     r: number,
     c: [number, number, number] = [180, 60, 5],
     b: number = 1,
+    falloffDecay: number = 1,
   ) {
     this.x = x;
     this.y = y;
     this.r = r;
     this.c = c;
     this.b = b;
+    this.falloffDecay = falloffDecay;
     this.oldX = x;
     this.oldY = y;
     this.oldR = r;

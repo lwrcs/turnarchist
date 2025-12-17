@@ -13,8 +13,9 @@ export class Torch extends Light {
     this.fuelCap = 500;
     this.fuel = 500;
     this.radius = 7;
-    this.maxBrightness = 5;
+    this.maxBrightness = 4;
     this.minBrightness = 2;
+    this.falloffDecay = 0.85;
     this.stackable = true;
   }
 }

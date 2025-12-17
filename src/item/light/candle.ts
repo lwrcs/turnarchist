@@ -21,5 +21,6 @@ export class Candle extends Light {
     this.stackable = true;
     this.maxBrightness = 2;
     this.maxBrightness = 0.25;
+    this.fov = 360;
   }
 }

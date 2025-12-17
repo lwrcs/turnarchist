@@ -14,6 +14,10 @@ export abstract class Light extends Equippable {
   canRefuel: boolean = false;
   waterproof: boolean;
   color: [number, number, number];
+  // Field of view in degrees for this light; defaults to full circle
+  fov: number;
+  // Controls how quickly light intensity decays; lower = slower falloff
+  falloffDecay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -27,6 +31,8 @@ export abstract class Light extends Equippable {
     this.equipped = false;
     this.color = LevelConstants.TORCH_LIGHT_COLOR;
     this.waterproof = false;
+    this.fov = GameConstants.DEFAULT_LIGHTING_FOV_DEGREES ?? 360;
+    this.falloffDecay = 1;
   }
 
   updateLighting = () => {
@@ -77,11 +83,15 @@ export abstract class Light extends Equippable {
         this.setBrightness();
         this.wielder.lightEquipped = true;
         this.wielder.lightColor = this.color;
+        this.setFov();
+        this.setFalloff();
       } else {
         //this.resetRadius();
         this.resetBrightness();
         this.wielder.lightEquipped = false;
         this.wielder.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+        this.resetFov();
+        this.resetFalloff();
       }
     } else {
       this.wielder.game.pushMessage(
@@ -102,6 +112,26 @@ export abstract class Light extends Equippable {
 
   resetBrightness = () => {
     this.wielder.lightBrightness = 0.5;
+  };
+
+  setFov = () => {
+    if (!this.wielder) return;
+    this.wielder.lightFov = this.fov ?? GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+  };
+
+  resetFov = () => {
+    if (!this.wielder) return;
+    this.wielder.lightFov = GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+  };
+
+  setFalloff = () => {
+    if (!this.wielder) return;
+    this.wielder.lightFalloffDecay = this.falloffDecay ?? 1;
+  };
+
+  resetFalloff = () => {
+    if (!this.wielder) return;
+    this.wielder.lightFalloffDecay = 1;
   };
 
   burn = () => {
@@ -131,6 +161,8 @@ export abstract class Light extends Equippable {
           // Ensure lighting updates after refuel
           this.setRadius();
           this.setBrightness();
+          this.setFov();
+          this.setFalloff();
           this.updateLighting();
           return;
         }
@@ -150,12 +182,16 @@ export abstract class Light extends Equippable {
           this.wielder.lightEquipped = false;
           this.wielder.inventory.removeItem(this);
           this.wielder.game.pushMessage(`${this.name} depletes.`);
+          this.resetFov();
+          this.resetFalloff();
         } else if (this.canRefuel) {
           this.wielder.game.pushMessage(`${this.name} depletes.`);
           this.equipped = false;
           this.resetRadius();
           this.wielder.lightEquipped = false;
           this.broken = true;
+          this.resetFov();
+          this.resetFalloff();
         }
 
         this.updateLighting();
@@ -234,6 +270,8 @@ export abstract class Light extends Equippable {
       this.resetBrightness();
       this.wielder.lightEquipped = false;
       this.wielder.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+      this.resetFov();
+      this.resetFalloff();
       this.wielder.game.pushMessage?.(`${this.name} fizzles out underwater.`);
       this.updateLighting();
     }

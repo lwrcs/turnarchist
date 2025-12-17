@@ -1925,6 +1925,7 @@ export class Room {
             l.r,
             l.c,
             l.b * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+            l.falloffDecay,
           ); // RGB color in sRGB
         }
       }
@@ -1962,6 +1963,7 @@ export class Room {
             lightingAngleStep,
             lightColor,
             lightBrightness,
+            player.lightFalloffDecay,
           );
         } else {
           for (let i = 0; i < 360; i += lightingAngleStep) {
@@ -1973,6 +1975,7 @@ export class Room {
               lightColor,
               lightBrightness *
                 LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+              player.lightFalloffDecay,
             );
           }
         }
@@ -2019,6 +2022,7 @@ export class Room {
     angleStep: number,
     lightColor: [number, number, number],
     lightBrightness: number,
+    falloffDecay: number,
   ) => {
     const originX = player.x + 0.5;
     const originY = player.y + 0.5;
@@ -2034,6 +2038,7 @@ export class Room {
         LevelConstants.LIGHTING_MAX_DISTANCE,
         lightColor,
         lightBrightness * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+        falloffDecay,
       );
     }
   };
@@ -2045,6 +2050,10 @@ export class Room {
       !player.dead
     ) {
       return GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES;
+    }
+    // Use equipped light's FOV when available, otherwise default
+    if (player.lightEquipped && typeof player.lightFov === "number") {
+      return player.lightFov;
     }
     return GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
   };
@@ -2132,6 +2141,7 @@ export class Room {
             lightSource.c,
             lightSource.b *
               LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+            lightSource.falloffDecay,
           ); // RGB color in sRGB
         } else {
           this.unCastTintAtAngle(
@@ -2142,6 +2152,7 @@ export class Room {
             lightSource.c,
             lightSource.b *
               LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+            lightSource.falloffDecay,
           );
         }
       }
@@ -2185,6 +2196,7 @@ export class Room {
     radius: number,
     color: [number, number, number],
     brightness: number,
+    falloffDecay: number = 1,
     action: "cast" | "unCast" = "cast",
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
@@ -2208,14 +2220,14 @@ export class Room {
       if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
 
       const tile = this.roomArray[currentX][currentY];
-      if (tile.isOpaque()) return; // Stop processing through opaque tiles
 
       // Handle i=0 separately to ensure correct intensity
       let intensity: number;
+      // Exponential falloff with origin boost preserved
       if (i === 0) {
         intensity = brightness * 0.1;
       } else {
-        intensity = brightness / Math.E ** (i - 0.25);
+        intensity = brightness * Math.exp(-falloffDecay * (i - 0.25));
       }
       if (intensity < 0.005) intensity = 0;
 
@@ -2226,6 +2238,33 @@ export class Room {
       }
       if (!this.renderBuffer[currentX][currentY]) {
         this.renderBuffer[currentX][currentY] = [];
+      }
+
+      // Inner walls block light explicitly and terminate the ray
+      if (tile instanceof Wall && tile.isInnerWall()) {
+        const weightedLinearColor: [number, number, number, number] = [
+          linearColor[0],
+          linearColor[1],
+          linearColor[2],
+          intensity,
+        ];
+
+        if (action === "cast") {
+          this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+        } else if (action === "unCast") {
+          this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
+            currentY
+          ].filter(
+            (colorEntry) =>
+              !(
+                Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
+              ),
+          );
+        }
+        return; // Terminate after processing the opaque wall
       }
 
       if (GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
@@ -2259,33 +2298,6 @@ export class Room {
         }
       }
       //end processing opaque entities
-
-      // Process inner walls like entities - terminate after processing
-      if (tile instanceof Wall && tile.isOpaque() && tile.isInnerWall()) {
-        const weightedLinearColor: [number, number, number, number] = [
-          linearColor[0],
-          linearColor[1],
-          linearColor[2],
-          intensity,
-        ];
-
-        if (action === "cast") {
-          this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-        } else if (action === "unCast") {
-          this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
-            currentY
-          ].filter(
-            (colorEntry) =>
-              !(
-                Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
-              ),
-          );
-        }
-        return; // Terminate after processing the opaque wall
-      }
 
       const weightedLinearColor: [number, number, number, number] = [
         linearColor[0],
@@ -2353,6 +2365,7 @@ export class Room {
     radius: number,
     color: [number, number, number],
     brightness: number,
+    falloffDecay: number = 1,
   ) => {
     this.processTintAtAngle(
       angle,
@@ -2361,6 +2374,7 @@ export class Room {
       radius,
       color,
       brightness / 3,
+      falloffDecay,
       "cast",
     );
   };
@@ -2382,6 +2396,7 @@ export class Room {
     radius: number,
     color: [number, number, number],
     brightness: number,
+    falloffDecay: number = 1,
   ) => {
     this.processTintAtAngle(
       angle,
@@ -2390,6 +2405,7 @@ export class Room {
       radius,
       color,
       brightness / 3, // added this
+      falloffDecay,
       "unCast",
     );
   };
@@ -3126,6 +3142,30 @@ export class Room {
         }
       }
 
+    // Player bloom derived from equipped light (uses Drawable bloom smoothing)
+    for (const key in this.game.players) {
+      const player = this.game.players[key];
+      if (player.getRoom() !== this) continue;
+
+      //player.hasBloom = true;
+      const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
+      player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
+      player.bloomAlpha = 0.5;
+      player.updateBloom(delta);
+
+      this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
+      this.bloomOffscreenCtx.fillStyle = player.bloomColor;
+      this.bloomOffscreenCtx.fillRect(
+        (player.x - player.drawX - this.roomX + offsetX) *
+          GameConstants.TILESIZE,
+        (player.y - player.drawY - this.roomY + offsetY - 0.5) *
+          GameConstants.TILESIZE,
+
+        GameConstants.TILESIZE,
+        GameConstants.TILESIZE,
+      );
+    }
+
     const shadeBufferTiles = 4;
     const { minX, maxX, minY, maxY } =
       this.getVisibleTileBounds(shadeBufferTiles);
@@ -3139,7 +3179,12 @@ export class Room {
 
           this.bloomOffscreenCtx.fillRect(
             (x - this.roomX + offsetX) * GameConstants.TILESIZE,
-            (y - this.roomY - 0.25 + offsetY) * GameConstants.TILESIZE,
+            (y -
+              this.roomY -
+              0.25 +
+              offsetY -
+              this.roomArray[x][y].bloomOffsetY) *
+              GameConstants.TILESIZE,
             GameConstants.TILESIZE,
             GameConstants.TILESIZE * 0.75,
           );

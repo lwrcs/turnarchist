@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.73ff84de81dc1f54a327.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.402070b8d44b09b19b64.png";
+module.exports = __webpack_require__.p + "assets/mobset.129c664bdc0df72912de.png";
 
 /***/ }),
 
@@ -9786,6 +9786,7 @@ class Drawable {
         this.bloomColor = "#FFFFFF";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
+        this.bloomOffsetY = 0;
         this.updateBloom = (delta) => {
             if (this.hasBloom) {
                 let diff = this.softBloomAlpha - this.bloomAlpha;
@@ -36396,6 +36397,7 @@ class Candle extends light_1.Light {
         this.stackable = true;
         this.maxBrightness = 2;
         this.maxBrightness = 0.25;
+        this.fov = 360;
     }
 }
 exports.Candle = Candle;
@@ -36523,9 +36525,11 @@ class Lantern extends light_1.Light {
         this.fuelCap = 250;
         this.name = "lantern";
         this.canRefuel = true;
-        this.maxBrightness = 20;
-        this.minBrightness = 5;
-        this.radius = 7;
+        this.maxBrightness = 7;
+        this.minBrightness = 3;
+        this.radius = 10;
+        // Moderately slower decay for wider effective radius without boosting peak brightness
+        this.falloffDecay = 0.6;
         this.broken = this.fuel <= 0 ? true : false;
     }
 }
@@ -36591,12 +36595,16 @@ class Light extends equippable_1.Equippable {
                     this.setBrightness();
                     this.wielder.lightEquipped = true;
                     this.wielder.lightColor = this.color;
+                    this.setFov();
+                    this.setFalloff();
                 }
                 else {
                     //this.resetRadius();
                     this.resetBrightness();
                     this.wielder.lightEquipped = false;
                     this.wielder.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+                    this.resetFov();
+                    this.resetFalloff();
                 }
             }
             else {
@@ -36612,6 +36620,26 @@ class Light extends equippable_1.Equippable {
         };
         this.resetBrightness = () => {
             this.wielder.lightBrightness = 0.5;
+        };
+        this.setFov = () => {
+            if (!this.wielder)
+                return;
+            this.wielder.lightFov = this.fov ?? gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+        };
+        this.resetFov = () => {
+            if (!this.wielder)
+                return;
+            this.wielder.lightFov = gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+        };
+        this.setFalloff = () => {
+            if (!this.wielder)
+                return;
+            this.wielder.lightFalloffDecay = this.falloffDecay ?? 1;
+        };
+        this.resetFalloff = () => {
+            if (!this.wielder)
+                return;
+            this.wielder.lightFalloffDecay = 1;
         };
         this.burn = () => {
             if (this.enforceUnderwaterRestrictions()) {
@@ -36639,6 +36667,8 @@ class Light extends equippable_1.Equippable {
                         // Ensure lighting updates after refuel
                         this.setRadius();
                         this.setBrightness();
+                        this.setFov();
+                        this.setFalloff();
                         this.updateLighting();
                         return;
                     }
@@ -36655,6 +36685,8 @@ class Light extends equippable_1.Equippable {
                         this.wielder.lightEquipped = false;
                         this.wielder.inventory.removeItem(this);
                         this.wielder.game.pushMessage(`${this.name} depletes.`);
+                        this.resetFov();
+                        this.resetFalloff();
                     }
                     else if (this.canRefuel) {
                         this.wielder.game.pushMessage(`${this.name} depletes.`);
@@ -36662,6 +36694,8 @@ class Light extends equippable_1.Equippable {
                         this.resetRadius();
                         this.wielder.lightEquipped = false;
                         this.broken = true;
+                        this.resetFov();
+                        this.resetFalloff();
                     }
                     this.updateLighting();
                 }
@@ -36707,6 +36741,8 @@ class Light extends equippable_1.Equippable {
         this.equipped = false;
         this.color = levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR;
         this.waterproof = false;
+        this.fov = gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES ?? 360;
+        this.falloffDecay = 1;
     }
     get fuelPercentage() {
         return this.fuel / this.fuelCap;
@@ -36737,6 +36773,8 @@ class Light extends equippable_1.Equippable {
             this.resetBrightness();
             this.wielder.lightEquipped = false;
             this.wielder.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+            this.resetFov();
+            this.resetFalloff();
             this.wielder.game.pushMessage?.(`${this.name} fizzles out underwater.`);
             this.updateLighting();
         }
@@ -36768,8 +36806,9 @@ class Torch extends light_1.Light {
         this.fuelCap = 500;
         this.fuel = 500;
         this.radius = 7;
-        this.maxBrightness = 5;
+        this.maxBrightness = 4;
         this.minBrightness = 2;
+        this.falloffDecay = 0.85;
         this.stackable = true;
     }
 }
@@ -44073,7 +44112,7 @@ exports.SidePathManager = SidePathManager;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LightSource = void 0;
 class LightSource {
-    constructor(x, y, r, c = [180, 60, 5], b = 1) {
+    constructor(x, y, r, c = [180, 60, 5], b = 1, falloffDecay = 1) {
         this.b = 1;
         this.dead = false;
         this.updatePosition = (x, y) => {
@@ -44092,6 +44131,7 @@ class LightSource {
         this.r = r;
         this.c = c;
         this.b = b;
+        this.falloffDecay = falloffDecay;
         this.oldX = x;
         this.oldY = y;
         this.oldR = r;
@@ -46540,6 +46580,8 @@ class Player extends drawable_1.Drawable {
         this.moveRange = 1;
         this.lightEquipped = false;
         this.lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+        this.lightFov = gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+        this.lightFalloffDecay = 1;
         this.hurtShield = false;
         this.lightBrightness = 0.3;
         this.moveQueue = [];
@@ -46553,6 +46595,7 @@ class Player extends drawable_1.Drawable {
         this.cooldownRemaining = 0;
         this.deathScreenPageIndex = 0;
         this.deathScreenPageCount = 1;
+        this.hasBloom = true;
     }
     get hitX() {
         return this.renderer?.drawX ?? 0;
@@ -50834,7 +50877,7 @@ class Room {
             for (const l of this.lightSources) {
                 if (l.shouldUpdate()) {
                     for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION); // RGB color in sRGB
+                        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, l.falloffDecay); // RGB color in sRGB
                     }
                 }
             }
@@ -50857,12 +50900,12 @@ class Room {
                         : null;
                     if (playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
                         facingAngle !== null) {
-                        this.castDirectionalPlayerLight(player, facingAngle, playerFov, lightingAngleStep, lightColor, lightBrightness);
+                        this.castDirectionalPlayerLight(player, facingAngle, playerFov, lightingAngleStep, lightColor, lightBrightness, player.lightFalloffDecay);
                     }
                     else {
                         for (let i = 0; i < 360; i += lightingAngleStep) {
                             this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness *
-                                levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
+                                levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, player.lightFalloffDecay);
                         }
                     }
                 }
@@ -50897,14 +50940,14 @@ class Room {
             this.lastLightingUpdate++;
             this.isUpdatingLighting = false;
         };
-        this.castDirectionalPlayerLight = (player, facingAngle, fovDegrees, angleStep, lightColor, lightBrightness) => {
+        this.castDirectionalPlayerLight = (player, facingAngle, fovDegrees, angleStep, lightColor, lightBrightness, falloffDecay) => {
             const originX = player.x + 0.5;
             const originY = player.y + 0.5;
             const halfFov = fovDegrees / 2;
             const span = Math.max(fovDegrees, angleStep);
             for (let offset = 0; offset <= span; offset += angleStep) {
                 const angle = this.normalizeDegrees(facingAngle - halfFov + offset);
-                this.castTintAtAngle(angle, originX, originY, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
+                this.castTintAtAngle(angle, originX, originY, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, falloffDecay);
             }
         };
         this.getPlayerLightingFov = (player) => {
@@ -50912,6 +50955,10 @@ class Room {
                 this.underwater &&
                 !player.dead) {
                 return gameConstants_1.GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES;
+            }
+            // Use equipped light's FOV when available, otherwise default
+            if (player.lightEquipped && typeof player.lightFov === "number") {
+                return player.lightFov;
             }
             return gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
         };
@@ -50975,11 +51022,11 @@ class Room {
                 for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
                     if (!remove) {
                         this.castTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b *
-                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION); // RGB color in sRGB
+                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, lightSource.falloffDecay); // RGB color in sRGB
                     }
                     else {
                         this.unCastTintAtAngle(i, lightSource.x, lightSource.y, lightSource.r, lightSource.c, lightSource.b *
-                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION);
+                            levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, lightSource.falloffDecay);
                     }
                 }
             }
@@ -51012,7 +51059,7 @@ class Room {
          * @param brightness - The brightness of the light source.
          * @param action - 'cast' to add tint, 'unCast' to remove tint.
          */
-        this.processTintAtAngle = (angle, px, py, radius, color, brightness, action = "cast") => {
+        this.processTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1, action = "cast") => {
             const dx = Math.cos((angle * Math.PI) / 180);
             const dy = Math.sin((angle * Math.PI) / 180);
             // Convert input color from sRGB to linear RGB
@@ -51027,15 +51074,14 @@ class Room {
                 if (!this.isPositionInRoom(currentX, currentY))
                     return; // Outside the room
                 const tile = this.roomArray[currentX][currentY];
-                if (tile.isOpaque())
-                    return; // Stop processing through opaque tiles
                 // Handle i=0 separately to ensure correct intensity
                 let intensity;
+                // Exponential falloff with origin boost preserved
                 if (i === 0) {
                     intensity = brightness * 0.1;
                 }
                 else {
-                    intensity = brightness / Math.E ** (i - 0.25);
+                    intensity = brightness * Math.exp(-falloffDecay * (i - 0.25));
                 }
                 if (intensity < 0.005)
                     intensity = 0;
@@ -51046,6 +51092,25 @@ class Room {
                 }
                 if (!this.renderBuffer[currentX][currentY]) {
                     this.renderBuffer[currentX][currentY] = [];
+                }
+                // Inner walls block light explicitly and terminate the ray
+                if (tile instanceof wall_1.Wall && tile.isInnerWall()) {
+                    const weightedLinearColor = [
+                        linearColor[0],
+                        linearColor[1],
+                        linearColor[2],
+                        intensity,
+                    ];
+                    if (action === "cast") {
+                        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
+                    }
+                    else if (action === "unCast") {
+                        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+                    }
+                    return; // Terminate after processing the opaque wall
                 }
                 if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
                     // O(1) membership check instead of scanning entities
@@ -51071,25 +51136,6 @@ class Room {
                     }
                 }
                 //end processing opaque entities
-                // Process inner walls like entities - terminate after processing
-                if (tile instanceof wall_1.Wall && tile.isOpaque() && tile.isInnerWall()) {
-                    const weightedLinearColor = [
-                        linearColor[0],
-                        linearColor[1],
-                        linearColor[2],
-                        intensity,
-                    ];
-                    if (action === "cast") {
-                        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-                    }
-                    else if (action === "unCast") {
-                        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
-                    }
-                    return; // Terminate after processing the opaque wall
-                }
                 const weightedLinearColor = [
                     linearColor[0],
                     linearColor[1],
@@ -51117,8 +51163,8 @@ class Room {
          * @param color - The RGB color tuple representing the tint.
          * @param brightness - The brightness of the light source.
          */
-        this.castTintAtAngle = (angle, px, py, radius, color, brightness) => {
-            this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, "cast");
+        this.castTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1) => {
+            this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, falloffDecay, "cast");
         };
         /**
          * Uncasts a tint from a light source at a specific angle.
@@ -51130,9 +51176,9 @@ class Room {
          * @param color - The RGB color tuple representing the tint.
          * @param brightness - The brightness of the light source.
          */
-        this.unCastTintAtAngle = (angle, px, py, radius, color, brightness) => {
+        this.unCastTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1) => {
             this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, // added this
-            "unCast");
+            falloffDecay, "unCast");
         };
         this.sRGBToLinear = (value) => {
             const normalized = value / 255;
@@ -51710,6 +51756,22 @@ class Room {
                             e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
                     }
                 }
+            // Player bloom derived from equipped light (uses Drawable bloom smoothing)
+            for (const key in this.game.players) {
+                const player = this.game.players[key];
+                if (player.getRoom() !== this)
+                    continue;
+                //player.hasBloom = true;
+                const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
+                player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
+                player.bloomAlpha = 0.5;
+                player.updateBloom(delta);
+                this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
+                this.bloomOffscreenCtx.fillStyle = player.bloomColor;
+                this.bloomOffscreenCtx.fillRect((player.x - player.drawX - this.roomX + offsetX) *
+                    gameConstants_1.GameConstants.TILESIZE, (player.y - player.drawY - this.roomY + offsetY - 0.5) *
+                    gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+            }
             const shadeBufferTiles = 4;
             const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(shadeBufferTiles);
             for (let x = minX; x <= maxX; x++) {
@@ -51719,7 +51781,12 @@ class Room {
                         this.bloomOffscreenCtx.globalAlpha =
                             1 * (1 - this.softVis[x][y]) * this.roomArray[x][y].softBloomAlpha;
                         this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
-                        this.bloomOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - this.roomY - 0.25 + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
+                        this.bloomOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y -
+                            this.roomY -
+                            0.25 +
+                            offsetY -
+                            this.roomArray[x][y].bloomOffsetY) *
+                            gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
                     }
                 }
             }
@@ -59291,6 +59358,10 @@ class Wall extends tile_1.Tile {
             if (!wallInfo)
                 return false;
             return ((!wallInfo.isTopWall && !wallInfo.isInnerWall) ||
+                ((wallInfo.isTopWall || wallInfo.isBottomWall) &&
+                    wallInfo.isLeftWall &&
+                    wallInfo.isRightWall &&
+                    !wallInfo.isInnerWall) ||
                 wallInfo.isLeftWall ||
                 wallInfo.isRightWall);
         };
@@ -59458,6 +59529,7 @@ class WallTorch extends wall_1.Wall {
         this.bloomColor = "#FFA500";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
+        this.bloomOffsetY = this.torchOffset;
     }
 }
 exports.WallTorch = WallTorch;

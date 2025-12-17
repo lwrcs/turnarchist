@@ -83,6 +83,8 @@ export class Player extends Drawable {
   lightSource: LightSource;
   hurtShield: boolean; // handles logic to take damage or not
   lightBrightness: number;
+  lightFov: number;
+  lightFalloffDecay: number;
   moveDistance: number;
   moveQueue: { x: number; y: number; direction: Direction }[];
   lastX: number;
@@ -173,6 +175,8 @@ export class Player extends Drawable {
     this.moveRange = 1;
     this.lightEquipped = false;
     this.lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+    this.lightFov = GameConstants.DEFAULT_LIGHTING_FOV_DEGREES;
+    this.lightFalloffDecay = 1;
 
     this.hurtShield = false;
     this.lightBrightness = 0.3;
@@ -191,6 +195,7 @@ export class Player extends Drawable {
     this.cooldownRemaining = 0;
     this.deathScreenPageIndex = 0;
     this.deathScreenPageCount = 1;
+    this.hasBloom = true;
   }
 
   getRoom = (): Room => {
