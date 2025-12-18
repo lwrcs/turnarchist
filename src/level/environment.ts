@@ -21,6 +21,7 @@ import { EnvType } from "../constants/environmentTypes";
 import { DownladderMaker } from "../entity/downladderMaker";
 import { DecoBlock } from "../entity/object/decoBlock";
 import { Furnace } from "../entity/object/furnace";
+import { TallSucculent } from "../entity/object/tallSucculent";
 
 // Enemy imports
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
@@ -673,6 +674,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     props: [
       { class: NullProp, weight: 1 },
       { class: Succulent, weight: 0.1 },
+      { class: TallSucculent, weight: 0.1 },
     ],
     enemies: [
       //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },

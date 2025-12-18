@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.129c664bdc0df72912de.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.2ca263333074960c297b.png";
+module.exports = __webpack_require__.p + "assets/objset.18c2106964bd808068b5.png";
 
 /***/ }),
 
@@ -22350,6 +22350,64 @@ class Succulent extends entity_1.Entity {
     }
 }
 exports.Succulent = Succulent;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/tallSucculent.ts":
+/*!********************************************!*\
+  !*** ./src/entity/object/tallSucculent.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TallSucculent = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class TallSucculent extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                this.frame += delta * 0.075;
+                if (this.frame > 8)
+                    this.frame = 0;
+                game_1.Game.drawObj(this.tileX + Math.floor(this.frame), this.tileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 3, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 13;
+        this.tileY = 12;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "tall succulent";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        this.drawYOffset = 2.175;
+        this.frame = Math.floor(random_1.Random.rand() * 8);
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.TallSucculent = TallSucculent;
 
 
 /***/ }),
@@ -39982,6 +40040,7 @@ const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/ob
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
 const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/entity/object/furnace.ts");
+const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 // Enemy imports
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
@@ -40568,6 +40627,7 @@ const environmentData = {
         props: [
             { class: NullProp, weight: 1 },
             { class: succulent_1.Succulent, weight: 0.1 },
+            { class: tallSucculent_1.TallSucculent, weight: 0.1 },
         ],
         enemies: [
         //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
@@ -49965,6 +50025,7 @@ const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./
 const backpack_1 = __webpack_require__(/*! ../item/backpack */ "./src/item/backpack.ts");
 const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/resource/coal.ts");
 const passageway_1 = __webpack_require__(/*! ../tile/passageway */ "./src/tile/passageway.ts");
+const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -50006,6 +50067,7 @@ var EnemyType;
     EnemyType["chest"] = "chest";
     EnemyType["boltcaster"] = "boltcaster";
     EnemyType["earthwizard"] = "earthwizard";
+    EnemyType["tallSucculent"] = "succulent";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -50046,6 +50108,7 @@ exports.EnemyTypeMap = {
     [EnemyType.chest]: chest_1.Chest,
     [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,
     [EnemyType.earthwizard]: earthWizard_1.EarthWizardEnemy,
+    [EnemyType.tallSucculent]: tallSucculent_1.TallSucculent,
     // Add other enemy mappings here
 };
 var RoomType;

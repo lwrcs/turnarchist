@@ -107,6 +107,7 @@ import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
 import { Backpack } from "../item/backpack";
 import { Coal } from "../item/resource/coal";
 import { Passageway } from "../tile/passageway";
+import { TallSucculent } from "../entity/object/tallSucculent";
 
 // #endregion
 
@@ -149,6 +150,7 @@ export enum EnemyType {
   chest = "chest",
   boltcaster = "boltcaster",
   earthwizard = "earthwizard",
+  tallSucculent = "succulent",
   // Add other enemy types here
 }
 
@@ -190,6 +192,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.chest]: Chest,
   [EnemyType.boltcaster]: BoltcasterEnemy,
   [EnemyType.earthwizard]: EarthWizardEnemy,
+  [EnemyType.tallSucculent]: TallSucculent,
   // Add other enemy mappings here
 };
 
