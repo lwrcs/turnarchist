@@ -358,9 +358,15 @@ export class Room {
 
   // Add a list to keep track of BeamEffect instances
   beamEffects: BeamEffect[] = [];
+  // Prevent unbounded particle growth when particles are spawned during render-time
+  // (e.g. bubbles) but turn/tick cleanup isn't running (idle, menus, replay, etc).
+  private particleCleanupAccumulator: number = 0;
 
   // Add this property to track created mask canvases
-  private maskCanvases: HTMLCanvasElement[] = [];
+  // Note: older versions tracked every created mask canvas, which could leak memory if called repeatedly.
+  // Keep a single reusable wall mask canvas instead.
+  private wallMaskCanvas?: HTMLCanvasElement;
+  private wallMaskCtx?: CanvasRenderingContext2D;
 
   // Add blur cache property
   private blurCache: BlurCache = {
@@ -3277,6 +3283,24 @@ export class Room {
   drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
     if (!this.onScreen) return;
 
+    // Render-time particle cleanup (in-place, avoids allocations).
+    // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
+    // while the game is idling; bubbles are spawned from `Player.draw()`.
+    this.particleCleanupAccumulator += delta;
+    if (this.particleCleanupAccumulator >= 10) {
+      this.particleCleanupAccumulator = 0;
+      if (this.particles.length > 0) {
+        let w = 0;
+        for (let r = 0; r < this.particles.length; r++) {
+          const p = this.particles[r];
+          if (p && !p.dead) {
+            this.particles[w++] = p;
+          }
+        }
+        if (w !== this.particles.length) this.particles.length = w;
+      }
+    }
+
     this.updateOxygenLineBeams();
 
     Game.ctx.save();
@@ -3639,11 +3663,17 @@ export class Room {
 
   // src/room.ts
   createWallMask = (): HTMLCanvasElement => {
-    const maskCanvas = document.createElement("canvas");
-    this.maskCanvases.push(maskCanvas); // <-- Track the canvas
+    // Reuse a single mask canvas to avoid allocating a new canvas repeatedly.
+    if (!this.wallMaskCanvas) {
+      this.wallMaskCanvas = document.createElement("canvas");
+      this.wallMaskCtx = this.wallMaskCanvas.getContext("2d") as
+        | CanvasRenderingContext2D
+        | undefined;
+    }
+    const maskCanvas = this.wallMaskCanvas;
     maskCanvas.width = this.width * GameConstants.TILESIZE;
     maskCanvas.height = this.height * GameConstants.TILESIZE;
-    const ctx = maskCanvas.getContext("2d");
+    const ctx = this.wallMaskCtx;
     if (!ctx) {
       throw new Error("Failed to create mask canvas context.");
     }
@@ -3681,6 +3711,9 @@ export class Room {
   //calculate wall info for proper wall rendering
   calculateWallInfo() {
     this.wallInfo.clear();
+    // IMPORTANT: calculateWallInfo() is called frequently (e.g. each tick).
+    // Reset `this.walls` to avoid unbounded growth and memory leaks over long play sessions.
+    if (this.walls) this.walls.length = 0;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const tile = this.getTile(x, y);

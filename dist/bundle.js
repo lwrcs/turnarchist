@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.3344df30b97066f66689.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.73ff84de81dc1f54a327.png";
+module.exports = __webpack_require__.p + "assets/itemset.756f2386f2be7f75e8d1.png";
 
 /***/ }),
 
@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.129c664bdc0df72912de.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.18c2106964bd808068b5.png";
+module.exports = __webpack_require__.p + "assets/objset.b5676c8fdf62e96c0af7.png";
 
 /***/ }),
 
@@ -21784,6 +21784,67 @@ exports.Furnace = Furnace;
 
 /***/ }),
 
+/***/ "./src/entity/object/glowshrooms.ts":
+/*!******************************************!*\
+  !*** ./src/entity/object/glowshrooms.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Glowshrooms = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const shroomLight_1 = __webpack_require__(/*! ../../item/usable/shroomLight */ "./src/item/usable/shroomLight.ts");
+class Glowshrooms extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 1;
+        this.tileY = 7;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = Glowshrooms.itemName;
+        this.imageParticleX = 0;
+        this.imageParticleY = 30;
+        this.drops.push(new shroomLight_1.ShroomLight(this.room, this.x, this.y));
+        this.hasBloom = true;
+        this.bloomColor = "#054B4B";
+        this.bloomAlpha = 1;
+        this.softBloomAlpha = 0;
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 100, 150], 5);
+        this.addLightSource(this.lightSource);
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Glowshrooms = Glowshrooms;
+Glowshrooms.itemName = "glowshrooms";
+
+
+/***/ }),
+
 /***/ "./src/entity/object/mushrooms.ts":
 /*!****************************************!*\
   !*** ./src/entity/object/mushrooms.ts ***!
@@ -22194,6 +22255,70 @@ class RookStatue extends entity_1.Entity {
     }
 }
 exports.RookStatue = RookStatue;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/rubble.ts":
+/*!*************************************!*\
+  !*** ./src/entity/object/rubble.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Rubble = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+class Rubble extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            sound_1.Sound.delayPlay(sound_1.Sound.breakRock, 50);
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 1;
+        this.tileX = 0;
+        this.tileY = 7;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        //this.pushable = true;
+        this.name = "rubble";
+        this.imageParticleX = 0;
+        this.imageParticleY = 25;
+        this.opaque = true;
+        //this.hitSound = Sound.breakRock;
+        if (random_1.Random.rand() < 0.01)
+            this.drops.push(new geode_1.Geode(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.Rubble = Rubble;
 
 
 /***/ }),
@@ -36522,6 +36647,7 @@ class GlowStick extends light_1.Light {
         //teal blue green rgb 0-255
         this.color = [5, 150, 50];
         this.waterproof = true;
+        this.falloffDecay = 0.7;
     }
 }
 exports.GlowStick = GlowStick;
@@ -37715,6 +37841,43 @@ class Hourglass extends usable_1.Usable {
 }
 exports.Hourglass = Hourglass;
 Hourglass.itemName = "hourglass";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/shroomLight.ts":
+/*!****************************************!*\
+  !*** ./src/item/usable/shroomLight.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ShroomLight = void 0;
+const light_1 = __webpack_require__(/*! ../light/light */ "./src/item/light/light.ts");
+class ShroomLight extends light_1.Light {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.getDescription = () => {
+            return "GLOWSHROOMS\nGives off a faint blue glow";
+        };
+        this.fuel = 100;
+        this.tileX = 7;
+        this.tileY = 2;
+        this.name = ShroomLight.itemName;
+        this.fuelCap = 100;
+        this.radius = 10;
+        this.stackable = true;
+        this.maxBrightness = 2;
+        //teal blue green rgb 0-255
+        this.color = [5, 100, 150];
+        this.waterproof = true;
+        this.falloffDecay = 0.7;
+    }
+}
+exports.ShroomLight = ShroomLight;
+ShroomLight.itemName = "glowshrooms";
 
 
 /***/ }),
@@ -40084,6 +40247,8 @@ const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockRe
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
 const ironResource_1 = __webpack_require__(/*! ../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
+const rubble_1 = __webpack_require__(/*! ../entity/object/rubble */ "./src/entity/object/rubble.ts");
+const glowshrooms_1 = __webpack_require__(/*! ../entity/object/glowshrooms */ "./src/entity/object/glowshrooms.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -40625,9 +40790,11 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.FLOODED_CAVE]: {
         props: [
-            { class: NullProp, weight: 1 },
-            { class: succulent_1.Succulent, weight: 0.1 },
-            { class: tallSucculent_1.TallSucculent, weight: 0.1 },
+            { class: NullProp, weight: 0.25 },
+            { class: succulent_1.Succulent, weight: 0.2 },
+            { class: tallSucculent_1.TallSucculent, weight: 0.2 },
+            { class: rubble_1.Rubble, weight: 0.2 },
+            { class: glowshrooms_1.Glowshrooms, weight: 0.1 },
         ],
         enemies: [
         //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
@@ -50173,8 +50340,9 @@ class Room {
         this.underwater = false;
         // Add a list to keep track of BeamEffect instances
         this.beamEffects = [];
-        // Add this property to track created mask canvases
-        this.maskCanvases = [];
+        // Prevent unbounded particle growth when particles are spawned during render-time
+        // (e.g. bubbles) but turn/tick cleanup isn't running (idle, menus, replay, etc).
+        this.particleCleanupAccumulator = 0;
         // Add blur cache property
         this.blurCache = {
             color6px: null,
@@ -51905,6 +52073,24 @@ class Room {
         this.drawEntities = (delta, skipLocalPlayer) => {
             if (!this.onScreen)
                 return;
+            // Render-time particle cleanup (in-place, avoids allocations).
+            // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
+            // while the game is idling; bubbles are spawned from `Player.draw()`.
+            this.particleCleanupAccumulator += delta;
+            if (this.particleCleanupAccumulator >= 10) {
+                this.particleCleanupAccumulator = 0;
+                if (this.particles.length > 0) {
+                    let w = 0;
+                    for (let r = 0; r < this.particles.length; r++) {
+                        const p = this.particles[r];
+                        if (p && !p.dead) {
+                            this.particles[w++] = p;
+                        }
+                    }
+                    if (w !== this.particles.length)
+                        this.particles.length = w;
+                }
+            }
             this.updateOxygenLineBeams();
             game_1.Game.ctx.save();
             // If using inline sliced shade, prepare the blurred shade source once
@@ -52214,11 +52400,15 @@ class Room {
         };
         // src/room.ts
         this.createWallMask = () => {
-            const maskCanvas = document.createElement("canvas");
-            this.maskCanvases.push(maskCanvas); // <-- Track the canvas
+            // Reuse a single mask canvas to avoid allocating a new canvas repeatedly.
+            if (!this.wallMaskCanvas) {
+                this.wallMaskCanvas = document.createElement("canvas");
+                this.wallMaskCtx = this.wallMaskCanvas.getContext("2d");
+            }
+            const maskCanvas = this.wallMaskCanvas;
             maskCanvas.width = this.width * gameConstants_1.GameConstants.TILESIZE;
             maskCanvas.height = this.height * gameConstants_1.GameConstants.TILESIZE;
-            const ctx = maskCanvas.getContext("2d");
+            const ctx = this.wallMaskCtx;
             if (!ctx) {
                 throw new Error("Failed to create mask canvas context.");
             }
@@ -53494,6 +53684,10 @@ class Room {
     //calculate wall info for proper wall rendering
     calculateWallInfo() {
         this.wallInfo.clear();
+        // IMPORTANT: calculateWallInfo() is called frequently (e.g. each tick).
+        // Reset `this.walls` to avoid unbounded growth and memory leaks over long play sessions.
+        if (this.walls)
+            this.walls.length = 0;
         for (let x = this.roomX; x < this.roomX + this.width; x++) {
             for (let y = this.roomY; y < this.roomY + this.height; y++) {
                 const tile = this.getTile(x, y);

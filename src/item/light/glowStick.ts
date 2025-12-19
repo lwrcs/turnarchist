@@ -23,5 +23,6 @@ export class GlowStick extends Light {
     //teal blue green rgb 0-255
     this.color = [5, 150, 50];
     this.waterproof = true;
+    this.falloffDecay = 0.7;
   }
 }

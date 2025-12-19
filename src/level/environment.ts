@@ -67,6 +67,8 @@ import { CaveRock } from "../entity/resource/caveRockResource";
 import { CaveBlock } from "../entity/object/caveBlock";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
 import { IronResource } from "../entity/resource/ironResource";
+import { Rubble } from "../entity/object/rubble";
+import { Glowshrooms } from "../entity/object/glowshrooms";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -672,9 +674,11 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.FLOODED_CAVE]: {
     props: [
-      { class: NullProp, weight: 1 },
-      { class: Succulent, weight: 0.1 },
-      { class: TallSucculent, weight: 0.1 },
+      { class: NullProp, weight: 0.25 },
+      { class: Succulent, weight: 0.2 },
+      { class: TallSucculent, weight: 0.2 },
+      { class: Rubble, weight: 0.2 },
+      { class: Glowshrooms, weight: 0.1 },
     ],
     enemies: [
       //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
