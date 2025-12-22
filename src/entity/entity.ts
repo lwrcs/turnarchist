@@ -48,7 +48,7 @@ export enum EntityType {
 
 export interface entityData {
   name: string;
-  location: { x: number; y: number };
+  location: { x: number; y: number; z?: number };
 }
 
 export interface bloomData {
@@ -65,6 +65,11 @@ export class Entity extends Drawable {
   room: Room;
   x: number;
   y: number;
+  /**
+   * Vertical layer within a room/level. Rendering will be handled later.
+   * Most game logic should only interact with other objects on the same `z`.
+   */
+  z: number;
   w: number;
   h: number;
   direction: Direction;
@@ -163,12 +168,13 @@ export class Entity extends Drawable {
   private _imageParticleTiles: { x: number; y: number };
   hitSound: () => void;
 
-  constructor(room: Room, game: Game, x: number, y: number) {
+  constructor(room: Room, game: Game, x: number, y: number, z: number = 0) {
     super();
     this.globalId = IdGenerator.generate("EN");
 
-    // Check if we're in cloning mode
-    const isCloning = (this.constructor as any).__isCloning;
+    // Check if we're in cloning mode (constructor flag used by cloneEntity)
+    const ctor = this.constructor as unknown as { __isCloning?: boolean };
+    const isCloning = ctor.__isCloning === true;
 
     // Set cloned status immediately if we're cloning
     if (isCloning) {
@@ -179,6 +185,7 @@ export class Entity extends Drawable {
     this.room = room;
     this.x = x;
     this.y = y;
+    this.z = z;
     this.w = 1;
     this.h = 1;
     this.game = game;
@@ -252,9 +259,9 @@ export class Entity extends Drawable {
       game: Game,
       x: number,
       y: number,
-      ...rest: any[]
+      ...rest: unknown[]
     ) => Entity,
-  >(this: T, room: Room, game: Game, x: number, y: number, ...rest: any[]) {
+  >(this: T, room: Room, game: Game, x: number, y: number, ...rest: unknown[]) {
     // Safety checks: verify tile exists and is not solid
     if (!room.roomArray[x] || !room.roomArray[x][y]) {
       console.warn(`Cannot add entity: tile at (${x}, ${y}) does not exist`);
@@ -281,6 +288,7 @@ export class Entity extends Drawable {
       original.game,
       original.x,
       original.y,
+      original.z ?? 0,
     );
 
     // Remove the temporary flag
@@ -298,6 +306,7 @@ export class Entity extends Drawable {
       direction: original.direction,
       drawX: original.drawX,
       drawY: original.drawY,
+      z: original.z ?? 0,
       alpha: original.alpha,
       shadeColor: original.shadeColor,
       shadeMultiplier: original.shadeMultiplier,
@@ -585,14 +594,21 @@ export class Entity extends Drawable {
 
     let flag = false;
     for (const e of this.room.entities) {
-      if (e !== this && entityCollide(e) && collide) {
+      if (
+        e !== this &&
+        (e.z ?? 0) === (this.z ?? 0) &&
+        entityCollide(e) &&
+        collide
+      ) {
         flag = true;
       }
     }
     if (flag) return;
 
     for (const i in this.game.players) {
-      if (pointWouldBeIn(this.game.players[i].x, this.game.players[i].y)) {
+      const pl: any = this.game.players[i];
+      if ((pl?.z ?? 0) !== (this.z ?? 0)) continue;
+      if (pointWouldBeIn(pl.x, pl.y)) {
         return;
       }
     }
@@ -630,8 +646,11 @@ export class Entity extends Drawable {
     const maxDistance = 138291380921; // pulled this straight outta my ass
     let closestDistance = maxDistance;
     let closestPlayer = null;
+    const myZ = (this as any).z ?? 0;
     for (const i in this.game.players) {
       if (this.game.rooms[this.game.players[i].levelID] === this.room) {
+        const pl: any = this.game.players[i];
+        if ((pl?.z ?? 0) !== myZ) continue;
         let distance = this.playerDistance(this.game.players[i]);
         if (distance < closestDistance) {
           closestDistance = distance;
@@ -910,6 +929,7 @@ export class Entity extends Drawable {
           const pos = candidates[(startIndex + index) % candidates.length];
           drop.x = pos.x;
           drop.y = pos.y;
+          drop.z = this.z ?? 0;
           used.add(`${pos.x},${pos.y}`);
         } else if (
           this.room.roomArray[coordX] &&
@@ -918,6 +938,7 @@ export class Entity extends Drawable {
         ) {
           drop.x = coordX;
           drop.y = coordY;
+          drop.z = this.z ?? 0;
           used.add(`${coordX},${coordY}`);
         }
         this.room.items.push(drop);
@@ -930,6 +951,7 @@ export class Entity extends Drawable {
         const remaining = candidates.filter((p) => !used.has(`${p.x},${p.y}`));
         remaining.forEach((p) => {
           const coin = new Coin(this.room, p.x, p.y);
+          coin.z = this.z ?? 0;
           coin.level = this.room;
           this.room.items.push(coin);
           coin.onDrop();
@@ -1084,8 +1106,11 @@ export class Entity extends Drawable {
     const maxDistance = 138291380921; // pulled this straight outta my ass
     let closestDistance = maxDistance;
     let closestPlayer = null;
+    const myZ = this.z ?? 0;
     for (const i in this.game.players) {
       if (this.game.rooms[this.game.players[i].levelID] === this.room) {
+        const pl = this.game.players[i];
+        if (pl.z !== myZ) continue;
         let distance = this.playerDistance(this.game.players[i]);
         if (distance < closestDistance) {
           closestDistance = distance;
@@ -1241,7 +1266,7 @@ export class Entity extends Drawable {
   emitEntityData = (): void => {
     globalEventBus.emit("EntityData", {
       name: this.name,
-      location: { x: this.x, y: this.y },
+      location: { x: this.x, y: this.y, z: this.z ?? 0 },
     });
   };
 
@@ -1394,7 +1419,7 @@ export class Entity extends Drawable {
 
   private isEntityColliding = (x: number, y: number): boolean => {
     return this.room.entities.some(
-      (entity) => entity.x === x && entity.y === y,
+      (entity) => entity.x === x && entity.y === y && entity.z === this.z,
     );
   };
 
@@ -1492,7 +1517,7 @@ export class Entity extends Drawable {
       this.room.roomArray[x][y] instanceof DownLadder ||
       this.room.roomArray[x][y] instanceof Door ||
       this.room.roomArray[x][y] instanceof Wall ||
-      this.room.entities.some((e) => e.x === x && e.y === y)
+      this.room.entities.some((e) => e.x === x && e.y === y && e.z === this.z)
     );
 
     if (!x || !y) return { x: this.x, y: this.y };

@@ -52,6 +52,10 @@ export class Player extends Drawable {
   id: string;
   x: number;
   y: number;
+  /**
+   * Vertical layer within the current room/level. Rendering will be handled later.
+   */
+  z: number;
   w: number;
   h: number;
   direction: Direction;
@@ -128,7 +132,13 @@ export class Player extends Drawable {
 
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
-  constructor(game: Game, x: number, y: number, isLocalPlayer: boolean) {
+  constructor(
+    game: Game,
+    x: number,
+    y: number,
+    isLocalPlayer: boolean,
+    z: number = 0,
+  ) {
     super();
     this.globalId = IdGenerator.generate("P");
 
@@ -139,6 +149,7 @@ export class Player extends Drawable {
 
     this.x = x;
     this.y = y;
+    this.z = z;
     this.w = 1;
     this.h = 1;
     this.moveDistance = 0;
@@ -199,7 +210,10 @@ export class Player extends Drawable {
   }
 
   getRoom = (): Room => {
-    const byId = (this.game as any).getRoomById?.(this.roomGID);
+    const gameWithLookup = this.game as unknown as {
+      getRoomById?: (gid?: string) => Room | undefined;
+    };
+    const byId = gameWithLookup.getRoomById?.(this.roomGID);
     return byId || this.game.levels[this.depth].rooms[this.levelID];
   };
 
@@ -680,7 +694,7 @@ export class Player extends Drawable {
     return 1;
   };
 
-  tryCollide = (other: any, newX: number, newY: number) => {
+  tryCollide = (other: Entity, newX: number, newY: number) => {
     if (other.collidable === false) return false;
     if (newX >= other.x + other.w || newX + this.w <= other.x) return false;
     if (newY >= other.y + other.h || newY + this.h <= other.y) return false;
@@ -706,6 +720,7 @@ export class Player extends Drawable {
     let collide = false;
 
     for (let e of this.getRoom().entities) {
+      if (e.z !== this.z) continue;
       if (e.collidable === true) {
         if (e.x === x && e.y === y) {
           collide = true;
@@ -729,6 +744,7 @@ export class Player extends Drawable {
     }
     //}
     for (let e of this.getRoom().entities) {
+      if (e.z !== this.z) continue;
       e.lastX = e.x;
       e.lastY = e.y;
       //console.log(`e.lastX, e.lastY: ${e.lastX}, ${e.lastY}`);
@@ -746,6 +762,7 @@ export class Player extends Drawable {
           while (true) {
             foundEnd = true;
             for (const f of this.getRoom().entities) {
+              if (f.z !== this.z) continue;
               f.lastX = f.x;
               f.lastY = f.y;
               if (f.pointIn(nextX, nextY)) {
@@ -971,6 +988,7 @@ export class Player extends Drawable {
     this.y = y;
 
     for (let i of this.getRoom().items) {
+      if (i.z !== this.z) continue;
       if (i.x === x && i.y === y) {
         i.onPickup(this);
       }

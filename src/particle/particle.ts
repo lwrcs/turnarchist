@@ -7,6 +7,11 @@ import { Room } from "../room/room";
 export class Particle extends Drawable {
   x: number;
   y: number;
+  /**
+   * Vertical layer within the room/level. Note: many particle subclasses already
+   * use `z` as a physics height (screen-space vertical offset). This avoids that clash.
+   */
+  worldZ: number = 0;
   dead: boolean;
   room: Room;
   drawTopLayer = (delta) => {};

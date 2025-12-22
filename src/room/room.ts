@@ -1392,17 +1392,19 @@ export class Room {
   // #region LOGIC METHODS
 
   tick = (player: Player) => {
+    const activeZ = player.z;
     this.updateLighting();
     player.updateSlowMotion();
     this.syncKeyPathParticles();
 
     this.lastEnemyCount = this.entities.filter(
-      (e) => e instanceof Enemy,
+      (e) => e instanceof Enemy && (e.z ?? 0) === activeZ,
     ).length;
     for (const h of this.hitwarnings) {
       if (this.isWithinEnemyInteractionRange(h.x, h.y)) h.tick();
     }
     for (const p of this.projectiles) {
+      if (p.z !== activeZ) continue;
       p.tick();
     }
 
@@ -1418,6 +1420,7 @@ export class Room {
     }
 
     for (const e of this.entities) {
+      if (e.z !== activeZ) continue;
       e.shouldSeeThrough();
     }
 
@@ -1433,8 +1436,10 @@ export class Room {
   };
 
   computerTurn = () => {
+    const activeZ = (this.playerTicked as any)?.z ?? this.getActiveZ();
     // take computer turn
     for (const e of this.entities) {
+      if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
         if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
       }
@@ -1444,6 +1449,7 @@ export class Room {
     this.entities = this.entities.filter((e) => !e.dead);
 
     for (const e of this.entities) {
+      if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
         if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
         e.makeHitWarnings();
@@ -1451,6 +1457,7 @@ export class Room {
     }
 
     for (const i of this.items) {
+      if (i.z !== activeZ) continue;
       i.tick();
     }
 
@@ -1473,6 +1480,7 @@ export class Room {
     }
 
     for (const p of this.projectiles) {
+      if (p.z !== activeZ) continue;
       if (
         this.roomArray[p.x] &&
         this.roomArray[p.x][p.y] &&
@@ -1480,6 +1488,8 @@ export class Room {
       )
         p.dead = true;
       for (const i in this.game.players) {
+        const pl = this.game.players[i];
+        if (pl.z !== activeZ) continue;
         if (
           (this.game.players[i] as any).getRoom?.() === this &&
           p.x === this.game.players[i].x &&
@@ -1489,6 +1499,7 @@ export class Room {
         }
       }
       for (const e of this.entities) {
+        if (e.z !== activeZ) continue;
         if (p.x === e.x && p.y === e.y) {
           p.hitEnemy(e);
         }
@@ -1514,9 +1525,19 @@ export class Room {
     this.turn = TurnState.playerTurn;
     this.updateLighting();
     for (const e of this.entities) {
+      if (((e as any).z ?? 0) !== activeZ) continue;
       e.shouldSeeThrough();
     }
   };
+
+  private getActiveZ(): number {
+    try {
+      const p = this.game?.players?.[this.game?.localPlayerID];
+      return p?.z ?? 0;
+    } catch {
+      return 0;
+    }
+  }
 
   private isWithinEnemyInteractionRange(x: number, y: number): boolean {
     try {
@@ -4022,14 +4043,20 @@ export class Room {
   };
 
   hasNoEnemies = () => {
-    let enemies = this.entities.filter((e) => e instanceof Enemy);
+    const activeZ = this.getActiveZ();
+    let enemies = this.entities.filter(
+      (e) => e instanceof Enemy && ((e as any).z ?? 0) === activeZ,
+    );
     const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
 
     return cleared;
   };
 
   roomCleared = () => {
-    const enemies = this.entities.filter((e) => e instanceof Enemy);
+    const activeZ = this.getActiveZ();
+    const enemies = this.entities.filter(
+      (e) => e instanceof Enemy && ((e as any).z ?? 0) === activeZ,
+    );
     return enemies.length === 0;
   };
 
@@ -4045,9 +4072,15 @@ export class Room {
     return false;
   };
 
-  hasEnemy = (x: number, y: number): boolean => {
+  hasEnemy = (x: number, y: number, z: number = this.getActiveZ()): boolean => {
     for (const e of this.entities) {
-      if (e instanceof Enemy && e.x === x && e.y === y) return true;
+      if (
+        e instanceof Enemy &&
+        e.x === x &&
+        e.y === y &&
+        ((e as any).z ?? 0) === z
+      )
+        return true;
     }
     return false;
   };

@@ -11,18 +11,28 @@ export class Projectile extends Drawable {
   globalId: string;
   x: number;
   y: number;
+  /**
+   * Vertical layer within the room/level.
+   */
+  z: number;
   dead: boolean;
   parent: Entity | Player;
   dir: Direction;
   bloomOffsetY: number;
   lightSource: LightSource;
 
-  constructor(parent: Entity | Player, x: number, y: number) {
+  constructor(
+    parent: Entity | Player,
+    x: number,
+    y: number,
+    z: number = parent?.z ?? 0,
+  ) {
     super();
     this.globalId = IdGenerator.generate("PROJ");
 
     this.x = x;
     this.y = y;
+    this.z = z;
     this.dead = false;
     this.parent = parent;
     this.drawableY = y;

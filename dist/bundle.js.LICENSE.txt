@@ -20,4 +20,4 @@
  *  MIT License
  */
 
-/*! Axios v1.11.0 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */

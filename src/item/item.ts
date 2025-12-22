@@ -19,6 +19,11 @@ export class Item extends Drawable {
   globalId: string;
   x: number; // x-coordinate of the item
   y: number; // y-coordinate of the item
+  /**
+   * Vertical layer within the room/level. (Particles already use `z` for height physics,
+   * so items/entities/projectiles keep `z` for layer.)
+   */
+  z: number;
   w: number; // width of the item
   h: number; // height of the item
   offsetY: number; // offset of the item on the y-axis
@@ -58,7 +63,7 @@ export class Item extends Drawable {
   private animStartDistance: number = null;
   player: Player;
   // Constructor for the Item class
-  constructor(level: Room, x: number, y: number) {
+  constructor(level: Room, x: number, y: number, z: number = 0) {
     super();
     this.globalId = IdGenerator.generate("IT");
 
@@ -66,6 +71,7 @@ export class Item extends Drawable {
     this.level = level;
     this.x = x;
     this.y = y;
+    this.z = z;
     this.drawableY = y;
     this.w = 1;
     this.h = 2;

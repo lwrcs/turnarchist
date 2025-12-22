@@ -24,19 +24,25 @@ export abstract class Tile extends Drawable {
   globalId: string;
   x: number;
   y: number;
+  /**
+   * Vertical layer within the room. Most tiles are shared across all layers for now.
+   * Rendering of multiple layers will be handled in a later step.
+   */
+  z: number;
   room: Room;
   skin: SkinType;
   isDoor: boolean;
   opacity: number;
   name: string = "";
 
-  constructor(room: Room, x: number, y: number) {
+  constructor(room: Room, x: number, y: number, z: number = 0) {
     super();
     this.globalId = IdGenerator.generate("T");
     this.skin = room.skin;
     this.room = room;
     this.x = x;
     this.y = y;
+    this.z = z;
     this.drawableY = y;
     this.isDoor = false;
     this.opacity = 1;
@@ -47,6 +53,7 @@ export abstract class Tile extends Drawable {
   };
 
   hasPlayer = (player: Player) => {
+    // Tiles are currently shared across all vertical layers; z-aware rendering/tiles come later.
     if (player.x === this.x && player.y === this.y) return true;
     else return false;
   };
