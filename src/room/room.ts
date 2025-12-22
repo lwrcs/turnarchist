@@ -3301,7 +3301,11 @@ export class Room {
     Game.ctx.restore();
   };
 
-  drawEntities = (delta: number, skipLocalPlayer?: boolean) => {
+  drawEntities = (
+    delta: number,
+    skipLocalPlayer?: boolean,
+    zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
+  ) => {
     if (!this.onScreen) return;
 
     // Render-time particle cleanup (in-place, avoids allocations).
@@ -3347,18 +3351,31 @@ export class Room {
       }
     }
 
-    let drawables = new Array<Drawable>();
-    let entities = new Array<Entity>();
-    entities = entities.concat(this.entities, this.deadEntities);
+    let drawables: Drawable[] = [];
+    const activeZ =
+      this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
+    const entities: Entity[] = ([] as Entity[]).concat(
+      this.entities,
+      this.deadEntities,
+    );
+    const entitiesOnLayer = entities.filter((e) => (e?.z ?? 0) === zLayer);
+    const projectilesOnLayer = this.projectiles.filter(
+      (p) => (p?.z ?? 0) === zLayer,
+    );
+    const itemsOnLayer = this.items.filter((i) => (i?.z ?? 0) === zLayer);
+    const particlesOnLayer = this.particles.filter(
+      (p) => ((p as any)?.worldZ ?? 0) === zLayer,
+    );
+    const hitwarningsOnLayer = zLayer === activeZ ? this.hitwarnings : [];
 
-    drawables = drawables.concat(
-      tiles,
-      this.decorations,
-      entities,
-      this.hitwarnings,
-      this.projectiles,
-      this.particles,
-      this.items,
+    drawables.push(
+      ...tiles,
+      ...this.decorations,
+      ...entitiesOnLayer,
+      ...hitwarningsOnLayer,
+      ...projectilesOnLayer,
+      ...particlesOnLayer,
+      ...itemsOnLayer,
     );
 
     // Filter out drawables that are completely off-screen (with a small tile buffer)
@@ -3378,14 +3395,16 @@ export class Room {
     });
 
     for (const i in this.game.players) {
-      if ((this.game.players[i] as any).getRoom?.() === this) {
+      const player = this.game.players[i];
+      if (player.getRoom?.() === this) {
+        if ((player.z ?? 0) !== zLayer) continue;
         if (
           !(
             skipLocalPlayer &&
-            this.game.players[i] === this.game.players[this.game.localPlayerID]
+            player === this.game.players[this.game.localPlayerID]
           )
         )
-          drawables.push(this.game.players[i]);
+          drawables.push(player);
       }
     }
 
@@ -3490,7 +3509,7 @@ export class Room {
     }
 
     this.drawAbovePlayer(delta);
-    for (const i of this.items) {
+    for (const i of itemsOnLayer) {
       i.drawTopLayer(delta);
     }
     for (const t of drawables) {
@@ -3614,22 +3633,31 @@ export class Room {
     }
   };
 
-  drawOverShade = (delta: number) => {
+  drawOverShade = (
+    delta: number,
+    zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
+  ) => {
+    const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer;
     Game.ctx.save();
     for (const e of this.entities) {
+      if ((e?.z ?? 0) !== zLayer) continue;
       e.drawTopLayer(delta); // health bars
     }
 
     for (const p of this.projectiles) {
+      if ((p?.z ?? 0) !== zLayer) continue;
       p.drawTopLayer(delta);
     }
     //Game.ctx.globalCompositeOperation = "overlay";
-    for (const h of this.hitwarnings) {
-      h.drawTopLayer(delta);
+    if (zLayer === activeZ) {
+      for (const h of this.hitwarnings) {
+        h.drawTopLayer(delta);
+      }
     }
     //Game.ctx.globalCompositeOperation = "source-over";
 
     for (const s of this.particles) {
+      if (((s as any)?.worldZ ?? 0) !== zLayer) continue;
       s.drawTopLayer(delta);
     }
     // draw over dithered shading
@@ -3640,6 +3668,7 @@ export class Room {
     }
     //added for coin animation
     for (const i of this.items) {
+      if ((i?.z ?? 0) !== zLayer) continue;
       i.drawAboveShading(delta);
     }
 
@@ -3665,8 +3694,12 @@ export class Room {
     Game.ctx.restore();
   };
 
-  drawTopBeams = (delta: number) => {
+  drawTopBeams = (
+    delta: number,
+    zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
+  ) => {
     for (const projectile of this.projectiles) {
+      if ((projectile?.z ?? 0) !== zLayer) continue;
       if (projectile instanceof BeamEffect && projectile.drawOnTop) {
         projectile.drawTopLayer(delta);
       }

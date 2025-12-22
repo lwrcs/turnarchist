@@ -1,6 +1,9 @@
 import { GameConstants } from "./game/gameConstants";
 import { EnemyType, Room, RoomType } from "./room/room";
 import { Player } from "./player/player";
+import { Entity } from "./entity/entity";
+import { Item } from "./item/item";
+import { Projectile } from "./projectile/projectile";
 import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound/sound";
 import { LevelConstants } from "./level/levelConstants";
@@ -392,6 +395,67 @@ export class Game {
   cameraTargetY: number;
   cameraX: number;
   cameraY: number;
+  /**
+   * Vertical stacking height (in pixels) between z-layers. We compute this from
+   * the current path's room bounds so each z-layer can be rendered "like a separate room"
+   * without overlapping other layers.
+   */
+  private getZLayerHeightPx = (): number => {
+    try {
+      const rooms = (this.rooms || []).filter(
+        (r) => r && r.pathId === this.currentPathId,
+      );
+      if (rooms.length === 0) {
+        // Fallback: at least one screen tall
+        return LevelConstants.SCREEN_H * GameConstants.TILESIZE;
+      }
+      let minY = Infinity;
+      let maxY = -Infinity;
+      for (const r of rooms) {
+        minY = Math.min(minY, r.roomY);
+        maxY = Math.max(maxY, r.roomY + r.height);
+      }
+      const paddingTiles = 4;
+      const heightTiles = Math.max(1, maxY - minY + paddingTiles);
+      return heightTiles * GameConstants.TILESIZE;
+    } catch {
+      return LevelConstants.SCREEN_H * GameConstants.TILESIZE;
+    }
+  };
+
+  private getMaxZInCurrentPath = (): number => {
+    let maxZ = 0;
+    try {
+      for (const p of Object.values(this.players || {})) {
+        if (!p) continue;
+        maxZ = Math.max(maxZ, (p as Player).z ?? 0);
+      }
+      const rooms = (this.rooms || []).filter(
+        (r) => r && r.pathId === this.currentPathId,
+      );
+      for (const r of rooms) {
+        // Entities / deadEntities
+        for (const e of (r.entities || []) as Entity[])
+          maxZ = Math.max(maxZ, e.z ?? 0);
+        for (const e of (r.deadEntities || []) as Entity[])
+          maxZ = Math.max(maxZ, e.z ?? 0);
+        // Items
+        for (const it of (r.items || []) as Item[])
+          maxZ = Math.max(maxZ, it.z ?? 0);
+        // Projectiles
+        for (const pr of (r.projectiles || []) as Projectile[])
+          maxZ = Math.max(maxZ, pr.z ?? 0);
+        // Particles (worldZ)
+        for (const pa of (r.particles || []) as any[]) {
+          const wz =
+            typeof (pa as any).worldZ === "number" ? (pa as any).worldZ : 0;
+          maxZ = Math.max(maxZ, wz);
+        }
+      }
+    } catch {}
+    return maxZ;
+  };
+
   justTransitioned: boolean = false;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
   lastDroppedCrossbowPiece: "stock" | "limb" | null = null;
@@ -2002,12 +2066,16 @@ export class Game {
     }
   };
 
-  drawRooms = (delta: number, skipLocalPlayer: boolean = false) => {
+  drawRooms = (
+    delta: number,
+    skipLocalPlayer: boolean = false,
+    zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
+  ) => {
     if (!GameConstants.drawOtherRooms) {
       // Ensure current room is drawn even if flags are stale
       if (!this.room || this.room.pathId !== this.currentPathId) return;
       this.room.draw(delta);
-      this.room.drawEntities(delta, true);
+      this.room.drawEntities(delta, true, zLayer);
     } else if (GameConstants.drawOtherRooms) {
       // Create a sorted copy of the rooms array based on roomY + height
       const sortedRooms = this.rooms
@@ -2025,14 +2093,29 @@ export class Game {
         if (shouldDraw) {
           room.draw(delta);
 
-          room.drawEntities(delta, skipLocalPlayer);
+          room.drawEntities(delta, skipLocalPlayer, zLayer);
           //room.drawShade(delta); // this used to come after the color layer
         }
       }
     }
   };
 
-  drawRoomShadeAndColor = (delta: number) => {
+  private drawZLayers = (delta: number) => {
+    const layerHeightPx = this.getZLayerHeightPx();
+    const maxZ = this.getMaxZInCurrentPath();
+    for (let z = 0; z <= maxZ; z++) {
+      Game.ctx.save();
+      Game.ctx.translate(0, z * layerHeightPx);
+      this.drawRooms(delta, false, z);
+      this.drawRoomShadeAndColor(delta, z);
+      Game.ctx.restore();
+    }
+  };
+
+  drawRoomShadeAndColor = (
+    delta: number,
+    zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
+  ) => {
     for (const room of this.rooms) {
       if (room.pathId !== this.currentPathId) continue;
       const shouldDraw = room === this.room || room.active || room.entered;
@@ -2051,7 +2134,7 @@ export class Game {
       const shouldDrawOver =
         room === this.room || (room.active && room.entered);
       if (shouldDrawOver) {
-        room.drawOverShade(delta);
+        room.drawOverShade(delta, zLayer);
       }
     }
 
@@ -2060,7 +2143,7 @@ export class Game {
       const shouldDrawTop =
         room === this.room || room.active || (room.entered && room.onScreen);
       if (shouldDrawTop) {
-        room.drawTopBeams(delta);
+        room.drawTopBeams(delta, zLayer);
       }
     }
   };
@@ -2471,8 +2554,7 @@ export class Game {
       const { cameraX, cameraY } = this.applyCamera(delta);
 
       Game.ctx.translate(-cameraX, -cameraY);
-      this.drawRooms(delta);
-      this.drawRoomShadeAndColor(delta);
+      this.drawZLayers(delta);
 
       //      this.room.draw(delta);
       //      this.room.drawEntities(delta);
@@ -3093,13 +3175,14 @@ export class Game {
     return x >= left && x <= right && y >= top && y <= bottom;
   }
 
-  targetCamera = (targetX: number, targetY: number) => {
+  targetCamera = (targetX: number, targetY: number, targetZ: number = 0) => {
     let cameraX = Math.round(
       (targetX + 0.5) * GameConstants.TILESIZE - 0.5 * GameConstants.WIDTH,
     );
     let cameraY = Math.round(
       (targetY + 0.5) * GameConstants.TILESIZE - 0.5 * GameConstants.HEIGHT,
     );
+    cameraY += Math.round(targetZ * this.getZLayerHeightPx());
     this.cameraTargetX = cameraX;
     this.cameraTargetY = cameraY;
   };
@@ -3137,7 +3220,11 @@ export class Game {
   applyCamera = (delta: number) => {
     let player = this.players[this.localPlayerID];
 
-    this.targetCamera(player.x - player.drawX, player.y - player.drawY);
+    this.targetCamera(
+      player.x - player.drawX,
+      player.y - player.drawY,
+      player.z ?? 0,
+    );
     this.updateCameraAnimation(delta);
     this.updateCamera(delta);
 
@@ -3189,7 +3276,11 @@ export class Game {
       (this.cameraAnimation.frame / this.cameraAnimation.duration) * speed;
 
     if (elapsed < 0.6)
-      this.targetCamera(this.cameraAnimation.x, this.cameraAnimation.y);
+      this.targetCamera(
+        this.cameraAnimation.x,
+        this.cameraAnimation.y,
+        this.players?.[this.localPlayerID]?.z ?? 0,
+      );
     // Accelerate frames if fast mode is enabled
     this.cameraAnimation.frame += delta * (this.cameraAnimation.fast ? 10 : 1);
     if (this.cameraAnimation.frame > this.cameraAnimation.duration)
