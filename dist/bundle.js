@@ -25106,13 +25106,18 @@ class Game {
                 Game.ctx.save();
                 Game.ctx.translate(0, -z * layerHeightPx);
                 this.drawRooms(delta, false, z);
+                // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
+                // and keep active-z bloom in the post-pass below to preserve the current look/order.
+                if (z !== activeZ) {
+                    this.drawRoomBloomForZ(delta, z);
+                }
                 Game.ctx.restore();
             }
             // Non-z-layered post passes: position on active z.
             // Match transition draw order: shade/color -> bloom -> overlays.
             Game.ctx.save();
-            Game.ctx.translate(0, -activeZ * layerHeightPx);
             this.drawRoomLightingLayersOnce(delta, activeZ);
+            Game.ctx.translate(0, -activeZ * layerHeightPx);
             this.drawRoomBloomForZ(delta, activeZ);
             this.drawRoomOverlaysForZ(delta, activeZ);
             Game.ctx.restore();
@@ -51471,8 +51476,8 @@ class Room {
             if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
                 const set = new Set();
                 for (const e of this.entities) {
-                    if ((e?.z ?? 0) !== activeZ)
-                        continue;
+                    // Z: entities block light regardless of the light source's z-layer.
+                    // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
                     if (e.opaque && this.isTileOnScreen(e.x, e.y, 7)) {
                         const w = Math.max(1, e.w || 1);
                         const h = Math.max(1, e.h || 1);
@@ -57596,7 +57601,7 @@ class Populator {
                     for (let y = room.roomY; y < room.roomY + room.height; y++) {
                         const key = `${x},${y}`;
                         if (upper.has(key)) {
-                            z1Tiles.set(key, new floor_1.Floor(room, x, y));
+                            z1Tiles.set(key, new floor_1.Floor(room, x, y, 1));
                         }
                         else {
                             z1Tiles.set(key, new air_1.Air(room, x, y));
@@ -59272,9 +59277,11 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 class Floor extends tile_1.Tile {
-    constructor(room, x, y) {
-        super(room, x, y);
+    constructor(room, x, y, z = 0) {
+        super(room, x, y, z);
         this.draw = (delta) => {
+            if (this.z !== 0)
+                return;
             game_1.Game.drawTile(this.variation, this.skin, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
         };
         this.variation = 1;

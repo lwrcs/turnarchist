@@ -2029,7 +2029,8 @@ export class Room {
     if (GameConstants.ENEMIES_BLOCK_LIGHT) {
       const set = new Set<string>();
       for (const e of this.entities) {
-        if (((e as any)?.z ?? 0) !== activeZ) continue;
+        // Z: entities block light regardless of the light source's z-layer.
+        // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
         if ((e as any).opaque && this.isTileOnScreen(e.x, e.y, 7)) {
           const w = Math.max(1, (e as any).w || 1);
           const h = Math.max(1, (e as any).h || 1);

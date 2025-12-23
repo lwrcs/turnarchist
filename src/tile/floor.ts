@@ -8,8 +8,8 @@ export class Floor extends Tile {
   // all are in grid units
   variation: number;
 
-  constructor(room: Room, x: number, y: number) {
-    super(room, x, y);
+  constructor(room: Room, x: number, y: number, z: number = 0) {
+    super(room, x, y, z);
     this.variation = 1;
     if (this.skin == SkinType.DUNGEON)
       this.variation = Game.randTable(
@@ -63,6 +63,8 @@ export class Floor extends Tile {
   }
 
   draw = (delta: number) => {
+    if (this.z !== 0) return;
+
     Game.drawTile(
       this.variation,
       this.skin,

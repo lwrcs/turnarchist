@@ -2166,14 +2166,20 @@ export class Game {
       Game.ctx.save();
       Game.ctx.translate(0, -z * layerHeightPx);
       this.drawRooms(delta, false, z);
+      // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
+      // and keep active-z bloom in the post-pass below to preserve the current look/order.
+      if (z !== activeZ) {
+        this.drawRoomBloomForZ(delta, z);
+      }
       Game.ctx.restore();
     }
 
     // Non-z-layered post passes: position on active z.
     // Match transition draw order: shade/color -> bloom -> overlays.
     Game.ctx.save();
-    Game.ctx.translate(0, -activeZ * layerHeightPx);
     this.drawRoomLightingLayersOnce(delta, activeZ);
+
+    Game.ctx.translate(0, -activeZ * layerHeightPx);
     this.drawRoomBloomForZ(delta, activeZ);
     this.drawRoomOverlaysForZ(delta, activeZ);
     Game.ctx.restore();

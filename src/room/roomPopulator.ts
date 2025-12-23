@@ -2791,7 +2791,7 @@ export class Populator {
           for (let y = room.roomY; y < room.roomY + room.height; y++) {
             const key = `${x},${y}`;
             if (upper.has(key)) {
-              z1Tiles.set(key, new Floor(room, x, y));
+              z1Tiles.set(key, new Floor(room, x, y, 1));
             } else {
               z1Tiles.set(key, new Air(room, x, y));
             }
