@@ -616,7 +616,7 @@ export class Entity extends Drawable {
     for (let xx = 0; xx < this.w; xx++) {
       for (let yy = 0; yy < this.h; yy++) {
         if (
-          !this.room.roomArray[x + xx][y + yy].isSolid() &&
+          !this.room.isSolidAt(x + xx, y + yy, this.z) &&
           !(this.room.roomArray[x + xx][y + yy] instanceof Door) &&
           !(this.room.roomArray[x + xx][y + yy] instanceof DownLadder)
         ) {

@@ -857,7 +857,7 @@ export class Player extends Drawable {
       console.warn("oi bruv, level to check for collision isn't even there!");
       return;
     }
-    if (!other.isSolid()) {
+    if (!this.getRoom().isSolidAt(x, y, this.z)) {
       if (other instanceof UpLadder || other instanceof DownLadder) {
         const locked = other.isLocked();
 
@@ -875,6 +875,8 @@ export class Player extends Drawable {
       }
       this.move(x, y);
       other.onCollide(this);
+      // Z-debug per-layer stairs (z-only triggers)
+      this.getRoom().applyZDebugStep(this, x, y);
       if (
         !(
           other instanceof Door ||
@@ -886,6 +888,11 @@ export class Player extends Drawable {
         this.getRoom().tick(this);
     } else {
       if (other instanceof Door) {
+        // Doors are only accessible/interactable from the same z-layer.
+        if ((other.z ?? 0) !== this.z) {
+          this.shakeScreen(this.x, this.y, x, y);
+          return;
+        }
         this.shakeScreen(this.x, this.y, x, y);
 
         if (other.canUnlock(this)) {

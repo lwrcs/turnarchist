@@ -2100,16 +2100,71 @@ export class Game {
     }
   };
 
+  /**
+   * Draw only the per-room lighting layers (shade/color/bloom). These are not z-layered.
+   * We draw them once and position them on the active z-layer in the main draw loop.
+   */
+  private drawRoomLightingLayersOnce = (delta: number) => {
+    for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
+      const shouldDraw = room === this.room || room.active || room.entered;
+      if (!shouldDraw) continue;
+      if (
+        GameConstants.SMOOTH_LIGHTING &&
+        !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+      ) {
+        room.drawShadeLayer();
+      }
+      room.drawColorLayer();
+      room.drawBloomLayer(delta);
+    }
+  };
+
+  /**
+   * Draw z-layered overlays (healthbars/above-shading/etc + top beams) for a specific z-layer.
+   * These are not part of the per-room lighting layers.
+   */
+  private drawRoomOverlaysForZ = (delta: number, zLayer: number) => {
+    for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
+      const shouldDrawOver =
+        room === this.room || (room.active && room.entered);
+      if (shouldDrawOver) {
+        room.drawOverShade(delta, zLayer);
+      }
+    }
+    for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
+      const shouldDrawTop =
+        room === this.room || room.active || (room.entered && room.onScreen);
+      if (shouldDrawTop) {
+        room.drawTopBeams(delta, zLayer);
+      }
+    }
+  };
+
   private drawZLayers = (delta: number) => {
-    const layerHeightPx = this.getZLayerHeightPx();
+    const layerHeightPx = 1 * GameConstants.TILESIZE; // this.getZLayerHeightPx();
     const maxZ = this.getMaxZInCurrentPath();
+    const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
     for (let z = 0; z <= maxZ; z++) {
       Game.ctx.save();
-      Game.ctx.translate(0, z * layerHeightPx);
+      Game.ctx.translate(0, -z * layerHeightPx);
       this.drawRooms(delta, false, z);
-      this.drawRoomShadeAndColor(delta, z);
       Game.ctx.restore();
     }
+
+    // Room overlays are not z-layered; draw them once positioned on active z.
+    Game.ctx.save();
+    Game.ctx.translate(0, -activeZ * layerHeightPx);
+    this.drawRoomOverlaysForZ(delta, activeZ);
+    Game.ctx.restore();
+
+    // Per-room lighting layers are not z-layered; draw them once positioned on active z.
+    Game.ctx.save();
+    Game.ctx.translate(0, -activeZ * layerHeightPx);
+    this.drawRoomLightingLayersOnce(delta);
+    Game.ctx.restore();
   };
 
   drawRoomShadeAndColor = (
@@ -3182,7 +3237,7 @@ export class Game {
     let cameraY = Math.round(
       (targetY + 0.5) * GameConstants.TILESIZE - 0.5 * GameConstants.HEIGHT,
     );
-    cameraY += Math.round(targetZ * this.getZLayerHeightPx());
+    cameraY; // += Math.round(targetZ * GameConstants.TILESIZE); // this.getZLayerHeightPx());
     this.cameraTargetX = cameraX;
     this.cameraTargetY = cameraY;
   };

@@ -42,6 +42,8 @@ export class Explosion extends Projectile {
     const damage =
       distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 6) / 2);
     for (const entity of this.parent.room.entities) {
+      // Z: explosion only affects entities on the same z-layer as the source.
+      if ((entity?.z ?? 0) !== (this.z ?? 0)) continue;
       if (
         entity.x === this.x &&
         entity.y === this.y &&
@@ -52,12 +54,22 @@ export class Explosion extends Projectile {
         }
         entity.hurt(playerHitBy, damage);
       }
-      if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
-        if (playerHitBy instanceof Player) {
-          playerHitBy.hurt(damage, "bomb");
-        }
-      }
     }
+
+    // Z/room: only hurt the player if they're on the same z and in the same room.
+    try {
+      const playerRoom = playerHitBy?.getRoom
+        ? playerHitBy.getRoom()
+        : this.parent?.room?.game?.rooms?.[playerHitBy.levelID];
+      if (
+        playerRoom === this.parent.room &&
+        (playerHitBy?.z ?? 0) === (this.z ?? 0) &&
+        playerHitBy.x === this.x &&
+        playerHitBy.y === this.y
+      ) {
+        playerHitBy.hurt(damage, "bomb");
+      }
+    } catch {}
   }
   drawTopLayer = (delta: number) => {
     if (this.dead) return;

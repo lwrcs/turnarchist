@@ -32,12 +32,14 @@ export class Spellbook extends Weapon {
       ? (this.wielder as any).getRoom()
       : this.game.rooms[this.wielder.levelID];
     let entities = room.entities;
+    const z = this.wielder?.z ?? 0;
     this.targets = entities.filter(
       (e) =>
         !e.pushable &&
         Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <=
           this.range &&
-        e.destroyable,
+        e.destroyable &&
+        (e?.z ?? 0) === z,
     );
     let enemies = this.targets.filter((e) => e.isEnemy === true);
     //console.log(enemies);
@@ -107,7 +109,7 @@ export class Spellbook extends Weapon {
       const room = (this.wielder as any)?.getRoom
         ? (this.wielder as any).getRoom()
         : this.game.rooms[this.wielder.levelID];
-      if (!room.roomArray[e.x][e.y].isSolid()) {
+      if (!room.isSolidAt(e.x, e.y, this.wielder?.z ?? 0)) {
         e.hurt(this.wielder, this.damage + this.wielder.magicDamageBonus); //don't apply damage bonus for magic weapons
 
         room.projectiles.push(new PlayerFireball(this.wielder, e.x, e.y));

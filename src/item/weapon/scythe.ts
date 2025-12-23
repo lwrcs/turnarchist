@@ -80,10 +80,14 @@ export class Scythe extends Weapon {
     if (hitSomething) {
       if (positions.length > 0) {
         for (const pos of positions) {
-          const room = (this.wielder as any)?.getRoom
-            ? (this.wielder as any).getRoom()
+          const room = this.wielder?.getRoom
+            ? this.wielder.getRoom()
             : this.game.rooms[this.wielder.levelID];
-          if (!room.roomArray[pos.x][pos.y].isSolid()) {
+          if (
+            room.roomArray[pos.x] &&
+            room.roomArray[pos.x][pos.y] &&
+            !room.isSolidAt(pos.x, pos.y, this.wielder?.z ?? 0)
+          ) {
             this.hitEntitiesAt(
               pos.x,
               pos.y,

@@ -280,7 +280,11 @@ export abstract class Weapon extends Equippable {
       return [];
     }
 
-    return room.entities.filter((e) => e.destroyable && e.pointIn(x, y));
+    const z = this.wielder?.z ?? 0;
+    // Z: weapons only interact with entities on the wielder's z-layer.
+    return room.entities.filter(
+      (e) => e.destroyable && e.pointIn(x, y) && (e?.z ?? 0) === z,
+    );
   }
 
   protected hitEntitiesAt(x: number, y: number, damage?: number): boolean {

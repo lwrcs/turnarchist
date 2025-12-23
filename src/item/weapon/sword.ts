@@ -26,6 +26,10 @@ export class Sword extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    const z = this.wielder?.z ?? 0;
     let leftCorner = { x: newX, y: newY };
     let rightCorner = { x: newX, y: newY };
 
@@ -69,9 +73,9 @@ export class Sword extends Weapon {
     if (hitSomething) {
       for (const pos of positions) {
         if (
-          !this.game.rooms[this.wielder.levelID].roomArray[pos.x][
-            pos.y
-          ].isSolid()
+          room.roomArray[pos.x] &&
+          room.roomArray[pos.x][pos.y] &&
+          !room.isSolidAt(pos.x, pos.y, z)
         ) {
           const damage = this.damage + this.wielder.damageBonus;
           this.hitEntitiesAt(pos.x, pos.y, damage);

@@ -18,26 +18,21 @@ export class Shotgun extends Weapon {
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    const z = this.wielder?.z ?? 0;
     let newX2 = 2 * newX - this.wielder.x;
     let newY2 = 2 * newY - this.wielder.y;
     let newX3 = 3 * newX - 2 * this.wielder.x;
     let newY3 = 3 * newY - 2 * this.wielder.y;
     let range = 3;
 
-    if (
-      !this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
-      this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
-    )
+    if (!room.tileInside(newX, newY) || room.isSolidAt(newX, newY, z))
       return true;
-    else if (
-      !this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
-      this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()
-    )
+    else if (!room.tileInside(newX2, newY2) || room.isSolidAt(newX2, newY2, z))
       range = 1;
-    else if (
-      !this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
-      this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid()
-    )
+    else if (!room.tileInside(newX3, newY3) || room.isSolidAt(newX3, newY3, z))
       range = 2;
 
     let enemyHitCandidates = [];
@@ -45,7 +40,8 @@ export class Shotgun extends Weapon {
     let firstNonPushable = 5;
     let firstNonDestroyable = 5;
 
-    for (let e of this.game.rooms[this.wielder.levelID].entities) {
+    for (let e of room.entities) {
+      if ((e?.z ?? 0) !== z) continue;
       if (e.pushable) {
         if (e.pointIn(newX, newY)) return true;
         if (e.pointIn(newX2, newY2) && range >= 2) {

@@ -13,6 +13,10 @@ export class Slingshot extends Weapon {
   }
 
   weaponMove = (newX: number, newY: number): boolean => {
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    const z = this.wielder?.z ?? 0;
     let nextX = [newX];
     let nextY = [newY];
     //define arrays for coords beginning with function arguments
@@ -24,28 +28,23 @@ export class Slingshot extends Weapon {
       i++ //loop through range
     ) {
       if (newX === this.wielder.x) {
-        nextX.push(newX), nextY.push(nextY[l] + (newY - this.wielder.y));
+        (nextX.push(newX), nextY.push(nextY[l] + (newY - this.wielder.y)));
       }
       if (newY === this.wielder.y) {
-        nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY);
+        (nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY));
       }
       // push nex coordinates to array of possible moves
       l++;
     }
-    if (
-      !this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
-      this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()
-    ) {
+    if (!room.tileInside(newX, newY) || room.isSolidAt(newX, newY, z)) {
       //if current position is inside new position OR is solid
       return true;
     }
     let c = 1;
     for (let i = 0; i < 5; i++) {
       if (
-        !this.game.rooms[this.wielder.levelID].tileInside(nextX[c], nextY[c]) ||
-        this.game.rooms[this.wielder.levelID].roomArray[nextX[c]][
-          nextY[c]
-        ].isSolid()
+        !room.tileInside(nextX[c], nextY[c]) ||
+        room.isSolidAt(nextX[c], nextY[c], z)
       ) {
         range = c;
         //exit the function if wall is detected
@@ -58,7 +57,8 @@ export class Slingshot extends Weapon {
     let firstPushable = range + 1;
     let firstNonPushable = range + 2;
     let firstNonDestroyable = range + 2;
-    for (let e of this.game.rooms[this.wielder.levelID].entities) {
+    for (let e of room.entities) {
+      if ((e?.z ?? 0) !== z) continue;
       //loop through enemies in this weapons wielders level
       if (e.pushable) {
         let p = 2;

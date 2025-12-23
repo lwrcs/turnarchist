@@ -55,6 +55,12 @@ import { DivingHelmet } from "../item/divingHelmet";
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
   static DEVELOPER_MODE = false;
+  /**
+   * Debug mode for stacked z-layer testing. When enabled, the room populator
+   * will generate simple "upper floors" (z=1) over inner walls and place
+   * z-only stairs to traverse between z=0 and z=1.
+   */
+  static Z_DEBUG_MODE = true;
   static isMobile = false;
   static isIOS = false;
   static MOBILE_KEYBOARD_SUPPORT = false;

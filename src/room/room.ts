@@ -330,6 +330,94 @@ export class Room {
   shadeColor = "#000000";
   innerWalls: Array<Wall>;
   wallInfo: Map<string, WallInfo> = new Map();
+
+  // #region Z DEBUG (stacked layer test geometry)
+  /**
+   * When `GameConstants.Z_DEBUG_MODE` is enabled, these sets define per-coordinate
+   * overrides for z-layer rendering/collision.
+   */
+  zDebugUpperFloors?: Set<string>;
+  /**
+   * Per-tile override map for z=1 during Z_DEBUG_MODE.
+   * If present, every (x,y) inside the room should have an entry (Floor or Air).
+   */
+  zDebugZ1Tiles?: Map<string, Tile>;
+  zDebugUpStairs?: Set<string>; // triggers z 0 -> 1
+  zDebugDownStairs?: Set<string>; // triggers z 1 -> 0 (typically placed on upper floors)
+  /** Linked z-debug stairs endpoints (single pair for now). */
+  zDebugStairLink?: {
+    up: { x: number; y: number };
+    down: { x: number; y: number };
+  };
+
+  private zKey(x: number, y: number): string {
+    return `${x},${y}`;
+  }
+
+  isSolidAt(x: number, y: number, zLayer: number): boolean {
+    const tile = this.roomArray[x]?.[y];
+    if (!tile) return true;
+
+    // Doors are only accessible from the same z-layer.
+    // Tiles are still shared across layers for now, so this blocks moving through (or onto)
+    // a door when you're on a different z than the door's `z` property.
+    if (tile instanceof Door && (tile.z ?? 0) !== zLayer) {
+      return true;
+    }
+
+    if (GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
+      const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+      // If missing (shouldn't happen), treat as solid to be safe.
+      return override ? override.isSolid() : true;
+    }
+
+    // Z-debug: allow stepping "into" the embedded wall-stairs on z=0
+    if (
+      GameConstants.Z_DEBUG_MODE &&
+      zLayer === 0 &&
+      this.zDebugUpStairs &&
+      this.zDebugUpStairs.has(this.zKey(x, y))
+    ) {
+      return false;
+    }
+
+    if (
+      GameConstants.Z_DEBUG_MODE &&
+      zLayer === 1 &&
+      this.zDebugUpperFloors &&
+      this.zDebugUpperFloors.has(this.zKey(x, y))
+    ) {
+      return false;
+    }
+
+    return tile.isSolid();
+  }
+
+  /**
+   * Z-debug per-step trigger (stairs that are only active on a specific z-layer).
+   * Call this after a successful move.
+   */
+  applyZDebugStep(player: Player, x: number, y: number) {
+    if (!GameConstants.Z_DEBUG_MODE) return;
+    const key = this.zKey(x, y);
+    if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
+      player.z = 1;
+      // Teleport to linked upper stairs tile (so "stairs" behaves like a connection)
+      if (this.zDebugStairLink) {
+        player.move(this.zDebugStairLink.down.x, this.zDebugStairLink.down.y);
+      }
+      return;
+    }
+    if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
+      player.z = 0;
+      // Teleport back to linked lower stairs tile
+      if (this.zDebugStairLink) {
+        player.move(this.zDebugStairLink.up.x, this.zDebugStairLink.up.y);
+      }
+      return;
+    }
+  }
+  // #endregion
   savePoint: Room;
   lastEnemyCount: number;
   outerWalls: Array<Wall>;
@@ -3346,6 +3434,19 @@ export class Room {
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         const tile = this.roomArray[x][y];
+        // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
+        if (GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
+          const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+          if (override) {
+            // Air draws nothing; only collect non-solid tiles for drawables.
+            if (!override.isSolid()) {
+              override.drawUnderPlayer(delta);
+              tiles.push(override);
+            }
+            continue;
+          }
+        }
+
         tile.drawUnderPlayer(delta);
         tiles.push(tile);
       }
@@ -3504,6 +3605,24 @@ export class Room {
           ) {
             Game.ctx.globalCompositeOperation = prevOp;
           }
+        }
+      }
+    }
+
+    // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
+    if (GameConstants.Z_DEBUG_MODE) {
+      if (zLayer === 0 && this.zDebugUpStairs) {
+        for (const key of this.zDebugUpStairs) {
+          const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+          if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+          Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+        }
+      }
+      if (zLayer === 1 && this.zDebugDownStairs) {
+        for (const key of this.zDebugDownStairs) {
+          const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+          if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+          Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
         }
       }
     }

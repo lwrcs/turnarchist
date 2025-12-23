@@ -52,6 +52,8 @@ import { Pickaxe } from "../item/tool/pickaxe";
 import { Shotgun } from "../item/weapon/shotgun";
 import { Tile } from "../tile/tile";
 import { Entity } from "../entity/entity";
+import { GameConstants } from "../game/gameConstants";
+import { Air } from "../tile/air";
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
 import { FrogEnemy } from "../entity/enemy/frogEnemy";
 import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
@@ -2763,6 +2765,53 @@ export class Populator {
       default:
         // No environmental features for other room types
         break;
+    }
+
+    // === Z DEBUG MODE: build a simple upper floor layer over inner walls and add z-only stairs ===
+    if (GameConstants.Z_DEBUG_MODE) {
+      try {
+        room.calculateWallInfo();
+        const upper = new Set<string>();
+        const innerWalls: Array<{ x: number; y: number }> = [];
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            const tile = room.roomArray[x]?.[y];
+            if (!(tile instanceof Wall)) continue;
+            const info = room.wallInfo.get(`${x},${y}`);
+            if (!info?.isInnerWall) continue;
+            upper.add(`${x},${y}`);
+            innerWalls.push({ x, y });
+          }
+        }
+        room.zDebugUpperFloors = upper;
+
+        // Build z=1 tile overrides: Floor on upper coords, Air everywhere else.
+        const z1Tiles = new Map<string, Tile>();
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            const key = `${x},${y}`;
+            if (upper.has(key)) {
+              z1Tiles.set(key, new Floor(room, x, y));
+            } else {
+              z1Tiles.set(key, new Air(room, x, y));
+            }
+          }
+        }
+        room.zDebugZ1Tiles = z1Tiles;
+
+        // Pick a stairs coordinate on the upper floors (inner wall coordinate).
+        // Both stairs endpoints share the same (x,y); z=0 is "embedded in the wall",
+        // z=1 is on the upper floor.
+        if (innerWalls.length > 0) {
+          const target = innerWalls[Math.floor(rand() * innerWalls.length)];
+          room.zDebugDownStairs = new Set([`${target.x},${target.y}`]);
+          room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
+          room.zDebugStairLink = {
+            up: { x: target.x, y: target.y },
+            down: { x: target.x, y: target.y },
+          };
+        }
+      } catch {}
     }
   }
 

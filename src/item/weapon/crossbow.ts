@@ -137,10 +137,12 @@ export class Crossbow extends Weapon {
       cy += dy;
 
       if (!room.tileInside(cx, cy)) break;
-      const tile = room.roomArray?.[cx]?.[cy];
-      if (!tile || tile.isSolid()) break;
+      if (room.isSolidAt(cx, cy, this.wielder?.z ?? 0)) break;
 
-      const entitiesHere = room.entities.filter((e: any) => e.pointIn(cx, cy));
+      const z = this.wielder?.z ?? 0;
+      const entitiesHere = room.entities.filter(
+        (e: any) => e.pointIn(cx, cy) && (e?.z ?? 0) === z,
+      );
 
       // Distance-sensitive targeting:
       // - At step 1, any destroyable (non-pushable) is a valid target

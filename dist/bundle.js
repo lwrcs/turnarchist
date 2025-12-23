@@ -9848,6 +9848,7 @@ class Drawable {
         this.drawableY = 0;
         this.x = 0;
         this.y = 0;
+        this.z = 0;
         // When true, this drawable should be rendered above the Player
         this.shouldDrawAbovePlayer = false;
         this.draw = (delta) => { };
@@ -19623,7 +19624,7 @@ class Entity extends drawable_1.Drawable {
             let tiles = [];
             for (let xx = 0; xx < this.w; xx++) {
                 for (let yy = 0; yy < this.h; yy++) {
-                    if (!this.room.roomArray[x + xx][y + yy].isSolid() &&
+                    if (!this.room.isSolidAt(x + xx, y + yy, this.z) &&
                         !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door) &&
                         !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder)) {
                         tiles.push(this.room.roomArray[x + xx][y + yy]);
@@ -25043,16 +25044,67 @@ class Game {
                 }
             }
         };
+        /**
+         * Draw only the per-room lighting layers (shade/color/bloom). These are not z-layered.
+         * We draw them once and position them on the active z-layer in the main draw loop.
+         */
+        this.drawRoomLightingLayersOnce = (delta) => {
+            for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
+                const shouldDraw = room === this.room || room.active || room.entered;
+                if (!shouldDraw)
+                    continue;
+                if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                    !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) {
+                    room.drawShadeLayer();
+                }
+                room.drawColorLayer();
+                room.drawBloomLayer(delta);
+            }
+        };
+        /**
+         * Draw z-layered overlays (healthbars/above-shading/etc + top beams) for a specific z-layer.
+         * These are not part of the per-room lighting layers.
+         */
+        this.drawRoomOverlaysForZ = (delta, zLayer) => {
+            for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
+                const shouldDrawOver = room === this.room || (room.active && room.entered);
+                if (shouldDrawOver) {
+                    room.drawOverShade(delta, zLayer);
+                }
+            }
+            for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
+                const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
+                if (shouldDrawTop) {
+                    room.drawTopBeams(delta, zLayer);
+                }
+            }
+        };
         this.drawZLayers = (delta) => {
-            const layerHeightPx = this.getZLayerHeightPx();
+            const layerHeightPx = 1 * gameConstants_1.GameConstants.TILESIZE; // this.getZLayerHeightPx();
             const maxZ = this.getMaxZInCurrentPath();
+            const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
             for (let z = 0; z <= maxZ; z++) {
                 Game.ctx.save();
-                Game.ctx.translate(0, z * layerHeightPx);
+                Game.ctx.translate(0, -z * layerHeightPx);
                 this.drawRooms(delta, false, z);
-                this.drawRoomShadeAndColor(delta, z);
                 Game.ctx.restore();
             }
+            // Room overlays are not z-layered; draw them once positioned on active z.
+            Game.ctx.save();
+            Game.ctx.translate(0, -activeZ * layerHeightPx);
+            this.drawRoomOverlaysForZ(delta, activeZ);
+            Game.ctx.restore();
+            // Per-room lighting layers are not z-layered; draw them once positioned on active z.
+            Game.ctx.save();
+            Game.ctx.translate(0, -activeZ * layerHeightPx);
+            this.drawRoomLightingLayersOnce(delta);
+            Game.ctx.restore();
         };
         this.drawRoomShadeAndColor = (delta, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
             for (const room of this.rooms) {
@@ -25845,7 +25897,7 @@ class Game {
         this.targetCamera = (targetX, targetY, targetZ = 0) => {
             let cameraX = Math.round((targetX + 0.5) * gameConstants_1.GameConstants.TILESIZE - 0.5 * gameConstants_1.GameConstants.WIDTH);
             let cameraY = Math.round((targetY + 0.5) * gameConstants_1.GameConstants.TILESIZE - 0.5 * gameConstants_1.GameConstants.HEIGHT);
-            cameraY += Math.round(targetZ * this.getZLayerHeightPx());
+            cameraY; // += Math.round(targetZ * GameConstants.TILESIZE); // this.getZLayerHeightPx());
             this.cameraTargetX = cameraX;
             this.cameraTargetY = cameraY;
         };
@@ -26937,6 +26989,12 @@ class GameConstants {
 exports.GameConstants = GameConstants;
 GameConstants.VERSION = "Alpha v0.3.1"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
+/**
+ * Debug mode for stacked z-layer testing. When enabled, the room populator
+ * will generate simple "upper floors" (z=1) over inner walls and place
+ * z-only stairs to traverse between z=0 and z=1.
+ */
+GameConstants.Z_DEBUG_MODE = true;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
 GameConstants.MOBILE_KEYBOARD_SUPPORT = false;
@@ -38437,10 +38495,10 @@ class Crossbow extends weapon_1.Weapon {
                 cy += dy;
                 if (!room.tileInside(cx, cy))
                     break;
-                const tile = room.roomArray?.[cx]?.[cy];
-                if (!tile || tile.isSolid())
+                if (room.isSolidAt(cx, cy, this.wielder?.z ?? 0))
                     break;
-                const entitiesHere = room.entities.filter((e) => e.pointIn(cx, cy));
+                const z = this.wielder?.z ?? 0;
+                const entitiesHere = room.entities.filter((e) => e.pointIn(cx, cy) && (e?.z ?? 0) === z);
                 // Distance-sensitive targeting:
                 // - At step 1, any destroyable (non-pushable) is a valid target
                 // - Beyond step 1, only enemies are valid targets
@@ -38947,7 +39005,9 @@ class Scythe extends weapon_1.Weapon {
                         const room = this.wielder?.getRoom
                             ? this.wielder.getRoom()
                             : this.game.rooms[this.wielder.levelID];
-                        if (!room.roomArray[pos.x][pos.y].isSolid()) {
+                        if (room.roomArray[pos.x] &&
+                            room.roomArray[pos.x][pos.y] &&
+                            !room.isSolidAt(pos.x, pos.y, this.wielder?.z ?? 0)) {
                             this.hitEntitiesAt(pos.x, pos.y, this.damage + this.wielder.damageBonus);
                         }
                     }
@@ -39224,25 +39284,28 @@ class Shotgun extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.weaponMove = (newX, newY) => {
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            const z = this.wielder?.z ?? 0;
             let newX2 = 2 * newX - this.wielder.x;
             let newY2 = 2 * newY - this.wielder.y;
             let newX3 = 3 * newX - 2 * this.wielder.x;
             let newY3 = 3 * newY - 2 * this.wielder.y;
             let range = 3;
-            if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid())
+            if (!room.tileInside(newX, newY) || room.isSolidAt(newX, newY, z))
                 return true;
-            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX2, newY2) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid())
+            else if (!room.tileInside(newX2, newY2) || room.isSolidAt(newX2, newY2, z))
                 range = 1;
-            else if (!this.game.rooms[this.wielder.levelID].tileInside(newX3, newY3) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX3][newY3].isSolid())
+            else if (!room.tileInside(newX3, newY3) || room.isSolidAt(newX3, newY3, z))
                 range = 2;
             let enemyHitCandidates = [];
             let firstPushable = 4;
             let firstNonPushable = 5;
             let firstNonDestroyable = 5;
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
+            for (let e of room.entities) {
+                if ((e?.z ?? 0) !== z)
+                    continue;
                 if (e.pushable) {
                     if (e.pointIn(newX, newY))
                         return true;
@@ -39340,6 +39403,10 @@ class Slingshot extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.weaponMove = (newX, newY) => {
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            const z = this.wielder?.z ?? 0;
             let nextX = [newX];
             let nextY = [newY];
             //define arrays for coords beginning with function arguments
@@ -39348,23 +39415,22 @@ class Slingshot extends weapon_1.Weapon {
             for (let i = 0; i < 5; i++ //loop through range
             ) {
                 if (newX === this.wielder.x) {
-                    nextX.push(newX), nextY.push(nextY[l] + (newY - this.wielder.y));
+                    (nextX.push(newX), nextY.push(nextY[l] + (newY - this.wielder.y)));
                 }
                 if (newY === this.wielder.y) {
-                    nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY);
+                    (nextX.push(nextX[l] + (newX - this.wielder.x)), nextY.push(newY));
                 }
                 // push nex coordinates to array of possible moves
                 l++;
             }
-            if (!this.game.rooms[this.wielder.levelID].tileInside(newX, newY) ||
-                this.game.rooms[this.wielder.levelID].roomArray[newX][newY].isSolid()) {
+            if (!room.tileInside(newX, newY) || room.isSolidAt(newX, newY, z)) {
                 //if current position is inside new position OR is solid
                 return true;
             }
             let c = 1;
             for (let i = 0; i < 5; i++) {
-                if (!this.game.rooms[this.wielder.levelID].tileInside(nextX[c], nextY[c]) ||
-                    this.game.rooms[this.wielder.levelID].roomArray[nextX[c]][nextY[c]].isSolid()) {
+                if (!room.tileInside(nextX[c], nextY[c]) ||
+                    room.isSolidAt(nextX[c], nextY[c], z)) {
                     range = c;
                     //exit the function if wall is detected
                 }
@@ -39376,7 +39442,9 @@ class Slingshot extends weapon_1.Weapon {
             let firstPushable = range + 1;
             let firstNonPushable = range + 2;
             let firstNonDestroyable = range + 2;
-            for (let e of this.game.rooms[this.wielder.levelID].entities) {
+            for (let e of room.entities) {
+                if ((e?.z ?? 0) !== z)
+                    continue;
                 //loop through enemies in this weapons wielders level
                 if (e.pushable) {
                     let p = 2;
@@ -39491,6 +39559,10 @@ class Spear extends weapon_1.Weapon {
             let newX2 = 2 * newX - this.wielder.x;
             let newY2 = 2 * newY - this.wielder.y;
             let hitEnemies = false;
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            const z = this.wielder?.z ?? 0;
             // Check if there are any pushables at first tile - these completely block the spear
             const pushables = this.getEntitiesAt(newX, newY).filter((e) => e.pushable);
             if (pushables.length > 0)
@@ -39523,9 +39595,9 @@ class Spear extends weapon_1.Weapon {
                 hitEnemies = true;
             }
             // Hit all enemies at second tile (if tile is valid and not solid)
-            if (this.game.rooms[this.wielder.levelID].roomArray[newX2] &&
-                this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] &&
-                !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()) {
+            if (room.roomArray[newX2] &&
+                room.roomArray[newX2][newY2] &&
+                !room.isSolidAt(newX2, newY2, z)) {
                 const enemiesAtSecondTile = entitiesAtSecondTile.filter((e) => !e.pushable && e.isEnemy);
                 if (enemiesAtSecondTile.length > 0) {
                     for (const enemy of enemiesAtSecondTile) {
@@ -39586,10 +39658,12 @@ class Spellbook extends weapon_1.Weapon {
                 ? this.wielder.getRoom()
                 : this.game.rooms[this.wielder.levelID];
             let entities = room.entities;
+            const z = this.wielder?.z ?? 0;
             this.targets = entities.filter((e) => !e.pushable &&
                 utils_1.Utils.distance(this.wielder.x, this.wielder.y, e.x, e.y) <=
                     this.range &&
-                e.destroyable);
+                e.destroyable &&
+                (e?.z ?? 0) === z);
             let enemies = this.targets.filter((e) => e.isEnemy === true);
             //console.log(enemies);
             if (enemies.length > 0)
@@ -39647,7 +39721,7 @@ class Spellbook extends weapon_1.Weapon {
                 const room = this.wielder?.getRoom
                     ? this.wielder.getRoom()
                     : this.game.rooms[this.wielder.levelID];
-                if (!room.roomArray[e.x][e.y].isSolid()) {
+                if (!room.isSolidAt(e.x, e.y, this.wielder?.z ?? 0)) {
                     e.hurt(this.wielder, this.damage + this.wielder.magicDamageBonus); //don't apply damage bonus for magic weapons
                     room.projectiles.push(new playerFireball_1.PlayerFireball(this.wielder, e.x, e.y));
                     // Add to the list of actually hit targets
@@ -39736,6 +39810,10 @@ class Sword extends weapon_1.Weapon {
             sound_1.Sound.playShortSlice();
         };
         this.weaponMove = (newX, newY) => {
+            const room = this.wielder?.getRoom
+                ? this.wielder.getRoom()
+                : this.game.rooms[this.wielder.levelID];
+            const z = this.wielder?.z ?? 0;
             let leftCorner = { x: newX, y: newY };
             let rightCorner = { x: newX, y: newY };
             let positions = [leftCorner, rightCorner];
@@ -39763,7 +39841,9 @@ class Sword extends weapon_1.Weapon {
             const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus, true, true, true, false);
             if (hitSomething) {
                 for (const pos of positions) {
-                    if (!this.game.rooms[this.wielder.levelID].roomArray[pos.x][pos.y].isSolid()) {
+                    if (room.roomArray[pos.x] &&
+                        room.roomArray[pos.x][pos.y] &&
+                        !room.isSolidAt(pos.x, pos.y, z)) {
                         const damage = this.damage + this.wielder.damageBonus;
                         this.hitEntitiesAt(pos.x, pos.y, damage);
                     }
@@ -40124,7 +40204,9 @@ class Weapon extends equippable_1.Equippable {
             console.error("🔫 WEAPON: current room is undefined");
             return [];
         }
-        return room.entities.filter((e) => e.destroyable && e.pointIn(x, y));
+        const z = this.wielder?.z ?? 0;
+        // Z: weapons only interact with entities on the wielder's z-layer.
+        return room.entities.filter((e) => e.destroyable && e.pointIn(x, y) && (e?.z ?? 0) === z);
     }
     hitEntitiesAt(x, y, damage) {
         const entities = this.getEntitiesAt(x, y).filter((e) => !e.pushable);
@@ -46647,7 +46729,7 @@ class Player extends drawable_1.Drawable {
                 console.warn("oi bruv, level to check for collision isn't even there!");
                 return;
             }
-            if (!other.isSolid()) {
+            if (!this.getRoom().isSolidAt(x, y, this.z)) {
                 if (other instanceof upLadder_1.UpLadder || other instanceof downLadder_1.DownLadder) {
                     const locked = other.isLocked();
                     if (locked) {
@@ -46665,6 +46747,8 @@ class Player extends drawable_1.Drawable {
                 }
                 this.move(x, y);
                 other.onCollide(this);
+                // Z-debug per-layer stairs (z-only triggers)
+                this.getRoom().applyZDebugStep(this, x, y);
                 if (!(other instanceof door_1.Door ||
                     other instanceof trapdoor_1.Trapdoor ||
                     other instanceof upLadder_1.UpLadder ||
@@ -46673,6 +46757,11 @@ class Player extends drawable_1.Drawable {
             }
             else {
                 if (other instanceof door_1.Door) {
+                    // Doors are only accessible/interactable from the same z-layer.
+                    if ((other.z ?? 0) !== this.z) {
+                        this.shakeScreen(this.x, this.y, x, y);
+                        return;
+                    }
                     this.shakeScreen(this.x, this.y, x, y);
                     if (other.canUnlock(this)) {
                         other.unlock(this);
@@ -49366,9 +49455,19 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
                 sound_1.Sound.enemySpawn();
             let hitPlayer = false;
             for (const i in this.room.game.players) {
-                if (this.room.game.players[i].x === this.x &&
-                    this.room.game.players[i].y === this.y) {
-                    this.room.game.players[i].hurt(0.5, "reaper");
+                const pl = this.room.game.players[i];
+                if (!pl)
+                    continue;
+                // Z/room: only collide with players on the same z-layer and in this room.
+                const playerRoom = pl?.getRoom
+                    ? pl.getRoom()
+                    : this.room.game.rooms[pl.levelID];
+                if (playerRoom !== this.room)
+                    continue;
+                if ((pl?.z ?? 0) !== (this.z ?? 0))
+                    continue;
+                if (pl.x === this.x && pl.y === this.y) {
+                    pl.hurt(0.5, "reaper");
                     hitPlayer = true;
                 }
             }
@@ -49422,7 +49521,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Explosion = void 0;
 const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/projectile.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -49451,6 +49549,9 @@ class Explosion extends projectile_1.Projectile {
         const distance = utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y);
         const damage = distance === 0 ? 1 : Math.max(0.5, Math.floor((1 / distance) * 6) / 2);
         for (const entity of this.parent.room.entities) {
+            // Z: explosion only affects entities on the same z-layer as the source.
+            if ((entity?.z ?? 0) !== (this.z ?? 0))
+                continue;
             if (entity.x === this.x &&
                 entity.y === this.y &&
                 entity !== this.parent) {
@@ -49459,12 +49560,20 @@ class Explosion extends projectile_1.Projectile {
                 }
                 entity.hurt(playerHitBy, damage);
             }
-            if (playerHitBy.x === this.x && playerHitBy.y === this.y) {
-                if (playerHitBy instanceof player_1.Player) {
-                    playerHitBy.hurt(damage, "bomb");
-                }
+        }
+        // Z/room: only hurt the player if they're on the same z and in the same room.
+        try {
+            const playerRoom = playerHitBy?.getRoom
+                ? playerHitBy.getRoom()
+                : this.parent?.room?.game?.rooms?.[playerHitBy.levelID];
+            if (playerRoom === this.parent.room &&
+                (playerHitBy?.z ?? 0) === (this.z ?? 0) &&
+                playerHitBy.x === this.x &&
+                playerHitBy.y === this.y) {
+                playerHitBy.hurt(damage, "bomb");
             }
         }
+        catch { }
     }
 }
 exports.Explosion = Explosion;
@@ -50499,6 +50608,64 @@ var WallDirection;
     WallDirection["BOTTOMRIGHT"] = "BottomRight";
 })(WallDirection = exports.WallDirection || (exports.WallDirection = {}));
 class Room {
+    zKey(x, y) {
+        return `${x},${y}`;
+    }
+    isSolidAt(x, y, zLayer) {
+        const tile = this.roomArray[x]?.[y];
+        if (!tile)
+            return true;
+        // Doors are only accessible from the same z-layer.
+        // Tiles are still shared across layers for now, so this blocks moving through (or onto)
+        // a door when you're on a different z than the door's `z` property.
+        if (tile instanceof door_1.Door && (tile.z ?? 0) !== zLayer) {
+            return true;
+        }
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
+            const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+            // If missing (shouldn't happen), treat as solid to be safe.
+            return override ? override.isSolid() : true;
+        }
+        // Z-debug: allow stepping "into" the embedded wall-stairs on z=0
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE &&
+            zLayer === 0 &&
+            this.zDebugUpStairs &&
+            this.zDebugUpStairs.has(this.zKey(x, y))) {
+            return false;
+        }
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE &&
+            zLayer === 1 &&
+            this.zDebugUpperFloors &&
+            this.zDebugUpperFloors.has(this.zKey(x, y))) {
+            return false;
+        }
+        return tile.isSolid();
+    }
+    /**
+     * Z-debug per-step trigger (stairs that are only active on a specific z-layer).
+     * Call this after a successful move.
+     */
+    applyZDebugStep(player, x, y) {
+        if (!gameConstants_1.GameConstants.Z_DEBUG_MODE)
+            return;
+        const key = this.zKey(x, y);
+        if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
+            player.z = 1;
+            // Teleport to linked upper stairs tile (so "stairs" behaves like a connection)
+            if (this.zDebugStairLink) {
+                player.move(this.zDebugStairLink.down.x, this.zDebugStairLink.down.y);
+            }
+            return;
+        }
+        if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
+            player.z = 0;
+            // Teleport back to linked lower stairs tile
+            if (this.zDebugStairLink) {
+                player.move(this.zDebugStairLink.up.x, this.zDebugStairLink.up.y);
+            }
+            return;
+        }
+    }
     constructor(game, x, y, w, h, type, depth, mapGroup, level, rand = random_1.Random.rand, envType) {
         // Border tiles around shade content for sliced shading (ensures blur has room to spill)
         this.shadeSliceBorderTiles = 1;
@@ -52303,6 +52470,18 @@ class Room {
             for (let x = minX; x <= maxX; x++) {
                 for (let y = minY; y <= maxY; y++) {
                     const tile = this.roomArray[x][y];
+                    // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
+                    if (gameConstants_1.GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
+                        const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+                        if (override) {
+                            // Air draws nothing; only collect non-solid tiles for drawables.
+                            if (!override.isSolid()) {
+                                override.drawUnderPlayer(delta);
+                                tiles.push(override);
+                            }
+                            continue;
+                        }
+                    }
                     tile.drawUnderPlayer(delta);
                     tiles.push(tile);
                 }
@@ -52445,6 +52624,25 @@ class Room {
                             gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
                             game_1.Game.ctx.globalCompositeOperation = prevOp;
                         }
+                    }
+                }
+            }
+            // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
+            if (gameConstants_1.GameConstants.Z_DEBUG_MODE) {
+                if (zLayer === 0 && this.zDebugUpStairs) {
+                    for (const key of this.zDebugUpStairs) {
+                        const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+                        if (!Number.isFinite(sx) || !Number.isFinite(sy))
+                            continue;
+                        game_1.Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+                    }
+                }
+                if (zLayer === 1 && this.zDebugDownStairs) {
+                    for (const key of this.zDebugDownStairs) {
+                        const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+                        if (!Number.isFinite(sx) || !Number.isFinite(sy))
+                            continue;
+                        game_1.Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
                     }
                 }
             }
@@ -55199,6 +55397,8 @@ const warhammer_1 = __webpack_require__(/*! ../item/weapon/warhammer */ "./src/i
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const shotgun_1 = __webpack_require__(/*! ../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const air_1 = __webpack_require__(/*! ../tile/air */ "./src/tile/air.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
@@ -57341,6 +57541,54 @@ class Populator {
                 // No environmental features for other room types
                 break;
         }
+        // === Z DEBUG MODE: build a simple upper floor layer over inner walls and add z-only stairs ===
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE) {
+            try {
+                room.calculateWallInfo();
+                const upper = new Set();
+                const innerWalls = [];
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        const tile = room.roomArray[x]?.[y];
+                        if (!(tile instanceof wall_1.Wall))
+                            continue;
+                        const info = room.wallInfo.get(`${x},${y}`);
+                        if (!info?.isInnerWall)
+                            continue;
+                        upper.add(`${x},${y}`);
+                        innerWalls.push({ x, y });
+                    }
+                }
+                room.zDebugUpperFloors = upper;
+                // Build z=1 tile overrides: Floor on upper coords, Air everywhere else.
+                const z1Tiles = new Map();
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        const key = `${x},${y}`;
+                        if (upper.has(key)) {
+                            z1Tiles.set(key, new floor_1.Floor(room, x, y));
+                        }
+                        else {
+                            z1Tiles.set(key, new air_1.Air(room, x, y));
+                        }
+                    }
+                }
+                room.zDebugZ1Tiles = z1Tiles;
+                // Pick a stairs coordinate on the upper floors (inner wall coordinate).
+                // Both stairs endpoints share the same (x,y); z=0 is "embedded in the wall",
+                // z=1 is on the upper floor.
+                if (innerWalls.length > 0) {
+                    const target = innerWalls[Math.floor(rand() * innerWalls.length)];
+                    room.zDebugDownStairs = new Set([`${target.x},${target.y}`]);
+                    room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
+                    room.zDebugStairLink = {
+                        up: { x: target.x, y: target.y },
+                        down: { x: target.x, y: target.y },
+                    };
+                }
+            }
+            catch { }
+        }
     }
     /**
      * Places a VendingMachine in an empty wall.
@@ -58183,6 +58431,36 @@ Sound.playCrush = () => {
 Sound.delayPlay = (method, delay) => {
     setTimeout(method, delay);
 };
+
+
+/***/ }),
+
+/***/ "./src/tile/air.ts":
+/*!*************************!*\
+  !*** ./src/tile/air.ts ***!
+  \*************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Air = void 0;
+const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
+/**
+ * "Air" is an invisible solid tile used for z-layer boundaries (debug + future geometry).
+ * It blocks movement but draws nothing.
+ */
+class Air extends tile_1.Tile {
+    constructor(room, x, y) {
+        super(room, x, y);
+        this.isSolid = () => true;
+        this.draw = (delta) => {
+            // Intentionally blank (invisible).
+        };
+        this.name = "air";
+    }
+}
+exports.Air = Air;
 
 
 /***/ }),

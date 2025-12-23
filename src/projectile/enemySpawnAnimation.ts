@@ -41,11 +41,16 @@ export class EnemySpawnAnimation extends Projectile {
 
     let hitPlayer = false;
     for (const i in this.room.game.players) {
-      if (
-        this.room.game.players[i].x === this.x &&
-        this.room.game.players[i].y === this.y
-      ) {
-        this.room.game.players[i].hurt(0.5, "reaper");
+      const pl = this.room.game.players[i];
+      if (!pl) continue;
+      // Z/room: only collide with players on the same z-layer and in this room.
+      const playerRoom = pl?.getRoom
+        ? pl.getRoom()
+        : this.room.game.rooms[pl.levelID];
+      if (playerRoom !== this.room) continue;
+      if ((pl?.z ?? 0) !== (this.z ?? 0)) continue;
+      if (pl.x === this.x && pl.y === this.y) {
+        pl.hurt(0.5, "reaper");
         hitPlayer = true;
       }
     }

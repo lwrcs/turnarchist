@@ -25,6 +25,10 @@ export class Spear extends Weapon {
     let newX2 = 2 * newX - this.wielder.x;
     let newY2 = 2 * newY - this.wielder.y;
     let hitEnemies = false;
+    const room = this.wielder?.getRoom
+      ? this.wielder.getRoom()
+      : this.game.rooms[this.wielder.levelID];
+    const z = this.wielder?.z ?? 0;
 
     // Check if there are any pushables at first tile - these completely block the spear
     const pushables = this.getEntitiesAt(newX, newY).filter((e) => e.pushable);
@@ -67,9 +71,9 @@ export class Spear extends Weapon {
 
     // Hit all enemies at second tile (if tile is valid and not solid)
     if (
-      this.game.rooms[this.wielder.levelID].roomArray[newX2] &&
-      this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2] &&
-      !this.game.rooms[this.wielder.levelID].roomArray[newX2][newY2].isSolid()
+      room.roomArray[newX2] &&
+      room.roomArray[newX2][newY2] &&
+      !room.isSolidAt(newX2, newY2, z)
     ) {
       const enemiesAtSecondTile = entitiesAtSecondTile.filter(
         (e) => !e.pushable && e.isEnemy,
