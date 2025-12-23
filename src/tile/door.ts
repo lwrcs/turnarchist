@@ -415,6 +415,10 @@ export class Door extends Passageway {
   drawAbovePlayer = (delta: number) => {};
 
   drawAboveShading = (delta: number) => {
+    // Z: Door icons (locked arrow/key) should only draw on the active z-layer.
+    const activeZ =
+      this.room?.game?.players?.[this.room.game.localPlayerID]?.z ?? 0;
+    if ((this.z ?? 0) !== activeZ) return;
     //if (this.type === DoorType.TUNNELDOOR) return;
     this.updateFrame(delta);
     Game.ctx.globalAlpha = this.iconAlpha;

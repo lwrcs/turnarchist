@@ -2800,16 +2800,56 @@ export class Populator {
         room.zDebugZ1Tiles = z1Tiles;
 
         // Pick a stairs coordinate on the upper floors (inner wall coordinate).
-        // Both stairs endpoints share the same (x,y); z=0 is "embedded in the wall",
-        // z=1 is on the upper floor.
+        // z=0 up-stairs is "embedded in the wall" at an inner-wall coordinate.
+        // When used, it switches the player to z=1 but keeps the same (x,y), so the
+        // player stands on the wall tile on the upper layer.
+        //
+        // From z=1, the adjacent "air/ledge" tiles (not in upper) act as down-stairs:
+        // stepping onto any of them switches the player back to z=0 while keeping (x,y).
+        // We only place down-stairs on adjacent tiles that are walkable on z=0.
         if (innerWalls.length > 0) {
-          const target = innerWalls[Math.floor(rand() * innerWalls.length)];
-          room.zDebugDownStairs = new Set([`${target.x},${target.y}`]);
-          room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
-          room.zDebugStairLink = {
-            up: { x: target.x, y: target.y },
-            down: { x: target.x, y: target.y },
+          const dirs = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+          ];
+
+          const getDownCandidates = (t: { x: number; y: number }) => {
+            const candidates: Array<{ x: number; y: number }> = [];
+            for (const d of dirs) {
+              const nx = t.x + d.x;
+              const ny = t.y + d.y;
+              if (nx < room.roomX || nx >= room.roomX + room.width) continue;
+              if (ny < room.roomY || ny >= room.roomY + room.height) continue;
+              const nKey = `${nx},${ny}`;
+              if (upper.has(nKey)) continue; // still on the upper floor, not a ledge
+              const baseTile = room.roomArray[nx]?.[ny];
+              if (!baseTile) continue;
+              if (baseTile.isSolid()) continue; // must be walkable on z=0 after switching down
+              candidates.push({ x: nx, y: ny });
+            }
+            return candidates;
           };
+
+          // Only place stairs on inner-wall tiles that are reachable:
+          // - must have at least one adjacent non-solid tile on z=0 (so you can approach/use stairs up)
+          // - that same adjacent tile becomes a down-stairs ledge tile on z=1
+          const validTargets = innerWalls.filter(
+            (t) => getDownCandidates(t).length > 0,
+          );
+          if (validTargets.length > 0) {
+            const target =
+              validTargets[Math.floor(rand() * validTargets.length)];
+            const candidates = getDownCandidates(target);
+
+            room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
+            room.zDebugDownStairs = new Set(
+              candidates.map((c) => `${c.x},${c.y}`),
+            );
+            // No fixed link needed; stepping down keeps the same (x,y) on z=0.
+            room.zDebugStairLink = undefined;
+          }
         }
       } catch {}
     }

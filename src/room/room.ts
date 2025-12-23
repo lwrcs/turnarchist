@@ -365,6 +365,17 @@ export class Room {
       return true;
     }
 
+    // Z-debug: allow stepping onto the "hanging" down-stairs tile on z=1,
+    // even if the z=1 override tile at that coordinate is Air (solid).
+    if (
+      GameConstants.Z_DEBUG_MODE &&
+      zLayer === 1 &&
+      this.zDebugDownStairs &&
+      this.zDebugDownStairs.has(this.zKey(x, y))
+    ) {
+      return false;
+    }
+
     if (GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
       const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
       // If missing (shouldn't happen), treat as solid to be safe.
@@ -402,18 +413,16 @@ export class Room {
     const key = this.zKey(x, y);
     if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
       player.z = 1;
-      // Teleport to linked upper stairs tile (so "stairs" behaves like a connection)
-      if (this.zDebugStairLink) {
-        player.move(this.zDebugStairLink.down.x, this.zDebugStairLink.down.y);
-      }
+      // Up-stairs: switch to z=1 but stay on the same (x,y) wall tile.
+      // Z changed; refresh lighting (lighting is computed for the active z-layer).
+      this.updateLighting({ x: player.x, y: player.y });
       return;
     }
     if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
       player.z = 0;
-      // Teleport back to linked lower stairs tile
-      if (this.zDebugStairLink) {
-        player.move(this.zDebugStairLink.up.x, this.zDebugStairLink.up.y);
-      }
+      // Down-stairs: switch to z=0 but stay on the same (x,y) ledge tile.
+      // Z changed; refresh lighting (lighting is computed for the active z-layer).
+      this.updateLighting({ x: player.x, y: player.y });
       return;
     }
   }
@@ -1926,8 +1935,9 @@ export class Room {
     const roomTiles = this.width * this.height;
 
     // Count players currently in this room
+    const activeZ = this.getActiveZ();
     const playersInRoom = Object.values(this.game.players || {}).filter(
-      (p: any) => p?.getRoom?.() === this,
+      (p) => p?.getRoom?.() === this && (p?.z ?? 0) === activeZ,
     ).length;
 
     // Rays per emitter at the current angular resolution
@@ -1961,6 +1971,7 @@ export class Room {
     }
     if (this.isUpdatingLighting) return;
     this.isUpdatingLighting = true;
+    const activeZ = this.getActiveZ();
 
     // Invalidate cache when lighting is updated
     this.invalidateBlurCache();
@@ -2018,6 +2029,7 @@ export class Room {
     if (GameConstants.ENEMIES_BLOCK_LIGHT) {
       const set = new Set<string>();
       for (const e of this.entities) {
+        if (((e as any)?.z ?? 0) !== activeZ) continue;
         if ((e as any).opaque && this.isTileOnScreen(e.x, e.y, 7)) {
           const w = Math.max(1, (e as any).w || 1);
           const h = Math.max(1, (e as any).h || 1);
@@ -2057,6 +2069,7 @@ export class Room {
     for (const p in this.game.players) {
       let player = this.game.players[p];
       if ((player as any).getRoom?.() === this) {
+        if ((player?.z ?? 0) !== activeZ) continue;
         let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
         let lightBrightness = 5;
         if (player.lightEquipped) {
@@ -2319,6 +2332,8 @@ export class Room {
   ) => {
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
+    // Lighting is currently computed for the local active z-layer only.
+    const activeZ = this.getActiveZ();
 
     // Convert input color from sRGB to linear RGB
     const linearColor: [number, number, number] = [
@@ -2337,7 +2352,14 @@ export class Room {
 
       if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
 
-      const tile = this.roomArray[currentX][currentY];
+      // Z-aware tile lookup for lighting blockers:
+      // - Default: tiles are shared across layers
+      // - Z_DEBUG_MODE: use the z=1 override tile map (Floor/Air) when activeZ === 1
+      let tile = this.roomArray[currentX][currentY];
+      if (GameConstants.Z_DEBUG_MODE && activeZ === 1 && this.zDebugZ1Tiles) {
+        const override = this.zDebugZ1Tiles.get(this.zKey(currentX, currentY));
+        if (override) tile = override;
+      }
 
       // Handle i=0 separately to ensure correct intensity
       let intensity: number;
@@ -3216,7 +3238,7 @@ export class Room {
     Game.ctx.drawImage(this.shadeSliceTempCanvas as HTMLCanvasElement, dx, dy);
   };
 
-  drawBloomLayer = (delta: number) => {
+  drawBloomLayer = (delta: number, zLayer: number = this.getActiveZ()) => {
     if (!this.onScreen) return;
 
     Game.ctx.save();
@@ -3232,38 +3254,33 @@ export class Room {
 
     let lastFillStyle = "";
 
-    // Draw all bloom rectangles without any filters
-    const allEntities = this.entities.concat(this.deadEntities);
-    if (allEntities.length > 0)
-      for (let e of this.entities) {
-        if (e.hasBloom) {
-          e.updateBloom(delta);
-          this.bloomOffscreenCtx.globalAlpha =
-            1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
-          this.bloomOffscreenCtx.fillStyle = e.bloomColor;
+    // Draw bloom for entities on the requested z-layer only.
+    const entitiesOnLayer = this.entities
+      .concat(this.deadEntities)
+      .filter((e) => (e?.z ?? 0) === zLayer);
+    for (const e of entitiesOnLayer) {
+      if (!e.hasBloom) continue;
+      e.updateBloom(delta);
+      this.bloomOffscreenCtx.globalAlpha =
+        1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
+      this.bloomOffscreenCtx.fillStyle = e.bloomColor;
 
-          this.bloomOffscreenCtx.fillRect(
-            (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-              GameConstants.TILESIZE,
-            (e.y -
-              e.drawY -
-              this.roomY -
-              0.5 +
-              offsetY +
-              0.5 -
-              e.bloomSize / 2) *
-              GameConstants.TILESIZE +
-              e.bloomOffsetY,
-            GameConstants.TILESIZE * e.bloomSize,
-            GameConstants.TILESIZE * e.bloomSize,
-          );
-        }
-      }
+      this.bloomOffscreenCtx.fillRect(
+        (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
+          GameConstants.TILESIZE,
+        (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
+          GameConstants.TILESIZE +
+          e.bloomOffsetY,
+        GameConstants.TILESIZE * e.bloomSize,
+        GameConstants.TILESIZE * e.bloomSize,
+      );
+    }
 
     // Player bloom derived from equipped light (uses Drawable bloom smoothing)
     for (const key in this.game.players) {
       const player = this.game.players[key];
       if (player.getRoom() !== this) continue;
+      if ((player?.z ?? 0) !== zLayer) continue;
 
       //player.hasBloom = true;
       const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
@@ -3310,23 +3327,21 @@ export class Room {
       }
     }
 
-    if (this.projectiles.length > 0)
-      for (let p of this.projectiles) {
-        if (p.hasBloom) {
-          p.updateBloom(delta);
-          this.bloomOffscreenCtx.globalAlpha =
-            1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
-          this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+    for (const p of this.projectiles) {
+      if ((p?.z ?? 0) !== zLayer) continue;
+      if (!p.hasBloom) continue;
+      p.updateBloom(delta);
+      this.bloomOffscreenCtx.globalAlpha =
+        1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
+      this.bloomOffscreenCtx.fillStyle = p.bloomColor;
 
-          this.bloomOffscreenCtx.fillRect(
-            (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
-            (p.y - this.roomY + offsetY + p.bloomOffsetY) *
-              GameConstants.TILESIZE,
-            GameConstants.TILESIZE,
-            GameConstants.TILESIZE,
-          );
-        }
-      }
+      this.bloomOffscreenCtx.fillRect(
+        (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
+        (p.y - this.roomY + offsetY + p.bloomOffsetY) * GameConstants.TILESIZE,
+        GameConstants.TILESIZE,
+        GameConstants.TILESIZE,
+      );
+    }
 
     // Choose blur method based on setting
     if (GameConstants.USE_WEBGL_BLUR) {

@@ -2101,10 +2101,13 @@ export class Game {
   };
 
   /**
-   * Draw only the per-room lighting layers (shade/color/bloom). These are not z-layered.
+   * Draw only the per-room lighting layers (shade/color). These are not z-layered.
    * We draw them once and position them on the active z-layer in the main draw loop.
    */
-  private drawRoomLightingLayersOnce = (delta: number) => {
+  private drawRoomLightingLayersOnce = (
+    delta: number,
+    zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
+  ) => {
     for (const room of this.rooms) {
       if (room.pathId !== this.currentPathId) continue;
       const shouldDraw = room === this.room || room.active || room.entered;
@@ -2116,7 +2119,19 @@ export class Game {
         room.drawShadeLayer();
       }
       room.drawColorLayer();
-      room.drawBloomLayer(delta);
+    }
+  };
+
+  /**
+   * Draw bloom for a specific z-layer. Bloom is z-layered and must be drawn
+   * in the same translated pass as the corresponding entity layer.
+   */
+  private drawRoomBloomForZ = (delta: number, zLayer: number) => {
+    for (const room of this.rooms) {
+      if (room.pathId !== this.currentPathId) continue;
+      const shouldDraw = room === this.room || room.active || room.entered;
+      if (!shouldDraw) continue;
+      room.drawBloomLayer(delta, zLayer);
     }
   };
 
@@ -2154,16 +2169,13 @@ export class Game {
       Game.ctx.restore();
     }
 
-    // Room overlays are not z-layered; draw them once positioned on active z.
+    // Non-z-layered post passes: position on active z.
+    // Match transition draw order: shade/color -> bloom -> overlays.
     Game.ctx.save();
     Game.ctx.translate(0, -activeZ * layerHeightPx);
+    this.drawRoomLightingLayersOnce(delta, activeZ);
+    this.drawRoomBloomForZ(delta, activeZ);
     this.drawRoomOverlaysForZ(delta, activeZ);
-    Game.ctx.restore();
-
-    // Per-room lighting layers are not z-layered; draw them once positioned on active z.
-    Game.ctx.save();
-    Game.ctx.translate(0, -activeZ * layerHeightPx);
-    this.drawRoomLightingLayersOnce(delta);
     Game.ctx.restore();
   };
 
@@ -2181,7 +2193,7 @@ export class Game {
         )
           room.drawShadeLayer();
         room.drawColorLayer();
-        room.drawBloomLayer(delta);
+        room.drawBloomLayer(delta, zLayer);
       }
     }
     for (const room of this.rooms) {

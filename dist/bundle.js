@@ -25045,10 +25045,10 @@ class Game {
             }
         };
         /**
-         * Draw only the per-room lighting layers (shade/color/bloom). These are not z-layered.
+         * Draw only the per-room lighting layers (shade/color). These are not z-layered.
          * We draw them once and position them on the active z-layer in the main draw loop.
          */
-        this.drawRoomLightingLayersOnce = (delta) => {
+        this.drawRoomLightingLayersOnce = (delta, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
             for (const room of this.rooms) {
                 if (room.pathId !== this.currentPathId)
                     continue;
@@ -25060,7 +25060,20 @@ class Game {
                     room.drawShadeLayer();
                 }
                 room.drawColorLayer();
-                room.drawBloomLayer(delta);
+            }
+        };
+        /**
+         * Draw bloom for a specific z-layer. Bloom is z-layered and must be drawn
+         * in the same translated pass as the corresponding entity layer.
+         */
+        this.drawRoomBloomForZ = (delta, zLayer) => {
+            for (const room of this.rooms) {
+                if (room.pathId !== this.currentPathId)
+                    continue;
+                const shouldDraw = room === this.room || room.active || room.entered;
+                if (!shouldDraw)
+                    continue;
+                room.drawBloomLayer(delta, zLayer);
             }
         };
         /**
@@ -25095,15 +25108,13 @@ class Game {
                 this.drawRooms(delta, false, z);
                 Game.ctx.restore();
             }
-            // Room overlays are not z-layered; draw them once positioned on active z.
+            // Non-z-layered post passes: position on active z.
+            // Match transition draw order: shade/color -> bloom -> overlays.
             Game.ctx.save();
             Game.ctx.translate(0, -activeZ * layerHeightPx);
+            this.drawRoomLightingLayersOnce(delta, activeZ);
+            this.drawRoomBloomForZ(delta, activeZ);
             this.drawRoomOverlaysForZ(delta, activeZ);
-            Game.ctx.restore();
-            // Per-room lighting layers are not z-layered; draw them once positioned on active z.
-            Game.ctx.save();
-            Game.ctx.translate(0, -activeZ * layerHeightPx);
-            this.drawRoomLightingLayersOnce(delta);
             Game.ctx.restore();
         };
         this.drawRoomShadeAndColor = (delta, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
@@ -25116,7 +25127,7 @@ class Game {
                         !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
                         room.drawShadeLayer();
                     room.drawColorLayer();
-                    room.drawBloomLayer(delta);
+                    room.drawBloomLayer(delta, zLayer);
                 }
             }
             for (const room of this.rooms) {
@@ -50621,6 +50632,14 @@ class Room {
         if (tile instanceof door_1.Door && (tile.z ?? 0) !== zLayer) {
             return true;
         }
+        // Z-debug: allow stepping onto the "hanging" down-stairs tile on z=1,
+        // even if the z=1 override tile at that coordinate is Air (solid).
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE &&
+            zLayer === 1 &&
+            this.zDebugDownStairs &&
+            this.zDebugDownStairs.has(this.zKey(x, y))) {
+            return false;
+        }
         if (gameConstants_1.GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
             const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
             // If missing (shouldn't happen), treat as solid to be safe.
@@ -50651,18 +50670,16 @@ class Room {
         const key = this.zKey(x, y);
         if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
             player.z = 1;
-            // Teleport to linked upper stairs tile (so "stairs" behaves like a connection)
-            if (this.zDebugStairLink) {
-                player.move(this.zDebugStairLink.down.x, this.zDebugStairLink.down.y);
-            }
+            // Up-stairs: switch to z=1 but stay on the same (x,y) wall tile.
+            // Z changed; refresh lighting (lighting is computed for the active z-layer).
+            this.updateLighting({ x: player.x, y: player.y });
             return;
         }
         if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
             player.z = 0;
-            // Teleport back to linked lower stairs tile
-            if (this.zDebugStairLink) {
-                player.move(this.zDebugStairLink.up.x, this.zDebugStairLink.up.y);
-            }
+            // Down-stairs: switch to z=0 but stay on the same (x,y) ledge tile.
+            // Z changed; refresh lighting (lighting is computed for the active z-layer).
+            this.updateLighting({ x: player.x, y: player.y });
             return;
         }
     }
@@ -51372,7 +51389,8 @@ class Room {
             // Estimate total tiles we will compute for lighting this frame
             const roomTiles = this.width * this.height;
             // Count players currently in this room
-            const playersInRoom = Object.values(this.game.players || {}).filter((p) => p?.getRoom?.() === this).length;
+            const activeZ = this.getActiveZ();
+            const playersInRoom = Object.values(this.game.players || {}).filter((p) => p?.getRoom?.() === this && (p?.z ?? 0) === activeZ).length;
             // Rays per emitter at the current angular resolution
             const raysPerEmitter = Math.ceil(360 / levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP);
             // Estimate steps per ray by summing radii of lights (capped) and players
@@ -51402,6 +51420,7 @@ class Room {
             if (this.isUpdatingLighting)
                 return;
             this.isUpdatingLighting = true;
+            const activeZ = this.getActiveZ();
             // Invalidate cache when lighting is updated
             this.invalidateBlurCache();
             // Start timing the initial setup
@@ -51452,6 +51471,8 @@ class Room {
             if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
                 const set = new Set();
                 for (const e of this.entities) {
+                    if ((e?.z ?? 0) !== activeZ)
+                        continue;
                     if (e.opaque && this.isTileOnScreen(e.x, e.y, 7)) {
                         const w = Math.max(1, e.w || 1);
                         const h = Math.max(1, e.h || 1);
@@ -51481,6 +51502,8 @@ class Room {
             for (const p in this.game.players) {
                 let player = this.game.players[p];
                 if (player.getRoom?.() === this) {
+                    if ((player?.z ?? 0) !== activeZ)
+                        continue;
                     let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
                     let lightBrightness = 5;
                     if (player.lightEquipped) {
@@ -51655,6 +51678,8 @@ class Room {
         this.processTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1, action = "cast") => {
             const dx = Math.cos((angle * Math.PI) / 180);
             const dy = Math.sin((angle * Math.PI) / 180);
+            // Lighting is currently computed for the local active z-layer only.
+            const activeZ = this.getActiveZ();
             // Convert input color from sRGB to linear RGB
             const linearColor = [
                 this.sRGBToLinear(color[0]),
@@ -51666,7 +51691,15 @@ class Room {
                 const currentY = Math.floor(py + dy * i);
                 if (!this.isPositionInRoom(currentX, currentY))
                     return; // Outside the room
-                const tile = this.roomArray[currentX][currentY];
+                // Z-aware tile lookup for lighting blockers:
+                // - Default: tiles are shared across layers
+                // - Z_DEBUG_MODE: use the z=1 override tile map (Floor/Air) when activeZ === 1
+                let tile = this.roomArray[currentX][currentY];
+                if (gameConstants_1.GameConstants.Z_DEBUG_MODE && activeZ === 1 && this.zDebugZ1Tiles) {
+                    const override = this.zDebugZ1Tiles.get(this.zKey(currentX, currentY));
+                    if (override)
+                        tile = override;
+                }
                 // Handle i=0 separately to ensure correct intensity
                 let intensity;
                 // Exponential falloff with origin boost preserved
@@ -52319,7 +52352,7 @@ class Room {
             // Blit to main ctx
             game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
         };
-        this.drawBloomLayer = (delta) => {
+        this.drawBloomLayer = (delta, zLayer = this.getActiveZ()) => {
             if (!this.onScreen)
                 return;
             game_1.Game.ctx.save();
@@ -52328,31 +52361,28 @@ class Room {
             const offsetX = this.blurOffsetX;
             const offsetY = this.blurOffsetY;
             let lastFillStyle = "";
-            // Draw all bloom rectangles without any filters
-            const allEntities = this.entities.concat(this.deadEntities);
-            if (allEntities.length > 0)
-                for (let e of this.entities) {
-                    if (e.hasBloom) {
-                        e.updateBloom(delta);
-                        this.bloomOffscreenCtx.globalAlpha =
-                            1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
-                        this.bloomOffscreenCtx.fillStyle = e.bloomColor;
-                        this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-                            gameConstants_1.GameConstants.TILESIZE, (e.y -
-                            e.drawY -
-                            this.roomY -
-                            0.5 +
-                            offsetY +
-                            0.5 -
-                            e.bloomSize / 2) *
-                            gameConstants_1.GameConstants.TILESIZE +
-                            e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
-                    }
-                }
+            // Draw bloom for entities on the requested z-layer only.
+            const entitiesOnLayer = this.entities
+                .concat(this.deadEntities)
+                .filter((e) => (e?.z ?? 0) === zLayer);
+            for (const e of entitiesOnLayer) {
+                if (!e.hasBloom)
+                    continue;
+                e.updateBloom(delta);
+                this.bloomOffscreenCtx.globalAlpha =
+                    1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
+                this.bloomOffscreenCtx.fillStyle = e.bloomColor;
+                this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
+                    gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
+                    gameConstants_1.GameConstants.TILESIZE +
+                    e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
+            }
             // Player bloom derived from equipped light (uses Drawable bloom smoothing)
             for (const key in this.game.players) {
                 const player = this.game.players[key];
                 if (player.getRoom() !== this)
+                    continue;
+                if ((player?.z ?? 0) !== zLayer)
                     continue;
                 //player.hasBloom = true;
                 const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
@@ -52383,17 +52413,17 @@ class Room {
                     }
                 }
             }
-            if (this.projectiles.length > 0)
-                for (let p of this.projectiles) {
-                    if (p.hasBloom) {
-                        p.updateBloom(delta);
-                        this.bloomOffscreenCtx.globalAlpha =
-                            1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
-                        this.bloomOffscreenCtx.fillStyle = p.bloomColor;
-                        this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) *
-                            gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
-                    }
-                }
+            for (const p of this.projectiles) {
+                if ((p?.z ?? 0) !== zLayer)
+                    continue;
+                if (!p.hasBloom)
+                    continue;
+                p.updateBloom(delta);
+                this.bloomOffscreenCtx.globalAlpha =
+                    1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
+                this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+                this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+            }
             // Choose blur method based on setting
             if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
                 // Use WebGL blur with caching
@@ -57575,16 +57605,53 @@ class Populator {
                 }
                 room.zDebugZ1Tiles = z1Tiles;
                 // Pick a stairs coordinate on the upper floors (inner wall coordinate).
-                // Both stairs endpoints share the same (x,y); z=0 is "embedded in the wall",
-                // z=1 is on the upper floor.
+                // z=0 up-stairs is "embedded in the wall" at an inner-wall coordinate.
+                // When used, it switches the player to z=1 but keeps the same (x,y), so the
+                // player stands on the wall tile on the upper layer.
+                //
+                // From z=1, the adjacent "air/ledge" tiles (not in upper) act as down-stairs:
+                // stepping onto any of them switches the player back to z=0 while keeping (x,y).
+                // We only place down-stairs on adjacent tiles that are walkable on z=0.
                 if (innerWalls.length > 0) {
-                    const target = innerWalls[Math.floor(rand() * innerWalls.length)];
-                    room.zDebugDownStairs = new Set([`${target.x},${target.y}`]);
-                    room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
-                    room.zDebugStairLink = {
-                        up: { x: target.x, y: target.y },
-                        down: { x: target.x, y: target.y },
+                    const dirs = [
+                        { x: 1, y: 0 },
+                        { x: -1, y: 0 },
+                        { x: 0, y: 1 },
+                        { x: 0, y: -1 },
+                    ];
+                    const getDownCandidates = (t) => {
+                        const candidates = [];
+                        for (const d of dirs) {
+                            const nx = t.x + d.x;
+                            const ny = t.y + d.y;
+                            if (nx < room.roomX || nx >= room.roomX + room.width)
+                                continue;
+                            if (ny < room.roomY || ny >= room.roomY + room.height)
+                                continue;
+                            const nKey = `${nx},${ny}`;
+                            if (upper.has(nKey))
+                                continue; // still on the upper floor, not a ledge
+                            const baseTile = room.roomArray[nx]?.[ny];
+                            if (!baseTile)
+                                continue;
+                            if (baseTile.isSolid())
+                                continue; // must be walkable on z=0 after switching down
+                            candidates.push({ x: nx, y: ny });
+                        }
+                        return candidates;
                     };
+                    // Only place stairs on inner-wall tiles that are reachable:
+                    // - must have at least one adjacent non-solid tile on z=0 (so you can approach/use stairs up)
+                    // - that same adjacent tile becomes a down-stairs ledge tile on z=1
+                    const validTargets = innerWalls.filter((t) => getDownCandidates(t).length > 0);
+                    if (validTargets.length > 0) {
+                        const target = validTargets[Math.floor(rand() * validTargets.length)];
+                        const candidates = getDownCandidates(target);
+                        room.zDebugUpStairs = new Set([`${target.x},${target.y}`]);
+                        room.zDebugDownStairs = new Set(candidates.map((c) => `${c.x},${c.y}`));
+                        // No fixed link needed; stepping down keeps the same (x,y) on z=0.
+                        room.zDebugStairLink = undefined;
+                    }
                 }
             }
             catch { }
@@ -58970,6 +59037,10 @@ class Door extends passageway_1.Passageway {
         };
         this.drawAbovePlayer = (delta) => { };
         this.drawAboveShading = (delta) => {
+            // Z: Door icons (locked arrow/key) should only draw on the active z-layer.
+            const activeZ = this.room?.game?.players?.[this.room.game.localPlayerID]?.z ?? 0;
+            if ((this.z ?? 0) !== activeZ)
+                return;
             //if (this.type === DoorType.TUNNELDOOR) return;
             this.updateFrame(delta);
             game_1.Game.ctx.globalAlpha = this.iconAlpha;
