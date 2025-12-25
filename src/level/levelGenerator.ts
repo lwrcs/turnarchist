@@ -273,7 +273,7 @@ export class LevelGenerator {
     let mainEnvType = depth > 2 ? EnvType.DARK_DUNGEON : EnvType.DUNGEON;
     let envType = isSidePath
       ? environment
-      : this.mainPathEnvOverride ?? mainEnvType;
+      : (this.mainPathEnvOverride ?? mainEnvType);
     // if (depth > 4) {
     //   envType = EnvType.MAGMA_CAVE;
     // }
