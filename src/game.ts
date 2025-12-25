@@ -1457,7 +1457,9 @@ export class Game {
           this.setPendingMainPathEnvOverride(parsed.envType);
           this.pushMessage(
             `Starting new ${getEnvTypeName(parsed.envType)} game${
-              seedInput ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})` : ""
+              seedInput
+                ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})`
+                : ""
             }`,
           );
           if (seedInput) {
@@ -1806,8 +1808,27 @@ export class Game {
         if (command.startsWith("spawn ")) {
           this.room.addNewEnemy(command.slice(6) as EnemyType);
         } else if (command.startsWith("fill")) {
-          while (this.room.getEmptyTiles().length > 0) {
-            this.room.addNewEnemy(command.slice(5) as EnemyType);
+          const rest = command.slice(4).trim();
+          const enemyName = rest.split(/\s+/)[0];
+          if (!enemyName) {
+            this.pushMessage("Usage: fill <enemyType>");
+            break;
+          }
+
+          // Avoid infinite loops: if the enemy type is unknown (or spawning fails),
+          // `getEmptyTiles()` won't decrease and the old while-loop would never terminate.
+          let lastEmpty = this.room.getEmptyTiles().length;
+          const maxIters = Math.max(0, lastEmpty) + 25;
+          for (let i = 0; i < maxIters && lastEmpty > 0; i++) {
+            this.room.addNewEnemy(enemyName as EnemyType);
+            const nowEmpty = this.room.getEmptyTiles().length;
+            if (nowEmpty >= lastEmpty) {
+              this.pushMessage(
+                `Unknown enemy type "${enemyName}" (fill aborted).`,
+              );
+              break;
+            }
+            lastEmpty = nowEmpty;
           }
         } else if (command === "map") {
           const { GameConstants } = require("./game/gameConstants");

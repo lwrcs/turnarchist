@@ -20032,9 +20032,22 @@ class Entity extends drawable_1.Drawable {
                         used.add(`${coordX},${coordY}`);
                     }
                     this.room.items.push(drop);
+                    const lenAfterPush = this.room.items.length;
                     drop.onDrop();
-                    if (this.name !== "chest")
-                        drop.autoPickup();
+                    // Some items (e.g., paired fragments) can replace themselves in `onDrop()` by removing
+                    // the original and spawning an alternate item at the same location. If we always call
+                    // `autoPickup()` on the original instance we can end up picking up the wrong piece.
+                    let pickupCandidate = drop;
+                    if (!this.room.items.includes(drop)) {
+                        const addedByOnDrop = this.room.items.slice(lenAfterPush);
+                        const replacement = addedByOnDrop.find((i) => i.x === drop.x && i.y === drop.y && i.z === drop.z);
+                        pickupCandidate = replacement;
+                    }
+                    if (this.name !== "chest" && pickupCandidate) {
+                        // Only auto-pickup if the candidate still exists in the room.
+                        if (this.room.items.includes(pickupCandidate))
+                            pickupCandidate.autoPickup();
+                    }
                 });
                 // For big enemies, drop coins on any remaining footprint tiles not chosen above
                 if (this.isEnemy && (this.w > 1 || this.h > 1) && candidates.length > 0) {
@@ -24699,7 +24712,9 @@ class Game {
                         const consumed = firstTwo === first ? 1 : 2;
                         const seedInput = parts.slice(consumed).join(" ").trim();
                         this.setPendingMainPathEnvOverride(parsed.envType);
-                        this.pushMessage(`Starting new ${(0, environmentTypes_1.getEnvTypeName)(parsed.envType)} game${seedInput ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})` : ""}`);
+                        this.pushMessage(`Starting new ${(0, environmentTypes_1.getEnvTypeName)(parsed.envType)} game${seedInput
+                            ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})`
+                            : ""}`);
                         if (seedInput) {
                             this.newGame(this.convertSeedToNumber(seedInput));
                         }
@@ -25012,8 +25027,24 @@ class Game {
                         this.room.addNewEnemy(command.slice(6));
                     }
                     else if (command.startsWith("fill")) {
-                        while (this.room.getEmptyTiles().length > 0) {
-                            this.room.addNewEnemy(command.slice(5));
+                        const rest = command.slice(4).trim();
+                        const enemyName = rest.split(/\s+/)[0];
+                        if (!enemyName) {
+                            this.pushMessage("Usage: fill <enemyType>");
+                            break;
+                        }
+                        // Avoid infinite loops: if the enemy type is unknown (or spawning fails),
+                        // `getEmptyTiles()` won't decrease and the old while-loop would never terminate.
+                        let lastEmpty = this.room.getEmptyTiles().length;
+                        const maxIters = Math.max(0, lastEmpty) + 25;
+                        for (let i = 0; i < maxIters && lastEmpty > 0; i++) {
+                            this.room.addNewEnemy(enemyName);
+                            const nowEmpty = this.room.getEmptyTiles().length;
+                            if (nowEmpty >= lastEmpty) {
+                                this.pushMessage(`Unknown enemy type "${enemyName}" (fill aborted).`);
+                                break;
+                            }
+                            lastEmpty = nowEmpty;
                         }
                     }
                     else if (command === "map") {
@@ -29110,6 +29141,7 @@ class GameState {
     constructor() {
         this.lastDroppedScythePiece = null;
         this.lastDroppedShieldPiece = null;
+        this.lastDroppedCrossbowPiece = null;
         this.seed = 0;
         this.randomState = 0;
         this.players = {};
@@ -29137,6 +29169,7 @@ const createGameState = (game) => {
         gs.randomState = random_1.Random.state;
         gs.lastDroppedScythePiece = game.lastDroppedScythePiece;
         gs.lastDroppedShieldPiece = game.lastDroppedShieldPiece;
+        gs.lastDroppedCrossbowPiece = game.lastDroppedCrossbowPiece;
         // Save level state
         if (game.level) {
             gs.level = new LevelState(game.level);
@@ -29223,6 +29256,10 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         game.roomsById = new Map();
         game.levels = [];
         game.levelsById = new Map();
+        // Restore piece-drop alternation state (used by fragment drops).
+        game.lastDroppedScythePiece = gameState.lastDroppedScythePiece ?? null;
+        game.lastDroppedShieldPiece = gameState.lastDroppedShieldPiece ?? null;
+        game.lastDroppedCrossbowPiece = gameState.lastDroppedCrossbowPiece ?? null;
         // Also reset input listener arrays to avoid duplicate mouse handlers after load
         try {
             const InputMod = __webpack_require__(/*! ./input */ "./src/game/input.ts");
@@ -39391,7 +39428,7 @@ class ShieldLeftFragment extends usable_1.Usable {
                 this.level.items = this.level.items.filter((item) => item !== this);
             }
             else if (this.level.game.lastDroppedShieldPiece === null) {
-                this.level.game.lastDroppedScythePiece = "blade";
+                this.level.game.lastDroppedShieldPiece = "left";
             }
         };
         this.useOnOther = (player, other) => {

@@ -34,7 +34,7 @@ export class ShieldLeftFragment extends Usable {
       );
       this.level.items = this.level.items.filter((item) => item !== this);
     } else if (this.level.game.lastDroppedShieldPiece === null) {
-      this.level.game.lastDroppedScythePiece = "blade";
+      this.level.game.lastDroppedShieldPiece = "left";
     }
   };
 

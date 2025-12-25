@@ -1682,6 +1682,7 @@ export class GameState {
   sidepathMeta?: Array<{ pathId: string; rooms: number }>;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
   lastDroppedShieldPiece: "left" | "right" | null = null;
+  lastDroppedCrossbowPiece: "stock" | "limb" | null = null;
   stats: Stats;
 
   constructor() {
@@ -1713,6 +1714,7 @@ export const createGameState = (game: Game): GameState => {
     gs.randomState = Random.state;
     gs.lastDroppedScythePiece = game.lastDroppedScythePiece;
     gs.lastDroppedShieldPiece = game.lastDroppedShieldPiece;
+    gs.lastDroppedCrossbowPiece = game.lastDroppedCrossbowPiece;
 
     // Save level state
     if (game.level) {
@@ -1807,6 +1809,10 @@ export const loadGameState = (
     game.roomsById = new Map();
     game.levels = [];
     game.levelsById = new Map();
+    // Restore piece-drop alternation state (used by fragment drops).
+    game.lastDroppedScythePiece = gameState.lastDroppedScythePiece ?? null;
+    game.lastDroppedShieldPiece = gameState.lastDroppedShieldPiece ?? null;
+    game.lastDroppedCrossbowPiece = gameState.lastDroppedCrossbowPiece ?? null;
     // Also reset input listener arrays to avoid duplicate mouse handlers after load
     try {
       const InputMod = require("./input");

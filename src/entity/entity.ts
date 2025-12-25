@@ -942,8 +942,26 @@ export class Entity extends Drawable {
           used.add(`${coordX},${coordY}`);
         }
         this.room.items.push(drop);
+        const lenAfterPush = this.room.items.length;
         drop.onDrop();
-        if (this.name !== "chest") drop.autoPickup();
+
+        // Some items (e.g., paired fragments) can replace themselves in `onDrop()` by removing
+        // the original and spawning an alternate item at the same location. If we always call
+        // `autoPickup()` on the original instance we can end up picking up the wrong piece.
+        let pickupCandidate: Item | undefined = drop;
+        if (!this.room.items.includes(drop)) {
+          const addedByOnDrop = this.room.items.slice(lenAfterPush);
+          const replacement = addedByOnDrop.find(
+            (i) => i.x === drop.x && i.y === drop.y && i.z === drop.z,
+          );
+          pickupCandidate = replacement;
+        }
+
+        if (this.name !== "chest" && pickupCandidate) {
+          // Only auto-pickup if the candidate still exists in the room.
+          if (this.room.items.includes(pickupCandidate))
+            pickupCandidate.autoPickup();
+        }
       });
 
       // For big enemies, drop coins on any remaining footprint tiles not chosen above
