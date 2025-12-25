@@ -23768,6 +23768,7 @@ const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ ".
 const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/game/replayManager.ts");
+const environmentTypes_1 = __webpack_require__(/*! ./constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const tilesetUrl = __webpack_require__(/*! ../res/tileset.png */ "./res/tileset.png");
 const objsetUrl = __webpack_require__(/*! ../res/objset.png */ "./res/objset.png");
 const mobsetUrl = __webpack_require__(/*! ../res/mobset.png */ "./res/mobset.png");
@@ -24505,6 +24506,14 @@ class Game {
                 this.pointers.clear();
             }
         };
+        this.setPendingMainPathEnvOverride = (envType) => {
+            this.pendingMainPathEnvOverride = envType;
+        };
+        this.consumePendingMainPathEnvOverride = () => {
+            const env = this.pendingMainPathEnvOverride;
+            this.pendingMainPathEnvOverride = undefined;
+            return env;
+        };
         // Add this helper function before the commandHandler
         this.convertSeedToNumber = (seed) => {
             // If it's already a number, parse and return it
@@ -24521,18 +24530,65 @@ class Game {
             // Ensure positive number
             return Math.abs(hash);
         };
+        this.parseEnvTypeToken = (token) => {
+            const normalized = token.toLowerCase().replace(/-/g, "_");
+            const map = {
+                dungeon: environmentTypes_1.EnvType.DUNGEON,
+                cave: environmentTypes_1.EnvType.CAVE,
+                forest: environmentTypes_1.EnvType.FOREST,
+                castle: environmentTypes_1.EnvType.CASTLE,
+                glacier: environmentTypes_1.EnvType.GLACIER,
+                dark_castle: environmentTypes_1.EnvType.DARK_CASTLE,
+                darkcastle: environmentTypes_1.EnvType.DARK_CASTLE,
+                dark_dungeon: environmentTypes_1.EnvType.DARK_DUNGEON,
+                darkdungeon: environmentTypes_1.EnvType.DARK_DUNGEON,
+                desert: environmentTypes_1.EnvType.DESERT,
+                magma_cave: environmentTypes_1.EnvType.MAGMA_CAVE,
+                magmacave: environmentTypes_1.EnvType.MAGMA_CAVE,
+                tutorial: environmentTypes_1.EnvType.TUTORIAL,
+                flooded_cave: environmentTypes_1.EnvType.FLOODED_CAVE,
+                floodedcave: environmentTypes_1.EnvType.FLOODED_CAVE,
+                underwater: environmentTypes_1.EnvType.FLOODED_CAVE,
+            };
+            const envType = map[normalized];
+            if (envType === undefined)
+                return undefined;
+            return { envType, wordsConsumed: 1 };
+        };
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
             // Handle "new" command with optional seed parameter
             if (command.startsWith("new")) {
                 if (command.startsWith("new ")) {
-                    const seedInput = command.slice(4).trim();
+                    const rest = command.slice(4).trim();
+                    const parts = rest.split(/\s+/).filter((p) => p.length > 0);
+                    const first = parts[0] ?? "";
+                    const second = parts[1] ?? "";
+                    // Support multi-word env types like "dark dungeon" / "dark castle"
+                    const firstTwo = second ? `${first}_${second}` : first;
+                    const parsed = this.parseEnvTypeToken(firstTwo) ?? this.parseEnvTypeToken(first);
+                    if (parsed) {
+                        const consumed = firstTwo === first ? 1 : 2;
+                        const seedInput = parts.slice(consumed).join(" ").trim();
+                        this.setPendingMainPathEnvOverride(parsed.envType);
+                        this.pushMessage(`Starting new ${(0, environmentTypes_1.getEnvTypeName)(parsed.envType)} game${seedInput ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})` : ""}`);
+                        if (seedInput) {
+                            this.newGame(this.convertSeedToNumber(seedInput));
+                        }
+                        else {
+                            this.newGame();
+                        }
+                        return;
+                    }
+                    // Back-compat: treat the argument as a seed string
+                    const seedInput = rest;
                     const seedNumber = this.convertSeedToNumber(seedInput);
                     this.pushMessage(`Starting new game with seed: ${seedInput} (${seedNumber})`);
                     this.newGame(seedNumber);
                 }
                 else if (command === "new") {
+                    this.setPendingMainPathEnvOverride(undefined);
                     this.newGame();
                 }
                 return;
@@ -29053,6 +29109,13 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
         // Initialize level generator
         game.levelgen = new levelGenerator_1.LevelGenerator();
         game.levelgen.setSeed(gameState.seed);
+        try {
+            const envOverride = game.consumePendingMainPathEnvOverride?.();
+            if (envOverride !== undefined) {
+                game.levelgen.setMainPathEnvOverride(envOverride);
+            }
+        }
+        catch { }
         // Handle missing level state
         if (!gameState.level) {
             console.warn("🔄 LOAD: No level state found, creating default");
@@ -41751,6 +41814,9 @@ class LevelGenerator {
     constructor() {
         this.depthReached = 0;
         this.currentFloorFirstLevelID = 0;
+        this.setMainPathEnvOverride = (envType) => {
+            this.mainPathEnvOverride = envType;
+        };
         this.setOpenWallsForPartitions = (partitions, mapWidth, mapHeight) => {
             for (const partition of partitions) {
                 // Reset all walls to closed by default
@@ -41878,7 +41944,9 @@ class LevelGenerator {
                 console.warn(`Overlap validation failed: ${overlapValidation.errorMessage}`);
             }
             let mainEnvType = depth > 2 ? environmentTypes_1.EnvType.DARK_DUNGEON : environmentTypes_1.EnvType.DUNGEON;
-            let envType = !isSidePath ? mainEnvType : environment;
+            let envType = isSidePath
+                ? environment
+                : this.mainPathEnvOverride ?? mainEnvType;
             // if (depth > 4) {
             //   envType = EnvType.MAGMA_CAVE;
             // }
@@ -58411,10 +58479,29 @@ Sound.playUnderwaterMusic = (index = 0) => {
     }
 };
 Sound.stopMusic = () => {
-    if (Sound.forestMusicId || Sound.caveMusicId) {
-        Sound.forestMusic.stop(Sound.forestMusicId);
-        Sound.caveMusic.stop(Sound.caveMusicId);
-        Sound.castleMusic.stop(Sound.castleMusicId);
+    // Stop all music tracks consistently (including underwater).
+    // Important: the prior implementation only stopped when forest/cave were active,
+    // and never stopped underwater, which could leave tracks playing across transitions.
+    try {
+        if (Sound.forestMusicId !== null) {
+            Sound.forestMusic.stop(Sound.forestMusicId);
+            Sound.forestMusicId = null;
+        }
+        if (Sound.caveMusicId !== null) {
+            Sound.caveMusic.stop(Sound.caveMusicId);
+            Sound.caveMusicId = null;
+        }
+        if (Sound.castleMusicId !== null) {
+            Sound.castleMusic.stop(Sound.castleMusicId);
+            Sound.castleMusicId = null;
+        }
+        if (Sound.underwaterMusicId !== null) {
+            Sound.underwaterMusic.stop(Sound.underwaterMusicId);
+            Sound.underwaterMusicId = null;
+        }
+    }
+    catch (error) {
+        console.error("Error stopping music:", error);
     }
 };
 Sound.doorOpen = () => {

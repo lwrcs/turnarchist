@@ -36,6 +36,7 @@ import { Random } from "./utility/random";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
+import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
 import tilesetUrl = require("../res/tileset.png");
 import objsetUrl = require("../res/objset.png");
 import mobsetUrl = require("../res/mobset.png");
@@ -1374,6 +1375,18 @@ export class Game {
     }
   };
 
+  private pendingMainPathEnvOverride?: EnvType;
+
+  setPendingMainPathEnvOverride = (envType?: EnvType) => {
+    this.pendingMainPathEnvOverride = envType;
+  };
+
+  consumePendingMainPathEnvOverride = (): EnvType | undefined => {
+    const env = this.pendingMainPathEnvOverride;
+    this.pendingMainPathEnvOverride = undefined;
+    return env;
+  };
+
   // Add this helper function before the commandHandler
   private convertSeedToNumber = (seed: string): number => {
     // If it's already a number, parse and return it
@@ -1393,6 +1406,33 @@ export class Game {
     return Math.abs(hash);
   };
 
+  private parseEnvTypeToken = (
+    token: string,
+  ): { envType: EnvType; wordsConsumed: number } | undefined => {
+    const normalized = token.toLowerCase().replace(/-/g, "_");
+    const map: Record<string, EnvType> = {
+      dungeon: EnvType.DUNGEON,
+      cave: EnvType.CAVE,
+      forest: EnvType.FOREST,
+      castle: EnvType.CASTLE,
+      glacier: EnvType.GLACIER,
+      dark_castle: EnvType.DARK_CASTLE,
+      darkcastle: EnvType.DARK_CASTLE,
+      dark_dungeon: EnvType.DARK_DUNGEON,
+      darkdungeon: EnvType.DARK_DUNGEON,
+      desert: EnvType.DESERT,
+      magma_cave: EnvType.MAGMA_CAVE,
+      magmacave: EnvType.MAGMA_CAVE,
+      tutorial: EnvType.TUTORIAL,
+      flooded_cave: EnvType.FLOODED_CAVE,
+      floodedcave: EnvType.FLOODED_CAVE,
+      underwater: EnvType.FLOODED_CAVE,
+    };
+    const envType = map[normalized];
+    if (envType === undefined) return undefined;
+    return { envType, wordsConsumed: 1 };
+  };
+
   commandHandler = (command: string): void => {
     command = command.toLowerCase();
     let enabled = "";
@@ -1401,13 +1441,42 @@ export class Game {
 
     if (command.startsWith("new")) {
       if (command.startsWith("new ")) {
-        const seedInput = command.slice(4).trim();
+        const rest = command.slice(4).trim();
+        const parts = rest.split(/\s+/).filter((p) => p.length > 0);
+        const first = parts[0] ?? "";
+        const second = parts[1] ?? "";
+
+        // Support multi-word env types like "dark dungeon" / "dark castle"
+        const firstTwo = second ? `${first}_${second}` : first;
+        const parsed =
+          this.parseEnvTypeToken(firstTwo) ?? this.parseEnvTypeToken(first);
+
+        if (parsed) {
+          const consumed = firstTwo === first ? 1 : 2;
+          const seedInput = parts.slice(consumed).join(" ").trim();
+          this.setPendingMainPathEnvOverride(parsed.envType);
+          this.pushMessage(
+            `Starting new ${getEnvTypeName(parsed.envType)} game${
+              seedInput ? ` with seed: ${seedInput} (${this.convertSeedToNumber(seedInput)})` : ""
+            }`,
+          );
+          if (seedInput) {
+            this.newGame(this.convertSeedToNumber(seedInput));
+          } else {
+            this.newGame();
+          }
+          return;
+        }
+
+        // Back-compat: treat the argument as a seed string
+        const seedInput = rest;
         const seedNumber = this.convertSeedToNumber(seedInput);
         this.pushMessage(
           `Starting new game with seed: ${seedInput} (${seedNumber})`,
         );
         this.newGame(seedNumber);
       } else if (command === "new") {
+        this.setPendingMainPathEnvOverride(undefined);
         this.newGame();
       }
       return;

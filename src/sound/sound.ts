@@ -690,10 +690,28 @@ export class Sound {
   };
 
   static stopMusic = () => {
-    if (Sound.forestMusicId || Sound.caveMusicId) {
-      Sound.forestMusic.stop(Sound.forestMusicId);
-      Sound.caveMusic.stop(Sound.caveMusicId);
-      Sound.castleMusic.stop(Sound.castleMusicId);
+    // Stop all music tracks consistently (including underwater).
+    // Important: the prior implementation only stopped when forest/cave were active,
+    // and never stopped underwater, which could leave tracks playing across transitions.
+    try {
+      if (Sound.forestMusicId !== null) {
+        Sound.forestMusic.stop(Sound.forestMusicId);
+        Sound.forestMusicId = null;
+      }
+      if (Sound.caveMusicId !== null) {
+        Sound.caveMusic.stop(Sound.caveMusicId);
+        Sound.caveMusicId = null;
+      }
+      if (Sound.castleMusicId !== null) {
+        Sound.castleMusic.stop(Sound.castleMusicId);
+        Sound.castleMusicId = null;
+      }
+      if (Sound.underwaterMusicId !== null) {
+        Sound.underwaterMusic.stop(Sound.underwaterMusicId);
+        Sound.underwaterMusicId = null;
+      }
+    } catch (error) {
+      console.error("Error stopping music:", error);
     }
   };
 

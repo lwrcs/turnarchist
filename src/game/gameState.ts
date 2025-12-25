@@ -1821,6 +1821,12 @@ export const loadGameState = (
 
     game.levelgen = new LevelGenerator();
     game.levelgen.setSeed(gameState.seed);
+    try {
+      const envOverride = game.consumePendingMainPathEnvOverride?.();
+      if (envOverride !== undefined) {
+        game.levelgen.setMainPathEnvOverride(envOverride);
+      }
+    } catch {}
 
     // Handle missing level state
     if (!gameState.level) {

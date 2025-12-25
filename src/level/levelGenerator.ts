@@ -37,6 +37,7 @@ export class LevelGenerator {
   private validator: LevelValidator;
   private visualizer: GenerationVisualizer;
   private pngPartitionGenerator: PngPartitionGenerator;
+  private mainPathEnvOverride?: EnvType;
 
   constructor() {
     // Don't initialize partitionGenerator here yet since we need game instance
@@ -44,6 +45,10 @@ export class LevelGenerator {
     this.visualizer = null;
     this.pngPartitionGenerator = new PngPartitionGenerator();
   }
+
+  setMainPathEnvOverride = (envType?: EnvType) => {
+    this.mainPathEnvOverride = envType;
+  };
 
   private setOpenWallsForPartitions = (
     partitions: Array<Partition>,
@@ -266,7 +271,9 @@ export class LevelGenerator {
       );
     }
     let mainEnvType = depth > 2 ? EnvType.DARK_DUNGEON : EnvType.DUNGEON;
-    let envType = !isSidePath ? mainEnvType : environment;
+    let envType = isSidePath
+      ? environment
+      : this.mainPathEnvOverride ?? mainEnvType;
     // if (depth > 4) {
     //   envType = EnvType.MAGMA_CAVE;
     // }
