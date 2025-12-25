@@ -637,6 +637,10 @@ export class Room {
       Sound.stopMusic();
 
       Sound.playCastleMusic();
+    } else if (this.envType === EnvType.FLOODED_CAVE) {
+      Sound.stopMusic();
+
+      Sound.playUnderwaterMusic();
     } else {
       Sound.stopMusic();
     }

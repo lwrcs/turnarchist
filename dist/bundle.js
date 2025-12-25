@@ -50745,6 +50745,10 @@ class Room {
                 sound_1.Sound.stopMusic();
                 sound_1.Sound.playCastleMusic();
             }
+            else if (this.envType === environmentTypes_1.EnvType.FLOODED_CAVE) {
+                sound_1.Sound.stopMusic();
+                sound_1.Sound.playUnderwaterMusic();
+            }
             else {
                 sound_1.Sound.stopMusic();
             }
@@ -58089,6 +58093,7 @@ Sound.audioContextResumed = false;
 Sound.forestMusicId = null;
 Sound.caveMusicId = null;
 Sound.castleMusicId = null;
+Sound.underwaterMusicId = null;
 Sound.ambientSoundId = null;
 Sound.loadSounds = async () => {
     if (Sound.initialized)
@@ -58178,6 +58183,7 @@ Sound.loadSounds = async () => {
         Sound.forestMusic = createHowl("res/music/forest1.mp3", 0.25, true, 1);
         Sound.caveMusic = createHowl("res/music/cave1.mp3", 0.25, true, 1);
         Sound.castleMusic = createHowl("res/music/castle1.mp3", 0.25, true, 1);
+        Sound.underwaterMusic = createHowl("res/music/underwater1.mp3", 0.75, true, 1);
         Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
         Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
         Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 2);
@@ -58350,6 +58356,25 @@ Sound.playCastleMusic = (index = 0) => {
     }
     catch (error) {
         console.error("Error playing castle music:", error);
+    }
+};
+Sound.playUnderwaterMusic = (index = 0) => {
+    if (Sound.audioMuted)
+        return;
+    try {
+        // Stop any existing castle music
+        if (Sound.underwaterMusicId) {
+            Sound.underwaterMusic.stop(Sound.underwaterMusicId);
+        }
+        // Play new instance
+        Sound.underwaterMusicId = Sound.underwaterMusic.play();
+        // Handle mobile audio context
+        if (Sound.isMobile && !Sound.audioContextResumed) {
+            Sound.enableAudioForMobile();
+        }
+    }
+    catch (error) {
+        console.error("Error playing underwater music:", error);
     }
 };
 Sound.stopMusic = () => {
