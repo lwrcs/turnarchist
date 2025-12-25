@@ -45567,8 +45567,25 @@ class OxygenLine {
         const room = this.player.getRoom();
         if (!room)
             return;
-        const dropX = this.player.lastX ?? this.player.x;
-        const dropY = this.player.lastY ?? this.player.y;
+        // Default: drop where the player was last tick (feels better than "snapping" to current tile).
+        // However, if we *just* transitioned through a door, lastX/lastY often points at the door tile
+        // while the player is now on the door's entry tile. Dropping on the door tile is bad because
+        // stepping onto it immediately re-triggers the transition and can make reconnect impossible.
+        let dropX = this.player.lastX ?? this.player.x;
+        let dropY = this.player.lastY ?? this.player.y;
+        try {
+            const lastTile = room.roomArray?.[dropX]?.[dropY];
+            if (lastTile instanceof door_1.Door) {
+                const entry = this.getDoorEntryPosition(lastTile);
+                if (entry && this.player.x === entry.x && this.player.y === entry.y) {
+                    dropX = this.player.x;
+                    dropY = this.player.y;
+                }
+            }
+        }
+        catch {
+            // ignore and fall back to default drop coordinates
+        }
         const pos = { x: dropX, y: dropY };
         this.disconnected = true;
         this.connected = false;
@@ -45625,6 +45642,11 @@ class OxygenLine {
         if (!this.anchor)
             return false;
         if (!this.player.getRoom()?.underwater)
+            return false;
+        // While the line is disconnected, the player may move through doors/rooms without the hose.
+        // In that state we must *not* validate/reset door history against the player's current room,
+        // otherwise we wipe the path needed to rebuild after reconnecting.
+        if (this.disconnected)
             return false;
         if (!this.validateDoorHistoryAgainstCurrentRoom()) {
             this.resetDoorHistory();
@@ -46091,7 +46113,18 @@ class OxygenLine {
         for (let i = doorStack.length - 1; i >= 0; i--) {
             const traversal = doorStack[i];
             const entryDoor = traversal.to;
-            length += this.distanceBetweenPoints(currentX, currentY, entryDoor.x, entryDoor.y);
+            // Door transitions commonly place the player on the *entry tile* adjacent to the door
+            // (not on the door tile itself). Since linked doors share the same (x,y), that one-step
+            // offset is an artifact of spawn placement, not meaningful "extra hose length".
+            // Discount it so you don't instantly disconnect on the first tick after entering.
+            let entryDistance = this.distanceBetweenPoints(currentX, currentY, entryDoor.x, entryDoor.y);
+            if (i === doorStack.length - 1 && entryDistance === 1) {
+                const entryPos = this.getDoorEntryPosition(entryDoor);
+                if (entryPos && currentX === entryPos.x && currentY === entryPos.y) {
+                    entryDistance = 0;
+                }
+            }
+            length += entryDistance;
             const exitDoor = traversal.from;
             currentX = exitDoor.x;
             currentY = exitDoor.y;
