@@ -148,6 +148,9 @@ export class ExalterEnemy extends Enemy {
     if (this.lightSource) {
       this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
     }
+
+    // Keep buff beams anchored even when this enemy is simulated off-screen.
+    this.syncBuffBeamsToPositions();
   };
 
   onHurt = (damage: number = 1) => {
@@ -224,6 +227,75 @@ export class ExalterEnemy extends Enemy {
       beam.type = "buff";
       this.room.projectiles.push(beam);
     }
+  };
+
+  private syncBuffBeamsToPositions = () => {
+    for (const projectile of this.room.projectiles) {
+      if (!(projectile instanceof BeamEffect)) continue;
+      if (projectile.type !== "buff") continue;
+      const parent = projectile.parent;
+      if (!(parent instanceof Enemy)) continue;
+      if (!this.buffedEnemies.includes(parent)) continue;
+      projectile.setTarget(this.x, this.y, parent.x, parent.y);
+      projectile.drawableY = parent.drawableY;
+    }
+  };
+
+  teleport = () => {
+    const newTile = this.findConstrainedFarTile(this.buffedEnemies);
+    if (!newTile) return;
+    this.drawX = newTile.x - this.x;
+    this.drawY = newTile.y - this.y;
+    this.x = newTile.x;
+    this.y = newTile.y;
+    this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
+    this.room.updateLighting();
+    this.syncBuffBeamsToPositions();
+  };
+
+  private findConstrainedFarTile = (linked: Enemy[]) => {
+    const emptyTiles = this.room.getEmptyTiles();
+    const player = this.getPlayer();
+    if (!player || player === false || emptyTiles.length === 0) return null;
+
+    const interactionRange =
+      GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+    const withinPlayerRange = (t: { x: number; y: number }) => {
+      const dx = t.x - player.x;
+      const dy = t.y - player.y;
+      return dx * dx + dy * dy <= interactionRange * interactionRange;
+    };
+
+    const maxLinkedDist = this.range;
+    const withinAllLinked = (t: { x: number; y: number }, dist: number) =>
+      linked.every((e) => Utils.distance(t.x, t.y, e.x, e.y) <= dist);
+
+    let candidates = emptyTiles.filter(
+      (t) =>
+        withinPlayerRange(t) &&
+        (linked.length === 0 || withinAllLinked(t, maxLinkedDist)),
+    );
+    if (candidates.length === 0 && linked.length > 0) {
+      candidates = emptyTiles.filter(
+        (t) => withinPlayerRange(t) && withinAllLinked(t, maxLinkedDist * 2),
+      );
+    }
+    if (candidates.length === 0) {
+      candidates = emptyTiles.filter((t) => withinPlayerRange(t));
+    }
+    if (candidates.length === 0) return null;
+
+    const tilesWithDistances = candidates.map((tile) => {
+      const distance = Utils.distance(tile.x, tile.y, player.x, player.y);
+      return { tile, distance };
+    });
+    tilesWithDistances.sort((a, b) => b.distance - a.distance);
+    const farTiles = tilesWithDistances.slice(
+      0,
+      Math.max(1, Math.floor(tilesWithDistances.length / 2)),
+    );
+    const randomIndex = Math.floor(Random.rand() * farTiles.length);
+    return farTiles[randomIndex]?.tile ?? null;
   };
 
   updateBeam = (delta: number) => {

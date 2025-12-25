@@ -148,6 +148,10 @@ export class OccultistEnemy extends Enemy {
     if (this.lightSource) {
       this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
     }
+
+    // Keep shield beams anchored even when this enemy is simulated off-screen
+    // (e.g., after teleporting outside the local interaction range).
+    this.syncShieldBeamsToPositions();
   };
 
   onHurt = (damage: number = 1) => {
@@ -223,6 +227,82 @@ export class OccultistEnemy extends Enemy {
       beam.type = "shield";
       this.room.projectiles.push(beam);
     }
+  };
+
+  private syncShieldBeamsToPositions = () => {
+    for (const projectile of this.room.projectiles) {
+      if (!(projectile instanceof BeamEffect)) continue;
+      if (projectile.type !== "shield") continue;
+      const parent = projectile.parent;
+      if (!(parent instanceof Enemy)) continue;
+      if (!this.shieldedEnemies.includes(parent)) continue;
+      // Use raw tile positions (not draw offsets) so this stays correct even when not being drawn.
+      projectile.setTarget(this.x, this.y, parent.x, parent.y);
+      projectile.drawableY = parent.drawableY;
+    }
+  };
+
+  teleport = () => {
+    const newTile = this.findConstrainedFarTile(this.shieldedEnemies);
+    if (!newTile) return;
+    this.drawX = newTile.x - this.x;
+    this.drawY = newTile.y - this.y;
+    this.x = newTile.x;
+    this.y = newTile.y;
+    this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
+    this.room.updateLighting();
+    this.syncShieldBeamsToPositions();
+  };
+
+  private findConstrainedFarTile = (linked: Enemy[]) => {
+    const emptyTiles = this.room.getEmptyTiles();
+    const player = this.getPlayer();
+    if (!player || player === false || emptyTiles.length === 0) return null;
+
+    const interactionRange =
+      GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+    const withinPlayerRange = (t: { x: number; y: number }) => {
+      const dx = t.x - player.x;
+      const dy = t.y - player.y;
+      return dx * dx + dy * dy <= interactionRange * interactionRange;
+    };
+
+    const maxLinkedDist = this.range;
+    const withinAllLinked = (t: { x: number; y: number }, dist: number) =>
+      linked.every((e) => Utils.distance(t.x, t.y, e.x, e.y) <= dist);
+
+    // Prefer tiles that keep us in range of the player AND all linked enemies.
+    let candidates = emptyTiles.filter(
+      (t) =>
+        withinPlayerRange(t) &&
+        (linked.length === 0 || withinAllLinked(t, maxLinkedDist)),
+    );
+
+    // If that's too strict, relax the linked constraint a bit (but still keep player interaction).
+    if (candidates.length === 0 && linked.length > 0) {
+      candidates = emptyTiles.filter(
+        (t) => withinPlayerRange(t) && withinAllLinked(t, maxLinkedDist * 2),
+      );
+    }
+
+    // As a last resort, just keep within player interaction range.
+    if (candidates.length === 0) {
+      candidates = emptyTiles.filter((t) => withinPlayerRange(t));
+    }
+
+    if (candidates.length === 0) return null;
+
+    const tilesWithDistances = candidates.map((tile) => {
+      const distance = Utils.distance(tile.x, tile.y, player.x, player.y);
+      return { tile, distance };
+    });
+    tilesWithDistances.sort((a, b) => b.distance - a.distance);
+    const farTiles = tilesWithDistances.slice(
+      0,
+      Math.max(1, Math.floor(tilesWithDistances.length / 2)),
+    );
+    const randomIndex = Math.floor(Random.rand() * farTiles.length);
+    return farTiles[randomIndex]?.tile ?? null;
   };
 
   updateBeam = (delta: number) => {

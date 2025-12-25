@@ -1545,7 +1545,7 @@ export class Room {
     for (const e of this.entities) {
       if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
-        if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
+        if (!this.shouldSimulateEnemy(e)) continue;
       }
       e.tick();
     }
@@ -1555,7 +1555,7 @@ export class Room {
     for (const e of this.entities) {
       if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
-        if (!this.isWithinEnemyInteractionRange(e.x, e.y)) continue;
+        if (!this.shouldSimulateEnemy(e)) continue;
         e.makeHitWarnings();
       }
     }
@@ -1654,6 +1654,13 @@ export class Room {
     } catch {
       return true;
     }
+  }
+
+  private shouldSimulateEnemy(enemy: Enemy): boolean {
+    // Preserve the performance win of range-gating, but once an enemy has "engaged" the player,
+    // keep simulating it even if it moves/teleports out of range (prevents desynced effects like beams).
+    if (this.isWithinEnemyInteractionRange(enemy.x, enemy.y)) return true;
+    return enemy.seenPlayer || enemy.aggro || enemy.heardPlayer;
   }
 
   update = () => {
