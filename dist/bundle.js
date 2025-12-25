@@ -25946,7 +25946,7 @@ class Game {
         };
         this.applyCamera = (delta) => {
             let player = this.players[this.localPlayerID];
-            this.targetCamera(player.x - player.drawX, player.y - player.drawY, player.z ?? 0);
+            this.targetCamera(player.x - player.drawX, player.y - player.drawY, player.z - player.drawZ);
             this.updateCameraAnimation(delta);
             this.updateCamera(delta);
             const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
@@ -46845,17 +46845,18 @@ class Player extends drawable_1.Drawable {
         this.endSlowMotion = () => {
             this.renderer.endSlowMotion();
         };
-        this.move = (x, y) => {
+        this.move = (x, y, z = this.z) => {
             this.updateLastPosition(this.x, this.y);
             //this.actionTab.setState(ActionState.MOVE);
             if (this.getRoom() === this.game.room)
                 sound_1.Sound.playerStoneFootstep(this.game.room.envType);
             if (this.openVendingMachine)
                 this.openVendingMachine.close();
-            this.renderer.setNewDrawXY(x, y);
+            this.renderer.setNewDrawXY(x, y, z);
             this.drawMoveQueue.push({
                 drawX: x - this.x,
                 drawY: y - this.y,
+                drawZ: z - this.z,
             });
             /*
             if (this.drawX > 1) this.drawX = 1;
@@ -46865,6 +46866,7 @@ class Player extends drawable_1.Drawable {
             */
             this.x = x;
             this.y = y;
+            this.z = z;
             for (let i of this.getRoom().items) {
                 if (i.z !== this.z)
                     continue;
@@ -47113,6 +47115,9 @@ class Player extends drawable_1.Drawable {
     }
     get drawY() {
         return this.renderer?.drawY ?? 0;
+    }
+    get drawZ() {
+        return this.renderer?.drawZ ?? 0;
     }
 }
 exports.Player = Player;
@@ -48173,9 +48178,10 @@ class PlayerRenderer {
         this.endSlowMotion = () => {
             this.slowMotionEnabled = false;
         };
-        this.setNewDrawXY = (x, y) => {
+        this.setNewDrawXY = (x, y, z) => {
             this.drawX += x - this.player.x;
             this.drawY += y - this.player.y;
+            this.drawZ += z - this.player.z;
         };
         this.enableSlowMotion = () => {
             if (this.motionSpeed < 1 && !this.slowMotionEnabled) {
@@ -48215,7 +48221,7 @@ class PlayerRenderer {
             game_1.Game.ctx.save(); // Save the current canvas state
             const divingHelmetOffsetY = divingHelmet ? 2 : 0;
             if (this.drawSmear()) {
-                game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
                 this.mouseDiagonal() &&
@@ -48230,13 +48236,13 @@ class PlayerRenderer {
                     diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
                 if (angle > 120 && angle <= 150)
                     diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
-                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else {
                 this.frame += 0.1 * delta;
                 if (this.frame >= 4)
                     this.frame = 0;
-                game_1.Game.drawMob(tileX, tileY, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                game_1.Game.drawMob(tileX, tileY, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
                 // TODO draw armor
@@ -48444,15 +48450,17 @@ class PlayerRenderer {
         };
         this.drawTopLayer = (delta) => {
             game_1.Game.ctx.save(); // Save the current canvas state
-            this.player.healthBar.draw(delta, this.player.health, this.player.maxHealth, this.player.x - this.drawX, this.player.y - this.drawY, !this.flashing || Math.floor(this.flashingFrame) % 2 === 0);
+            this.player.healthBar.draw(delta, this.player.health, this.player.maxHealth, this.player.x - this.drawX, this.player.y - this.drawY - this.drawZ, !this.flashing || Math.floor(this.flashingFrame) % 2 === 0);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.updateDrawXY = (delta) => {
             if (!this.doneMoving()) {
                 this.drawX *= 0.85 ** delta;
                 this.drawY *= 0.85 ** delta;
+                this.drawZ *= 0.85 ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
+                this.drawZ = Math.abs(this.drawZ) < 0.01 ? 0 : this.drawZ;
             }
             if (this.doneHitting()) {
                 this.jump(delta);
@@ -48478,7 +48486,9 @@ class PlayerRenderer {
         };
         this.doneMoving = () => {
             let EPSILON = 0.01;
-            return Math.abs(this.drawX) < EPSILON && Math.abs(this.drawY) < EPSILON;
+            return (Math.abs(this.drawX) < EPSILON &&
+                Math.abs(this.drawY) < EPSILON &&
+                Math.abs(this.drawZ) < EPSILON);
         };
         this.doneHitting = () => {
             let EPSILON = 0.01;
@@ -48865,6 +48875,7 @@ class PlayerRenderer {
         this.hitY = 0;
         this.drawX = 0;
         this.drawY = 0;
+        this.drawZ = 0;
         this.hurtAlpha = 0.25;
         this.jumpHeight = 0.25;
         this.hurting = false;
@@ -50674,14 +50685,16 @@ class Room {
             return;
         const key = this.zKey(x, y);
         if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
-            player.z = 1;
+            player.move(x, y, 1);
+            //player.z = 1;
             // Up-stairs: switch to z=1 but stay on the same (x,y) wall tile.
             // Z changed; refresh lighting (lighting is computed for the active z-layer).
             this.updateLighting({ x: player.x, y: player.y });
             return;
         }
         if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
-            player.z = 0;
+            player.move(x, y, 0);
+            //player.z = 0;
             // Down-stairs: switch to z=0 but stay on the same (x,y) ledge tile.
             // Z changed; refresh lighting (lighting is computed for the active z-layer).
             this.updateLighting({ x: player.x, y: player.y });

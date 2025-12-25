@@ -2,6 +2,7 @@ import { Game } from "../game";
 import { Player } from "../player/player";
 import { Room } from "../room/room";
 import { Floor } from "./floor";
+import { Wall } from "./wall";
 
 /**
  * In-level stairs only change the player's vertical layer (`player.z`) within the same room.
@@ -9,7 +10,7 @@ import { Floor } from "./floor";
  *
  * Rendering of multiple layers will be handled later; for now these draw like floor with a small marker.
  */
-export class InLevelStairs extends Floor {
+export class InLevelStairs extends Wall {
   readonly deltaZ: number;
 
   constructor(room: Room, x: number, y: number, deltaZ: number) {
@@ -18,15 +19,15 @@ export class InLevelStairs extends Floor {
     this.name = deltaZ >= 0 ? "stairs up" : "stairs down";
   }
 
-  onCollide = (player: Player) => {
-    player.z = Math.max(0, player.z + this.deltaZ);
+  interact = (player: Player) => {
+    //player.move(this.x, this.y, player.z + this.deltaZ);
   };
 
   draw = (delta: number) => {
     // Floor.draw is a class-field arrow function, so calling `super.draw(...)` here
     // is invalid in TS (and would be undefined at runtime). Inline the floor draw.
     Game.drawTile(
-      this.variation,
+      0,
       this.skin,
       1,
       1,

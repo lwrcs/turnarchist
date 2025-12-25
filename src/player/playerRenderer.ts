@@ -27,6 +27,7 @@ export class PlayerRenderer {
   private hurtingShield: boolean;
   drawX: number;
   drawY: number;
+  drawZ: number;
   hitX: number;
   hitY: number;
   private frame: number;
@@ -48,6 +49,7 @@ export class PlayerRenderer {
     this.hitY = 0;
     this.drawX = 0;
     this.drawY = 0;
+    this.drawZ = 0;
     this.hurtAlpha = 0.25;
     this.jumpHeight = 0.25;
     this.hurting = false;
@@ -130,9 +132,10 @@ export class PlayerRenderer {
     this.slowMotionEnabled = false;
   };
 
-  setNewDrawXY = (x: number, y: number) => {
+  setNewDrawXY = (x: number, y: number, z: number) => {
     this.drawX += x - this.player.x;
     this.drawY += y - this.player.y;
+    this.drawZ += z - this.player.z;
   };
 
   enableSlowMotion = () => {
@@ -179,7 +182,7 @@ export class PlayerRenderer {
         1,
         2,
         player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
         1,
         2,
         this.shadeColor(),
@@ -211,7 +214,7 @@ export class PlayerRenderer {
         1,
         2,
         player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
         1,
         2,
         this.shadeColor(),
@@ -229,7 +232,7 @@ export class PlayerRenderer {
         1,
         2,
         player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
         1,
         2,
         this.shadeColor(),
@@ -486,7 +489,7 @@ export class PlayerRenderer {
       this.player.health,
       this.player.maxHealth,
       this.player.x - this.drawX,
-      this.player.y - this.drawY,
+      this.player.y - this.drawY - this.drawZ,
       !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
     );
 
@@ -497,8 +500,10 @@ export class PlayerRenderer {
     if (!this.doneMoving()) {
       this.drawX *= 0.85 ** delta;
       this.drawY *= 0.85 ** delta;
+      this.drawZ *= 0.85 ** delta;
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
+      this.drawZ = Math.abs(this.drawZ) < 0.01 ? 0 : this.drawZ;
     }
     if (this.doneHitting()) {
       this.jump(delta);
@@ -528,7 +533,11 @@ export class PlayerRenderer {
 
   doneMoving = (): boolean => {
     let EPSILON = 0.01;
-    return Math.abs(this.drawX) < EPSILON && Math.abs(this.drawY) < EPSILON;
+    return (
+      Math.abs(this.drawX) < EPSILON &&
+      Math.abs(this.drawY) < EPSILON &&
+      Math.abs(this.drawZ) < EPSILON
+    );
   };
 
   doneHitting = (): boolean => {

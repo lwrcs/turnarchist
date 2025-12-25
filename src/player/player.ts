@@ -123,6 +123,7 @@ export class Player extends Drawable {
   private drawMoveQueue: {
     drawX: number;
     drawY: number;
+    drawZ: number;
   }[] = [];
 
   private bubbleSpawnAccumulator = 0;
@@ -238,6 +239,9 @@ export class Player extends Drawable {
   }
   get drawY() {
     return this.renderer?.drawY ?? 0;
+  }
+  get drawZ() {
+    return this.renderer?.drawZ ?? 0;
   }
 
   getInterpolatedTilePosition = (): { x: number; y: number } => {
@@ -969,7 +973,7 @@ export class Player extends Drawable {
     this.renderer.endSlowMotion();
   };
 
-  move = (x: number, y: number) => {
+  move = (x: number, y: number, z: number = this.z) => {
     this.updateLastPosition(this.x, this.y);
 
     //this.actionTab.setState(ActionState.MOVE);
@@ -978,10 +982,11 @@ export class Player extends Drawable {
 
     if (this.openVendingMachine) this.openVendingMachine.close();
 
-    this.renderer.setNewDrawXY(x, y);
+    this.renderer.setNewDrawXY(x, y, z);
     this.drawMoveQueue.push({
       drawX: x - this.x,
       drawY: y - this.y,
+      drawZ: z - this.z,
     });
 
     /*
@@ -993,6 +998,7 @@ export class Player extends Drawable {
 
     this.x = x;
     this.y = y;
+    this.z = z;
 
     for (let i of this.getRoom().items) {
       if (i.z !== this.z) continue;

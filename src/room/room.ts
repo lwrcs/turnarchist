@@ -412,14 +412,17 @@ export class Room {
     if (!GameConstants.Z_DEBUG_MODE) return;
     const key = this.zKey(x, y);
     if (player.z === 0 && this.zDebugUpStairs?.has(key)) {
-      player.z = 1;
+      player.move(x, y, 1);
+
+      //player.z = 1;
       // Up-stairs: switch to z=1 but stay on the same (x,y) wall tile.
       // Z changed; refresh lighting (lighting is computed for the active z-layer).
       this.updateLighting({ x: player.x, y: player.y });
       return;
     }
     if (player.z === 1 && this.zDebugDownStairs?.has(key)) {
-      player.z = 0;
+      player.move(x, y, 0);
+      //player.z = 0;
       // Down-stairs: switch to z=0 but stay on the same (x,y) ledge tile.
       // Z changed; refresh lighting (lighting is computed for the active z-layer).
       this.updateLighting({ x: player.x, y: player.y });

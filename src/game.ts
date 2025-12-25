@@ -3296,7 +3296,7 @@ export class Game {
     this.targetCamera(
       player.x - player.drawX,
       player.y - player.drawY,
-      player.z ?? 0,
+      player.z - player.drawZ,
     );
     this.updateCameraAnimation(delta);
     this.updateCamera(delta);
