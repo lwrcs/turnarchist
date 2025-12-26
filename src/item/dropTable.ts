@@ -44,6 +44,8 @@ import { QuarterStaff } from "./weapon/quarterStaff";
 import { DivingHelmet } from "./divingHelmet";
 import { Backplate } from "./backplate";
 import { Gauntlets } from "./gauntlets";
+import { ShoulderPlates } from "./shoulderPlates";
+import { ChestPlate } from "./chestPlate";
 
 interface Drop {
   itemType: string;
@@ -64,6 +66,8 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   divinghelmet: DivingHelmet,
   backplate: Backplate,
   gauntlets: Gauntlets,
+  shoulderplates: ShoulderPlates,
+  chestplate: ChestPlate,
   hourglass: Hourglass,
   fishingrod: FishingRod,
 
@@ -219,6 +223,18 @@ export class DropTable {
     },
     {
       itemType: "gauntlets",
+      dropRate: 200,
+      category: ["equipment"],
+      unique: true,
+    },
+    {
+      itemType: "shoulderplates",
+      dropRate: 200,
+      category: ["equipment"],
+      unique: true,
+    },
+    {
+      itemType: "chestplate",
       dropRate: 200,
       category: ["equipment"],
       unique: true,

@@ -16,37 +16,70 @@ export class BlockSwipeAnimation extends Particle {
 
   constructor(x: number, y: number, direction: Direction, worldZ: number = 0) {
     super();
+    // Spawn the effect one tile in the direction the attack is coming from.
+    // Origin is typically the player position.
+
     this.x = x;
-    this.y = y - 0.25;
+    this.y = y - 0.5;
     this.worldZ = worldZ;
     this.dead = false;
 
-    // Reuse the sword swipe animation sheet.
-    this.tileY = 48;
+    // Reuse existing swipe sheets:
+    // - Cardinals: sword swipe (tileY=48) with offsets 0/2/4/6
+    // - Diagonals: diagonal block swipe (tileY=40) with offsets described by design
+    const isDiagonal =
+      direction === Direction.UP_RIGHT ||
+      direction === Direction.UP_LEFT ||
+      direction === Direction.DOWN_LEFT ||
+      direction === Direction.DOWN_RIGHT;
+
+    this.tileY = isDiagonal ? 40 : 48;
     // "Middle frame" of sword animation:
     // sword uses frames=6 and draws columns at tileX 0,2,4,6; the midpoint maps to 4.
+    // Note: tileX is intentionally set by the caller/authoring of the sheet.
     this.tileX = 10;
 
     switch (direction) {
       case Direction.DOWN:
         this.tileYOffset = 0;
-        this.yOffset = 0;
+        this.yOffset = -0.25;
         this.xOffset = 0;
         break;
       case Direction.UP:
         this.tileYOffset = 2;
-        this.yOffset = 0;
+        this.yOffset = 0.25;
         this.xOffset = 0;
         break;
       case Direction.LEFT:
         this.tileYOffset = 4;
-        this.xOffset = 0;
+        this.xOffset = 0.25;
         this.yOffset = 0;
         break;
       case Direction.RIGHT:
         this.tileYOffset = 6;
-        this.xOffset = 0;
+        this.xOffset = -0.25;
         this.yOffset = 0;
+        break;
+      // Diagonals: tileY=40; offsets: UR=0, UL=2, DL=4, DR=6
+      case Direction.UP_RIGHT:
+        this.tileYOffset = 0;
+        this.xOffset = -0.25;
+        this.yOffset = 0.25;
+        break;
+      case Direction.UP_LEFT:
+        this.tileYOffset = 2;
+        this.xOffset = 0.25;
+        this.yOffset = 0.25;
+        break;
+      case Direction.DOWN_LEFT:
+        this.tileYOffset = 4;
+        this.xOffset = 0.25;
+        this.yOffset = -0.25;
+        break;
+      case Direction.DOWN_RIGHT:
+        this.tileYOffset = 6;
+        this.xOffset = -0.25;
+        this.yOffset = -0.25;
         break;
       default:
         this.tileYOffset = 0;

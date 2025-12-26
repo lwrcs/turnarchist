@@ -53,6 +53,8 @@ import { GlowStick } from "../item/light/glowStick";
 import { DivingHelmet } from "../item/divingHelmet";
 import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
+import { ShoulderPlates } from "../item/shoulderPlates";
+import { ChestPlate } from "../item/chestPlate";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -398,6 +400,8 @@ export class GameConstants {
     WeaponBlood,
     Backplate,
     Gauntlets,
+    ShoulderPlates,
+    ChestPlate,
 
     Coal,
     Coal,

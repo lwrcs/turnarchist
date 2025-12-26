@@ -21,6 +21,8 @@ import { WoodenShield } from "../item/woodenShield";
 import { DivingHelmet } from "../item/divingHelmet";
 import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
+import { ShoulderPlates } from "../item/shoulderPlates";
+import { ChestPlate } from "../item/chestPlate";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -583,6 +585,22 @@ export class Inventory {
     return (
       this.items.find(
         (i): i is Gauntlets => i instanceof Gauntlets && i.equipped,
+      ) || null
+    );
+  };
+
+  getShoulderPlates = (): ShoulderPlates | null => {
+    return (
+      this.items.find(
+        (i): i is ShoulderPlates => i instanceof ShoulderPlates && i.equipped,
+      ) || null
+    );
+  };
+
+  getChestPlate = (): ChestPlate | null => {
+    return (
+      this.items.find(
+        (i): i is ChestPlate => i instanceof ChestPlate && i.equipped,
       ) || null
     );
   };
