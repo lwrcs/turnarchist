@@ -68,10 +68,19 @@ export class Chest extends Entity {
     }
 
     const full = playerHitBy.inventory.isFull();
-    if (this.drops.length === 0 || full) {
+    if (full) {
       this.health -= 1;
       this.destroyable = true;
+      return;
     }
+
+    // Drops can become "gone" without being marked pickedUp (e.g. Coin.onDrop merges stacks
+    // and removes other Coin instances from room.items). Prune stale drop references so
+    // emptiness reflects what's actually on the ground.
+    this.pruneDrops();
+
+    // If all drops are gone, immediately transition to destroyable state.
+    this.refreshEmptyState();
   };
   uniqueKillBehavior = () => {
     if (this.cloned) return;
@@ -109,15 +118,53 @@ export class Chest extends Entity {
       }
     });
     this.dropLoot();
+    this.pruneDrops();
     this.drops.forEach((drop) => {
       drop.animateFromChest();
+      if (drop instanceof Coin) {
+        drop.queueAutoPickupAfterChestReveal();
+      }
     });
+  };
+
+  tick = () => {
+    // Chests can become empty without another explicit interact (e.g. coin auto-pickup after reveal),
+    // so continuously prune picked-up drops and update destroyable state.
+    if (this.health !== 2) return;
+    this.pruneDrops();
+    this.refreshEmptyState();
+  };
+
+  private pruneDrops = () => {
+    if (!this.drops || this.drops.length === 0) return;
+    // Keep only drops that still exist in the room and haven't been picked up.
+    this.drops = this.drops.filter(
+      (d) => !d.pickedUp && this.room.items.includes(d),
+    );
+  };
+
+  private refreshEmptyState = () => {
+    // When a chest is open (health===2), and there are no unpicked drops left,
+    // flip it to the "destroyable" phase immediately (matching prior interact logic).
+    if (this.health !== 2) return;
+    if (this.destroyable) return;
+    if (this.drops.length > 0) return;
+    this.health -= 1;
+    this.destroyable = true;
   };
 
   draw = (delta: number) => {
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
+
+    // The chest can become empty outside of turn-ticks (e.g. coin auto-pickup happens on a timer).
+    // Since `tick()` only runs during computer turns, also refresh emptiness during rendering so
+    // the chest becomes destroyable immediately when the last drop is picked up.
+    if (this.health === 2) {
+      this.pruneDrops();
+      this.refreshEmptyState();
+    }
 
     if (this.opening) {
       if (this.tileX <= 6) {

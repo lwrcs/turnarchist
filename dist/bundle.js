@@ -21282,6 +21282,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Chest = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
@@ -21305,10 +21306,17 @@ class Chest extends entity_1.Entity {
                 this.drops = this.drops.filter((d) => d !== pickedUpDrop);
             }
             const full = playerHitBy.inventory.isFull();
-            if (this.drops.length === 0 || full) {
+            if (full) {
                 this.health -= 1;
                 this.destroyable = true;
+                return;
             }
+            // Drops can become "gone" without being marked pickedUp (e.g. Coin.onDrop merges stacks
+            // and removes other Coin instances from room.items). Prune stale drop references so
+            // emptiness reflects what's actually on the ground.
+            this.pruneDrops();
+            // If all drops are gone, immediately transition to destroyable state.
+            this.refreshEmptyState();
         };
         this.uniqueKillBehavior = () => {
             if (this.cloned)
@@ -21338,15 +21346,52 @@ class Chest extends entity_1.Entity {
                 }
             });
             this.dropLoot();
+            this.pruneDrops();
             this.drops.forEach((drop) => {
                 drop.animateFromChest();
+                if (drop instanceof coin_1.Coin) {
+                    drop.queueAutoPickupAfterChestReveal();
+                }
             });
+        };
+        this.tick = () => {
+            // Chests can become empty without another explicit interact (e.g. coin auto-pickup after reveal),
+            // so continuously prune picked-up drops and update destroyable state.
+            if (this.health !== 2)
+                return;
+            this.pruneDrops();
+            this.refreshEmptyState();
+        };
+        this.pruneDrops = () => {
+            if (!this.drops || this.drops.length === 0)
+                return;
+            // Keep only drops that still exist in the room and haven't been picked up.
+            this.drops = this.drops.filter((d) => !d.pickedUp && this.room.items.includes(d));
+        };
+        this.refreshEmptyState = () => {
+            // When a chest is open (health===2), and there are no unpicked drops left,
+            // flip it to the "destroyable" phase immediately (matching prior interact logic).
+            if (this.health !== 2)
+                return;
+            if (this.destroyable)
+                return;
+            if (this.drops.length > 0)
+                return;
+            this.health -= 1;
+            this.destroyable = true;
         };
         this.draw = (delta) => {
             if (this.dead)
                 return;
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
+            // The chest can become empty outside of turn-ticks (e.g. coin auto-pickup happens on a timer).
+            // Since `tick()` only runs during computer turns, also refresh emptiness during rendering so
+            // the chest becomes destroyable immediately when the last drop is picked up.
+            if (this.health === 2) {
+                this.pruneDrops();
+                this.refreshEmptyState();
+            }
             if (this.opening) {
                 if (this.tileX <= 6) {
                     this.tileX += 0.15 * delta;
@@ -35554,6 +35599,25 @@ class Coin extends item_1.Item {
     //checked: boolean;
     constructor(level, x, y) {
         super(level, x, y);
+        this.chestRevealPickupTimeoutId = null;
+        this.queueAutoPickupAfterChestReveal = () => {
+            // Items dropped from chests intentionally do NOT auto-pickup immediately (see Entity.dropLoot()).
+            // For coins, we want: float-up reveal first, then animate-to-inventory pickup.
+            if (this.chestRevealPickupTimeoutId !== null)
+                return;
+            // The chest "float up" reveal is purely visual and is driven by render delta.
+            // Use a small wall-clock delay that matches the feel of the reveal animation.
+            this.chestRevealPickupTimeoutId = window.setTimeout(() => {
+                this.chestRevealPickupTimeoutId = null;
+                if (this.pickedUp)
+                    return;
+                if (this.level !== this.level.game.room)
+                    return;
+                // Stop treating it as "in chest" so the pickup animation isn't offset strangely.
+                this.inChest = false;
+                this.autoPickup();
+            }, 750);
+        };
         this.onDrop = () => {
             const coinList = []; //array to store coin objects
             for (const item of this.level.items) {
