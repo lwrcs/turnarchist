@@ -20,6 +20,7 @@ import { EVENTS } from "../event/events";
 import { WoodenShield } from "../item/woodenShield";
 import { DivingHelmet } from "../item/divingHelmet";
 import { Backplate } from "../item/backplate";
+import { Gauntlets } from "../item/gauntlets";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -574,6 +575,14 @@ export class Inventory {
     return (
       this.items.find(
         (i): i is Backplate => i instanceof Backplate && i.equipped,
+      ) || null
+    );
+  };
+
+  getGauntlets = (): Gauntlets | null => {
+    return (
+      this.items.find(
+        (i): i is Gauntlets => i instanceof Gauntlets && i.equipped,
       ) || null
     );
   };

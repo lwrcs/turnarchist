@@ -14,6 +14,8 @@ import { Entity } from "../entity/entity";
 import { Item } from "../item/item";
 import { DivingHelmet } from "../item/divingHelmet";
 import { Backplate } from "../item/backplate";
+import { Gauntlets } from "../item/gauntlets";
+import { BlockSwipeAnimation } from "../particle/blockSwipeAnimation";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -926,6 +928,10 @@ export class Player extends Drawable {
     return this.inventory.getBackplate();
   };
 
+  private getEquippedGauntlets = (): Gauntlets | null => {
+    return this.inventory.getGauntlets();
+  };
+
   private isAttackFromBehind = (source: { x: number; y: number }): boolean => {
     const dx = source.x - this.x;
     const dy = source.y - this.y;
@@ -942,6 +948,71 @@ export class Player extends Drawable {
     if (dy > 0) return this.defenseFacing === Direction.UP;
     if (dy < 0) return this.defenseFacing === Direction.DOWN;
     return false;
+  };
+
+  private isAttackFromSideNoDiagonal = (source: {
+    x: number;
+    y: number;
+  }): boolean => {
+    const dx = source.x - this.x;
+    const dy = source.y - this.y;
+    // Same-tile or diagonal doesn't count.
+    if (dx === 0 && dy === 0) return false;
+    if (dx !== 0 && dy !== 0) return false;
+
+    // Sides are defined relative to the player's locked defenseFacing.
+    // Facing UP/DOWN => sides are EAST/WEST. Facing LEFT/RIGHT => sides are NORTH/SOUTH.
+    switch (this.defenseFacing) {
+      case Direction.UP:
+      case Direction.DOWN:
+        return dy === 0; // horizontal hit
+      case Direction.LEFT:
+      case Direction.RIGHT:
+        return dx === 0; // vertical hit
+      default:
+        return false;
+    }
+  };
+
+  private getIncomingCardinalDirection = (source: {
+    x: number;
+    y: number;
+  }): Direction | null => {
+    const dx = source.x - this.x;
+    const dy = source.y - this.y;
+    if (dx === 0 && dy === 0) return null;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return dx > 0 ? Direction.RIGHT : Direction.LEFT;
+    }
+    return dy > 0 ? Direction.DOWN : Direction.UP;
+  };
+
+  private spawnDirectionalBlockFX = (source: { x: number; y: number }) => {
+    const dir = this.getIncomingCardinalDirection(source);
+    if (dir === null) return;
+    const room = this.getRoom();
+    if (room !== this.game.room) return;
+    let fxX = this.x;
+    let fxY = this.y;
+    // Offset one tile in the direction the attack is coming from.
+    switch (dir) {
+      case Direction.UP:
+        fxY -= -0.25;
+        break;
+      case Direction.DOWN:
+        fxY += -0.25;
+        break;
+      case Direction.LEFT:
+        fxX -= -0.25;
+        break;
+      case Direction.RIGHT:
+        fxX += -0.25;
+        break;
+    }
+
+    const fx = new BlockSwipeAnimation(fxX, fxY, dir, this.z ?? 0);
+    fx.room = room;
+    room.particles.push(fx);
   };
 
   hurt = (
@@ -965,6 +1036,7 @@ export class Player extends Drawable {
     // Backplate: block hits that come from behind.
     const backplate = this.getEquippedBackplate();
     if (backplate && source && this.isAttackFromBehind(source)) {
+      this.spawnDirectionalBlockFX(source);
       if (this.getRoom() === this.game.room) {
         setTimeout(() => {
           this.renderer.hurtShield();
@@ -975,6 +1047,13 @@ export class Player extends Drawable {
       }
       this.lastHitBy = enemy;
       return;
+    }
+
+    // Gauntlets: halve hits that come from the sides (axis-aligned only, no diagonal).
+    const gauntlets = this.getEquippedGauntlets();
+    if (gauntlets && source && this.isAttackFromSideNoDiagonal(source)) {
+      this.spawnDirectionalBlockFX(source);
+      damage *= 0.5;
     }
 
     // Handle armor damage

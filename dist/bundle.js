@@ -9646,7 +9646,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.3344df30b97066f66689.png";
+module.exports = __webpack_require__.p + "assets/fxset.97d9c2253cfdfa07a4f5.png";
 
 /***/ }),
 
@@ -27275,6 +27275,7 @@ const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ ".
 const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -27559,6 +27560,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     divingHelmet_1.DivingHelmet,
     weaponBlood_1.WeaponBlood,
     backplate_1.Backplate,
+    gauntlets_1.Gauntlets,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -34234,6 +34236,7 @@ const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -34661,6 +34664,9 @@ class Inventory {
         };
         this.getBackplate = () => {
             return (this.items.find((i) => i instanceof backplate_1.Backplate && i.equipped) || null);
+        };
+        this.getGauntlets = () => {
+            return (this.items.find((i) => i instanceof gauntlets_1.Gauntlets && i.equipped) || null);
         };
         this.divingHelmetEquipped = () => {
             return (this.items.some((i) => i instanceof divingHelmet_1.DivingHelmet && i.equipped) || false);
@@ -35875,6 +35881,7 @@ const crossbowBolt_1 = __webpack_require__(/*! ./weapon/crossbowBolt */ "./src/i
 const quarterStaff_1 = __webpack_require__(/*! ./weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const divingHelmet_1 = __webpack_require__(/*! ./divingHelmet */ "./src/item/divingHelmet.ts");
 const backplate_1 = __webpack_require__(/*! ./backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ./gauntlets */ "./src/item/gauntlets.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -35885,6 +35892,7 @@ exports.ItemTypeMap = {
     quarterstaff: quarterStaff_1.QuarterStaff,
     divinghelmet: divingHelmet_1.DivingHelmet,
     backplate: backplate_1.Backplate,
+    gauntlets: gauntlets_1.Gauntlets,
     hourglass: hourglass_1.Hourglass,
     fishingrod: fishingRod_1.FishingRod,
     crossbowstock: crossbowStock_1.CrossbowStock,
@@ -36023,6 +36031,12 @@ DropTable.drops = [
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
     {
         itemType: "backplate",
+        dropRate: 200,
+        category: ["equipment"],
+        unique: true,
+    },
+    {
+        itemType: "gauntlets",
         dropRate: 200,
         category: ["equipment"],
         unique: true,
@@ -36301,6 +36315,40 @@ class Equippable extends item_1.Item {
     }
 }
 exports.Equippable = Equippable;
+
+
+/***/ }),
+
+/***/ "./src/item/gauntlets.ts":
+/*!*******************************!*\
+  !*** ./src/item/gauntlets.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Gauntlets = void 0;
+const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+class Gauntlets extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.coEquippable = (other) => {
+            // Only allow one gauntlets item equipped at a time.
+            if (other instanceof Gauntlets)
+                return false;
+            return true;
+        };
+        // Reuse existing armor tile for now (until we assign unique art).
+        this.tileX = 5;
+        this.tileY = 0;
+        this.stackable = false;
+        this.name = Gauntlets.itemName;
+        this.description = "Reduces damage from the sides (not diagonal) by half.";
+    }
+}
+exports.Gauntlets = Gauntlets;
+Gauntlets.itemName = "gauntlets";
 
 
 /***/ }),
@@ -45345,6 +45393,79 @@ exports.AttackAnimation = AttackAnimation;
 
 /***/ }),
 
+/***/ "./src/particle/blockSwipeAnimation.ts":
+/*!*********************************************!*\
+  !*** ./src/particle/blockSwipeAnimation.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BlockSwipeAnimation = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+/**
+ * A short-lived "block" effect that reuses the sword 2x2 swipe sheet,
+ * but renders only the middle frame for a fixed duration.
+ */
+class BlockSwipeAnimation extends particle_1.Particle {
+    constructor(x, y, direction, worldZ = 0) {
+        super();
+        this.elapsedMs = 0;
+        this.durationMs = 200;
+        this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.drawFX(this.tileX, this.tileY + this.tileYOffset, 2, 2, this.x - 0.5 + this.xOffset, this.y - 0.5 + this.yOffset, 2, 2);
+            // delta is normalized to 60fps, so each 1.0 delta ~= 16.666ms
+            this.elapsedMs += (delta * 1000) / 60;
+            if (this.elapsedMs >= this.durationMs)
+                this.dead = true;
+        };
+        this.x = x;
+        this.y = y - 0.25;
+        this.worldZ = worldZ;
+        this.dead = false;
+        // Reuse the sword swipe animation sheet.
+        this.tileY = 48;
+        // "Middle frame" of sword animation:
+        // sword uses frames=6 and draws columns at tileX 0,2,4,6; the midpoint maps to 4.
+        this.tileX = 10;
+        switch (direction) {
+            case game_1.Direction.DOWN:
+                this.tileYOffset = 0;
+                this.yOffset = 0;
+                this.xOffset = 0;
+                break;
+            case game_1.Direction.UP:
+                this.tileYOffset = 2;
+                this.yOffset = 0;
+                this.xOffset = 0;
+                break;
+            case game_1.Direction.LEFT:
+                this.tileYOffset = 4;
+                this.xOffset = 0;
+                this.yOffset = 0;
+                break;
+            case game_1.Direction.RIGHT:
+                this.tileYOffset = 6;
+                this.xOffset = 0;
+                this.yOffset = 0;
+                break;
+            default:
+                this.tileYOffset = 0;
+                this.xOffset = 0;
+                this.yOffset = 0;
+                break;
+        }
+    }
+}
+exports.BlockSwipeAnimation = BlockSwipeAnimation;
+
+
+/***/ }),
+
 /***/ "./src/particle/damageNumber.ts":
 /*!**************************************!*\
   !*** ./src/particle/damageNumber.ts ***!
@@ -46604,6 +46725,7 @@ const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/draw
 const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawable/drawable.ts");
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
+const blockSwipeAnimation_1 = __webpack_require__(/*! ../particle/blockSwipeAnimation */ "./src/particle/blockSwipeAnimation.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
@@ -47203,6 +47325,9 @@ class Player extends drawable_1.Drawable {
         this.getEquippedBackplate = () => {
             return this.inventory.getBackplate();
         };
+        this.getEquippedGauntlets = () => {
+            return this.inventory.getGauntlets();
+        };
         this.isAttackFromBehind = (source) => {
             const dx = source.x - this.x;
             const dy = source.y - this.y;
@@ -47224,6 +47349,65 @@ class Player extends drawable_1.Drawable {
                 return this.defenseFacing === game_1.Direction.DOWN;
             return false;
         };
+        this.isAttackFromSideNoDiagonal = (source) => {
+            const dx = source.x - this.x;
+            const dy = source.y - this.y;
+            // Same-tile or diagonal doesn't count.
+            if (dx === 0 && dy === 0)
+                return false;
+            if (dx !== 0 && dy !== 0)
+                return false;
+            // Sides are defined relative to the player's locked defenseFacing.
+            // Facing UP/DOWN => sides are EAST/WEST. Facing LEFT/RIGHT => sides are NORTH/SOUTH.
+            switch (this.defenseFacing) {
+                case game_1.Direction.UP:
+                case game_1.Direction.DOWN:
+                    return dy === 0; // horizontal hit
+                case game_1.Direction.LEFT:
+                case game_1.Direction.RIGHT:
+                    return dx === 0; // vertical hit
+                default:
+                    return false;
+            }
+        };
+        this.getIncomingCardinalDirection = (source) => {
+            const dx = source.x - this.x;
+            const dy = source.y - this.y;
+            if (dx === 0 && dy === 0)
+                return null;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                return dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+            }
+            return dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+        };
+        this.spawnDirectionalBlockFX = (source) => {
+            const dir = this.getIncomingCardinalDirection(source);
+            if (dir === null)
+                return;
+            const room = this.getRoom();
+            if (room !== this.game.room)
+                return;
+            let fxX = this.x;
+            let fxY = this.y;
+            // Offset one tile in the direction the attack is coming from.
+            switch (dir) {
+                case game_1.Direction.UP:
+                    fxY -= -0.25;
+                    break;
+                case game_1.Direction.DOWN:
+                    fxY += -0.25;
+                    break;
+                case game_1.Direction.LEFT:
+                    fxX -= -0.25;
+                    break;
+                case game_1.Direction.RIGHT:
+                    fxX += -0.25;
+                    break;
+            }
+            const fx = new blockSwipeAnimation_1.BlockSwipeAnimation(fxX, fxY, dir, this.z ?? 0);
+            fx.room = room;
+            room.particles.push(fx);
+        };
         this.hurt = (damage, enemy, ctx) => {
             const delay = ctx?.delay ?? 0;
             const source = ctx?.source;
@@ -47240,6 +47424,7 @@ class Player extends drawable_1.Drawable {
             // Backplate: block hits that come from behind.
             const backplate = this.getEquippedBackplate();
             if (backplate && source && this.isAttackFromBehind(source)) {
+                this.spawnDirectionalBlockFX(source);
                 if (this.getRoom() === this.game.room) {
                     setTimeout(() => {
                         this.renderer.hurtShield();
@@ -47250,6 +47435,12 @@ class Player extends drawable_1.Drawable {
                 }
                 this.lastHitBy = enemy;
                 return;
+            }
+            // Gauntlets: halve hits that come from the sides (axis-aligned only, no diagonal).
+            const gauntlets = this.getEquippedGauntlets();
+            if (gauntlets && source && this.isAttackFromSideNoDiagonal(source)) {
+                this.spawnDirectionalBlockFX(source);
+                damage *= 0.5;
             }
             // Handle armor damage
             const armor = this.inventory.getArmor();
