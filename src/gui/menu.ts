@@ -22,6 +22,53 @@ export class Menu {
   private lastButtonClickIndex: number = -1;
   private readonly BUTTON_CLICK_DEBOUNCE_TIME = 150; // milliseconds
 
+  private getDeltaMs(delta: number): number {
+    // delta is normalized to ~60fps ticks
+    return (delta * 1000) / 60;
+  }
+
+  private triggerRejectShake(button: guiButton) {
+    button.rejectShakeElapsedMs = 0;
+    button.rejectShakeRemainingMs = 350;
+  }
+
+  private computeButtonAnim(
+    button: guiButton,
+    delta: number,
+  ): { growPx: number; shakePx: number } {
+    const dtMs = this.getDeltaMs(delta);
+
+    const cursor = MouseCursor.getInstance().getPosition();
+    const hovered = button.isPointInButton(cursor.x, cursor.y);
+    const idx = this.buttons.indexOf(button);
+    // Only treat a button as selected if it actually exists in the main buttons list.
+    // (The close button is not in `this.buttons`, and `selectedButton = -1` is our "none" sentinel.)
+    const selected = idx >= 0 && this.selectedButton === idx;
+
+    const targetHover = hovered || selected ? 1 : 0;
+    // Hover grow speed (inventory-like): slightly faster feel
+    button.hoverAnim += 0.3 * delta * (targetHover - button.hoverAnim);
+    button.hoverAnim = Math.max(0, Math.min(1, button.hoverAnim));
+
+    // Inventory-style hover grow: subtle expansion
+    const growPx = Math.round(3 * button.hoverAnim);
+
+    let shakePx = 0;
+    if (button.rejectShakeRemainingMs > 0) {
+      button.rejectShakeRemainingMs = Math.max(
+        0,
+        button.rejectShakeRemainingMs - dtMs,
+      );
+      button.rejectShakeElapsedMs += dtMs;
+      const progress = Math.min(1, button.rejectShakeElapsedMs / 350);
+      const amp = 3 * (1 - progress);
+      // Shake left/right quickly for a "rejected" feel
+      shakePx = Math.round(Math.sin(button.rejectShakeElapsedMs / 18) * amp);
+    }
+
+    return { growPx, shakePx };
+  }
+
   constructor(
     arg:
       | Player
@@ -351,46 +398,51 @@ export class Menu {
     this.buttons.push(button);
   }
 
-  draw() {
+  draw(delta: number = 1) {
     if (this.open) {
       Game.ctx.save();
-      Game.ctx.fillStyle = "rgba(0, 0, 0, 0)";
+      // Menu backdrop (scrim) for readability over gameplay/inventory
+      Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
       // Draw main menu buttons
       this.buttons.forEach((button) => {
-        this.drawButton(button);
+        this.drawButton(button, delta);
       });
 
       // Draw close button
-      if (this.showCloseButton && this.closeButton) this.drawCloseButton();
+      if (this.showCloseButton && this.closeButton) this.drawCloseButton(delta);
 
       Game.ctx.restore();
     }
   }
 
-  drawButton(button: guiButton) {
+  drawButton(button: guiButton, delta: number = 1) {
     Game.ctx.save();
     Game.ctx.imageSmoothingEnabled = false;
 
-    // Clear any stroke settings to prevent unwanted outlines
-    Game.ctx.strokeStyle = "transparent";
-    Game.ctx.lineWidth = 0;
-
     // Optional no-fill for header-like buttons
+    const { growPx, shakePx } = this.computeButtonAnim(button, delta);
+    const x = Math.round(button.x + shakePx - growPx);
+    const y = Math.round(button.y - growPx);
+    const w = Math.round(button.width + 2 * growPx);
+    const h = Math.round(button.height + 2 * growPx);
+
     if (!button.noFill) {
+      const alpha = button.opaque ? 1 : 0.5;
       Game.ctx.fillStyle =
         this.selectedButton === this.buttons.indexOf(button)
-          ? "rgba(75, 75, 75, 0.5)"
-          : "rgba(100, 100, 100, 0.5)";
+          ? `rgba(75, 75, 75, ${alpha})`
+          : `rgba(100, 100, 100, ${alpha})`;
 
       // Round coordinates to prevent anti-aliasing outlines
-      Game.ctx.fillRect(
-        Math.round(button.x),
-        Math.round(button.y),
-        Math.round(button.width),
-        Math.round(button.height),
-      );
+      Game.ctx.fillRect(x, y, w, h);
+
+      if (button.outlineColor) {
+        Game.ctx.strokeStyle = button.outlineColor;
+        Game.ctx.lineWidth = 1;
+        Game.ctx.strokeRect(x, y, w, h);
+      }
     }
 
     // Default text color: yellow (overridden by per-button textColor if provided)
@@ -398,45 +450,48 @@ export class Menu {
     if (button.textColor) Game.ctx.fillStyle = button.textColor;
 
     const textWidth = Game.measureText(button.text).width;
-    const textX = button.x + (button.width - textWidth) / 2;
+    const textX = x + (w - textWidth) / 2;
 
     // Center text vertically in the button, accounting for varying button heights
-    const textY = button.y + button.height / 2 - Game.letter_height / 2;
+    const textY = y + h / 2 - Game.letter_height / 2;
 
     Game.fillText(button.text, Math.round(textX), Math.round(textY));
     Game.ctx.restore();
   }
 
-  drawCloseButton() {
+  drawCloseButton(delta: number = 1) {
     Game.ctx.save();
     Game.ctx.imageSmoothingEnabled = false;
 
+    const { growPx, shakePx } = this.closeButton
+      ? this.computeButtonAnim(this.closeButton, delta)
+      : { growPx: 0, shakePx: 0 };
+
+    const bx = this.closeButton
+      ? Math.round(this.closeButton.x + shakePx - growPx)
+      : 0;
+    const by = this.closeButton ? Math.round(this.closeButton.y - growPx) : 0;
+    const bw = this.closeButton
+      ? Math.round(this.closeButton.width + 2 * growPx)
+      : 0;
+    const bh = this.closeButton
+      ? Math.round(this.closeButton.height + 2 * growPx)
+      : 0;
+
     // Close button styling - make it red-ish for better visibility
     Game.ctx.fillStyle = "rgba(220, 60, 60, 1)"; // Red background
-    Game.ctx.fillRect(
-      Math.round(this.closeButton.x),
-      Math.round(this.closeButton.y),
-      Math.round(this.closeButton.width),
-      Math.round(this.closeButton.height),
-    );
+    Game.ctx.fillRect(bx, by, bw, bh);
 
     // Border for the close button
     Game.ctx.strokeStyle = "rgba(0, 0, 0, 1)";
     Game.ctx.lineWidth = 1;
-    if (this.closeButton)
-      Game.ctx.strokeRect(
-        this.closeButton.x,
-        this.closeButton.y,
-        this.closeButton.width,
-        this.closeButton.height,
-      );
+    if (this.closeButton) Game.ctx.strokeRect(bx, by, bw, bh);
 
     // Draw X text
     Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
     const textWidth = Game.measureText(this.closeButton.text).width;
-    const textX = this.closeButton.x + (this.closeButton.width - textWidth) / 2;
-    const textY =
-      this.closeButton.y + this.closeButton.height / 2 - Game.letter_height / 2;
+    const textX = bx + (bw - textWidth) / 2;
+    const textY = by + bh / 2 - Game.letter_height / 2;
 
     Game.fillText(this.closeButton.text, textX, textY);
     Game.ctx.restore();
@@ -739,8 +794,15 @@ export class Menu {
    */
   openSelectionMenu = (config: {
     title: string;
-    options: Array<{ label: string; onSelect: () => void }>;
+    options: Array<{
+      label: string;
+      onSelect: () => void;
+      enabled?: boolean;
+      textColor?: string;
+      disabledTextColor?: string;
+    }>;
     includeCancel?: boolean;
+    style?: "default" | "overlay";
   }) => {
     // Save current menu state so the normal menu returns after this selection.
     this.buttonStack.push({
@@ -774,26 +836,49 @@ export class Menu {
     this.buttons = [header];
 
     for (const opt of config.options) {
+      const enabled = opt.enabled !== false;
       const btn = new guiButton(
         0,
         0,
         0,
         0,
         opt.label,
-        () => {
-          opt.onSelect();
-          this.close();
-        },
+        enabled
+          ? () => {
+              opt.onSelect();
+              this.close();
+            }
+          : () => this.triggerRejectShake(btn),
         false,
         this,
       );
+      if (config.style === "overlay") {
+        btn.opaque = true;
+        btn.outlineColor = "rgba(255, 255, 255, 1)";
+      }
+      if (opt.textColor) btn.textColor = opt.textColor;
+      if (!enabled) {
+        btn.textColor = opt.disabledTextColor ?? "rgb(170, 170, 170)";
+      }
       this.addButton(btn);
     }
 
     if (config.includeCancel !== false) {
-      this.addButton(
-        new guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this),
+      const cancelBtn = new guiButton(
+        0,
+        0,
+        0,
+        0,
+        "Cancel",
+        () => this.close(),
+        false,
+        this,
       );
+      if (config.style === "overlay") {
+        cancelBtn.opaque = true;
+        cancelBtn.outlineColor = "rgba(255, 255, 255, 1)";
+      }
+      this.addButton(cancelBtn);
     }
 
     this.positionButtons();

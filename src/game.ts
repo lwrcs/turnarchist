@@ -2438,7 +2438,7 @@ export class Game {
       );
     } else {
       // Draw the start screen menu buttons (Continue/New Game)
-      this.startMenu?.draw();
+      this.startMenu?.draw(delta);
     }
 
     Game.ctx.globalAlpha = 1;

@@ -25458,7 +25458,7 @@ class Game {
             }
             else {
                 // Draw the start screen menu buttons (Continue/New Game)
-                this.startMenu?.draw();
+                this.startMenu?.draw(delta);
             }
             Game.ctx.globalAlpha = 1;
         };
@@ -31522,6 +31522,11 @@ class guiButton {
         this.parent = parent;
         this.noFill = false;
         this.textColor = undefined;
+        this.opaque = false;
+        this.outlineColor = undefined;
+        this.hoverAnim = 0;
+        this.rejectShakeRemainingMs = 0;
+        this.rejectShakeElapsedMs = 0;
     }
     // Check if a point is within the button bounds
     isPointInButton(x, y) {
@@ -32525,6 +32530,39 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 class Menu {
+    getDeltaMs(delta) {
+        // delta is normalized to ~60fps ticks
+        return (delta * 1000) / 60;
+    }
+    triggerRejectShake(button) {
+        button.rejectShakeElapsedMs = 0;
+        button.rejectShakeRemainingMs = 350;
+    }
+    computeButtonAnim(button, delta) {
+        const dtMs = this.getDeltaMs(delta);
+        const cursor = mouseCursor_1.MouseCursor.getInstance().getPosition();
+        const hovered = button.isPointInButton(cursor.x, cursor.y);
+        const idx = this.buttons.indexOf(button);
+        // Only treat a button as selected if it actually exists in the main buttons list.
+        // (The close button is not in `this.buttons`, and `selectedButton = -1` is our "none" sentinel.)
+        const selected = idx >= 0 && this.selectedButton === idx;
+        const targetHover = hovered || selected ? 1 : 0;
+        // Hover grow speed (inventory-like): slightly faster feel
+        button.hoverAnim += 0.3 * delta * (targetHover - button.hoverAnim);
+        button.hoverAnim = Math.max(0, Math.min(1, button.hoverAnim));
+        // Inventory-style hover grow: subtle expansion
+        const growPx = Math.round(3 * button.hoverAnim);
+        let shakePx = 0;
+        if (button.rejectShakeRemainingMs > 0) {
+            button.rejectShakeRemainingMs = Math.max(0, button.rejectShakeRemainingMs - dtMs);
+            button.rejectShakeElapsedMs += dtMs;
+            const progress = Math.min(1, button.rejectShakeElapsedMs / 350);
+            const amp = 3 * (1 - progress);
+            // Shake left/right quickly for a "rejected" feel
+            shakePx = Math.round(Math.sin(button.rejectShakeElapsedMs / 18) * amp);
+        }
+        return { growPx, shakePx };
+    }
     constructor(arg) {
         this.showCloseButton = true;
         this.selectionTimeoutId = null;
@@ -32577,14 +32615,31 @@ class Menu {
             header.textColor = "rgb(255, 255, 0)";
             this.buttons = [header];
             for (const opt of config.options) {
-                const btn = new guiButton_1.guiButton(0, 0, 0, 0, opt.label, () => {
-                    opt.onSelect();
-                    this.close();
-                }, false, this);
+                const enabled = opt.enabled !== false;
+                const btn = new guiButton_1.guiButton(0, 0, 0, 0, opt.label, enabled
+                    ? () => {
+                        opt.onSelect();
+                        this.close();
+                    }
+                    : () => this.triggerRejectShake(btn), false, this);
+                if (config.style === "overlay") {
+                    btn.opaque = true;
+                    btn.outlineColor = "rgba(255, 255, 255, 1)";
+                }
+                if (opt.textColor)
+                    btn.textColor = opt.textColor;
+                if (!enabled) {
+                    btn.textColor = opt.disabledTextColor ?? "rgb(170, 170, 170)";
+                }
                 this.addButton(btn);
             }
             if (config.includeCancel !== false) {
-                this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this));
+                const cancelBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this);
+                if (config.style === "overlay") {
+                    cancelBtn.opaque = true;
+                    cancelBtn.outlineColor = "rgba(255, 255, 255, 1)";
+                }
+                this.addButton(cancelBtn);
             }
             this.positionButtons();
             this.openMenu();
@@ -32780,63 +32835,85 @@ class Menu {
     addButton(button) {
         this.buttons.push(button);
     }
-    draw() {
+    draw(delta = 1) {
         if (this.open) {
             game_1.Game.ctx.save();
-            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0)";
+            // Menu backdrop (scrim) for readability over gameplay/inventory
+            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             // Draw main menu buttons
             this.buttons.forEach((button) => {
-                this.drawButton(button);
+                this.drawButton(button, delta);
             });
             // Draw close button
             if (this.showCloseButton && this.closeButton)
-                this.drawCloseButton();
+                this.drawCloseButton(delta);
             game_1.Game.ctx.restore();
         }
     }
-    drawButton(button) {
+    drawButton(button, delta = 1) {
         game_1.Game.ctx.save();
         game_1.Game.ctx.imageSmoothingEnabled = false;
-        // Clear any stroke settings to prevent unwanted outlines
-        game_1.Game.ctx.strokeStyle = "transparent";
-        game_1.Game.ctx.lineWidth = 0;
         // Optional no-fill for header-like buttons
+        const { growPx, shakePx } = this.computeButtonAnim(button, delta);
+        const x = Math.round(button.x + shakePx - growPx);
+        const y = Math.round(button.y - growPx);
+        const w = Math.round(button.width + 2 * growPx);
+        const h = Math.round(button.height + 2 * growPx);
         if (!button.noFill) {
+            const alpha = button.opaque ? 1 : 0.5;
             game_1.Game.ctx.fillStyle =
                 this.selectedButton === this.buttons.indexOf(button)
-                    ? "rgba(75, 75, 75, 0.5)"
-                    : "rgba(100, 100, 100, 0.5)";
+                    ? `rgba(75, 75, 75, ${alpha})`
+                    : `rgba(100, 100, 100, ${alpha})`;
             // Round coordinates to prevent anti-aliasing outlines
-            game_1.Game.ctx.fillRect(Math.round(button.x), Math.round(button.y), Math.round(button.width), Math.round(button.height));
+            game_1.Game.ctx.fillRect(x, y, w, h);
+            if (button.outlineColor) {
+                game_1.Game.ctx.strokeStyle = button.outlineColor;
+                game_1.Game.ctx.lineWidth = 1;
+                game_1.Game.ctx.strokeRect(x, y, w, h);
+            }
         }
         // Default text color: yellow (overridden by per-button textColor if provided)
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
         if (button.textColor)
             game_1.Game.ctx.fillStyle = button.textColor;
         const textWidth = game_1.Game.measureText(button.text).width;
-        const textX = button.x + (button.width - textWidth) / 2;
+        const textX = x + (w - textWidth) / 2;
         // Center text vertically in the button, accounting for varying button heights
-        const textY = button.y + button.height / 2 - game_1.Game.letter_height / 2;
+        const textY = y + h / 2 - game_1.Game.letter_height / 2;
         game_1.Game.fillText(button.text, Math.round(textX), Math.round(textY));
         game_1.Game.ctx.restore();
     }
-    drawCloseButton() {
+    drawCloseButton(delta = 1) {
         game_1.Game.ctx.save();
         game_1.Game.ctx.imageSmoothingEnabled = false;
+        const { growPx, shakePx } = this.closeButton
+            ? this.computeButtonAnim(this.closeButton, delta)
+            : { growPx: 0, shakePx: 0 };
+        const bx = this.closeButton
+            ? Math.round(this.closeButton.x + shakePx - growPx)
+            : 0;
+        const by = this.closeButton ? Math.round(this.closeButton.y - growPx) : 0;
+        const bw = this.closeButton
+            ? Math.round(this.closeButton.width + 2 * growPx)
+            : 0;
+        const bh = this.closeButton
+            ? Math.round(this.closeButton.height + 2 * growPx)
+            : 0;
         // Close button styling - make it red-ish for better visibility
         game_1.Game.ctx.fillStyle = "rgba(220, 60, 60, 1)"; // Red background
-        game_1.Game.ctx.fillRect(Math.round(this.closeButton.x), Math.round(this.closeButton.y), Math.round(this.closeButton.width), Math.round(this.closeButton.height));
+        game_1.Game.ctx.fillRect(bx, by, bw, bh);
         // Border for the close button
         game_1.Game.ctx.strokeStyle = "rgba(0, 0, 0, 1)";
         game_1.Game.ctx.lineWidth = 1;
         if (this.closeButton)
-            game_1.Game.ctx.strokeRect(this.closeButton.x, this.closeButton.y, this.closeButton.width, this.closeButton.height);
+            game_1.Game.ctx.strokeRect(bx, by, bw, bh);
         // Draw X text
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
         const textWidth = game_1.Game.measureText(this.closeButton.text).width;
-        const textX = this.closeButton.x + (this.closeButton.width - textWidth) / 2;
-        const textY = this.closeButton.y + this.closeButton.height / 2 - game_1.Game.letter_height / 2;
+        const textX = bx + (bw - textWidth) / 2;
+        const textY = by + bh / 2 - game_1.Game.letter_height / 2;
         game_1.Game.fillText(this.closeButton.text, textX, textY);
         game_1.Game.ctx.restore();
     }
@@ -38057,34 +38134,53 @@ class IronBar extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smith = (player) => {
-            const craft = (label, item) => {
-                player.inventory.subtractItem(this, 1);
+            const getAvailableBars = () => {
+                const stack = player.inventory.hasItem(IronBar);
+                return stack?.stackCount ?? 0;
+            };
+            const craft = (label, item, costBars) => {
+                player.inventory.subtractItem(this, costBars);
                 player.inventory.addItem(item);
                 this.level.game.pushMessage(`You hammer the iron bar into ${label}.`);
                 sound_1.Sound.playSmith();
             };
+            const cost = {
+                divingHelmet: 1,
+                shoulderPlates: 1,
+                chestPlate: 2,
+                backplate: 2,
+                gauntlets: 2,
+            };
+            const barsLabel = (n) => `(${n} iron bar${n === 1 ? "" : "s"})`;
+            const bars = getAvailableBars();
             player.menu.openSelectionMenu({
                 title: "Smith armor",
+                style: "overlay",
                 options: [
                     {
-                        label: "Chest plate",
-                        onSelect: () => craft("a chest plate", new chestPlate_1.ChestPlate(this.level, this.x, this.y)),
+                        label: `Chest plate ${barsLabel(cost.chestPlate)}`,
+                        enabled: bars >= cost.chestPlate,
+                        onSelect: () => craft("a chest plate", new chestPlate_1.ChestPlate(this.level, this.x, this.y), cost.chestPlate),
                     },
                     {
-                        label: "Backplate",
-                        onSelect: () => craft("a backplate", new backplate_1.Backplate(this.level, this.x, this.y)),
+                        label: `Backplate ${barsLabel(cost.backplate)}`,
+                        enabled: bars >= cost.backplate,
+                        onSelect: () => craft("a backplate", new backplate_1.Backplate(this.level, this.x, this.y), cost.backplate),
                     },
                     {
-                        label: "Shoulder plates",
-                        onSelect: () => craft("shoulder plates", new shoulderPlates_1.ShoulderPlates(this.level, this.x, this.y)),
+                        label: `Shoulder plates ${barsLabel(cost.shoulderPlates)}`,
+                        enabled: bars >= cost.shoulderPlates,
+                        onSelect: () => craft("shoulder plates", new shoulderPlates_1.ShoulderPlates(this.level, this.x, this.y), cost.shoulderPlates),
                     },
                     {
-                        label: "Gauntlets",
-                        onSelect: () => craft("gauntlets", new gauntlets_1.Gauntlets(this.level, this.x, this.y)),
+                        label: `Gauntlets ${barsLabel(cost.gauntlets)}`,
+                        enabled: bars >= cost.gauntlets,
+                        onSelect: () => craft("gauntlets", new gauntlets_1.Gauntlets(this.level, this.x, this.y), cost.gauntlets),
                     },
                     {
-                        label: "Diving helmet",
-                        onSelect: () => craft("a diving helmet", new divingHelmet_1.DivingHelmet(this.level, this.x, this.y)),
+                        label: `Diving helmet ${barsLabel(cost.divingHelmet)}`,
+                        enabled: bars >= cost.divingHelmet,
+                        onSelect: () => craft("a diving helmet", new divingHelmet_1.DivingHelmet(this.level, this.x, this.y), cost.divingHelmet),
                     },
                 ],
             });
@@ -49652,7 +49748,7 @@ class PlayerRenderer {
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
             if (this.player.menu.open)
-                this.player.menu.draw();
+                this.player.menu.draw(delta);
             game_1.Game.ctx.restore();
         };
         this.drawBreathStatus = (quickbarStartX) => {

@@ -918,7 +918,7 @@ export class PlayerRenderer {
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
-    if (this.player.menu.open) this.player.menu.draw();
+    if (this.player.menu.open) this.player.menu.draw(delta);
     Game.ctx.restore();
   };
 
