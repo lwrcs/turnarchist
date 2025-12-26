@@ -313,8 +313,12 @@ export class Entity extends Drawable {
       softShadeColor: original.softShadeColor,
       hasBloom: original.hasBloom,
       bloomColor: original.bloomColor,
-      bloomAlpha: 1,
-      softBloomAlpha: 1,
+      // Preserve current bloom intensity, but target a fade-out.
+      // This fixes death-clone bloom "sticking" at full brightness.
+      bloomAlpha: 0,
+      softBloomAlpha: original.softBloomAlpha,
+      bloomSize: original.bloomSize,
+      bloomOffsetY: original.bloomOffsetY,
       dyingFrame: 30,
     });
 

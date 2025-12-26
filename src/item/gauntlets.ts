@@ -7,8 +7,8 @@ export class Gauntlets extends Equippable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     // Reuse existing armor tile for now (until we assign unique art).
-    this.tileX = 5;
-    this.tileY = 0;
+    this.tileX = 9;
+    this.tileY = 2;
     this.stackable = false;
     this.name = Gauntlets.itemName;
     this.description = "Reduces damage from the sides (not diagonal) by half.";
@@ -20,5 +20,3 @@ export class Gauntlets extends Equippable {
     return true;
   };
 }
-
-

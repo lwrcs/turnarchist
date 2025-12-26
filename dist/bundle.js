@@ -9657,7 +9657,7 @@ module.exports = __webpack_require__.p + "assets/fxset.29b6186e827741f98588.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.756f2386f2be7f75e8d1.png";
+module.exports = __webpack_require__.p + "assets/itemset.6a46615ed30ab0980b94.png";
 
 /***/ }),
 
@@ -20745,8 +20745,12 @@ class Entity extends drawable_1.Drawable {
             softShadeColor: original.softShadeColor,
             hasBloom: original.hasBloom,
             bloomColor: original.bloomColor,
-            bloomAlpha: 1,
-            softBloomAlpha: 1,
+            // Preserve current bloom intensity, but target a fade-out.
+            // This fixes death-clone bloom "sticking" at full brightness.
+            bloomAlpha: 0,
+            softBloomAlpha: original.softBloomAlpha,
+            bloomSize: original.bloomSize,
+            bloomOffsetY: original.bloomOffsetY,
             dyingFrame: 30,
         });
         // Add to room's dead entities
@@ -36533,8 +36537,8 @@ class Gauntlets extends equippable_1.Equippable {
             return true;
         };
         // Reuse existing armor tile for now (until we assign unique art).
-        this.tileX = 5;
-        this.tileY = 0;
+        this.tileX = 9;
+        this.tileY = 2;
         this.stackable = false;
         this.name = Gauntlets.itemName;
         this.description = "Reduces damage from the sides (not diagonal) by half.";
