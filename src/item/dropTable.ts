@@ -42,6 +42,7 @@ import { CrossbowLimb } from "./weapon/crossbowLimb";
 import { CrossbowBolt } from "./weapon/crossbowBolt";
 import { QuarterStaff } from "./weapon/quarterStaff";
 import { DivingHelmet } from "./divingHelmet";
+import { Backplate } from "./backplate";
 
 interface Drop {
   itemType: string;
@@ -60,6 +61,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   scythe: Scythe,
   quarterstaff: QuarterStaff,
   divinghelmet: DivingHelmet,
+  backplate: Backplate,
   hourglass: Hourglass,
   fishingrod: FishingRod,
 
@@ -207,6 +209,12 @@ export class DropTable {
 
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
+    {
+      itemType: "backplate",
+      dropRate: 200,
+      category: ["equipment"],
+      unique: true,
+    },
     {
       itemType: "divinghelmet",
       dropRate: 50,

@@ -114,7 +114,7 @@ export class CrusherEnemy extends Enemy {
         p.x === this.x &&
         p.y === this.y
       ) {
-        p.hurt(this.hit(), this.name, 400);
+        p.hurt(this.hit(), this.name, { delay: 400, source: { x: this.x, y: this.y } });
         this.drawX += 0.5 * (this.x - p.x);
         this.drawY += 0.5 * (this.y - p.y);
         if (p === this.game.players[this.game.localPlayerID]) {

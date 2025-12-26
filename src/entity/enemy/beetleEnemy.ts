@@ -302,7 +302,9 @@ export class BeetleEnemy extends Enemy {
       ) {
         // Only allow attacks when moving 2-3 tiles in a single action
         if (stepDist >= 2 && stepDist <= 3) {
-          this.game.players[i].hurt(this.hit(), this.name);
+          this.game.players[i].hurt(this.hit(), this.name, {
+            source: { x: this.x, y: this.y },
+          });
           this.drawX = 0.5 * (this.x - this.game.players[i].x);
           this.drawY = 0.5 * (this.y - this.game.players[i].y);
           if (

@@ -1528,6 +1528,9 @@ export class Room {
       e.shouldSeeThrough();
     }
 
+    // Lock player's facing for the upcoming enemy turn (directional damage checks).
+    player.snapshotDefenseFacing?.();
+
     this.turn = TurnState.computerTurn;
 
     this.playerTurnTime = Date.now();

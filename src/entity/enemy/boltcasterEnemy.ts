@@ -249,7 +249,7 @@ export class BoltcasterEnemy extends Enemy {
 
     // Apply damage
     if (hitPlayer && player) {
-      player.hurt(this.hit(), this.name);
+      player.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
     } else if (hitEntity) {
       (hitEntity as any).hurt?.(this as any, 1);
     }

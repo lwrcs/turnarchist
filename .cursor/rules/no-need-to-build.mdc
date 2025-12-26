@@ -1,0 +1,3 @@
+## Don't run build script. There is a "watch" script always running and automatically building as needed.
+
+## alwaysApply: true

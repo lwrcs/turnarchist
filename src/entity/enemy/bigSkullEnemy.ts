@@ -224,7 +224,7 @@ export class BigSkullEnemy extends Enemy {
                   this.game.rooms[this.game.players[i].levelID] === this.room &&
                   wouldHit(this.game.players[i], moveX, moveY)
                 ) {
-                  this.game.players[i].hurt(this.hit(), this.name);
+                  this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                   this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
                   this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
                   if (

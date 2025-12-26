@@ -13,6 +13,7 @@ import { Drawable } from "../drawable/drawable";
 import { Entity } from "../entity/entity";
 import { Item } from "../item/item";
 import { DivingHelmet } from "../item/divingHelmet";
+import { Backplate } from "../item/backplate";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -60,6 +61,7 @@ export class Player extends Drawable {
   h: number;
   direction: Direction;
   lastDirection: Direction;
+  private defenseFacing: Direction;
   game: Game;
   levelID: number; // which room we're in (legacy index; avoid using directly)
   roomGID?: string;
@@ -156,6 +158,7 @@ export class Player extends Drawable {
     this.moveDistance = 0;
     this.direction = Direction.UP;
     this.lastDirection = Direction.UP;
+    this.defenseFacing = this.direction;
 
     this.lastX = 0;
     this.lastY = 0;
@@ -913,7 +916,41 @@ export class Player extends Drawable {
     this.lastY = y;
   };
 
-  hurt = (damage: number, enemy: string, delay: number = 0) => {
+  snapshotDefenseFacing = () => {
+    // Capture facing for resolving directional damage during the enemy turn.
+    // This prevents mouse-driven direction changes during the computer turn from affecting blocking.
+    this.defenseFacing = this.direction;
+  };
+
+  private getEquippedBackplate = (): Backplate | null => {
+    return this.inventory.getBackplate();
+  };
+
+  private isAttackFromBehind = (source: { x: number; y: number }): boolean => {
+    const dx = source.x - this.x;
+    const dy = source.y - this.y;
+    if (dx === 0 && dy === 0) return false;
+
+    // Choose the dominant axis to decide which "side" the attack is coming from.
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      // Horizontal
+      if (dx > 0) return this.defenseFacing === Direction.LEFT;
+      if (dx < 0) return this.defenseFacing === Direction.RIGHT;
+      return false;
+    }
+    // Vertical
+    if (dy > 0) return this.defenseFacing === Direction.UP;
+    if (dy < 0) return this.defenseFacing === Direction.DOWN;
+    return false;
+  };
+
+  hurt = (
+    damage: number,
+    enemy: string,
+    ctx?: { delay?: number; source?: { x: number; y: number } },
+  ) => {
+    const delay = ctx?.delay ?? 0;
+    const source = ctx?.source;
     //if (GameConstants.DEVELOPER_MODE) return;
     // Play hurt sound if in current room
     if (this.getRoom() === this.game.room) {
@@ -923,6 +960,21 @@ export class Player extends Drawable {
         this.renderer.flash();
         this.renderer.hurt();
       }, delay);
+    }
+
+    // Backplate: block hits that come from behind.
+    const backplate = this.getEquippedBackplate();
+    if (backplate && source && this.isAttackFromBehind(source)) {
+      if (this.getRoom() === this.game.room) {
+        setTimeout(() => {
+          this.renderer.hurtShield();
+        }, delay);
+      }
+      if (!GameConstants.DEVELOPER_MODE) {
+        this.game.pushMessage("Your backplate blocks the attack from behind.");
+      }
+      this.lastHitBy = enemy;
+      return;
     }
 
     // Handle armor damage

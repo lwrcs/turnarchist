@@ -67,7 +67,7 @@ export class Explosion extends Projectile {
         playerHitBy.x === this.x &&
         playerHitBy.y === this.y
       ) {
-        playerHitBy.hurt(damage, "bomb");
+        playerHitBy.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
       }
     } catch {}
   }

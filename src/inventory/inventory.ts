@@ -19,6 +19,7 @@ import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { WoodenShield } from "../item/woodenShield";
 import { DivingHelmet } from "../item/divingHelmet";
+import { Backplate } from "../item/backplate";
 
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
@@ -565,6 +566,14 @@ export class Inventory {
       this.items.find(
         (i): i is Armor =>
           (i instanceof Armor || i instanceof WoodenShield) && i.equipped,
+      ) || null
+    );
+  };
+
+  getBackplate = (): Backplate | null => {
+    return (
+      this.items.find(
+        (i): i is Backplate => i instanceof Backplate && i.equipped,
       ) || null
     );
   };

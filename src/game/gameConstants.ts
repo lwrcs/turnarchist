@@ -51,6 +51,7 @@ import { CrossbowBolt } from "../item/weapon/crossbowBolt";
 import { Crossbow } from "../item/weapon/crossbow";
 import { GlowStick } from "../item/light/glowStick";
 import { DivingHelmet } from "../item/divingHelmet";
+import { Backplate } from "../item/backplate";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -394,6 +395,7 @@ export class GameConstants {
     Lantern,
     DivingHelmet,
     WeaponBlood,
+    Backplate,
 
     Coal,
     Coal,

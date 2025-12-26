@@ -50,7 +50,7 @@ export class EnemySpawnAnimation extends Projectile {
       if (playerRoom !== this.room) continue;
       if ((pl?.z ?? 0) !== (this.z ?? 0)) continue;
       if (pl.x === this.x && pl.y === this.y) {
-        pl.hurt(0.5, "reaper");
+        pl.hurt(0.5, "reaper", { source: { x: this.x, y: this.y } });
         hitPlayer = true;
       }
     }

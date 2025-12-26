@@ -264,7 +264,9 @@ export class SpiderEnemy extends Enemy {
         this.game.players[i].x === destX &&
         this.game.players[i].y === destY
       ) {
-        this.game.players[i].hurt(this.hit(), this.name);
+        this.game.players[i].hurt(this.hit(), this.name, {
+          source: { x: this.x, y: this.y },
+        });
         this.drawX = 0.5 * (this.x - this.game.players[i].x);
         this.drawY = 0.5 * (this.y - this.game.players[i].y);
         if (this.game.players[i] === this.game.players[this.game.localPlayerID])

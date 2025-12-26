@@ -110,7 +110,7 @@ export class WizardFireball extends Projectile {
 
   hitPlayer = (player: Player) => {
     if (!this.dead && this.state === 2) {
-      player.hurt(1, this.parent.name);
+      player.hurt(1, this.parent.name, { source: { x: this.parent.x, y: this.parent.y } });
     }
   };
 

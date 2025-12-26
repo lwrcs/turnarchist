@@ -10324,7 +10324,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -10554,7 +10554,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY &&
                                         oldDir == this.direction) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -10894,7 +10894,9 @@ class BeetleEnemy extends enemy_1.Enemy {
                     this.game.players[i].y === destY) {
                     // Only allow attacks when moving 2-3 tiles in a single action
                     if (stepDist >= 2 && stepDist <= 3) {
-                        this.game.players[i].hurt(this.hit(), this.name);
+                        this.game.players[i].hurt(this.hit(), this.name, {
+                            source: { x: this.x, y: this.y },
+                        });
                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                         if (this.game.players[i] === this.game.players[this.game.localPlayerID])
@@ -11533,7 +11535,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                         continue;
                                     if (wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)) {
                                         const closestTile = this.closestTile(this.game.players[i]);
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
                                         this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -11944,7 +11946,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                                     break;
                                             }
                                             if (playerHit) {
-                                                this.game.players[i].hurt(this.hit(), this.name);
+                                                this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                                 if (this.game.players[i] ===
@@ -12239,7 +12241,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                     const closestTile = this.closestTile(this.game.players[i]);
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         wouldHit(this.game.players[i], moveX, moveY)) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -12543,7 +12545,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                                 break;
                                         }
                                         if (playerHit) {
-                                            this.game.players[i].hurt(this.hit(), this.name);
+                                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                             this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                             this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                             if (this.game.players[i] ===
@@ -12822,7 +12824,7 @@ class BishopEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name);
+                                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     hitPlayer = true;
@@ -13135,7 +13137,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, startX, startY, finalEndX, finalEndY));
             // Apply damage
             if (hitPlayer && player) {
-                player.hurt(this.hit(), this.name);
+                player.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
             }
             else if (hitEntity) {
                 hitEntity.hurt?.(this, 1);
@@ -13482,7 +13484,7 @@ class ChargeEnemy extends enemy_1.Enemy {
                                     this.game.players[i].y <= this.targetY) ||
                                     (this.targetY <= this.game.players[i].y &&
                                         this.game.players[i].y < this.y)))) {
-                            this.game.players[i].hurt(this.hit(), this.name);
+                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                         }
                     }
                     this.startX = this.x;
@@ -13706,7 +13708,9 @@ class CrabEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -13928,7 +13932,7 @@ class CrusherEnemy extends enemy_1.Enemy {
                 if (this.game.rooms[p.levelID] === this.room &&
                     p.x === this.x &&
                     p.y === this.y) {
-                    p.hurt(this.hit(), this.name, 400);
+                    p.hurt(this.hit(), this.name, { delay: 400, source: { x: this.x, y: this.y } });
                     this.drawX += 0.5 * (this.x - p.x);
                     this.drawY += 0.5 * (this.y - p.y);
                     if (p === this.game.players[this.game.localPlayerID]) {
@@ -14638,7 +14642,9 @@ class Enemy extends entity_1.Entity {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -15724,7 +15730,9 @@ class FrogEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[1].pos.x &&
                                         this.game.players[i].y === moves[1].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX += 1.5 * (this.x - this.game.players[i].x);
                                         this.drawY += 1.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -16138,7 +16146,9 @@ class KingEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name);
+                                    this.game.players[i].hurt(this.hit(), this.name, {
+                                        source: { x: this.x, y: this.y },
+                                    });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     if (this.game.players[i] ===
@@ -16319,7 +16329,9 @@ class KnightEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -16541,7 +16553,7 @@ class MummyEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -17080,7 +17092,7 @@ class PawnEnemy extends enemy_1.Enemy {
                         if (Math.abs(dxToPlayer) === 1 &&
                             Math.abs(dyToPlayer) === 1 &&
                             !this.unconscious) {
-                            this.targetPlayer.hurt(this.hit(), this.name);
+                            this.targetPlayer.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                             this.drawX = 0.5 * (this.x - this.targetPlayer.x);
                             this.drawY = 0.5 * (this.y - this.targetPlayer.y);
                             if (this.targetPlayer === this.game.players[this.game.localPlayerID])
@@ -17273,7 +17285,7 @@ class QueenEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name);
+                                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     if (this.game.players[i] ===
@@ -17451,7 +17463,7 @@ class RookEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name);
+                                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     if (this.game.players[i] ===
@@ -17657,7 +17669,7 @@ class SkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -18357,7 +18369,9 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                     this.game.players[i].x === destX &&
                     this.game.players[i].y === destY) {
-                    this.game.players[i].hurt(this.hit(), this.name);
+                    this.game.players[i].hurt(this.hit(), this.name, {
+                        source: { x: this.x, y: this.y },
+                    });
                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                     if (this.game.players[i] === this.game.players[this.game.localPlayerID])
@@ -18878,7 +18892,9 @@ class WardenEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -19310,7 +19326,9 @@ class ZombieEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name);
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -27256,6 +27274,7 @@ const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/it
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
+const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/backplate.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -27539,6 +27558,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     lantern_1.Lantern,
     divingHelmet_1.DivingHelmet,
     weaponBlood_1.WeaponBlood,
+    backplate_1.Backplate,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -34213,6 +34233,7 @@ const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eve
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
+const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/backplate.ts");
 let OPEN_TIME = 100; // milliseconds
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
@@ -34637,6 +34658,9 @@ class Inventory {
         };
         this.getArmor = () => {
             return (this.items.find((i) => (i instanceof armor_1.Armor || i instanceof woodenShield_1.WoodenShield) && i.equipped) || null);
+        };
+        this.getBackplate = () => {
+            return (this.items.find((i) => i instanceof backplate_1.Backplate && i.equipped) || null);
         };
         this.divingHelmetEquipped = () => {
             return (this.items.some((i) => i instanceof divingHelmet_1.DivingHelmet && i.equipped) || false);
@@ -35512,6 +35536,48 @@ Backpack.itemName = "backpack";
 
 /***/ }),
 
+/***/ "./src/item/backplate.ts":
+/*!*******************************!*\
+  !*** ./src/item/backplate.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Backplate = void 0;
+const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
+class Backplate extends equippable_1.Equippable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.outline = () => {
+            return {
+                color: "#639bff",
+                opacity: 0.5,
+                offset: 1,
+                manhattan: true,
+            };
+        };
+        this.coEquippable = (other) => {
+            // Only allow one backplate.
+            if (other instanceof Backplate)
+                return false;
+            return true;
+        };
+        // Reuse the existing armor tile for now (requested).
+        this.tileX = 5;
+        this.tileY = 0;
+        this.stackable = false;
+        this.name = Backplate.itemName;
+        this.description = "Blocks damage from behind based on your facing.";
+    }
+}
+exports.Backplate = Backplate;
+Backplate.itemName = "backplate";
+
+
+/***/ }),
+
 /***/ "./src/item/bestiaryBook.ts":
 /*!**********************************!*\
   !*** ./src/item/bestiaryBook.ts ***!
@@ -35808,6 +35874,7 @@ const crossbowLimb_1 = __webpack_require__(/*! ./weapon/crossbowLimb */ "./src/i
 const crossbowBolt_1 = __webpack_require__(/*! ./weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const quarterStaff_1 = __webpack_require__(/*! ./weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const divingHelmet_1 = __webpack_require__(/*! ./divingHelmet */ "./src/item/divingHelmet.ts");
+const backplate_1 = __webpack_require__(/*! ./backplate */ "./src/item/backplate.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -35817,6 +35884,7 @@ exports.ItemTypeMap = {
     scythe: scythe_1.Scythe,
     quarterstaff: quarterStaff_1.QuarterStaff,
     divinghelmet: divingHelmet_1.DivingHelmet,
+    backplate: backplate_1.Backplate,
     hourglass: hourglass_1.Hourglass,
     fishingrod: fishingRod_1.FishingRod,
     crossbowstock: crossbowStock_1.CrossbowStock,
@@ -35953,6 +36021,12 @@ DropTable.drops = [
     },
     // Equipment
     { itemType: "armor", dropRate: 350, category: ["equipment"], unique: true },
+    {
+        itemType: "backplate",
+        dropRate: 200,
+        category: ["equipment"],
+        unique: true,
+    },
     {
         itemType: "divinghelmet",
         dropRate: 50,
@@ -47121,7 +47195,38 @@ class Player extends drawable_1.Drawable {
             this.lastX = x;
             this.lastY = y;
         };
-        this.hurt = (damage, enemy, delay = 0) => {
+        this.snapshotDefenseFacing = () => {
+            // Capture facing for resolving directional damage during the enemy turn.
+            // This prevents mouse-driven direction changes during the computer turn from affecting blocking.
+            this.defenseFacing = this.direction;
+        };
+        this.getEquippedBackplate = () => {
+            return this.inventory.getBackplate();
+        };
+        this.isAttackFromBehind = (source) => {
+            const dx = source.x - this.x;
+            const dy = source.y - this.y;
+            if (dx === 0 && dy === 0)
+                return false;
+            // Choose the dominant axis to decide which "side" the attack is coming from.
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                // Horizontal
+                if (dx > 0)
+                    return this.defenseFacing === game_1.Direction.LEFT;
+                if (dx < 0)
+                    return this.defenseFacing === game_1.Direction.RIGHT;
+                return false;
+            }
+            // Vertical
+            if (dy > 0)
+                return this.defenseFacing === game_1.Direction.UP;
+            if (dy < 0)
+                return this.defenseFacing === game_1.Direction.DOWN;
+            return false;
+        };
+        this.hurt = (damage, enemy, ctx) => {
+            const delay = ctx?.delay ?? 0;
+            const source = ctx?.source;
             //if (GameConstants.DEVELOPER_MODE) return;
             // Play hurt sound if in current room
             if (this.getRoom() === this.game.room) {
@@ -47131,6 +47236,20 @@ class Player extends drawable_1.Drawable {
                     this.renderer.flash();
                     this.renderer.hurt();
                 }, delay);
+            }
+            // Backplate: block hits that come from behind.
+            const backplate = this.getEquippedBackplate();
+            if (backplate && source && this.isAttackFromBehind(source)) {
+                if (this.getRoom() === this.game.room) {
+                    setTimeout(() => {
+                        this.renderer.hurtShield();
+                    }, delay);
+                }
+                if (!gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                    this.game.pushMessage("Your backplate blocks the attack from behind.");
+                }
+                this.lastHitBy = enemy;
+                return;
             }
             // Handle armor damage
             const armor = this.inventory.getArmor();
@@ -47388,6 +47507,7 @@ class Player extends drawable_1.Drawable {
         this.moveDistance = 0;
         this.direction = game_1.Direction.UP;
         this.lastDirection = game_1.Direction.UP;
+        this.defenseFacing = this.direction;
         this.lastX = 0;
         this.lastY = 0;
         this.isLocalPlayer = isLocalPlayer;
@@ -49823,7 +49943,7 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
                 if ((pl?.z ?? 0) !== (this.z ?? 0))
                     continue;
                 if (pl.x === this.x && pl.y === this.y) {
-                    pl.hurt(0.5, "reaper");
+                    pl.hurt(0.5, "reaper", { source: { x: this.x, y: this.y } });
                     hitPlayer = true;
                 }
             }
@@ -49926,7 +50046,7 @@ class Explosion extends projectile_1.Projectile {
                 (playerHitBy?.z ?? 0) === (this.z ?? 0) &&
                 playerHitBy.x === this.x &&
                 playerHitBy.y === this.y) {
-                playerHitBy.hurt(damage, "bomb");
+                playerHitBy.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
             }
         }
         catch { }
@@ -50121,7 +50241,7 @@ class WizardFireball extends projectile_1.Projectile {
         };
         this.hitPlayer = (player) => {
             if (!this.dead && this.state === 2) {
-                player.hurt(1, this.parent.name);
+                player.hurt(1, this.parent.name, { source: { x: this.parent.x, y: this.parent.y } });
             }
         };
         this.draw = (delta) => {
@@ -51395,6 +51515,8 @@ class Room {
                     continue;
                 e.shouldSeeThrough();
             }
+            // Lock player's facing for the upcoming enemy turn (directional damage checks).
+            player.snapshotDefenseFacing?.();
             this.turn = TurnState.computerTurn;
             this.playerTurnTime = Date.now();
             this.playerTicked = player;
@@ -60199,7 +60321,7 @@ class Spike extends tile_1.Tile {
     constructor() {
         super(...arguments);
         this.onCollide = (player) => {
-            player.hurt(1, "spike");
+            player.hurt(1, "spike", { source: { x: this.x, y: this.y } });
         };
         this.draw = (delta) => {
             game_1.Game.drawTile(11, 0, 1, 1, this.x, this.y, 1, 1, this.room.shadeColor, this.shadeAmount());
@@ -60240,7 +60362,9 @@ class SpikeTrap extends tile_1.Tile {
                         this.room.game.rooms[this.room.game.players[i].levelID] &&
                         this.room.game.players[i].x === this.x &&
                         this.room.game.players[i].y === this.y)
-                        this.room.game.players[i].hurt(0.5, "spike trap");
+                        this.room.game.players[i].hurt(0.5, "spike trap", {
+                            source: { x: this.x, y: this.y },
+                        });
                 }
             }
             if (this.tickCount === 3)

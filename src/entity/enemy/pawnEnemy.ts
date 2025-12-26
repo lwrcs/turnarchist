@@ -120,7 +120,7 @@ export class PawnEnemy extends Enemy {
             Math.abs(dyToPlayer) === 1 &&
             !this.unconscious
           ) {
-            this.targetPlayer.hurt(this.hit(), this.name);
+            this.targetPlayer.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
             this.drawX = 0.5 * (this.x - this.targetPlayer.x);
             this.drawY = 0.5 * (this.y - this.targetPlayer.y);
             if (
