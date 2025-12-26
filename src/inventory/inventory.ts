@@ -626,6 +626,9 @@ export class Inventory {
       if (i !== null) i.tickInInventory();
     });
 
+    // If the menu is open, inventory should not process drag/hold input.
+    if (this.player.menu.open) return;
+
     // Check for drag initiation
     this.checkForDragStart();
   };

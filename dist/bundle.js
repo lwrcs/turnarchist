@@ -27278,6 +27278,7 @@ const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/bac
 const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/chestPlate.ts");
+const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -27565,6 +27566,13 @@ GameConstants.STARTING_DEV_INVENTORY = [
     gauntlets_1.Gauntlets,
     shoulderPlates_1.ShoulderPlates,
     chestPlate_1.ChestPlate,
+    ironBar_1.IronBar,
+    ironBar_1.IronBar,
+    ironBar_1.IronBar,
+    ironBar_1.IronBar,
+    ironOre_1.IronOre,
+    ironOre_1.IronOre,
+    ironOre_1.IronOre,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -32520,6 +32528,8 @@ class Menu {
     constructor(arg) {
         this.showCloseButton = true;
         this.selectionTimeoutId = null;
+        this.onCloseHook = null;
+        this.buttonStack = [];
         // Add debouncing properties
         this.lastButtonClickTime = 0;
         this.lastButtonClickIndex = -1;
@@ -32542,6 +32552,42 @@ class Menu {
         this.scaleDown = () => {
             this.game.decreaseScale();
             // Add scale down functionality here
+        };
+        /**
+         * Opens a temporary selection menu (reusable) and restores previous menu buttons on close.
+         */
+        this.openSelectionMenu = (config) => {
+            // Save current menu state so the normal menu returns after this selection.
+            this.buttonStack.push({
+                buttons: this.buttons,
+                selectedButton: this.selectedButton,
+            });
+            const restore = () => {
+                const prev = this.buttonStack.pop();
+                if (!prev)
+                    return;
+                this.buttons = prev.buttons;
+                this.selectedButton = prev.selectedButton;
+                this.positionButtons();
+            };
+            this.onCloseHook = restore;
+            // Build selection buttons
+            const header = new guiButton_1.guiButton(0, 0, 0, 0, config.title, () => { }, false, this);
+            header.noFill = true;
+            header.textColor = "rgb(255, 255, 0)";
+            this.buttons = [header];
+            for (const opt of config.options) {
+                const btn = new guiButton_1.guiButton(0, 0, 0, 0, opt.label, () => {
+                    opt.onSelect();
+                    this.close();
+                }, false, this);
+                this.addButton(btn);
+            }
+            if (config.includeCancel !== false) {
+                this.addButton(new guiButton_1.guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this));
+            }
+            this.positionButtons();
+            this.openMenu();
         };
         this.buttons = [];
         this.open = false;
@@ -32867,6 +32913,12 @@ class Menu {
     }
     close() {
         this.open = false;
+        // Allow temporary menus to restore previous state on close.
+        if (this.onCloseHook) {
+            const fn = this.onCloseHook;
+            this.onCloseHook = null;
+            fn();
+        }
     }
     openMenu() {
         this.open = true;
@@ -34694,6 +34746,9 @@ class Inventory {
                 if (i !== null)
                     i.tickInInventory();
             });
+            // If the menu is open, inventory should not process drag/hold input.
+            if (this.player.menu.open)
+                return;
             // Check for drag initiation
             this.checkForDragStart();
         };
@@ -37994,21 +38049,51 @@ exports.IronBar = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../divingHelmet */ "./src/item/divingHelmet.ts");
+const backplate_1 = __webpack_require__(/*! ../backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ../gauntlets */ "./src/item/gauntlets.ts");
+const shoulderPlates_1 = __webpack_require__(/*! ../shoulderPlates */ "./src/item/shoulderPlates.ts");
+const chestPlate_1 = __webpack_require__(/*! ../chestPlate */ "./src/item/chestPlate.ts");
 class IronBar extends item_1.Item {
     constructor(level, x, y) {
         super(level, x, y);
         this.smith = (player) => {
-            player.inventory.subtractItem(this, 1);
-            player.inventory.addItem(new divingHelmet_1.DivingHelmet(this.level, this.x, this.y));
-            this.level.game.pushMessage(`You hammer the iron bar into a diving helmet.`);
-            sound_1.Sound.playSmith();
+            const craft = (label, item) => {
+                player.inventory.subtractItem(this, 1);
+                player.inventory.addItem(item);
+                this.level.game.pushMessage(`You hammer the iron bar into ${label}.`);
+                sound_1.Sound.playSmith();
+            };
+            player.menu.openSelectionMenu({
+                title: "Smith armor",
+                options: [
+                    {
+                        label: "Chest plate",
+                        onSelect: () => craft("a chest plate", new chestPlate_1.ChestPlate(this.level, this.x, this.y)),
+                    },
+                    {
+                        label: "Backplate",
+                        onSelect: () => craft("a backplate", new backplate_1.Backplate(this.level, this.x, this.y)),
+                    },
+                    {
+                        label: "Shoulder plates",
+                        onSelect: () => craft("shoulder plates", new shoulderPlates_1.ShoulderPlates(this.level, this.x, this.y)),
+                    },
+                    {
+                        label: "Gauntlets",
+                        onSelect: () => craft("gauntlets", new gauntlets_1.Gauntlets(this.level, this.x, this.y)),
+                    },
+                    {
+                        label: "Diving helmet",
+                        onSelect: () => craft("a diving helmet", new divingHelmet_1.DivingHelmet(this.level, this.x, this.y)),
+                    },
+                ],
+            });
         };
         this.tileX = 16;
         this.tileY = 0;
         this.name = IronBar.itemName;
         this.stackable = true;
-        this.description =
-            "A bar of iron. Hit it with a hammer to make a diving helmet.";
+        this.description = "A bar of iron. Hit it with a hammer to smith armor.";
     }
 }
 exports.IronBar = IronBar;
@@ -48446,18 +48531,18 @@ class PlayerInputHandler {
         input_1.Input.lastMouseDownX = x;
         input_1.Input.lastMouseDownY = y;
         const inventory = player.inventory;
+        // Handle menu first: menu clicks should not affect inventory open/close state.
+        if (this.player.menu.open) {
+            this.player.menu.mouseInputHandler(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // Handle inventory toggle when clicking outside or on inventory button
         const clickedOutsideInventory = (inventory.isOpen &&
             !inventory.isPointInInventoryBounds(x, y).inBounds) ||
             inventory.isPointInInventoryButton(x, y);
         if (clickedOutsideInventory) {
             inventory.toggleOpen();
-            input_1.Input.mouseDownHandled = true;
-            return;
-        }
-        // Handle menu
-        if (this.player.menu.open) {
-            this.player.menu.mouseInputHandler(x, y);
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -48522,17 +48607,16 @@ class PlayerInputHandler {
             return;
         }
         const inventory = player.inventory;
+        // If the menu is open, it consumes clicks and should not affect inventory open/close state.
+        if (this.player.menu.open) {
+            this.player.menu.mouseInputHandler(x, y);
+            return;
+        }
         const clickedOutsideInventory = (inventory.isOpen &&
             !inventory.isPointInInventoryBounds(x, y).inBounds) ||
             inventory.isPointInInventoryButton(x, y);
         if (clickedOutsideInventory) {
             inventory.toggleOpen();
-        }
-        if (this.player.menu.open) {
-            this.player.menu.mouseInputHandler(x, y);
-            return;
-        }
-        else {
         }
         // Check if click is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
@@ -49388,14 +49472,17 @@ class PlayerRenderer {
                     vendingMachine_1.VendingMachine.isPointInVendingMachineBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, this.player.openVendingMachine);
                 const inInventoryBounds = this.player.inventory.isPointInInventoryBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
                 const drawFor = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
+                    !this.player.menu.open &&
                     !inventoryOpen &&
                     !quickbarOpen &&
                     !this.player.openVendingMachine
                     ? "inGame"
                     : gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
+                        !this.player.menu.open &&
                         ((inventoryOpen && inInventoryBounds) || quickbarOpen)
                         ? "inventory"
                         : gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
+                            !this.player.menu.open &&
                             inVendingMachine
                             ? "vendingMachine"
                             : "none";

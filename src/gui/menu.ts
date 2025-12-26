@@ -14,6 +14,9 @@ export class Menu {
   player?: Player;
   private showCloseButton: boolean = true;
   selectionTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private onCloseHook: (() => void) | null = null;
+  private buttonStack: Array<{ buttons: guiButton[]; selectedButton: number }> =
+    [];
   // Add debouncing properties
   private lastButtonClickTime: number = 0;
   private lastButtonClickIndex: number = -1;
@@ -528,6 +531,12 @@ export class Menu {
 
   close() {
     this.open = false;
+    // Allow temporary menus to restore previous state on close.
+    if (this.onCloseHook) {
+      const fn = this.onCloseHook;
+      this.onCloseHook = null;
+      fn();
+    }
   }
 
   openMenu() {
@@ -724,4 +733,70 @@ export class Menu {
       y <= this.closeButton.y + this.closeButton.height
     );
   }
+
+  /**
+   * Opens a temporary selection menu (reusable) and restores previous menu buttons on close.
+   */
+  openSelectionMenu = (config: {
+    title: string;
+    options: Array<{ label: string; onSelect: () => void }>;
+    includeCancel?: boolean;
+  }) => {
+    // Save current menu state so the normal menu returns after this selection.
+    this.buttonStack.push({
+      buttons: this.buttons,
+      selectedButton: this.selectedButton,
+    });
+
+    const restore = () => {
+      const prev = this.buttonStack.pop();
+      if (!prev) return;
+      this.buttons = prev.buttons;
+      this.selectedButton = prev.selectedButton;
+      this.positionButtons();
+    };
+    this.onCloseHook = restore;
+
+    // Build selection buttons
+    const header = new guiButton(
+      0,
+      0,
+      0,
+      0,
+      config.title,
+      () => {},
+      false,
+      this,
+    );
+    header.noFill = true;
+    header.textColor = "rgb(255, 255, 0)";
+
+    this.buttons = [header];
+
+    for (const opt of config.options) {
+      const btn = new guiButton(
+        0,
+        0,
+        0,
+        0,
+        opt.label,
+        () => {
+          opt.onSelect();
+          this.close();
+        },
+        false,
+        this,
+      );
+      this.addButton(btn);
+    }
+
+    if (config.includeCancel !== false) {
+      this.addButton(
+        new guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this),
+      );
+    }
+
+    this.positionButtons();
+    this.openMenu();
+  };
 }

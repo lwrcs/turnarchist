@@ -675,14 +675,17 @@ export class PlayerRenderer {
 
       const drawFor =
         GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
+        !this.player.menu.open &&
         !inventoryOpen &&
         !quickbarOpen &&
         !this.player.openVendingMachine
           ? "inGame"
           : GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
+              !this.player.menu.open &&
               ((inventoryOpen && inInventoryBounds) || quickbarOpen)
             ? "inventory"
             : GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
+                !this.player.menu.open &&
                 inVendingMachine
               ? "vendingMachine"
               : "none";

@@ -417,6 +417,13 @@ export class PlayerInputHandler {
 
     const inventory = player.inventory;
 
+    // Handle menu first: menu clicks should not affect inventory open/close state.
+    if (this.player.menu.open) {
+      this.player.menu.mouseInputHandler(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     // Handle inventory toggle when clicking outside or on inventory button
     const clickedOutsideInventory =
       (inventory.isOpen &&
@@ -425,13 +432,6 @@ export class PlayerInputHandler {
 
     if (clickedOutsideInventory) {
       inventory.toggleOpen();
-      Input.mouseDownHandled = true;
-      return;
-    }
-
-    // Handle menu
-    if (this.player.menu.open) {
-      this.player.menu.mouseInputHandler(x, y);
       Input.mouseDownHandled = true;
       return;
     }
@@ -513,6 +513,12 @@ export class PlayerInputHandler {
 
     const inventory = player.inventory;
 
+    // If the menu is open, it consumes clicks and should not affect inventory open/close state.
+    if (this.player.menu.open) {
+      this.player.menu.mouseInputHandler(x, y);
+      return;
+    }
+
     const clickedOutsideInventory =
       (inventory.isOpen &&
         !inventory.isPointInInventoryBounds(x, y).inBounds) ||
@@ -520,12 +526,6 @@ export class PlayerInputHandler {
 
     if (clickedOutsideInventory) {
       inventory.toggleOpen();
-    }
-
-    if (this.player.menu.open) {
-      this.player.menu.mouseInputHandler(x, y);
-      return;
-    } else {
     }
 
     // Check if click is on menu button

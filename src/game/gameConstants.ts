@@ -55,6 +55,7 @@ import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
+import { IronBar } from "../item/resource/ironBar";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -402,6 +403,13 @@ export class GameConstants {
     Gauntlets,
     ShoulderPlates,
     ChestPlate,
+    IronBar,
+    IronBar,
+    IronBar,
+    IronBar,
+    IronOre,
+    IronOre,
+    IronOre,
 
     Coal,
     Coal,
