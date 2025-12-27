@@ -489,6 +489,55 @@ export class Entity extends Drawable {
     );
   };
 
+  /**
+   * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
+   * Useful for bestiary pages without instantiating enemies.
+   */
+  static drawIdleSprite = (args: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    frames?: number;
+    frameStride?: number;
+    frameMs?: number;
+    w?: number;
+    h?: number;
+    drawW?: number;
+    drawH?: number;
+    shadeColor?: string;
+    shadeAmount?: number;
+  }) => {
+    const frames = args.frames ?? 1;
+    const stride = args.frameStride ?? 1;
+    const frameMs = args.frameMs ?? 220;
+    const w = args.w ?? 1;
+    const h = args.h ?? 1;
+    const drawW = args.drawW ?? w;
+    const drawH = args.drawH ?? h;
+    const shadeColor = args.shadeColor ?? "Black";
+    const shadeAmount = args.shadeAmount ?? 0;
+
+    const frameIndex =
+      frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
+    // Frames on the tilesheet are laid out horizontally; for multi-tile sprites,
+    // each frame consumes `w` tiles of width.
+    const tx = args.tileX + frameIndex * stride * w;
+
+    Game.drawMob(
+      tx,
+      args.tileY,
+      w,
+      h,
+      args.x,
+      args.y,
+      drawW,
+      drawH,
+      shadeColor,
+      shadeAmount,
+    );
+  };
+
   createDamageNumber = (
     damage: number,
     type: "none" | "poison" | "blood" | "heal" = "none",

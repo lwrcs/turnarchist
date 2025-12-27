@@ -80,6 +80,28 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Bestiary takes over input while open.
+    if (this.player.bestiary?.isOpen) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.bestiary.handleInput("escape");
+          return;
+        case InputEnum.LEFT:
+          this.player.bestiary.handleInput("left");
+          return;
+        case InputEnum.RIGHT:
+          this.player.bestiary.handleInput("right");
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.bestiary.handleMouseDown(x, y);
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
     if (this.player.menu.open) {
       this.player.menu.inputHandler(input);
       return;
@@ -399,6 +421,12 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (player.bestiary?.isOpen) {
+      player.bestiary.handleMouseDown(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     // Handle game not started
     if (!player.game.started) {
       if ((player.game as any).startMenuActive) {
@@ -508,6 +536,11 @@ export class PlayerInputHandler {
 
     if (player.dead) {
       this.handleDeathScreenInput(x, y);
+      return;
+    }
+
+    if (player.bestiary?.isOpen) {
+      player.bestiary.handleMouseDown(x, y);
       return;
     }
 

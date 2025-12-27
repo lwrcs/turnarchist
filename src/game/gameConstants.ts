@@ -379,7 +379,7 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Torch,
-    Sword,
+    BestiaryBook,
     GlowStick,
     GodStone,
     Spellbook,

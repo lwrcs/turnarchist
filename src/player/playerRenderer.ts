@@ -562,7 +562,6 @@ export class PlayerRenderer {
     Game.ctx.save();
     if (!this.player.dead) {
       //if (this.player.menu.open) this.player.menu.draw();
-      if (this.player.bestiary) this.player.bestiary.draw(delta);
 
       if (this.guiHeartFrame > 0) this.guiHeartFrame += delta;
       if (this.guiHeartFrame > 5) {
@@ -676,16 +675,19 @@ export class PlayerRenderer {
       const drawFor =
         GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
         !this.player.menu.open &&
+        !this.player.bestiary?.isOpen &&
         !inventoryOpen &&
         !quickbarOpen &&
         !this.player.openVendingMachine
           ? "inGame"
           : GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
               !this.player.menu.open &&
+              !this.player.bestiary?.isOpen &&
               ((inventoryOpen && inInventoryBounds) || quickbarOpen)
             ? "inventory"
             : GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
                 !this.player.menu.open &&
+                !this.player.bestiary?.isOpen &&
                 inVendingMachine
               ? "vendingMachine"
               : "none";
@@ -706,6 +708,9 @@ export class PlayerRenderer {
           drawFor,
         );
       }
+
+      // Draw bestiary last so it renders above inventory/quickbar.
+      if (this.player.bestiary) this.player.bestiary.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();
@@ -913,7 +918,8 @@ export class PlayerRenderer {
     );
     if (this.hurting) this.drawHurt(delta);
 
-    if (this.player.mapToggled === true) this.player.map.draw(delta);
+    if (this.player.mapToggled === true && !this.player.bestiary?.isOpen)
+      this.player.map.draw(delta);
     this.drawTileCursor(delta);
     this.player.setCursorIcon();
 

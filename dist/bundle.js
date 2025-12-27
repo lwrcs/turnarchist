@@ -15976,6 +15976,8 @@ const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./s
 const glowBugs_1 = __webpack_require__(/*! ../../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../../event/events */ "./src/event/events.ts");
 class GlowBugEnemy extends entity_1.Entity {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -15987,6 +15989,12 @@ class GlowBugEnemy extends entity_1.Entity {
             this.lastY = this.y;
             this.seenPlayer = true;
             this.aggro = true;
+            if (!this.hasEmittedSeenPlayer) {
+                this.hasEmittedSeenPlayer = true;
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_SEEN_PLAYER, {
+                    enemyType: this.constructor.name,
+                });
+            }
             if (!this.dead) {
                 if (this.skipNextTurns > 0) {
                     this.skipNextTurns--;
@@ -16047,6 +16055,7 @@ class GlowBugEnemy extends entity_1.Entity {
         this.hasBloom = true;
         this.bloomAlpha = 1;
         this.bloomColor = "#054B4B";
+        this.hasEmittedSeenPlayer = false;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 6, [5, 75, 75]);
         this.addLightSource(this.lightSource);
         this.drops = [new glowBugs_1.GlowBugs(this.room, this.x, this.y)]; //this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
@@ -20787,6 +20796,26 @@ class Entity extends drawable_1.Drawable {
     }
 }
 exports.Entity = Entity;
+/**
+ * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
+ * Useful for bestiary pages without instantiating enemies.
+ */
+Entity.drawIdleSprite = (args) => {
+    const frames = args.frames ?? 1;
+    const stride = args.frameStride ?? 1;
+    const frameMs = args.frameMs ?? 220;
+    const w = args.w ?? 1;
+    const h = args.h ?? 1;
+    const drawW = args.drawW ?? w;
+    const drawH = args.drawH ?? h;
+    const shadeColor = args.shadeColor ?? "Black";
+    const shadeAmount = args.shadeAmount ?? 0;
+    const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
+    // Frames on the tilesheet are laid out horizontally; for multi-tile sprites,
+    // each frame consumes `w` tiles of width.
+    const tx = args.tileX + frameIndex * stride * w;
+    game_1.Game.drawMob(tx, args.tileY, w, h, args.x, args.y, drawW, drawH, shadeColor, shadeAmount);
+};
 
 
 /***/ }),
@@ -27003,55 +27032,26 @@ exports.gs = new gameState_1.GameState();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Bestiary = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
-const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
-const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
-const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
-const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
-const energyWizard_1 = __webpack_require__(/*! ../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
-const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
-const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
-const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
-const armoredzombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
-const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
-const queenEnemy_1 = __webpack_require__(/*! ../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
-const knightEnemy_1 = __webpack_require__(/*! ../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
-const bigKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
-const fireWizard_1 = __webpack_require__(/*! ../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
-const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
-const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
-//enemy typeof to class map
-const enemyClassMap = {
-    CrabEnemy: crabEnemy_1.CrabEnemy,
-    FrogEnemy: frogEnemy_1.FrogEnemy,
-    ZombieEnemy: zombieEnemy_1.ZombieEnemy,
-    SkullEnemy: skullEnemy_1.SkullEnemy,
-    EnergyWizardEnemy: energyWizard_1.EnergyWizardEnemy,
-    ChargeEnemy: chargeEnemy_1.ChargeEnemy,
-    RookEnemy: rookEnemy_1.RookEnemy,
-    BishopEnemy: bishopEnemy_1.BishopEnemy,
-    ArmoredzombieEnemy: armoredzombieEnemy_1.ArmoredzombieEnemy,
-    BigSkullEnemy: bigSkullEnemy_1.BigSkullEnemy,
-    QueenEnemy: queenEnemy_1.QueenEnemy,
-    KnightEnemy: knightEnemy_1.KnightEnemy,
-    BigKnightEnemy: bigKnightEnemy_1.BigKnightEnemy,
-    FireWizardEnemy: fireWizard_1.FireWizardEnemy,
-    Spawner: spawner_1.Spawner,
-    OccultistEnemy: occultistEnemy_1.OccultistEnemy,
-};
+const environment_1 = __webpack_require__(/*! ../level/environment */ "./src/level/environment.ts");
+const bestiaryPersistence_1 = __webpack_require__(/*! ./bestiaryPersistence */ "./src/game/bestiaryPersistence.ts");
+const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const bestiaryEnemyRegistry_1 = __webpack_require__(/*! ./bestiaryEnemyRegistry */ "./src/game/bestiaryEnemyRegistry.ts");
+const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 class Bestiary {
     constructor(game, player) {
         this.isOpen = false;
         this.openTime = Date.now();
-        this.frame = 0;
         this.activeEntryIndex = 0;
+        // UI hitboxes (pixels)
+        this.leftArrowRect = null;
+        this.rightArrowRect = null;
+        this.closeRect = null;
         /**
          * Opens the logbook window.
          */
         this.open = () => {
-            if (this.seenEnemies.size === 0)
-                this.seenEnemies = this.game.tutorialListener.seenEnemies;
             this.isOpen = true;
             this.openTime = Date.now();
         };
@@ -27076,16 +27076,102 @@ class Bestiary {
         };
         /**
          * Adds a new entry to the logbook.
-         * @param enemy The enemy to add.
+         * @param enemyTypeName The enemy class name (e.g. "CrabEnemy")
          */
-        this.addEntry = (enemy) => {
-            const enemyClass = enemyClassMap[enemy.name];
+        this.addEntry = (enemyTypeName) => {
+            this.seenEnemyTypeNames.add(enemyTypeName);
+            this.ensureEntry(enemyTypeName);
+            (0, bestiaryPersistence_1.saveSeenEnemyTypes)(this.seenEnemyTypeNames);
+        };
+        this.ensureEntry = (enemyTypeName) => {
+            // Already exists?
+            if (this.entries.some((e) => e.typeName === enemyTypeName))
+                return;
+            const reg = bestiaryEnemyRegistry_1.BESTIARY_ENEMIES[enemyTypeName];
+            if (reg) {
+                this.entries.push({
+                    typeName: reg.typeName,
+                    displayName: reg.displayName,
+                    description: reg.description,
+                    sprites: reg.sprites.map((s) => ({
+                        label: s.label,
+                        tileX: s.tileX,
+                        tileY: s.tileY,
+                        frames: s.frames ?? 1,
+                        frameStride: s.frameStride ?? 1,
+                        frameMs: s.frameMs ?? 220,
+                        w: s.w ?? 1,
+                        h: s.h ?? 1,
+                        rumbling: s.rumbling,
+                    })),
+                });
+                return;
+            }
+            const cls = this.enemyNameToClass.get(enemyTypeName);
+            if (!cls)
+                return;
+            // WARNING: many enemies set tileX/tileY/description in their constructor.
+            // For now we rely on the prototype fields present for common enemies, falling back to defaults.
+            const proto = cls.prototype;
             this.entries.push({
-                name: enemy.name,
-                description: enemyClass.prototype.description,
-                tileX: enemyClass.prototype.tileX,
-                tileY: enemyClass.prototype.tileY,
+                typeName: enemyTypeName,
+                displayName: proto.name ?? enemyTypeName,
+                description: proto.description ?? "",
+                sprites: [
+                    {
+                        label: "Idle",
+                        tileX: proto.tileX ?? 0,
+                        tileY: proto.tileY ?? 0,
+                        frames: 1,
+                        frameStride: 1,
+                        frameMs: 220,
+                        w: 1,
+                        h: 1,
+                    },
+                ],
             });
+        };
+        this.pageLeft = () => {
+            if (this.entries.length <= 0)
+                return;
+            this.activeEntryIndex =
+                (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+        };
+        this.pageRight = () => {
+            if (this.entries.length <= 0)
+                return;
+            this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+        };
+        this.handleInput = (input) => {
+            if (!this.isOpen)
+                return;
+            if (input === "escape") {
+                this.close();
+                return;
+            }
+            if (input === "left")
+                this.pageLeft();
+            if (input === "right")
+                this.pageRight();
+        };
+        this.handleMouseDown = (x, y) => {
+            if (!this.isOpen)
+                return;
+            if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
+                this.close();
+                return;
+            }
+            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect)) {
+                this.pageLeft();
+                return;
+            }
+            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect)) {
+                this.pageRight();
+                return;
+            }
+        };
+        this.pointInRect = (x, y, r) => {
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
         };
         /**
          * Draws the logbook interface.
@@ -27095,114 +27181,545 @@ class Bestiary {
             if (!this.isOpen)
                 return;
             game_1.Game.ctx.save();
-            // Draw semi-transparent background
+            // Backdrop
             game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            // Define dimensions similar to Inventory
-            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / 100); // example scaling
-            const b = 2; // border
-            const g = -2; // gap
-            const ob = 1; // outer border
-            const width = 5 * (s + 2 * b + g) - g; // assuming 5 columns
-            const height = 4 * (s + 2 * b + g) - g; // assuming 4 rows
-            const startX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
-            const startY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
-            // Draw main logbook background
-            game_1.Game.ctx.fillStyle = "white";
-            game_1.Game.ctx.fillRect(startX, startY, width + 2 * ob, height + 2 * ob);
-            // Draw logbook entries
-            game_1.Game.ctx.fillStyle = "black";
-            const padding = 10;
-            if (this.entries.length === 0) {
-                game_1.Game.fillText("No enemies seen yet", startX + padding, startY + padding);
+            // Book rect
+            const margin = 16;
+            const bookW = Math.min(gameConstants_1.GameConstants.WIDTH - margin * 2, 420);
+            const bookH = Math.min(gameConstants_1.GameConstants.HEIGHT - margin * 2, 260);
+            const bookX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * bookW);
+            const bookY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * bookH);
+            // Cover/border
+            game_1.Game.ctx.fillStyle = "rgba(235, 225, 200, 1)";
+            game_1.Game.ctx.fillRect(bookX, bookY, bookW, bookH);
+            game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+            game_1.Game.ctx.lineWidth = 2;
+            game_1.Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
+            // Spine
+            const spineX = Math.round(bookX + bookW / 2);
+            game_1.Game.ctx.strokeStyle = "rgba(160, 140, 120, 1)";
+            game_1.Game.ctx.lineWidth = 2;
+            game_1.Game.ctx.beginPath();
+            game_1.Game.ctx.moveTo(spineX, bookY + 8);
+            game_1.Game.ctx.lineTo(spineX, bookY + bookH - 8);
+            game_1.Game.ctx.stroke();
+            // Page panels
+            const pad = 12;
+            const pageW = Math.floor(bookW / 2) - pad * 2;
+            const pageH = bookH - pad * 2 - 22; // reserve bottom row for arrows
+            const leftX = bookX + pad;
+            const rightX = spineX + pad;
+            const pageY = bookY + pad;
+            game_1.Game.ctx.fillStyle = "rgba(245, 238, 220, 1)";
+            game_1.Game.ctx.fillRect(leftX, pageY, pageW, pageH);
+            game_1.Game.ctx.fillRect(rightX, pageY, pageW, pageH);
+            game_1.Game.ctx.strokeStyle = "rgba(200, 185, 160, 1)";
+            game_1.Game.ctx.lineWidth = 1;
+            game_1.Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
+            game_1.Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
+            // Close button (top-right corner of book)
+            const closeSize = 18;
+            this.closeRect = {
+                x: bookX + bookW - closeSize - 6,
+                y: bookY + 6,
+                w: closeSize,
+                h: closeSize,
+            };
+            game_1.Game.ctx.fillStyle = "rgba(220, 60, 60, 1)";
+            game_1.Game.ctx.fillRect(this.closeRect.x, this.closeRect.y, this.closeRect.w, this.closeRect.h);
+            game_1.Game.ctx.fillStyle = "rgba(255,255,255,1)";
+            game_1.Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
+            const entry = this.entries[this.activeEntryIndex] ?? null;
+            if (!entry) {
+                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.fillText("No entries", leftX + 6, pageY + 6);
             }
             else {
-                this.entries.forEach((entry, index) => {
-                    game_1.Game.fillText(entry.name, startX + padding, startY + padding + index * 20);
-                });
-                this.drawEnemySprite(this.entries[this.activeEntryIndex].tileX, this.entries[this.activeEntryIndex].tileY, delta);
+                // Left page: name + description
+                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.fillText(entry.displayName, leftX + 6, pageY + 6);
+                this.drawWrappedText(entry.description || "???", leftX + 6, pageY + 20, pageW - 12);
+                // Right page: enemy sprite (idle)
+                game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+                game_1.Game.ctx.lineWidth = 1;
+                const rightInnerX = rightX + 10;
+                const rightInnerY = pageY + 10;
+                const rightInnerW = pageW - 20;
+                const rightInnerH = pageH - 20;
+                game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+                const sprites = entry.sprites ?? [];
+                const count = sprites.length;
+                if (count === 0) {
+                    game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                    game_1.Game.fillText("No sprite", rightInnerX + 6, rightInnerY + 6);
+                }
+                else {
+                    const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
+                    const rows = Math.ceil(count / cols);
+                    const cellW = rightInnerW / cols;
+                    const cellH = rightInnerH / rows;
+                    const labelH = game_1.Game.letter_height + 4;
+                    const cellPad = 6;
+                    for (let i = 0; i < count; i++) {
+                        const s = sprites[i];
+                        const col = i % cols;
+                        const row = Math.floor(i / cols);
+                        const cellX = rightInnerX + col * cellW;
+                        const cellY = rightInnerY + row * cellH;
+                        // Label
+                        game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                        const label = s.label ?? "";
+                        const lw = game_1.Game.measureText(label).width;
+                        game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+                        // Sprite draw area (pixels)
+                        const areaX = cellX + cellPad;
+                        const areaY = cellY + labelH;
+                        const areaWpx = cellW - cellPad * 2;
+                        const areaHpx = cellH - labelH - cellPad;
+                        // Do not scale sprites down to fit; allow overlap if they exceed their cells.
+                        const drawW = s.w;
+                        const drawH = s.h;
+                        const centerX = cellX + cellW / 2;
+                        const centerY = areaY + areaHpx / 2;
+                        const drawX = centerX / gameConstants_1.GameConstants.TILESIZE - drawW / 2;
+                        const drawY = centerY / gameConstants_1.GameConstants.TILESIZE - drawH / 2;
+                        // Match crab-style rumble (2-frame: base vs +1px) when requested.
+                        // Crab uses `offset = isOddFrame ? 0.0325 : 0` in tile-units.
+                        const rumbleTiles = s.rumbling && Math.floor(Date.now() / 170) % 2 === 1 ? 0.0325 : 0;
+                        entity_1.Entity.drawIdleSprite({
+                            tileX: s.tileX,
+                            tileY: s.tileY,
+                            x: drawX + rumbleTiles,
+                            y: drawY,
+                            w: s.w,
+                            h: s.h,
+                            drawW,
+                            drawH,
+                            frames: s.frames,
+                            frameStride: s.frameStride,
+                            frameMs: s.frameMs,
+                            shadeColor: "Black",
+                            shadeAmount: 0,
+                        });
+                    }
+                }
             }
-            // Draw logbook button
-            this.drawLogbookButton(delta);
+            // Page turn arrows
+            const arrowY = bookY + bookH - 20;
+            const arrowW = 28;
+            const arrowH = 14;
+            if (this.entries.length > 1) {
+                this.leftArrowRect = {
+                    x: spineX - arrowW - 18,
+                    y: arrowY,
+                    w: arrowW,
+                    h: arrowH,
+                };
+                this.rightArrowRect = {
+                    x: spineX + 18,
+                    y: arrowY,
+                    w: arrowW,
+                    h: arrowH,
+                };
+                this.drawArrow(this.leftArrowRect, "left");
+                this.drawArrow(this.rightArrowRect, "right");
+            }
+            else {
+                this.leftArrowRect = null;
+                this.rightArrowRect = null;
+            }
+            // Page indicator
+            if (this.entries.length > 0) {
+                const indicator = `${this.activeEntryIndex + 1}/${this.entries.length}`;
+                const iw = game_1.Game.measureText(indicator).width;
+                game_1.Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+                game_1.Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
+            }
             game_1.Game.ctx.restore();
         };
-        this.drawEnemySprite = (tileX, tileY, delta) => {
-            this.frame += Math.round(0.1 * delta * 10) / 10;
-            if (this.frame >= 4)
-                this.frame = 0;
-            game_1.Game.drawMob(tileX, tileY, 1, 1, 1, 1, 1, 1, "Black", 0);
-        };
-        /**
-         * Draws the logbook button on the screen.
-         * @param delta The time delta since the last frame.
-         */
-        this.drawLogbookButton = (delta) => {
+        this.drawArrow = (rect, dir) => {
             game_1.Game.ctx.save();
-            this.buttonX = levelConstants_1.LevelConstants.SCREEN_W - 2;
-            this.buttonY = levelConstants_1.LevelConstants.SCREEN_H - 2.25;
-            game_1.Game.drawFX(0, 0, 2, 2, this.buttonX, this.buttonY, 2, 2);
+            game_1.Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+            game_1.Game.ctx.beginPath();
+            if (dir === "left") {
+                game_1.Game.ctx.moveTo(rect.x + rect.w, rect.y);
+                game_1.Game.ctx.lineTo(rect.x, rect.y + rect.h / 2);
+                game_1.Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+            }
+            else {
+                game_1.Game.ctx.moveTo(rect.x, rect.y);
+                game_1.Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
+                game_1.Game.ctx.lineTo(rect.x, rect.y + rect.h);
+            }
+            game_1.Game.ctx.closePath();
+            game_1.Game.ctx.fill();
             game_1.Game.ctx.restore();
         };
-        /**
-         * Handles mouse down events.
-         * @param x The x-coordinate of the mouse.
-         * @param y The y-coordinate of the mouse.
-         * @param button The mouse button pressed.
-         */
-        this.handleMouseDown = (x, y, button) => {
-            if (button !== 0)
-                return; // Only respond to left click
-            if (this.isPointInLogbookButton(x, y)) {
-                this.toggleOpen();
+        this.drawWrappedText = (text, x, y, maxWidth) => {
+            const words = text.split(/\s+/);
+            let line = "";
+            let yy = y;
+            const lineH = game_1.Game.letter_height + 4;
+            for (const w of words) {
+                const test = line.length === 0 ? w : `${line} ${w}`;
+                if (game_1.Game.measureText(test).width > maxWidth && line.length > 0) {
+                    game_1.Game.fillText(line, x, yy);
+                    yy += lineH;
+                    line = w;
+                }
+                else {
+                    line = test;
+                }
             }
-        };
-        /**
-         * Handles mouse up events.
-         * @param x The x-coordinate of the mouse.
-         * @param y The y-coordinate of the mouse.
-         * @param button The mouse button released.
-         */
-        this.handleMouseUp = (x, y, button) => {
-            // Implement if needed
-        };
-        /**
-         * Handles hold detection.
-         */
-        this.onHoldDetected = () => {
-            // Implement if needed
-        };
-        /**
-         * Checks if a point is within the logbook button bounds.
-         * @param x The x-coordinate to check.
-         * @param y The y-coordinate to check.
-         * @returns True if the point is within the button bounds, else false.
-         */
-        this.isPointInLogbookButton = (x, y) => {
-            const tX = x / gameConstants_1.GameConstants.TILESIZE;
-            const tY = y / gameConstants_1.GameConstants.TILESIZE;
-            return (tX >= this.buttonX &&
-                tX <= this.buttonX + 2 &&
-                tY >= this.buttonY &&
-                tY <= this.buttonY + 2);
-        };
-        /**
-         * Updates the logbook state each game tick.
-         */
-        this.tick = () => {
-            if (this.isOpen) {
-                // Update logbook-related logic here
-            }
+            if (line.length > 0)
+                game_1.Game.fillText(line, x, yy);
         };
         this.game = game;
         this.player = player;
         this.entries = [];
         this.activeEntryIndex = 0;
-        this.buttonX = Math.round((Math.round(gameConstants_1.GameConstants.WIDTH / 2) + 3) / gameConstants_1.GameConstants.TILESIZE);
-        this.buttonY = Math.round(10);
-        this.seenEnemies = new Set();
+        // Build registry from environment enemy mapping.
+        this.enemyNameToClass = new Map();
+        for (const [enemyClass] of environment_1.enemyClassToId.entries()) {
+            this.enemyNameToClass.set(enemyClass.name, enemyClass);
+        }
+        this.seenEnemyTypeNames = new Set((0, bestiaryPersistence_1.loadSeenEnemyTypes)());
+        // Always include crab as the first entry.
+        this.ensureEntry("CrabEnemy");
+        // In developer mode, show all enemies regardless of "seen" status.
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+            for (const typeName of Object.keys(bestiaryEnemyRegistry_1.BESTIARY_ENEMIES)) {
+                this.ensureEntry(typeName);
+            }
+        }
+        // Load persisted entries.
+        for (const enemyTypeName of this.seenEnemyTypeNames) {
+            this.ensureEntry(enemyTypeName);
+        }
+        // Track newly encountered enemies for persistence/bestiary population.
+        eventBus_1.globalEventBus.on(events_1.EVENTS.ENEMY_SEEN_PLAYER, (data) => {
+            const enemyTypeName = data?.enemyType;
+            if (typeof enemyTypeName !== "string")
+                return;
+            this.addEntry(enemyTypeName);
+        });
     }
 }
 exports.Bestiary = Bestiary;
+
+
+/***/ }),
+
+/***/ "./src/game/bestiaryEnemyRegistry.ts":
+/*!*******************************************!*\
+  !*** ./src/game/bestiaryEnemyRegistry.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BESTIARY_ENEMIES = void 0;
+// NOTE: These are intentionally hand-authored so every enemy has a meaningful description and correct sprite tiles.
+// If you add a new enemy, add it here so the bestiary remains complete and high-quality.
+exports.BESTIARY_ENEMIES = {
+    CrabEnemy: {
+        typeName: "CrabEnemy",
+        displayName: "Crab",
+        description: "A skittering crustacean that advances every other turn. Weak, but will still chip you down if you ignore it.",
+        sprites: [
+            { label: "Idle", tileX: 8, tileY: 4, w: 1, h: 1 },
+            { label: "Armed", tileX: 9, tileY: 4, w: 1, h: 1, rumbling: true },
+        ],
+    },
+    FrogEnemy: {
+        typeName: "FrogEnemy",
+        displayName: "Frog",
+        description: "A quick jumper that can threaten both orthogonal and diagonal lines. Watch for sudden leaps.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 1,
+                tileY: 16,
+                w: 1,
+                h: 2,
+                frames: 4,
+                frameMs: 130,
+            },
+            { label: "Armed", tileX: 3, tileY: 16, w: 1, h: 2, rumbling: true },
+        ],
+    },
+    ZombieEnemy: {
+        typeName: "ZombieEnemy",
+        displayName: "Zombie",
+        description: "A shambling corpse with a forward-only attack pattern. Manage spacing and facing.",
+        sprites: [{ tileX: 17, tileY: 8, w: 1, h: 2, frames: 4 }],
+    },
+    SkullEnemy: {
+        typeName: "SkullEnemy",
+        displayName: "Skeleton",
+        description: "A brittle undead that hits forward. More dangerous than it looks if you let it close.",
+        sprites: [
+            { label: "2 HP", tileX: 5, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "1 HP", tileX: 3, tileY: 0, w: 1, h: 2 },
+        ],
+    },
+    EnergyWizardEnemy: {
+        typeName: "EnergyWizardEnemy",
+        displayName: "Wizard Bomber",
+        description: "A volatile caster that attacks from range. Expect sudden bursts of damage.",
+        sprites: [{ label: "Idle", tileX: 6, tileY: 0, w: 1, h: 2 }],
+    },
+    FireWizardEnemy: {
+        typeName: "FireWizardEnemy",
+        displayName: "Fire Wizard",
+        description: "A ranged caster that pressures you with fire. Don’t stand still in open lanes.",
+        sprites: [{ label: "Idle", tileX: 35, tileY: 8, w: 1, h: 2 }],
+    },
+    EarthWizardEnemy: {
+        typeName: "EarthWizardEnemy",
+        displayName: "Earth Wizard",
+        description: "A ranged caster that punishes predictable movement. Keep your approach flexible.",
+        // Note: EarthWizard constructor sets tileX=35,tileY=8 (even though static differs).
+        sprites: [{ label: "Idle", tileX: 35, tileY: 8, w: 1, h: 2 }],
+    },
+    ChargeEnemy: {
+        typeName: "ChargeEnemy",
+        displayName: "Charge Knight",
+        description: "Builds up and then charges in a straight line. Avoid being caught in corridors.",
+        sprites: [
+            { label: "Idle", tileX: 13, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "Armed", tileX: 13, tileY: 8, w: 1, h: 2, rumbling: true },
+        ],
+    },
+    RookEnemy: {
+        typeName: "RookEnemy",
+        displayName: "Rook",
+        description: "A heavy chess-piece enemy that attacks orthogonally. Respect its straight-line threats.",
+        sprites: [{ label: "Idle", tileX: 51, tileY: 8, w: 1, h: 2, frames: 4 }],
+    },
+    BishopEnemy: {
+        typeName: "BishopEnemy",
+        displayName: "Bishop",
+        description: "A chess-piece enemy that attacks diagonally. It will punish diagonal approaches.",
+        sprites: [
+            { label: "2 HP", tileX: 31, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "1 HP", tileX: 31, tileY: 10, w: 1, h: 2, frames: 4 },
+        ],
+    },
+    ArmoredzombieEnemy: {
+        typeName: "ArmoredzombieEnemy",
+        displayName: "Armored Zombie",
+        description: "A tougher zombie that can soak hits. Don’t waste turns trading blows in bad positions.",
+        sprites: [
+            { label: "2 HP", tileX: 27, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "1 HP", tileX: 17, tileY: 8, w: 1, h: 2, frames: 4 },
+        ],
+    },
+    BigSkullEnemy: {
+        typeName: "BigSkullEnemy",
+        displayName: "Giant Skeleton",
+        description: "A massive undead that occupies multiple tiles. Its body blocks space and its hits hurt.",
+        // BigSkull uses 2x2 sprite at (33,12)
+        sprites: [
+            { label: "4 HP", tileX: 33, tileY: 12, w: 2, h: 3 },
+            { label: "1 HP", tileX: 35, tileY: 12, w: 2, h: 3 },
+        ],
+    },
+    QueenEnemy: {
+        typeName: "QueenEnemy",
+        displayName: "Queen",
+        description: "A regal chess-piece enemy that can threaten many angles. Be careful approaching it.",
+        // Queen constructor sets tileX=23,tileY=10
+        sprites: [
+            { label: "2 HP", tileX: 23, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "1 HP", tileX: 23, tileY: 10, w: 1, h: 2, frames: 4 },
+        ],
+    },
+    KnightEnemy: {
+        typeName: "KnightEnemy",
+        displayName: "Burrow Knight",
+        description: "An aggressive melee enemy that can set up nasty engages. Don’t get flanked.",
+        sprites: [
+            { label: "Idle", tileX: 9, tileY: 8, w: 1, h: 2 },
+            {
+                label: "Armed",
+                tileX: 9,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                frames: 4,
+                rumbling: true,
+            },
+        ],
+    },
+    BigKnightEnemy: {
+        typeName: "BigKnightEnemy",
+        displayName: "Giant Knight",
+        description: "A towering knight that dominates space. Plan your pathing before it pins you.",
+        sprites: [
+            { label: "Idle", tileX: 29, tileY: 5, w: 2, h: 3 },
+            { label: "Armed", tileX: 29, tileY: 1, w: 2, h: 3, rumbling: true },
+        ],
+    },
+    ArmoredSkullEnemy: {
+        typeName: "ArmoredSkullEnemy",
+        displayName: "Armored Skeleton",
+        description: "A reinforced skeleton that can take more punishment. Treat it as a real frontline threat.",
+        // ArmoredSkull uses (17,16) in constructor
+        sprites: [
+            { label: "3 HP", tileX: 27, tileY: 16, w: 1, h: 2, frames: 4 },
+            { label: "2 HP", tileX: 5, tileY: 8, w: 1, h: 2, frames: 4 },
+            { label: "1 HP", tileX: 3, tileY: 0, w: 1, h: 2 },
+        ],
+    },
+    MummyEnemy: {
+        typeName: "MummyEnemy",
+        displayName: "Mummy",
+        description: "A cursed undead with unusual resistances. Don’t rely on status effects alone.",
+        sprites: [{ label: "", tileX: 17, tileY: 16, w: 1, h: 2, frames: 4 }],
+    },
+    SpiderEnemy: {
+        typeName: "SpiderEnemy",
+        displayName: "Spider",
+        description: "A skittish ambusher that can hide and reposition. Track its reveals and don’t overextend.",
+        sprites: [
+            { label: "Idle", tileX: 11, tileY: 4, w: 2, h: 2 },
+            { label: "Armed", tileX: 11, tileY: 4, w: 2, h: 2, rumbling: true },
+        ],
+    },
+    PawnEnemy: {
+        typeName: "PawnEnemy",
+        displayName: "Pawn",
+        description: "A chess-piece enemy that threatens diagonals. Don’t step into its diagonal lanes.",
+        sprites: [{ label: "Idle", tileX: 23, tileY: 12, w: 1, h: 2, frames: 4 }],
+    },
+    BigFrogEnemy: {
+        typeName: "BigFrogEnemy",
+        displayName: "Big Frog",
+        description: "A huge leaper that can crush space. Expect wide coverage and heavy hits.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 37,
+                tileY: 24,
+                w: 2,
+                h: 3,
+                frames: 4,
+                frameMs: 130,
+            },
+            { label: "Armed", tileX: 41, tileY: 24, w: 2, h: 3, rumbling: true },
+        ],
+    },
+    BeetleEnemy: {
+        typeName: "BeetleEnemy",
+        displayName: "Beetle",
+        description: "A tough little bug that commits to lanes. Watch its approach and don’t get cornered.",
+        sprites: [
+            { label: "Idle", tileX: 13, tileY: 4, w: 2, h: 2 },
+            { label: "Armed", tileX: 13, tileY: 4, w: 2, h: 2, rumbling: true },
+        ],
+    },
+    KingEnemy: {
+        typeName: "KingEnemy",
+        displayName: "King",
+        description: "A powerful chess-piece enemy. It’s dangerous up close and hard to bully.",
+        sprites: [
+            { label: "2 HP", tileX: 51, tileY: 12, w: 1, h: 3, frames: 4 },
+            { label: "1 HP", tileX: 51, tileY: 15, w: 1, h: 3, frames: 4 },
+        ],
+    },
+    BoltcasterEnemy: {
+        typeName: "BoltcasterEnemy",
+        displayName: "Boltcaster",
+        description: "A ranged attacker that looks for clear lines. Break line-of-sight and avoid straight corridors.",
+        sprites: [{ label: "Idle", tileX: 43, tileY: 8, w: 1, h: 2 }],
+    },
+    BigZombieEnemy: {
+        typeName: "BigZombieEnemy",
+        displayName: "Big Zombie",
+        description: "A huge undead that takes up space and hits hard. Treat its footprint like terrain.",
+        sprites: [{ label: "Idle", tileX: 31, tileY: 12, w: 2, h: 3 }],
+    },
+    OccultistEnemy: {
+        typeName: "OccultistEnemy",
+        displayName: "Occultist",
+        description: "A support caster that shields nearby enemies. If left alive, fights get much longer.",
+        sprites: [{ label: "Idle", tileX: 55, tileY: 8, w: 1, h: 2, frames: 4 }],
+    },
+    ExalterEnemy: {
+        typeName: "ExalterEnemy",
+        displayName: "Exalter",
+        description: "A support caster that buffs nearby enemies. The longer it lives, the more lethal the room becomes.",
+        sprites: [{ label: "Idle", tileX: 59, tileY: 8, w: 1, h: 2, frames: 4 }],
+    },
+    WardenEnemy: {
+        typeName: "WardenEnemy",
+        displayName: "Warden",
+        description: "A dangerous boss that commands crushers with chained beams. Respect its tempo and clear space.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 43,
+                tileY: 10,
+                w: 2,
+                h: 2,
+                frames: 4,
+                // Frame stepping is `frameStride * w` in drawIdleSprite.
+                frameStride: 1,
+            },
+        ],
+    },
+    Spawner: {
+        typeName: "Spawner",
+        displayName: "Reaper",
+        description: "A reaper idol that spawns enemies over time. If you don't destroy it, the room will snowball.",
+        sprites: [{ label: "Idle", tileX: 6, tileY: 4, w: 1, h: 2 }],
+    },
+    GlowBugEnemy: {
+        typeName: "GlowBugEnemy",
+        displayName: "Glowbugs",
+        description: "A drifting light swarm. Mostly harmless, but it can clutter rooms and affect visibility.",
+        sprites: [{ label: "Idle", tileX: 8, tileY: 0, w: 1, h: 1, frames: 4 }],
+    },
+};
+
+
+/***/ }),
+
+/***/ "./src/game/bestiaryPersistence.ts":
+/*!*****************************************!*\
+  !*** ./src/game/bestiaryPersistence.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.saveSeenEnemyTypes = exports.loadSeenEnemyTypes = void 0;
+const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
+const COOKIE_PREFIX = "bestiary_seen_enemies_v1";
+const loadSeenEnemyTypes = () => {
+    const raw = (0, cookies_1.getCookieChunks)(COOKIE_PREFIX);
+    if (!raw)
+        return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed))
+            return [];
+        return parsed.filter((v) => typeof v === "string");
+    }
+    catch {
+        return [];
+    }
+};
+exports.loadSeenEnemyTypes = loadSeenEnemyTypes;
+const saveSeenEnemyTypes = (enemyTypes) => {
+    const uniq = Array.from(new Set(enemyTypes)).sort();
+    (0, cookies_1.setCookieChunks)(COOKIE_PREFIX, JSON.stringify(uniq), 180);
+};
+exports.saveSeenEnemyTypes = saveSeenEnemyTypes;
 
 
 /***/ }),
@@ -27262,12 +27779,12 @@ const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weap
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
+const bestiaryBook_1 = __webpack_require__(/*! ../item/bestiaryBook */ "./src/item/bestiaryBook.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
-const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
@@ -27546,7 +28063,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
-    sword_1.Sword,
+    bestiaryBook_1.BestiaryBook,
     glowStick_1.GlowStick,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
@@ -34827,8 +35344,8 @@ class Inventory {
                 if (i !== null)
                     i.tickInInventory();
             });
-            // If the menu is open, inventory should not process drag/hold input.
-            if (this.player.menu.open)
+            // If an overlay UI is open, inventory should not process drag/hold input.
+            if (this.player.menu.open || this.player.bestiary?.isOpen)
                 return;
             // Check for drag initiation
             this.checkForDragStart();
@@ -35399,7 +35916,7 @@ class Inventory {
             return { x, y, w, h };
         };
         this.handleMouseDown = (x, y, button) => {
-            if (this.player.menu.open)
+            if (this.player.menu.open || this.player.bestiary?.isOpen)
                 return;
             // Ignore if not left click
             if (button !== 0)
@@ -35445,7 +35962,7 @@ class Inventory {
             }
         };
         this.handleMouseUp = (x, y, button) => {
-            if (this.player.menu.open)
+            if (this.player.menu.open || this.player.bestiary?.isOpen)
                 return;
             // Ignore if not left click
             if (button !== 0)
@@ -35753,7 +36270,8 @@ class BestiaryBook extends usable_1.Usable {
             }
             player.bestiary.toggleOpen();
         };
-        this.tileX = 8;
+        // Use the spellbook sprite for now.
+        this.tileX = 25;
         this.tileY = 0;
         this.offsetY = -0.3;
         this.name = BestiaryBook.itemName;
@@ -47075,6 +47593,8 @@ class Player extends drawable_1.Drawable {
         this.bubbleSpawnInterval = 7;
         this.bubbleBreathTimer = 0;
         this.bubbleBreathPeriod = 240;
+        // Tracked by TutorialListener / Bestiary now; kept here previously but unused.
+        // TODO: remove entirely once no callers depend on it.
         this.seenEnemies = new Set();
         this.bestiary = null;
         this.getRoom = () => {
@@ -48354,6 +48874,27 @@ class PlayerInputHandler {
             input !== input_1.InputEnum.MOUSE_MOVE) {
             return;
         }
+        // Bestiary takes over input while open.
+        if (this.player.bestiary?.isOpen) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.bestiary.handleInput("escape");
+                    return;
+                case input_1.InputEnum.LEFT:
+                    this.player.bestiary.handleInput("left");
+                    return;
+                case input_1.InputEnum.RIGHT:
+                    this.player.bestiary.handleInput("right");
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.bestiary.handleMouseDown(x, y);
+                    return;
+                }
+                default:
+                    return;
+            }
+        }
         if (this.player.menu.open) {
             this.player.menu.inputHandler(input);
             return;
@@ -48615,6 +49156,11 @@ class PlayerInputHandler {
             input_1.Input.mouseDownHandled = true;
             return;
         }
+        if (player.bestiary?.isOpen) {
+            player.bestiary.handleMouseDown(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // Handle game not started
         if (!player.game.started) {
             if (player.game.startMenuActive) {
@@ -48704,6 +49250,10 @@ class PlayerInputHandler {
         this.setMostRecentInput("mouse");
         if (player.dead) {
             this.handleDeathScreenInput(x, y);
+            return;
+        }
+        if (player.bestiary?.isOpen) {
+            player.bestiary.handleMouseDown(x, y);
             return;
         }
         const inventory = player.inventory;
@@ -49505,8 +50055,6 @@ class PlayerRenderer {
             game_1.Game.ctx.save();
             if (!this.player.dead) {
                 //if (this.player.menu.open) this.player.menu.draw();
-                if (this.player.bestiary)
-                    this.player.bestiary.draw(delta);
                 if (this.guiHeartFrame > 0)
                     this.guiHeartFrame += delta;
                 if (this.guiHeartFrame > 5) {
@@ -49573,16 +50121,19 @@ class PlayerRenderer {
                 const inInventoryBounds = this.player.inventory.isPointInInventoryBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
                 const drawFor = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
                     !this.player.menu.open &&
+                    !this.player.bestiary?.isOpen &&
                     !inventoryOpen &&
                     !quickbarOpen &&
                     !this.player.openVendingMachine
                     ? "inGame"
                     : gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
                         !this.player.menu.open &&
+                        !this.player.bestiary?.isOpen &&
                         ((inventoryOpen && inInventoryBounds) || quickbarOpen)
                         ? "inventory"
                         : gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
                             !this.player.menu.open &&
+                            !this.player.bestiary?.isOpen &&
                             inVendingMachine
                             ? "vendingMachine"
                             : "none";
@@ -49591,6 +50142,9 @@ class PlayerRenderer {
                         ? this.player.getRoom()
                         : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, drawFor);
                 }
+                // Draw bestiary last so it renders above inventory/quickbar.
+                if (this.player.bestiary)
+                    this.player.bestiary.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -49746,7 +50300,7 @@ class PlayerRenderer {
             postProcess_1.PostProcessor.draw(delta, this.player?.getRoom()?.underwater ?? false, cameraOrigin);
             if (this.hurting)
                 this.drawHurt(delta);
-            if (this.player.mapToggled === true)
+            if (this.player.mapToggled === true && !this.player.bestiary?.isOpen)
                 this.player.map.draw(delta);
             this.drawTileCursor(delta);
             this.player.setCursorIcon();

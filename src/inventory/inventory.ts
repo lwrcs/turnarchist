@@ -626,8 +626,8 @@ export class Inventory {
       if (i !== null) i.tickInInventory();
     });
 
-    // If the menu is open, inventory should not process drag/hold input.
-    if (this.player.menu.open) return;
+    // If an overlay UI is open, inventory should not process drag/hold input.
+    if (this.player.menu.open || this.player.bestiary?.isOpen) return;
 
     // Check for drag initiation
     this.checkForDragStart();
@@ -1400,7 +1400,7 @@ export class Inventory {
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {
-    if (this.player.menu.open) return;
+    if (this.player.menu.open || this.player.bestiary?.isOpen) return;
 
     // Ignore if not left click
     if (button !== 0) return;
@@ -1450,7 +1450,7 @@ export class Inventory {
   };
 
   handleMouseUp = (x: number, y: number, button: number) => {
-    if (this.player.menu.open) return;
+    if (this.player.menu.open || this.player.bestiary?.isOpen) return;
 
     // Ignore if not left click
     if (button !== 0) return;

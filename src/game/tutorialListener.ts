@@ -1,16 +1,12 @@
 import { globalEventBus } from "../event/eventBus";
-import { Enemy } from "../entity/enemy/enemy";
-import { Room, RoomType } from "../room/room";
 import { Game } from "../game";
-import { DownLadder } from "../tile/downLadder";
-import { Door, DoorType } from "../tile/door";
 import { Player } from "../player/player";
-import { Bestiary } from "./bestiary";
 
 export class TutorialListener {
-  private _seenEnemies: Set<typeof Enemy> = new Set();
-  private _seenEnemyClasses: Set<Enemy> = new Set();
-  private pendingNewEnemies: Set<typeof Enemy> = new Set();
+  // EnemySeenPlayer currently emits `enemyType` as a string (constructor.name).
+  // Track by type-name so this stays consistent and serializable.
+  private _seenEnemyTypes: Set<string> = new Set();
+  private pendingNewEnemyTypes: Set<string> = new Set();
   private tutorialCreationTimeout: NodeJS.Timeout | null = null;
   private game: Game;
   private player: Player;
@@ -22,11 +18,11 @@ export class TutorialListener {
     this.player = this.game.player;
   }
 
-  get seenEnemies(): Set<typeof Enemy> {
-    if (this._seenEnemies === undefined) {
-      this._seenEnemies = new Set();
+  get seenEnemyTypes(): Set<string> {
+    if (this._seenEnemyTypes === undefined) {
+      this._seenEnemyTypes = new Set();
     }
-    return this._seenEnemies;
+    return this._seenEnemyTypes;
   }
 
   private setupEventListeners(): void {
@@ -35,32 +31,31 @@ export class TutorialListener {
   }
 
   private handleEnemySeen(data: {
-    enemyType: typeof Enemy;
+    enemyType: string;
     enemyName: string;
   }): void {
-    if (!this.hasSeenEnemy(data.enemyType)) {
+    if (!this.hasSeenEnemyType(data.enemyType)) {
       this.game.pushMessage(`New enemy encountered: ${data.enemyName}`);
-      this.addSeenEnemy(data.enemyType);
-      this.pendingNewEnemies.add(data.enemyType);
+      this.addSeenEnemyType(data.enemyType);
+      this.pendingNewEnemyTypes.add(data.enemyType);
       this.scheduleTutorialCreation();
-
+      // Bestiary handles persistence + entry creation now; keep this for immediate session UI.
       this.player.bestiary.addEntry(data.enemyType);
-      console.log(this.player.bestiary.entries);
     }
   }
 
   private scheduleTutorialCreation(): void {
     if (this.tutorialCreationTimeout === null) {
       this.tutorialCreationTimeout = setTimeout(() => {
-        this.createTutorialRoom(Array.from(this.pendingNewEnemies));
+        this.createTutorialRoom(Array.from(this.pendingNewEnemyTypes));
         //this.game.pushMessage("Defeat the enemies guarding the exits.");
-        this.pendingNewEnemies.clear();
+        this.pendingNewEnemyTypes.clear();
         this.tutorialCreationTimeout = null;
       }, 100); // Wait 100ms to collect all new enemies
     }
   }
 
-  private createTutorialRoom(enemyTypes: Array<typeof Enemy>) {
+  private createTutorialRoom(enemyTypes: Array<string>) {
     /*
     this.game.tutorialActive = true;
     this.game.room.doors.forEach((door: Door) => {
@@ -70,23 +65,19 @@ export class TutorialListener {
   }
 
   // Method to check if an enemy has been seen before
-  hasSeenEnemy(enemyType: typeof Enemy): boolean {
-    //console.log(`Checking if enemy has been seen: ${enemyType}`);
-    return this._seenEnemies.has(enemyType);
+  hasSeenEnemyType(enemyType: string): boolean {
+    return this._seenEnemyTypes.has(enemyType);
   }
 
   // Method to manually add an enemy to the seen list (useful for testing or manual control)
-  addSeenEnemy(enemyType: typeof Enemy): void {
-    //console.log(`Adding enemy to seen list: ${enemyType}`);
-    this._seenEnemies.add(enemyType);
-    this._seenEnemyClasses.add(enemyType.prototype);
+  addSeenEnemyType(enemyType: string): void {
+    this._seenEnemyTypes.add(enemyType);
   }
 
   // Method to reset the seen enemies list (useful for testing or game resets)
   resetSeenEnemies(): void {
     //console.log("Resetting seen enemies list");
-    this._seenEnemies.clear();
-    this._seenEnemyClasses.clear();
+    this._seenEnemyTypes.clear();
   }
 
   // Method to clean up event listeners when needed

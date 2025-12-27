@@ -10,6 +10,8 @@ import { Utils } from "../../utility/utils";
 import { GlowBugs } from "../../item/light/glowBugs";
 import { LightSource } from "../../lighting/lightSource";
 import { Entity } from "../entity";
+import { globalEventBus } from "../../event/eventBus";
+import { EVENTS } from "../../event/events";
 
 export class GlowBugEnemy extends Entity {
   ticks: number;
@@ -18,6 +20,7 @@ export class GlowBugEnemy extends Entity {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  private hasEmittedSeenPlayer: boolean;
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
@@ -45,6 +48,7 @@ export class GlowBugEnemy extends Entity {
     this.hasBloom = true;
     this.bloomAlpha = 1;
     this.bloomColor = "#054B4B";
+    this.hasEmittedSeenPlayer = false;
 
     this.lightSource = new LightSource(
       this.x + 0.5,
@@ -72,6 +76,13 @@ export class GlowBugEnemy extends Entity {
     this.lastY = this.y;
     this.seenPlayer = true;
     this.aggro = true;
+
+    if (!this.hasEmittedSeenPlayer) {
+      this.hasEmittedSeenPlayer = true;
+      globalEventBus.emit(EVENTS.ENEMY_SEEN_PLAYER, {
+        enemyType: this.constructor.name,
+      });
+    }
 
     if (!this.dead) {
       if (this.skipNextTurns > 0) {

@@ -137,6 +137,8 @@ export class Player extends Drawable {
   private bubbleBreathTimer = 0;
   private readonly bubbleBreathPeriod = 240;
 
+  // Tracked by TutorialListener / Bestiary now; kept here previously but unused.
+  // TODO: remove entirely once no callers depend on it.
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
   constructor(

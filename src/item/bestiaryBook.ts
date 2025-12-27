@@ -10,7 +10,8 @@ export class BestiaryBook extends Usable {
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 8;
+    // Use the spellbook sprite for now.
+    this.tileX = 25;
     this.tileY = 0;
     this.offsetY = -0.3;
     this.name = BestiaryBook.itemName;
