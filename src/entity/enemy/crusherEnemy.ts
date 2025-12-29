@@ -12,6 +12,8 @@ import { Door } from "../../tile/door";
 import { DownLadder } from "../../tile/downLadder";
 import { Sound } from "../../sound/sound";
 import { HitWarning } from "../../drawable/hitWarning";
+import { globalEventBus } from "../../event/eventBus";
+import { EVENTS } from "../../event/events";
 
 export class CrusherEnemy extends Enemy {
   ticks: number;
@@ -25,6 +27,7 @@ export class CrusherEnemy extends Enemy {
   static tileY: number = 4;
   animateY: number = 0;
   softAnimateY: number = 0;
+  private static hasEverEmittedSeenPlayer: boolean = false;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
@@ -48,6 +51,16 @@ export class CrusherEnemy extends Enemy {
     this.destroyable = false;
 
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+
+    // Track crushers as an encounterable "enemy type" for the bestiary, even though
+    // they may be spawned already in-motion and never run the usual `lookForPlayer()` path.
+    if (!CrusherEnemy.hasEverEmittedSeenPlayer) {
+      CrusherEnemy.hasEverEmittedSeenPlayer = true;
+      globalEventBus.emit(EVENTS.ENEMY_SEEN_PLAYER, {
+        enemyType: this.constructor.name,
+        enemyName: this.name,
+      });
+    }
   }
 
   get alertText() {
@@ -114,7 +127,10 @@ export class CrusherEnemy extends Enemy {
         p.x === this.x &&
         p.y === this.y
       ) {
-        p.hurt(this.hit(), this.name, { delay: 400, source: { x: this.x, y: this.y } });
+        p.hurt(this.hit(), this.name, {
+          delay: 400,
+          source: { x: this.x, y: this.y },
+        });
         this.drawX += 0.5 * (this.x - p.x);
         this.drawY += 0.5 * (this.y - p.y);
         if (p === this.game.players[this.game.localPlayerID]) {

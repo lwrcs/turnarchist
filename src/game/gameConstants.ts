@@ -375,7 +375,7 @@ export class GameConstants {
     return bestScale;
   };
 
-  static readonly STARTING_INVENTORY = [Dagger, Candle];
+  static readonly STARTING_INVENTORY = [Dagger, Candle, BestiaryBook];
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Torch,

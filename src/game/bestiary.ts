@@ -24,6 +24,9 @@ interface BestiaryEntry {
     frameMs: number;
     w: number;
     h: number;
+    sheet?: "mob" | "obj";
+    offsetX?: number;
+    offsetY?: number;
     rumbling?: boolean;
   }>;
 }
@@ -147,6 +150,9 @@ export class Bestiary {
           frameMs: s.frameMs ?? 220,
           w: s.w ?? 1,
           h: s.h ?? 1,
+          sheet: s.sheet,
+          offsetX: s.offsetX,
+          offsetY: s.offsetY,
           rumbling: s.rumbling,
         })),
       });
@@ -367,21 +373,39 @@ export class Bestiary {
           const rumbleTiles =
             s.rumbling && Math.floor(Date.now() / 170) % 2 === 1 ? 0.0325 : 0;
 
-          Entity.drawIdleSprite({
-            tileX: s.tileX,
-            tileY: s.tileY,
-            x: drawX + rumbleTiles,
-            y: drawY,
-            w: s.w,
-            h: s.h,
-            drawW,
-            drawH,
-            frames: s.frames,
-            frameStride: s.frameStride,
-            frameMs: s.frameMs,
-            shadeColor: "Black",
-            shadeAmount: 0,
-          });
+          const ox = s.offsetX ?? 0;
+          const oy = s.offsetY ?? 0;
+          const x = drawX + rumbleTiles + ox;
+          const y = drawY + oy;
+
+          const frames = s.frames ?? 1;
+          const stride = s.frameStride ?? 1;
+          const frameMs = s.frameMs ?? 220;
+          const w = s.w ?? 1;
+          const h = s.h ?? 1;
+          const frameIndex =
+            frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
+          const tx = s.tileX + frameIndex * stride * w;
+
+          if (s.sheet === "obj") {
+            Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+          } else {
+            Entity.drawIdleSprite({
+              tileX: s.tileX,
+              tileY: s.tileY,
+              x,
+              y,
+              w: s.w,
+              h: s.h,
+              drawW,
+              drawH,
+              frames: s.frames,
+              frameStride: s.frameStride,
+              frameMs: s.frameMs,
+              shadeColor: "Black",
+              shadeAmount: 0,
+            });
+          }
         }
       }
     }

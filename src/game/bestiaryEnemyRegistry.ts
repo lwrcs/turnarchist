@@ -8,6 +8,17 @@ export type BestiaryEnemySprite = {
   w?: number;
   h?: number;
   /**
+   * Which spritesheet to use when drawing.
+   * - "mob": `Game.drawMob` (default)
+   * - "obj": `Game.drawObj` (used by some entities like Crusher)
+   */
+  sheet?: "mob" | "obj";
+  /**
+   * Offsets applied to the sprite's drawn position (tile-units) in the bestiary UI.
+   */
+  offsetX?: number;
+  offsetY?: number;
+  /**
    * When true, apply the same 2-frame 1px rumble used by enemies like the Crab.
    */
   rumbling?: boolean;
@@ -320,6 +331,36 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         frames: 4,
         // Frame stepping is `frameStride * w` in drawIdleSprite.
         frameStride: 1,
+      },
+    ],
+  },
+
+  CrusherEnemy: {
+    typeName: "CrusherEnemy",
+    displayName: "Crusher",
+    description:
+      "A chained crusher block commanded by the Warden. It slams and threatens its tile aggressively.",
+    sprites: [
+      {
+        label: "Idle",
+        tileX: 3,
+        tileY: 4,
+        w: 2,
+        h: 2,
+        sheet: "obj",
+        // Lower down
+        offsetY: 0.18,
+      },
+      {
+        label: "Armed",
+        tileX: 3,
+        tileY: 4,
+        w: 2,
+        h: 2,
+        sheet: "obj",
+        // Higher up + rumble
+        offsetY: -1,
+        rumbling: true,
       },
     ],
   },

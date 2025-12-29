@@ -13877,6 +13877,8 @@ const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
+const events_1 = __webpack_require__(/*! ../../event/events */ "./src/event/events.ts");
 class CrusherEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -13932,7 +13934,10 @@ class CrusherEnemy extends enemy_1.Enemy {
                 if (this.game.rooms[p.levelID] === this.room &&
                     p.x === this.x &&
                     p.y === this.y) {
-                    p.hurt(this.hit(), this.name, { delay: 400, source: { x: this.x, y: this.y } });
+                    p.hurt(this.hit(), this.name, {
+                        delay: 400,
+                        source: { x: this.x, y: this.y },
+                    });
                     this.drawX += 0.5 * (this.x - p.x);
                     this.drawY += 0.5 * (this.y - p.y);
                     if (p === this.game.players[this.game.localPlayerID]) {
@@ -14138,6 +14143,15 @@ class CrusherEnemy extends enemy_1.Enemy {
         this.collidable = false;
         this.destroyable = false;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+        // Track crushers as an encounterable "enemy type" for the bestiary, even though
+        // they may be spawned already in-motion and never run the usual `lookForPlayer()` path.
+        if (!CrusherEnemy.hasEverEmittedSeenPlayer) {
+            CrusherEnemy.hasEverEmittedSeenPlayer = true;
+            eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_SEEN_PLAYER, {
+                enemyType: this.constructor.name,
+                enemyName: this.name,
+            });
+        }
     }
     get alertText() {
         return `New Enemy Spotted: Crab 
@@ -14150,6 +14164,7 @@ exports.CrusherEnemy = CrusherEnemy;
 CrusherEnemy.difficulty = 1;
 CrusherEnemy.tileX = 8;
 CrusherEnemy.tileY = 4;
+CrusherEnemy.hasEverEmittedSeenPlayer = false;
 
 
 /***/ }),
@@ -27102,6 +27117,9 @@ class Bestiary {
                         frameMs: s.frameMs ?? 220,
                         w: s.w ?? 1,
                         h: s.h ?? 1,
+                        sheet: s.sheet,
+                        offsetX: s.offsetX,
+                        offsetY: s.offsetY,
                         rumbling: s.rumbling,
                     })),
                 });
@@ -27287,21 +27305,37 @@ class Bestiary {
                         // Match crab-style rumble (2-frame: base vs +1px) when requested.
                         // Crab uses `offset = isOddFrame ? 0.0325 : 0` in tile-units.
                         const rumbleTiles = s.rumbling && Math.floor(Date.now() / 170) % 2 === 1 ? 0.0325 : 0;
-                        entity_1.Entity.drawIdleSprite({
-                            tileX: s.tileX,
-                            tileY: s.tileY,
-                            x: drawX + rumbleTiles,
-                            y: drawY,
-                            w: s.w,
-                            h: s.h,
-                            drawW,
-                            drawH,
-                            frames: s.frames,
-                            frameStride: s.frameStride,
-                            frameMs: s.frameMs,
-                            shadeColor: "Black",
-                            shadeAmount: 0,
-                        });
+                        const ox = s.offsetX ?? 0;
+                        const oy = s.offsetY ?? 0;
+                        const x = drawX + rumbleTiles + ox;
+                        const y = drawY + oy;
+                        const frames = s.frames ?? 1;
+                        const stride = s.frameStride ?? 1;
+                        const frameMs = s.frameMs ?? 220;
+                        const w = s.w ?? 1;
+                        const h = s.h ?? 1;
+                        const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
+                        const tx = s.tileX + frameIndex * stride * w;
+                        if (s.sheet === "obj") {
+                            game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+                        }
+                        else {
+                            entity_1.Entity.drawIdleSprite({
+                                tileX: s.tileX,
+                                tileY: s.tileY,
+                                x,
+                                y,
+                                w: s.w,
+                                h: s.h,
+                                drawW,
+                                drawH,
+                                frames: s.frames,
+                                frameStride: s.frameStride,
+                                frameMs: s.frameMs,
+                                shadeColor: "Black",
+                                shadeAmount: 0,
+                            });
+                        }
                     }
                 }
             }
@@ -27668,6 +27702,34 @@ exports.BESTIARY_ENEMIES = {
                 frames: 4,
                 // Frame stepping is `frameStride * w` in drawIdleSprite.
                 frameStride: 1,
+            },
+        ],
+    },
+    CrusherEnemy: {
+        typeName: "CrusherEnemy",
+        displayName: "Crusher",
+        description: "A chained crusher block commanded by the Warden. It slams and threatens its tile aggressively.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 3,
+                tileY: 4,
+                w: 2,
+                h: 2,
+                sheet: "obj",
+                // Lower down
+                offsetY: 0.18,
+            },
+            {
+                label: "Armed",
+                tileX: 3,
+                tileY: 4,
+                w: 2,
+                h: 2,
+                sheet: "obj",
+                // Higher up + rumble
+                offsetY: -1,
+                rumbling: true,
             },
         ],
     },
@@ -28059,7 +28121,7 @@ GameConstants.FIND_SCALE = (isMobile) => {
     }
     return bestScale;
 };
-GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
+GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle, bestiaryBook_1.BestiaryBook];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
