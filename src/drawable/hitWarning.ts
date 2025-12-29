@@ -21,6 +21,7 @@ export class HitWarning extends Drawable {
   y: number;
   dead: boolean;
   static frame = 0;
+  static previewFrame = 0;
   private game: Game;
   parent: Entity | null = null;
   private _pointerDir: HitWarningDirection | null = null;
@@ -36,6 +37,7 @@ export class HitWarning extends Drawable {
   private alpha: number = 0;
   private ticks: number;
   private tickedForDeath = false;
+  private static readonly previewOffsetY = 0.2;
 
   constructor(
     game: Game,
@@ -73,6 +75,120 @@ export class HitWarning extends Drawable {
   static updateFrame = (delta: number) => {
     HitWarning.frame += 0.125 * delta;
     if (HitWarning.frame >= 2) HitWarning.frame = 0;
+  };
+
+  /**
+   * Bestiary/UI-only frame update. Intentionally runs at half the in-game speed.
+   */
+  static updatePreviewFrame = (delta: number) => {
+    HitWarning.previewFrame += 0.0625 * delta;
+    if (HitWarning.previewFrame >= 2) HitWarning.previewFrame = 0;
+  };
+
+  static computePointerDir = (args: {
+    targetX: number;
+    targetY: number;
+    sourceX: number;
+    sourceY: number;
+  }): HitWarningDirection => {
+    const dx = args.sourceX - args.targetX;
+    const dy = args.sourceY - args.targetY;
+
+    if (dx === 0 && dy === 0) return HitWarningDirection.Center;
+    if (dx === 0)
+      return dy < 0 ? HitWarningDirection.South : HitWarningDirection.North;
+    if (dy === 0)
+      return dx < 0 ? HitWarningDirection.East : HitWarningDirection.West;
+    if (dx < 0)
+      return dy < 0
+        ? HitWarningDirection.SouthEast
+        : HitWarningDirection.NorthEast;
+    return dy < 0
+      ? HitWarningDirection.SouthWest
+      : HitWarningDirection.NorthWest;
+  };
+
+  static pointerOffsetForDir = (
+    dir: HitWarningDirection,
+  ): { x: number; y: number } => {
+    const offsets: Record<HitWarningDirection, { x: number; y: number }> = {
+      [HitWarningDirection.North]: { x: 0, y: 0.5 },
+      [HitWarningDirection.South]: { x: 0, y: -0.6 },
+      [HitWarningDirection.West]: { x: 0.6, y: 0 },
+      [HitWarningDirection.East]: { x: -0.6, y: 0 },
+      [HitWarningDirection.NorthEast]: { x: -0.5, y: 0.5 },
+      [HitWarningDirection.NorthWest]: { x: 0.5, y: 0.5 },
+      [HitWarningDirection.SouthEast]: { x: -0.5, y: -0.5 },
+      [HitWarningDirection.SouthWest]: { x: 0.5, y: -0.5 },
+      [HitWarningDirection.Center]: { x: 0, y: -0.25 },
+    };
+    return offsets[dir];
+  };
+
+  static drawPreviewArrow = (args: {
+    targetX: number;
+    targetY: number;
+    dir: HitWarningDirection;
+    /**
+     * - "red": matches `draw()` arrow
+     * - "white": matches `drawTopLayer()` arrow
+     */
+    variant: "red" | "white";
+    alpha?: number;
+    /**
+     * When true, mimics the in-game top-layer behavior where the white arrow is
+     * suppressed for North.
+     */
+    suppressIfNorth?: boolean;
+  }) => {
+    if (
+      args.variant === "white" &&
+      args.suppressIfNorth &&
+      args.dir === HitWarningDirection.North
+    ) {
+      return;
+    }
+
+    const baseTileX = 0 + 2 * args.dir;
+    const frame = Math.floor(HitWarning.previewFrame);
+    const tileX = baseTileX + frame;
+    const tileY = args.variant === "red" ? 22 : 23;
+    const pointerOffset = HitWarning.pointerOffsetForDir(args.dir);
+
+    Game.ctx.save();
+    Game.ctx.globalAlpha = args.alpha ?? 1;
+    Game.drawFX(
+      tileX,
+      tileY,
+      1,
+      1,
+      args.targetX + pointerOffset.x,
+      args.targetY + pointerOffset.y - HitWarning.previewOffsetY,
+      1,
+      1,
+    );
+    Game.ctx.restore();
+  };
+
+  static drawPreviewX = (args: {
+    targetX: number;
+    targetY: number;
+    alpha?: number;
+  }) => {
+    const frame = Math.floor(HitWarning.previewFrame);
+    Game.ctx.save();
+    Game.ctx.globalAlpha = args.alpha ?? 1;
+    Game.drawFX(
+      18 + frame,
+      6,
+      1,
+      1,
+      args.targetX,
+      args.targetY - HitWarning.previewOffsetY,
+      1,
+      1,
+    );
+    Game.ctx.restore();
   };
 
   removeOverlapping = () => {

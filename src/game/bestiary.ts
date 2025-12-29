@@ -10,6 +10,7 @@ import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { BESTIARY_ENEMIES } from "./bestiaryEnemyRegistry";
 import { Entity } from "../entity/entity";
+import { HitWarning, HitWarningDirection } from "../drawable/hitWarning";
 
 interface BestiaryEntry {
   typeName: string;
@@ -27,6 +28,26 @@ interface BestiaryEntry {
     sheet?: "mob" | "obj";
     offsetX?: number;
     offsetY?: number;
+    hitWarnings?: Array<{
+      targetOffset: { x: number; y: number };
+      sourceOffset?: { x: number; y: number };
+      direction?:
+        | "North"
+        | "NorthEast"
+        | "East"
+        | "SouthEast"
+        | "South"
+        | "SouthWest"
+        | "West"
+        | "NorthWest"
+        | "Center";
+      show?: {
+        redArrow?: boolean;
+        whiteArrow?: boolean;
+        redX?: boolean;
+      };
+      alpha?: number;
+    }>;
     rumbling?: boolean;
   }>;
 }
@@ -153,6 +174,7 @@ export class Bestiary {
           sheet: s.sheet,
           offsetX: s.offsetX,
           offsetY: s.offsetY,
+          hitWarnings: s.hitWarnings,
           rumbling: s.rumbling,
         })),
       });
@@ -242,6 +264,7 @@ export class Bestiary {
   draw = (delta: number) => {
     if (!this.isOpen) return;
     Game.ctx.save();
+    HitWarning.updatePreviewFrame(delta);
 
     // Backdrop
     Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
@@ -369,14 +392,18 @@ export class Bestiary {
           const drawY = centerY / GameConstants.TILESIZE - drawH / 2;
 
           // Match crab-style rumble (2-frame: base vs +1px) when requested.
-          // Crab uses `offset = isOddFrame ? 0.0325 : 0` in tile-units.
+          // Use exactly 1px in tile-units so this remains visible regardless of TILESIZE.
           const rumbleTiles =
-            s.rumbling && Math.floor(Date.now() / 170) % 2 === 1 ? 0.0325 : 0;
+            s.rumbling && Math.floor(Date.now() / 170) % 2 === 1
+              ? 1 / GameConstants.TILESIZE
+              : 0;
 
           const ox = s.offsetX ?? 0;
           const oy = s.offsetY ?? 0;
-          const x = drawX + rumbleTiles + ox;
-          const y = drawY + oy;
+          const xBase = drawX + ox;
+          const yBase = drawY + oy;
+          const x = xBase + rumbleTiles;
+          const y = yBase;
 
           const frames = s.frames ?? 1;
           const stride = s.frameStride ?? 1;
@@ -405,6 +432,47 @@ export class Bestiary {
               shadeColor: "Black",
               shadeAmount: 0,
             });
+          }
+
+          // Bestiary-only: render any hitwarning previews requested for this sprite/state.
+          // Anchor at the "feet tile" of the drawn sprite (better for 1x2 mobs).
+          // IMPORTANT: anchor should not include rumble jitter, otherwise the hitwarnings
+          // visually "rumble" along with the sprite.
+          const anchorX = xBase + (drawW - 1) / 2;
+          const anchorY = yBase + (drawH - 1);
+          for (const hw of s.hitWarnings ?? []) {
+            const tx2 = anchorX + hw.targetOffset.x;
+            // Bestiary tweak: the in-game hitwarning sprites are biased slightly upward.
+            // For bestiary previews we want them visually centered on the target tile.
+            const ty2 = anchorY + hw.targetOffset.y + 0.5;
+            const alpha = hw.alpha ?? 1;
+            const show = hw.show ?? {};
+
+            const dir = this.resolveHitWarningDir(hw, anchorX, anchorY);
+            if (dir !== null) {
+              if (show.redArrow) {
+                HitWarning.drawPreviewArrow({
+                  targetX: tx2,
+                  targetY: ty2,
+                  dir,
+                  variant: "red",
+                  alpha,
+                });
+              }
+              if (show.whiteArrow) {
+                HitWarning.drawPreviewArrow({
+                  targetX: tx2,
+                  targetY: ty2,
+                  dir,
+                  variant: "white",
+                  alpha,
+                  suppressIfNorth: true,
+                });
+              }
+            }
+            if (show.redX) {
+              HitWarning.drawPreviewX({ targetX: tx2, targetY: ty2, alpha });
+            }
           }
         }
       }
@@ -443,6 +511,42 @@ export class Bestiary {
     }
 
     Game.ctx.restore();
+  };
+
+  private resolveHitWarningDir = (
+    hw: NonNullable<BestiaryEntry["sprites"][number]["hitWarnings"]>[number],
+    anchorX: number,
+    anchorY: number,
+  ): HitWarningDirection | null => {
+    if (hw.direction) {
+      const map: Record<
+        NonNullable<typeof hw.direction>,
+        HitWarningDirection
+      > = {
+        North: HitWarningDirection.North,
+        NorthEast: HitWarningDirection.NorthEast,
+        East: HitWarningDirection.East,
+        SouthEast: HitWarningDirection.SouthEast,
+        South: HitWarningDirection.South,
+        SouthWest: HitWarningDirection.SouthWest,
+        West: HitWarningDirection.West,
+        NorthWest: HitWarningDirection.NorthWest,
+        Center: HitWarningDirection.Center,
+      };
+      return map[hw.direction];
+    }
+
+    if (!hw.sourceOffset) return null;
+    const sourceX = anchorX + hw.sourceOffset.x;
+    const sourceY = anchorY + hw.sourceOffset.y;
+    const targetX = anchorX + hw.targetOffset.x;
+    const targetY = anchorY + hw.targetOffset.y;
+    return HitWarning.computePointerDir({
+      targetX,
+      targetY,
+      sourceX,
+      sourceY,
+    });
   };
 
   private drawArrow = (
