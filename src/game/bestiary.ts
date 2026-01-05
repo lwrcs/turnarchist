@@ -28,6 +28,12 @@ interface BestiaryEntry {
     h: number;
     hp?: number;
     maxHp?: number;
+    effects?: Array<{
+      kind: "wizardFireball";
+      state: 0 | 1 | 2;
+      variant: "energy" | "fire" | "earth";
+      offsets: Array<{ x: number; y: number }>;
+    }>;
     sheet?: "mob" | "obj";
     offsetX?: number;
     offsetY?: number;
@@ -61,6 +67,7 @@ export class Bestiary {
   player: Player;
   isOpen: boolean = false;
   openTime: number = Date.now();
+  private entryViewStartTime: number = Date.now();
   entries: Array<BestiaryEntry>;
   activeEntryIndex: number = 0;
   /**
@@ -78,6 +85,10 @@ export class Bestiary {
    */
   cycleEntrySprites: boolean = true;
   private readonly entrySpriteCycleMs = 1200;
+  private previewAnimT = 0;
+
+  theme: "parchment" | "slate" | "midnight" | "mahogany" | "arcana" =
+    "parchment";
 
   /**
    * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
@@ -108,10 +119,109 @@ export class Bestiary {
     return Math.max(4, Math.min(10, i));
   };
 
+  private getTheme = () => {
+    const THEMES = {
+      parchment: {
+        backdrop: "rgba(0, 0, 0, 0.8)",
+        coverFill: "rgba(235, 225, 200, 1)",
+        coverStroke: "rgba(120, 100, 80, 1)",
+        spineStroke: "rgba(160, 140, 120, 1)",
+        pageFill: "rgba(245, 238, 220, 1)",
+        pageStroke: "rgba(200, 185, 160, 1)",
+        spritePanelFill: "rgba(235, 225, 200, 1)",
+        spritePanelStroke: "rgba(120, 100, 80, 1)",
+        text: "rgba(40, 35, 30, 1)",
+        accentText: "rgba(60, 50, 40, 1)",
+        closeFill: "rgba(220, 60, 60, 1)",
+        closeText: "rgba(255, 255, 255, 1)",
+      },
+      slate: {
+        backdrop: "rgba(0, 0, 0, 0.85)",
+        coverFill: "rgba(165, 170, 178, 1)",
+        coverStroke: "rgba(78, 82, 90, 1)",
+        spineStroke: "rgba(105, 110, 118, 1)",
+        pageFill: "rgba(195, 198, 205, 1)",
+        pageStroke: "rgba(120, 125, 135, 1)",
+        spritePanelFill: "rgba(150, 154, 162, 1)",
+        spritePanelStroke: "rgba(78, 82, 90, 1)",
+        text: "rgba(30, 32, 36, 1)",
+        accentText: "rgba(45, 48, 54, 1)",
+        closeFill: "rgba(200, 70, 70, 1)",
+        closeText: "rgba(255, 255, 255, 1)",
+      },
+      // Darker than "slate" but still readable (not pitch-black).
+      midnight: {
+        backdrop: "rgba(0, 0, 0, 0.92)",
+        coverFill: "rgba(75, 78, 86, 1)",
+        coverStroke: "rgba(28, 30, 36, 1)",
+        spineStroke: "rgba(45, 48, 56, 1)",
+        pageFill: "rgba(100, 104, 114, 1)",
+        pageStroke: "rgba(55, 58, 66, 1)",
+        // Enemy preview panel should be darker than the surrounding page.
+        spritePanelFill: "rgba(78, 82, 92, 1)",
+        spritePanelStroke: "rgba(28, 30, 36, 1)",
+        // Use light text for readability on dark pages.
+        text: "rgba(245, 246, 248, 1)",
+        accentText: "rgba(220, 222, 226, 1)",
+        closeFill: "rgba(185, 60, 60, 1)",
+        closeText: "rgba(255, 255, 255, 1)",
+      },
+      // Deep wood / mahogany: darker than midnight with warm reds/browns.
+      mahogany: {
+        backdrop: "rgba(0, 0, 0, 0.92)",
+        coverFill: "rgba(70, 28, 24, 1)",
+        coverStroke: "rgba(24, 10, 10, 1)",
+        spineStroke: "rgba(40, 16, 14, 1)",
+        pageFill: "rgba(92, 38, 30, 1)",
+        pageStroke: "rgba(40, 16, 14, 1)",
+        // Enemy preview panel should be darker than the surrounding page.
+        spritePanelFill: "rgba(62, 24, 20, 1)",
+        spritePanelStroke: "rgba(24, 10, 10, 1)",
+        text: "rgba(248, 240, 236, 1)",
+        accentText: "rgba(230, 214, 206, 1)",
+        closeFill: "rgba(190, 58, 58, 1)",
+        closeText: "rgba(255, 255, 255, 1)",
+      },
+      // Wild card: dark "arcane" purple theme.
+      arcana: {
+        backdrop: "rgba(0, 0, 0, 0.9)",
+        coverFill: "rgba(118, 104, 146, 1)",
+        coverStroke: "rgba(44, 34, 66, 1)",
+        spineStroke: "rgba(68, 54, 96, 1)",
+        pageFill: "rgba(150, 136, 178, 1)",
+        pageStroke: "rgba(78, 62, 110, 1)",
+        spritePanelFill: "rgba(110, 96, 140, 1)",
+        spritePanelStroke: "rgba(44, 34, 66, 1)",
+        text: "rgba(18, 12, 28, 1)",
+        accentText: "rgba(34, 20, 52, 1)",
+        closeFill: "rgba(196, 70, 110, 1)",
+        closeText: "rgba(255, 255, 255, 1)",
+      },
+    } as const;
+
+    return THEMES[this.theme];
+  };
+
   private activeCycledSpriteIndex = (len: number): number => {
     if (len <= 0) return 0;
-    const t = Math.max(0, Date.now() - this.openTime);
+    const t = Math.max(0, Date.now() - this.entryViewStartTime);
     return Math.floor(t / this.entrySpriteCycleMs) % len;
+  };
+
+  private setActiveEntryIndex = (nextIndex: number): void => {
+    if (this.entries.length <= 0) {
+      this.activeEntryIndex = 0;
+      this.entryViewStartTime = Date.now();
+      return;
+    }
+    const clamped =
+      ((nextIndex % this.entries.length) + this.entries.length) %
+      this.entries.length;
+    if (clamped !== this.activeEntryIndex) {
+      this.activeEntryIndex = clamped;
+      // Reset sprite cycling so the viewed enemy starts at its first state.
+      this.entryViewStartTime = Date.now();
+    }
   };
 
   // UI hitboxes (pixels)
@@ -172,6 +282,8 @@ export class Bestiary {
   open = () => {
     this.isOpen = true;
     this.openTime = Date.now();
+    this.previewAnimT = 0;
+    this.entryViewStartTime = Date.now();
     // Ensure layout mode reflects the current screen size at the moment of opening.
     this.handleResize();
   };
@@ -184,12 +296,11 @@ export class Bestiary {
   };
 
   entryUp = () => {
-    this.activeEntryIndex =
-      (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+    this.setActiveEntryIndex(this.activeEntryIndex - 1);
   };
 
   entryDown = () => {
-    this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+    this.setActiveEntryIndex(this.activeEntryIndex + 1);
   };
 
   /**
@@ -230,6 +341,7 @@ export class Bestiary {
           h: s.h ?? 1,
           hp: s.hp,
           maxHp: s.maxHp,
+          effects: s.effects,
           sheet: s.sheet,
           offsetX: s.offsetX,
           offsetY: s.offsetY,
@@ -279,13 +391,13 @@ export class Bestiary {
       const totalPages = this.entries.length * 2;
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
       const next = (current - 1 + totalPages) % totalPages;
-      this.activeEntryIndex = Math.floor(next / 2);
+      const nextEntry = Math.floor(next / 2);
       this.activeEntrySubpage = (next % 2) as 0 | 1;
+      this.setActiveEntryIndex(nextEntry);
       return;
     }
 
-    this.activeEntryIndex =
-      (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+    this.setActiveEntryIndex(this.activeEntryIndex - 1);
   };
 
   pageRight = () => {
@@ -294,12 +406,13 @@ export class Bestiary {
       const totalPages = this.entries.length * 2;
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
       const next = (current + 1) % totalPages;
-      this.activeEntryIndex = Math.floor(next / 2);
+      const nextEntry = Math.floor(next / 2);
       this.activeEntrySubpage = (next % 2) as 0 | 1;
+      this.setActiveEntryIndex(nextEntry);
       return;
     }
 
-    this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+    this.setActiveEntryIndex(this.activeEntryIndex + 1);
   };
 
   handleInput = (input: "escape" | "left" | "right") => {
@@ -344,9 +457,11 @@ export class Bestiary {
     if (!this.isOpen) return;
     Game.ctx.save();
     HitWarning.updatePreviewFrame(delta);
+    this.previewAnimT += delta;
+    const theme = this.getTheme();
 
     // Backdrop
-    Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    Game.ctx.fillStyle = theme.backdrop;
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     // Book rect
@@ -359,16 +474,16 @@ export class Bestiary {
     if (!compactMode) this.activeEntrySubpage = 0;
 
     // Cover/border
-    Game.ctx.fillStyle = "rgba(235, 225, 200, 1)";
+    Game.ctx.fillStyle = theme.coverFill;
     Game.ctx.fillRect(bookX, bookY, bookW, bookH);
-    Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+    Game.ctx.strokeStyle = theme.coverStroke;
     Game.ctx.lineWidth = 2;
     Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
 
     // Spine (only in two-page mode)
     const spineX = Math.round(bookX + bookW / 2);
     if (!compactMode) {
-      Game.ctx.strokeStyle = "rgba(160, 140, 120, 1)";
+      Game.ctx.strokeStyle = theme.spineStroke;
       Game.ctx.lineWidth = 2;
       Game.ctx.beginPath();
       Game.ctx.moveTo(spineX, bookY + 8);
@@ -386,9 +501,9 @@ export class Bestiary {
     const rightX = spineX + pad;
     const pageY = bookY + pad;
 
-    Game.ctx.fillStyle = "rgba(245, 238, 220, 1)";
+    Game.ctx.fillStyle = theme.pageFill;
     Game.ctx.fillRect(leftX, pageY, pageW, pageH);
-    Game.ctx.strokeStyle = "rgba(200, 185, 160, 1)";
+    Game.ctx.strokeStyle = theme.pageStroke;
     Game.ctx.lineWidth = 1;
     Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
     if (!compactMode) {
@@ -404,25 +519,25 @@ export class Bestiary {
       w: closeSize,
       h: closeSize,
     };
-    Game.ctx.fillStyle = "rgba(220, 60, 60, 1)";
+    Game.ctx.fillStyle = theme.closeFill;
     Game.ctx.fillRect(
       this.closeRect.x,
       this.closeRect.y,
       this.closeRect.w,
       this.closeRect.h,
     );
-    Game.ctx.fillStyle = "rgba(255,255,255,1)";
+    Game.ctx.fillStyle = theme.closeText;
     Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
 
     const entry = this.entries[this.activeEntryIndex] ?? null;
     if (!entry) {
-      Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+      Game.ctx.fillStyle = theme.text;
       Game.fillText("No entries", leftX + 6, pageY + 6);
     } else {
       const inset = this.pageInsetPx();
       if (!compactMode || this.activeEntrySubpage === 0) {
         // Info page
-        Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+        Game.ctx.fillStyle = theme.text;
         Game.fillText(entry.displayName, leftX + inset, pageY + inset);
         this.drawWrappedText(
           entry.description || "???",
@@ -434,12 +549,14 @@ export class Bestiary {
 
       if (!compactMode || this.activeEntrySubpage === 1) {
         // Sprite page (right page in wide mode, single page in compact mode)
-        Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+        Game.ctx.fillStyle = theme.spritePanelFill;
+        Game.ctx.strokeStyle = theme.spritePanelStroke;
         Game.ctx.lineWidth = 1;
         const rightInnerX = (compactMode ? leftX : rightX) + inset;
         const rightInnerY = pageY + inset;
         const rightInnerW = pageW - inset * 2;
         const rightInnerH = pageH - inset * 2;
+        Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
         Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
 
         this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
@@ -479,7 +596,7 @@ export class Bestiary {
     if (this.entries.length > 0) {
       const indicator = `${this.activeEntryIndex + 1}/${this.entries.length}`;
       const iw = Game.measureText(indicator).width;
-      Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+      Game.ctx.fillStyle = theme.accentText;
       Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
       if (compactMode) {
         const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
@@ -529,9 +646,10 @@ export class Bestiary {
     sprites: BestiaryEntry["sprites"],
     rect: { x: number; y: number; w: number; h: number },
   ) => {
+    const theme = this.getTheme();
     const count = sprites.length;
     if (count === 0) {
-      Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+      Game.ctx.fillStyle = theme.text;
       Game.fillText("No sprite", rect.x + 6, rect.y + 6);
       return;
     }
@@ -558,7 +676,7 @@ export class Bestiary {
       const cellY = rect.y + row * cellH;
 
       // Label
-      Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+      Game.ctx.fillStyle = theme.text;
       const label = s.label ?? "";
       const lw = Game.measureText(label).width;
       if (label.length > 0) {
@@ -598,6 +716,10 @@ export class Bestiary {
         frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
       const tx = s.tileX + frameIndex * stride * w;
 
+      // Bestiary-only effect previews (e.g. wizard fireballs).
+      // Draw effects that are above the enemy first so they appear behind the mob sprite.
+      this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "behind");
+
       if (s.sheet === "obj") {
         Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
       } else {
@@ -618,6 +740,9 @@ export class Bestiary {
         });
       }
 
+      // Draw remaining effects on top of the mob sprite.
+      this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "front");
+
       // Optional HP bar preview (uses existing heart-bar visuals).
       // Draw it anchored to the sprite (right above), not in the text/label row.
       if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
@@ -629,7 +754,7 @@ export class Bestiary {
         HealthBar.drawStatic({
           hearts: s.hp,
           maxHearts: s.maxHp,
-          x: hbX, 
+          x: hbX,
           y: hbY,
           flashing: true,
         });
@@ -682,6 +807,63 @@ export class Bestiary {
     }
   };
 
+  private drawEffectsPreview = (
+    sprite: BestiaryEntry["sprites"][number],
+    args: { xBase: number; yBase: number; drawW: number; drawH: number },
+    layer: "behind" | "front",
+  ): void => {
+    const effects = sprite.effects;
+    if (!effects || effects.length === 0) return;
+
+    // Feet-tile anchor for placing effects (matches hitwarning anchor approach).
+    const baseY = args.yBase + (args.drawH - 1);
+    const baseX =
+      sprite.hitWarningsWide && args.drawW > 1
+        ? args.xBase
+        : args.xBase + (args.drawW - 1) / 2;
+
+    for (const fx of effects) {
+      if (fx.kind !== "wizardFireball") continue;
+
+      // Mirror `WizardFireball.tileY` selection.
+      const tileY =
+        fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
+
+      // Determine which offsets should render behind the mob.
+      // Mirror WizardFireball's own draw offsets:
+      // - state 0: y + 0
+      // - state 1: y - 0.2
+      // - state 2: y - 1
+      const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
+
+      const offsets = fx.offsets
+        .filter((o) => {
+          const yDraw = o.y + stateYOffset;
+          return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+        })
+        // stable: higher tiles first
+        .slice()
+        .sort((a, b) => a.y - b.y);
+
+      for (const o of offsets) {
+        const x = baseX + o.x;
+        // Nudge down slightly to match the in-game perceived placement.
+        const y = baseY + o.y + 0.5;
+
+        if (fx.state === 0) {
+          const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+          Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
+        } else if (fx.state === 1) {
+          const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+          Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
+        } else {
+          const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+          Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+        }
+      }
+    }
+  };
+
   private resolveHitWarningDir = (
     hw: NonNullable<BestiaryEntry["sprites"][number]["hitWarnings"]>[number],
     anchorX: number,
@@ -722,8 +904,9 @@ export class Bestiary {
     rect: { x: number; y: number; w: number; h: number },
     dir: "left" | "right",
   ) => {
+    const theme = this.getTheme();
     Game.ctx.save();
-    Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+    Game.ctx.fillStyle = theme.accentText;
     Game.ctx.beginPath();
     if (dir === "left") {
       Game.ctx.moveTo(rect.x + rect.w, rect.y);

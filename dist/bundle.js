@@ -10219,8 +10219,13 @@ HitWarning.drawPreviewArrow = (args) => {
     const tileY = args.variant === "red" ? 22 : 23;
     const pointerOffset = HitWarning.pointerOffsetForDir(args.dir);
     game_1.Game.ctx.save();
-    game_1.Game.ctx.globalAlpha = args.alpha ?? 1;
-    game_1.Game.drawFX(tileX, tileY, 1, 1, args.targetX + pointerOffset.x, args.targetY + pointerOffset.y - HitWarning.previewOffsetY, 1, 1);
+    const alpha = args.alpha ?? 1;
+    // The arrow pixels in the FX sheet are somewhat transparent; draw twice to make
+    // the preview read more clearly (without affecting in-game hitwarnings).
+    for (let pass = 0; pass < 2; pass++) {
+        game_1.Game.ctx.globalAlpha = alpha;
+        game_1.Game.drawFX(tileX, tileY, 1, 1, args.targetX + pointerOffset.x, args.targetY + pointerOffset.y - HitWarning.previewOffsetY, 1, 1);
+    }
     game_1.Game.ctx.restore();
 };
 HitWarning.drawPreviewX = (args) => {
@@ -27180,6 +27185,7 @@ class Bestiary {
     constructor(game, player) {
         this.isOpen = false;
         this.openTime = Date.now();
+        this.entryViewStartTime = Date.now();
         this.activeEntryIndex = 0;
         /**
          * In compact mode, each entry is split into two pages:
@@ -27193,6 +27199,8 @@ class Bestiary {
          */
         this.cycleEntrySprites = true;
         this.entrySpriteCycleMs = 1200;
+        this.previewAnimT = 0;
+        this.theme = "parchment";
         /**
          * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
          * but stays comfortable on larger screens.
@@ -27219,11 +27227,106 @@ class Bestiary {
             const i = Math.round(gameConstants_1.GameConstants.WIDTH * 0.025);
             return Math.max(4, Math.min(10, i));
         };
+        this.getTheme = () => {
+            const THEMES = {
+                parchment: {
+                    backdrop: "rgba(0, 0, 0, 0.8)",
+                    coverFill: "rgba(235, 225, 200, 1)",
+                    coverStroke: "rgba(120, 100, 80, 1)",
+                    spineStroke: "rgba(160, 140, 120, 1)",
+                    pageFill: "rgba(245, 238, 220, 1)",
+                    pageStroke: "rgba(200, 185, 160, 1)",
+                    spritePanelFill: "rgba(235, 225, 200, 1)",
+                    spritePanelStroke: "rgba(120, 100, 80, 1)",
+                    text: "rgba(40, 35, 30, 1)",
+                    accentText: "rgba(60, 50, 40, 1)",
+                    closeFill: "rgba(220, 60, 60, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                slate: {
+                    backdrop: "rgba(0, 0, 0, 0.85)",
+                    coverFill: "rgba(165, 170, 178, 1)",
+                    coverStroke: "rgba(78, 82, 90, 1)",
+                    spineStroke: "rgba(105, 110, 118, 1)",
+                    pageFill: "rgba(195, 198, 205, 1)",
+                    pageStroke: "rgba(120, 125, 135, 1)",
+                    spritePanelFill: "rgba(150, 154, 162, 1)",
+                    spritePanelStroke: "rgba(78, 82, 90, 1)",
+                    text: "rgba(30, 32, 36, 1)",
+                    accentText: "rgba(45, 48, 54, 1)",
+                    closeFill: "rgba(200, 70, 70, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                // Darker than "slate" but still readable (not pitch-black).
+                midnight: {
+                    backdrop: "rgba(0, 0, 0, 0.92)",
+                    coverFill: "rgba(75, 78, 86, 1)",
+                    coverStroke: "rgba(28, 30, 36, 1)",
+                    spineStroke: "rgba(45, 48, 56, 1)",
+                    pageFill: "rgba(100, 104, 114, 1)",
+                    pageStroke: "rgba(55, 58, 66, 1)",
+                    // Enemy preview panel should be darker than the surrounding page.
+                    spritePanelFill: "rgba(78, 82, 92, 1)",
+                    spritePanelStroke: "rgba(28, 30, 36, 1)",
+                    // Use light text for readability on dark pages.
+                    text: "rgba(245, 246, 248, 1)",
+                    accentText: "rgba(220, 222, 226, 1)",
+                    closeFill: "rgba(185, 60, 60, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                // Deep wood / mahogany: darker than midnight with warm reds/browns.
+                mahogany: {
+                    backdrop: "rgba(0, 0, 0, 0.92)",
+                    coverFill: "rgba(70, 28, 24, 1)",
+                    coverStroke: "rgba(24, 10, 10, 1)",
+                    spineStroke: "rgba(40, 16, 14, 1)",
+                    pageFill: "rgba(92, 38, 30, 1)",
+                    pageStroke: "rgba(40, 16, 14, 1)",
+                    // Enemy preview panel should be darker than the surrounding page.
+                    spritePanelFill: "rgba(62, 24, 20, 1)",
+                    spritePanelStroke: "rgba(24, 10, 10, 1)",
+                    text: "rgba(248, 240, 236, 1)",
+                    accentText: "rgba(230, 214, 206, 1)",
+                    closeFill: "rgba(190, 58, 58, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                // Wild card: dark "arcane" purple theme.
+                arcana: {
+                    backdrop: "rgba(0, 0, 0, 0.9)",
+                    coverFill: "rgba(118, 104, 146, 1)",
+                    coverStroke: "rgba(44, 34, 66, 1)",
+                    spineStroke: "rgba(68, 54, 96, 1)",
+                    pageFill: "rgba(150, 136, 178, 1)",
+                    pageStroke: "rgba(78, 62, 110, 1)",
+                    spritePanelFill: "rgba(110, 96, 140, 1)",
+                    spritePanelStroke: "rgba(44, 34, 66, 1)",
+                    text: "rgba(18, 12, 28, 1)",
+                    accentText: "rgba(34, 20, 52, 1)",
+                    closeFill: "rgba(196, 70, 110, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+            };
+            return THEMES[this.theme];
+        };
         this.activeCycledSpriteIndex = (len) => {
             if (len <= 0)
                 return 0;
-            const t = Math.max(0, Date.now() - this.openTime);
+            const t = Math.max(0, Date.now() - this.entryViewStartTime);
             return Math.floor(t / this.entrySpriteCycleMs) % len;
+        };
+        this.setActiveEntryIndex = (nextIndex) => {
+            if (this.entries.length <= 0) {
+                this.activeEntryIndex = 0;
+                this.entryViewStartTime = Date.now();
+                return;
+            }
+            const clamped = ((nextIndex % this.entries.length) + this.entries.length) %
+                this.entries.length;
+            if (clamped !== this.activeEntryIndex) {
+                this.activeEntryIndex = clamped;
+                // Reset sprite cycling so the viewed enemy starts at its first state.
+                this.entryViewStartTime = Date.now();
+            }
         };
         // UI hitboxes (pixels)
         this.leftArrowRect = null;
@@ -27235,6 +27338,8 @@ class Bestiary {
         this.open = () => {
             this.isOpen = true;
             this.openTime = Date.now();
+            this.previewAnimT = 0;
+            this.entryViewStartTime = Date.now();
             // Ensure layout mode reflects the current screen size at the moment of opening.
             this.handleResize();
         };
@@ -27245,11 +27350,10 @@ class Bestiary {
             this.isOpen = false;
         };
         this.entryUp = () => {
-            this.activeEntryIndex =
-                (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+            this.setActiveEntryIndex(this.activeEntryIndex - 1);
         };
         this.entryDown = () => {
-            this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+            this.setActiveEntryIndex(this.activeEntryIndex + 1);
         };
         /**
          * Toggles the logbook window's open state.
@@ -27287,6 +27391,7 @@ class Bestiary {
                         h: s.h ?? 1,
                         hp: s.hp,
                         maxHp: s.maxHp,
+                        effects: s.effects,
                         sheet: s.sheet,
                         offsetX: s.offsetX,
                         offsetY: s.offsetY,
@@ -27329,12 +27434,12 @@ class Bestiary {
                 const totalPages = this.entries.length * 2;
                 const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
                 const next = (current - 1 + totalPages) % totalPages;
-                this.activeEntryIndex = Math.floor(next / 2);
+                const nextEntry = Math.floor(next / 2);
                 this.activeEntrySubpage = (next % 2);
+                this.setActiveEntryIndex(nextEntry);
                 return;
             }
-            this.activeEntryIndex =
-                (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
+            this.setActiveEntryIndex(this.activeEntryIndex - 1);
         };
         this.pageRight = () => {
             if (this.entries.length <= 0)
@@ -27343,11 +27448,12 @@ class Bestiary {
                 const totalPages = this.entries.length * 2;
                 const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
                 const next = (current + 1) % totalPages;
-                this.activeEntryIndex = Math.floor(next / 2);
+                const nextEntry = Math.floor(next / 2);
                 this.activeEntrySubpage = (next % 2);
+                this.setActiveEntryIndex(nextEntry);
                 return;
             }
-            this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
+            this.setActiveEntryIndex(this.activeEntryIndex + 1);
         };
         this.handleInput = (input) => {
             if (!this.isOpen)
@@ -27389,8 +27495,10 @@ class Bestiary {
                 return;
             game_1.Game.ctx.save();
             hitWarning_1.HitWarning.updatePreviewFrame(delta);
+            this.previewAnimT += delta;
+            const theme = this.getTheme();
             // Backdrop
-            game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            game_1.Game.ctx.fillStyle = theme.backdrop;
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             // Book rect
             const margin = this.marginPx();
@@ -27402,15 +27510,15 @@ class Bestiary {
             if (!compactMode)
                 this.activeEntrySubpage = 0;
             // Cover/border
-            game_1.Game.ctx.fillStyle = "rgba(235, 225, 200, 1)";
+            game_1.Game.ctx.fillStyle = theme.coverFill;
             game_1.Game.ctx.fillRect(bookX, bookY, bookW, bookH);
-            game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+            game_1.Game.ctx.strokeStyle = theme.coverStroke;
             game_1.Game.ctx.lineWidth = 2;
             game_1.Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
             // Spine (only in two-page mode)
             const spineX = Math.round(bookX + bookW / 2);
             if (!compactMode) {
-                game_1.Game.ctx.strokeStyle = "rgba(160, 140, 120, 1)";
+                game_1.Game.ctx.strokeStyle = theme.spineStroke;
                 game_1.Game.ctx.lineWidth = 2;
                 game_1.Game.ctx.beginPath();
                 game_1.Game.ctx.moveTo(spineX, bookY + 8);
@@ -27426,9 +27534,9 @@ class Bestiary {
             const leftX = bookX + pad;
             const rightX = spineX + pad;
             const pageY = bookY + pad;
-            game_1.Game.ctx.fillStyle = "rgba(245, 238, 220, 1)";
+            game_1.Game.ctx.fillStyle = theme.pageFill;
             game_1.Game.ctx.fillRect(leftX, pageY, pageW, pageH);
-            game_1.Game.ctx.strokeStyle = "rgba(200, 185, 160, 1)";
+            game_1.Game.ctx.strokeStyle = theme.pageStroke;
             game_1.Game.ctx.lineWidth = 1;
             game_1.Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
             if (!compactMode) {
@@ -27443,31 +27551,33 @@ class Bestiary {
                 w: closeSize,
                 h: closeSize,
             };
-            game_1.Game.ctx.fillStyle = "rgba(220, 60, 60, 1)";
+            game_1.Game.ctx.fillStyle = theme.closeFill;
             game_1.Game.ctx.fillRect(this.closeRect.x, this.closeRect.y, this.closeRect.w, this.closeRect.h);
-            game_1.Game.ctx.fillStyle = "rgba(255,255,255,1)";
+            game_1.Game.ctx.fillStyle = theme.closeText;
             game_1.Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
             const entry = this.entries[this.activeEntryIndex] ?? null;
             if (!entry) {
-                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.ctx.fillStyle = theme.text;
                 game_1.Game.fillText("No entries", leftX + 6, pageY + 6);
             }
             else {
                 const inset = this.pageInsetPx();
                 if (!compactMode || this.activeEntrySubpage === 0) {
                     // Info page
-                    game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                    game_1.Game.ctx.fillStyle = theme.text;
                     game_1.Game.fillText(entry.displayName, leftX + inset, pageY + inset);
                     this.drawWrappedText(entry.description || "???", leftX + inset, pageY + inset + 14, pageW - inset * 2);
                 }
                 if (!compactMode || this.activeEntrySubpage === 1) {
                     // Sprite page (right page in wide mode, single page in compact mode)
-                    game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+                    game_1.Game.ctx.fillStyle = theme.spritePanelFill;
+                    game_1.Game.ctx.strokeStyle = theme.spritePanelStroke;
                     game_1.Game.ctx.lineWidth = 1;
                     const rightInnerX = (compactMode ? leftX : rightX) + inset;
                     const rightInnerY = pageY + inset;
                     const rightInnerW = pageW - inset * 2;
                     const rightInnerH = pageH - inset * 2;
+                    game_1.Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
                     game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
                     this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
                         x: rightInnerX,
@@ -27505,7 +27615,7 @@ class Bestiary {
             if (this.entries.length > 0) {
                 const indicator = `${this.activeEntryIndex + 1}/${this.entries.length}`;
                 const iw = game_1.Game.measureText(indicator).width;
-                game_1.Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+                game_1.Game.ctx.fillStyle = theme.accentText;
                 game_1.Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
                 if (compactMode) {
                     const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
@@ -27542,9 +27652,10 @@ class Bestiary {
             return bookScreenPx < 250;
         };
         this.drawSpritesWithHitWarnings = (sprites, rect) => {
+            const theme = this.getTheme();
             const count = sprites.length;
             if (count === 0) {
-                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.ctx.fillStyle = theme.text;
                 game_1.Game.fillText("No sprite", rect.x + 6, rect.y + 6);
                 return;
             }
@@ -27567,7 +27678,7 @@ class Bestiary {
                 const cellX = rect.x + col * cellW;
                 const cellY = rect.y + row * cellH;
                 // Label
-                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.ctx.fillStyle = theme.text;
                 const label = s.label ?? "";
                 const lw = game_1.Game.measureText(label).width;
                 if (label.length > 0) {
@@ -27599,6 +27710,9 @@ class Bestiary {
                 const h = s.h ?? 1;
                 const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
                 const tx = s.tileX + frameIndex * stride * w;
+                // Bestiary-only effect previews (e.g. wizard fireballs).
+                // Draw effects that are above the enemy first so they appear behind the mob sprite.
+                this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "behind");
                 if (s.sheet === "obj") {
                     game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
                 }
@@ -27619,6 +27733,8 @@ class Bestiary {
                         shadeAmount: 0,
                     });
                 }
+                // Draw remaining effects on top of the mob sprite.
+                this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "front");
                 // Optional HP bar preview (uses existing heart-bar visuals).
                 // Draw it anchored to the sprite (right above), not in the text/label row.
                 if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
@@ -27677,6 +27793,53 @@ class Bestiary {
                 }
             }
         };
+        this.drawEffectsPreview = (sprite, args, layer) => {
+            const effects = sprite.effects;
+            if (!effects || effects.length === 0)
+                return;
+            // Feet-tile anchor for placing effects (matches hitwarning anchor approach).
+            const baseY = args.yBase + (args.drawH - 1);
+            const baseX = sprite.hitWarningsWide && args.drawW > 1
+                ? args.xBase
+                : args.xBase + (args.drawW - 1) / 2;
+            for (const fx of effects) {
+                if (fx.kind !== "wizardFireball")
+                    continue;
+                // Mirror `WizardFireball.tileY` selection.
+                const tileY = fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
+                // Determine which offsets should render behind the mob.
+                // Mirror WizardFireball's own draw offsets:
+                // - state 0: y + 0
+                // - state 1: y - 0.2
+                // - state 2: y - 1
+                const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
+                const offsets = fx.offsets
+                    .filter((o) => {
+                    const yDraw = o.y + stateYOffset;
+                    return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+                })
+                    // stable: higher tiles first
+                    .slice()
+                    .sort((a, b) => a.y - b.y);
+                for (const o of offsets) {
+                    const x = baseX + o.x;
+                    // Nudge down slightly to match the in-game perceived placement.
+                    const y = baseY + o.y + 0.5;
+                    if (fx.state === 0) {
+                        const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                        game_1.Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
+                    }
+                    else if (fx.state === 1) {
+                        const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                        game_1.Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
+                    }
+                    else {
+                        const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+                        game_1.Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+                    }
+                }
+            }
+        };
         this.resolveHitWarningDir = (hw, anchorX, anchorY) => {
             if (hw.direction) {
                 const map = {
@@ -27706,8 +27869,9 @@ class Bestiary {
             });
         };
         this.drawArrow = (rect, dir) => {
+            const theme = this.getTheme();
             game_1.Game.ctx.save();
-            game_1.Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
+            game_1.Game.ctx.fillStyle = theme.accentText;
             game_1.Game.ctx.beginPath();
             if (dir === "left") {
                 game_1.Game.ctx.moveTo(rect.x + rect.w, rect.y);
@@ -27804,6 +27968,32 @@ const hw = (targetOffset, show, opts) => ({
     alpha: 1,
     ...opts,
 });
+const WIZARD_CARDINAL_2 = [
+    { x: -1, y: 0 },
+    { x: -2, y: 0 },
+    { x: 1, y: 0 },
+    { x: 2, y: 0 },
+    { x: 0, y: -1 },
+    { x: 0, y: -2 },
+    { x: 0, y: 1 },
+    { x: 0, y: 2 },
+];
+// NOTE: EarthWizard uses `attemptProjectilePlacement(..., clearPath=true)` which relies on
+// `Entity.isPathClear()`. That path-clear logic only works for cardinal or perfect diagonal
+// rays (it steps by sign(dx), sign(dy)), so offsets like (-2,-1) will never be "clear".
+// The effective pattern is the "ring corners + cardinal distance-2", not a full perimeter.
+const EARTH_RING_2 = [
+    // corners
+    { x: -2, y: -2 },
+    { x: 2, y: -2 },
+    { x: -2, y: 2 },
+    { x: 2, y: 2 },
+    // cardinals at distance 2
+    { x: -2, y: 0 },
+    { x: 2, y: 0 },
+    { x: 0, y: -2 },
+    { x: 0, y: 2 },
+];
 const CARDINAL_1 = [
     { x: 0, y: 1 },
     { x: 0, y: -1 },
@@ -27952,8 +28142,60 @@ exports.BESTIARY_ENEMIES = {
                 h: 2,
                 hp: 1,
                 maxHp: 1,
-                // Wizard fireballs create hitwarnings at the target tile.
-                hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
+                frames: 1,
+            },
+            {
+                label: "Cast (orb)",
+                // Energy wizard uses attack pose in `WizardEnemy.draw()` (tileX=7).
+                tileX: 7,
+                tileY: 0,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 0,
+                        variant: "energy",
+                        offsets: WIZARD_CARDINAL_2,
+                    },
+                ],
+            },
+            {
+                label: "Cast (marker)",
+                tileX: 7,
+                tileY: 0,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 1,
+                        variant: "energy",
+                        offsets: WIZARD_CARDINAL_2,
+                    },
+                ],
+                hitWarnings: WIZARD_CARDINAL_2.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+            },
+            {
+                label: "Cast (boom)",
+                tileX: 7,
+                tileY: 0,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 2,
+                        variant: "energy",
+                        offsets: WIZARD_CARDINAL_2,
+                    },
+                ],
             },
         ],
     },
@@ -27970,8 +28212,92 @@ exports.BESTIARY_ENEMIES = {
                 h: 2,
                 hp: 1,
                 maxHp: 1,
-                // Preview as a straight lane.
-                hitWarnings: line(0, 1, 4).map((o) => hw(o, SHOW_X)),
+                frames: 1,
+            },
+            {
+                label: "Turn 1: Cast (orb)",
+                tileX: 36,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 0,
+                        variant: "fire",
+                        offsets: CARDINAL_1,
+                    },
+                ],
+            },
+            {
+                label: "Turn 2: Overlap (warn + cast)",
+                // On the next turn, the previous cast advances to marker (state 1)
+                // while the new pattern is spawned (state 0).
+                tileX: 35,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 1,
+                        variant: "fire",
+                        offsets: CARDINAL_1,
+                    },
+                    {
+                        kind: "wizardFireball",
+                        state: 0,
+                        variant: "fire",
+                        offsets: DIAGONAL_1,
+                    },
+                ],
+                // Hitwarnings only for the marker phase.
+                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+            },
+            {
+                label: "Turn 3: Overlap (boom + warn)",
+                tileX: 35,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 2,
+                        variant: "fire",
+                        offsets: CARDINAL_1,
+                    },
+                    {
+                        kind: "wizardFireball",
+                        state: 1,
+                        variant: "fire",
+                        offsets: DIAGONAL_1,
+                    },
+                ],
+                hitWarnings: DIAGONAL_1.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+            },
+            {
+                label: "Turn 4: Diagonal (boom)",
+                tileX: 35,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 2,
+                        variant: "fire",
+                        offsets: DIAGONAL_1,
+                    },
+                ],
             },
         ],
     },
@@ -27983,13 +28309,98 @@ exports.BESTIARY_ENEMIES = {
         sprites: [
             {
                 label: "Idle",
-                tileX: 35,
+                tileX: 37,
                 tileY: 8,
                 w: 1,
                 h: 2,
                 hp: 1,
                 maxHp: 1,
-                hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
+                frames: 1,
+            },
+            {
+                label: "Turn 1: Ring r=2 (orb)",
+                tileX: 38,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 0,
+                        variant: "earth",
+                        offsets: EARTH_RING_2,
+                    },
+                ],
+            },
+            {
+                label: "Turn 2: Overlap (r=2 warn + r=1 cast)",
+                // Next turn: r=2 advances to marker while r=1 ring is spawned.
+                tileX: 37,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 1,
+                        variant: "earth",
+                        offsets: EARTH_RING_2,
+                    },
+                    {
+                        kind: "wizardFireball",
+                        state: 0,
+                        variant: "earth",
+                        offsets: OMNI_1,
+                    },
+                ],
+                hitWarnings: [
+                    ...EARTH_RING_2.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+                ],
+            },
+            {
+                label: "Turn 3: Overlap (r=2 boom + r=1 warn)",
+                tileX: 37,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 2,
+                        variant: "earth",
+                        offsets: EARTH_RING_2,
+                    },
+                    {
+                        kind: "wizardFireball",
+                        state: 1,
+                        variant: "earth",
+                        offsets: OMNI_1,
+                    },
+                ],
+                hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+            },
+            {
+                label: "Turn 4: Ring r=1 (boom)",
+                tileX: 37,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                effects: [
+                    {
+                        kind: "wizardFireball",
+                        state: 2,
+                        variant: "earth",
+                        offsets: OMNI_1,
+                    },
+                ],
             },
         ],
     },

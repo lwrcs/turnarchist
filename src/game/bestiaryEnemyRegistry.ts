@@ -14,6 +14,25 @@ export type BestiaryEnemySprite = {
   hp?: number;
   maxHp?: number;
   /**
+   * Optional Bestiary-only effect previews (e.g. wizard fireballs) rendered near the sprite.
+   */
+  effects?: Array<{
+    kind: "wizardFireball";
+    /**
+     * 0 = charging orb, 1 = marker/telegraph, 2 = explosion.
+     * Matches `WizardFireball.draw()` branches.
+     */
+    state: 0 | 1 | 2;
+    /**
+     * Determines which FX row to use (matches `WizardFireball.tileY` selection).
+     */
+    variant: "energy" | "fire" | "earth";
+    /**
+     * Target tile offsets relative to the sprite's feet-tile anchor.
+     */
+    offsets: Array<{ x: number; y: number }>;
+  }>;
+  /**
    * Some enemies use multi-tile art but still behave like a 1-tile enemy for warnings.
    * When true, hitwarnings are anchored on the *left* foot tile (instead of centered),
    * so registry authors can place per-tile warnings with integer offsets.
@@ -99,6 +118,34 @@ const hw = (
   alpha: 1,
   ...opts,
 });
+
+const WIZARD_CARDINAL_2: Array<{ x: number; y: number }> = [
+  { x: -1, y: 0 },
+  { x: -2, y: 0 },
+  { x: 1, y: 0 },
+  { x: 2, y: 0 },
+  { x: 0, y: -1 },
+  { x: 0, y: -2 },
+  { x: 0, y: 1 },
+  { x: 0, y: 2 },
+];
+
+// NOTE: EarthWizard uses `attemptProjectilePlacement(..., clearPath=true)` which relies on
+// `Entity.isPathClear()`. That path-clear logic only works for cardinal or perfect diagonal
+// rays (it steps by sign(dx), sign(dy)), so offsets like (-2,-1) will never be "clear".
+// The effective pattern is the "ring corners + cardinal distance-2", not a full perimeter.
+const EARTH_RING_2: Array<{ x: number; y: number }> = [
+  // corners
+  { x: -2, y: -2 },
+  { x: 2, y: -2 },
+  { x: -2, y: 2 },
+  { x: 2, y: 2 },
+  // cardinals at distance 2
+  { x: -2, y: 0 },
+  { x: 2, y: 0 },
+  { x: 0, y: -2 },
+  { x: 0, y: 2 },
+];
 
 const CARDINAL_1: Array<{ x: number; y: number }> = [
   { x: 0, y: 1 },
@@ -267,8 +314,62 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         h: 2,
         hp: 1,
         maxHp: 1,
-        // Wizard fireballs create hitwarnings at the target tile.
-        hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
+        frames: 1,
+      },
+      {
+        label: "Cast (orb)",
+        // Energy wizard uses attack pose in `WizardEnemy.draw()` (tileX=7).
+        tileX: 7,
+        tileY: 0,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 0,
+            variant: "energy",
+            offsets: WIZARD_CARDINAL_2,
+          },
+        ],
+      },
+      {
+        label: "Cast (marker)",
+        tileX: 7,
+        tileY: 0,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 1,
+            variant: "energy",
+            offsets: WIZARD_CARDINAL_2,
+          },
+        ],
+        hitWarnings: WIZARD_CARDINAL_2.map((o) =>
+          hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+        ),
+      },
+      {
+        label: "Cast (boom)",
+        tileX: 7,
+        tileY: 0,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 2,
+            variant: "energy",
+            offsets: WIZARD_CARDINAL_2,
+          },
+        ],
       },
     ],
   },
@@ -287,8 +388,96 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         h: 2,
         hp: 1,
         maxHp: 1,
-        // Preview as a straight lane.
-        hitWarnings: line(0, 1, 4).map((o) => hw(o, SHOW_X)),
+        frames: 1,
+      },
+      {
+        label: "Turn 1: Cast (orb)",
+        tileX: 36,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 0,
+            variant: "fire",
+            offsets: CARDINAL_1,
+          },
+        ],
+      },
+      {
+        label: "Turn 2: Overlap (warn + cast)",
+        // On the next turn, the previous cast advances to marker (state 1)
+        // while the new pattern is spawned (state 0).
+        tileX: 35,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 1, // previous (cardinal) telegraph
+            variant: "fire",
+            offsets: CARDINAL_1,
+          },
+          {
+            kind: "wizardFireball",
+            state: 0, // new (diagonal) spawn
+            variant: "fire",
+            offsets: DIAGONAL_1,
+          },
+        ],
+        // Hitwarnings only for the marker phase.
+        hitWarnings: CARDINAL_1.map((o) =>
+          hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+        ),
+      },
+      {
+        label: "Turn 3: Overlap (boom + warn)",
+        tileX: 35,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 2, // previous (cardinal) explosion
+            variant: "fire",
+            offsets: CARDINAL_1,
+          },
+          {
+            kind: "wizardFireball",
+            state: 1, // diagonal telegraph
+            variant: "fire",
+            offsets: DIAGONAL_1,
+          },
+        ],
+        hitWarnings: DIAGONAL_1.map((o) =>
+          hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+        ),
+      },
+      {
+        label: "Turn 4: Diagonal (boom)",
+        tileX: 35,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 2,
+            variant: "fire",
+            offsets: DIAGONAL_1,
+          },
+        ],
       },
     ],
   },
@@ -302,13 +491,102 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
     sprites: [
       {
         label: "Idle",
-        tileX: 35,
+        tileX: 37,
         tileY: 8,
         w: 1,
         h: 2,
         hp: 1,
         maxHp: 1,
-        hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
+        frames: 1,
+      },
+      {
+        label: "Turn 1: Ring r=2 (orb)",
+        tileX: 38,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 0,
+            variant: "earth",
+            offsets: EARTH_RING_2,
+          },
+        ],
+      },
+      {
+        label: "Turn 2: Overlap (r=2 warn + r=1 cast)",
+        // Next turn: r=2 advances to marker while r=1 ring is spawned.
+        tileX: 37,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 1,
+            variant: "earth",
+            offsets: EARTH_RING_2,
+          },
+          {
+            kind: "wizardFireball",
+            state: 0,
+            variant: "earth",
+            offsets: OMNI_1,
+          },
+        ],
+        hitWarnings: [
+          ...EARTH_RING_2.map((o) =>
+            hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+          ),
+        ],
+      },
+      {
+        label: "Turn 3: Overlap (r=2 boom + r=1 warn)",
+        tileX: 37,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 2,
+            variant: "earth",
+            offsets: EARTH_RING_2,
+          },
+          {
+            kind: "wizardFireball",
+            state: 1,
+            variant: "earth",
+            offsets: OMNI_1,
+          },
+        ],
+        hitWarnings: OMNI_1.map((o) =>
+          hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+        ),
+      },
+      {
+        label: "Turn 4: Ring r=1 (boom)",
+        tileX: 37,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        effects: [
+          {
+            kind: "wizardFireball",
+            state: 2,
+            variant: "earth",
+            offsets: OMNI_1,
+          },
+        ],
       },
     ],
   },

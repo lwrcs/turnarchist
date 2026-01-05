@@ -156,17 +156,22 @@ export class HitWarning extends Drawable {
     const pointerOffset = HitWarning.pointerOffsetForDir(args.dir);
 
     Game.ctx.save();
-    Game.ctx.globalAlpha = args.alpha ?? 1;
-    Game.drawFX(
-      tileX,
-      tileY,
-      1,
-      1,
-      args.targetX + pointerOffset.x,
-      args.targetY + pointerOffset.y - HitWarning.previewOffsetY,
-      1,
-      1,
-    );
+    const alpha = args.alpha ?? 1;
+    // The arrow pixels in the FX sheet are somewhat transparent; draw twice to make
+    // the preview read more clearly (without affecting in-game hitwarnings).
+    for (let pass = 0; pass < 2; pass++) {
+      Game.ctx.globalAlpha = alpha;
+      Game.drawFX(
+        tileX,
+        tileY,
+        1,
+        1,
+        args.targetX + pointerOffset.x,
+        args.targetY + pointerOffset.y - HitWarning.previewOffsetY,
+        1,
+        1,
+      );
+    }
     Game.ctx.restore();
   };
 
