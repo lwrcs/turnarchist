@@ -27200,6 +27200,12 @@ class Bestiary {
         this.cycleEntrySprites = true;
         this.entrySpriteCycleMs = 1200;
         this.previewAnimT = 0;
+        /**
+         * When enabled (default), automatic state cycling is disabled and a button is shown
+         * on the sprite page to manually advance through states.
+         */
+        this.manualStateCycling = true;
+        this.activeSpriteStateIndex = 0;
         this.theme = "parchment";
         /**
          * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
@@ -27326,12 +27332,15 @@ class Bestiary {
                 this.activeEntryIndex = clamped;
                 // Reset sprite cycling so the viewed enemy starts at its first state.
                 this.entryViewStartTime = Date.now();
+                this.activeSpriteStateIndex = 0;
             }
         };
         // UI hitboxes (pixels)
         this.leftArrowRect = null;
         this.rightArrowRect = null;
         this.closeRect = null;
+        this.prevStateRect = null;
+        this.nextStateRect = null;
         /**
          * Opens the logbook window.
          */
@@ -27474,6 +27483,14 @@ class Bestiary {
                 this.close();
                 return;
             }
+            if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect)) {
+                this.advanceSpriteState(-1);
+                return;
+            }
+            if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect)) {
+                this.advanceSpriteState(1);
+                return;
+            }
             if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect)) {
                 this.pageLeft();
                 return;
@@ -27585,6 +27602,17 @@ class Bestiary {
                         w: rightInnerW,
                         h: rightInnerH,
                     });
+                    this.drawStateCycleButton({
+                        theme,
+                        compactMode,
+                        leftX,
+                        rightX,
+                        pageY,
+                        pageW,
+                        pageH,
+                        inset,
+                        entry,
+                    });
                 }
             }
             // Page turn arrows
@@ -27659,11 +27687,18 @@ class Bestiary {
                 game_1.Game.fillText("No sprite", rect.x + 6, rect.y + 6);
                 return;
             }
-            // Default behavior: cycle through sprites/states rather than showing all at once.
-            if (this.cycleEntrySprites && count > 1) {
-                const idx = this.activeCycledSpriteIndex(count);
-                this.drawSpritesWithHitWarnings([sprites[idx]], rect);
-                return;
+            // Default behavior: show one state at a time (manual by default; otherwise auto-cycle).
+            if (count > 1) {
+                if (this.manualStateCycling) {
+                    const idx = ((this.activeSpriteStateIndex % count) + count) % count;
+                    this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+                    return;
+                }
+                if (this.cycleEntrySprites) {
+                    const idx = this.activeCycledSpriteIndex(count);
+                    this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+                    return;
+                }
             }
             const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
             const rows = Math.ceil(count / cols);
@@ -27839,6 +27874,38 @@ class Bestiary {
                     }
                 }
             }
+        };
+        this.advanceSpriteState = (dir) => {
+            const entry = this.entries[this.activeEntryIndex];
+            const count = entry?.sprites?.length ?? 0;
+            if (count <= 1)
+                return;
+            this.activeSpriteStateIndex =
+                (((this.activeSpriteStateIndex + dir) % count) + count) % count;
+        };
+        this.drawStateCycleButton = (args) => {
+            const count = args.entry.sprites?.length ?? 0;
+            const shouldShow = this.manualStateCycling && count > 1;
+            if (!shouldShow) {
+                this.prevStateRect = null;
+                this.nextStateRect = null;
+                return;
+            }
+            // Render as simple left/right arrows (no box/text), centered on the sprite page.
+            const arrowW = 22;
+            const arrowH = 12;
+            const gap = 14;
+            // Place at the bottom of the sprite page, centered, inside the page panel.
+            const pageX = args.compactMode ? args.leftX : args.rightX;
+            const centerX = pageX + args.pageW / 2;
+            const totalW = arrowW * 2 + gap;
+            const leftX = Math.round(centerX - totalW / 2);
+            const rightX = leftX + arrowW + gap;
+            const y = Math.round(args.pageY + args.pageH - arrowH - 4);
+            this.prevStateRect = { x: leftX, y, w: arrowW, h: arrowH };
+            this.nextStateRect = { x: rightX, y, w: arrowW, h: arrowH };
+            this.drawArrow(this.prevStateRect, "left");
+            this.drawArrow(this.nextStateRect, "right");
         };
         this.resolveHitWarningDir = (hw, anchorX, anchorY) => {
             if (hw.direction) {
