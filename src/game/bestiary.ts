@@ -11,6 +11,7 @@ import { EVENTS } from "../event/events";
 import { BESTIARY_ENEMIES } from "./bestiaryEnemyRegistry";
 import { Entity } from "../entity/entity";
 import { HitWarning, HitWarningDirection } from "../drawable/hitWarning";
+import { HealthBar } from "../drawable/healthbar";
 
 interface BestiaryEntry {
   typeName: string;
@@ -25,6 +26,8 @@ interface BestiaryEntry {
     frameMs: number;
     w: number;
     h: number;
+    hp?: number;
+    maxHp?: number;
     sheet?: "mob" | "obj";
     offsetX?: number;
     offsetY?: number;
@@ -70,6 +73,13 @@ export class Bestiary {
   private enemyNameToClass: Map<string, typeof Enemy>;
 
   /**
+   * When enabled (default), if an entry has multiple sprites (idle/armed/HP states),
+   * the bestiary cycles through them instead of rendering them all side-by-side.
+   */
+  cycleEntrySprites: boolean = true;
+  private readonly entrySpriteCycleMs = 1200;
+
+  /**
    * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
    * but stays comfortable on larger screens.
    */
@@ -96,6 +106,12 @@ export class Bestiary {
     // ~2.5% of width, clamped.
     const i = Math.round(GameConstants.WIDTH * 0.025);
     return Math.max(4, Math.min(10, i));
+  };
+
+  private activeCycledSpriteIndex = (len: number): number => {
+    if (len <= 0) return 0;
+    const t = Math.max(0, Date.now() - this.openTime);
+    return Math.floor(t / this.entrySpriteCycleMs) % len;
   };
 
   // UI hitboxes (pixels)
@@ -212,6 +228,8 @@ export class Bestiary {
           frameMs: s.frameMs ?? 220,
           w: s.w ?? 1,
           h: s.h ?? 1,
+          hp: s.hp,
+          maxHp: s.maxHp,
           sheet: s.sheet,
           offsetX: s.offsetX,
           offsetY: s.offsetY,
@@ -518,6 +536,13 @@ export class Bestiary {
       return;
     }
 
+    // Default behavior: cycle through sprites/states rather than showing all at once.
+    if (this.cycleEntrySprites && count > 1) {
+      const idx = this.activeCycledSpriteIndex(count);
+      this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+      return;
+    }
+
     const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
     const rows = Math.ceil(count / cols);
     const cellW = rect.w / cols;
@@ -536,7 +561,9 @@ export class Bestiary {
       Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
       const label = s.label ?? "";
       const lw = Game.measureText(label).width;
-      Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+      if (label.length > 0) {
+        Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+      }
 
       // Sprite draw area (pixels)
       const areaY = cellY + labelH;
@@ -588,6 +615,23 @@ export class Bestiary {
           frameMs: s.frameMs,
           shadeColor: "Black",
           shadeAmount: 0,
+        });
+      }
+
+      // Optional HP bar preview (uses existing heart-bar visuals).
+      // Draw it anchored to the sprite (right above), not in the text/label row.
+      if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
+        // HealthBar visuals are centered around (x + 0.5). So pass (desiredCenter - 0.5).
+        const hbX = xBase + (drawW - 1) / 2;
+        // Place the bar just above the sprite's top edge.
+        // `HealthBar.drawStatic` draws at (y - 1.25), so `yBase + 1` -> `yBase - 0.25`.
+        const hbY = yBase + 1;
+        HealthBar.drawStatic({
+          hearts: s.hp,
+          maxHearts: s.maxHp,
+          x: hbX, 
+          y: hbY,
+          flashing: true,
         });
       }
 

@@ -95,4 +95,78 @@ export class HealthBar {
       }
     }
   };
+
+  /**
+   * UI/static draw: renders the same heart bar visuals as `draw()`, but without
+   * the hurt-timer animation gating. Intended for previews (e.g. Bestiary).
+   *
+   * Coordinates are in tile units (same as `draw()`).
+   */
+  static drawStatic = (args: {
+    hearts: number;
+    maxHearts: number;
+    x: number;
+    y: number;
+    flashing?: boolean;
+    alpha?: number;
+  }) => {
+    const hearts = args.hearts;
+    const maxHearts = args.maxHearts;
+    if (maxHearts <= 0) return;
+
+    const fullHearts = Math.floor(hearts);
+    const halfHearts = Math.ceil(hearts - fullHearts);
+
+    // Match the "fully expanded" look of the in-game bar.
+    const drawWidth = 9;
+    const drawHeight = 0.5;
+    const width = (drawWidth * (maxHearts - 1) + 8) / 16.0;
+    const xxStart = 0.5 + -width / 2;
+
+    const flashing = args.flashing ?? true;
+
+    Game.ctx.save();
+    if (args.alpha !== undefined) Game.ctx.globalAlpha = args.alpha;
+
+    for (let i = 0; i < Math.ceil(0.5 * maxHearts); i++) {
+      let tileX = 0;
+      if (!flashing) tileX = 1.5;
+      else if (i < fullHearts) tileX = 0;
+      else if (i < fullHearts + halfHearts) tileX = 0.5;
+      else tileX = 1;
+      const xx = (drawWidth * i) / 16.0 + xxStart;
+      Game.drawFX(
+        tileX,
+        8,
+        0.5,
+        0.5,
+        args.x + xx,
+        args.y - 1 - drawHeight / 2,
+        0.5,
+        drawHeight,
+      );
+
+      const j = maxHearts - i - 1;
+      if (j !== i) {
+        let tileX = 0;
+        if (!flashing) tileX = 1.5;
+        else if (j < fullHearts) tileX = 0;
+        else if (j < fullHearts + halfHearts) tileX = 0.5;
+        else tileX = 1;
+        const xx = (drawWidth * j) / 16.0 + xxStart;
+        Game.drawFX(
+          tileX,
+          8,
+          0.5,
+          0.5,
+          args.x + xx,
+          args.y - 1 - drawHeight / 2,
+          0.5,
+          drawHeight,
+        );
+      }
+    }
+
+    Game.ctx.restore();
+  };
 }

@@ -9942,6 +9942,57 @@ class HealthBar {
     }
 }
 exports.HealthBar = HealthBar;
+/**
+ * UI/static draw: renders the same heart bar visuals as `draw()`, but without
+ * the hurt-timer animation gating. Intended for previews (e.g. Bestiary).
+ *
+ * Coordinates are in tile units (same as `draw()`).
+ */
+HealthBar.drawStatic = (args) => {
+    const hearts = args.hearts;
+    const maxHearts = args.maxHearts;
+    if (maxHearts <= 0)
+        return;
+    const fullHearts = Math.floor(hearts);
+    const halfHearts = Math.ceil(hearts - fullHearts);
+    // Match the "fully expanded" look of the in-game bar.
+    const drawWidth = 9;
+    const drawHeight = 0.5;
+    const width = (drawWidth * (maxHearts - 1) + 8) / 16.0;
+    const xxStart = 0.5 + -width / 2;
+    const flashing = args.flashing ?? true;
+    game_1.Game.ctx.save();
+    if (args.alpha !== undefined)
+        game_1.Game.ctx.globalAlpha = args.alpha;
+    for (let i = 0; i < Math.ceil(0.5 * maxHearts); i++) {
+        let tileX = 0;
+        if (!flashing)
+            tileX = 1.5;
+        else if (i < fullHearts)
+            tileX = 0;
+        else if (i < fullHearts + halfHearts)
+            tileX = 0.5;
+        else
+            tileX = 1;
+        const xx = (drawWidth * i) / 16.0 + xxStart;
+        game_1.Game.drawFX(tileX, 8, 0.5, 0.5, args.x + xx, args.y - 1 - drawHeight / 2, 0.5, drawHeight);
+        const j = maxHearts - i - 1;
+        if (j !== i) {
+            let tileX = 0;
+            if (!flashing)
+                tileX = 1.5;
+            else if (j < fullHearts)
+                tileX = 0;
+            else if (j < fullHearts + halfHearts)
+                tileX = 0.5;
+            else
+                tileX = 1;
+            const xx = (drawWidth * j) / 16.0 + xxStart;
+            game_1.Game.drawFX(tileX, 8, 0.5, 0.5, args.x + xx, args.y - 1 - drawHeight / 2, 0.5, drawHeight);
+        }
+    }
+    game_1.Game.ctx.restore();
+};
 
 
 /***/ }),
@@ -27124,6 +27175,7 @@ const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.
 const bestiaryEnemyRegistry_1 = __webpack_require__(/*! ./bestiaryEnemyRegistry */ "./src/game/bestiaryEnemyRegistry.ts");
 const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
 class Bestiary {
     constructor(game, player) {
         this.isOpen = false;
@@ -27135,6 +27187,12 @@ class Bestiary {
          */
         this.activeEntrySubpage = 0;
         this.compactMode = false;
+        /**
+         * When enabled (default), if an entry has multiple sprites (idle/armed/HP states),
+         * the bestiary cycles through them instead of rendering them all side-by-side.
+         */
+        this.cycleEntrySprites = true;
+        this.entrySpriteCycleMs = 1200;
         /**
          * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
          * but stays comfortable on larger screens.
@@ -27160,6 +27218,12 @@ class Bestiary {
             // ~2.5% of width, clamped.
             const i = Math.round(gameConstants_1.GameConstants.WIDTH * 0.025);
             return Math.max(4, Math.min(10, i));
+        };
+        this.activeCycledSpriteIndex = (len) => {
+            if (len <= 0)
+                return 0;
+            const t = Math.max(0, Date.now() - this.openTime);
+            return Math.floor(t / this.entrySpriteCycleMs) % len;
         };
         // UI hitboxes (pixels)
         this.leftArrowRect = null;
@@ -27221,6 +27285,8 @@ class Bestiary {
                         frameMs: s.frameMs ?? 220,
                         w: s.w ?? 1,
                         h: s.h ?? 1,
+                        hp: s.hp,
+                        maxHp: s.maxHp,
                         sheet: s.sheet,
                         offsetX: s.offsetX,
                         offsetY: s.offsetY,
@@ -27482,6 +27548,12 @@ class Bestiary {
                 game_1.Game.fillText("No sprite", rect.x + 6, rect.y + 6);
                 return;
             }
+            // Default behavior: cycle through sprites/states rather than showing all at once.
+            if (this.cycleEntrySprites && count > 1) {
+                const idx = this.activeCycledSpriteIndex(count);
+                this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+                return;
+            }
             const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
             const rows = Math.ceil(count / cols);
             const cellW = rect.w / cols;
@@ -27498,7 +27570,9 @@ class Bestiary {
                 game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
                 const label = s.label ?? "";
                 const lw = game_1.Game.measureText(label).width;
-                game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+                if (label.length > 0) {
+                    game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+                }
                 // Sprite draw area (pixels)
                 const areaY = cellY + labelH;
                 const areaHpx = cellH - labelH - cellPad;
@@ -27543,6 +27617,22 @@ class Bestiary {
                         frameMs: s.frameMs,
                         shadeColor: "Black",
                         shadeAmount: 0,
+                    });
+                }
+                // Optional HP bar preview (uses existing heart-bar visuals).
+                // Draw it anchored to the sprite (right above), not in the text/label row.
+                if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
+                    // HealthBar visuals are centered around (x + 0.5). So pass (desiredCenter - 0.5).
+                    const hbX = xBase + (drawW - 1) / 2;
+                    // Place the bar just above the sprite's top edge.
+                    // `HealthBar.drawStatic` draws at (y - 1.25), so `yBase + 1` -> `yBase - 0.25`.
+                    const hbY = yBase + 1;
+                    healthbar_1.HealthBar.drawStatic({
+                        hearts: s.hp,
+                        maxHearts: s.maxHp,
+                        x: hbX,
+                        y: hbY,
+                        flashing: true,
                     });
                 }
                 // Hitwarnings (anchor should not include rumble)
@@ -27742,6 +27832,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 1,
                 h: 1,
+                hp: 1,
+                maxHp: 1,
             },
             {
                 label: "Armed",
@@ -27749,6 +27841,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 1,
                 h: 1,
+                hp: 1,
+                maxHp: 1,
                 rumbling: true,
                 hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -27765,6 +27859,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 16,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 frames: 4,
                 frameMs: 130,
             },
@@ -27774,6 +27870,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 16,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 rumbling: true,
                 hitWarnings: [
                     { x: 0, y: 2 },
@@ -27798,6 +27896,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 frames: 4,
                 hitWarnings: [
                     {
@@ -27817,20 +27917,24 @@ exports.BESTIARY_ENEMIES = {
         description: "A brittle undead that hits forward. More dangerous than it looks if you let it close.",
         sprites: [
             {
-                label: "2 HP",
+                label: "",
                 tileX: 5,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 3,
                 tileY: 0,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 2,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
         ],
@@ -27846,6 +27950,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 0,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 // Wizard fireballs create hitwarnings at the target tile.
                 hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
             },
@@ -27862,6 +27968,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 // Preview as a straight lane.
                 hitWarnings: line(0, 1, 4).map((o) => hw(o, SHOW_X)),
             },
@@ -27879,6 +27987,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 hitWarnings: [hw({ x: 0, y: 3 }, SHOW_FULL, { direction: "South" })],
             },
         ],
@@ -27888,13 +27998,24 @@ exports.BESTIARY_ENEMIES = {
         displayName: "Charge Knight",
         description: "Builds up and then charges in a straight line. Avoid being caught in corridors.",
         sprites: [
-            { label: "Idle", tileX: 13, tileY: 8, w: 1, h: 2, frames: 4 },
+            {
+                label: "Idle",
+                tileX: 13,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                frames: 4,
+            },
             {
                 label: "Armed",
                 tileX: 13,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 rumbling: true,
                 // ChargeEnemy warns tiles along its charge lane.
                 hitWarnings: line(0, 1, 3).map((o) => hw(o, SHOW_FULL, { direction: "South" })),
@@ -27912,6 +28033,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 frames: 4,
                 hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -27923,20 +28046,24 @@ exports.BESTIARY_ENEMIES = {
         description: "A chess-piece enemy that attacks diagonally. It will punish diagonal approaches.",
         sprites: [
             {
-                label: "2 HP",
+                label: "",
                 tileX: 31,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: DIAGONAL_1.map((o) => hw(o, SHOW_FULL)),
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 31,
                 tileY: 10,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: DIAGONAL_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -27948,20 +28075,24 @@ exports.BESTIARY_ENEMIES = {
         description: "A tougher zombie that can soak hits. Don’t waste turns trading blows in bad positions.",
         sprites: [
             {
-                label: "2 HP",
+                label: "",
                 tileX: 27,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 17,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
@@ -27974,11 +28105,13 @@ exports.BESTIARY_ENEMIES = {
         // BigSkull uses 2x2 sprite at (33,12)
         sprites: [
             {
-                label: "4 HP",
+                label: "",
                 tileX: 33,
                 tileY: 12,
                 w: 2,
                 h: 3,
+                hp: 4,
+                maxHp: 4,
                 hitWarningsWide: true,
                 hitWarnings: [
                     hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
@@ -27989,11 +28122,13 @@ exports.BESTIARY_ENEMIES = {
                 ],
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 35,
                 tileY: 12,
                 w: 2,
                 h: 3,
+                hp: 1,
+                maxHp: 4,
                 hitWarningsWide: true,
             },
         ],
@@ -28005,20 +28140,24 @@ exports.BESTIARY_ENEMIES = {
         // Queen constructor sets tileX=23,tileY=10
         sprites: [
             {
-                label: "2 HP",
+                label: "",
                 tileX: 23,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 23,
                 tileY: 10,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -28035,6 +28174,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
             },
             {
                 label: "Armed",
@@ -28042,6 +28183,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 rumbling: true,
                 hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
@@ -28059,6 +28202,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 5,
                 w: 2,
                 h: 3,
+                hp: 4,
+                maxHp: 4,
                 hitWarningsWide: true,
             },
             {
@@ -28067,6 +28212,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 1,
                 w: 2,
                 h: 3,
+                hp: 4,
+                maxHp: 4,
                 hitWarningsWide: true,
                 rumbling: true,
                 // Cardinal-only, 1-tile range, no diagonals.
@@ -28096,29 +28243,35 @@ exports.BESTIARY_ENEMIES = {
         // ArmoredSkull uses (17,16) in constructor
         sprites: [
             {
-                label: "3 HP",
+                label: "",
                 tileX: 27,
                 tileY: 16,
                 w: 1,
                 h: 2,
+                hp: 3,
+                maxHp: 3,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
             {
-                label: "2 HP",
+                label: "",
                 tileX: 5,
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 3,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 3,
                 tileY: 0,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 3,
             },
         ],
     },
@@ -28133,6 +28286,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 16,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 frames: 4,
                 hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
             },
@@ -28149,6 +28304,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
             },
             {
@@ -28157,6 +28314,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 rumbling: true,
                 hitWarnings: [
                     { x: 0, y: 2 },
@@ -28182,6 +28341,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 12,
                 w: 1,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 frames: 4,
                 hitWarnings: [
                     // Orthogonals: arrows only (no X)
@@ -28203,6 +28364,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 24,
                 w: 2,
                 h: 3,
+                hp: 4,
+                maxHp: 4,
                 hitWarningsWide: true,
                 frames: 4,
                 frameMs: 130,
@@ -28213,6 +28376,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 24,
                 w: 2,
                 h: 3,
+                hp: 4,
+                maxHp: 4,
                 hitWarningsWide: true,
                 rumbling: true,
                 // BigFrog is effectively a 2x2 footprint for warning directionality.
@@ -28263,6 +28428,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
             },
             {
@@ -28271,6 +28438,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 rumbling: true,
                 hitWarnings: [
                     { x: 0, y: 2 },
@@ -28291,20 +28460,24 @@ exports.BESTIARY_ENEMIES = {
         description: "A powerful chess-piece enemy. It’s dangerous up close and hard to bully.",
         sprites: [
             {
-                label: "2 HP",
+                label: "",
                 tileX: 51,
                 tileY: 12,
                 w: 1,
                 h: 3,
+                hp: 2,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
             },
             {
-                label: "1 HP",
+                label: "",
                 tileX: 51,
                 tileY: 15,
                 w: 1,
                 h: 3,
+                hp: 1,
+                maxHp: 2,
                 frames: 4,
                 hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -28321,6 +28494,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 8,
                 w: 1,
                 h: 2,
+                hp: 2,
+                maxHp: 2,
                 // Show long cardinal lanes (boltcaster seeks row/col LOS).
                 hitWarnings: [
                     ...line(0, 1, 4),
@@ -28342,6 +28517,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 12,
                 w: 2,
                 h: 3,
+                hp: 3,
+                maxHp: 3,
                 hitWarningsWide: true,
                 hitWarnings: [
                     hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
@@ -28357,13 +28534,35 @@ exports.BESTIARY_ENEMIES = {
         typeName: "OccultistEnemy",
         displayName: "Occultist",
         description: "A support caster that shields nearby enemies. If left alive, fights get much longer.",
-        sprites: [{ label: "Idle", tileX: 55, tileY: 8, w: 1, h: 2, frames: 4 }],
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 55,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 6,
+                maxHp: 6,
+                frames: 4,
+            },
+        ],
     },
     ExalterEnemy: {
         typeName: "ExalterEnemy",
         displayName: "Exalter",
         description: "A support caster that buffs nearby enemies. The longer it lives, the more lethal the room becomes.",
-        sprites: [{ label: "Idle", tileX: 59, tileY: 8, w: 1, h: 2, frames: 4 }],
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 59,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 6,
+                maxHp: 6,
+                frames: 4,
+            },
+        ],
     },
     WardenEnemy: {
         typeName: "WardenEnemy",
@@ -28376,6 +28575,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 10,
                 w: 2,
                 h: 2,
+                hp: 6,
+                maxHp: 6,
                 frames: 4,
                 // Frame stepping is `frameStride * w` in drawIdleSprite.
                 frameStride: 1,
@@ -28394,6 +28595,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 sheet: "obj",
                 // Lower down
                 offsetY: 0.18,
@@ -28404,6 +28607,8 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
+                hp: 1,
+                maxHp: 1,
                 sheet: "obj",
                 // Higher up + rumble
                 offsetY: -1,
@@ -28422,13 +28627,26 @@ exports.BESTIARY_ENEMIES = {
         typeName: "Spawner",
         displayName: "Reaper",
         description: "A reaper idol that spawns enemies over time. If you don't destroy it, the room will snowball.",
-        sprites: [{ label: "Idle", tileX: 6, tileY: 4, w: 1, h: 2 }],
+        sprites: [
+            { label: "Idle", tileX: 6, tileY: 4, w: 1, h: 2, hp: 4, maxHp: 4 },
+        ],
     },
     GlowBugEnemy: {
         typeName: "GlowBugEnemy",
         displayName: "Glowbugs",
         description: "A drifting light swarm. Mostly harmless, but it can clutter rooms and affect visibility.",
-        sprites: [{ label: "Idle", tileX: 8, tileY: 0, w: 1, h: 1, frames: 4 }],
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 8,
+                tileY: 0,
+                w: 1,
+                h: 1,
+                hp: 1,
+                maxHp: 1,
+                frames: 4,
+            },
+        ],
     },
 };
 
