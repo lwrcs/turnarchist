@@ -25295,6 +25295,11 @@ class Game {
                 this.players?.[this.localPlayerID]?.menu) {
                 this.players[this.localPlayerID].menu.positionButtons();
             }
+            // Let modal UI recompute any size-dependent layout immediately.
+            if (this.localPlayerID !== undefined &&
+                this.players?.[this.localPlayerID]) {
+                this.players[this.localPlayerID].bestiary?.handleResize?.();
+            }
             this.isMobile =
                 /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent);
             gameConstants_1.GameConstants.isIOS =
@@ -27124,6 +27129,38 @@ class Bestiary {
         this.isOpen = false;
         this.openTime = Date.now();
         this.activeEntryIndex = 0;
+        /**
+         * In compact mode, each entry is split into two pages:
+         * 0 = info (name/description), 1 = sprite preview.
+         */
+        this.activeEntrySubpage = 0;
+        this.compactMode = false;
+        /**
+         * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
+         * but stays comfortable on larger screens.
+         */
+        this.marginPx = () => {
+            // ~4% of width, clamped.
+            const m = Math.round(gameConstants_1.GameConstants.WIDTH * 0.04);
+            return Math.max(6, Math.min(16, m));
+        };
+        /**
+         * Inner padding between the book cover and the page panel(s).
+         * Shrinks on small screens to reclaim content space.
+         */
+        this.innerPadPx = () => {
+            // ~3% of width, clamped.
+            const p = Math.round(gameConstants_1.GameConstants.WIDTH * 0.03);
+            return Math.max(4, Math.min(12, p));
+        };
+        /**
+         * Inner content inset within a page panel (text/sprites away from the border).
+         */
+        this.pageInsetPx = () => {
+            // ~2.5% of width, clamped.
+            const i = Math.round(gameConstants_1.GameConstants.WIDTH * 0.025);
+            return Math.max(4, Math.min(10, i));
+        };
         // UI hitboxes (pixels)
         this.leftArrowRect = null;
         this.rightArrowRect = null;
@@ -27134,6 +27171,8 @@ class Bestiary {
         this.open = () => {
             this.isOpen = true;
             this.openTime = Date.now();
+            // Ensure layout mode reflects the current screen size at the moment of opening.
+            this.handleResize();
         };
         /**
          * Closes the logbook window.
@@ -27185,6 +27224,7 @@ class Bestiary {
                         sheet: s.sheet,
                         offsetX: s.offsetX,
                         offsetY: s.offsetY,
+                        hitWarningsWide: s.hitWarningsWide,
                         hitWarnings: s.hitWarnings,
                         rumbling: s.rumbling,
                     })),
@@ -27218,12 +27258,29 @@ class Bestiary {
         this.pageLeft = () => {
             if (this.entries.length <= 0)
                 return;
+            if (this.isCompactMode()) {
+                // Linear navigation across (entry, subpage).
+                const totalPages = this.entries.length * 2;
+                const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
+                const next = (current - 1 + totalPages) % totalPages;
+                this.activeEntryIndex = Math.floor(next / 2);
+                this.activeEntrySubpage = (next % 2);
+                return;
+            }
             this.activeEntryIndex =
                 (this.activeEntryIndex - 1 + this.entries.length) % this.entries.length;
         };
         this.pageRight = () => {
             if (this.entries.length <= 0)
                 return;
+            if (this.isCompactMode()) {
+                const totalPages = this.entries.length * 2;
+                const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
+                const next = (current + 1) % totalPages;
+                this.activeEntryIndex = Math.floor(next / 2);
+                this.activeEntrySubpage = (next % 2);
+                return;
+            }
             this.activeEntryIndex = (this.activeEntryIndex + 1) % this.entries.length;
         };
         this.handleInput = (input) => {
@@ -27270,39 +27327,48 @@ class Bestiary {
             game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             // Book rect
-            const margin = 16;
+            const margin = this.marginPx();
             const bookW = Math.min(gameConstants_1.GameConstants.WIDTH - margin * 2, 420);
             const bookH = Math.min(gameConstants_1.GameConstants.HEIGHT - margin * 2, 260);
             const bookX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * bookW);
             const bookY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * bookH);
+            const compactMode = this.isCompactMode();
+            if (!compactMode)
+                this.activeEntrySubpage = 0;
             // Cover/border
             game_1.Game.ctx.fillStyle = "rgba(235, 225, 200, 1)";
             game_1.Game.ctx.fillRect(bookX, bookY, bookW, bookH);
             game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
             game_1.Game.ctx.lineWidth = 2;
             game_1.Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
-            // Spine
+            // Spine (only in two-page mode)
             const spineX = Math.round(bookX + bookW / 2);
-            game_1.Game.ctx.strokeStyle = "rgba(160, 140, 120, 1)";
-            game_1.Game.ctx.lineWidth = 2;
-            game_1.Game.ctx.beginPath();
-            game_1.Game.ctx.moveTo(spineX, bookY + 8);
-            game_1.Game.ctx.lineTo(spineX, bookY + bookH - 8);
-            game_1.Game.ctx.stroke();
+            if (!compactMode) {
+                game_1.Game.ctx.strokeStyle = "rgba(160, 140, 120, 1)";
+                game_1.Game.ctx.lineWidth = 2;
+                game_1.Game.ctx.beginPath();
+                game_1.Game.ctx.moveTo(spineX, bookY + 8);
+                game_1.Game.ctx.lineTo(spineX, bookY + bookH - 8);
+                game_1.Game.ctx.stroke();
+            }
             // Page panels
-            const pad = 12;
-            const pageW = Math.floor(bookW / 2) - pad * 2;
+            const pad = this.innerPadPx();
+            const pageW = compactMode
+                ? bookW - pad * 2
+                : Math.floor(bookW / 2) - pad * 2;
             const pageH = bookH - pad * 2 - 22; // reserve bottom row for arrows
             const leftX = bookX + pad;
             const rightX = spineX + pad;
             const pageY = bookY + pad;
             game_1.Game.ctx.fillStyle = "rgba(245, 238, 220, 1)";
             game_1.Game.ctx.fillRect(leftX, pageY, pageW, pageH);
-            game_1.Game.ctx.fillRect(rightX, pageY, pageW, pageH);
             game_1.Game.ctx.strokeStyle = "rgba(200, 185, 160, 1)";
             game_1.Game.ctx.lineWidth = 1;
             game_1.Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
-            game_1.Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
+            if (!compactMode) {
+                game_1.Game.ctx.fillRect(rightX, pageY, pageW, pageH);
+                game_1.Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
+            }
             // Close button (top-right corner of book)
             const closeSize = 18;
             this.closeRect = {
@@ -27321,132 +27387,28 @@ class Bestiary {
                 game_1.Game.fillText("No entries", leftX + 6, pageY + 6);
             }
             else {
-                // Left page: name + description
-                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
-                game_1.Game.fillText(entry.displayName, leftX + 6, pageY + 6);
-                this.drawWrappedText(entry.description || "???", leftX + 6, pageY + 20, pageW - 12);
-                // Right page: enemy sprite (idle)
-                game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
-                game_1.Game.ctx.lineWidth = 1;
-                const rightInnerX = rightX + 10;
-                const rightInnerY = pageY + 10;
-                const rightInnerW = pageW - 20;
-                const rightInnerH = pageH - 20;
-                game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
-                const sprites = entry.sprites ?? [];
-                const count = sprites.length;
-                if (count === 0) {
+                const inset = this.pageInsetPx();
+                if (!compactMode || this.activeEntrySubpage === 0) {
+                    // Info page
                     game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
-                    game_1.Game.fillText("No sprite", rightInnerX + 6, rightInnerY + 6);
+                    game_1.Game.fillText(entry.displayName, leftX + inset, pageY + inset);
+                    this.drawWrappedText(entry.description || "???", leftX + inset, pageY + inset + 14, pageW - inset * 2);
                 }
-                else {
-                    const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
-                    const rows = Math.ceil(count / cols);
-                    const cellW = rightInnerW / cols;
-                    const cellH = rightInnerH / rows;
-                    const labelH = game_1.Game.letter_height + 4;
-                    const cellPad = 6;
-                    for (let i = 0; i < count; i++) {
-                        const s = sprites[i];
-                        const col = i % cols;
-                        const row = Math.floor(i / cols);
-                        const cellX = rightInnerX + col * cellW;
-                        const cellY = rightInnerY + row * cellH;
-                        // Label
-                        game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
-                        const label = s.label ?? "";
-                        const lw = game_1.Game.measureText(label).width;
-                        game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
-                        // Sprite draw area (pixels)
-                        const areaX = cellX + cellPad;
-                        const areaY = cellY + labelH;
-                        const areaWpx = cellW - cellPad * 2;
-                        const areaHpx = cellH - labelH - cellPad;
-                        // Do not scale sprites down to fit; allow overlap if they exceed their cells.
-                        const drawW = s.w;
-                        const drawH = s.h;
-                        const centerX = cellX + cellW / 2;
-                        const centerY = areaY + areaHpx / 2;
-                        const drawX = centerX / gameConstants_1.GameConstants.TILESIZE - drawW / 2;
-                        const drawY = centerY / gameConstants_1.GameConstants.TILESIZE - drawH / 2;
-                        // Match crab-style rumble (2-frame: base vs +1px) when requested.
-                        // Use exactly 1px in tile-units so this remains visible regardless of TILESIZE.
-                        const rumbleTiles = s.rumbling && Math.floor(Date.now() / 170) % 2 === 1
-                            ? 1 / gameConstants_1.GameConstants.TILESIZE
-                            : 0;
-                        const ox = s.offsetX ?? 0;
-                        const oy = s.offsetY ?? 0;
-                        const xBase = drawX + ox;
-                        const yBase = drawY + oy;
-                        const x = xBase + rumbleTiles;
-                        const y = yBase;
-                        const frames = s.frames ?? 1;
-                        const stride = s.frameStride ?? 1;
-                        const frameMs = s.frameMs ?? 220;
-                        const w = s.w ?? 1;
-                        const h = s.h ?? 1;
-                        const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
-                        const tx = s.tileX + frameIndex * stride * w;
-                        if (s.sheet === "obj") {
-                            game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
-                        }
-                        else {
-                            entity_1.Entity.drawIdleSprite({
-                                tileX: s.tileX,
-                                tileY: s.tileY,
-                                x,
-                                y,
-                                w: s.w,
-                                h: s.h,
-                                drawW,
-                                drawH,
-                                frames: s.frames,
-                                frameStride: s.frameStride,
-                                frameMs: s.frameMs,
-                                shadeColor: "Black",
-                                shadeAmount: 0,
-                            });
-                        }
-                        // Bestiary-only: render any hitwarning previews requested for this sprite/state.
-                        // Anchor at the "feet tile" of the drawn sprite (better for 1x2 mobs).
-                        // IMPORTANT: anchor should not include rumble jitter, otherwise the hitwarnings
-                        // visually "rumble" along with the sprite.
-                        const anchorX = xBase + (drawW - 1) / 2;
-                        const anchorY = yBase + (drawH - 1);
-                        for (const hw of s.hitWarnings ?? []) {
-                            const tx2 = anchorX + hw.targetOffset.x;
-                            // Bestiary tweak: the in-game hitwarning sprites are biased slightly upward.
-                            // For bestiary previews we want them visually centered on the target tile.
-                            const ty2 = anchorY + hw.targetOffset.y + 0.5;
-                            const alpha = hw.alpha ?? 1;
-                            const show = hw.show ?? {};
-                            const dir = this.resolveHitWarningDir(hw, anchorX, anchorY);
-                            if (dir !== null) {
-                                if (show.redArrow) {
-                                    hitWarning_1.HitWarning.drawPreviewArrow({
-                                        targetX: tx2,
-                                        targetY: ty2,
-                                        dir,
-                                        variant: "red",
-                                        alpha,
-                                    });
-                                }
-                                if (show.whiteArrow) {
-                                    hitWarning_1.HitWarning.drawPreviewArrow({
-                                        targetX: tx2,
-                                        targetY: ty2,
-                                        dir,
-                                        variant: "white",
-                                        alpha,
-                                        suppressIfNorth: true,
-                                    });
-                                }
-                            }
-                            if (show.redX) {
-                                hitWarning_1.HitWarning.drawPreviewX({ targetX: tx2, targetY: ty2, alpha });
-                            }
-                        }
-                    }
+                if (!compactMode || this.activeEntrySubpage === 1) {
+                    // Sprite page (right page in wide mode, single page in compact mode)
+                    game_1.Game.ctx.strokeStyle = "rgba(120, 100, 80, 1)";
+                    game_1.Game.ctx.lineWidth = 1;
+                    const rightInnerX = (compactMode ? leftX : rightX) + inset;
+                    const rightInnerY = pageY + inset;
+                    const rightInnerW = pageW - inset * 2;
+                    const rightInnerH = pageH - inset * 2;
+                    game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+                    this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
+                        x: rightInnerX,
+                        y: rightInnerY,
+                        w: rightInnerW,
+                        h: rightInnerH,
+                    });
                 }
             }
             // Page turn arrows
@@ -27473,14 +27435,157 @@ class Bestiary {
                 this.leftArrowRect = null;
                 this.rightArrowRect = null;
             }
-            // Page indicator
+            // Page indicator (entry index stays the same even in compact mode)
             if (this.entries.length > 0) {
                 const indicator = `${this.activeEntryIndex + 1}/${this.entries.length}`;
                 const iw = game_1.Game.measureText(indicator).width;
                 game_1.Game.ctx.fillStyle = "rgba(60, 50, 40, 1)";
                 game_1.Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
+                if (compactMode) {
+                    const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
+                    game_1.Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
+                }
             }
             game_1.Game.ctx.restore();
+        };
+        /**
+         * Recompute layout mode based on current scaled canvas width.
+         * Call this from `Game.onResize()` so the Bestiary flips immediately as the screen changes.
+         */
+        this.handleResize = () => {
+            const nextCompact = this.computeCompactMode();
+            if (nextCompact === this.compactMode)
+                return;
+            this.compactMode = nextCompact;
+            // If we just switched to wide mode, ensure we're on the info page (since sprites will
+            // render on the right page again).
+            if (!this.compactMode)
+                this.activeEntrySubpage = 0;
+        };
+        this.isCompactMode = () => {
+            return this.compactMode;
+        };
+        this.computeCompactMode = () => {
+            // Decide compact mode in *screen pixels* (CSS px), so this doesn't get stuck
+            // when the user changes scale. `GameConstants.WIDTH` is unscaled canvas px.
+            const canvasScreenW = gameConstants_1.GameConstants.WIDTH;
+            const marginScreenPx = this.marginPx();
+            const maxBookScreenPx = 420;
+            const bookScreenPx = Math.min(canvasScreenW - marginScreenPx * 2, maxBookScreenPx);
+            // Threshold is in screen px: below this, two-page layout becomes unusably tight.
+            return bookScreenPx < 250;
+        };
+        this.drawSpritesWithHitWarnings = (sprites, rect) => {
+            const count = sprites.length;
+            if (count === 0) {
+                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                game_1.Game.fillText("No sprite", rect.x + 6, rect.y + 6);
+                return;
+            }
+            const cols = count === 1 ? 1 : count === 2 ? 2 : 2;
+            const rows = Math.ceil(count / cols);
+            const cellW = rect.w / cols;
+            const cellH = rect.h / rows;
+            const labelH = game_1.Game.letter_height + 4;
+            const cellPad = 6;
+            for (let i = 0; i < count; i++) {
+                const s = sprites[i];
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const cellX = rect.x + col * cellW;
+                const cellY = rect.y + row * cellH;
+                // Label
+                game_1.Game.ctx.fillStyle = "rgba(40, 35, 30, 1)";
+                const label = s.label ?? "";
+                const lw = game_1.Game.measureText(label).width;
+                game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
+                // Sprite draw area (pixels)
+                const areaY = cellY + labelH;
+                const areaHpx = cellH - labelH - cellPad;
+                const drawW = s.w;
+                const drawH = s.h;
+                const centerX = cellX + cellW / 2;
+                const centerY = areaY + areaHpx / 2;
+                const drawX = centerX / gameConstants_1.GameConstants.TILESIZE - drawW / 2;
+                const drawY = centerY / gameConstants_1.GameConstants.TILESIZE - drawH / 2;
+                // Match crab-style rumble (2-frame: base vs +1px) when requested.
+                const rumbleTiles = s.rumbling && Math.floor(Date.now() / 170) % 2 === 1
+                    ? 1 / gameConstants_1.GameConstants.TILESIZE
+                    : 0;
+                const ox = s.offsetX ?? 0;
+                const oy = s.offsetY ?? 0;
+                const xBase = drawX + ox;
+                const yBase = drawY + oy;
+                const x = xBase + rumbleTiles;
+                const y = yBase;
+                const frames = s.frames ?? 1;
+                const stride = s.frameStride ?? 1;
+                const frameMs = s.frameMs ?? 220;
+                const w = s.w ?? 1;
+                const h = s.h ?? 1;
+                const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
+                const tx = s.tileX + frameIndex * stride * w;
+                if (s.sheet === "obj") {
+                    game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+                }
+                else {
+                    entity_1.Entity.drawIdleSprite({
+                        tileX: s.tileX,
+                        tileY: s.tileY,
+                        x,
+                        y,
+                        w: s.w,
+                        h: s.h,
+                        drawW,
+                        drawH,
+                        frames: s.frames,
+                        frameStride: s.frameStride,
+                        frameMs: s.frameMs,
+                        shadeColor: "Black",
+                        shadeAmount: 0,
+                    });
+                }
+                // Hitwarnings (anchor should not include rumble)
+                //
+                // NOTE: `hitWarningsWide` is intentionally NOT "draw twice". It's a coordinate-space
+                // tweak for authoring: for wide sprites (w>1), anchor hitwarnings on the *left* foot
+                // tile so registry authors can place per-tile warnings with integer offsets:
+                // - left tile: x = 0
+                // - right tile: x = 1 (for w=2)
+                const anchorY = yBase + (drawH - 1);
+                const anchorX = s.hitWarningsWide && drawW > 1 ? xBase : xBase + (drawW - 1) / 2;
+                for (const hw of s.hitWarnings ?? []) {
+                    const alpha = hw.alpha ?? 1;
+                    const show = hw.show ?? {};
+                    const tx2 = anchorX + hw.targetOffset.x;
+                    const ty2 = anchorY + hw.targetOffset.y + 0.5;
+                    const dir = this.resolveHitWarningDir(hw, anchorX, anchorY);
+                    if (dir !== null) {
+                        if (show.redArrow) {
+                            hitWarning_1.HitWarning.drawPreviewArrow({
+                                targetX: tx2,
+                                targetY: ty2,
+                                dir,
+                                variant: "red",
+                                alpha,
+                            });
+                        }
+                        if (show.whiteArrow) {
+                            hitWarning_1.HitWarning.drawPreviewArrow({
+                                targetX: tx2,
+                                targetY: ty2,
+                                dir,
+                                variant: "white",
+                                alpha,
+                                suppressIfNorth: true,
+                            });
+                        }
+                    }
+                    if (show.redX) {
+                        hitWarning_1.HitWarning.drawPreviewX({ targetX: tx2, targetY: ty2, alpha });
+                    }
+                }
+            }
         };
         this.resolveHitWarningDir = (hw, anchorX, anchorY) => {
             if (hw.direction) {
@@ -27576,6 +27681,8 @@ class Bestiary {
                 return;
             this.addEntry(enemyTypeName);
         });
+        // Initialize layout state based on current canvas size.
+        this.handleResize();
     }
 }
 exports.Bestiary = Bestiary;
@@ -27872,7 +27979,14 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 12,
                 w: 2,
                 h: 3,
-                hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+                hitWarningsWide: true,
+                hitWarnings: [
+                    hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
+                    hw({ x: 1, y: 1 }, SHOW_FULL, {
+                        direction: "South",
+                        sourceOffset: { x: 1, y: 0 },
+                    }),
+                ],
             },
             {
                 label: "1 HP",
@@ -27880,7 +27994,7 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 12,
                 w: 2,
                 h: 3,
-                hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+                hitWarningsWide: true,
             },
         ],
     },
@@ -27945,6 +28059,7 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 5,
                 w: 2,
                 h: 3,
+                hitWarningsWide: true,
             },
             {
                 label: "Armed",
@@ -27952,8 +28067,25 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 1,
                 w: 2,
                 h: 3,
+                hitWarningsWide: true,
                 rumbling: true,
-                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+                // Cardinal-only, 1-tile range, no diagonals.
+                // Since `hitWarningsWide` anchors on the left foot tile:
+                // - left tile source:  (0, 0)
+                // - right tile source: (1, 0)
+                hitWarnings: [
+                    // Up (one tile above each footprint tile)
+                    hw({ x: 0, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    // Down
+                    hw({ x: 0, y: 1 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 1, y: 1 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    // Left / Right
+                    hw({ x: -1, y: 0 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 2, y: 0 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    hw({ x: -1, y: -1 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+                    hw({ x: 2, y: -1 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+                ],
             },
         ],
     },
@@ -28017,7 +28149,7 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
-                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
+                //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
             },
             {
                 label: "Armed",
@@ -28026,7 +28158,16 @@ exports.BESTIARY_ENEMIES = {
                 w: 2,
                 h: 2,
                 rumbling: true,
-                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
+                hitWarnings: [
+                    { x: 0, y: 2 },
+                    { x: 0, y: -2 },
+                    { x: 2, y: 0 },
+                    { x: -2, y: 0 },
+                    { x: 0, y: 1 },
+                    { x: 0, y: -1 },
+                    { x: 1, y: 0 },
+                    { x: -1, y: 0 },
+                ].map((o) => hw(o, SHOW_FULL)),
             },
         ],
     },
@@ -28062,6 +28203,7 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 24,
                 w: 2,
                 h: 3,
+                hitWarningsWide: true,
                 frames: 4,
                 frameMs: 130,
             },
@@ -28071,8 +28213,42 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 24,
                 w: 2,
                 h: 3,
+                hitWarningsWide: true,
                 rumbling: true,
-                hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
+                // BigFrog is effectively a 2x2 footprint for warning directionality.
+                // Since `hitWarningsWide` anchors on the left foot tile, use per-warning `sourceOffset`
+                // to make arrows point outward from the correct corner/edge tile.
+                //
+                // Footprint source tiles (relative to left-foot anchor):
+                // - bottom-left:  (0, 0)
+                // - bottom-right: (1, 0)
+                // - top-left:     (0,-1)
+                // - top-right:    (1,-1)
+                hitWarnings: [
+                    // Bottom side
+                    hw({ x: 0, y: 2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 1, y: 2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    // Top side
+                    hw({ x: 0, y: -3 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+                    hw({ x: 1, y: -3 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+                    // Right side
+                    hw({ x: 3, y: 0 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    hw({ x: 3, y: -1 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+                    // Left side
+                    hw({ x: -2, y: 0 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: -2, y: -1 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+                    // Diagonal-ish outer ring
+                    hw({ x: -1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+                    hw({ x: 2, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+                    hw({ x: -1, y: 1 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 2, y: 1 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    /* Potential extras:
+                    hw({ x: 3, y: 2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+                    hw({ x: -2, y: 2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+                    hw({ x: 3, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+                    hw({ x: -1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+                    */
+                ],
             },
         ],
     },
@@ -28087,7 +28263,7 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 4,
                 w: 2,
                 h: 2,
-                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+                //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
             },
             {
                 label: "Armed",
@@ -28096,7 +28272,16 @@ exports.BESTIARY_ENEMIES = {
                 w: 2,
                 h: 2,
                 rumbling: true,
-                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+                hitWarnings: [
+                    { x: 0, y: 2 },
+                    { x: 0, y: -2 },
+                    { x: 2, y: 0 },
+                    { x: -2, y: 0 },
+                    { x: 0, y: 3 },
+                    { x: 0, y: -3 },
+                    { x: 3, y: 0 },
+                    { x: -3, y: 0 },
+                ].map((o) => hw(o, SHOW_FULL)),
             },
         ],
     },
@@ -28157,7 +28342,14 @@ exports.BESTIARY_ENEMIES = {
                 tileY: 12,
                 w: 2,
                 h: 3,
-                hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+                hitWarningsWide: true,
+                hitWarnings: [
+                    hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
+                    hw({ x: 1, y: 1 }, SHOW_FULL, {
+                        direction: "South",
+                        sourceOffset: { x: 1, y: 0 },
+                    }),
+                ],
             },
         ],
     },

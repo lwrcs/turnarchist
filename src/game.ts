@@ -2009,6 +2009,13 @@ export class Game {
     ) {
       this.players[this.localPlayerID].menu.positionButtons();
     }
+    // Let modal UI recompute any size-dependent layout immediately.
+    if (
+      this.localPlayerID !== undefined &&
+      this.players?.[this.localPlayerID]
+    ) {
+      this.players[this.localPlayerID].bestiary?.handleResize?.();
+    }
     this.isMobile =
       /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(
         navigator.userAgent,

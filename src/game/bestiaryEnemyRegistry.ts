@@ -8,6 +8,12 @@ export type BestiaryEnemySprite = {
   w?: number;
   h?: number;
   /**
+   * Some enemies use multi-tile art but still behave like a 1-tile enemy for warnings.
+   * When true, hitwarnings are anchored on the *left* foot tile (instead of centered),
+   * so registry authors can place per-tile warnings with integer offsets.
+   */
+  hitWarningsWide?: boolean;
+  /**
    * Which spritesheet to use when drawing.
    * - "mob": `Game.drawMob` (default)
    * - "obj": `Game.drawObj` (used by some entities like Crusher)
@@ -388,7 +394,14 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 12,
         w: 2,
         h: 3,
-        hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+        hitWarningsWide: true,
+        hitWarnings: [
+          hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
+          hw({ x: 1, y: 1 }, SHOW_FULL, {
+            direction: "South",
+            sourceOffset: { x: 1, y: 0 },
+          }),
+        ],
       },
       {
         label: "1 HP",
@@ -396,7 +409,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 12,
         w: 2,
         h: 3,
-        hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+        hitWarningsWide: true,
       },
     ],
   },
@@ -467,6 +480,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 5,
         w: 2,
         h: 3,
+        hitWarningsWide: true,
       },
       {
         label: "Armed",
@@ -474,8 +488,27 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 1,
         w: 2,
         h: 3,
+        hitWarningsWide: true,
         rumbling: true,
-        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+        // Cardinal-only, 1-tile range, no diagonals.
+        // Since `hitWarningsWide` anchors on the left foot tile:
+        // - left tile source:  (0, 0)
+        // - right tile source: (1, 0)
+        hitWarnings: [
+          // Up (one tile above each footprint tile)
+          hw({ x: 0, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+
+          // Down
+          hw({ x: 0, y: 1 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 1, y: 1 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+
+          // Left / Right
+          hw({ x: -1, y: 0 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 2, y: 0 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+          hw({ x: -1, y: -1 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+          hw({ x: 2, y: -1 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+        ],
       },
     ],
   },
@@ -545,7 +578,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 4,
         w: 2,
         h: 2,
-        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
+        //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
       },
       {
         label: "Armed",
@@ -554,7 +587,16 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         w: 2,
         h: 2,
         rumbling: true,
-        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_X)),
+        hitWarnings: [
+          { x: 0, y: 2 },
+          { x: 0, y: -2 },
+          { x: 2, y: 0 },
+          { x: -2, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 },
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+        ].map((o) => hw(o, SHOW_FULL)),
       },
     ],
   },
@@ -606,6 +648,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 24,
         w: 2,
         h: 3,
+        hitWarningsWide: true,
         frames: 4,
         frameMs: 130,
       },
@@ -615,8 +658,47 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 24,
         w: 2,
         h: 3,
+        hitWarningsWide: true,
         rumbling: true,
-        hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
+        // BigFrog is effectively a 2x2 footprint for warning directionality.
+        // Since `hitWarningsWide` anchors on the left foot tile, use per-warning `sourceOffset`
+        // to make arrows point outward from the correct corner/edge tile.
+        //
+        // Footprint source tiles (relative to left-foot anchor):
+        // - bottom-left:  (0, 0)
+        // - bottom-right: (1, 0)
+        // - top-left:     (0,-1)
+        // - top-right:    (1,-1)
+        hitWarnings: [
+          // Bottom side
+          hw({ x: 0, y: 2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 1, y: 2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+
+          // Top side
+          hw({ x: 0, y: -3 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+          hw({ x: 1, y: -3 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+
+          // Right side
+          hw({ x: 3, y: 0 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+          hw({ x: 3, y: -1 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+
+          // Left side
+          hw({ x: -2, y: 0 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: -2, y: -1 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+
+          // Diagonal-ish outer ring
+          hw({ x: -1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+          hw({ x: 2, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+          hw({ x: -1, y: 1 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 2, y: 1 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+
+          /* Potential extras:
+          hw({ x: 3, y: 2 }, SHOW_FULL, { sourceOffset: { x: 1, y: 0 } }),
+          hw({ x: -2, y: 2 }, SHOW_FULL, { sourceOffset: { x: 0, y: 0 } }),
+          hw({ x: 3, y: -2 }, SHOW_FULL, { sourceOffset: { x: 1, y: -1 } }),
+          hw({ x: -1, y: -2 }, SHOW_FULL, { sourceOffset: { x: 0, y: -1 } }),
+          */
+        ],
       },
     ],
   },
@@ -633,7 +715,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 4,
         w: 2,
         h: 2,
-        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+        //hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
       },
       {
         label: "Armed",
@@ -642,7 +724,16 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         w: 2,
         h: 2,
         rumbling: true,
-        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+        hitWarnings: [
+          { x: 0, y: 2 },
+          { x: 0, y: -2 },
+          { x: 2, y: 0 },
+          { x: -2, y: 0 },
+          { x: 0, y: 3 },
+          { x: 0, y: -3 },
+          { x: 3, y: 0 },
+          { x: -3, y: 0 },
+        ].map((o) => hw(o, SHOW_FULL)),
       },
     ],
   },
@@ -709,7 +800,14 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         tileY: 12,
         w: 2,
         h: 3,
-        hitWarnings: [hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" })],
+        hitWarningsWide: true,
+        hitWarnings: [
+          hw({ x: 0, y: 1 }, SHOW_FULL, { direction: "South" }),
+          hw({ x: 1, y: 1 }, SHOW_FULL, {
+            direction: "South",
+            sourceOffset: { x: 1, y: 0 },
+          }),
+        ],
       },
     ],
   },
