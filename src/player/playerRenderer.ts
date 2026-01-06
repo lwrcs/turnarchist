@@ -704,7 +704,11 @@ export class PlayerRenderer {
               ? "vendingMachine"
               : "none";
 
-      if (GameConstants.HOVER_TEXT_ENABLED && !this.player.contextMenu?.open) {
+      if (
+        GameConstants.HOVER_TEXT_ENABLED &&
+        !this.player.contextMenu?.open &&
+        !this.player.game.isMobile
+      ) {
         HoverText.draw(
           delta,
           this.player.x,

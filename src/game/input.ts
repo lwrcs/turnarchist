@@ -82,6 +82,7 @@ export const Input = {
 
   touchStartListeners: [],
   touchEndListeners: [],
+  touchMoveListeners: [],
 
   mouseX: 0,
   mouseY: 0,
@@ -98,6 +99,16 @@ export const Input = {
   // Tracks whether a registered hold action actually fired (e.g. inventory drag).
   // This lets us emulate mobile right-click without being blocked by the generic hold timer.
   holdCallbackFired: false,
+
+  // Touch gesture state
+  touchStartedInUI: false,
+  touchDragging: false,
+  touchLongPressFired: false,
+  touchLongPressTimerId: null as ReturnType<typeof setTimeout> | null,
+  // Many browsers (and devtools emulation) generate synthetic mouse events after touch.
+  // Track touch activity so we can suppress those mouse events and avoid double-processing taps.
+  lastTouchEventTimeMs: 0,
+  debugTouch: false,
 
   SPACE: "Space",
   LEFT: "ArrowLeft",
@@ -246,6 +257,33 @@ export const Input = {
       Input.mouseUpListeners[i](x, y, button);
   },
 
+  touchStartListener: function (x: number, y: number) {
+    let inUI = false;
+    for (let i = 0; i < Input.touchStartListeners.length; i++) {
+      try {
+        const res = Input.touchStartListeners[i](x, y);
+        if (res === true) inUI = true;
+      } catch {}
+    }
+    Input.touchStartedInUI = inUI;
+  },
+
+  touchMoveListener: function (x: number, y: number) {
+    for (let i = 0; i < Input.touchMoveListeners.length; i++) {
+      try {
+        Input.touchMoveListeners[i](x, y);
+      } catch {}
+    }
+  },
+
+  touchEndListener: function (x: number, y: number) {
+    for (let i = 0; i < Input.touchEndListeners.length; i++) {
+      try {
+        Input.touchEndListeners[i](x, y);
+      } catch {}
+    }
+  },
+
   mouseClickListener: function (event: MouseEvent) {
     if (event.button === 0 || event.button === 2) {
       let rect = window.document
@@ -299,6 +337,18 @@ export const Input = {
   },
 
   handleMouseDown: function (event: MouseEvent) {
+    // Suppress synthetic mouse events generated immediately after touch interactions.
+    if (Date.now() - Input.lastTouchEventTimeMs < 800) {
+      if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+        console.log("[Input] suppress mouseDown after touch", {
+          button: event.button,
+          x: Input.mouseX,
+          y: Input.mouseY,
+          dtMs: Date.now() - Input.lastTouchEventTimeMs,
+        });
+      }
+      return;
+    }
     if (Input.mouseDown) return; // Prevent multiple triggers
     MouseCursor.getInstance().startClickAnim();
     Input.mouseDown = true;
@@ -314,6 +364,18 @@ export const Input = {
   },
 
   handleMouseUp: function (event: MouseEvent) {
+    // Suppress synthetic mouse events generated immediately after touch interactions.
+    if (Date.now() - Input.lastTouchEventTimeMs < 800) {
+      if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+        console.log("[Input] suppress mouseUp after touch", {
+          button: event.button,
+          x: Input.mouseX,
+          y: Input.mouseY,
+          dtMs: Date.now() - Input.lastTouchEventTimeMs,
+        });
+      }
+      return;
+    }
     Input.mouseDown = false;
     Input.mouseDownStartTime = null;
     Input.mouseUpListener(Input.mouseX, Input.mouseY, event.button);
@@ -370,6 +432,7 @@ export const Input = {
     Game.inputReceived = true;
 
     evt.preventDefault();
+    Input.lastTouchEventTimeMs = Date.now();
 
     const firstTouch = Input.getTouches(evt)[0];
     Input.xDown = firstTouch.clientX;
@@ -378,6 +441,13 @@ export const Input = {
     Input.currentY = firstTouch.clientY;
 
     Input.tapStartTime = Date.now();
+    Input.touchDragging = false;
+    Input.touchLongPressFired = false;
+    Input.touchStartedInUI = false;
+    if (Input.touchLongPressTimerId) {
+      clearTimeout(Input.touchLongPressTimerId);
+      Input.touchLongPressTimerId = null;
+    }
 
     Input.updateMousePos({
       clientX: Input.currentX,
@@ -386,21 +456,35 @@ export const Input = {
 
     Input.swiped = false;
 
-    // Unify with mouseDown logic, but force button=0 (left-click equivalent)
-    Input.mouseDown = true;
-    Input.mouseDownStartTime = Date.now();
-    Input.isMouseHold = false;
-    Input.holdCallbackFired = false;
-    Input.mouseDownListener(Input.mouseX, Input.mouseY, 0);
-
-    if (!Input._holdCheckInterval) {
-      Input._holdCheckInterval = setInterval(Input.checkIsMouseHold, 16);
-      // console.log("_holdCheckInterval started");
+    // Allow UI systems to prep (e.g. inventory drag candidate) without committing an action yet.
+    // Default tap actions are processed on touch end.
+    Input.touchStartListener(Input.mouseX, Input.mouseY);
+    if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+      console.log("[Input] touchStart", {
+        raw: { x: Input.currentX, y: Input.currentY },
+        scaled: { x: Input.mouseX, y: Input.mouseY },
+        touchStartedInUI: Input.touchStartedInUI,
+      });
     }
+
+    // Start long-press timer for right-click/context menu.
+    const LONG_PRESS_MS = 450;
+    Input.touchLongPressTimerId = setTimeout(() => {
+      if (Input.touchDragging || Input.swiped) return;
+      Input.touchLongPressFired = true;
+      if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+        console.log("[Input] longPress fired -> RIGHT_CLICK", {
+          scaled: { x: Input.mouseX, y: Input.mouseY },
+          touchStartedInUI: Input.touchStartedInUI,
+        });
+      }
+      Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
+    }, LONG_PRESS_MS);
   },
 
   handleTouchMove: function (evt) {
     evt.preventDefault();
+    Input.lastTouchEventTimeMs = Date.now();
 
     Input.currentX = evt.touches[0].clientX;
     Input.currentY = evt.touches[0].clientY;
@@ -410,13 +494,56 @@ export const Input = {
       clientY: Input.currentY,
     } as MouseEvent);
 
+    Input.touchMoveListener(Input.mouseX, Input.mouseY);
+
     if (Input.swiped) return;
 
     var xDiff = Input.xDown - Input.currentX;
     var yDiff = Input.yDown - Input.currentY;
 
+    // Any meaningful movement cancels a pending long press (right click requires staying put).
+    const MOVE_CANCEL_PX = 8;
+    if (Input.touchLongPressTimerId) {
+      if (xDiff ** 2 + yDiff ** 2 >= MOVE_CANCEL_PX * MOVE_CANCEL_PX) {
+        clearTimeout(Input.touchLongPressTimerId);
+        Input.touchLongPressTimerId = null;
+        if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+          console.log("[Input] cancel longPress due to movement", {
+            movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+            touchStartedInUI: Input.touchStartedInUI,
+          });
+        }
+      }
+    }
+
+    // If the finger has moved significantly, cancel long press and consider it a drag gesture
+    // (primarily for UI dragging). Do not enter drag mode for minor jitter.
+    const DRAG_CANCEL_PX = 14;
+    if (
+      !Input.touchDragging &&
+      Input.touchStartedInUI &&
+      xDiff ** 2 + yDiff ** 2 >= DRAG_CANCEL_PX * DRAG_CANCEL_PX
+    ) {
+      Input.touchDragging = true;
+      if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+        console.log("[Input] touch entered drag mode", {
+          movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+        });
+      }
+    }
+
     // Check if we've swiped
     if (xDiff ** 2 + yDiff ** 2 >= GameConstants.SWIPE_THRESH) {
+      // Any real swipe cancels long press.
+      if (Input.touchLongPressTimerId) {
+        clearTimeout(Input.touchLongPressTimerId);
+        Input.touchLongPressTimerId = null;
+      }
+      if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+        console.log("[Input] swipe detected (movement)", {
+          movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+        });
+      }
       if (Math.abs(xDiff) > Math.abs(yDiff)) {
         if (xDiff > 0) {
           Input.leftSwipeListener();
@@ -447,28 +574,50 @@ export const Input = {
 
   handleTouchEnd: function (evt: TouchEvent) {
     evt.preventDefault();
+    Input.lastTouchEventTimeMs = Date.now();
 
-    // Mobile right-click emulation: long-press + release (RuneScape-like).
-    // - If finger doesn't move, and no swipe/drag occurred, emit RIGHT_CLICK.
-    // - Dragging (holdCallback) takes precedence over right click.
-    const RIGHT_CLICK_HOLD_THRESH = 450; // ms
-    const MOVE_THRESH_PX = 8; // CSS px
-    const dx = Input.currentX - Input.xDown;
-    const dy = Input.currentY - Input.yDown;
-    const movedSq = dx * dx + dy * dy;
-    const heldMs =
-      typeof Input.tapStartTime === "number"
-        ? Date.now() - Input.tapStartTime
-        : 0;
-    const shouldRightClick =
-      !Input.swiped &&
-      heldMs >= RIGHT_CLICK_HOLD_THRESH &&
-      movedSq <= MOVE_THRESH_PX * MOVE_THRESH_PX &&
-      Input.holdCallbackFired === false;
+    // Update mouse position from the final touch location so UI taps use release coords.
+    try {
+      const t = (evt.changedTouches && evt.changedTouches[0]) || null;
+      if (t) {
+        Input.currentX = t.clientX;
+        Input.currentY = t.clientY;
+        Input.updateMousePos({
+          clientX: Input.currentX,
+          clientY: Input.currentY,
+        } as MouseEvent);
+      }
+    } catch {}
 
-    if (shouldRightClick) {
-      Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
-    } else if (!Input.isTapHold && !Input.swiped) {
+    if (Input.touchLongPressTimerId) {
+      clearTimeout(Input.touchLongPressTimerId);
+      Input.touchLongPressTimerId = null;
+    }
+
+    // Touch "tap" actions are executed on release, but some code paths (notably `handleTap`)
+    // treat `mouseDownHandled` as "already consumed by mousedown". Since touch no longer
+    // drives the mouseDown pipeline, ensure we clear these flags so taps can take effect.
+    Input.lastMouseDownTime = 0;
+    Input.mouseDownHandled = false;
+
+    // Let UI systems finalize (e.g. inventory drop) before deciding tap action.
+    Input.touchEndListener(Input.mouseX, Input.mouseY);
+
+    const shouldTap =
+      !Input.touchLongPressFired && !Input.swiped && !Input.touchDragging;
+    if (GameConstants.DEVELOPER_MODE && Input.debugTouch) {
+      console.log("[Input] touchEnd", {
+        scaled: { x: Input.mouseX, y: Input.mouseY },
+        touchStartedInUI: Input.touchStartedInUI,
+        touchDragging: Input.touchDragging,
+        swiped: Input.swiped,
+        touchLongPressFired: Input.touchLongPressFired,
+        shouldTap,
+      });
+    }
+
+    // If the long press already opened a context menu, don't also perform the default action.
+    if (shouldTap) {
       Input.tapListener();
     }
     Input.isTapHold = false;
@@ -480,20 +629,10 @@ export const Input = {
     Input.lastSwipeTime = 0;
     Input.lastSwipeDirection = null;
 
-    // Also unify with mouseUp logic, again forcing button=0
-    Input.mouseDown = false;
-    Input.mouseDownStartTime = null;
-    Input.mouseUpListener(Input.mouseX, Input.mouseY, 0);
-
-    if (Input._holdCheckInterval) {
-      clearInterval(Input._holdCheckInterval);
-      Input._holdCheckInterval = null;
-      //console.log("_holdCheckInterval cleared");
-    }
-    setTimeout(() => {
-      Input.isMouseHold = false;
-      //console.log("isMouseHold reset");
-    }, 50);
+    // Reset gesture state
+    Input.touchDragging = false;
+    Input.touchLongPressFired = false;
+    Input.touchStartedInUI = false;
   },
 
   checkIsTapHold: function () {
@@ -573,28 +712,26 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("mouseup", (event) => Input.handleMouseUp(event), false);
-window.document
-  .getElementById("gameCanvas")
-  .addEventListener(
-    "contextmenu",
-    (event) => {
-      // Use contextmenu as our canonical desktop right-click signal (click does not always fire for button=2).
-      event.preventDefault();
+window.document.getElementById("gameCanvas").addEventListener(
+  "contextmenu",
+  (event) => {
+    // Use contextmenu as our canonical desktop right-click signal (click does not always fire for button=2).
+    event.preventDefault();
 
-      // Update mouse position from this event (same scaling logic as mousemove).
-      const canvas = window.document.getElementById("gameCanvas");
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      Input.rawMouseX = x;
-      Input.rawMouseY = y;
-      Input.mouseX = Math.floor(x / Game.scale);
-      Input.mouseY = Math.floor(y / Game.scale);
+    // Update mouse position from this event (same scaling logic as mousemove).
+    const canvas = window.document.getElementById("gameCanvas");
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    Input.rawMouseX = x;
+    Input.rawMouseY = y;
+    Input.mouseX = Math.floor(x / Game.scale);
+    Input.mouseY = Math.floor(y / Game.scale);
 
-      Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
-    },
-    false,
-  );
+    Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
+  },
+  false,
+);
 window.document.getElementById("gameCanvas").addEventListener(
   "wheel",
   (event) => {
@@ -614,4 +751,4 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);
-  */
+*/

@@ -68,6 +68,9 @@ export class Inventory {
   private usingItem: Usable | null = null;
   private usingItemIndex: number | null = null;
   mostRecentInput: "mouse" | "keyboard" = "keyboard";
+  // Track initial press position so mobile can start dragging on movement threshold (not long-press).
+  private dragStartMouseX: number | null = null;
+  private dragStartMouseY: number | null = null;
 
   // Static variables for inventory button position
   private buttonY: number;
@@ -89,6 +92,13 @@ export class Inventory {
     Input.mouseUpListeners.push((x, y, button) =>
       this.handleMouseUp(x, y, button),
     );
+    Input.touchStartListeners.push((x: number, y: number) => {
+      this.handleMouseDown(x, y, 0);
+      return false;
+    });
+    Input.touchEndListeners.push((x: number, y: number) => {
+      this.handleMouseUp(x, y, 0);
+    });
 
     Input.holdCallback = () => this.onHoldDetected();
 
@@ -327,6 +337,23 @@ export class Inventory {
 
       if (oldSelX !== this.selX || oldSelY !== this.selY) {
         // Optional: Handle selection change
+      }
+    }
+
+    // Mobile: initiate dragging by moving past a threshold after touching a slot.
+    // Long-press is reserved for context menus.
+    if (
+      this.player.game.isMobile &&
+      !this._isDragging &&
+      this._dragStartItem !== null &&
+      this.dragStartMouseX !== null &&
+      this.dragStartMouseY !== null
+    ) {
+      const dx = x - this.dragStartMouseX;
+      const dy = y - this.dragStartMouseY;
+      const DRAG_START_PX = 14;
+      if (dx * dx + dy * dy >= DRAG_START_PX * DRAG_START_PX) {
+        this.initiateDrag();
       }
     }
   };
@@ -1412,6 +1439,8 @@ export class Inventory {
       if (selectedItem !== null) {
         this._dragStartItem = selectedItem;
         this._dragStartSlot = this.selX + this.selY * this.cols;
+        this.dragStartMouseX = x;
+        this.dragStartMouseY = y;
       }
     }
   };
@@ -1423,6 +1452,7 @@ export class Inventory {
     if (this._dragStartItem === null || this._isDragging) {
       return;
     }
+    Input.holdCallbackFired = true;
     this._isDragging = true;
     this.grabbedItem = this._dragStartItem;
 
@@ -1436,6 +1466,9 @@ export class Inventory {
    * Handle hold detection for both mouse and touch.
    */
   onHoldDetected = () => {
+    // On mobile, long-press is reserved for context menus.
+    // Dragging is initiated via movement threshold in `mouseMove()`.
+    if (this.player.game.isMobile) return;
     this.initiateDrag();
   };
 
@@ -1460,6 +1493,10 @@ export class Inventory {
 
     // Ignore if not left click
     if (button !== 0) return;
+
+    // Reset drag-start tracking on release
+    this.dragStartMouseX = null;
+    this.dragStartMouseY = null;
 
     const invBounds = this.isPointInInventoryBounds(x, y);
     const quickbarBounds = this.isPointInQuickbarBounds(x, y);

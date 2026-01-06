@@ -45,6 +45,20 @@ export class PlayerInputHandler {
     Input.mouseRightClickListeners.push((x: number, y: number) =>
       this.handleMouseRightClickAt(x, y),
     );
+    // Touch start is used only to classify "started in UI" for gesture decisions.
+    // Actual actions still occur on touch end via `tapListener`, or on long-press via right click.
+    Input.touchStartListeners.push((x: number, y: number) => {
+      const inventory = this.player.inventory;
+      const bestiary = this.player.bestiary;
+      return (
+        inventory.isPointInInventoryButton(x, y) ||
+        inventory.isPointInQuickbarBounds(x, y).inBounds ||
+        (inventory.isOpen &&
+          inventory.isPointInInventoryBounds(x, y).inBounds) ||
+        Menu.isPointInOpenMenuButtonBounds(x, y) ||
+        (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false)
+      );
+    });
     Input.mouseDownListeners.push((x: number, y: number, button: number) =>
       this.handleMouseDown(x, y, button),
     );
@@ -667,6 +681,12 @@ export class PlayerInputHandler {
   handleTap() {
     // If the interaction was already handled by mouseDown, don't process it again
     if (Input.mouseDownHandled) {
+      if (GameConstants.DEVELOPER_MODE) {
+        console.log("[Tap] blocked by mouseDownHandled", {
+          x: Input.mouseX,
+          y: Input.mouseY,
+        });
+      }
       return;
     }
 
@@ -701,6 +721,21 @@ export class PlayerInputHandler {
     const bestiary = this.player.bestiary;
     const ctxMenu = this.player.contextMenu;
 
+    if (GameConstants.DEVELOPER_MODE) {
+      console.log("[Tap] handleTap", {
+        x,
+        y,
+        inMenuButton: this.isPointInMenuButtonBounds(x, y),
+        inBestiaryButton: bestiary
+          ? bestiary.isPointInBestiaryButton(x, y)
+          : false,
+        inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
+        inventoryOpen: this.player.inventory.isOpen,
+        menuOpen: this.player.menu.open,
+        ctxMenuOpen: Boolean(ctxMenu?.open),
+      });
+    }
+
     if (ctxMenu?.open) {
       ctxMenu.handleMouseDown(x, y, 0);
       return;
@@ -718,6 +753,8 @@ export class PlayerInputHandler {
 
     // Check if tap is on menu button
     if (this.isPointInMenuButtonBounds(x, y)) {
+      if (GameConstants.DEVELOPER_MODE)
+        console.log("[Tap] menu button -> toggle");
       this.handleMenuButtonClick();
       return;
     }

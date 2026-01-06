@@ -32197,6 +32197,7 @@ exports.Input = {
     mouseUpListeners: [],
     touchStartListeners: [],
     touchEndListeners: [],
+    touchMoveListeners: [],
     mouseX: 0,
     mouseY: 0,
     mouseDown: false,
@@ -32210,6 +32211,15 @@ exports.Input = {
     // Tracks whether a registered hold action actually fired (e.g. inventory drag).
     // This lets us emulate mobile right-click without being blocked by the generic hold timer.
     holdCallbackFired: false,
+    // Touch gesture state
+    touchStartedInUI: false,
+    touchDragging: false,
+    touchLongPressFired: false,
+    touchLongPressTimerId: null,
+    // Many browsers (and devtools emulation) generate synthetic mouse events after touch.
+    // Track touch activity so we can suppress those mouse events and avoid double-processing taps.
+    lastTouchEventTimeMs: 0,
+    debugTouch: false,
     SPACE: "Space",
     LEFT: "ArrowLeft",
     UP: "ArrowUp",
@@ -32350,6 +32360,34 @@ exports.Input = {
         for (let i = 0; i < exports.Input.mouseUpListeners.length; i++)
             exports.Input.mouseUpListeners[i](x, y, button);
     },
+    touchStartListener: function (x, y) {
+        let inUI = false;
+        for (let i = 0; i < exports.Input.touchStartListeners.length; i++) {
+            try {
+                const res = exports.Input.touchStartListeners[i](x, y);
+                if (res === true)
+                    inUI = true;
+            }
+            catch { }
+        }
+        exports.Input.touchStartedInUI = inUI;
+    },
+    touchMoveListener: function (x, y) {
+        for (let i = 0; i < exports.Input.touchMoveListeners.length; i++) {
+            try {
+                exports.Input.touchMoveListeners[i](x, y);
+            }
+            catch { }
+        }
+    },
+    touchEndListener: function (x, y) {
+        for (let i = 0; i < exports.Input.touchEndListeners.length; i++) {
+            try {
+                exports.Input.touchEndListeners[i](x, y);
+            }
+            catch { }
+        }
+    },
     mouseClickListener: function (event) {
         if (event.button === 0 || event.button === 2) {
             let rect = window.document
@@ -32392,6 +32430,18 @@ exports.Input = {
         }
     },
     handleMouseDown: function (event) {
+        // Suppress synthetic mouse events generated immediately after touch interactions.
+        if (Date.now() - exports.Input.lastTouchEventTimeMs < 800) {
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                console.log("[Input] suppress mouseDown after touch", {
+                    button: event.button,
+                    x: exports.Input.mouseX,
+                    y: exports.Input.mouseY,
+                    dtMs: Date.now() - exports.Input.lastTouchEventTimeMs,
+                });
+            }
+            return;
+        }
         if (exports.Input.mouseDown)
             return; // Prevent multiple triggers
         mouseCursor_1.MouseCursor.getInstance().startClickAnim();
@@ -32406,6 +32456,18 @@ exports.Input = {
         }
     },
     handleMouseUp: function (event) {
+        // Suppress synthetic mouse events generated immediately after touch interactions.
+        if (Date.now() - exports.Input.lastTouchEventTimeMs < 800) {
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                console.log("[Input] suppress mouseUp after touch", {
+                    button: event.button,
+                    x: exports.Input.mouseX,
+                    y: exports.Input.mouseY,
+                    dtMs: Date.now() - exports.Input.lastTouchEventTimeMs,
+                });
+            }
+            return;
+        }
         exports.Input.mouseDown = false;
         exports.Input.mouseDownStartTime = null;
         exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
@@ -32451,42 +32513,103 @@ exports.Input = {
         //console.log("handleTouchStart triggered");
         game_1.Game.inputReceived = true;
         evt.preventDefault();
+        exports.Input.lastTouchEventTimeMs = Date.now();
         const firstTouch = exports.Input.getTouches(evt)[0];
         exports.Input.xDown = firstTouch.clientX;
         exports.Input.yDown = firstTouch.clientY;
         exports.Input.currentX = firstTouch.clientX;
         exports.Input.currentY = firstTouch.clientY;
         exports.Input.tapStartTime = Date.now();
+        exports.Input.touchDragging = false;
+        exports.Input.touchLongPressFired = false;
+        exports.Input.touchStartedInUI = false;
+        if (exports.Input.touchLongPressTimerId) {
+            clearTimeout(exports.Input.touchLongPressTimerId);
+            exports.Input.touchLongPressTimerId = null;
+        }
         exports.Input.updateMousePos({
             clientX: exports.Input.currentX,
             clientY: exports.Input.currentY,
         });
         exports.Input.swiped = false;
-        // Unify with mouseDown logic, but force button=0 (left-click equivalent)
-        exports.Input.mouseDown = true;
-        exports.Input.mouseDownStartTime = Date.now();
-        exports.Input.isMouseHold = false;
-        exports.Input.holdCallbackFired = false;
-        exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, 0);
-        if (!exports.Input._holdCheckInterval) {
-            exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16);
-            // console.log("_holdCheckInterval started");
+        // Allow UI systems to prep (e.g. inventory drag candidate) without committing an action yet.
+        // Default tap actions are processed on touch end.
+        exports.Input.touchStartListener(exports.Input.mouseX, exports.Input.mouseY);
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+            console.log("[Input] touchStart", {
+                raw: { x: exports.Input.currentX, y: exports.Input.currentY },
+                scaled: { x: exports.Input.mouseX, y: exports.Input.mouseY },
+                touchStartedInUI: exports.Input.touchStartedInUI,
+            });
         }
+        // Start long-press timer for right-click/context menu.
+        const LONG_PRESS_MS = 450;
+        exports.Input.touchLongPressTimerId = setTimeout(() => {
+            if (exports.Input.touchDragging || exports.Input.swiped)
+                return;
+            exports.Input.touchLongPressFired = true;
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                console.log("[Input] longPress fired -> RIGHT_CLICK", {
+                    scaled: { x: exports.Input.mouseX, y: exports.Input.mouseY },
+                    touchStartedInUI: exports.Input.touchStartedInUI,
+                });
+            }
+            exports.Input.mouseRightClickListener(exports.Input.mouseX, exports.Input.mouseY);
+        }, LONG_PRESS_MS);
     },
     handleTouchMove: function (evt) {
         evt.preventDefault();
+        exports.Input.lastTouchEventTimeMs = Date.now();
         exports.Input.currentX = evt.touches[0].clientX;
         exports.Input.currentY = evt.touches[0].clientY;
         exports.Input.updateMousePos({
             clientX: exports.Input.currentX,
             clientY: exports.Input.currentY,
         });
+        exports.Input.touchMoveListener(exports.Input.mouseX, exports.Input.mouseY);
         if (exports.Input.swiped)
             return;
         var xDiff = exports.Input.xDown - exports.Input.currentX;
         var yDiff = exports.Input.yDown - exports.Input.currentY;
+        // Any meaningful movement cancels a pending long press (right click requires staying put).
+        const MOVE_CANCEL_PX = 8;
+        if (exports.Input.touchLongPressTimerId) {
+            if (xDiff ** 2 + yDiff ** 2 >= MOVE_CANCEL_PX * MOVE_CANCEL_PX) {
+                clearTimeout(exports.Input.touchLongPressTimerId);
+                exports.Input.touchLongPressTimerId = null;
+                if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                    console.log("[Input] cancel longPress due to movement", {
+                        movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+                        touchStartedInUI: exports.Input.touchStartedInUI,
+                    });
+                }
+            }
+        }
+        // If the finger has moved significantly, cancel long press and consider it a drag gesture
+        // (primarily for UI dragging). Do not enter drag mode for minor jitter.
+        const DRAG_CANCEL_PX = 14;
+        if (!exports.Input.touchDragging &&
+            exports.Input.touchStartedInUI &&
+            xDiff ** 2 + yDiff ** 2 >= DRAG_CANCEL_PX * DRAG_CANCEL_PX) {
+            exports.Input.touchDragging = true;
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                console.log("[Input] touch entered drag mode", {
+                    movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+                });
+            }
+        }
         // Check if we've swiped
         if (xDiff ** 2 + yDiff ** 2 >= gameConstants_1.GameConstants.SWIPE_THRESH) {
+            // Any real swipe cancels long press.
+            if (exports.Input.touchLongPressTimerId) {
+                clearTimeout(exports.Input.touchLongPressTimerId);
+                exports.Input.touchLongPressTimerId = null;
+            }
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+                console.log("[Input] swipe detected (movement)", {
+                    movedPx: Math.sqrt(xDiff ** 2 + yDiff ** 2),
+                });
+            }
             if (Math.abs(xDiff) > Math.abs(yDiff)) {
                 if (xDiff > 0) {
                     exports.Input.leftSwipeListener();
@@ -32519,25 +32642,44 @@ exports.Input = {
     },
     handleTouchEnd: function (evt) {
         evt.preventDefault();
-        // Mobile right-click emulation: long-press + release (RuneScape-like).
-        // - If finger doesn't move, and no swipe/drag occurred, emit RIGHT_CLICK.
-        // - Dragging (holdCallback) takes precedence over right click.
-        const RIGHT_CLICK_HOLD_THRESH = 450; // ms
-        const MOVE_THRESH_PX = 8; // CSS px
-        const dx = exports.Input.currentX - exports.Input.xDown;
-        const dy = exports.Input.currentY - exports.Input.yDown;
-        const movedSq = dx * dx + dy * dy;
-        const heldMs = typeof exports.Input.tapStartTime === "number"
-            ? Date.now() - exports.Input.tapStartTime
-            : 0;
-        const shouldRightClick = !exports.Input.swiped &&
-            heldMs >= RIGHT_CLICK_HOLD_THRESH &&
-            movedSq <= MOVE_THRESH_PX * MOVE_THRESH_PX &&
-            exports.Input.holdCallbackFired === false;
-        if (shouldRightClick) {
-            exports.Input.mouseRightClickListener(exports.Input.mouseX, exports.Input.mouseY);
+        exports.Input.lastTouchEventTimeMs = Date.now();
+        // Update mouse position from the final touch location so UI taps use release coords.
+        try {
+            const t = (evt.changedTouches && evt.changedTouches[0]) || null;
+            if (t) {
+                exports.Input.currentX = t.clientX;
+                exports.Input.currentY = t.clientY;
+                exports.Input.updateMousePos({
+                    clientX: exports.Input.currentX,
+                    clientY: exports.Input.currentY,
+                });
+            }
         }
-        else if (!exports.Input.isTapHold && !exports.Input.swiped) {
+        catch { }
+        if (exports.Input.touchLongPressTimerId) {
+            clearTimeout(exports.Input.touchLongPressTimerId);
+            exports.Input.touchLongPressTimerId = null;
+        }
+        // Touch "tap" actions are executed on release, but some code paths (notably `handleTap`)
+        // treat `mouseDownHandled` as "already consumed by mousedown". Since touch no longer
+        // drives the mouseDown pipeline, ensure we clear these flags so taps can take effect.
+        exports.Input.lastMouseDownTime = 0;
+        exports.Input.mouseDownHandled = false;
+        // Let UI systems finalize (e.g. inventory drop) before deciding tap action.
+        exports.Input.touchEndListener(exports.Input.mouseX, exports.Input.mouseY);
+        const shouldTap = !exports.Input.touchLongPressFired && !exports.Input.swiped && !exports.Input.touchDragging;
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE && exports.Input.debugTouch) {
+            console.log("[Input] touchEnd", {
+                scaled: { x: exports.Input.mouseX, y: exports.Input.mouseY },
+                touchStartedInUI: exports.Input.touchStartedInUI,
+                touchDragging: exports.Input.touchDragging,
+                swiped: exports.Input.swiped,
+                touchLongPressFired: exports.Input.touchLongPressFired,
+                shouldTap,
+            });
+        }
+        // If the long press already opened a context menu, don't also perform the default action.
+        if (shouldTap) {
             exports.Input.tapListener();
         }
         exports.Input.isTapHold = false;
@@ -32547,19 +32689,10 @@ exports.Input = {
         exports.Input.swipeHoldRepeating = false;
         exports.Input.lastSwipeTime = 0;
         exports.Input.lastSwipeDirection = null;
-        // Also unify with mouseUp logic, again forcing button=0
-        exports.Input.mouseDown = false;
-        exports.Input.mouseDownStartTime = null;
-        exports.Input.mouseUpListener(exports.Input.mouseX, exports.Input.mouseY, 0);
-        if (exports.Input._holdCheckInterval) {
-            clearInterval(exports.Input._holdCheckInterval);
-            exports.Input._holdCheckInterval = null;
-            //console.log("_holdCheckInterval cleared");
-        }
-        setTimeout(() => {
-            exports.Input.isMouseHold = false;
-            //console.log("isMouseHold reset");
-        }, 50);
+        // Reset gesture state
+        exports.Input.touchDragging = false;
+        exports.Input.touchLongPressFired = false;
+        exports.Input.touchStartedInUI = false;
     },
     checkIsTapHold: function () {
         if (exports.Input.tapStartTime !== null &&
@@ -32616,9 +32749,7 @@ window.document
 window.document
     .getElementById("gameCanvas")
     .addEventListener("mouseup", (event) => exports.Input.handleMouseUp(event), false);
-window.document
-    .getElementById("gameCanvas")
-    .addEventListener("contextmenu", (event) => {
+window.document.getElementById("gameCanvas").addEventListener("contextmenu", (event) => {
     // Use contextmenu as our canonical desktop right-click signal (click does not always fire for button=2).
     event.preventDefault();
     // Update mouse position from this event (same scaling logic as mousemove).
@@ -32647,7 +32778,7 @@ window.document
 window.document
   .getElementById("gameCanvas")
   .addEventListener("touchend", (event) => Input.handleTouchEnd(event), false);
-  */
+*/
 
 
 /***/ }),
@@ -36640,6 +36771,9 @@ class Inventory {
         this.usingItem = null;
         this.usingItemIndex = null;
         this.mostRecentInput = "keyboard";
+        // Track initial press position so mobile can start dragging on movement threshold (not long-press).
+        this.dragStartMouseX = null;
+        this.dragStartMouseY = null;
         this.initializedItems = false;
         this.clear = () => {
             this.items.fill(null);
@@ -36812,6 +36946,20 @@ class Inventory {
                     : 0;
                 if (oldSelX !== this.selX || oldSelY !== this.selY) {
                     // Optional: Handle selection change
+                }
+            }
+            // Mobile: initiate dragging by moving past a threshold after touching a slot.
+            // Long-press is reserved for context menus.
+            if (this.player.game.isMobile &&
+                !this._isDragging &&
+                this._dragStartItem !== null &&
+                this.dragStartMouseX !== null &&
+                this.dragStartMouseY !== null) {
+                const dx = x - this.dragStartMouseX;
+                const dy = y - this.dragStartMouseY;
+                const DRAG_START_PX = 14;
+                if (dx * dx + dy * dy >= DRAG_START_PX * DRAG_START_PX) {
+                    this.initiateDrag();
                 }
             }
         };
@@ -37638,6 +37786,8 @@ class Inventory {
                 if (selectedItem !== null) {
                     this._dragStartItem = selectedItem;
                     this._dragStartSlot = this.selX + this.selY * this.cols;
+                    this.dragStartMouseX = x;
+                    this.dragStartMouseY = y;
                 }
             }
         };
@@ -37648,6 +37798,7 @@ class Inventory {
             if (this._dragStartItem === null || this._isDragging) {
                 return;
             }
+            input_1.Input.holdCallbackFired = true;
             this._isDragging = true;
             this.grabbedItem = this._dragStartItem;
             // Remove item from original slot
@@ -37659,6 +37810,10 @@ class Inventory {
          * Handle hold detection for both mouse and touch.
          */
         this.onHoldDetected = () => {
+            // On mobile, long-press is reserved for context menus.
+            // Dragging is initiated via movement threshold in `mouseMove()`.
+            if (this.player.game.isMobile)
+                return;
             this.initiateDrag();
         };
         /**
@@ -37680,6 +37835,9 @@ class Inventory {
             // Ignore if not left click
             if (button !== 0)
                 return;
+            // Reset drag-start tracking on release
+            this.dragStartMouseX = null;
+            this.dragStartMouseY = null;
             const invBounds = this.isPointInInventoryBounds(x, y);
             const quickbarBounds = this.isPointInQuickbarBounds(x, y);
             const isValidDropZone = this.isOpen
@@ -37745,6 +37903,13 @@ class Inventory {
         this.buttonY = 10;
         input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.mouseUpListeners.push((x, y, button) => this.handleMouseUp(x, y, button));
+        input_1.Input.touchStartListeners.push((x, y) => {
+            this.handleMouseDown(x, y, 0);
+            return false;
+        });
+        input_1.Input.touchEndListeners.push((x, y) => {
+            this.handleMouseUp(x, y, 0);
+        });
         input_1.Input.holdCallback = () => this.onHoldDetected();
         this.items = new Array((this.rows + this._expansion) * this.cols).fill(null);
         this.equipAnimAmount = new Array((this.rows + this._expansion) * this.cols).fill(0);
@@ -50563,6 +50728,18 @@ class PlayerInputHandler {
         input_1.Input.tapListener = () => this.handleTap();
         input_1.Input.mouseMoveListener = () => this.handleInput(input_1.InputEnum.MOUSE_MOVE);
         input_1.Input.mouseRightClickListeners.push((x, y) => this.handleMouseRightClickAt(x, y));
+        // Touch start is used only to classify "started in UI" for gesture decisions.
+        // Actual actions still occur on touch end via `tapListener`, or on long-press via right click.
+        input_1.Input.touchStartListeners.push((x, y) => {
+            const inventory = this.player.inventory;
+            const bestiary = this.player.bestiary;
+            return (inventory.isPointInInventoryButton(x, y) ||
+                inventory.isPointInQuickbarBounds(x, y).inBounds ||
+                (inventory.isOpen &&
+                    inventory.isPointInInventoryBounds(x, y).inBounds) ||
+                menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
+                (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false));
+        });
         input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.numKeyListener = (num) => this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
@@ -51062,6 +51239,12 @@ class PlayerInputHandler {
     handleTap() {
         // If the interaction was already handled by mouseDown, don't process it again
         if (input_1.Input.mouseDownHandled) {
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                console.log("[Tap] blocked by mouseDownHandled", {
+                    x: input_1.Input.mouseX,
+                    y: input_1.Input.mouseY,
+                });
+            }
             return;
         }
         // Speed up camera animation on tap
@@ -51090,6 +51273,20 @@ class PlayerInputHandler {
         const y = input_1.Input.mouseY;
         const bestiary = this.player.bestiary;
         const ctxMenu = this.player.contextMenu;
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+            console.log("[Tap] handleTap", {
+                x,
+                y,
+                inMenuButton: this.isPointInMenuButtonBounds(x, y),
+                inBestiaryButton: bestiary
+                    ? bestiary.isPointInBestiaryButton(x, y)
+                    : false,
+                inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
+                inventoryOpen: this.player.inventory.isOpen,
+                menuOpen: this.player.menu.open,
+                ctxMenuOpen: Boolean(ctxMenu?.open),
+            });
+        }
         if (ctxMenu?.open) {
             ctxMenu.handleMouseDown(x, y, 0);
             return;
@@ -51104,6 +51301,8 @@ class PlayerInputHandler {
         }
         // Check if tap is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE)
+                console.log("[Tap] menu button -> toggle");
             this.handleMenuButtonClick();
             return;
         }
@@ -51926,7 +52125,9 @@ class PlayerRenderer {
                             inVendingMachine
                             ? "vendingMachine"
                             : "none";
-                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED && !this.player.contextMenu?.open) {
+                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED &&
+                    !this.player.contextMenu?.open &&
+                    !this.player.game.isMobile) {
                     hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
                         ? this.player.getRoom()
                         : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, drawFor);
