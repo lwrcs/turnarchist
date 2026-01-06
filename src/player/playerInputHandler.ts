@@ -7,6 +7,8 @@ import { GameConstants } from "../game/gameConstants";
 import { MuteButton } from "../gui/muteButton";
 import { Sound } from "../sound/sound";
 import { Menu } from "../gui/menu";
+import { Equippable } from "../item/equippable";
+import { Usable } from "../item/usable/usable";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -387,10 +389,84 @@ export class PlayerInputHandler {
     const menu = player.contextMenu;
     if (!menu) return;
 
-    menu.openAt(x, y, [
-      { label: "Placeholder", onClick: () => {} },
-      { label: "Cancel", onClick: () => {} },
-    ]);
+    const items: Array<{ label: string; onClick: () => void }> = [];
+
+    // UI buttons (menus)
+    if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
+      items.push({
+        label: player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary",
+        onClick: () => player.bestiary?.toggleOpen(),
+      });
+      items.push({ label: "Cancel", onClick: () => {} });
+      menu.openAt(x, y, items);
+      return;
+    }
+    if (player.inventory.isPointInInventoryButton(x, y)) {
+      items.push({
+        label: player.inventory.isOpen ? "Close Inventory" : "Open Inventory",
+        onClick: () => player.inventory.toggleOpen(),
+      });
+      items.push({ label: "Cancel", onClick: () => {} });
+      menu.openAt(x, y, items);
+      return;
+    }
+    if (Menu.isPointInOpenMenuButtonBounds(x, y)) {
+      items.push({
+        label: player.menu.open ? "Close Menu" : "Open Menu",
+        onClick: () => player.menu.toggleOpen(),
+      });
+      items.push({ label: "Cancel", onClick: () => {} });
+      menu.openAt(x, y, items);
+      return;
+    }
+
+    // Inventory / quickbar items
+    const inv = player.inventory;
+    const idx = inv.isOpen
+      ? inv.getInventorySlotIndexAtPoint(x, y)
+      : inv.getQuickbarSlotIndexAtPoint(x, y);
+
+    if (idx !== null && idx >= 0 && idx < inv.items.length) {
+      const item = inv.items[idx];
+      if (item) {
+        const primaryLabel = (() => {
+          if (item instanceof Equippable) {
+            return item.equipped ? "Unequip" : "Equip";
+          }
+          if (item instanceof Usable) {
+            if (item.canUseOnOther) return "Use on";
+            // Heuristic: potions are "Drink", other usables are "Eat" (foods).
+            const name = (item.name ?? "").toLowerCase();
+            if (name.includes("potion")) return "Drink";
+            return "Eat";
+          }
+          return "Use";
+        })();
+
+        // Primary option always matches the default click/use behavior.
+        items.push({
+          label: primaryLabel,
+          onClick: () => {
+            // Select the slot first, then reuse the existing inventory action logic.
+            inv.selX = idx % inv.cols;
+            inv.selY = Math.floor(idx / inv.cols);
+            inv.itemUse();
+          },
+        });
+
+        // Drop is always second-to-last (before Cancel)
+        items.push({
+          label: "Drop",
+          onClick: () => {
+            inv.dropItem(item, idx);
+          },
+        });
+      }
+    }
+
+    // Always include cancel as the final option.
+    items.push({ label: "Cancel", onClick: () => {} });
+    menu.openAt(x, y, items);
   }
 
   handleMouseDown(x: number, y: number, button: number) {

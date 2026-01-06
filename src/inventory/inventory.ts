@@ -1353,6 +1353,37 @@ export class Inventory {
     };
   };
 
+  getInventorySlotIndexAtPoint = (x: number, y: number): number | null => {
+    if (!this.isOpen) return null;
+    const bounds = this.isPointInInventoryBounds(x, y);
+    if (!bounds.inBounds) return null;
+    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME);
+    const b = 2;
+    const g = -2;
+    const stride = s + 2 * b + g;
+    const col = Math.floor((x - bounds.startX) / stride);
+    const row = Math.floor((y - bounds.startY) / stride);
+    if (col < 0 || col >= this.cols) return null;
+    if (row < 0 || row >= this.rows + this._expansion) return null;
+    const idx = col + row * this.cols;
+    return idx >= 0 && idx < this.items.length ? idx : null;
+  };
+
+  getQuickbarSlotIndexAtPoint = (x: number, y: number): number | null => {
+    const bounds = this.isPointInQuickbarBounds(x, y);
+    if (!bounds.inBounds) return null;
+    const s = this.isOpen
+      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
+      : 18;
+    const b = 2;
+    const g = -2;
+    const stride = s + 2 * b + g;
+    const col = Math.floor((x - bounds.startX) / stride);
+    if (col < 0 || col >= this.cols) return null;
+    const idx = col; // quickbar is row 0
+    return idx >= 0 && idx < this.items.length ? idx : null;
+  };
+
   isPointInInventoryButton = (x: number, y: number): boolean => {
     // Use the same rect math as `drawInventoryButton()` to avoid relying on
     // previous-frame state for hover/click hit tests.

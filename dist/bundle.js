@@ -37715,6 +37715,41 @@ class Inventory {
                 startY,
             };
         };
+        this.getInventorySlotIndexAtPoint = (x, y) => {
+            if (!this.isOpen)
+                return null;
+            const bounds = this.isPointInInventoryBounds(x, y);
+            if (!bounds.inBounds)
+                return null;
+            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME);
+            const b = 2;
+            const g = -2;
+            const stride = s + 2 * b + g;
+            const col = Math.floor((x - bounds.startX) / stride);
+            const row = Math.floor((y - bounds.startY) / stride);
+            if (col < 0 || col >= this.cols)
+                return null;
+            if (row < 0 || row >= this.rows + this._expansion)
+                return null;
+            const idx = col + row * this.cols;
+            return idx >= 0 && idx < this.items.length ? idx : null;
+        };
+        this.getQuickbarSlotIndexAtPoint = (x, y) => {
+            const bounds = this.isPointInQuickbarBounds(x, y);
+            if (!bounds.inBounds)
+                return null;
+            const s = this.isOpen
+                ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
+                : 18;
+            const b = 2;
+            const g = -2;
+            const stride = s + 2 * b + g;
+            const col = Math.floor((x - bounds.startX) / stride);
+            if (col < 0 || col >= this.cols)
+                return null;
+            const idx = col; // quickbar is row 0
+            return idx >= 0 && idx < this.items.length ? idx : null;
+        };
         this.isPointInInventoryButton = (x, y) => {
             // Use the same rect math as `drawInventoryButton()` to avoid relying on
             // previous-frame state for hover/click hit tests.
@@ -50630,6 +50665,8 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const muteButton_1 = __webpack_require__(/*! ../gui/muteButton */ "./src/gui/muteButton.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
+const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
+const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.mouseHoldInitialDirection = null;
@@ -51011,10 +51048,80 @@ class PlayerInputHandler {
         const menu = player.contextMenu;
         if (!menu)
             return;
-        menu.openAt(x, y, [
-            { label: "Placeholder", onClick: () => { } },
-            { label: "Cancel", onClick: () => { } },
-        ]);
+        const items = [];
+        // UI buttons (menus)
+        if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
+            items.push({
+                label: player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary",
+                onClick: () => player.bestiary?.toggleOpen(),
+            });
+            items.push({ label: "Cancel", onClick: () => { } });
+            menu.openAt(x, y, items);
+            return;
+        }
+        if (player.inventory.isPointInInventoryButton(x, y)) {
+            items.push({
+                label: player.inventory.isOpen ? "Close Inventory" : "Open Inventory",
+                onClick: () => player.inventory.toggleOpen(),
+            });
+            items.push({ label: "Cancel", onClick: () => { } });
+            menu.openAt(x, y, items);
+            return;
+        }
+        if (menu_1.Menu.isPointInOpenMenuButtonBounds(x, y)) {
+            items.push({
+                label: player.menu.open ? "Close Menu" : "Open Menu",
+                onClick: () => player.menu.toggleOpen(),
+            });
+            items.push({ label: "Cancel", onClick: () => { } });
+            menu.openAt(x, y, items);
+            return;
+        }
+        // Inventory / quickbar items
+        const inv = player.inventory;
+        const idx = inv.isOpen
+            ? inv.getInventorySlotIndexAtPoint(x, y)
+            : inv.getQuickbarSlotIndexAtPoint(x, y);
+        if (idx !== null && idx >= 0 && idx < inv.items.length) {
+            const item = inv.items[idx];
+            if (item) {
+                const primaryLabel = (() => {
+                    if (item instanceof equippable_1.Equippable) {
+                        return item.equipped ? "Unequip" : "Equip";
+                    }
+                    if (item instanceof usable_1.Usable) {
+                        if (item.canUseOnOther)
+                            return "Use on";
+                        // Heuristic: potions are "Drink", other usables are "Eat" (foods).
+                        const name = (item.name ?? "").toLowerCase();
+                        if (name.includes("potion"))
+                            return "Drink";
+                        return "Eat";
+                    }
+                    return "Use";
+                })();
+                // Primary option always matches the default click/use behavior.
+                items.push({
+                    label: primaryLabel,
+                    onClick: () => {
+                        // Select the slot first, then reuse the existing inventory action logic.
+                        inv.selX = idx % inv.cols;
+                        inv.selY = Math.floor(idx / inv.cols);
+                        inv.itemUse();
+                    },
+                });
+                // Drop is always second-to-last (before Cancel)
+                items.push({
+                    label: "Drop",
+                    onClick: () => {
+                        inv.dropItem(item, idx);
+                    },
+                });
+            }
+        }
+        // Always include cancel as the final option.
+        items.push({ label: "Cancel", onClick: () => { } });
+        menu.openAt(x, y, items);
     }
     handleMouseDown(x, y, button) {
         if (button !== 0)
