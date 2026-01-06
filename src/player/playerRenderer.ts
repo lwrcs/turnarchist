@@ -581,6 +581,14 @@ export class PlayerRenderer {
         heartStartX = 0.25;
       }
 
+      // On narrow screens, the bottom-left bestiary button can overlap the hearts.
+      // Mirror the coin/inventory-button avoidance logic by shifting the hearts right.
+      if (GameConstants.WIDTH < 145 && this.player.bestiary) {
+        const r = this.player.bestiary.getBestiaryButtonRect();
+        const minHeartStartX = (r.x + r.w + 4) / GameConstants.TILESIZE; // +4px padding
+        if (heartStartX < minHeartStartX) heartStartX = minHeartStartX;
+      }
+
       for (let i = 0; i < this.player.maxHealth; i++) {
         let shake = 0;
         let shakeY = 0;
@@ -653,7 +661,11 @@ export class PlayerRenderer {
       //this.drawCooldownBar();
       this.drawBreathStatus(quickbarStartX);
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
-      if (!transitioning) this.player.inventory.draw(delta);
+      if (!transitioning) {
+        this.player.inventory.draw(delta);
+        // Inventory-style bestiary button (bottom-left), drawn alongside other UI.
+        this.player.bestiary?.drawBestiaryButton(delta);
+      }
       const inventoryOpen = this.player.inventory.isOpen;
       const quickbarOpen =
         this.player.inventory.isPointInQuickbarBounds(

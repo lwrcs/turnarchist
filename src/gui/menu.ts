@@ -119,6 +119,27 @@ export class Menu {
     Game.ctx.restore();
   }
 
+  static isPointInOpenMenuButtonBounds(x: number, y: number): boolean {
+    const r = Menu.getOpenMenuButtonRect();
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  }
+
+  static getOpenMenuButtonRect(): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } {
+    // Mirror `drawOpenMenuButton()` placement: icon at (0, 0.5 tiles).
+    const tile = GameConstants.TILESIZE;
+    const x = 0;
+    const y = Math.round(0.5 * tile);
+    // Preserve the historical 1.5-tile-wide hit area used for clicking.
+    const w = Math.round(1.5 * tile);
+    const h = tile;
+    return { x, y, w, h };
+  }
+
   initializeCloseButton() {
     // Match the menu button dimensions
     const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);

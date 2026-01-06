@@ -1327,14 +1327,10 @@ export class Inventory {
   };
 
   isPointInInventoryButton = (x: number, y: number): boolean => {
-    const tX = x / GameConstants.TILESIZE;
-    const tY = y / GameConstants.TILESIZE;
-    return (
-      tX >= this.buttonX &&
-      tX <= this.buttonX + 1 &&
-      tY >= this.buttonY &&
-      tY <= this.buttonY + 1
-    );
+    // Use the same rect math as `drawInventoryButton()` to avoid relying on
+    // previous-frame state for hover/click hit tests.
+    const r = this.getInventoryButtonRect();
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
   };
 
   /**

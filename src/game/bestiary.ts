@@ -68,6 +68,9 @@ export class Bestiary {
   isOpen: boolean = false;
   openTime: number = Date.now();
   private entryViewStartTime: number = Date.now();
+  // Inventory-style open button positioning (stored in tile coordinates)
+  private buttonX: number = 0.25;
+  private buttonY: number = 0;
   entries: Array<BestiaryEntry>;
   activeEntryIndex: number = 0;
   /**
@@ -321,6 +324,44 @@ export class Bestiary {
     this.isOpen ? this.close() : this.open();
   };
 
+  isPointInBestiaryButton = (x: number, y: number): boolean => {
+    const r = this.getBestiaryButtonRect();
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  };
+
+  getBestiaryButtonRect = (): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } => {
+    // Mirror `drawBestiaryButton()` positioning logic.
+    let bx = 0.25;
+    let by = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
+    if (GameConstants.WIDTH < 145) by -= 1.25;
+    const x = Math.round(bx * GameConstants.TILESIZE);
+    const y = Math.round(by * GameConstants.TILESIZE);
+    const w = GameConstants.TILESIZE;
+    const h = GameConstants.TILESIZE;
+    return { x, y, w, h };
+  };
+
+  drawBestiaryButton = (delta: number) => {
+    // Mirror inventory button's bottom-corner positioning logic, but on the left.
+    // `delta` is unused, but kept for parity with other UI draw methods.
+    delta;
+    Game.ctx.save();
+
+    const r = this.getBestiaryButtonRect();
+    this.buttonX = r.x / GameConstants.TILESIZE;
+    this.buttonY = r.y / GameConstants.TILESIZE;
+
+    // Draw like the inventory button, but +1 tileX on fxset (one to the right).
+    Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
+
+    Game.ctx.restore();
+  };
+
   /**
    * Adds a new entry to the logbook.
    * @param enemyTypeName The enemy class name (e.g. "CrabEnemy")
@@ -438,6 +479,11 @@ export class Bestiary {
 
   handleMouseDown = (x: number, y: number) => {
     if (!this.isOpen) return;
+    // Allow the inventory-style button to close the bestiary.
+    if (this.isPointInBestiaryButton(x, y)) {
+      this.close();
+      return;
+    }
     if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
       this.close();
       return;
@@ -538,15 +584,6 @@ export class Bestiary {
       w: closeSize,
       h: closeSize,
     };
-    Game.ctx.fillStyle = theme.closeFill;
-    Game.ctx.fillRect(
-      this.closeRect.x,
-      this.closeRect.y,
-      this.closeRect.w,
-      this.closeRect.h,
-    );
-    Game.ctx.fillStyle = theme.closeText;
-    Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
 
     const entry = this.entries[this.activeEntryIndex] ?? null;
     if (!entry) {
@@ -633,6 +670,19 @@ export class Bestiary {
         const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
         Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
       }
+    }
+
+    // Close button should draw on top of everything else in the bestiary.
+    if (this.closeRect) {
+      Game.ctx.fillStyle = theme.closeFill;
+      Game.ctx.fillRect(
+        this.closeRect.x,
+        this.closeRect.y,
+        this.closeRect.w,
+        this.closeRect.h,
+      );
+      Game.ctx.fillStyle = theme.closeText;
+      Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
     }
 
     Game.ctx.restore();
@@ -988,22 +1038,18 @@ export class Bestiary {
     rect: { x: number; y: number; w: number; h: number },
     dir: "left" | "right",
   ) => {
-    const theme = this.getTheme();
-    Game.ctx.save();
-    Game.ctx.fillStyle = theme.accentText;
-    Game.ctx.beginPath();
+    // Draw a fixed 1x1 tile sprite, centered within the clickable rect.
+    const tile = GameConstants.TILESIZE;
+    const cx = rect.x + rect.w / 2;
+    const cy = rect.y + rect.h / 2;
+    const dX = (cx - tile / 2) / tile;
+    const dY = (cy - tile / 2) / tile;
+
     if (dir === "left") {
-      Game.ctx.moveTo(rect.x + rect.w, rect.y);
-      Game.ctx.lineTo(rect.x, rect.y + rect.h / 2);
-      Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+      Game.drawFX(15, 1, 1, 1, dX, dY, 1, 1);
     } else {
-      Game.ctx.moveTo(rect.x, rect.y);
-      Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
-      Game.ctx.lineTo(rect.x, rect.y + rect.h);
+      Game.drawFX(16, 1, 1, 1, dX, dY, 1, 1);
     }
-    Game.ctx.closePath();
-    Game.ctx.fill();
-    Game.ctx.restore();
   };
 
   private drawWrappedText = (

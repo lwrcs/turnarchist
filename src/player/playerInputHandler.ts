@@ -6,6 +6,7 @@ import { VendingMachine } from "../entity/object/vendingMachine";
 import { GameConstants } from "../game/gameConstants";
 import { MuteButton } from "../gui/muteButton";
 import { Sound } from "../sound/sound";
+import { Menu } from "../gui/menu";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -444,10 +445,18 @@ export class PlayerInputHandler {
     Input.lastMouseDownY = y;
 
     const inventory = player.inventory;
+    const bestiary = player.bestiary;
 
     // Handle menu first: menu clicks should not affect inventory open/close state.
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Bestiary button toggle should not affect inventory open/close state.
+    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+      bestiary.toggleOpen();
       Input.mouseDownHandled = true;
       return;
     }
@@ -497,6 +506,7 @@ export class PlayerInputHandler {
 
     // Check if this is a UI interaction
     const isUIInteraction =
+      (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
       inventory.isPointInInventoryButton(x, y) ||
       inventory.isPointInQuickbarBounds(x, y).inBounds ||
       inventory.isOpen ||
@@ -545,10 +555,17 @@ export class PlayerInputHandler {
     }
 
     const inventory = player.inventory;
+    const bestiary = player.bestiary;
 
     // If the menu is open, it consumes clicks and should not affect inventory open/close state.
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(x, y);
+      return;
+    }
+
+    // Bestiary button toggle should not affect inventory open/close state.
+    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+      bestiary.toggleOpen();
       return;
     }
 
@@ -588,7 +605,8 @@ export class PlayerInputHandler {
     const notInInventoryUI =
       !inventory.isPointInInventoryButton(x, y) &&
       !inventory.isPointInQuickbarBounds(x, y).inBounds &&
-      !inventory.isOpen;
+      !inventory.isOpen &&
+      !(bestiary ? bestiary.isPointInBestiaryButton(x, y) : false);
 
     // Only handle movement if it wasn't already handled on mousedown
     if (notInInventoryUI && !Input.mouseDownHandled) {
@@ -642,6 +660,17 @@ export class PlayerInputHandler {
 
     const x = Input.mouseX;
     const y = Input.mouseY;
+    const bestiary = this.player.bestiary;
+
+    if (bestiary?.isOpen) {
+      bestiary.handleMouseDown(x, y);
+      return;
+    }
+
+    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+      bestiary.toggleOpen();
+      return;
+    }
 
     // Check if tap is on menu button
     if (this.isPointInMenuButtonBounds(x, y)) {
@@ -783,9 +812,7 @@ export class PlayerInputHandler {
   }
 
   isPointInMenuButtonBounds(x: number, y: number): boolean {
-    const tile = GameConstants.TILESIZE;
-    //menu button is at the top left of the screen right below the fps counter and is 1 tile wide and tall
-    return x >= 0 && x <= tile * 1.5 && y >= 0 && y <= tile;
+    return Menu.isPointInOpenMenuButtonBounds(x, y);
   }
 
   handleMenuButtonClick() {

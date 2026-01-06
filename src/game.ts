@@ -2734,20 +2734,20 @@ export class Game {
       Game.ctx.translate(cameraX, cameraY);
 
       this.room.drawTopLayer(delta);
+      // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
+      if (!this.startMenuActive) {
+        if (!this.tutorialFlags.initPointers) {
+          try {
+            this.setupInitialPointers();
+          } catch {}
+          this.tutorialFlags.initPointers = true;
+        }
+      }
+      // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
+      this.drawPointers(delta);
       this.players[this.localPlayerID].drawGUI(delta);
       //for (const i in this.players) this.players[i].updateDrawXY(delta);
     }
-    // Initialize tutorial pointers on first IN_LEVEL frame
-    if (this.levelState === LevelState.IN_LEVEL && !this.startMenuActive) {
-      if (!this.tutorialFlags.initPointers) {
-        try {
-          this.setupInitialPointers();
-        } catch {}
-        this.tutorialFlags.initPointers = true;
-      }
-    }
-    // Draw pointers over GUI elements
-    this.drawPointers(delta);
     this.drawChat(delta);
     this.drawAlerts(delta);
 

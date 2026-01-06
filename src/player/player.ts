@@ -651,6 +651,8 @@ export class Player extends Drawable {
 
     return (
       this.inventory.isPointInInventoryButton(x, y) ||
+      Menu.isPointInOpenMenuButtonBounds(x, y) ||
+      (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
       this.isInventoryItemInteraction(x, y)
     );
   };

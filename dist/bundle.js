@@ -9646,7 +9646,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.29b6186e827741f98588.png";
+module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png";
 
 /***/ }),
 
@@ -25841,21 +25841,21 @@ class Game {
                 // this.drawStuff(delta);
                 Game.ctx.translate(cameraX, cameraY);
                 this.room.drawTopLayer(delta);
+                // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
+                if (!this.startMenuActive) {
+                    if (!this.tutorialFlags.initPointers) {
+                        try {
+                            this.setupInitialPointers();
+                        }
+                        catch { }
+                        this.tutorialFlags.initPointers = true;
+                    }
+                }
+                // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
+                this.drawPointers(delta);
                 this.players[this.localPlayerID].drawGUI(delta);
                 //for (const i in this.players) this.players[i].updateDrawXY(delta);
             }
-            // Initialize tutorial pointers on first IN_LEVEL frame
-            if (this.levelState === LevelState.IN_LEVEL && !this.startMenuActive) {
-                if (!this.tutorialFlags.initPointers) {
-                    try {
-                        this.setupInitialPointers();
-                    }
-                    catch { }
-                    this.tutorialFlags.initPointers = true;
-                }
-            }
-            // Draw pointers over GUI elements
-            this.drawPointers(delta);
             this.drawChat(delta);
             this.drawAlerts(delta);
             // game version
@@ -27205,6 +27205,9 @@ class Bestiary {
         this.isOpen = false;
         this.openTime = Date.now();
         this.entryViewStartTime = Date.now();
+        // Inventory-style open button positioning (stored in tile coordinates)
+        this.buttonX = 0.25;
+        this.buttonY = 0;
         this.activeEntryIndex = 0;
         /**
          * In compact mode, each entry is split into two pages:
@@ -27389,6 +27392,34 @@ class Bestiary {
         this.toggleOpen = () => {
             this.isOpen ? this.close() : this.open();
         };
+        this.isPointInBestiaryButton = (x, y) => {
+            const r = this.getBestiaryButtonRect();
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        };
+        this.getBestiaryButtonRect = () => {
+            // Mirror `drawBestiaryButton()` positioning logic.
+            let bx = 0.25;
+            let by = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
+            if (gameConstants_1.GameConstants.WIDTH < 145)
+                by -= 1.25;
+            const x = Math.round(bx * gameConstants_1.GameConstants.TILESIZE);
+            const y = Math.round(by * gameConstants_1.GameConstants.TILESIZE);
+            const w = gameConstants_1.GameConstants.TILESIZE;
+            const h = gameConstants_1.GameConstants.TILESIZE;
+            return { x, y, w, h };
+        };
+        this.drawBestiaryButton = (delta) => {
+            // Mirror inventory button's bottom-corner positioning logic, but on the left.
+            // `delta` is unused, but kept for parity with other UI draw methods.
+            delta;
+            game_1.Game.ctx.save();
+            const r = this.getBestiaryButtonRect();
+            this.buttonX = r.x / gameConstants_1.GameConstants.TILESIZE;
+            this.buttonY = r.y / gameConstants_1.GameConstants.TILESIZE;
+            // Draw like the inventory button, but +1 tileX on fxset (one to the right).
+            game_1.Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
+            game_1.Game.ctx.restore();
+        };
         /**
          * Adds a new entry to the logbook.
          * @param enemyTypeName The enemy class name (e.g. "CrabEnemy")
@@ -27498,6 +27529,11 @@ class Bestiary {
         this.handleMouseDown = (x, y) => {
             if (!this.isOpen)
                 return;
+            // Allow the inventory-style button to close the bestiary.
+            if (this.isPointInBestiaryButton(x, y)) {
+                this.close();
+                return;
+            }
             if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
                 this.close();
                 return;
@@ -27587,10 +27623,6 @@ class Bestiary {
                 w: closeSize,
                 h: closeSize,
             };
-            game_1.Game.ctx.fillStyle = theme.closeFill;
-            game_1.Game.ctx.fillRect(this.closeRect.x, this.closeRect.y, this.closeRect.w, this.closeRect.h);
-            game_1.Game.ctx.fillStyle = theme.closeText;
-            game_1.Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
             const entry = this.entries[this.activeEntryIndex] ?? null;
             if (!entry) {
                 game_1.Game.ctx.fillStyle = theme.text;
@@ -27668,6 +27700,13 @@ class Bestiary {
                     const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
                     game_1.Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
                 }
+            }
+            // Close button should draw on top of everything else in the bestiary.
+            if (this.closeRect) {
+                game_1.Game.ctx.fillStyle = theme.closeFill;
+                game_1.Game.ctx.fillRect(this.closeRect.x, this.closeRect.y, this.closeRect.w, this.closeRect.h);
+                game_1.Game.ctx.fillStyle = theme.closeText;
+                game_1.Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
             }
             game_1.Game.ctx.restore();
         };
@@ -27955,23 +27994,18 @@ class Bestiary {
             });
         };
         this.drawArrow = (rect, dir) => {
-            const theme = this.getTheme();
-            game_1.Game.ctx.save();
-            game_1.Game.ctx.fillStyle = theme.accentText;
-            game_1.Game.ctx.beginPath();
+            // Draw a fixed 1x1 tile sprite, centered within the clickable rect.
+            const tile = gameConstants_1.GameConstants.TILESIZE;
+            const cx = rect.x + rect.w / 2;
+            const cy = rect.y + rect.h / 2;
+            const dX = (cx - tile / 2) / tile;
+            const dY = (cy - tile / 2) / tile;
             if (dir === "left") {
-                game_1.Game.ctx.moveTo(rect.x + rect.w, rect.y);
-                game_1.Game.ctx.lineTo(rect.x, rect.y + rect.h / 2);
-                game_1.Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+                game_1.Game.drawFX(15, 1, 1, 1, dX, dY, 1, 1);
             }
             else {
-                game_1.Game.ctx.moveTo(rect.x, rect.y);
-                game_1.Game.ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
-                game_1.Game.ctx.lineTo(rect.x, rect.y + rect.h);
+                game_1.Game.drawFX(16, 1, 1, 1, dX, dY, 1, 1);
             }
-            game_1.Game.ctx.closePath();
-            game_1.Game.ctx.fill();
-            game_1.Game.ctx.restore();
         };
         this.drawWrappedText = (text, x, y, maxWidth) => {
             const words = text.split(/\s+/);
@@ -29521,7 +29555,7 @@ GameConstants.FIND_SCALE = (isMobile) => {
     }
     return bestScale;
 };
-GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle, bestiaryBook_1.BestiaryBook];
+GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
@@ -33537,12 +33571,11 @@ exports.HoverText = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const menu_1 = __webpack_require__(/*! ./menu */ "./src/gui/menu.ts");
 class HoverText {
     static getHoverText(x, y, room, player, drawFor) {
         // Handle undefined mouse coordinates
-        if (input_1.Input.mouseX === undefined ||
-            input_1.Input.mouseY === undefined ||
-            drawFor === "none") {
+        if (input_1.Input.mouseX === undefined || input_1.Input.mouseY === undefined) {
             return [];
         }
         // Get screen center coordinates
@@ -33556,6 +33589,27 @@ class HoverText {
         const offsetX = x + tileOffsetX;
         const offsetY = y + tileOffsetY;
         const strings = [];
+        // UI hover text (buttons) should take priority and be screen-space, not tile-space.
+        // Keep this lightweight and aligned with existing click bounds.
+        try {
+            if (player.bestiary?.isPointInBestiaryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                strings.push(player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary");
+                return strings;
+            }
+            if (player.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                strings.push(player.inventory.isOpen ? "Close Inventory" : "Open Inventory");
+                return strings;
+            }
+            if (menu_1.Menu.isPointInOpenMenuButtonBounds(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                strings.push(player.menu.open ? "Close Menu" : "Open Menu");
+                return strings;
+            }
+        }
+        catch { }
+        // If we're not drawing hover text for any world/UI context, stop here.
+        if (drawFor === "none") {
+            return [];
+        }
         if (drawFor === "inGame" &&
             !player.inventory.isPointInQuickbarBounds(x, y).inBounds) {
             for (const entity of room.entities) {
@@ -33591,49 +33645,32 @@ class HoverText {
             return;
         }
         game_1.Game.ctx.save();
-        if (drawFor === "none") {
-            return;
-        }
-        for (const string of strings) {
-            const offsetY = strings.indexOf(string) * 6;
-            if (drawFor === "inventory") {
-                game_1.Game.ctx.globalAlpha = 1;
-            }
-            else {
-                game_1.Game.ctx.globalAlpha = 0.5;
-            }
-            game_1.Game.ctx.fillStyle = "yellow";
-            const offsetX = game_1.Game.measureText(string).width / 2;
-            let posX = x;
-            let posY = y;
-            switch (drawFor) {
-                case "inGame":
-                    posX = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawX + 8
-                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
-                    posY = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawY + 8 // + offsetY
-                        : gameConstants_1.GameConstants.HEIGHT - 32;
-                    break;
-                case "inventory":
-                    posX = gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawX + 8
-                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
-                    posY = gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawY + 8 // + offsetY
-                        : gameConstants_1.GameConstants.HEIGHT - 32;
-                    break;
-                case "vendingMachine":
-                    posX = gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawX + 8
-                        : gameConstants_1.GameConstants.WIDTH / 2 - offsetX;
-                    posY = gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE
-                        ? drawY + 8 // + offsetY
-                        : gameConstants_1.GameConstants.HEIGHT - 32;
-                    break;
-            }
-            //Game.ctx.globalCompositeOperation = "destination-out";
-            game_1.Game.fillTextOutline(string, posX, posY, "black", "yellow");
+        const LINE_HEIGHT = game_1.Game.letter_height + 1;
+        const margin = 2;
+        const widths = strings.map((s) => game_1.Game.measureText(s).width);
+        const maxW = Math.max(1, ...widths);
+        const totalH = strings.length * LINE_HEIGHT;
+        const followsMouse = (drawFor === "inGame" &&
+            gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_FOLLOWS_MOUSE) ||
+            (drawFor === "inventory" &&
+                gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_FOLLOWS_MOUSE) ||
+            (drawFor === "vendingMachine" &&
+                gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_FOLLOWS_MOUSE) ||
+            drawFor === "none";
+        let baseX = followsMouse ? drawX + 8 : gameConstants_1.GameConstants.WIDTH / 2 - maxW / 2;
+        let baseY = followsMouse ? drawY + 8 : gameConstants_1.GameConstants.HEIGHT - 32;
+        // Clamp the tooltip block fully on-screen.
+        baseX = Math.max(margin, Math.min(gameConstants_1.GameConstants.WIDTH - margin - maxW, baseX));
+        baseY = Math.max(margin, Math.min(gameConstants_1.GameConstants.HEIGHT - margin - totalH, baseY));
+        game_1.Game.ctx.globalAlpha =
+            drawFor === "inventory" || drawFor === "none" ? 1 : 0.5;
+        game_1.Game.ctx.fillStyle = "yellow";
+        for (let i = 0; i < strings.length; i++) {
+            const s = strings[i];
+            const w = widths[i];
+            const xLine = Math.round(baseX + (maxW - w) / 2);
+            const yLine = Math.round(baseY + i * LINE_HEIGHT);
+            game_1.Game.fillTextOutline(s, xLine, yLine, "black", "yellow");
         }
         game_1.Game.ctx.restore();
     }
@@ -34662,6 +34699,20 @@ class Menu {
         game_1.Game.fillText("Menu", 10, 10);
         game_1.Game.ctx.globalAlpha = 1;
         game_1.Game.ctx.restore();
+    }
+    static isPointInOpenMenuButtonBounds(x, y) {
+        const r = Menu.getOpenMenuButtonRect();
+        return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    }
+    static getOpenMenuButtonRect() {
+        // Mirror `drawOpenMenuButton()` placement: icon at (0, 0.5 tiles).
+        const tile = gameConstants_1.GameConstants.TILESIZE;
+        const x = 0;
+        const y = Math.round(0.5 * tile);
+        // Preserve the historical 1.5-tile-wide hit area used for clicking.
+        const w = Math.round(1.5 * tile);
+        const h = tile;
+        return { x, y, w, h };
     }
     initializeCloseButton() {
         // Match the menu button dimensions
@@ -37319,12 +37370,10 @@ class Inventory {
             };
         };
         this.isPointInInventoryButton = (x, y) => {
-            const tX = x / gameConstants_1.GameConstants.TILESIZE;
-            const tY = y / gameConstants_1.GameConstants.TILESIZE;
-            return (tX >= this.buttonX &&
-                tX <= this.buttonX + 1 &&
-                tY >= this.buttonY &&
-                tY <= this.buttonY + 1);
+            // Use the same rect math as `drawInventoryButton()` to avoid relying on
+            // previous-frame state for hover/click hit tests.
+            const r = this.getInventoryButtonRect();
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
         };
         /**
          * Draws the inventory button to the canvas.
@@ -49361,6 +49410,8 @@ class Player extends drawable_1.Drawable {
         this.isMouseInUI = (mousePos) => {
             const { x, y } = mousePos;
             return (this.inventory.isPointInInventoryButton(x, y) ||
+                menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
+                (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
                 this.isInventoryItemInteraction(x, y));
         };
         this.isInventoryItemInteraction = (x, y) => {
@@ -50209,6 +50260,7 @@ const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const muteButton_1 = __webpack_require__(/*! ../gui/muteButton */ "./src/gui/muteButton.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.mouseHoldInitialDirection = null;
@@ -50639,9 +50691,16 @@ class PlayerInputHandler {
         input_1.Input.lastMouseDownX = x;
         input_1.Input.lastMouseDownY = y;
         const inventory = player.inventory;
+        const bestiary = player.bestiary;
         // Handle menu first: menu clicks should not affect inventory open/close state.
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Bestiary button toggle should not affect inventory open/close state.
+        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+            bestiary.toggleOpen();
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -50678,7 +50737,8 @@ class PlayerInputHandler {
             return;
         }
         // Check if this is a UI interaction
-        const isUIInteraction = inventory.isPointInInventoryButton(x, y) ||
+        const isUIInteraction = (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+            inventory.isPointInInventoryButton(x, y) ||
             inventory.isPointInQuickbarBounds(x, y).inBounds ||
             inventory.isOpen ||
             this.isPointInMenuButtonBounds(x, y);
@@ -50719,9 +50779,15 @@ class PlayerInputHandler {
             return;
         }
         const inventory = player.inventory;
+        const bestiary = player.bestiary;
         // If the menu is open, it consumes clicks and should not affect inventory open/close state.
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(x, y);
+            return;
+        }
+        // Bestiary button toggle should not affect inventory open/close state.
+        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+            bestiary.toggleOpen();
             return;
         }
         const clickedOutsideInventory = (inventory.isOpen &&
@@ -50749,7 +50815,8 @@ class PlayerInputHandler {
         }
         const notInInventoryUI = !inventory.isPointInInventoryButton(x, y) &&
             !inventory.isPointInQuickbarBounds(x, y).inBounds &&
-            !inventory.isOpen;
+            !inventory.isOpen &&
+            !(bestiary ? bestiary.isPointInBestiaryButton(x, y) : false);
         // Only handle movement if it wasn't already handled on mousedown
         if (notInInventoryUI && !input_1.Input.mouseDownHandled) {
             player.moveWithMouse();
@@ -50784,6 +50851,15 @@ class PlayerInputHandler {
         }
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
+        const bestiary = this.player.bestiary;
+        if (bestiary?.isOpen) {
+            bestiary.handleMouseDown(x, y);
+            return;
+        }
+        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
+            bestiary.toggleOpen();
+            return;
+        }
         // Check if tap is on menu button
         if (this.isPointInMenuButtonBounds(x, y)) {
             this.handleMenuButtonClick();
@@ -50865,9 +50941,7 @@ class PlayerInputHandler {
         this.player.game.pushMessage(sound_1.Sound.audioMuted ? "Audio muted" : "Audio unmuted");
     }
     isPointInMenuButtonBounds(x, y) {
-        const tile = gameConstants_1.GameConstants.TILESIZE;
-        //menu button is at the top left of the screen right below the fps counter and is 1 tile wide and tall
-        return x >= 0 && x <= tile * 1.5 && y >= 0 && y <= tile;
+        return menu_1.Menu.isPointInOpenMenuButtonBounds(x, y);
     }
     handleMenuButtonClick() {
         this.player.menu.toggleOpen();
@@ -51531,6 +51605,14 @@ class PlayerRenderer {
                 if (heartStartX < 0.25) {
                     heartStartX = 0.25;
                 }
+                // On narrow screens, the bottom-left bestiary button can overlap the hearts.
+                // Mirror the coin/inventory-button avoidance logic by shifting the hearts right.
+                if (gameConstants_1.GameConstants.WIDTH < 145 && this.player.bestiary) {
+                    const r = this.player.bestiary.getBestiaryButtonRect();
+                    const minHeartStartX = (r.x + r.w + 4) / gameConstants_1.GameConstants.TILESIZE; // +4px padding
+                    if (heartStartX < minHeartStartX)
+                        heartStartX = minHeartStartX;
+                }
                 for (let i = 0; i < this.player.maxHealth; i++) {
                     let shake = 0;
                     let shakeY = 0;
@@ -51574,8 +51656,11 @@ class PlayerRenderer {
                 this.drawBreathStatus(quickbarStartX);
                 if (armor)
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
-                if (!transitioning)
+                if (!transitioning) {
                     this.player.inventory.draw(delta);
+                    // Inventory-style bestiary button (bottom-left), drawn alongside other UI.
+                    this.player.bestiary?.drawBestiaryButton(delta);
+                }
                 const inventoryOpen = this.player.inventory.isOpen;
                 const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds && !this.player.inventory.isOpen;
                 const inVendingMachine = this.player.openVendingMachine &&
