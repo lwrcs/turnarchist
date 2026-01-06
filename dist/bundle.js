@@ -12944,7 +12944,9 @@ class BishopEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                    this.game.players[i].hurt(this.hit(), this.name, {
+                                        source: { x: this.x, y: this.y },
+                                    });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     hitPlayer = true;
@@ -13017,6 +13019,8 @@ class BishopEnemy extends enemy_1.Enemy {
         this.seenPlayer = false;
         this.aggro = false;
         this.name = "bishop";
+        // Chess-piece warnings should show the full threat pattern (no directional culling).
+        this.hitWarningCullFactor = 0.2;
         this.jumpHeight = 1;
         this.diagonalAttackRange = 1;
         this.diagonalAttack = true;
@@ -17236,7 +17240,9 @@ class PawnEnemy extends enemy_1.Enemy {
                         if (Math.abs(dxToPlayer) === 1 &&
                             Math.abs(dyToPlayer) === 1 &&
                             !this.unconscious) {
-                            this.targetPlayer.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                            this.targetPlayer.hurt(this.hit(), this.name, {
+                                source: { x: this.x, y: this.y },
+                            });
                             this.drawX = 0.5 * (this.x - this.targetPlayer.x);
                             this.drawY = 0.5 * (this.y - this.targetPlayer.y);
                             if (this.targetPlayer === this.game.players[this.game.localPlayerID])
@@ -17245,8 +17251,8 @@ class PawnEnemy extends enemy_1.Enemy {
                             return;
                         }
                         if (this.justHurt) {
-                            // do nothing special when just hurt
-                            this.justHurt = false;
+                            // Match bishop/queen behavior: retreat immediately after being hurt.
+                            this.retreat(oldX, oldY);
                         }
                         else if (!this.unconscious) {
                             // Build grid like rookEnemy and use A* with orthogonal-only movement
@@ -17331,6 +17337,8 @@ class PawnEnemy extends enemy_1.Enemy {
         this.seenPlayer = false;
         this.aggro = false;
         this.name = "pawn";
+        // Chess-piece warnings should show the full threat pattern (no directional culling).
+        this.hitWarningCullFactor = 0.4;
         // Pawns show only diagonal attack telegraphs
         this.orthogonalAttack = false;
         this.diagonalAttack = true;
@@ -17429,7 +17437,9 @@ class QueenEnemy extends enemy_1.Enemy {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                     this.game.players[i].x === moveX &&
                                     this.game.players[i].y === moveY) {
-                                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                    this.game.players[i].hurt(this.hit(), this.name, {
+                                        source: { x: this.x, y: this.y },
+                                    });
                                     this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                     this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                     if (this.game.players[i] ===
@@ -17514,6 +17524,8 @@ class QueenEnemy extends enemy_1.Enemy {
         this.aggro = false;
         this.destroyableByOthers = false;
         this.name = "queen";
+        // Chess-piece warnings should show the full threat pattern (no directional culling).
+        this.hitWarningCullFactor = 0.4;
         this.orthogonalAttack = true;
         this.diagonalAttack = true;
         this.jumpHeight = 1;
@@ -19664,6 +19676,13 @@ class Entity extends drawable_1.Drawable {
     constructor(room, game, x, y, z = 0) {
         super();
         this.sleepingZFrame = 0;
+        /**
+         * Controls how aggressively `makeHitWarnings()` culls warning tiles based on the
+         * player's relative position. 0 = no culling (show full pattern).
+         *
+         * Default (0.45) matches the existing behavior.
+         */
+        this.hitWarningCullFactor = 0.45;
         this.imageParticleX = 0;
         this.imageParticleY = 26;
         this.dropChance = 1;
@@ -20682,7 +20701,7 @@ class Entity extends drawable_1.Drawable {
                 return;
             const player = this.getPlayer();
             const isPlayerOnTile = player.x === hx && player.y === hy;
-            const cullFactor = isPlayerOnTile ? 0 : 0.45;
+            const cullFactor = isPlayerOnTile ? 0 : this.hitWarningCullFactor;
             let orthogonal = this.orthogonalAttack;
             let diagonal = this.diagonalAttack;
             let forwardOnly = this.forwardOnlyAttack;

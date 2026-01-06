@@ -30,6 +30,8 @@ export class BishopEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "bishop";
+    // Chess-piece warnings should show the full threat pattern (no directional culling).
+    this.hitWarningCullFactor = 0.2;
     this.jumpHeight = 1;
     this.diagonalAttackRange = 1;
     this.diagonalAttack = true;
@@ -153,7 +155,9 @@ export class BishopEnemy extends Enemy {
                 this.game.players[i].x === moveX &&
                 this.game.players[i].y === moveY
               ) {
-                this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                this.game.players[i].hurt(this.hit(), this.name, {
+                  source: { x: this.x, y: this.y },
+                });
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                 hitPlayer = true;

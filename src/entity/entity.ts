@@ -112,6 +112,13 @@ export class Entity extends Drawable {
   protected forwardOnlyAttack: boolean;
   protected attackRange: number;
   protected diagonalAttackRange: number;
+  /**
+   * Controls how aggressively `makeHitWarnings()` culls warning tiles based on the
+   * player's relative position. 0 = no culling (show full pattern).
+   *
+   * Default (0.45) matches the existing behavior.
+   */
+  hitWarningCullFactor: number = 0.45;
   lightSource: LightSource;
   drawMoveSpeed: number;
   unconscious: boolean;
@@ -1625,7 +1632,7 @@ export class Entity extends Drawable {
     if (this.unconscious || (this.isEnemy && !(this as any).seenPlayer)) return;
     const player: Player = this.getPlayer();
     const isPlayerOnTile = player.x === hx && player.y === hy;
-    const cullFactor = isPlayerOnTile ? 0 : 0.45;
+    const cullFactor = isPlayerOnTile ? 0 : this.hitWarningCullFactor;
 
     let orthogonal = this.orthogonalAttack;
     let diagonal = this.diagonalAttack;

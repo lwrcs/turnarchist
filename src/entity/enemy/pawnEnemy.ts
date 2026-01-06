@@ -32,6 +32,8 @@ export class PawnEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "pawn";
+    // Chess-piece warnings should show the full threat pattern (no directional culling).
+    this.hitWarningCullFactor = 0.4;
     // Pawns show only diagonal attack telegraphs
     this.orthogonalAttack = false;
     this.diagonalAttack = true;
@@ -120,7 +122,9 @@ export class PawnEnemy extends Enemy {
             Math.abs(dyToPlayer) === 1 &&
             !this.unconscious
           ) {
-            this.targetPlayer.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+            this.targetPlayer.hurt(this.hit(), this.name, {
+              source: { x: this.x, y: this.y },
+            });
             this.drawX = 0.5 * (this.x - this.targetPlayer.x);
             this.drawY = 0.5 * (this.y - this.targetPlayer.y);
             if (
@@ -133,8 +137,8 @@ export class PawnEnemy extends Enemy {
           }
 
           if (this.justHurt) {
-            // do nothing special when just hurt
-            this.justHurt = false;
+            // Match bishop/queen behavior: retreat immediately after being hurt.
+            this.retreat(oldX, oldY);
           } else if (!this.unconscious) {
             // Build grid like rookEnemy and use A* with orthogonal-only movement
             const moves = this.searchPathLocalized(

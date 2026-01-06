@@ -30,6 +30,8 @@ export class QueenEnemy extends Enemy {
     this.aggro = false;
     this.destroyableByOthers = false;
     this.name = "queen";
+    // Chess-piece warnings should show the full threat pattern (no directional culling).
+    this.hitWarningCullFactor = 0.4;
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
     this.jumpHeight = 1;
@@ -112,7 +114,9 @@ export class QueenEnemy extends Enemy {
                 this.game.players[i].x === moveX &&
                 this.game.players[i].y === moveY
               ) {
-                this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                this.game.players[i].hurt(this.hit(), this.name, {
+                  source: { x: this.x, y: this.y },
+                });
                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                 if (
