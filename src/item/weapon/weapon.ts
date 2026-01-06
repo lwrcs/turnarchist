@@ -164,6 +164,41 @@ export abstract class Weapon extends Equippable {
     return !hitSomething;
   };
 
+  /**
+   * For UI (context menu) only: determine whether a target tile is in-range for this weapon,
+   * without consuming turns or changing any gameplay behavior.
+   *
+   * Default = cardinal line attack up to `this.range`, matching `Player.enemyInRange`.
+   * Subclasses (e.g. Spellbook) can override.
+   */
+  isTargetInRange = (targetX: number, targetY: number): boolean => {
+    const p = this.wielder;
+    if (!p) return false;
+    return p.enemyInRange(targetX, targetY, this.range);
+  };
+
+  /**
+   * For UI (context menu) only: compute the input tile (newX/newY) that should be fed into
+   * `weaponMove()` to attempt to attack the given target.
+   *
+   * Default: one step in the cardinal direction toward the target (works for spear etc).
+   * Returns null for diagonal targets.
+   */
+  getAttackInputTileForTarget = (
+    targetX: number,
+    targetY: number,
+  ): { x: number; y: number } | null => {
+    const p = this.wielder;
+    if (!p) return null;
+    const dx = targetX - p.x;
+    const dy = targetY - p.y;
+    if (dx !== 0 && dy !== 0) return null;
+    if (dx === 0 && dy === 0) return null;
+    const sx = dx === 0 ? 0 : dx > 0 ? 1 : -1;
+    const sy = dy === 0 ? 0 : dy > 0 ? 1 : -1;
+    return { x: p.x + sx, y: p.y + sy };
+  };
+
   attack = (enemy: Entity, damage?: number) => {
     if (!this.shouldHitEntity(enemy)) return;
     enemy.hurt(this.wielder, damage || this.damage);

@@ -5,6 +5,8 @@ import { Input } from "../game/input";
 export type ContextMenuItem = {
   label: string;
   onClick: () => void;
+  enabled?: boolean;
+  onDisabledClick?: () => void;
 };
 
 /**
@@ -94,6 +96,13 @@ export class ContextMenu {
     const item = idx !== null ? this.items[idx] : null;
     if (!item) return true;
 
+    const enabled = item.enabled !== false;
+    if (!enabled) {
+      item.onDisabledClick?.();
+      // Disabled actions do not close the menu.
+      return true;
+    }
+
     try {
       item.onClick();
     } finally {
@@ -150,25 +159,18 @@ export class ContextMenu {
       const item = this.items[i];
       const rowX = this.xPx + this.padX;
       const rowTop = this.yPx + this.padY + i * this.rowH;
+      const enabled = item.enabled !== false;
 
       if (hovered === i) {
         Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-        Game.ctx.fillRect(
-          this.xPx + 1,
-          rowTop,
-          this.widthPx - 2,
-          this.rowH,
-        );
+        Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
       }
 
-      Game.ctx.fillStyle = "white";
-      const textY =
-        rowTop + Math.floor((this.rowH - Game.letter_height) / 2);
+      Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
+      const textY = rowTop + Math.floor((this.rowH - Game.letter_height) / 2);
       Game.fillText(item.label, rowX, textY);
     }
 
     Game.ctx.restore();
   };
 }
-
-

@@ -33739,6 +33739,12 @@ class ContextMenu {
             const item = idx !== null ? this.items[idx] : null;
             if (!item)
                 return true;
+            const enabled = item.enabled !== false;
+            if (!enabled) {
+                item.onDisabledClick?.();
+                // Disabled actions do not close the menu.
+                return true;
+            }
             try {
                 item.onClick();
             }
@@ -33789,11 +33795,12 @@ class ContextMenu {
                 const item = this.items[i];
                 const rowX = this.xPx + this.padX;
                 const rowTop = this.yPx + this.padY + i * this.rowH;
+                const enabled = item.enabled !== false;
                 if (hovered === i) {
                     game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
                     game_1.Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
                 }
-                game_1.Game.ctx.fillStyle = "white";
+                game_1.Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
                 const textY = rowTop + Math.floor((this.rowH - game_1.Game.letter_height) / 2);
                 game_1.Game.fillText(item.label, rowX, textY);
             }
@@ -42892,6 +42899,18 @@ class Spellbook extends weapon_1.Weapon {
             }
             return !flag;
         };
+        // Spellbook can hit targets in any direction within a radius; for UI range checks,
+        // match the same distance test used by `getTargets()`.
+        this.isTargetInRange = (targetX, targetY) => {
+            if (!this.wielder)
+                return false;
+            return (utils_1.Utils.distance(this.wielder.x, this.wielder.y, targetX, targetY) <=
+                this.range);
+        };
+        // Spellbook uses the clicked tile as its aim point.
+        this.getAttackInputTileForTarget = (targetX, targetY) => {
+            return { x: targetX, y: targetY };
+        };
         this.drawBeams = (playerDrawX, playerDrawY, delta) => {
             // Clear existing beam effects each frame
             const room = this.wielder?.getRoom
@@ -43206,6 +43225,40 @@ class Weapon extends equippable_1.Equippable {
             }
             const hitSomething = this.executeAttack(newX, newY);
             return !hitSomething;
+        };
+        /**
+         * For UI (context menu) only: determine whether a target tile is in-range for this weapon,
+         * without consuming turns or changing any gameplay behavior.
+         *
+         * Default = cardinal line attack up to `this.range`, matching `Player.enemyInRange`.
+         * Subclasses (e.g. Spellbook) can override.
+         */
+        this.isTargetInRange = (targetX, targetY) => {
+            const p = this.wielder;
+            if (!p)
+                return false;
+            return p.enemyInRange(targetX, targetY, this.range);
+        };
+        /**
+         * For UI (context menu) only: compute the input tile (newX/newY) that should be fed into
+         * `weaponMove()` to attempt to attack the given target.
+         *
+         * Default: one step in the cardinal direction toward the target (works for spear etc).
+         * Returns null for diagonal targets.
+         */
+        this.getAttackInputTileForTarget = (targetX, targetY) => {
+            const p = this.wielder;
+            if (!p)
+                return null;
+            const dx = targetX - p.x;
+            const dy = targetY - p.y;
+            if (dx !== 0 && dy !== 0)
+                return null;
+            if (dx === 0 && dy === 0)
+                return null;
+            const sx = dx === 0 ? 0 : dx > 0 ? 1 : -1;
+            const sy = dy === 0 ? 0 : dy > 0 ? 1 : -1;
+            return { x: p.x + sx, y: p.y + sy };
         };
         this.attack = (enemy, damage) => {
             if (!this.shouldHitEntity(enemy))
@@ -49846,6 +49899,31 @@ class Player extends drawable_1.Drawable {
                     this.enemyInRange(entity.x, entity.y, range));
             });
         };
+        /**
+         * UI helper: find the enemy entity currently "under" the attack cursor.
+         * Mirrors cursor-attack logic by checking the current tile and the tile above
+         * (to account for tall sprites).
+         *
+         * Does NOT apply range checks.
+         */
+        this.getEnemyUnderCursorForAttack = () => {
+            const mouseTile = this.mouseToTile();
+            const tileAbove = {
+                x: mouseTile.x,
+                y: this.mouseToTile(gameConstants_1.GameConstants.TILESIZE / 2).y,
+            };
+            const room = this.game.room;
+            if (!room)
+                return null;
+            const z = this.z;
+            const candidates = [mouseTile, tileAbove];
+            for (const t of candidates) {
+                const hit = room.entities.find((e) => (e?.z ?? 0) === z && e.isEnemy && e.x === t.x && e.y === t.y);
+                if (hit)
+                    return hit;
+            }
+            return null;
+        };
         this.restart = () => {
             this.dead = false;
             this.game.newGame();
@@ -51072,6 +51150,49 @@ class PlayerInputHandler {
             items.push({
                 label: player.menu.open ? "Close Menu" : "Open Menu",
                 onClick: () => player.menu.toggleOpen(),
+            });
+            items.push({ label: "Cancel", onClick: () => { } });
+            menu.openAt(x, y, items);
+            return;
+        }
+        // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
+        const enemy = player.getEnemyUnderCursorForAttack();
+        if (enemy) {
+            const weapon = player.inventory.weapon;
+            const canAttack = (() => {
+                if (!weapon)
+                    return false;
+                return weapon.isTargetInRange(enemy.x, enemy.y);
+            })();
+            items.push({
+                label: "Attack",
+                enabled: canAttack,
+                onDisabledClick: () => {
+                    if (!weapon) {
+                        player.game.pushMessage("No weapon equipped.");
+                        return;
+                    }
+                    player.game.pushMessage("Enemy out of range.");
+                },
+                onClick: () => {
+                    if (!weapon)
+                        return;
+                    const input = weapon.getAttackInputTileForTarget(enemy.x, enemy.y);
+                    if (!input) {
+                        player.game.pushMessage("Enemy out of range.");
+                        return;
+                    }
+                    // Face the enemy; turning is free, but some weapon logic depends on direction.
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        player.direction = dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+                    }
+                    else if (dy !== 0) {
+                        player.direction = dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+                    }
+                    weapon.weaponMove(input.x, input.y);
+                },
             });
             items.push({ label: "Cancel", onClick: () => { } });
             menu.openAt(x, y, items);

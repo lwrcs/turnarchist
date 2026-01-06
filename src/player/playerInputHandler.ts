@@ -9,6 +9,7 @@ import { Sound } from "../sound/sound";
 import { Menu } from "../gui/menu";
 import { Equippable } from "../item/equippable";
 import { Usable } from "../item/usable/usable";
+import { Weapon } from "../item/weapon/weapon";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -389,7 +390,12 @@ export class PlayerInputHandler {
     const menu = player.contextMenu;
     if (!menu) return;
 
-    const items: Array<{ label: string; onClick: () => void }> = [];
+    const items: Array<{
+      label: string;
+      onClick: () => void;
+      enabled?: boolean;
+      onDisabledClick?: () => void;
+    }> = [];
 
     // UI buttons (menus)
     if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
@@ -415,6 +421,49 @@ export class PlayerInputHandler {
         label: player.menu.open ? "Close Menu" : "Open Menu",
         onClick: () => player.menu.toggleOpen(),
       });
+      items.push({ label: "Cancel", onClick: () => {} });
+      menu.openAt(x, y, items);
+      return;
+    }
+
+    // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
+    const enemy = player.getEnemyUnderCursorForAttack();
+    if (enemy) {
+      const weapon = player.inventory.weapon as Weapon | null;
+      const canAttack = (() => {
+        if (!weapon) return false;
+        return weapon.isTargetInRange(enemy.x, enemy.y);
+      })();
+
+      items.push({
+        label: "Attack",
+        enabled: canAttack,
+        onDisabledClick: () => {
+          if (!weapon) {
+            player.game.pushMessage("No weapon equipped.");
+            return;
+          }
+          player.game.pushMessage("Enemy out of range.");
+        },
+        onClick: () => {
+          if (!weapon) return;
+          const input = weapon.getAttackInputTileForTarget(enemy.x, enemy.y);
+          if (!input) {
+            player.game.pushMessage("Enemy out of range.");
+            return;
+          }
+          // Face the enemy; turning is free, but some weapon logic depends on direction.
+          const dx = enemy.x - player.x;
+          const dy = enemy.y - player.y;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
+          } else if (dy !== 0) {
+            player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
+          }
+          weapon.weaponMove(input.x, input.y);
+        },
+      });
+
       items.push({ label: "Cancel", onClick: () => {} });
       menu.openAt(x, y, items);
       return;

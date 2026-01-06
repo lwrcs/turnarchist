@@ -699,6 +699,34 @@ export class Player extends Drawable {
     });
   };
 
+  /**
+   * UI helper: find the enemy entity currently "under" the attack cursor.
+   * Mirrors cursor-attack logic by checking the current tile and the tile above
+   * (to account for tall sprites).
+   *
+   * Does NOT apply range checks.
+   */
+  getEnemyUnderCursorForAttack = (): Entity | null => {
+    const mouseTile = this.mouseToTile();
+    const tileAbove = {
+      x: mouseTile.x,
+      y: this.mouseToTile(GameConstants.TILESIZE / 2).y,
+    };
+
+    const room = this.game.room;
+    if (!room) return null;
+
+    const z = this.z;
+    const candidates = [mouseTile, tileAbove];
+    for (const t of candidates) {
+      const hit = room.entities.find(
+        (e) => (e?.z ?? 0) === z && e.isEnemy && e.x === t.x && e.y === t.y,
+      );
+      if (hit) return hit;
+    }
+    return null;
+  };
+
   restart = () => {
     this.dead = false;
     this.game.newGame();

@@ -148,6 +148,24 @@ export class Spellbook extends Weapon {
     return !flag;
   };
 
+  // Spellbook can hit targets in any direction within a radius; for UI range checks,
+  // match the same distance test used by `getTargets()`.
+  isTargetInRange = (targetX: number, targetY: number): boolean => {
+    if (!this.wielder) return false;
+    return (
+      Utils.distance(this.wielder.x, this.wielder.y, targetX, targetY) <=
+      this.range
+    );
+  };
+
+  // Spellbook uses the clicked tile as its aim point.
+  getAttackInputTileForTarget = (
+    targetX: number,
+    targetY: number,
+  ): { x: number; y: number } | null => {
+    return { x: targetX, y: targetY };
+  };
+
   drawBeams = (playerDrawX: number, playerDrawY: number, delta: number) => {
     // Clear existing beam effects each frame
     const room = (this.wielder as any)?.getRoom
