@@ -95,6 +95,9 @@ export const Input = {
   lastMouseDownX: 0,
   lastMouseDownY: 0,
   mouseDownHandled: false,
+  // Tracks whether a registered hold action actually fired (e.g. inventory drag).
+  // This lets us emulate mobile right-click without being blocked by the generic hold timer.
+  holdCallbackFired: false,
 
   SPACE: "Space",
   LEFT: "ArrowLeft",
@@ -301,6 +304,7 @@ export const Input = {
     Input.mouseDown = true;
     Input.mouseDownStartTime = Date.now();
     Input.isMouseHold = false;
+    Input.holdCallbackFired = false;
     Input.mouseDownListener(Input.mouseX, Input.mouseY, event.button);
 
     // Start checking for hold
@@ -340,6 +344,7 @@ export const Input = {
         Input.isMouseHold = true;
         // Call the hold callback if one is registered
         if (Input.holdCallback) {
+          Input.holdCallbackFired = true;
           Input.holdCallback();
         }
       }
@@ -385,6 +390,7 @@ export const Input = {
     Input.mouseDown = true;
     Input.mouseDownStartTime = Date.now();
     Input.isMouseHold = false;
+    Input.holdCallbackFired = false;
     Input.mouseDownListener(Input.mouseX, Input.mouseY, 0);
 
     if (!Input._holdCheckInterval) {
@@ -442,7 +448,29 @@ export const Input = {
   handleTouchEnd: function (evt: TouchEvent) {
     evt.preventDefault();
 
-    if (!Input.isTapHold && !Input.swiped) Input.tapListener();
+    // Mobile right-click emulation: long-press + release (RuneScape-like).
+    // - If finger doesn't move, and no swipe/drag occurred, emit RIGHT_CLICK.
+    // - Dragging (holdCallback) takes precedence over right click.
+    const RIGHT_CLICK_HOLD_THRESH = 450; // ms
+    const MOVE_THRESH_PX = 8; // CSS px
+    const dx = Input.currentX - Input.xDown;
+    const dy = Input.currentY - Input.yDown;
+    const movedSq = dx * dx + dy * dy;
+    const heldMs =
+      typeof Input.tapStartTime === "number"
+        ? Date.now() - Input.tapStartTime
+        : 0;
+    const shouldRightClick =
+      !Input.swiped &&
+      heldMs >= RIGHT_CLICK_HOLD_THRESH &&
+      movedSq <= MOVE_THRESH_PX * MOVE_THRESH_PX &&
+      Input.holdCallbackFired === false;
+
+    if (shouldRightClick) {
+      Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
+    } else if (!Input.isTapHold && !Input.swiped) {
+      Input.tapListener();
+    }
     Input.isTapHold = false;
     Input.tapStartTime = null;
 
@@ -547,7 +575,26 @@ window.document
   .addEventListener("mouseup", (event) => Input.handleMouseUp(event), false);
 window.document
   .getElementById("gameCanvas")
-  .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+  .addEventListener(
+    "contextmenu",
+    (event) => {
+      // Use contextmenu as our canonical desktop right-click signal (click does not always fire for button=2).
+      event.preventDefault();
+
+      // Update mouse position from this event (same scaling logic as mousemove).
+      const canvas = window.document.getElementById("gameCanvas");
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      Input.rawMouseX = x;
+      Input.rawMouseY = y;
+      Input.mouseX = Math.floor(x / Game.scale);
+      Input.mouseY = Math.floor(y / Game.scale);
+
+      Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
+    },
+    false,
+  );
 window.document.getElementById("gameCanvas").addEventListener(
   "wheel",
   (event) => {

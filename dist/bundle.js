@@ -26713,6 +26713,9 @@ class Game {
                             const localPlayer = this.players?.[this.localPlayerID];
                             if (localPlayer && localPlayer.dead)
                                 return;
+                            // Context menu is modal; don't allow chat focus while it's open.
+                            if (localPlayer && localPlayer.contextMenu?.open)
+                                return;
                             // If already open, don't steal the event
                             if (this.chatOpen)
                                 return;
@@ -32204,6 +32207,9 @@ exports.Input = {
     lastMouseDownX: 0,
     lastMouseDownY: 0,
     mouseDownHandled: false,
+    // Tracks whether a registered hold action actually fired (e.g. inventory drag).
+    // This lets us emulate mobile right-click without being blocked by the generic hold timer.
+    holdCallbackFired: false,
     SPACE: "Space",
     LEFT: "ArrowLeft",
     UP: "ArrowUp",
@@ -32392,6 +32398,7 @@ exports.Input = {
         exports.Input.mouseDown = true;
         exports.Input.mouseDownStartTime = Date.now();
         exports.Input.isMouseHold = false;
+        exports.Input.holdCallbackFired = false;
         exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, event.button);
         // Start checking for hold
         if (!exports.Input._holdCheckInterval) {
@@ -32424,6 +32431,7 @@ exports.Input = {
                 exports.Input.isMouseHold = true;
                 // Call the hold callback if one is registered
                 if (exports.Input.holdCallback) {
+                    exports.Input.holdCallbackFired = true;
                     exports.Input.holdCallback();
                 }
             }
@@ -32458,6 +32466,7 @@ exports.Input = {
         exports.Input.mouseDown = true;
         exports.Input.mouseDownStartTime = Date.now();
         exports.Input.isMouseHold = false;
+        exports.Input.holdCallbackFired = false;
         exports.Input.mouseDownListener(exports.Input.mouseX, exports.Input.mouseY, 0);
         if (!exports.Input._holdCheckInterval) {
             exports.Input._holdCheckInterval = setInterval(exports.Input.checkIsMouseHold, 16);
@@ -32510,8 +32519,27 @@ exports.Input = {
     },
     handleTouchEnd: function (evt) {
         evt.preventDefault();
-        if (!exports.Input.isTapHold && !exports.Input.swiped)
+        // Mobile right-click emulation: long-press + release (RuneScape-like).
+        // - If finger doesn't move, and no swipe/drag occurred, emit RIGHT_CLICK.
+        // - Dragging (holdCallback) takes precedence over right click.
+        const RIGHT_CLICK_HOLD_THRESH = 450; // ms
+        const MOVE_THRESH_PX = 8; // CSS px
+        const dx = exports.Input.currentX - exports.Input.xDown;
+        const dy = exports.Input.currentY - exports.Input.yDown;
+        const movedSq = dx * dx + dy * dy;
+        const heldMs = typeof exports.Input.tapStartTime === "number"
+            ? Date.now() - exports.Input.tapStartTime
+            : 0;
+        const shouldRightClick = !exports.Input.swiped &&
+            heldMs >= RIGHT_CLICK_HOLD_THRESH &&
+            movedSq <= MOVE_THRESH_PX * MOVE_THRESH_PX &&
+            exports.Input.holdCallbackFired === false;
+        if (shouldRightClick) {
+            exports.Input.mouseRightClickListener(exports.Input.mouseX, exports.Input.mouseY);
+        }
+        else if (!exports.Input.isTapHold && !exports.Input.swiped) {
             exports.Input.tapListener();
+        }
         exports.Input.isTapHold = false;
         exports.Input.tapStartTime = null;
         // Reset swipe hold tracking
@@ -32590,7 +32618,20 @@ window.document
     .addEventListener("mouseup", (event) => exports.Input.handleMouseUp(event), false);
 window.document
     .getElementById("gameCanvas")
-    .addEventListener("contextmenu", (event) => event.preventDefault(), false);
+    .addEventListener("contextmenu", (event) => {
+    // Use contextmenu as our canonical desktop right-click signal (click does not always fire for button=2).
+    event.preventDefault();
+    // Update mouse position from this event (same scaling logic as mousemove).
+    const canvas = window.document.getElementById("gameCanvas");
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    exports.Input.rawMouseX = x;
+    exports.Input.rawMouseY = y;
+    exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
+    exports.Input.mouseY = Math.floor(y / game_1.Game.scale);
+    exports.Input.mouseRightClickListener(exports.Input.mouseX, exports.Input.mouseY);
+}, false);
 window.document.getElementById("gameCanvas").addEventListener("wheel", (event) => {
     event.preventDefault();
     exports.Input.wheelListener(event.deltaY);
@@ -33473,6 +33514,163 @@ exports.IdGenerator = IdGenerator;
 IdGenerator._next = BigInt(1);
 /** Registry of every ID produced or reserved this session. */
 IdGenerator._registry = new Set();
+
+
+/***/ }),
+
+/***/ "./src/gui/contextMenu.ts":
+/*!********************************!*\
+  !*** ./src/gui/contextMenu.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ContextMenu = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+/**
+ * Simple RuneScape-style context menu:
+ * - Opens at the click location, extending down/right.
+ * - Clamps on-screen if it would overflow.
+ * - Clicking outside closes it.
+ */
+class ContextMenu {
+    constructor() {
+        this.open = false;
+        this.xPx = 0;
+        this.yPx = 0;
+        this.items = [];
+        // Cached layout
+        this.widthPx = 0;
+        this.heightPx = 0;
+        this.padX = 6;
+        this.padY = 6;
+        this.rowH = game_1.Game.letter_height + 8;
+        this.closeMarginPx = 10;
+        this.openAt = (xPx, yPx, items) => {
+            this.items = items;
+            this.open = true;
+            this.xPx = Math.round(xPx);
+            this.yPx = Math.round(yPx);
+            this.recomputeLayoutAndClamp();
+        };
+        this.close = () => {
+            this.open = false;
+        };
+        this.recomputeLayoutAndClamp = () => {
+            const labels = this.items.map((it) => it.label);
+            const maxW = Math.max(1, ...labels.map((s) => game_1.Game.measureText(s).width));
+            this.widthPx = this.padX * 2 + maxW;
+            this.heightPx = this.padY * 2 + this.items.length * this.rowH;
+            // Clamp to screen (canvas pixels).
+            const margin = 2;
+            if (this.xPx + this.widthPx > gameConstants_1.GameConstants.WIDTH - margin) {
+                this.xPx = gameConstants_1.GameConstants.WIDTH - margin - this.widthPx;
+            }
+            if (this.yPx + this.heightPx > gameConstants_1.GameConstants.HEIGHT - margin) {
+                this.yPx = gameConstants_1.GameConstants.HEIGHT - margin - this.heightPx;
+            }
+            if (this.xPx < margin)
+                this.xPx = margin;
+            if (this.yPx < margin)
+                this.yPx = margin;
+        };
+        this.isPointInMenu = (x, y) => {
+            if (!this.open)
+                return false;
+            return (x >= this.xPx &&
+                x <= this.xPx + this.widthPx &&
+                y >= this.yPx &&
+                y <= this.yPx + this.heightPx);
+        };
+        this.isPointInMenuWithMargin = (x, y, marginPx) => {
+            if (!this.open)
+                return false;
+            return (x >= this.xPx - marginPx &&
+                x <= this.xPx + this.widthPx + marginPx &&
+                y >= this.yPx - marginPx &&
+                y <= this.yPx + this.heightPx + marginPx);
+        };
+        this.handleMouseDown = (x, y, button) => {
+            if (!this.open)
+                return false;
+            // Right click inside menu just consumes for now.
+            if (!this.isPointInMenu(x, y)) {
+                this.close();
+                return true;
+            }
+            if (button !== 0)
+                return true;
+            const idx = this.getHoveredIndex(x, y);
+            const item = idx !== null ? this.items[idx] : null;
+            if (!item)
+                return true;
+            try {
+                item.onClick();
+            }
+            finally {
+                // Always close after any selection (RuneScape-like).
+                this.close();
+            }
+            return true;
+        };
+        this.getHoveredIndex = (x, y) => {
+            const localY = y - (this.yPx + this.padY);
+            if (localY < 0)
+                return null;
+            const idx = Math.floor(localY / this.rowH);
+            if (idx < 0 || idx >= this.items.length)
+                return null;
+            return idx;
+        };
+        this.draw = (delta) => {
+            delta;
+            if (!this.open)
+                return;
+            // RuneScape-style: menu only persists while cursor stays near it (desktop only).
+            // (On mobile there is no persistent cursor, so do not auto-close here.)
+            const mx = input_1.Input.mouseX;
+            const my = input_1.Input.mouseY;
+            if (!gameConstants_1.GameConstants.isMobile &&
+                mx !== undefined &&
+                my !== undefined &&
+                !this.isPointInMenuWithMargin(mx, my, this.closeMarginPx)) {
+                this.close();
+                return;
+            }
+            game_1.Game.ctx.save();
+            // Background + border
+            game_1.Game.ctx.globalAlpha = 0.95;
+            game_1.Game.ctx.fillStyle = "rgba(12, 16, 22, 0.95)";
+            game_1.Game.ctx.fillRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
+            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+            game_1.Game.ctx.lineWidth = 1;
+            game_1.Game.ctx.strokeRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
+            const hovered = mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
+                ? this.getHoveredIndex(mx, my)
+                : null;
+            // Items
+            for (let i = 0; i < this.items.length; i++) {
+                const item = this.items[i];
+                const rowX = this.xPx + this.padX;
+                const rowTop = this.yPx + this.padY + i * this.rowH;
+                if (hovered === i) {
+                    game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+                    game_1.Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
+                }
+                game_1.Game.ctx.fillStyle = "white";
+                const textY = rowTop + Math.floor((this.rowH - game_1.Game.letter_height) / 2);
+                game_1.Game.fillText(item.label, rowX, textY);
+            }
+            game_1.Game.ctx.restore();
+        };
+    }
+}
+exports.ContextMenu = ContextMenu;
 
 
 /***/ }),
@@ -37427,7 +37625,9 @@ class Inventory {
             return { x, y, w, h };
         };
         this.handleMouseDown = (x, y, button) => {
-            if (this.player.menu.open || this.player.bestiary?.isOpen)
+            if (this.player.menu.open ||
+                this.player.bestiary?.isOpen ||
+                this.player.contextMenu?.open)
                 return;
             // Ignore if not left click
             if (button !== 0)
@@ -37473,7 +37673,9 @@ class Inventory {
             }
         };
         this.handleMouseUp = (x, y, button) => {
-            if (this.player.menu.open || this.player.bestiary?.isOpen)
+            if (this.player.menu.open ||
+                this.player.bestiary?.isOpen ||
+                this.player.contextMenu?.open)
                 return;
             // Ignore if not left click
             if (button !== 0)
@@ -49068,6 +49270,7 @@ const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/e
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const bestiary_1 = __webpack_require__(/*! ../game/bestiary */ "./src/game/bestiary.ts");
+const contextMenu_1 = __webpack_require__(/*! ../gui/contextMenu */ "./src/gui/contextMenu.ts");
 const playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 const playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
 const playerMovement_1 = __webpack_require__(/*! ./playerMovement */ "./src/player/playerMovement.ts");
@@ -49108,6 +49311,7 @@ class Player extends drawable_1.Drawable {
         // TODO: remove entirely once no callers depend on it.
         this.seenEnemies = new Set();
         this.bestiary = null;
+        this.contextMenu = new contextMenu_1.ContextMenu();
         this.getRoom = () => {
             const gameWithLookup = this.game;
             const byId = gameWithLookup.getRoomById?.(this.roomGID);
@@ -50358,7 +50562,7 @@ class PlayerInputHandler {
         input_1.Input.periodListener = () => this.handleInput(input_1.InputEnum.PERIOD);
         input_1.Input.tapListener = () => this.handleTap();
         input_1.Input.mouseMoveListener = () => this.handleInput(input_1.InputEnum.MOUSE_MOVE);
-        input_1.Input.mouseRightClickListeners.push(() => this.handleInput(input_1.InputEnum.RIGHT_CLICK));
+        input_1.Input.mouseRightClickListeners.push((x, y) => this.handleMouseRightClickAt(x, y));
         input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.numKeyListener = (num) => this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
@@ -50403,6 +50607,26 @@ class PlayerInputHandler {
                 case input_1.InputEnum.LEFT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                     this.player.bestiary.handleMouseDown(x, y);
+                    return;
+                }
+                default:
+                    return;
+            }
+        }
+        // Context menu is modal while open.
+        if (this.player.contextMenu?.open) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.contextMenu.close();
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.contextMenu.handleMouseDown(x, y, 0);
+                    return;
+                }
+                case input_1.InputEnum.RIGHT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.contextMenu.handleMouseDown(x, y, 2);
                     return;
                 }
                 default:
@@ -50530,7 +50754,7 @@ class PlayerInputHandler {
                 this.handleMouseLeftClick();
                 break;
             case input_1.InputEnum.RIGHT_CLICK:
-                this.handleMouseRightClick();
+                this.handleMouseRightClickAt(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y);
                 break;
             case input_1.InputEnum.MOUSE_MOVE:
                 //when mouse moves
@@ -50604,18 +50828,27 @@ class PlayerInputHandler {
         this.setMostRecentInput("keyboard");
         inv.mostRecentInput = "keyboard";
     }
-    handleMouseRightClick() {
+    handleMouseRightClickAt(x, y) {
         this.setMostRecentInput("mouse");
-        const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
-        const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
-        if (bounds.inBounds) {
-            this.player.inventory.drop();
-        }
+        const player = this.player;
+        const menu = player.contextMenu;
+        if (!menu)
+            return;
+        menu.openAt(x, y, [
+            { label: "Placeholder", onClick: () => { } },
+            { label: "Cancel", onClick: () => { } },
+        ]);
     }
     handleMouseDown(x, y, button) {
         if (button !== 0)
             return; // Only handle left mouse button
         const player = this.player;
+        // Context menu consumes clicks while open (click outside closes).
+        if (player.contextMenu?.open) {
+            player.contextMenu.handleMouseDown(x, y, 0);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // Speed up camera animation on any mouse down
         if (player.game.cameraAnimation.active) {
             player.game.cameraAnimation.fast = true;
@@ -50774,6 +51007,10 @@ class PlayerInputHandler {
             this.handleDeathScreenInput(x, y);
             return;
         }
+        if (player.contextMenu?.open) {
+            player.contextMenu.handleMouseDown(x, y, 0);
+            return;
+        }
         if (player.bestiary?.isOpen) {
             player.bestiary.handleMouseDown(x, y);
             return;
@@ -50852,6 +51089,11 @@ class PlayerInputHandler {
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
         const bestiary = this.player.bestiary;
+        const ctxMenu = this.player.contextMenu;
+        if (ctxMenu?.open) {
+            ctxMenu.handleMouseDown(x, y, 0);
+            return;
+        }
         if (bestiary?.isOpen) {
             bestiary.handleMouseDown(x, y);
             return;
@@ -51684,7 +51926,7 @@ class PlayerRenderer {
                             inVendingMachine
                             ? "vendingMachine"
                             : "none";
-                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED) {
+                if (gameConstants_1.GameConstants.HOVER_TEXT_ENABLED && !this.player.contextMenu?.open) {
                     hoverText_1.HoverText.draw(delta, this.player.x, this.player.y, this.player.getRoom
                         ? this.player.getRoom()
                         : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, drawFor);
@@ -51692,6 +51934,8 @@ class PlayerRenderer {
                 // Draw bestiary last so it renders above inventory/quickbar.
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
+                // Context menu should draw above all other UI (inventory/bestiary).
+                this.player.contextMenu?.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;

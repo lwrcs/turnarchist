@@ -704,7 +704,7 @@ export class PlayerRenderer {
               ? "vendingMachine"
               : "none";
 
-      if (GameConstants.HOVER_TEXT_ENABLED) {
+      if (GameConstants.HOVER_TEXT_ENABLED && !this.player.contextMenu?.open) {
         HoverText.draw(
           delta,
           this.player.x,
@@ -723,6 +723,9 @@ export class PlayerRenderer {
 
       // Draw bestiary last so it renders above inventory/quickbar.
       if (this.player.bestiary) this.player.bestiary.draw(delta);
+
+      // Context menu should draw above all other UI (inventory/bestiary).
+      this.player.contextMenu?.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();

@@ -717,6 +717,8 @@ export class Game {
               // Do not allow opening chat via touch when the death screen is active
               const localPlayer = this.players?.[this.localPlayerID];
               if (localPlayer && localPlayer.dead) return;
+              // Context menu is modal; don't allow chat focus while it's open.
+              if (localPlayer && localPlayer.contextMenu?.open) return;
               // If already open, don't steal the event
               if (this.chatOpen) return;
               if (this.isPointInChatHotspot(x, y)) {

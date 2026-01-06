@@ -42,8 +42,8 @@ export class PlayerInputHandler {
     Input.periodListener = () => this.handleInput(InputEnum.PERIOD);
     Input.tapListener = () => this.handleTap();
     Input.mouseMoveListener = () => this.handleInput(InputEnum.MOUSE_MOVE);
-    Input.mouseRightClickListeners.push(() =>
-      this.handleInput(InputEnum.RIGHT_CLICK),
+    Input.mouseRightClickListeners.push((x: number, y: number) =>
+      this.handleMouseRightClickAt(x, y),
     );
     Input.mouseDownListeners.push((x: number, y: number, button: number) =>
       this.handleMouseDown(x, y, button),
@@ -96,6 +96,27 @@ export class PlayerInputHandler {
         case InputEnum.LEFT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
           this.player.bestiary.handleMouseDown(x, y);
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
+    // Context menu is modal while open.
+    if (this.player.contextMenu?.open) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.contextMenu.close();
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.contextMenu.handleMouseDown(x, y, 0);
+          return;
+        }
+        case InputEnum.RIGHT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.contextMenu.handleMouseDown(x, y, 2);
           return;
         }
         default:
@@ -236,7 +257,10 @@ export class PlayerInputHandler {
         this.handleMouseLeftClick();
         break;
       case InputEnum.RIGHT_CLICK:
-        this.handleMouseRightClick();
+        this.handleMouseRightClickAt(
+          MouseCursor.getInstance().getPosition().x,
+          MouseCursor.getInstance().getPosition().y,
+        );
         break;
       case InputEnum.MOUSE_MOVE:
         //when mouse moves
@@ -343,20 +367,29 @@ export class PlayerInputHandler {
     }
   };
 
-  handleMouseRightClick() {
+  private handleMouseRightClickAt(x: number, y: number) {
     this.setMostRecentInput("mouse");
-    const { x, y } = MouseCursor.getInstance().getPosition();
-    const bounds = this.player.inventory.isPointInInventoryBounds(x, y);
+    const player = this.player;
+    const menu = player.contextMenu;
+    if (!menu) return;
 
-    if (bounds.inBounds) {
-      this.player.inventory.drop();
-    }
+    menu.openAt(x, y, [
+      { label: "Placeholder", onClick: () => {} },
+      { label: "Cancel", onClick: () => {} },
+    ]);
   }
 
   handleMouseDown(x: number, y: number, button: number) {
     if (button !== 0) return; // Only handle left mouse button
 
     const player = this.player;
+
+    // Context menu consumes clicks while open (click outside closes).
+    if (player.contextMenu?.open) {
+      player.contextMenu.handleMouseDown(x, y, 0);
+      Input.mouseDownHandled = true;
+      return;
+    }
 
     // Speed up camera animation on any mouse down
     if (player.game.cameraAnimation.active) {
@@ -549,6 +582,11 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (player.contextMenu?.open) {
+      player.contextMenu.handleMouseDown(x, y, 0);
+      return;
+    }
+
     if (player.bestiary?.isOpen) {
       player.bestiary.handleMouseDown(x, y);
       return;
@@ -661,6 +699,12 @@ export class PlayerInputHandler {
     const x = Input.mouseX;
     const y = Input.mouseY;
     const bestiary = this.player.bestiary;
+    const ctxMenu = this.player.contextMenu;
+
+    if (ctxMenu?.open) {
+      ctxMenu.handleMouseDown(x, y, 0);
+      return;
+    }
 
     if (bestiary?.isOpen) {
       bestiary.handleMouseDown(x, y);

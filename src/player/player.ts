@@ -25,6 +25,7 @@ import { LightSource } from "../lighting/lightSource";
 
 import { Menu } from "../gui/menu";
 import { Bestiary } from "../game/bestiary";
+import { ContextMenu } from "../gui/contextMenu";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
@@ -141,6 +142,7 @@ export class Player extends Drawable {
   // TODO: remove entirely once no callers depend on it.
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
+  contextMenu: ContextMenu = new ContextMenu();
   constructor(
     game: Game,
     x: number,
