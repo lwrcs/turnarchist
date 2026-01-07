@@ -12,6 +12,7 @@ import { Shadow } from "../drawable/shadow";
 import { statsTracker } from "../game/stats";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
+import { ITEM_EXAMINE_TEXT } from "../examine/itemExamineText";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
@@ -134,6 +135,11 @@ export class Item extends Drawable {
    * Override this for items that should have a distinct examine message.
    */
   examineText = (): string => {
+    const ctorName = (this.constructor as { name?: unknown }).name;
+    if (typeof ctorName === "string") {
+      const s = ITEM_EXAMINE_TEXT[ctorName];
+      if (typeof s === "string" && s.trim().length > 0) return s.trim();
+    }
     const ctor = this.constructor as unknown as { examineText?: unknown };
     if (typeof ctor.examineText === "string") {
       const s = ctor.examineText.trim();

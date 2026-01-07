@@ -30,6 +30,7 @@ import { Tile } from "../tile/tile";
 import { BeamEffect } from "../projectile/beamEffect";
 import { Lighting } from "../lighting/lighting";
 import { Enemy } from "./enemy/enemy";
+import { ENTITY_EXAMINE_TEXT } from "../examine/entityExamineText";
 
 export enum EntityDirection {
   DOWN,
@@ -144,6 +145,11 @@ export class Entity extends Drawable {
    * Prefer adding a `static examineText = "..."` to specific Entity subclasses.
    */
   examineText = (): string => {
+    const ctorName = (this.constructor as { name?: unknown }).name;
+    if (typeof ctorName === "string") {
+      const s = ENTITY_EXAMINE_TEXT[ctorName];
+      if (typeof s === "string" && s.trim().length > 0) return s.trim();
+    }
     const ctor = this.constructor as unknown as { examineText?: unknown };
     if (typeof ctor.examineText === "string") {
       const s = ctor.examineText.trim();
