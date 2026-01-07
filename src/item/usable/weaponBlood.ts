@@ -8,6 +8,7 @@ import { Weapon } from "../weapon/weapon";
 
 export class WeaponBlood extends Usable {
   static itemName = "cursed blood";
+  static examineText = "A vial of cursed blood. It stains the light.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 12;

@@ -8,6 +8,7 @@ import { Usable } from "./usable/usable";
 
 export class BombItem extends Usable {
   static itemName = "bomb";
+  static examineText = "A bomb. Keep your fingers.";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

@@ -5,6 +5,7 @@ import { Direction } from "../../game";
 
 export class Scythe extends Weapon {
   static itemName = "scythe";
+  static examineText = "A reaper's tool. Sweeps wide.";
   hitDelay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

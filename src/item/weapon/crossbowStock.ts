@@ -8,6 +8,7 @@ import { CrossbowLimb } from "./crossbowLimb";
 
 export class CrossbowStock extends Usable {
   static itemName = "crossbow stock";
+  static examineText = "A crossbow stock. A weapon in pieces.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

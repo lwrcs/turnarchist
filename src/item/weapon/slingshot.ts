@@ -4,6 +4,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 
 export class Slingshot extends Weapon {
   static itemName = "slingshot";
+  static examineText = "A slingshot. Childish, until it isn't.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

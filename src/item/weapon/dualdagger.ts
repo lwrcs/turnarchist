@@ -8,6 +8,7 @@ import { AttackAnimation } from "../../particle/attackAnimation";
 export class DualDagger extends Weapon {
   firstAttack: boolean;
   static itemName = "dual daggers";
+  static examineText = "Two daggers. Twice the confidence.";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

@@ -12,6 +12,7 @@ import { ScytheBlade } from "./scytheBlade";
 
 export class ScytheHandle extends Usable {
   static itemName = "scythe handle";
+  static examineText = "A scythe handle. Needs a blade.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

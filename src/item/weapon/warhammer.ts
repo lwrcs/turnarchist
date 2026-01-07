@@ -5,6 +5,7 @@ import { Direction } from "../../game";
 
 export class Warhammer extends Weapon {
   static itemName = "warhammer";
+  static examineText = "A brutal warhammer. Subtlety not included.";
   hitDelay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

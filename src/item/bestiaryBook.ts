@@ -7,6 +7,7 @@ import { Bestiary } from "../game/bestiary";
 
 export class BestiaryBook extends Usable {
   static itemName = "bestiary book";
+  static examineText = "A worn bestiary. It remembers what you've survived.";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

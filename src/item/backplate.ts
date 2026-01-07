@@ -3,6 +3,7 @@ import { Equippable } from "./equippable";
 
 export class Backplate extends Equippable {
   static itemName = "backplate";
+  static examineText = "A backplate. Watch your back—literally.";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

@@ -284,6 +284,9 @@ export class PlayerInputHandler {
         this.setMostRecentInput("mouse");
         this.player.inventory.mouseMove();
 
+        // Keep the context menu truly modal: don't update facing or tile cursor while it's open.
+        if (this.player.contextMenu?.open) break;
+
         // Check if mouse hold should be cancelled
         if (Input.mouseDown && Input.mouseDownHandled) {
           let shouldCancelHold = false;
@@ -390,12 +393,20 @@ export class PlayerInputHandler {
     const menu = player.contextMenu;
     if (!menu) return;
 
+    // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
+    player.frozenMouseAngleRad = this.mouseAngle();
+
     const items: Array<{
       label: string;
       onClick: () => void;
       enabled?: boolean;
       onDisabledClick?: () => void;
     }> = [];
+
+    const formatExamine = (text: string): string => {
+      // Keep examine as a single chat line.
+      return text.replace(/\s+/g, " ").trim();
+    };
 
     // UI buttons (menus)
     if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
@@ -464,9 +475,52 @@ export class PlayerInputHandler {
         },
       });
 
+      // Examine (optional)
+      const examine = (() => {
+        const maybe = enemy as unknown as {
+          examineText?: unknown;
+          description?: unknown;
+        };
+        if (typeof maybe.examineText === "function") {
+          const t = (maybe.examineText as () => unknown)();
+          return typeof t === "string" ? t : "";
+        }
+        return typeof maybe.description === "string" ? maybe.description : "";
+      })();
+      const ex = formatExamine(examine);
+      if (ex.length > 0) {
+        items.push({
+          label: "Examine",
+          onClick: () => {
+            player.game.pushMessage(ex);
+          },
+        });
+      }
+
       items.push({ label: "Cancel", onClick: () => {} });
       menu.openAt(x, y, items);
       return;
+    }
+
+    // Tiles (e.g. doors/ladders). Most tiles return empty examine text.
+    const room = player.getRoom ? player.getRoom() : player.game.room;
+    if (room) {
+      const t = player.mouseToTile();
+      const tile = room.getTile(t.x, t.y);
+      if (tile && typeof tile.examineText === "function") {
+        const ex = formatExamine(String(tile.examineText() ?? ""));
+        if (ex.length > 0) {
+          items.push({
+            label: "Examine",
+            onClick: () => {
+              player.game.pushMessage(ex);
+            },
+          });
+          items.push({ label: "Cancel", onClick: () => {} });
+          menu.openAt(x, y, items);
+          return;
+        }
+      }
     }
 
     // Inventory / quickbar items
@@ -503,13 +557,24 @@ export class PlayerInputHandler {
           },
         });
 
-        // Drop is always second-to-last (before Cancel)
+        const examine = formatExamine(item.examineText?.() ?? "");
+
+        // Drop goes near the bottom. "Examine" is always right before "Cancel".
         items.push({
           label: "Drop",
           onClick: () => {
             inv.dropItem(item, idx);
           },
         });
+
+        if (examine.length > 0) {
+          items.push({
+            label: "Examine",
+            onClick: () => {
+              player.game.pushMessage(examine);
+            },
+          });
+        }
       }
     }
 

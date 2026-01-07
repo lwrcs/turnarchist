@@ -129,6 +129,23 @@ export class Item extends Drawable {
     return `${this.name} \n${this.description} \n${stackText}`;
   };
 
+  /**
+   * Context-menu "Examine" text. Defaults to the item's description text.
+   * Override this for items that should have a distinct examine message.
+   */
+  examineText = (): string => {
+    const ctor = this.constructor as unknown as { examineText?: unknown };
+    if (typeof ctor.examineText === "string") {
+      const s = ctor.examineText.trim();
+      if (s.length > 0) return s;
+    }
+    const d =
+      typeof this.description === "string" ? this.description.trim() : "";
+    if (d.length > 0) return d;
+    // Fallback for items that only implement `getDescription()` and don't populate `description`.
+    return this.getDescription();
+  };
+
   animateFromChest = () => {
     this.chestOffsetY = 0.5;
     this.alpha = 0;

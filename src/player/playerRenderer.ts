@@ -191,38 +191,70 @@ export class PlayerRenderer {
         this.outlineColor(),
         this.outlineOpacity(),
       );
-    } else if (
-      this.player.inputHandler.mostRecentMoveInput === "mouse" &&
-      this.mouseDiagonal() &&
-      !GameConstants.isMobile
-    ) {
-      const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
-      let diagonalTile = { x: 1, y: 18 };
+    } else if (!GameConstants.isMobile) {
+      // While the context menu is open, freeze the diagonal mouse-angle pose at the moment it opened.
+      const angleRad =
+        player.contextMenu?.open &&
+        typeof player.frozenMouseAngleRad === "number"
+          ? player.frozenMouseAngleRad
+          : player.inputHandler.mostRecentMoveInput === "mouse"
+            ? player.inputHandler.mouseAngle()
+            : null;
 
-      if (angle > -150 && angle <= -120)
-        diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
-      if (angle > -60 && angle <= -30)
-        diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
-      if (angle > 30 && angle <= 60)
-        diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
-      if (angle > 120 && angle <= 150)
-        diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
+      const angleDeg = angleRad === null ? null : (angleRad * 180) / Math.PI;
+      const isDiagonal =
+        angleDeg !== null &&
+        ((angleDeg > 30 && angleDeg < 60) ||
+          (angleDeg > 120 && angleDeg < 150) ||
+          (angleDeg > -150 && angleDeg < -120) ||
+          (angleDeg > -60 && angleDeg < -30));
 
-      Game.drawMob(
-        diagonalTile.x,
-        diagonalTile.y,
-        1,
-        2,
-        player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
-        1,
-        2,
-        this.shadeColor(),
-        undefined,
-        undefined,
-        this.outlineColor(),
-        this.outlineOpacity(),
-      );
+      if (isDiagonal && angleDeg !== null) {
+        let diagonalTile = { x: 1, y: 18 };
+
+        if (angleDeg > -150 && angleDeg <= -120)
+          diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
+        if (angleDeg > -60 && angleDeg <= -30)
+          diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
+        if (angleDeg > 30 && angleDeg <= 60)
+          diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
+        if (angleDeg > 120 && angleDeg <= 150)
+          diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
+
+        Game.drawMob(
+          diagonalTile.x,
+          diagonalTile.y,
+          1,
+          2,
+          player.x - this.drawX - this.hitX,
+          player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+          1,
+          2,
+          this.shadeColor(),
+          undefined,
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
+        );
+      } else {
+        this.frame += 0.1 * delta;
+        if (this.frame >= 4) this.frame = 0;
+        Game.drawMob(
+          tileX,
+          tileY,
+          1,
+          2,
+          player.x - this.drawX - this.hitX,
+          player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+          1,
+          2,
+          this.shadeColor(),
+          undefined,
+          undefined,
+          this.outlineColor(),
+          this.outlineOpacity(),
+        );
+      }
     } else {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
@@ -1082,6 +1114,7 @@ export class PlayerRenderer {
   drawTileCursor = (delta: number) => {
     if (
       this.player.inventory.isOpen ||
+      this.player.contextMenu?.open ||
       this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
       GameConstants.isMobile
     )

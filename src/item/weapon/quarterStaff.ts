@@ -4,6 +4,7 @@ import { Sound } from "../../sound/sound";
 
 export class QuarterStaff extends Weapon {
   static itemName = "quarterstaff";
+  static examineText = "A sturdy staff. Better than bare hands.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

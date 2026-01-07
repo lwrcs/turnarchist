@@ -6,6 +6,7 @@ import { Random } from "../utility/random";
 
 export class Coin extends Item {
   static itemName = "coin";
+  static examineText = "A coin. Shiny and spendable.";
   private chestRevealPickupTimeoutId: number | null = null;
   //checked: boolean;
   constructor(level: Room, x: number, y: number) {

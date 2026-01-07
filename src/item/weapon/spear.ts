@@ -7,6 +7,7 @@ import { AttackAnimation } from "../../particle/attackAnimation";
 
 export class Spear extends Weapon {
   static itemName = "spear";
+  static examineText = "A long spear. Keeps trouble at arm's length.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

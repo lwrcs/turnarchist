@@ -38165,6 +38165,7 @@ class Backplate extends equippable_1.Equippable {
 }
 exports.Backplate = Backplate;
 Backplate.itemName = "backplate";
+Backplate.examineText = "A backplate. Watch your back—literally.";
 
 
 /***/ }),
@@ -38200,6 +38201,7 @@ class BestiaryBook extends usable_1.Usable {
 }
 exports.BestiaryBook = BestiaryBook;
 BestiaryBook.itemName = "bestiary book";
+BestiaryBook.examineText = "A worn bestiary. It remembers what you've survived.";
 
 
 /***/ }),
@@ -38235,6 +38237,7 @@ class BombItem extends usable_1.Usable {
 }
 exports.BombItem = BombItem;
 BombItem.itemName = "bomb";
+BombItem.examineText = "A bomb. Keep your fingers.";
 
 
 /***/ }),
@@ -38268,6 +38271,7 @@ class ChestPlate extends equippable_1.Equippable {
 }
 exports.ChestPlate = ChestPlate;
 ChestPlate.itemName = "chest plate";
+ChestPlate.examineText = "A chest plate. Solid where it counts.";
 
 
 /***/ }),
@@ -38353,6 +38357,7 @@ class Coin extends item_1.Item {
 }
 exports.Coin = Coin;
 Coin.itemName = "coin";
+Coin.examineText = "A coin. Shiny and spendable.";
 
 
 /***/ }),
@@ -38984,6 +38989,7 @@ class Gauntlets extends equippable_1.Equippable {
 }
 exports.Gauntlets = Gauntlets;
 Gauntlets.itemName = "gauntlets";
+Gauntlets.examineText = "Gauntlets. Better knuckles, fewer regrets.";
 
 
 /***/ }),
@@ -39114,6 +39120,23 @@ class Item extends drawable_1.Drawable {
         this.getDescription = () => {
             const stackText = this.stackable ? `\nAmount: ${this.stackCount}` : "";
             return `${this.name} \n${this.description} \n${stackText}`;
+        };
+        /**
+         * Context-menu "Examine" text. Defaults to the item's description text.
+         * Override this for items that should have a distinct examine message.
+         */
+        this.examineText = () => {
+            const ctor = this.constructor;
+            if (typeof ctor.examineText === "string") {
+                const s = ctor.examineText.trim();
+                if (s.length > 0)
+                    return s;
+            }
+            const d = typeof this.description === "string" ? this.description.trim() : "";
+            if (d.length > 0)
+                return d;
+            // Fallback for items that only implement `getDescription()` and don't populate `description`.
+            return this.getDescription();
         };
         this.animateFromChest = () => {
             this.chestOffsetY = 0.5;
@@ -39833,6 +39856,7 @@ class Key extends usable_1.Usable {
 }
 exports.Key = Key;
 Key.itemName = "key";
+Key.examineText = "A key. It probably fits one lock.";
 
 
 /***/ }),
@@ -40810,6 +40834,7 @@ class ShoulderPlates extends equippable_1.Equippable {
 }
 exports.ShoulderPlates = ShoulderPlates;
 ShoulderPlates.itemName = "shoulder plates";
+ShoulderPlates.examineText = "Shoulder plates. No more cheap shots.";
 
 
 /***/ }),
@@ -41406,6 +41431,7 @@ class WeaponBlood extends usable_1.Usable {
 }
 exports.WeaponBlood = WeaponBlood;
 WeaponBlood.itemName = "cursed blood";
+WeaponBlood.examineText = "A vial of cursed blood. It stains the light.";
 
 
 /***/ }),
@@ -41466,6 +41492,7 @@ class WeaponFragments extends usable_1.Usable {
 }
 exports.WeaponFragments = WeaponFragments;
 WeaponFragments.itemName = "weapon fragments";
+WeaponFragments.examineText = "Weapon scraps. Good for cobbling.";
 
 
 /***/ }),
@@ -41513,6 +41540,7 @@ class WeaponPoison extends usable_1.Usable {
 }
 exports.WeaponPoison = WeaponPoison;
 WeaponPoison.itemName = "weapon poison";
+WeaponPoison.examineText = "A vial of poison. Paint it on steel.";
 
 
 /***/ }),
@@ -41701,6 +41729,7 @@ class Crossbow extends weapon_1.Weapon {
 }
 exports.Crossbow = Crossbow;
 Crossbow.itemName = "crossbow";
+Crossbow.examineText = "A crossbow. Point, load, and regret.";
 
 
 /***/ }),
@@ -41760,6 +41789,7 @@ class CrossbowBolt extends usable_1.Usable {
 }
 exports.CrossbowBolt = CrossbowBolt;
 CrossbowBolt.itemName = "crossbow bolt";
+CrossbowBolt.examineText = "A crossbow bolt. Pointy on purpose.";
 
 
 /***/ }),
@@ -41812,6 +41842,7 @@ class CrossbowLimb extends usable_1.Usable {
 }
 exports.CrossbowLimb = CrossbowLimb;
 CrossbowLimb.itemName = "crossbow limb";
+CrossbowLimb.examineText = "A crossbow limb. Springy and sharp.";
 
 
 /***/ }),
@@ -41864,6 +41895,7 @@ class CrossbowStock extends usable_1.Usable {
 }
 exports.CrossbowStock = CrossbowStock;
 CrossbowStock.itemName = "crossbow stock";
+CrossbowStock.examineText = "A crossbow stock. A weapon in pieces.";
 
 
 /***/ }),
@@ -41897,6 +41929,7 @@ class Dagger extends weapon_1.Weapon {
 }
 exports.Dagger = Dagger;
 Dagger.itemName = "dagger";
+Dagger.examineText = "A simple dagger. Close and quick.";
 
 
 /***/ }),
@@ -41969,6 +42002,7 @@ class DualDagger extends weapon_1.Weapon {
 }
 exports.DualDagger = DualDagger;
 DualDagger.itemName = "dual daggers";
+DualDagger.examineText = "Two daggers. Twice the confidence.";
 
 
 /***/ }),
@@ -42046,6 +42080,7 @@ class Greataxe extends weapon_1.Weapon {
 }
 exports.Greataxe = Greataxe;
 Greataxe.itemName = "greataxe";
+Greataxe.examineText = "A great axe. It wants to bite.";
 
 
 /***/ }),
@@ -42080,6 +42115,7 @@ class QuarterStaff extends weapon_1.Weapon {
 }
 exports.QuarterStaff = QuarterStaff;
 QuarterStaff.itemName = "quarterstaff";
+QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
 
 
 /***/ }),
@@ -42200,6 +42236,7 @@ class Scythe extends weapon_1.Weapon {
 }
 exports.Scythe = Scythe;
 Scythe.itemName = "scythe";
+Scythe.examineText = "A reaper's tool. Sweeps wide.";
 
 
 /***/ }),
@@ -42252,6 +42289,7 @@ class ScytheBlade extends usable_1.Usable {
 }
 exports.ScytheBlade = ScytheBlade;
 ScytheBlade.itemName = "scythe blade";
+ScytheBlade.examineText = "A scythe blade. Very convincing.";
 
 
 /***/ }),
@@ -42304,6 +42342,7 @@ class ScytheHandle extends usable_1.Usable {
 }
 exports.ScytheHandle = ScytheHandle;
 ScytheHandle.itemName = "scythe handle";
+ScytheHandle.examineText = "A scythe handle. Needs a blade.";
 
 
 /***/ }),
@@ -42357,6 +42396,7 @@ class ShieldLeftFragment extends usable_1.Usable {
 }
 exports.ShieldLeftFragment = ShieldLeftFragment;
 ShieldLeftFragment.itemName = "left shield fragment";
+ShieldLeftFragment.examineText = "A broken shield half. Find its partner.";
 
 
 /***/ }),
@@ -42410,6 +42450,7 @@ class ShieldRightFragment extends usable_1.Usable {
 }
 exports.ShieldRightFragment = ShieldRightFragment;
 ShieldRightFragment.itemName = "right shield fragment";
+ShieldRightFragment.examineText = "A broken shield half. Find its partner.";
 
 
 /***/ }),
@@ -42529,6 +42570,7 @@ class Shotgun extends weapon_1.Weapon {
 }
 exports.Shotgun = Shotgun;
 Shotgun.itemName = "shotgun";
+Shotgun.examineText = "A shotgun. Loud, short-range certainty.";
 
 
 /***/ }),
@@ -42683,6 +42725,7 @@ class Slingshot extends weapon_1.Weapon {
 }
 exports.Slingshot = Slingshot;
 Slingshot.itemName = "slingshot";
+Slingshot.examineText = "A slingshot. Childish, until it isn't.";
 
 
 /***/ }),
@@ -42775,6 +42818,7 @@ class Spear extends weapon_1.Weapon {
 }
 exports.Spear = Spear;
 Spear.itemName = "spear";
+Spear.examineText = "A long spear. Keeps trouble at arm's length.";
 
 
 /***/ }),
@@ -42943,6 +42987,7 @@ class Spellbook extends weapon_1.Weapon {
 }
 exports.Spellbook = Spellbook;
 Spellbook.itemName = "spellbook";
+Spellbook.examineText = "A spellbook. Arcane pages and dangerous ideas.";
 
 
 /***/ }),
@@ -43044,6 +43089,7 @@ class Sword extends weapon_1.Weapon {
 }
 exports.Sword = Sword;
 Sword.itemName = "sword";
+Sword.examineText = "A balanced sword. Reliable steel.";
 
 
 /***/ }),
@@ -43109,6 +43155,7 @@ class Warhammer extends weapon_1.Weapon {
 }
 exports.Warhammer = Warhammer;
 Warhammer.itemName = "warhammer";
+Warhammer.examineText = "A brutal warhammer. Subtlety not included.";
 
 
 /***/ }),
@@ -49565,6 +49612,12 @@ class Player extends drawable_1.Drawable {
         this.seenEnemies = new Set();
         this.bestiary = null;
         this.contextMenu = new contextMenu_1.ContextMenu();
+        /**
+         * When the context menu opens, we snapshot the current mouse angle so the player
+         * can keep rendering the same diagonal mouse-facing sprite while the menu is open.
+         * Stored in radians (matches `PlayerInputHandler.mouseAngle()`).
+         */
+        this.frozenMouseAngleRad = null;
         this.getRoom = () => {
             const gameWithLookup = this.game;
             const byId = gameWithLookup.getRoomById?.(this.roomGID);
@@ -49919,6 +49972,28 @@ class Player extends drawable_1.Drawable {
             const candidates = [mouseTile, tileAbove];
             for (const t of candidates) {
                 const hit = room.entities.find((e) => (e?.z ?? 0) === z && e.isEnemy && e.x === t.x && e.y === t.y);
+                if (hit)
+                    return hit;
+            }
+            return null;
+        };
+        /**
+         * UI helper: find any entity under the cursor (for context-menu examine).
+         * Checks the cursor tile and the tile above to account for tall sprites.
+         */
+        this.getEntityUnderCursorForExamine = () => {
+            const mouseTile = this.mouseToTile();
+            const tileAbove = {
+                x: mouseTile.x,
+                y: this.mouseToTile(gameConstants_1.GameConstants.TILESIZE / 2).y,
+            };
+            const room = this.game.room;
+            if (!room)
+                return null;
+            const z = this.z;
+            const candidates = [mouseTile, tileAbove];
+            for (const t of candidates) {
+                const hit = room.entities.find((e) => (e?.z ?? 0) === z && e.pointIn(t.x, t.y));
                 if (hit)
                     return hit;
             }
@@ -51052,6 +51127,9 @@ class PlayerInputHandler {
                 //when mouse moves
                 this.setMostRecentInput("mouse");
                 this.player.inventory.mouseMove();
+                // Keep the context menu truly modal: don't update facing or tile cursor while it's open.
+                if (this.player.contextMenu?.open)
+                    break;
                 // Check if mouse hold should be cancelled
                 if (input_1.Input.mouseDown && input_1.Input.mouseDownHandled) {
                     let shouldCancelHold = false;
@@ -51126,7 +51204,13 @@ class PlayerInputHandler {
         const menu = player.contextMenu;
         if (!menu)
             return;
+        // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
+        player.frozenMouseAngleRad = this.mouseAngle();
         const items = [];
+        const formatExamine = (text) => {
+            // Keep examine as a single chat line.
+            return text.replace(/\s+/g, " ").trim();
+        };
         // UI buttons (menus)
         if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
             items.push({
@@ -51194,9 +51278,47 @@ class PlayerInputHandler {
                     weapon.weaponMove(input.x, input.y);
                 },
             });
+            // Examine (optional)
+            const examine = (() => {
+                const maybe = enemy;
+                if (typeof maybe.examineText === "function") {
+                    const t = maybe.examineText();
+                    return typeof t === "string" ? t : "";
+                }
+                return typeof maybe.description === "string" ? maybe.description : "";
+            })();
+            const ex = formatExamine(examine);
+            if (ex.length > 0) {
+                items.push({
+                    label: "Examine",
+                    onClick: () => {
+                        player.game.pushMessage(ex);
+                    },
+                });
+            }
             items.push({ label: "Cancel", onClick: () => { } });
             menu.openAt(x, y, items);
             return;
+        }
+        // Tiles (e.g. doors/ladders). Most tiles return empty examine text.
+        const room = player.getRoom ? player.getRoom() : player.game.room;
+        if (room) {
+            const t = player.mouseToTile();
+            const tile = room.getTile(t.x, t.y);
+            if (tile && typeof tile.examineText === "function") {
+                const ex = formatExamine(String(tile.examineText() ?? ""));
+                if (ex.length > 0) {
+                    items.push({
+                        label: "Examine",
+                        onClick: () => {
+                            player.game.pushMessage(ex);
+                        },
+                    });
+                    items.push({ label: "Cancel", onClick: () => { } });
+                    menu.openAt(x, y, items);
+                    return;
+                }
+            }
         }
         // Inventory / quickbar items
         const inv = player.inventory;
@@ -51231,13 +51353,22 @@ class PlayerInputHandler {
                         inv.itemUse();
                     },
                 });
-                // Drop is always second-to-last (before Cancel)
+                const examine = formatExamine(item.examineText?.() ?? "");
+                // Drop goes near the bottom. "Examine" is always right before "Cancel".
                 items.push({
                     label: "Drop",
                     onClick: () => {
                         inv.dropItem(item, idx);
                     },
                 });
+                if (examine.length > 0) {
+                    items.push({
+                        label: "Examine",
+                        onClick: () => {
+                            player.game.pushMessage(examine);
+                        },
+                    });
+                }
             }
         }
         // Always include cancel as the final option.
@@ -51974,20 +52105,38 @@ class PlayerRenderer {
             if (this.drawSmear()) {
                 game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
-            else if (this.player.inputHandler.mostRecentMoveInput === "mouse" &&
-                this.mouseDiagonal() &&
-                !gameConstants_1.GameConstants.isMobile) {
-                const angle = (this.player.inputHandler.mouseAngle() * 180) / Math.PI;
-                let diagonalTile = { x: 1, y: 18 };
-                if (angle > -150 && angle <= -120)
-                    diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
-                if (angle > -60 && angle <= -30)
-                    diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
-                if (angle > 30 && angle <= 60)
-                    diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
-                if (angle > 120 && angle <= 150)
-                    diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
-                game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+            else if (!gameConstants_1.GameConstants.isMobile) {
+                // While the context menu is open, freeze the diagonal mouse-angle pose at the moment it opened.
+                const angleRad = player.contextMenu?.open &&
+                    typeof player.frozenMouseAngleRad === "number"
+                    ? player.frozenMouseAngleRad
+                    : player.inputHandler.mostRecentMoveInput === "mouse"
+                        ? player.inputHandler.mouseAngle()
+                        : null;
+                const angleDeg = angleRad === null ? null : (angleRad * 180) / Math.PI;
+                const isDiagonal = angleDeg !== null &&
+                    ((angleDeg > 30 && angleDeg < 60) ||
+                        (angleDeg > 120 && angleDeg < 150) ||
+                        (angleDeg > -150 && angleDeg < -120) ||
+                        (angleDeg > -60 && angleDeg < -30));
+                if (isDiagonal && angleDeg !== null) {
+                    let diagonalTile = { x: 1, y: 18 };
+                    if (angleDeg > -150 && angleDeg <= -120)
+                        diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
+                    if (angleDeg > -60 && angleDeg <= -30)
+                        diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
+                    if (angleDeg > 30 && angleDeg <= 60)
+                        diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
+                    if (angleDeg > 120 && angleDeg <= 150)
+                        diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
+                    game_1.Game.drawMob(diagonalTile.x, diagonalTile.y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                }
+                else {
+                    this.frame += 0.1 * delta;
+                    if (this.frame >= 4)
+                        this.frame = 0;
+                    game_1.Game.drawMob(tileX, tileY, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
+                }
             }
             else {
                 this.frame += 0.1 * delta;
@@ -52618,6 +52767,7 @@ class PlayerRenderer {
          */
         this.drawTileCursor = (delta) => {
             if (this.player.inventory.isOpen ||
+                this.player.contextMenu?.open ||
                 this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
                 gameConstants_1.GameConstants.isMobile)
                 return;
@@ -62684,6 +62834,26 @@ class Door extends passageway_1.Passageway {
             else
                 return vis;
         };
+        this.examineText = () => {
+            // Tunnel doors
+            if (this.type === DoorType.TUNNELDOOR) {
+                if (this.opened && this.linkedDoor?.opened) {
+                    return "A narrow tunnel. It looks passable.";
+                }
+                if (this.locked) {
+                    return "A blocked tunnel door. It won't budge.";
+                }
+                return "A tunnel door leading into darkness.";
+            }
+            // Regular doors
+            if (this.opened)
+                return "An open door.";
+            if (this.type === DoorType.GUARDEDDOOR)
+                return "A guarded door.";
+            if (this.type === DoorType.LOCKEDDOOR || this.locked)
+                return "A locked door.";
+            return "A closed door.";
+        };
         this.openTunnelXOffset = () => {
             if (this.type === DoorType.TUNNELDOOR) {
                 if (!this.opened) {
@@ -63009,6 +63179,15 @@ class DownLadder extends passageway_1.Passageway {
         this.isSidePath = false;
         this.getName = () => {
             return this.isSidePath ? "rope down" : "staircase down";
+        };
+        this.examineText = () => {
+            const locked = this.lockable?.isLocked?.() === true;
+            if (this.isSidePath) {
+                return locked
+                    ? "A rope down. It's locked."
+                    : "A rope down. It leads to a side path.";
+            }
+            return locked ? "A staircase down. It's locked." : "A staircase down.";
         };
         this.generate = async () => {
             if (!this.linkedRoom) {
@@ -63785,6 +63964,13 @@ class Tile extends drawable_1.Drawable {
         this.getName = () => {
             return this.name;
         };
+        /**
+         * Context-menu "Examine" text. Empty string = no examine option.
+         * (Most floor/wall tiles should return empty.)
+         */
+        this.examineText = () => {
+            return "";
+        };
         this.hasPlayer = (player) => {
             // Tiles are currently shared across all vertical layers; z-aware rendering/tiles come later.
             if (player.x === this.x && player.y === this.y)
@@ -63925,6 +64111,13 @@ class UpLadder extends passageway_1.Passageway {
         };
         this.getName = () => {
             return this.isRope ? "rope up" : "staircase up";
+        };
+        this.examineText = () => {
+            const locked = this.lockable?.isLocked?.() === true;
+            if (this.isRope) {
+                return locked ? "A rope up. It's locked." : "A rope up.";
+            }
+            return locked ? "A staircase up. It's locked." : "A staircase up.";
         };
         this.linkRoom = () => {
             // For sidepaths (rope), link back to the room that contains the DownLadder

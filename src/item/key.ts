@@ -11,6 +11,7 @@ import { Shadow } from "../drawable/shadow";
 
 export class Key extends Usable {
   static itemName = "key";
+  static examineText = "A key. It probably fits one lock.";
   doorID: number;
   depth: number;
   room: Room;

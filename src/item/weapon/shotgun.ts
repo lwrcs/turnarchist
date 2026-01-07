@@ -9,6 +9,7 @@ import { GenericParticle } from "../../particle/genericParticle";
 
 export class Shotgun extends Weapon {
   static itemName = "shotgun";
+  static examineText = "A shotgun. Loud, short-range certainty.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

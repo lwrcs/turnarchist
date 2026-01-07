@@ -14,6 +14,7 @@ enum CrossbowState {
 
 export class Crossbow extends Weapon {
   static itemName = "crossbow";
+  static examineText = "A crossbow. Point, load, and regret.";
   state: CrossbowState;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

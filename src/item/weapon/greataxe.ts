@@ -6,6 +6,7 @@ import { Entity } from "../../entity/entity";
 
 export class Greataxe extends Weapon {
   static itemName = "greataxe";
+  static examineText = "A great axe. It wants to bite.";
   hitDelay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

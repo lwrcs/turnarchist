@@ -143,6 +143,12 @@ export class Player extends Drawable {
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
   contextMenu: ContextMenu = new ContextMenu();
+  /**
+   * When the context menu opens, we snapshot the current mouse angle so the player
+   * can keep rendering the same diagonal mouse-facing sprite while the menu is open.
+   * Stored in radians (matches `PlayerInputHandler.mouseAngle()`).
+   */
+  frozenMouseAngleRad: number | null = null;
   constructor(
     game: Game,
     x: number,
@@ -721,6 +727,29 @@ export class Player extends Drawable {
     for (const t of candidates) {
       const hit = room.entities.find(
         (e) => (e?.z ?? 0) === z && e.isEnemy && e.x === t.x && e.y === t.y,
+      );
+      if (hit) return hit;
+    }
+    return null;
+  };
+
+  /**
+   * UI helper: find any entity under the cursor (for context-menu examine).
+   * Checks the cursor tile and the tile above to account for tall sprites.
+   */
+  getEntityUnderCursorForExamine = (): Entity | null => {
+    const mouseTile = this.mouseToTile();
+    const tileAbove = {
+      x: mouseTile.x,
+      y: this.mouseToTile(GameConstants.TILESIZE / 2).y,
+    };
+    const room = this.game.room;
+    if (!room) return null;
+    const z = this.z;
+    const candidates = [mouseTile, tileAbove];
+    for (const t of candidates) {
+      const hit = room.entities.find(
+        (e) => (e?.z ?? 0) === z && e.pointIn(t.x, t.y),
       );
       if (hit) return hit;
     }

@@ -52,6 +52,14 @@ export abstract class Tile extends Drawable {
     return this.name;
   };
 
+  /**
+   * Context-menu "Examine" text. Empty string = no examine option.
+   * (Most floor/wall tiles should return empty.)
+   */
+  examineText = (): string => {
+    return "";
+  };
+
   hasPlayer = (player: Player) => {
     // Tiles are currently shared across all vertical layers; z-aware rendering/tiles come later.
     if (player.x === this.x && player.y === this.y) return true;

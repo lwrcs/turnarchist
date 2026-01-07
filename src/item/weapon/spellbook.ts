@@ -11,6 +11,7 @@ export class Spellbook extends Weapon {
   targets: Entity[];
   isTargeting: boolean;
   static itemName = "spellbook";
+  static examineText = "A spellbook. Arcane pages and dangerous ideas.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.range = 4;

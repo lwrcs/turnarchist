@@ -65,6 +65,16 @@ export class DownLadder extends Passageway {
     return this.isSidePath ? "rope down" : "staircase down";
   };
 
+  examineText = (): string => {
+    const locked = this.lockable?.isLocked?.() === true;
+    if (this.isSidePath) {
+      return locked
+        ? "A rope down. It's locked."
+        : "A rope down. It leads to a side path.";
+    }
+    return locked ? "A staircase down. It's locked." : "A staircase down.";
+  };
+
   generate = async () => {
     if (!this.linkedRoom) {
       await this.sidePathManager.generateFor(this);

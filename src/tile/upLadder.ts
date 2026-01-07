@@ -100,6 +100,14 @@ export class UpLadder extends Passageway {
     return this.isRope ? "rope up" : "staircase up";
   };
 
+  examineText = (): string => {
+    const locked = this.lockable?.isLocked?.() === true;
+    if (this.isRope) {
+      return locked ? "A rope up. It's locked." : "A rope up.";
+    }
+    return locked ? "A staircase up. It's locked." : "A staircase up.";
+  };
+
   linkRoom = () => {
     // For sidepaths (rope), link back to the room that contains the DownLadder
     if (this.isRope && !this.linkedRoom) {

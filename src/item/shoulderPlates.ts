@@ -3,6 +3,7 @@ import { Equippable } from "./equippable";
 
 export class ShoulderPlates extends Equippable {
   static itemName = "shoulder plates";
+  static examineText = "Shoulder plates. No more cheap shots.";
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

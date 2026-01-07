@@ -8,6 +8,7 @@ import { Random } from "../../utility/random";
 
 export class WeaponFragments extends Usable {
   static itemName = "weapon fragments";
+  static examineText = "Weapon scraps. Good for cobbling.";
   constructor(level: Room, x: number, y: number, stackCount?: number) {
     super(level, x, y);
     this.tileX = 3;

@@ -124,6 +124,26 @@ export class Door extends Passageway {
     else return vis;
   };
 
+  examineText = (): string => {
+    // Tunnel doors
+    if (this.type === DoorType.TUNNELDOOR) {
+      if (this.opened && this.linkedDoor?.opened) {
+        return "A narrow tunnel. It looks passable.";
+      }
+      if (this.locked) {
+        return "A blocked tunnel door. It won't budge.";
+      }
+      return "A tunnel door leading into darkness.";
+    }
+
+    // Regular doors
+    if (this.opened) return "An open door.";
+    if (this.type === DoorType.GUARDEDDOOR) return "A guarded door.";
+    if (this.type === DoorType.LOCKEDDOOR || this.locked)
+      return "A locked door.";
+    return "A closed door.";
+  };
+
   openTunnelXOffset = () => {
     if (this.type === DoorType.TUNNELDOOR) {
       if (!this.opened) {

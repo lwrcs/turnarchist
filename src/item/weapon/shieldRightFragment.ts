@@ -14,6 +14,7 @@ import { Armor } from "../armor";
 
 export class ShieldRightFragment extends Usable {
   static itemName = "right shield fragment";
+  static examineText = "A broken shield half. Find its partner.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 

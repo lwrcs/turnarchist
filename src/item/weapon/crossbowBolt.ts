@@ -10,6 +10,7 @@ import { Random } from "../../utility/random";
 import { Crossbow } from "./crossbow";
 export class CrossbowBolt extends Usable {
   static itemName = "crossbow bolt";
+  static examineText = "A crossbow bolt. Pointy on purpose.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 21;

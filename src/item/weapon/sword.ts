@@ -5,6 +5,7 @@ import { Direction } from "../../game";
 
 export class Sword extends Weapon {
   static itemName = "sword";
+  static examineText = "A balanced sword. Reliable steel.";
   hitDelay: number;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);

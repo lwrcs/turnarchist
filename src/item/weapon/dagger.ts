@@ -3,6 +3,7 @@ import { Room } from "../../room/room";
 
 export class Dagger extends Weapon {
   static itemName = "dagger";
+  static examineText = "A simple dagger. Close and quick.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
