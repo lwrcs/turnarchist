@@ -589,6 +589,17 @@ export class Player extends Drawable {
     return false;
   };
 
+  /**
+   * UI helper for ground-item interaction: can the player pick up something at (tileX,tileY)?
+   * True if on the same tile or cardinal-adjacent (not diagonal).
+   */
+  canPickupAt = (tileX: number, tileY: number): boolean => {
+    const dx = tileX - this.x;
+    const dy = tileY - this.y;
+    if (dx === 0 && dy === 0) return true;
+    return Math.abs(dx) + Math.abs(dy) === 1;
+  };
+
   getDirectionFromCoords = (inputX: number, inputY: number): string => {
     // Same position - no direction
     if (inputX === this.x && inputY === this.y) return "";

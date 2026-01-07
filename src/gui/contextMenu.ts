@@ -4,6 +4,11 @@ import { Input } from "../game/input";
 
 export type ContextMenuItem = {
   label: string;
+  /**
+   * Optional "target name" suffix (e.g., Attack + Zombie) drawn in yellow.
+   * Not used for generic menu items like Cancel.
+   */
+  targetName?: string;
   onClick: () => void;
   enabled?: boolean;
   onDisabledClick?: () => void;
@@ -28,6 +33,13 @@ export class ContextMenu {
   private readonly padY = 6;
   private readonly rowH = Game.letter_height + 8;
   private readonly closeMarginPx = 10;
+  private readonly targetNameColor = "rgb(255, 210, 74)";
+  private readonly targetNameDisabledColor = "rgba(255, 210, 74, 0.65)";
+
+  private getDisplayLabel = (it: ContextMenuItem): string => {
+    const t = typeof it.targetName === "string" ? it.targetName.trim() : "";
+    return t.length > 0 ? `${it.label} ${t}` : it.label;
+  };
 
   openAt = (xPx: number, yPx: number, items: ContextMenuItem[]) => {
     this.items = items;
@@ -42,7 +54,7 @@ export class ContextMenu {
   };
 
   private recomputeLayoutAndClamp = () => {
-    const labels = this.items.map((it) => it.label);
+    const labels = this.items.map((it) => this.getDisplayLabel(it));
     const maxW = Math.max(1, ...labels.map((s) => Game.measureText(s).width));
     this.widthPx = this.padX * 2 + maxW;
     this.heightPx = this.padY * 2 + this.items.length * this.rowH;
@@ -166,9 +178,19 @@ export class ContextMenu {
         Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
       }
 
-      Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
       const textY = rowTop + Math.floor((this.rowH - Game.letter_height) / 2);
+      Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
       Game.fillText(item.label, rowX, textY);
+
+      const t =
+        typeof item.targetName === "string" ? item.targetName.trim() : "";
+      if (t.length > 0) {
+        const prefixW = Game.measureText(`${item.label} `).width;
+        Game.ctx.fillStyle = enabled
+          ? this.targetNameColor
+          : this.targetNameDisabledColor;
+        Game.fillText(t, rowX + prefixW, textY);
+      }
     }
 
     Game.ctx.restore();

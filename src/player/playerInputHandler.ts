@@ -398,6 +398,7 @@ export class PlayerInputHandler {
 
     const items: Array<{
       label: string;
+      targetName?: string;
       onClick: () => void;
       enabled?: boolean;
       onDisabledClick?: () => void;
@@ -406,6 +407,35 @@ export class PlayerInputHandler {
     const formatExamine = (text: string): string => {
       // Keep examine as a single chat line.
       return text.replace(/\s+/g, " ").trim();
+    };
+
+    const getTargetName = (obj: unknown): string => {
+      if (!obj || typeof obj !== "object") return "";
+      const anyObj: Record<string, unknown> = obj as Record<string, unknown>;
+
+      // Prefer `.name` if present (items/entities/tiles commonly have it).
+      if (typeof anyObj.name === "string") {
+        const s = anyObj.name.trim();
+        if (s.length > 0) return s;
+      }
+
+      // Tiles often expose a name via getName().
+      const maybeGetName = anyObj.getName;
+      if (typeof maybeGetName === "function") {
+        const n = maybeGetName.call(obj);
+        if (typeof n === "string") {
+          const s = n.trim();
+          if (s.length > 0) return s;
+        }
+      }
+
+      const ctorName = (obj as { constructor?: { name?: unknown } }).constructor
+        ?.name;
+      if (typeof ctorName === "string") {
+        // Strip common suffixes to keep it clean.
+        return ctorName.replace(/(Enemy|Tile|Item)$/, "");
+      }
+      return "";
     };
 
     // UI buttons (menus)
@@ -437,9 +467,78 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Inventory / quickbar items
+    const inv = player.inventory;
+    const idx = inv.isOpen
+      ? inv.getInventorySlotIndexAtPoint(x, y)
+      : inv.getQuickbarSlotIndexAtPoint(x, y);
+
+    if (idx !== null && idx >= 0 && idx < inv.items.length) {
+      const item = inv.items[idx];
+      if (item) {
+        const targetName = getTargetName(item);
+        const primaryLabel = (() => {
+          if (item instanceof Equippable) {
+            return item.equipped ? "Unequip" : "Equip";
+          }
+          if (item instanceof Usable) {
+            if (item.canUseOnOther) return "Use on";
+            // Heuristic: potions are "Drink", other usables are "Eat" (foods).
+            const name = (item.name ?? "").toLowerCase();
+            if (name.includes("potion")) return "Drink";
+            return "Eat";
+          }
+          return "Use";
+        })();
+
+        // Primary option always matches the default click/use behavior.
+        items.push({
+          label: primaryLabel,
+          targetName,
+          onClick: () => {
+            // Select the slot first, then reuse the existing inventory action logic.
+            inv.selX = idx % inv.cols;
+            inv.selY = Math.floor(idx / inv.cols);
+            inv.itemUse();
+          },
+        });
+
+        const examine = formatExamine(item.examineText?.() ?? "");
+
+        // Drop goes near the bottom. "Examine" is always right before "Cancel".
+        items.push({
+          label: "Drop",
+          targetName,
+          onClick: () => {
+            inv.dropItem(item, idx);
+          },
+        });
+
+        if (examine.length > 0) {
+          items.push({
+            label: "Examine",
+            targetName,
+            onClick: () => {
+              player.game.pushMessage(examine);
+            },
+          });
+        }
+      }
+
+      // Always include cancel as the final option.
+      items.push({ label: "Cancel", onClick: () => {} });
+      menu.openAt(x, y, items);
+      return;
+    }
+
+    // --- World tile interactions (entity + ground items) ---
+    const room = player.getRoom ? player.getRoom() : player.game.room;
+    const t = player.mouseToTile();
+
     // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
     const enemy = player.getEnemyUnderCursorForAttack();
     if (enemy) {
+      const targetName = getTargetName(enemy);
       const weapon = player.inventory.weapon as Weapon | null;
       const canAttack = (() => {
         if (!weapon) return false;
@@ -448,6 +547,7 @@ export class PlayerInputHandler {
 
       items.push({
         label: "Attack",
+        targetName,
         enabled: canAttack,
         onDisabledClick: () => {
           if (!weapon) {
@@ -482,8 +582,8 @@ export class PlayerInputHandler {
           description?: unknown;
         };
         if (typeof maybe.examineText === "function") {
-          const t = (maybe.examineText as () => unknown)();
-          return typeof t === "string" ? t : "";
+          const txt = (maybe.examineText as () => unknown)();
+          return typeof txt === "string" ? txt : "";
         }
         return typeof maybe.description === "string" ? maybe.description : "";
       })();
@@ -491,94 +591,74 @@ export class PlayerInputHandler {
       if (ex.length > 0) {
         items.push({
           label: "Examine",
+          targetName,
           onClick: () => {
             player.game.pushMessage(ex);
           },
         });
       }
-
-      items.push({ label: "Cancel", onClick: () => {} });
-      menu.openAt(x, y, items);
-      return;
     }
 
-    // Tiles (e.g. doors/ladders). Most tiles return empty examine text.
-    const room = player.getRoom ? player.getRoom() : player.game.room;
-    if (room) {
-      const t = player.mouseToTile();
+    // Ground items on the hovered tile: only "Pick up" + "Examine" (no usage options).
+    const groundItems =
+      room && t.x !== undefined && t.y !== undefined
+        ? room.items.filter(
+            (it) => !it.pickedUp && it.x === t.x && it.y === t.y,
+          )
+        : [];
+
+    for (const it of groundItems) {
+      const targetName = getTargetName(it);
+      const inReach = player.canPickupAt(it.x, it.y);
+      const hasSpace = inv.canPickup(it);
+      const canPickup = inReach && hasSpace;
+
+      items.push({
+        label: "Pick up",
+        targetName,
+        enabled: canPickup,
+        onDisabledClick: () => {
+          if (!inReach) {
+            player.game.pushMessage("You can't reach that.");
+            return;
+          }
+          player.game.pushMessage("You can't carry any more.");
+        },
+        onClick: () => {
+          it.onPickup(player);
+        },
+      });
+
+      const examine = formatExamine(it.examineText?.() ?? "");
+      if (examine.length > 0) {
+        items.push({
+          label: "Examine",
+          targetName,
+          onClick: () => {
+            player.game.pushMessage(examine);
+          },
+        });
+      }
+    }
+
+    // Tiles (e.g. doors/ladders). Only offer tile-examine if nothing else was found.
+    if (items.length === 0 && room && t.x !== undefined && t.y !== undefined) {
       const tile = room.getTile(t.x, t.y);
       if (tile && typeof tile.examineText === "function") {
         const ex = formatExamine(String(tile.examineText() ?? ""));
         if (ex.length > 0) {
+          const targetName = getTargetName(tile);
           items.push({
             label: "Examine",
+            targetName,
             onClick: () => {
               player.game.pushMessage(ex);
             },
           });
-          items.push({ label: "Cancel", onClick: () => {} });
-          menu.openAt(x, y, items);
-          return;
         }
       }
     }
 
-    // Inventory / quickbar items
-    const inv = player.inventory;
-    const idx = inv.isOpen
-      ? inv.getInventorySlotIndexAtPoint(x, y)
-      : inv.getQuickbarSlotIndexAtPoint(x, y);
-
-    if (idx !== null && idx >= 0 && idx < inv.items.length) {
-      const item = inv.items[idx];
-      if (item) {
-        const primaryLabel = (() => {
-          if (item instanceof Equippable) {
-            return item.equipped ? "Unequip" : "Equip";
-          }
-          if (item instanceof Usable) {
-            if (item.canUseOnOther) return "Use on";
-            // Heuristic: potions are "Drink", other usables are "Eat" (foods).
-            const name = (item.name ?? "").toLowerCase();
-            if (name.includes("potion")) return "Drink";
-            return "Eat";
-          }
-          return "Use";
-        })();
-
-        // Primary option always matches the default click/use behavior.
-        items.push({
-          label: primaryLabel,
-          onClick: () => {
-            // Select the slot first, then reuse the existing inventory action logic.
-            inv.selX = idx % inv.cols;
-            inv.selY = Math.floor(idx / inv.cols);
-            inv.itemUse();
-          },
-        });
-
-        const examine = formatExamine(item.examineText?.() ?? "");
-
-        // Drop goes near the bottom. "Examine" is always right before "Cancel".
-        items.push({
-          label: "Drop",
-          onClick: () => {
-            inv.dropItem(item, idx);
-          },
-        });
-
-        if (examine.length > 0) {
-          items.push({
-            label: "Examine",
-            onClick: () => {
-              player.game.pushMessage(examine);
-            },
-          });
-        }
-      }
-    }
-
-    // Always include cancel as the final option.
     items.push({ label: "Cancel", onClick: () => {} });
     menu.openAt(x, y, items);
   }

@@ -33681,6 +33681,12 @@ class ContextMenu {
         this.padY = 6;
         this.rowH = game_1.Game.letter_height + 8;
         this.closeMarginPx = 10;
+        this.targetNameColor = "rgb(255, 210, 74)";
+        this.targetNameDisabledColor = "rgba(255, 210, 74, 0.65)";
+        this.getDisplayLabel = (it) => {
+            const t = typeof it.targetName === "string" ? it.targetName.trim() : "";
+            return t.length > 0 ? `${it.label} ${t}` : it.label;
+        };
         this.openAt = (xPx, yPx, items) => {
             this.items = items;
             this.open = true;
@@ -33692,7 +33698,7 @@ class ContextMenu {
             this.open = false;
         };
         this.recomputeLayoutAndClamp = () => {
-            const labels = this.items.map((it) => it.label);
+            const labels = this.items.map((it) => this.getDisplayLabel(it));
             const maxW = Math.max(1, ...labels.map((s) => game_1.Game.measureText(s).width));
             this.widthPx = this.padX * 2 + maxW;
             this.heightPx = this.padY * 2 + this.items.length * this.rowH;
@@ -33800,9 +33806,17 @@ class ContextMenu {
                     game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
                     game_1.Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
                 }
-                game_1.Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
                 const textY = rowTop + Math.floor((this.rowH - game_1.Game.letter_height) / 2);
+                game_1.Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
                 game_1.Game.fillText(item.label, rowX, textY);
+                const t = typeof item.targetName === "string" ? item.targetName.trim() : "";
+                if (t.length > 0) {
+                    const prefixW = game_1.Game.measureText(`${item.label} `).width;
+                    game_1.Game.ctx.fillStyle = enabled
+                        ? this.targetNameColor
+                        : this.targetNameDisabledColor;
+                    game_1.Game.fillText(t, rowX + prefixW, textY);
+                }
             }
             game_1.Game.ctx.restore();
         };
@@ -49866,6 +49880,17 @@ class Player extends drawable_1.Drawable {
             }
             return false;
         };
+        /**
+         * UI helper for ground-item interaction: can the player pick up something at (tileX,tileY)?
+         * True if on the same tile or cardinal-adjacent (not diagonal).
+         */
+        this.canPickupAt = (tileX, tileY) => {
+            const dx = tileX - this.x;
+            const dy = tileY - this.y;
+            if (dx === 0 && dy === 0)
+                return true;
+            return Math.abs(dx) + Math.abs(dy) === 1;
+        };
         this.getDirectionFromCoords = (inputX, inputY) => {
             // Same position - no direction
             if (inputX === this.x && inputY === this.y)
@@ -51211,6 +51236,34 @@ class PlayerInputHandler {
             // Keep examine as a single chat line.
             return text.replace(/\s+/g, " ").trim();
         };
+        const getTargetName = (obj) => {
+            if (!obj || typeof obj !== "object")
+                return "";
+            const anyObj = obj;
+            // Prefer `.name` if present (items/entities/tiles commonly have it).
+            if (typeof anyObj.name === "string") {
+                const s = anyObj.name.trim();
+                if (s.length > 0)
+                    return s;
+            }
+            // Tiles often expose a name via getName().
+            const maybeGetName = anyObj.getName;
+            if (typeof maybeGetName === "function") {
+                const n = maybeGetName.call(obj);
+                if (typeof n === "string") {
+                    const s = n.trim();
+                    if (s.length > 0)
+                        return s;
+                }
+            }
+            const ctorName = obj.constructor
+                ?.name;
+            if (typeof ctorName === "string") {
+                // Strip common suffixes to keep it clean.
+                return ctorName.replace(/(Enemy|Tile|Item)$/, "");
+            }
+            return "";
+        };
         // UI buttons (menus)
         if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
             items.push({
@@ -51239,9 +51292,72 @@ class PlayerInputHandler {
             menu.openAt(x, y, items);
             return;
         }
+        // Inventory / quickbar items
+        const inv = player.inventory;
+        const idx = inv.isOpen
+            ? inv.getInventorySlotIndexAtPoint(x, y)
+            : inv.getQuickbarSlotIndexAtPoint(x, y);
+        if (idx !== null && idx >= 0 && idx < inv.items.length) {
+            const item = inv.items[idx];
+            if (item) {
+                const targetName = getTargetName(item);
+                const primaryLabel = (() => {
+                    if (item instanceof equippable_1.Equippable) {
+                        return item.equipped ? "Unequip" : "Equip";
+                    }
+                    if (item instanceof usable_1.Usable) {
+                        if (item.canUseOnOther)
+                            return "Use on";
+                        // Heuristic: potions are "Drink", other usables are "Eat" (foods).
+                        const name = (item.name ?? "").toLowerCase();
+                        if (name.includes("potion"))
+                            return "Drink";
+                        return "Eat";
+                    }
+                    return "Use";
+                })();
+                // Primary option always matches the default click/use behavior.
+                items.push({
+                    label: primaryLabel,
+                    targetName,
+                    onClick: () => {
+                        // Select the slot first, then reuse the existing inventory action logic.
+                        inv.selX = idx % inv.cols;
+                        inv.selY = Math.floor(idx / inv.cols);
+                        inv.itemUse();
+                    },
+                });
+                const examine = formatExamine(item.examineText?.() ?? "");
+                // Drop goes near the bottom. "Examine" is always right before "Cancel".
+                items.push({
+                    label: "Drop",
+                    targetName,
+                    onClick: () => {
+                        inv.dropItem(item, idx);
+                    },
+                });
+                if (examine.length > 0) {
+                    items.push({
+                        label: "Examine",
+                        targetName,
+                        onClick: () => {
+                            player.game.pushMessage(examine);
+                        },
+                    });
+                }
+            }
+            // Always include cancel as the final option.
+            items.push({ label: "Cancel", onClick: () => { } });
+            menu.openAt(x, y, items);
+            return;
+        }
+        // --- World tile interactions (entity + ground items) ---
+        const room = player.getRoom ? player.getRoom() : player.game.room;
+        const t = player.mouseToTile();
         // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
         const enemy = player.getEnemyUnderCursorForAttack();
         if (enemy) {
+            const targetName = getTargetName(enemy);
             const weapon = player.inventory.weapon;
             const canAttack = (() => {
                 if (!weapon)
@@ -51250,6 +51366,7 @@ class PlayerInputHandler {
             })();
             items.push({
                 label: "Attack",
+                targetName,
                 enabled: canAttack,
                 onDisabledClick: () => {
                     if (!weapon) {
@@ -51282,8 +51399,8 @@ class PlayerInputHandler {
             const examine = (() => {
                 const maybe = enemy;
                 if (typeof maybe.examineText === "function") {
-                    const t = maybe.examineText();
-                    return typeof t === "string" ? t : "";
+                    const txt = maybe.examineText();
+                    return typeof txt === "string" ? txt : "";
                 }
                 return typeof maybe.description === "string" ? maybe.description : "";
             })();
@@ -51291,87 +51408,65 @@ class PlayerInputHandler {
             if (ex.length > 0) {
                 items.push({
                     label: "Examine",
+                    targetName,
                     onClick: () => {
                         player.game.pushMessage(ex);
                     },
                 });
             }
-            items.push({ label: "Cancel", onClick: () => { } });
-            menu.openAt(x, y, items);
-            return;
         }
-        // Tiles (e.g. doors/ladders). Most tiles return empty examine text.
-        const room = player.getRoom ? player.getRoom() : player.game.room;
-        if (room) {
-            const t = player.mouseToTile();
+        // Ground items on the hovered tile: only "Pick up" + "Examine" (no usage options).
+        const groundItems = room && t.x !== undefined && t.y !== undefined
+            ? room.items.filter((it) => !it.pickedUp && it.x === t.x && it.y === t.y)
+            : [];
+        for (const it of groundItems) {
+            const targetName = getTargetName(it);
+            const inReach = player.canPickupAt(it.x, it.y);
+            const hasSpace = inv.canPickup(it);
+            const canPickup = inReach && hasSpace;
+            items.push({
+                label: "Pick up",
+                targetName,
+                enabled: canPickup,
+                onDisabledClick: () => {
+                    if (!inReach) {
+                        player.game.pushMessage("You can't reach that.");
+                        return;
+                    }
+                    player.game.pushMessage("You can't carry any more.");
+                },
+                onClick: () => {
+                    it.onPickup(player);
+                },
+            });
+            const examine = formatExamine(it.examineText?.() ?? "");
+            if (examine.length > 0) {
+                items.push({
+                    label: "Examine",
+                    targetName,
+                    onClick: () => {
+                        player.game.pushMessage(examine);
+                    },
+                });
+            }
+        }
+        // Tiles (e.g. doors/ladders). Only offer tile-examine if nothing else was found.
+        if (items.length === 0 && room && t.x !== undefined && t.y !== undefined) {
             const tile = room.getTile(t.x, t.y);
             if (tile && typeof tile.examineText === "function") {
                 const ex = formatExamine(String(tile.examineText() ?? ""));
                 if (ex.length > 0) {
+                    const targetName = getTargetName(tile);
                     items.push({
                         label: "Examine",
+                        targetName,
                         onClick: () => {
                             player.game.pushMessage(ex);
                         },
                     });
-                    items.push({ label: "Cancel", onClick: () => { } });
-                    menu.openAt(x, y, items);
-                    return;
                 }
             }
         }
-        // Inventory / quickbar items
-        const inv = player.inventory;
-        const idx = inv.isOpen
-            ? inv.getInventorySlotIndexAtPoint(x, y)
-            : inv.getQuickbarSlotIndexAtPoint(x, y);
-        if (idx !== null && idx >= 0 && idx < inv.items.length) {
-            const item = inv.items[idx];
-            if (item) {
-                const primaryLabel = (() => {
-                    if (item instanceof equippable_1.Equippable) {
-                        return item.equipped ? "Unequip" : "Equip";
-                    }
-                    if (item instanceof usable_1.Usable) {
-                        if (item.canUseOnOther)
-                            return "Use on";
-                        // Heuristic: potions are "Drink", other usables are "Eat" (foods).
-                        const name = (item.name ?? "").toLowerCase();
-                        if (name.includes("potion"))
-                            return "Drink";
-                        return "Eat";
-                    }
-                    return "Use";
-                })();
-                // Primary option always matches the default click/use behavior.
-                items.push({
-                    label: primaryLabel,
-                    onClick: () => {
-                        // Select the slot first, then reuse the existing inventory action logic.
-                        inv.selX = idx % inv.cols;
-                        inv.selY = Math.floor(idx / inv.cols);
-                        inv.itemUse();
-                    },
-                });
-                const examine = formatExamine(item.examineText?.() ?? "");
-                // Drop goes near the bottom. "Examine" is always right before "Cancel".
-                items.push({
-                    label: "Drop",
-                    onClick: () => {
-                        inv.dropItem(item, idx);
-                    },
-                });
-                if (examine.length > 0) {
-                    items.push({
-                        label: "Examine",
-                        onClick: () => {
-                            player.game.pushMessage(examine);
-                        },
-                    });
-                }
-            }
-        }
-        // Always include cancel as the final option.
         items.push({ label: "Cancel", onClick: () => { } });
         menu.openAt(x, y, items);
     }
