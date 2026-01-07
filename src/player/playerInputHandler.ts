@@ -535,59 +535,150 @@ export class PlayerInputHandler {
     const room = player.getRoom ? player.getRoom() : player.game.room;
     const t = player.mouseToTile();
 
-    // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
-    const enemy = player.getEnemyUnderCursorForAttack();
-    if (enemy) {
-      const targetName = getTargetName(enemy);
-      const weapon = player.inventory.weapon as Weapon | null;
-      const canAttack = (() => {
-        if (!weapon) return false;
-        return weapon.isTargetInRange(enemy.x, enemy.y);
-      })();
+    // Entities in the level (enemies + props/resources/etc).
+    // Use the general cursor hit-test so non-enemy entities can be examined too.
+    const entity = player.getEntityUnderCursorForExamine();
+    if (entity) {
+      const targetName = getTargetName(entity);
 
-      items.push({
-        label: "Attack",
-        targetName,
-        enabled: canAttack,
-        onDisabledClick: () => {
-          if (!weapon) {
-            player.game.pushMessage("No weapon equipped.");
-            return;
-          }
-          player.game.pushMessage("Enemy out of range.");
-        },
-        onClick: () => {
-          if (!weapon) return;
-          const input = weapon.getAttackInputTileForTarget(enemy.x, enemy.y);
-          if (!input) {
+      // Enemies: Attack + Examine
+      if (entity.isEnemy) {
+        const weapon = player.inventory.weapon as Weapon | null;
+        const canAttack = (() => {
+          if (!weapon) return false;
+          return weapon.isTargetInRange(entity.x, entity.y);
+        })();
+
+        items.push({
+          label: "Attack",
+          targetName,
+          enabled: canAttack,
+          onDisabledClick: () => {
+            if (!weapon) {
+              player.game.pushMessage("No weapon equipped.");
+              return;
+            }
             player.game.pushMessage("Enemy out of range.");
-            return;
-          }
-          // Face the enemy; turning is free, but some weapon logic depends on direction.
-          const dx = enemy.x - player.x;
-          const dy = enemy.y - player.y;
-          if (Math.abs(dx) > Math.abs(dy)) {
-            player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
-          } else if (dy !== 0) {
-            player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
-          }
-          weapon.weaponMove(input.x, input.y);
-        },
-      });
+          },
+          onClick: () => {
+            if (!weapon) return;
+            const input = weapon.getAttackInputTileForTarget(
+              entity.x,
+              entity.y,
+            );
+            if (!input) {
+              player.game.pushMessage("Enemy out of range.");
+              return;
+            }
+            // Face the enemy; turning is free, but some weapon logic depends on direction.
+            const dx = entity.x - player.x;
+            const dy = entity.y - player.y;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
+            } else if (dy !== 0) {
+              player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
+            }
+            weapon.weaponMove(input.x, input.y);
+          },
+        });
+      } else {
+        // Non-enemy entities: choose a primary action.
+        // Push can take precedence over Hit when the push-chain is actually possible.
+        const wantsPush = Boolean(entity.pushable);
+        const canPush = wantsPush && player.canPushEntity(entity);
 
-      // Examine (optional)
-      const examine = (() => {
-        const maybe = enemy as unknown as {
-          examineText?: unknown;
-          description?: unknown;
-        };
-        if (typeof maybe.examineText === "function") {
-          const txt = (maybe.examineText as () => unknown)();
-          return typeof txt === "string" ? txt : "";
+        const primary = (() => {
+          if (wantsPush) return canPush ? "Push" : "Hit";
+          if (entity.interactable) return "Interact";
+          if (entity.destroyable) return "Hit";
+          return null;
+        })();
+
+        if (primary === "Push") {
+          items.push({
+            label: "Push",
+            targetName,
+            onClick: () => {
+              // Reuse the existing push logic in `Player.tryMove()`.
+              player.tryMove(entity.x, entity.y);
+            },
+          });
+        } else if (primary === "Interact") {
+          const inReach = player.canPickupAt(entity.x, entity.y);
+          items.push({
+            label: "Interact",
+            targetName,
+            enabled: inReach,
+            onDisabledClick: () => {
+              player.game.pushMessage("You can't reach that.");
+            },
+            onClick: () => {
+              entity.interact?.(player);
+            },
+          });
+        } else if (primary === "Hit") {
+          // Special case: pushable-but-blocked "Hit" should behave like walking into it.
+          // In `Player.tryMove()`, blocked pushables are handled by the push logic branch
+          // (and may be destroyed even without a normal attack).
+          const isBlockedPushableHit = wantsPush && !canPush;
+          const inReach = player.canPickupAt(entity.x, entity.y);
+
+          const weapon = player.inventory.weapon as Weapon | null;
+          const canHit = isBlockedPushableHit
+            ? inReach
+            : (() => {
+                if (!weapon) return false;
+                return weapon.isTargetInRange(entity.x, entity.y);
+              })();
+
+          items.push({
+            label: "Hit",
+            targetName,
+            enabled: canHit,
+            onDisabledClick: () => {
+              if (isBlockedPushableHit) {
+                player.game.pushMessage("You can't reach that.");
+                return;
+              }
+              if (!weapon) {
+                player.game.pushMessage("No weapon equipped.");
+                return;
+              }
+              player.game.pushMessage("Target out of range.");
+            },
+            onClick: () => {
+              if (isBlockedPushableHit) {
+                if (!inReach) return;
+                // Reuse the existing "blocked pushable" behavior path.
+                player.tryMove(entity.x, entity.y);
+                return;
+              }
+
+              if (!weapon) return;
+              const input = weapon.getAttackInputTileForTarget(
+                entity.x,
+                entity.y,
+              );
+              if (!input) {
+                player.game.pushMessage("Target out of range.");
+                return;
+              }
+              // Face the target for consistent weapon animation/logic.
+              const dx = entity.x - player.x;
+              const dy = entity.y - player.y;
+              if (Math.abs(dx) > Math.abs(dy)) {
+                player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
+              } else if (dy !== 0) {
+                player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
+              }
+              weapon.weaponMove(input.x, input.y);
+            },
+          });
         }
-        return typeof maybe.description === "string" ? maybe.description : "";
-      })();
-      const ex = formatExamine(examine);
+      }
+
+      // Examine (optional) for any entity type
+      const ex = formatExamine(entity.examineText?.() ?? "");
       if (ex.length > 0) {
         items.push({
           label: "Examine",

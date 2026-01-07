@@ -12,6 +12,7 @@ import { Coin } from "../../item/coin";
 import { Sound } from "../../sound/sound";
 
 export class DarkVase extends Entity {
+  static examineText = "A dark vase. Fragile on purpose.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

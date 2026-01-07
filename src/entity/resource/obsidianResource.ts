@@ -12,6 +12,7 @@ import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 
 export class ObsidianResource extends Resource {
+  static examineText = "Obsidian. Tough stone with a mean edge.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

@@ -18,6 +18,7 @@ export class ArmoredzombieEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 17;
   static tileY: number = 8;
+  static examineText = "A zombie in armor. Takes a bit more work.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

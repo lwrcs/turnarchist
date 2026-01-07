@@ -17,6 +17,7 @@ export class EnergyWizardEnemy extends WizardEnemy {
   static difficulty: number = 3;
   static tileX: number = 6;
   static tileY: number = 0;
+  static examineText = "An energy wizard. Fast bursts and nasty overlaps.";
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

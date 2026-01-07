@@ -16,6 +16,7 @@ import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 
 export class OccultistEnemy extends Enemy {
+  static examineText = "An occultist. Shields allies and drags out fights.";
   ticks: number;
   seenPlayer: boolean;
   shieldedEnemies: Enemy[];

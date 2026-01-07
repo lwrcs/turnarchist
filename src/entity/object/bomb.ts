@@ -20,6 +20,7 @@ import { Explosion } from "../../projectile/explosion";
 import { Utils } from "../../utility/utils";
 
 export class Bomb extends Entity {
+  static examineText = "A bomb. Light it and leave.";
   fuseLength: number = 4;
   lit: boolean = false;
   playerHitBy: Player | null = null;

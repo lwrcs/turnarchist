@@ -6,6 +6,7 @@ import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 
 export class CoalResource extends Resource {
+  static examineText = "Coal seam. Fuel for the furnace.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

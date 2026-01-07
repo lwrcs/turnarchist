@@ -16,6 +16,7 @@ export class KnightEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 9;
   static tileY: number = 8;
+  static examineText = "A burrow knight. Marches straight and hits hard.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

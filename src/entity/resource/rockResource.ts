@@ -12,6 +12,7 @@ import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 
 export class Rock extends Resource {
+  static examineText = "A rock. Breakable with a pickaxe.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

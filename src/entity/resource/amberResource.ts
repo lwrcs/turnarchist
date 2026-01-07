@@ -16,6 +16,7 @@ import { OrangeGem } from "../../item/resource/orangegem";
 import { LightSource } from "../../lighting/lightSource";
 
 export class AmberResource extends Resource {
+  static examineText = "An amber vein. Warm glow, sharp edges.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

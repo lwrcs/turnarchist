@@ -10,6 +10,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
 
 export class Chest extends Entity {
+  static examineText = "A chest. Open it for loot.";
   frame: number;
   opening: boolean;
   dropX: number;

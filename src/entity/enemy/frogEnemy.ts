@@ -26,6 +26,7 @@ export class FrogEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 12;
   static tileY: number = 16;
+  static examineText = "It hops in bursts. Don't stand where it lands.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

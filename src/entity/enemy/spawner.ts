@@ -42,6 +42,7 @@ export class Spawner extends Enemy {
   nextSpawnTick: number;
   static tileX: number = 6;
   static tileY: number = 4;
+  static examineText = "A reaper. It spits out trouble if left alone.";
 
   constructor(
     room: Room,

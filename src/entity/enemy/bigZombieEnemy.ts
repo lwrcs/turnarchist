@@ -28,6 +28,7 @@ export class BigZombieEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 21;
   static tileY: number = 0;
+  static examineText = "A big zombie. Wide and stubborn.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

@@ -15,6 +15,7 @@ import { BlueGem } from "../../item/resource/bluegem";
 import { LightSource } from "../../lighting/lightSource";
 
 export class ZirconResource extends Resource {
+  static examineText = "A zircon vein. Cold light, sharp cuts.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

@@ -14,6 +14,7 @@ import { RedGem } from "../../item/resource/redgem";
 import { LightSource } from "../../lighting/lightSource";
 
 export class GarnetResource extends Resource {
+  static examineText = "A garnet vein. Red as a warning.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

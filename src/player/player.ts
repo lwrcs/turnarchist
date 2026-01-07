@@ -600,6 +600,59 @@ export class Player extends Drawable {
     return Math.abs(dx) + Math.abs(dy) === 1;
   };
 
+  /**
+   * UI helper: can the player push the given pushable entity right now?
+   *
+   * Mirrors the push-chain scan in `tryMove()`:
+   * - You must be cardinal-adjacent (attempting to move into the entity).
+   * - The tile behind the push-chain must be empty of entities.
+   * - The tile behind the chain must be walkable (not solid) and must NOT be a crush tile.
+   *
+   * (If the chain ends in a crush tile or a non-chain-pushable blocker, we treat it as not pushable,
+   * so the context menu can fall back to "Hit" instead.)
+   */
+  canPushEntity = (target: Entity): boolean => {
+    if (!target?.pushable) return false;
+
+    // Only push when moving into the target (cardinal-adjacent).
+    const dx = target.x - this.x;
+    const dy = target.y - this.y;
+    if (Math.abs(dx) + Math.abs(dy) !== 1) return false;
+
+    const room = this.getRoom?.() ?? this.game.room;
+    if (!room) return false;
+
+    const z = this.z ?? 0;
+
+    let nextX = target.x + dx;
+    let nextY = target.y + dy;
+
+    // Walk the push chain until we find the first empty tile, or hit a non-chain-pushable blocker.
+    while (true) {
+      if (!room.tileInside(nextX, nextY)) return false;
+
+      const blocker = room.entities.find((e) => {
+        if (!e) return false;
+        if ((e.z ?? 0) !== z) return false;
+        return e.pointIn(nextX, nextY);
+      });
+
+      if (!blocker) break;
+      if (!blocker.chainPushable) return false;
+
+      // Step past this blocker based on its footprint (matches tryMove logic).
+      nextX += dx * (blocker.w ?? 1);
+      nextY += dy * (blocker.h ?? 1);
+    }
+
+    // Require an empty, walkable tile behind the chain (no crush tiles).
+    if (room.isSolidAt(nextX, nextY, z)) return false;
+    const tile = room.roomArray[nextX]?.[nextY];
+    if (tile?.canCrushEnemy?.()) return false;
+
+    return true;
+  };
+
   getDirectionFromCoords = (inputX: number, inputY: number): string => {
     // Same position - no direction
     if (inputX === this.x && inputY === this.y) return "";

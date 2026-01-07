@@ -28,6 +28,7 @@ export class MummyEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 17;
   static tileY: number = 16;
+  static examineText = "A mummy. Quiet steps, short temper.";
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

@@ -35,6 +35,7 @@ let OUTLINE_COLOR = "#292c36";
 let FULL_OUTLINE = "white";
 
 export class VendingMachine extends Entity {
+  static examineText = "A vending machine. Coins in, supplies out.";
   playerOpened: Player;
   open = false;
   openTime = 0;

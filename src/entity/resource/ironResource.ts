@@ -11,6 +11,7 @@ import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 import { IronOre } from "../../item/resource/ironOre";
 export class IronResource extends Resource {
+  static examineText = "Iron ore vein. Needs a pickaxe.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

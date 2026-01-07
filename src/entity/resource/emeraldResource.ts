@@ -13,6 +13,7 @@ import { Random } from "../../utility/random";
 import { LightSource } from "../../lighting/lightSource";
 
 export class EmeraldResource extends Resource {
+  static examineText = "An emerald vein. Bright and brittle.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

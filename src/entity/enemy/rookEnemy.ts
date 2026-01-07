@@ -17,6 +17,7 @@ export class RookEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 23 + 28;
   static tileY: number = 8;
+  static examineText = "A rook. Controls straight lines.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

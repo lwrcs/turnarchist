@@ -16,6 +16,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { LightSource } from "../../lighting/lightSource";
 
 export class TombStone extends Entity {
+  static examineText = "A tombstone. Someone didn't make it back.";
   skinType: number;
 
   constructor(

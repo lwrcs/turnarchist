@@ -138,6 +138,19 @@ export class Entity extends Drawable {
   shadeMultiplier: number = 1;
   hurting: boolean;
   hurtFrame: number;
+
+  /**
+   * Context-menu "Examine" text. Empty string = no examine option.
+   * Prefer adding a `static examineText = "..."` to specific Entity subclasses.
+   */
+  examineText = (): string => {
+    const ctor = this.constructor as unknown as { examineText?: unknown };
+    if (typeof ctor.examineText === "string") {
+      const s = ctor.examineText.trim();
+      if (s.length > 0) return s;
+    }
+    return "";
+  };
   softShadeColor: string;
   shadeColor: string;
   dying: boolean;

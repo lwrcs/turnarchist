@@ -29,6 +29,7 @@ export class ChargeEnemy extends Enemy {
   static difficulty: number = 5;
   static tileX: number = 13;
   static tileY: number = 8;
+  static examineText = "It lines you up, then charges in a straight line.";
   trailAlpha: number = 1;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {

@@ -10,6 +10,7 @@ import { Sound } from "../../sound/sound";
 import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 export class Block extends Entity {
+  static examineText = "A heavy block. Solid, stubborn, and in the way.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

@@ -19,6 +19,7 @@ export class BeetleEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  static examineText = "A beetle. It moves on a rhythm, not a rush.";
   revealTick: number;
   jumpDistance: number;
 

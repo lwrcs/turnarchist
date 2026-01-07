@@ -16,6 +16,7 @@ export class KingEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 23;
   static tileY: number = 8;
+  static examineText = "A king. Hits hard and won't die politely.";
   justHurt: boolean = false;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

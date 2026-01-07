@@ -25,6 +25,7 @@ export class CrusherEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  static examineText = "A crusher. It doesn't fight— it falls.";
   animateY: number = 0;
   softAnimateY: number = 0;
   private static hasEverEmittedSeenPlayer: boolean = false;

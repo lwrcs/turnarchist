@@ -10,6 +10,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Random } from "../../utility/random";
 
 export class TallSucculent extends Entity {
+  static examineText = "A tall succulent. Spiky and stubborn.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

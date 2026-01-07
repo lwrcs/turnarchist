@@ -11,6 +11,7 @@ import { Sound } from "../../sound/sound";
 import { Resource } from "../resource/resource";
 
 export class CaveBlock extends Resource {
+  static examineText = "Cave rock. Mine it with a pickaxe.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

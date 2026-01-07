@@ -21,6 +21,7 @@ export class ArmoredSkullEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 5;
   static tileY: number = 8;
+  static examineText = "An armored skeleton. Tougher, still angry.";
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     if (this.cloned) return;

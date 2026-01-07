@@ -11,6 +11,7 @@ import { Coin } from "../../item/coin";
 import { Random } from "../../utility/random";
 
 export class Crate extends Entity {
+  static examineText = "A crate. Pushable cover with splinters.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

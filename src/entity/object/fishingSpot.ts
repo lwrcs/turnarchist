@@ -17,6 +17,7 @@ import { XPPopup } from "../../particle/xpPopup";
 import { GameConstants } from "../../game/gameConstants";
 
 export class FishingSpot extends Entity {
+  static examineText = "A fishing spot. Bring a rod.";
   fishCount: number = 0;
   active: boolean = false;
   startFrame: number = 0;

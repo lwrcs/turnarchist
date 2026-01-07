@@ -16,6 +16,7 @@ import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 
 export class ExalterEnemy extends Enemy {
+  static examineText = "An exalter. Makes other enemies hit harder.";
   ticks: number;
   seenPlayer: boolean;
   buffedEnemies: Enemy[];

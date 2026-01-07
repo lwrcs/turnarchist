@@ -6,6 +6,7 @@ import { GoldOre } from "../../item/resource/goldOre";
 import { Geode } from "../../item/resource/geode";
 import { Random } from "../../utility/random";
 export class GoldResource extends Resource {
+  static examineText = "Gold ore vein. Shiny, heavy, valuable.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
 

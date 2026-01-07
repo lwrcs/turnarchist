@@ -11,6 +11,7 @@ import { Sound } from "../../sound/sound";
 import { Resource } from "../resource/resource";
 
 export class ObsidianBlock extends Resource {
+  static examineText = "Obsidian. Harder than it looks.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

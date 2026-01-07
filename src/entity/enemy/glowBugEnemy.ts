@@ -24,6 +24,7 @@ export class GlowBugEnemy extends Entity {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  static examineText = "A glowbug. Harmless, but bright enough to matter.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

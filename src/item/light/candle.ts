@@ -23,4 +23,8 @@ export class Candle extends Light {
     this.maxBrightness = 0.25;
     this.fov = 360;
   }
+
+  examineText = (): string => {
+    return "Provides just enough light to see";
+  };
 }

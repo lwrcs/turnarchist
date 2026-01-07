@@ -20,6 +20,7 @@ export class FireWizardEnemy extends WizardEnemy {
   static difficulty: number = 3;
   static tileX: number = 35;
   static tileY: number = 8;
+  static examineText = "A fire wizard. Telegraphs flames, then detonates.";
   readonly ATTACK_RADIUS = 5;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {

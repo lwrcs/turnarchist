@@ -8,6 +8,7 @@ import { Coin } from "../../item/coin";
 import { Random } from "../../utility/random";
 
 export class Barrel extends Entity {
+  static examineText = "A barrel. Rolls poorly, blocks well.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

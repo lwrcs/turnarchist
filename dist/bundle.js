@@ -10599,6 +10599,7 @@ exports.ArmoredSkullEnemy = ArmoredSkullEnemy;
 ArmoredSkullEnemy.difficulty = 2;
 ArmoredSkullEnemy.tileX = 5;
 ArmoredSkullEnemy.tileY = 8;
+ArmoredSkullEnemy.examineText = "An armored skeleton. Tougher, still angry.";
 
 
 /***/ }),
@@ -10812,6 +10813,7 @@ exports.ArmoredzombieEnemy = ArmoredzombieEnemy;
 ArmoredzombieEnemy.difficulty = 2;
 ArmoredzombieEnemy.tileX = 17;
 ArmoredzombieEnemy.tileY = 8;
+ArmoredzombieEnemy.examineText = "A zombie in armor. Takes a bit more work.";
 
 
 /***/ }),
@@ -11416,6 +11418,7 @@ exports.BeetleEnemy = BeetleEnemy;
 BeetleEnemy.difficulty = 1;
 BeetleEnemy.tileX = 8;
 BeetleEnemy.tileY = 4;
+BeetleEnemy.examineText = "A beetle. It moves on a rhythm, not a rush.";
 
 
 /***/ }),
@@ -11942,6 +11945,7 @@ exports.BigFrogEnemy = BigFrogEnemy;
 BigFrogEnemy.difficulty = 1;
 BigFrogEnemy.tileX = 37;
 BigFrogEnemy.tileY = 24;
+BigFrogEnemy.examineText = "A hulking hopper. Big swings, big reach.";
 
 
 /***/ }),
@@ -12199,6 +12203,7 @@ exports.BigKnightEnemy = BigKnightEnemy;
 BigKnightEnemy.difficulty = 4;
 BigKnightEnemy.tileX = 29;
 BigKnightEnemy.tileY = 0;
+BigKnightEnemy.examineText = "A giant knight. Wide body, short reach, huge threat.";
 
 
 /***/ }),
@@ -12535,6 +12540,7 @@ exports.BigSkullEnemy = BigSkullEnemy;
 BigSkullEnemy.difficulty = 4;
 BigSkullEnemy.tileX = 21;
 BigSkullEnemy.tileY = 0;
+BigSkullEnemy.examineText = "A giant skeleton. Wide swings, wide body.";
 
 
 /***/ }),
@@ -12819,6 +12825,7 @@ exports.BigZombieEnemy = BigZombieEnemy;
 BigZombieEnemy.difficulty = 1;
 BigZombieEnemy.tileX = 21;
 BigZombieEnemy.tileY = 0;
+BigZombieEnemy.examineText = "A big zombie. Wide and stubborn.";
 
 
 /***/ }),
@@ -13037,6 +13044,7 @@ exports.BishopEnemy = BishopEnemy;
 BishopEnemy.difficulty = 2;
 BishopEnemy.tileX = 31;
 BishopEnemy.tileY = 8;
+BishopEnemy.examineText = "A bishop. Only the diagonals are safe—sometimes.";
 
 
 /***/ }),
@@ -13478,6 +13486,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
     }
 }
 exports.BoltcasterEnemy = BoltcasterEnemy;
+BoltcasterEnemy.examineText = "A boltcaster. It seeks a clear line, then fires.";
 
 
 /***/ }),
@@ -13755,6 +13764,7 @@ exports.ChargeEnemy = ChargeEnemy;
 ChargeEnemy.difficulty = 5;
 ChargeEnemy.tileX = 13;
 ChargeEnemy.tileY = 8;
+ChargeEnemy.examineText = "It lines you up, then charges in a straight line.";
 
 
 /***/ }),
@@ -13980,6 +13990,7 @@ exports.CrabEnemy = CrabEnemy;
 CrabEnemy.difficulty = 1;
 CrabEnemy.tileX = 8;
 CrabEnemy.tileY = 4;
+CrabEnemy.examineText = "It scuttles sideways and snaps up close.";
 
 
 /***/ }),
@@ -14288,6 +14299,7 @@ exports.CrusherEnemy = CrusherEnemy;
 CrusherEnemy.difficulty = 1;
 CrusherEnemy.tileX = 8;
 CrusherEnemy.tileY = 4;
+CrusherEnemy.examineText = "A crusher. It doesn't fight— it falls.";
 CrusherEnemy.hasEverEmittedSeenPlayer = false;
 
 
@@ -14501,6 +14513,7 @@ exports.EarthWizardEnemy = EarthWizardEnemy;
 EarthWizardEnemy.difficulty = 3;
 EarthWizardEnemy.tileX = 37;
 EarthWizardEnemy.tileY = 8;
+EarthWizardEnemy.examineText = "An earth wizard. Rings you in, then crushes the gaps.";
 
 
 /***/ }),
@@ -15275,6 +15288,7 @@ exports.EnergyWizardEnemy = EnergyWizardEnemy;
 EnergyWizardEnemy.difficulty = 3;
 EnergyWizardEnemy.tileX = 6;
 EnergyWizardEnemy.tileY = 0;
+EnergyWizardEnemy.examineText = "An energy wizard. Fast bursts and nasty overlaps.";
 
 
 /***/ }),
@@ -15578,6 +15592,7 @@ class ExalterEnemy extends enemy_1.Enemy {
     }
 }
 exports.ExalterEnemy = ExalterEnemy;
+ExalterEnemy.examineText = "An exalter. Makes other enemies hit harder.";
 ExalterEnemy.tileX = 59;
 ExalterEnemy.tileY = 8;
 
@@ -15776,6 +15791,7 @@ exports.FireWizardEnemy = FireWizardEnemy;
 FireWizardEnemy.difficulty = 3;
 FireWizardEnemy.tileX = 35;
 FireWizardEnemy.tileY = 8;
+FireWizardEnemy.examineText = "A fire wizard. Telegraphs flames, then detonates.";
 
 
 /***/ }),
@@ -16096,6 +16112,7 @@ exports.FrogEnemy = FrogEnemy;
 FrogEnemy.difficulty = 1;
 FrogEnemy.tileX = 12;
 FrogEnemy.tileY = 16;
+FrogEnemy.examineText = "It hops in bursts. Don't stand where it lands.";
 
 
 /***/ }),
@@ -16210,6 +16227,7 @@ exports.GlowBugEnemy = GlowBugEnemy;
 GlowBugEnemy.difficulty = 1;
 GlowBugEnemy.tileX = 8;
 GlowBugEnemy.tileY = 4;
+GlowBugEnemy.examineText = "A glowbug. Harmless, but bright enough to matter.";
 
 
 /***/ }),
@@ -16403,6 +16421,7 @@ exports.KingEnemy = KingEnemy;
 KingEnemy.difficulty = 4;
 KingEnemy.tileX = 23;
 KingEnemy.tileY = 8;
+KingEnemy.examineText = "A king. Hits hard and won't die politely.";
 
 
 /***/ }),
@@ -16604,6 +16623,7 @@ exports.KnightEnemy = KnightEnemy;
 KnightEnemy.difficulty = 2;
 KnightEnemy.tileX = 9;
 KnightEnemy.tileY = 8;
+KnightEnemy.examineText = "A burrow knight. Marches straight and hits hard.";
 
 
 /***/ }),
@@ -16838,6 +16858,7 @@ exports.MummyEnemy = MummyEnemy;
 MummyEnemy.difficulty = 1;
 MummyEnemy.tileX = 17;
 MummyEnemy.tileY = 16;
+MummyEnemy.examineText = "A mummy. Quiet steps, short temper.";
 
 
 /***/ }),
@@ -17144,6 +17165,7 @@ class OccultistEnemy extends enemy_1.Enemy {
     }
 }
 exports.OccultistEnemy = OccultistEnemy;
+OccultistEnemy.examineText = "An occultist. Shields allies and drags out fights.";
 OccultistEnemy.tileX = 55;
 OccultistEnemy.tileY = 8;
 
@@ -17353,6 +17375,7 @@ exports.PawnEnemy = PawnEnemy;
 PawnEnemy.difficulty = 4;
 PawnEnemy.tileX = 23 + 28;
 PawnEnemy.tileY = 8;
+PawnEnemy.examineText = "A pawn. Harmless head-on—deadly on the diagonals.";
 
 
 /***/ }),
@@ -17541,6 +17564,7 @@ exports.QueenEnemy = QueenEnemy;
 QueenEnemy.difficulty = 4;
 QueenEnemy.tileX = 23;
 QueenEnemy.tileY = 8;
+QueenEnemy.examineText = "A queen. Threatens straight and diagonal lines.";
 
 
 /***/ }),
@@ -17705,6 +17729,7 @@ exports.RookEnemy = RookEnemy;
 RookEnemy.difficulty = 4;
 RookEnemy.tileX = 23 + 28;
 RookEnemy.tileY = 8;
+RookEnemy.examineText = "A rook. Controls straight lines.";
 
 
 /***/ }),
@@ -17970,6 +17995,7 @@ exports.SkullEnemy = SkullEnemy;
 SkullEnemy.difficulty = 2;
 SkullEnemy.tileX = 5;
 SkullEnemy.tileY = 8;
+SkullEnemy.examineText = "A skeleton. Hits hard, and doesn't stay down for long.";
 
 
 /***/ }),
@@ -18344,6 +18370,7 @@ class Spawner extends enemy_1.Enemy {
 exports.Spawner = Spawner;
 Spawner.tileX = 6;
 Spawner.tileY = 4;
+Spawner.examineText = "A reaper. It spits out trouble if left alone.";
 
 
 /***/ }),
@@ -18874,6 +18901,7 @@ exports.SpiderEnemy = SpiderEnemy;
 SpiderEnemy.difficulty = 1;
 SpiderEnemy.tileX = 8;
 SpiderEnemy.tileY = 4;
+SpiderEnemy.examineText = "It hides, then strikes when you're close.";
 
 
 /***/ }),
@@ -19202,6 +19230,7 @@ exports.WardenEnemy = WardenEnemy;
 WardenEnemy.difficulty = 2;
 WardenEnemy.tileX = 21;
 WardenEnemy.tileY = 0;
+WardenEnemy.examineText = "A warden. Keeps its distance and calls in crushers.";
 
 
 /***/ }),
@@ -19619,6 +19648,7 @@ exports.ZombieEnemy = ZombieEnemy;
 ZombieEnemy.difficulty = 1;
 ZombieEnemy.tileX = 17;
 ZombieEnemy.tileY = 8;
+ZombieEnemy.examineText = "Slow, relentless, and always in your lane.";
 
 
 /***/ }),
@@ -19688,6 +19718,19 @@ class Entity extends drawable_1.Drawable {
         this.dropChance = 1;
         //shadeColor: string;
         this.shadeMultiplier = 1;
+        /**
+         * Context-menu "Examine" text. Empty string = no examine option.
+         * Prefer adding a `static examineText = "..."` to specific Entity subclasses.
+         */
+        this.examineText = () => {
+            const ctor = this.constructor;
+            if (typeof ctor.examineText === "string") {
+                const s = ctor.examineText.trim();
+                if (s.length > 0)
+                    return s;
+            }
+            return "";
+        };
         this.bloomColor = "#FFFFFF";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 1;
@@ -21028,6 +21071,7 @@ class Barrel extends entity_1.Entity {
     }
 }
 exports.Barrel = Barrel;
+Barrel.examineText = "A barrel. Rolls poorly, blocks well.";
 
 
 /***/ }),
@@ -21152,6 +21196,7 @@ class Block extends entity_1.Entity {
     }
 }
 exports.Block = Block;
+Block.examineText = "A heavy block. Solid, stubborn, and in the way.";
 
 
 /***/ }),
@@ -21296,6 +21341,7 @@ class Bomb extends entity_1.Entity {
     }
 }
 exports.Bomb = Bomb;
+Bomb.examineText = "A bomb. Light it and leave.";
 
 
 /***/ }),
@@ -21351,6 +21397,7 @@ class Bush extends entity_1.Entity {
     }
 }
 exports.Bush = Bush;
+Bush.examineText = "A bush. Rustles when you hit it.";
 
 
 /***/ }),
@@ -21471,6 +21518,7 @@ class CaveBlock extends resource_1.Resource {
     }
 }
 exports.CaveBlock = CaveBlock;
+CaveBlock.examineText = "Cave rock. Mine it with a pickaxe.";
 
 
 /***/ }),
@@ -21646,6 +21694,7 @@ class Chest extends entity_1.Entity {
     }
 }
 exports.Chest = Chest;
+Chest.examineText = "A chest. Open it for loot.";
 
 
 /***/ }),
@@ -21745,6 +21794,7 @@ class Crate extends entity_1.Entity {
     }
 }
 exports.Crate = Crate;
+Crate.examineText = "A crate. Pushable cover with splinters.";
 
 
 /***/ }),
@@ -21804,6 +21854,7 @@ class DarkCrate extends entity_1.Entity {
     }
 }
 exports.DarkCrate = DarkCrate;
+DarkCrate.examineText = "A dark crate. Push it. Hide behind it.";
 
 
 /***/ }),
@@ -21912,6 +21963,7 @@ class DarkPot extends entity_1.Entity {
     }
 }
 exports.DarkPot = DarkPot;
+DarkPot.examineText = "A dark pot. Smashable, usually disappointing.";
 
 
 /***/ }),
@@ -21969,6 +22021,7 @@ class DarkVase extends entity_1.Entity {
     }
 }
 exports.DarkVase = DarkVase;
+DarkVase.examineText = "A dark vase. Fragile on purpose.";
 
 
 /***/ }),
@@ -22200,6 +22253,7 @@ class FishingSpot extends entity_1.Entity {
     }
 }
 exports.FishingSpot = FishingSpot;
+FishingSpot.examineText = "A fishing spot. Bring a rod.";
 
 
 /***/ }),
@@ -22260,6 +22314,7 @@ class Furnace extends entity_1.Entity {
     }
 }
 exports.Furnace = Furnace;
+Furnace.examineText = "A furnace. Hot enough to make bars.";
 
 
 /***/ }),
@@ -22432,6 +22487,7 @@ class ObsidianBlock extends resource_1.Resource {
     }
 }
 exports.ObsidianBlock = ObsidianBlock;
+ObsidianBlock.examineText = "Obsidian. Harder than it looks.";
 
 
 /***/ }),
@@ -22549,6 +22605,7 @@ class Pot extends entity_1.Entity {
     }
 }
 exports.Pot = Pot;
+Pot.examineText = "A pot. Smashable, sometimes rewarding.";
 
 
 /***/ }),
@@ -23013,6 +23070,7 @@ class TallSucculent extends entity_1.Entity {
     }
 }
 exports.TallSucculent = TallSucculent;
+TallSucculent.examineText = "A tall succulent. Spiky and stubborn.";
 
 
 /***/ }),
@@ -23109,6 +23167,7 @@ class TombStone extends entity_1.Entity {
     }
 }
 exports.TombStone = TombStone;
+TombStone.examineText = "A tombstone. Someone didn't make it back.";
 
 
 /***/ }),
@@ -23188,6 +23247,7 @@ class Tree extends entity_1.Entity {
     }
 }
 exports.Tree = Tree;
+Tree.examineText = "A tree. Blocks sight and takes hits.";
 
 
 /***/ }),
@@ -23532,6 +23592,7 @@ class VendingMachine extends entity_1.Entity {
     }
 }
 exports.VendingMachine = VendingMachine;
+VendingMachine.examineText = "A vending machine. Coins in, supplies out.";
 VendingMachine.isPointInVendingMachineBounds = (x, y, shop) => {
     // First check if this is the currently open vending machine
     if (!shop.open || shop !== shop.playerOpened?.openVendingMachine)
@@ -23601,6 +23662,7 @@ class AmberResource extends resource_1.Resource {
     }
 }
 exports.AmberResource = AmberResource;
+AmberResource.examineText = "An amber vein. Warm glow, sharp edges.";
 
 
 /***/ }),
@@ -23637,6 +23699,7 @@ class CaveRock extends resource_1.Resource {
     }
 }
 exports.CaveRock = CaveRock;
+CaveRock.examineText = "Cave rock. Picks love it.";
 
 
 /***/ }),
@@ -23671,6 +23734,7 @@ class CoalResource extends resource_1.Resource {
     }
 }
 exports.CoalResource = CoalResource;
+CoalResource.examineText = "Coal seam. Fuel for the furnace.";
 
 
 /***/ }),
@@ -23710,6 +23774,7 @@ class EmeraldResource extends resource_1.Resource {
     }
 }
 exports.EmeraldResource = EmeraldResource;
+EmeraldResource.examineText = "An emerald vein. Bright and brittle.";
 
 
 /***/ }),
@@ -23750,6 +23815,7 @@ class GarnetResource extends resource_1.Resource {
     }
 }
 exports.GarnetResource = GarnetResource;
+GarnetResource.examineText = "A garnet vein. Red as a warning.";
 
 
 /***/ }),
@@ -23782,6 +23848,7 @@ class GoldResource extends resource_1.Resource {
     }
 }
 exports.GoldResource = GoldResource;
+GoldResource.examineText = "Gold ore vein. Shiny, heavy, valuable.";
 
 
 /***/ }),
@@ -23814,6 +23881,7 @@ class IronResource extends resource_1.Resource {
     }
 }
 exports.IronResource = IronResource;
+IronResource.examineText = "Iron ore vein. Needs a pickaxe.";
 
 
 /***/ }),
@@ -23848,6 +23916,7 @@ class ObsidianResource extends resource_1.Resource {
     }
 }
 exports.ObsidianResource = ObsidianResource;
+ObsidianResource.examineText = "Obsidian. Tough stone with a mean edge.";
 
 
 /***/ }),
@@ -23965,6 +24034,7 @@ class Rock extends resource_1.Resource {
     }
 }
 exports.Rock = Rock;
+Rock.examineText = "A rock. Breakable with a pickaxe.";
 
 
 /***/ }),
@@ -24005,6 +24075,7 @@ class ZirconResource extends resource_1.Resource {
     }
 }
 exports.ZirconResource = ZirconResource;
+ZirconResource.examineText = "A zircon vein. Cold light, sharp cuts.";
 
 
 /***/ }),
@@ -39889,6 +39960,9 @@ const light_1 = __webpack_require__(/*! ./light */ "./src/item/light/light.ts");
 class Candle extends light_1.Light {
     constructor(level, x, y) {
         super(level, x, y);
+        this.examineText = () => {
+            return "Provides just enough light to see";
+        };
         this.fuel = 100; //how many turns before it burns out
         this.tileX = 27;
         this.tileY = 0;
@@ -49891,6 +49965,58 @@ class Player extends drawable_1.Drawable {
                 return true;
             return Math.abs(dx) + Math.abs(dy) === 1;
         };
+        /**
+         * UI helper: can the player push the given pushable entity right now?
+         *
+         * Mirrors the push-chain scan in `tryMove()`:
+         * - You must be cardinal-adjacent (attempting to move into the entity).
+         * - The tile behind the push-chain must be empty of entities.
+         * - The tile behind the chain must be walkable (not solid) and must NOT be a crush tile.
+         *
+         * (If the chain ends in a crush tile or a non-chain-pushable blocker, we treat it as not pushable,
+         * so the context menu can fall back to "Hit" instead.)
+         */
+        this.canPushEntity = (target) => {
+            if (!target?.pushable)
+                return false;
+            // Only push when moving into the target (cardinal-adjacent).
+            const dx = target.x - this.x;
+            const dy = target.y - this.y;
+            if (Math.abs(dx) + Math.abs(dy) !== 1)
+                return false;
+            const room = this.getRoom?.() ?? this.game.room;
+            if (!room)
+                return false;
+            const z = this.z ?? 0;
+            let nextX = target.x + dx;
+            let nextY = target.y + dy;
+            // Walk the push chain until we find the first empty tile, or hit a non-chain-pushable blocker.
+            while (true) {
+                if (!room.tileInside(nextX, nextY))
+                    return false;
+                const blocker = room.entities.find((e) => {
+                    if (!e)
+                        return false;
+                    if ((e.z ?? 0) !== z)
+                        return false;
+                    return e.pointIn(nextX, nextY);
+                });
+                if (!blocker)
+                    break;
+                if (!blocker.chainPushable)
+                    return false;
+                // Step past this blocker based on its footprint (matches tryMove logic).
+                nextX += dx * (blocker.w ?? 1);
+                nextY += dy * (blocker.h ?? 1);
+            }
+            // Require an empty, walkable tile behind the chain (no crush tiles).
+            if (room.isSolidAt(nextX, nextY, z))
+                return false;
+            const tile = room.roomArray[nextX]?.[nextY];
+            if (tile?.canCrushEnemy?.())
+                return false;
+            return true;
+        };
         this.getDirectionFromCoords = (inputX, inputY) => {
             // Same position - no direction
             if (inputX === this.x && inputY === this.y)
@@ -51354,57 +51480,149 @@ class PlayerInputHandler {
         // --- World tile interactions (entity + ground items) ---
         const room = player.getRoom ? player.getRoom() : player.game.room;
         const t = player.mouseToTile();
-        // Enemies in the level (entity detection; range checks are UI-only and do not affect gameplay).
-        const enemy = player.getEnemyUnderCursorForAttack();
-        if (enemy) {
-            const targetName = getTargetName(enemy);
-            const weapon = player.inventory.weapon;
-            const canAttack = (() => {
-                if (!weapon)
-                    return false;
-                return weapon.isTargetInRange(enemy.x, enemy.y);
-            })();
-            items.push({
-                label: "Attack",
-                targetName,
-                enabled: canAttack,
-                onDisabledClick: () => {
-                    if (!weapon) {
-                        player.game.pushMessage("No weapon equipped.");
-                        return;
-                    }
-                    player.game.pushMessage("Enemy out of range.");
-                },
-                onClick: () => {
+        // Entities in the level (enemies + props/resources/etc).
+        // Use the general cursor hit-test so non-enemy entities can be examined too.
+        const entity = player.getEntityUnderCursorForExamine();
+        if (entity) {
+            const targetName = getTargetName(entity);
+            // Enemies: Attack + Examine
+            if (entity.isEnemy) {
+                const weapon = player.inventory.weapon;
+                const canAttack = (() => {
                     if (!weapon)
-                        return;
-                    const input = weapon.getAttackInputTileForTarget(enemy.x, enemy.y);
-                    if (!input) {
+                        return false;
+                    return weapon.isTargetInRange(entity.x, entity.y);
+                })();
+                items.push({
+                    label: "Attack",
+                    targetName,
+                    enabled: canAttack,
+                    onDisabledClick: () => {
+                        if (!weapon) {
+                            player.game.pushMessage("No weapon equipped.");
+                            return;
+                        }
                         player.game.pushMessage("Enemy out of range.");
-                        return;
-                    }
-                    // Face the enemy; turning is free, but some weapon logic depends on direction.
-                    const dx = enemy.x - player.x;
-                    const dy = enemy.y - player.y;
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        player.direction = dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
-                    }
-                    else if (dy !== 0) {
-                        player.direction = dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
-                    }
-                    weapon.weaponMove(input.x, input.y);
-                },
-            });
-            // Examine (optional)
-            const examine = (() => {
-                const maybe = enemy;
-                if (typeof maybe.examineText === "function") {
-                    const txt = maybe.examineText();
-                    return typeof txt === "string" ? txt : "";
+                    },
+                    onClick: () => {
+                        if (!weapon)
+                            return;
+                        const input = weapon.getAttackInputTileForTarget(entity.x, entity.y);
+                        if (!input) {
+                            player.game.pushMessage("Enemy out of range.");
+                            return;
+                        }
+                        // Face the enemy; turning is free, but some weapon logic depends on direction.
+                        const dx = entity.x - player.x;
+                        const dy = entity.y - player.y;
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            player.direction = dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+                        }
+                        else if (dy !== 0) {
+                            player.direction = dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+                        }
+                        weapon.weaponMove(input.x, input.y);
+                    },
+                });
+            }
+            else {
+                // Non-enemy entities: choose a primary action.
+                // Push can take precedence over Hit when the push-chain is actually possible.
+                const wantsPush = Boolean(entity.pushable);
+                const canPush = wantsPush && player.canPushEntity(entity);
+                const primary = (() => {
+                    if (wantsPush)
+                        return canPush ? "Push" : "Hit";
+                    if (entity.interactable)
+                        return "Interact";
+                    if (entity.destroyable)
+                        return "Hit";
+                    return null;
+                })();
+                if (primary === "Push") {
+                    items.push({
+                        label: "Push",
+                        targetName,
+                        onClick: () => {
+                            // Reuse the existing push logic in `Player.tryMove()`.
+                            player.tryMove(entity.x, entity.y);
+                        },
+                    });
                 }
-                return typeof maybe.description === "string" ? maybe.description : "";
-            })();
-            const ex = formatExamine(examine);
+                else if (primary === "Interact") {
+                    const inReach = player.canPickupAt(entity.x, entity.y);
+                    items.push({
+                        label: "Interact",
+                        targetName,
+                        enabled: inReach,
+                        onDisabledClick: () => {
+                            player.game.pushMessage("You can't reach that.");
+                        },
+                        onClick: () => {
+                            entity.interact?.(player);
+                        },
+                    });
+                }
+                else if (primary === "Hit") {
+                    // Special case: pushable-but-blocked "Hit" should behave like walking into it.
+                    // In `Player.tryMove()`, blocked pushables are handled by the push logic branch
+                    // (and may be destroyed even without a normal attack).
+                    const isBlockedPushableHit = wantsPush && !canPush;
+                    const inReach = player.canPickupAt(entity.x, entity.y);
+                    const weapon = player.inventory.weapon;
+                    const canHit = isBlockedPushableHit
+                        ? inReach
+                        : (() => {
+                            if (!weapon)
+                                return false;
+                            return weapon.isTargetInRange(entity.x, entity.y);
+                        })();
+                    items.push({
+                        label: "Hit",
+                        targetName,
+                        enabled: canHit,
+                        onDisabledClick: () => {
+                            if (isBlockedPushableHit) {
+                                player.game.pushMessage("You can't reach that.");
+                                return;
+                            }
+                            if (!weapon) {
+                                player.game.pushMessage("No weapon equipped.");
+                                return;
+                            }
+                            player.game.pushMessage("Target out of range.");
+                        },
+                        onClick: () => {
+                            if (isBlockedPushableHit) {
+                                if (!inReach)
+                                    return;
+                                // Reuse the existing "blocked pushable" behavior path.
+                                player.tryMove(entity.x, entity.y);
+                                return;
+                            }
+                            if (!weapon)
+                                return;
+                            const input = weapon.getAttackInputTileForTarget(entity.x, entity.y);
+                            if (!input) {
+                                player.game.pushMessage("Target out of range.");
+                                return;
+                            }
+                            // Face the target for consistent weapon animation/logic.
+                            const dx = entity.x - player.x;
+                            const dy = entity.y - player.y;
+                            if (Math.abs(dx) > Math.abs(dy)) {
+                                player.direction = dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+                            }
+                            else if (dy !== 0) {
+                                player.direction = dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+                            }
+                            weapon.weaponMove(input.x, input.y);
+                        },
+                    });
+                }
+            }
+            // Examine (optional) for any entity type
+            const ex = formatExamine(entity.examineText?.() ?? "");
             if (ex.length > 0) {
                 items.push({
                     label: "Examine",
@@ -62944,7 +63162,7 @@ class Door extends passageway_1.Passageway {
             if (this.opened)
                 return "An open door.";
             if (this.type === DoorType.GUARDEDDOOR)
-                return "A guarded door.";
+                return "A guarded door. Unlocks when all enemies are defeated.";
             if (this.type === DoorType.LOCKEDDOOR || this.locked)
                 return "A locked door.";
             return "A closed door.";

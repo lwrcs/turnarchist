@@ -12,6 +12,7 @@ import { Coin } from "../../item/coin";
 import { Sound } from "../../sound/sound";
 
 export class Pot extends Entity {
+  static examineText = "A pot. Smashable, sometimes rewarding.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

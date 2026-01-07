@@ -20,6 +20,7 @@ export class EarthWizardEnemy extends WizardEnemy {
   static difficulty: number = 3;
   static tileX: number = 37;
   static tileY: number = 8;
+  static examineText = "An earth wizard. Rings you in, then crushes the gaps.";
   readonly ATTACK_RADIUS = 5;
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {

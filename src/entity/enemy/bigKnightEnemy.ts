@@ -27,6 +27,7 @@ export class BigKnightEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 29;
   static tileY: number = 0;
+  static examineText = "A giant knight. Wide body, short reach, huge threat.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

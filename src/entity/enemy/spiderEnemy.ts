@@ -25,6 +25,7 @@ export class SpiderEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  static examineText = "It hides, then strikes when you're close.";
   state: SpiderState;
   revealTick: number;
   jumpDistance: number;

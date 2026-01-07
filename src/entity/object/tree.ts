@@ -12,6 +12,7 @@ import { Sound } from "../../sound/sound";
 import { Random } from "../../utility/random";
 
 export class Tree extends Entity {
+  static examineText = "A tree. Blocks sight and takes hits.";
   seeThroughAlpha: number = 1;
   softSeeThroughAlpha: number = 1;
   constructor(room: Room, game: Game, x: number, y: number) {

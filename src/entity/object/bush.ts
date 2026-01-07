@@ -10,6 +10,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
 
 export class Bush extends Entity {
+  static examineText = "A bush. Rustles when you hit it.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

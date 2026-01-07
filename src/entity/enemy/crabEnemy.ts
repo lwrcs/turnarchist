@@ -18,6 +18,7 @@ export class CrabEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 8;
   static tileY: number = 4;
+  static examineText = "It scuttles sideways and snaps up close.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

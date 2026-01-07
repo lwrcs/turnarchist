@@ -16,6 +16,7 @@ export class QueenEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 23;
   static tileY: number = 8;
+  static examineText = "A queen. Threatens straight and diagonal lines.";
   justHurt: boolean = false;
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

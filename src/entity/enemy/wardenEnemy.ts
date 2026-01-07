@@ -32,6 +32,7 @@ export class WardenEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 21;
   static tileY: number = 0;
+  static examineText = "A warden. Keeps its distance and calls in crushers.";
   crusherPositions: { x: number; y: number }[] = [];
   crusherCount: number = 0;
   crushers: CrusherEnemy[] = [];

@@ -32,6 +32,7 @@ export class BigSkullEnemy extends Enemy {
   static difficulty: number = 4;
   static tileX: number = 21;
   static tileY: number = 0;
+  static examineText = "A giant skeleton. Wide swings, wide body.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

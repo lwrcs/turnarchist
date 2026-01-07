@@ -30,6 +30,7 @@ export class BigFrogEnemy extends Enemy {
   static difficulty: number = 1;
   static tileX: number = 37;
   static tileY: number = 24;
+  static examineText = "A hulking hopper. Big swings, big reach.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);

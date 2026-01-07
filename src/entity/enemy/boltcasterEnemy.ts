@@ -15,6 +15,7 @@ enum BoltcasterState {
 }
 
 export class BoltcasterEnemy extends Enemy {
+  static examineText = "A boltcaster. It seeks a clear line, then fires.";
   state: BoltcasterState;
   isLoading: boolean;
   loadDx: number;

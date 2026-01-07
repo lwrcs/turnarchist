@@ -18,6 +18,7 @@ export class BishopEnemy extends Enemy {
   static difficulty: number = 2;
   static tileX: number = 31;
   static tileY: number = 8;
+  static examineText = "A bishop. Only the diagonals are safe—sometimes.";
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
     this.ticks = 0;

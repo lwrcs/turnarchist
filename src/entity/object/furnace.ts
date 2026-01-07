@@ -14,6 +14,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Torch } from "../../item/light/torch";
 
 export class Furnace extends Entity {
+  static examineText = "A furnace. Hot enough to make bars.";
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
     this.room = room;

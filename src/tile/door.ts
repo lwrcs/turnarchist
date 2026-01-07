@@ -138,7 +138,8 @@ export class Door extends Passageway {
 
     // Regular doors
     if (this.opened) return "An open door.";
-    if (this.type === DoorType.GUARDEDDOOR) return "A guarded door.";
+    if (this.type === DoorType.GUARDEDDOOR)
+      return "A guarded door. Unlocks when all enemies are defeated.";
     if (this.type === DoorType.LOCKEDDOOR || this.locked)
       return "A locked door.";
     return "A closed door.";
