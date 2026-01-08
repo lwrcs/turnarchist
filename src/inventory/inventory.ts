@@ -654,7 +654,12 @@ export class Inventory {
     });
 
     // If an overlay UI is open, inventory should not process drag/hold input.
-    if (this.player.menu.open || this.player.bestiary?.isOpen) return;
+    if (
+      this.player.menu.open ||
+      this.player.bestiary?.isOpen ||
+      this.player.contextMenu?.open
+    )
+      return;
 
     // Check for drag initiation
     this.checkForDragStart();
@@ -662,25 +667,64 @@ export class Inventory {
 
   textWrap = (text: string, x: number, y: number, maxWidth: number): number => {
     // Returns y value for next line
-    if (text === "") return y;
-    let words = text.split(" ");
+    if (text === "" || maxWidth <= 0) return y;
+
+    const lineHeight = 8;
+    const words = text.split(" ");
     let line = "";
 
-    while (words.length > 0) {
-      if (Game.measureText(line + words[0]).width > maxWidth) {
-        Game.fillText(line, x, y);
-        line = "";
-        y += 8;
-      } else {
-        if (line !== "") line += " ";
-        line += words[0];
-        words.splice(0, 1);
+    const drawLine = (lineToDraw: string) => {
+      const trimmed = lineToDraw.trim();
+      if (trimmed === "") return;
+      Game.fillText(trimmed, x, y);
+      y += lineHeight;
+    };
+
+    const findFittingPrefixLength = (s: string): number => {
+      // Largest prefix length (>= 1) whose measured width <= maxWidth.
+      // Returns 0 if nothing fits.
+      if (s.length === 0) return 0;
+      if (Game.measureText(s[0]).width > maxWidth) return 0;
+
+      let lo = 1;
+      let hi = s.length;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi + 1) / 2);
+        if (Game.measureText(s.slice(0, mid)).width <= maxWidth) lo = mid;
+        else hi = mid - 1;
       }
+      return lo;
+    };
+
+    while (words.length > 0) {
+      const word = words[0];
+      const testLine = line === "" ? word : line + " " + word;
+
+      if (Game.measureText(testLine).width <= maxWidth) {
+        line = testLine;
+        words.shift();
+        continue;
+      }
+
+      // Current line doesn't fit with next word; emit the current line if any.
+      if (line !== "") {
+        drawLine(line);
+        line = "";
+        continue;
+      }
+
+      // Single word doesn't fit on an empty line; split it into chunks.
+      let remaining = word;
+      while (remaining.length > 0) {
+        const prefixLen = findFittingPrefixLength(remaining);
+        if (prefixLen <= 0) break; // give up; avoids infinite loop on pathological widths
+        drawLine(remaining.slice(0, prefixLen));
+        remaining = remaining.slice(prefixLen);
+      }
+      words.shift();
     }
-    if (line.trim() !== "") {
-      Game.fillText(line, x, y);
-      y += 8;
-    }
+
+    if (line.trim() !== "") drawLine(line);
     return y;
   };
 
@@ -1243,7 +1287,11 @@ export class Inventory {
       // Draw item description and action text (unique to full inventory view)
       const selectedIdx = this.selX + this.selY * this.cols;
 
-      if (selectedIdx < this.items.length && this.items[selectedIdx] !== null) {
+      if (
+        !this.game.isMobile &&
+        selectedIdx < this.items.length &&
+        this.items[selectedIdx] !== null
+      ) {
         const item = this.items[selectedIdx]!;
         Game.ctx.fillStyle = "white";
 
@@ -1257,25 +1305,28 @@ export class Inventory {
         }
 
         // Draw action text
-        const actionTextWidth = Game.measureText(topPhrase).width;
-        Game.fillText(
-          topPhrase,
-          Math.round(0.5 * (GameConstants.WIDTH - actionTextWidth)),
-          5,
-        );
+        if (topPhrase !== "") {
+          const actionTextWidth = Game.measureText(topPhrase).width;
+          Game.fillText(
+            topPhrase,
+            Math.round(0.5 * (GameConstants.WIDTH - actionTextWidth)),
+            5,
+          );
+        }
 
         // Draw item description
         const lines = item.getDescription().split("\n");
-        let nextY = Math.round(
-          0.5 * GameConstants.HEIGHT -
-            0.5 * height +
-            (this.rows + this.expansion) * (s + 2 * b + g) +
-            b +
-            5,
-        );
-        lines.forEach((line) => {
-          nextY = this.textWrap(line, 5, nextY, GameConstants.WIDTH - 10);
-        });
+        const leftPadding = 6;
+        const gutter = 8;
+        const descX = leftPadding;
+        const descMaxWidth = Math.max(0, mainBgX - descX - gutter);
+
+        if (descMaxWidth > 0) {
+          let nextY = Math.round(Math.max(18, mainBgY + leftPadding));
+          lines.forEach((line) => {
+            nextY = this.textWrap(line, descX, nextY, descMaxWidth);
+          });
+        }
       }
     }
     if (this.isOpen) {
@@ -1507,6 +1558,10 @@ export class Inventory {
    * Continuously check for mouse hold during tick.
    */
   checkForDragStart = () => {
+    // On mobile, long-press is reserved for right-click/context menus and dragging
+    // is initiated via movement threshold in `mouseMove()`.
+    if (this.player.game.isMobile) return;
+
     if (Input.mouseDown && Input.isMouseHold) {
       this.initiateDrag();
     } else if (Input.isTapHold) {

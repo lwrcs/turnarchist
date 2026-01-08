@@ -7,9 +7,8 @@ export class ChestPlate extends Equippable {
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    // Reuse existing armor tile for now (until we assign unique art).
-    this.tileX = 5;
-    this.tileY = 0;
+    this.tileX = 10;
+    this.tileY = 2;
     this.stackable = false;
     this.name = ChestPlate.itemName;
     this.description = "Reduces front-facing attacks by half.";

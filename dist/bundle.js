@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -9657,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.6a46615ed30ab0980b94.png";
+module.exports = __webpack_require__.p + "assets/itemset.c2e1a7470c52105dbf6d.png";
 
 /***/ }),
 
@@ -37441,34 +37372,72 @@ class Inventory {
                     i.tickInInventory();
             });
             // If an overlay UI is open, inventory should not process drag/hold input.
-            if (this.player.menu.open || this.player.bestiary?.isOpen)
+            if (this.player.menu.open ||
+                this.player.bestiary?.isOpen ||
+                this.player.contextMenu?.open)
                 return;
             // Check for drag initiation
             this.checkForDragStart();
         };
         this.textWrap = (text, x, y, maxWidth) => {
             // Returns y value for next line
-            if (text === "")
+            if (text === "" || maxWidth <= 0)
                 return y;
-            let words = text.split(" ");
+            const lineHeight = 8;
+            const words = text.split(" ");
             let line = "";
+            const drawLine = (lineToDraw) => {
+                const trimmed = lineToDraw.trim();
+                if (trimmed === "")
+                    return;
+                game_1.Game.fillText(trimmed, x, y);
+                y += lineHeight;
+            };
+            const findFittingPrefixLength = (s) => {
+                // Largest prefix length (>= 1) whose measured width <= maxWidth.
+                // Returns 0 if nothing fits.
+                if (s.length === 0)
+                    return 0;
+                if (game_1.Game.measureText(s[0]).width > maxWidth)
+                    return 0;
+                let lo = 1;
+                let hi = s.length;
+                while (lo < hi) {
+                    const mid = Math.floor((lo + hi + 1) / 2);
+                    if (game_1.Game.measureText(s.slice(0, mid)).width <= maxWidth)
+                        lo = mid;
+                    else
+                        hi = mid - 1;
+                }
+                return lo;
+            };
             while (words.length > 0) {
-                if (game_1.Game.measureText(line + words[0]).width > maxWidth) {
-                    game_1.Game.fillText(line, x, y);
+                const word = words[0];
+                const testLine = line === "" ? word : line + " " + word;
+                if (game_1.Game.measureText(testLine).width <= maxWidth) {
+                    line = testLine;
+                    words.shift();
+                    continue;
+                }
+                // Current line doesn't fit with next word; emit the current line if any.
+                if (line !== "") {
+                    drawLine(line);
                     line = "";
-                    y += 8;
+                    continue;
                 }
-                else {
-                    if (line !== "")
-                        line += " ";
-                    line += words[0];
-                    words.splice(0, 1);
+                // Single word doesn't fit on an empty line; split it into chunks.
+                let remaining = word;
+                while (remaining.length > 0) {
+                    const prefixLen = findFittingPrefixLength(remaining);
+                    if (prefixLen <= 0)
+                        break; // give up; avoids infinite loop on pathological widths
+                    drawLine(remaining.slice(0, prefixLen));
+                    remaining = remaining.slice(prefixLen);
                 }
+                words.shift();
             }
-            if (line.trim() !== "") {
-                game_1.Game.fillText(line, x, y);
-                y += 8;
-            }
+            if (line.trim() !== "")
+                drawLine(line);
             return y;
         };
         this.drawCoins = (delta) => {
@@ -37867,7 +37836,9 @@ class Inventory {
                 // this.drawUsingItem(delta, mainBgX, mainBgY, s, b, g);
                 // Draw item description and action text (unique to full inventory view)
                 const selectedIdx = this.selX + this.selY * this.cols;
-                if (selectedIdx < this.items.length && this.items[selectedIdx] !== null) {
+                if (!this.game.isMobile &&
+                    selectedIdx < this.items.length &&
+                    this.items[selectedIdx] !== null) {
                     const item = this.items[selectedIdx];
                     game_1.Game.ctx.fillStyle = "white";
                     // Determine action text
@@ -37879,18 +37850,22 @@ class Inventory {
                         topPhrase = "[SPACE] to use";
                     }
                     // Draw action text
-                    const actionTextWidth = game_1.Game.measureText(topPhrase).width;
-                    game_1.Game.fillText(topPhrase, Math.round(0.5 * (gameConstants_1.GameConstants.WIDTH - actionTextWidth)), 5);
+                    if (topPhrase !== "") {
+                        const actionTextWidth = game_1.Game.measureText(topPhrase).width;
+                        game_1.Game.fillText(topPhrase, Math.round(0.5 * (gameConstants_1.GameConstants.WIDTH - actionTextWidth)), 5);
+                    }
                     // Draw item description
                     const lines = item.getDescription().split("\n");
-                    let nextY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT -
-                        0.5 * height +
-                        (this.rows + this.expansion) * (s + 2 * b + g) +
-                        b +
-                        5);
-                    lines.forEach((line) => {
-                        nextY = this.textWrap(line, 5, nextY, gameConstants_1.GameConstants.WIDTH - 10);
-                    });
+                    const leftPadding = 6;
+                    const gutter = 8;
+                    const descX = leftPadding;
+                    const descMaxWidth = Math.max(0, mainBgX - descX - gutter);
+                    if (descMaxWidth > 0) {
+                        let nextY = Math.round(Math.max(18, mainBgY + leftPadding));
+                        lines.forEach((line) => {
+                            nextY = this.textWrap(line, descX, nextY, descMaxWidth);
+                        });
+                    }
                 }
             }
             if (this.isOpen) {
@@ -38092,6 +38067,10 @@ class Inventory {
          * Continuously check for mouse hold during tick.
          */
         this.checkForDragStart = () => {
+            // On mobile, long-press is reserved for right-click/context menus and dragging
+            // is initiated via movement threshold in `mouseMove()`.
+            if (this.player.game.isMobile)
+                return;
             if (input_1.Input.mouseDown && input_1.Input.isMouseHold) {
                 this.initiateDrag();
             }
@@ -38491,9 +38470,8 @@ class ChestPlate extends equippable_1.Equippable {
                 return false;
             return true;
         };
-        // Reuse existing armor tile for now (until we assign unique art).
-        this.tileX = 5;
-        this.tileY = 0;
+        this.tileX = 10;
+        this.tileY = 2;
         this.stackable = false;
         this.name = ChestPlate.itemName;
         this.description = "Reduces front-facing attacks by half.";
