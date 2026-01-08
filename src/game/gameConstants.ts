@@ -65,7 +65,7 @@ export class GameConstants {
    * will generate simple "upper floors" (z=1) over inner walls and place
    * z-only stairs to traverse between z=0 and z=1.
    */
-  static Z_DEBUG_MODE = true;
+  static Z_DEBUG_MODE = false;
   static isMobile = false;
   static isIOS = false;
   static MOBILE_KEYBOARD_SUPPORT = false;

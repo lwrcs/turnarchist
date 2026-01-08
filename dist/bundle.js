@@ -29528,7 +29528,7 @@ GameConstants.DEVELOPER_MODE = false;
  * will generate simple "upper floors" (z=1) over inner walls and place
  * z-only stairs to traverse between z=0 and z=1.
  */
-GameConstants.Z_DEBUG_MODE = true;
+GameConstants.Z_DEBUG_MODE = false;
 GameConstants.isMobile = false;
 GameConstants.isIOS = false;
 GameConstants.MOBILE_KEYBOARD_SUPPORT = false;
