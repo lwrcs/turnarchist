@@ -297,6 +297,45 @@ const times = [];
 let fps = 60;
 
 export class Game {
+  /**
+   * Shared animation frame used for door icon "floating" sine motion.
+   * Stored at the game level so all doors stay in sync and we avoid per-door frame updates.
+   */
+  doorIconFloatFrame: number = 0;
+
+  private updateDoorIconFloatFrame = (delta: number) => {
+    // Match Passageway's historical frame progression (wrap at ~100).
+    this.doorIconFloatFrame += 1 * delta;
+    if (this.doorIconFloatFrame > 100) this.doorIconFloatFrame = 0;
+  };
+
+  private updateRoomOverShadeAlphas = (delta: number) => {
+    // During transitions, explicitly drive the two involved rooms to match the transition.
+    if (this.levelState === LevelState.TRANSITIONING && this.prevLevel) {
+      const t = Math.max(
+        0,
+        Math.min(
+          1,
+          (Date.now() - this.transitionStartTime) /
+            LevelConstants.LEVEL_TRANSITION_TIME,
+        ),
+      );
+      this.prevLevel.overShadeAlpha = 1 - t;
+      this.room.overShadeAlpha = t;
+      return;
+    }
+
+    // Otherwise: current room fades in, all others fade out and *stay* out.
+    // This ensures once a room has faded out, it remains hidden until re-entered.
+    const fadeSpeed = 0.18 * delta;
+    for (const r of this.rooms) {
+      if (r.pathId !== this.currentPathId) continue;
+      const target = r === this.room ? 1 : 0;
+      r.overShadeAlpha += (target - r.overShadeAlpha) * fadeSpeed;
+      if (r.overShadeAlpha < 0.001) r.overShadeAlpha = 0;
+      if (r.overShadeAlpha > 0.999) r.overShadeAlpha = 1;
+    }
+  };
   // Replay manager singleton
   private static _replayManager: ReplayManager | null = null;
   get replayManager(): ReplayManager {
@@ -1075,6 +1114,10 @@ export class Game {
     } else if (delta > deltaMax) {
       delta = deltaMax;
     }
+
+    // Shared per-frame animations
+    this.updateDoorIconFloatFrame(delta);
+    this.updateRoomOverShadeAlphas(delta);
     //delta = 0.025;
     // Update FPS tracking
     while (times.length > 0 && times[0] <= timestamp - 1000) {
@@ -2241,10 +2284,10 @@ export class Game {
   private drawRoomOverlaysForZ = (delta: number, zLayer: number) => {
     for (const room of this.rooms) {
       if (room.pathId !== this.currentPathId) continue;
-      const shouldDrawOver =
-        room === this.room || (room.active && room.entered);
+      // Above-shading should draw for entered rooms even if they are not currently active.
+      const shouldDrawOver = room === this.room || room.active || room.entered;
       if (shouldDrawOver) {
-        room.drawOverShade(delta, zLayer);
+        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
       }
     }
     for (const room of this.rooms) {
@@ -2303,10 +2346,10 @@ export class Game {
     }
     for (const room of this.rooms) {
       if (room.pathId !== this.currentPathId) continue;
-      const shouldDrawOver =
-        room === this.room || (room.active && room.entered);
+      // Above-shading should draw for entered rooms even if they are not currently active.
+      const shouldDrawOver = room === this.room || room.active || room.entered;
       if (shouldDrawOver) {
-        room.drawOverShade(delta, zLayer);
+        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
       }
     }
 
@@ -2574,7 +2617,11 @@ export class Game {
         this.prevLevel.drawEntities(delta);
         this.prevLevel.drawColorLayer();
         this.prevLevel.drawShade(delta);
-        this.prevLevel.drawOverShade(delta);
+        this.prevLevel.drawOverShade(
+          delta,
+          undefined,
+          this.prevLevel.overShadeAlpha,
+        );
 
         /*
         for (
@@ -2608,6 +2655,11 @@ export class Game {
         Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
         this.drawRoomShadeAndColor(delta);
+      } else {
+        // When we don't draw other rooms during transitions, we still want the NEW room's
+        // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
+        // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
+        this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
       }
 
       for (

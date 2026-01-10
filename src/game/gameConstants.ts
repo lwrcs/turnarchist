@@ -410,6 +410,9 @@ export class GameConstants {
     IronOre,
     IronOre,
     IronOre,
+    Scythe,
+    Sword,
+    DualDagger,
 
     Coal,
     Coal,

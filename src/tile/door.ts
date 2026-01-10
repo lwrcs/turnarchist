@@ -441,8 +441,8 @@ export class Door extends Passageway {
       this.room?.game?.players?.[this.room.game.localPlayerID]?.z ?? 0;
     if ((this.z ?? 0) !== activeZ) return;
     //if (this.type === DoorType.TUNNELDOOR) return;
-    this.updateFrame(delta);
-    Game.ctx.globalAlpha = this.iconAlpha;
+    const baseAlpha = Game.ctx.globalAlpha;
+    Game.ctx.globalAlpha = baseAlpha * this.iconAlpha;
     let multiplier = 0.125;
     if (this.unlocking === true) {
       this.iconAlpha *= 0.92 ** delta;
@@ -452,6 +452,9 @@ export class Door extends Passageway {
         this.removeLockIcon();
       }
     }
+
+    // Use a shared game-level frame for the floating sine animation.
+    const frame = this.game.doorIconFloatFrame;
     if (this.doorDir === Direction.UP) {
       //if top door
       Game.drawFX(
@@ -462,7 +465,7 @@ export class Door extends Passageway {
         this.x + this.iconXOffset,
         this.y -
           1.25 +
-          multiplier * Math.sin((this.frame * Math.PI) / 50) +
+          multiplier * Math.sin((frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
         1,
@@ -478,13 +481,13 @@ export class Door extends Passageway {
         this.x + this.iconXOffset,
         this.y -
           1.25 +
-          multiplier * Math.sin((this.frame * Math.PI) / 50) +
+          multiplier * Math.sin((frame * Math.PI) / 50) +
           this.iconYOffset,
         1,
         1,
       ); //if not top door
     }
-    Game.ctx.globalAlpha = 1;
+    Game.ctx.globalAlpha = baseAlpha;
   };
 
   private getAnchorAngle(): number {

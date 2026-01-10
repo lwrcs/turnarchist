@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.c2e1a7470c52105dbf6d.png";
+module.exports = __webpack_require__.p + "assets/itemset.25821f5dfaf86c2d6f90.png";
 
 /***/ }),
 
@@ -10000,7 +10000,8 @@ class HitWarning extends drawable_1.Drawable {
             this.fadeHitwarnings(delta);
             if (Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
                 Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) {
-                game_1.Game.ctx.globalAlpha = this.alpha;
+                const baseAlpha = game_1.Game.ctx.globalAlpha;
+                game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha;
                 if (this.isEnemy &&
                     utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
                     // Red Arrow that only renders one square away
@@ -10008,23 +10009,43 @@ class HitWarning extends drawable_1.Drawable {
                 }
                 if (false) // removed by dead control flow
 {}
-                game_1.Game.ctx.globalAlpha = 1;
+                game_1.Game.ctx.globalAlpha = baseAlpha;
             }
         };
         this.drawTopLayer = (delta) => {
             this.fadeHitwarnings(delta);
-            game_1.Game.ctx.globalAlpha = this.alpha;
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
+            game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha;
             if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
                 //white arrow top layer
                 game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
             }
-            if (utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y) <= 1) {
-                if (!this.dirOnly) {
-                    // Red X that renders 1 square away for top layer
+            if (!this.dirOnly) {
+                // Fade the X based on proximity (instead of hard on/off).
+                // Full strength within 1 tile, then fades to 0 by 2 tiles away.
+                const player = this.game.players[this.game.localPlayerID];
+                // Use rendered position (x - drawX) so transitions don't cause proximity to snap.
+                const playerX = player.x - player.drawX;
+                const playerY = player.y - player.drawY;
+                const dist = utils_1.Utils.distance(this.x, this.y, playerX, playerY);
+                const fadeStart = 1;
+                const fadeEnd = 2;
+                let proximityAlpha = 0;
+                if (dist <= fadeStart)
+                    proximityAlpha = 1;
+                else if (dist >= fadeEnd)
+                    proximityAlpha = 0;
+                else
+                    proximityAlpha = 1 - (dist - fadeStart) / (fadeEnd - fadeStart);
+                if (proximityAlpha > 0.001) {
+                    // Temporarily apply proximity fade on top of the hitwarning's own alpha.
+                    game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha * proximityAlpha;
                     game_1.Game.drawFX(18 + Math.floor(HitWarning.frame), 6, 1, 1, this.x, this.y - this.offsetY + 0, 1, 1);
+                    // Restore for any subsequent draws in this hitwarning.
+                    game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha;
                 }
             }
-            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.globalAlpha = baseAlpha;
         };
         this.x = x;
         this.y = y;
@@ -24479,6 +24500,40 @@ class Game {
         return Game._replayManager;
     }
     constructor() {
+        /**
+         * Shared animation frame used for door icon "floating" sine motion.
+         * Stored at the game level so all doors stay in sync and we avoid per-door frame updates.
+         */
+        this.doorIconFloatFrame = 0;
+        this.updateDoorIconFloatFrame = (delta) => {
+            // Match Passageway's historical frame progression (wrap at ~100).
+            this.doorIconFloatFrame += 1 * delta;
+            if (this.doorIconFloatFrame > 100)
+                this.doorIconFloatFrame = 0;
+        };
+        this.updateRoomOverShadeAlphas = (delta) => {
+            // During transitions, explicitly drive the two involved rooms to match the transition.
+            if (this.levelState === LevelState.TRANSITIONING && this.prevLevel) {
+                const t = Math.max(0, Math.min(1, (Date.now() - this.transitionStartTime) /
+                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME));
+                this.prevLevel.overShadeAlpha = 1 - t;
+                this.room.overShadeAlpha = t;
+                return;
+            }
+            // Otherwise: current room fades in, all others fade out and *stay* out.
+            // This ensures once a room has faded out, it remains hidden until re-entered.
+            const fadeSpeed = 0.18 * delta;
+            for (const r of this.rooms) {
+                if (r.pathId !== this.currentPathId)
+                    continue;
+                const target = r === this.room ? 1 : 0;
+                r.overShadeAlpha += (target - r.overShadeAlpha) * fadeSpeed;
+                if (r.overShadeAlpha < 0.001)
+                    r.overShadeAlpha = 0;
+                if (r.overShadeAlpha > 0.999)
+                    r.overShadeAlpha = 1;
+            }
+        };
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
         this.localPlayerID = "localplayer";
@@ -24812,6 +24867,9 @@ class Game {
             else if (delta > deltaMax) {
                 delta = deltaMax;
             }
+            // Shared per-frame animations
+            this.updateDoorIconFloatFrame(delta);
+            this.updateRoomOverShadeAlphas(delta);
             //delta = 0.025;
             // Update FPS tracking
             while (times.length > 0 && times[0] <= timestamp - 1000) {
@@ -25700,9 +25758,10 @@ class Game {
             for (const room of this.rooms) {
                 if (room.pathId !== this.currentPathId)
                     continue;
-                const shouldDrawOver = room === this.room || (room.active && room.entered);
+                // Above-shading should draw for entered rooms even if they are not currently active.
+                const shouldDrawOver = room === this.room || room.active || room.entered;
                 if (shouldDrawOver) {
-                    room.drawOverShade(delta, zLayer);
+                    room.drawOverShade(delta, zLayer, room.overShadeAlpha);
                 }
             }
             for (const room of this.rooms) {
@@ -25754,9 +25813,10 @@ class Game {
             for (const room of this.rooms) {
                 if (room.pathId !== this.currentPathId)
                     continue;
-                const shouldDrawOver = room === this.room || (room.active && room.entered);
+                // Above-shading should draw for entered rooms even if they are not currently active.
+                const shouldDrawOver = room === this.room || room.active || room.entered;
                 if (shouldDrawOver) {
-                    room.drawOverShade(delta, zLayer);
+                    room.drawOverShade(delta, zLayer, room.overShadeAlpha);
                 }
             }
             for (const room of this.rooms) {
@@ -25878,7 +25938,7 @@ class Game {
                     this.prevLevel.drawEntities(delta);
                     this.prevLevel.drawColorLayer();
                     this.prevLevel.drawShade(delta);
-                    this.prevLevel.drawOverShade(delta);
+                    this.prevLevel.drawOverShade(delta, undefined, this.prevLevel.overShadeAlpha);
                     /*
                     for (
                       let x = this.prevLevel.roomX - 1;
@@ -25906,6 +25966,12 @@ class Game {
                     Game.ctx.translate(-playerOffsetX, -playerOffsetY);
                     Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
                     this.drawRoomShadeAndColor(delta);
+                }
+                else {
+                    // When we don't draw other rooms during transitions, we still want the NEW room's
+                    // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
+                    // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
+                    this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
                 }
                 for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
                     for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
@@ -29421,6 +29487,7 @@ const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light
 const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
@@ -29430,7 +29497,9 @@ const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/ite
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
 const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
+const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
@@ -29740,6 +29809,9 @@ GameConstants.STARTING_DEV_INVENTORY = [
     ironOre_1.IronOre,
     ironOre_1.IronOre,
     ironOre_1.IronOre,
+    scythe_1.Scythe,
+    sword_1.Sword,
+    dualdagger_1.DualDagger,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -38350,14 +38422,6 @@ const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippa
 class Backplate extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
-        this.outline = () => {
-            return {
-                color: "#639bff",
-                opacity: 0.5,
-                offset: 1,
-                manhattan: true,
-            };
-        };
         this.coEquippable = (other) => {
             // Only allow one backplate.
             if (other instanceof Backplate)
@@ -38365,8 +38429,8 @@ class Backplate extends equippable_1.Equippable {
             return true;
         };
         // Reuse the existing armor tile for now (requested).
-        this.tileX = 5;
-        this.tileY = 0;
+        this.tileX = 10;
+        this.tileY = 4;
         this.stackable = false;
         this.name = Backplate.itemName;
         this.description = "Blocks damage from behind based on your facing.";
@@ -39498,6 +39562,7 @@ class Item extends drawable_1.Drawable {
                 this.durability -= 1;
         };
         this.drawAboveShading = (delta) => {
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
             if (this.pickedUp) {
                 if (this.animateToInventory === true && this.player) {
                     // Lerp towards the inventory button with ease-out
@@ -39523,12 +39588,12 @@ class Item extends drawable_1.Drawable {
                         this.alpha = Math.max(1 - k, Math.abs(distance / this.animStartDistance));
                     }
                     if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                        game_1.Game.ctx.globalAlpha = Math.max(0, this.alpha);
+                        game_1.Game.ctx.globalAlpha = baseAlpha * Math.max(0, this.alpha);
                     this.x = Math.floor(posX);
                     this.y = Math.floor(posY);
                     game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, posX, posY - 1.5, // + diffY,
                     this.w, this.h, this.level.shadeColor, this.shadeAmount());
-                    game_1.Game.ctx.globalAlpha = 1.0;
+                    game_1.Game.ctx.globalAlpha = baseAlpha;
                     if (this.animT >= 1) {
                         //this.animateToInventory = false;
                         this.level.items = this.level.items.filter((x) => x !== this);
@@ -39539,6 +39604,7 @@ class Item extends drawable_1.Drawable {
                     return;
                 }
             }
+            game_1.Game.ctx.globalAlpha = baseAlpha;
         };
         // Function to draw the top layer of the item
         this.drawTopLayer = (delta) => {
@@ -41043,8 +41109,8 @@ class ShoulderPlates extends equippable_1.Equippable {
             return true;
         };
         // Reuse existing armor tile for now (until we assign unique art).
-        this.tileX = 5;
-        this.tileY = 0;
+        this.tileX = 9;
+        this.tileY = 4;
         this.stackable = false;
         this.name = ShoulderPlates.itemName;
         this.description = "Reduces diagonal attacks by half.";
@@ -55071,6 +55137,12 @@ class Room {
         // Border tiles around shade content for sliced shading (ensures blur has room to spill)
         this.shadeSliceBorderTiles = 1;
         this.name = "";
+        /**
+         * Alpha for the "over shade" (above-shading / top overlay) pass.
+         * Driven by `Game` so rooms can smoothly fade out on exit and stay hidden
+         * until they are re-entered.
+         */
+        this.overShadeAlpha = 0;
         this.shadeColor = "#000000";
         this.wallInfo = new Map();
         this.tunnelDoor = null; // this is the door that connects the start room to the exit room
@@ -57164,9 +57236,13 @@ class Room {
                 return 0.25;
             }
         };
-        this.drawOverShade = (delta, zLayer = this.game?.players?.[this.game.localPlayerID]?.z ?? 0) => {
+        this.drawOverShade = (delta, zLayer = this.game?.players?.[this.game.localPlayerID]?.z ?? 0, alpha = 1) => {
+            if (alpha <= 0.001)
+                return;
             const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer;
             game_1.Game.ctx.save();
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
+            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
             for (const e of this.entities) {
                 if ((e?.z ?? 0) !== zLayer)
                     continue;
@@ -57189,6 +57265,9 @@ class Room {
                     continue;
                 s.drawTopLayer(delta);
             }
+            // Some top-layer draws may mutate globalAlpha and not restore it.
+            // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
+            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
             // draw over dithered shading
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -57196,11 +57275,13 @@ class Room {
                 }
             }
             //added for coin animation
+            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
             for (const i of this.items) {
                 if ((i?.z ?? 0) !== zLayer)
                     continue;
                 i.drawAboveShading(delta);
             }
+            game_1.Game.ctx.globalAlpha = baseAlpha;
             game_1.Game.ctx.restore();
         };
         // for stuff rendered on top of the player
@@ -63499,8 +63580,8 @@ class Door extends passageway_1.Passageway {
             if ((this.z ?? 0) !== activeZ)
                 return;
             //if (this.type === DoorType.TUNNELDOOR) return;
-            this.updateFrame(delta);
-            game_1.Game.ctx.globalAlpha = this.iconAlpha;
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
+            game_1.Game.ctx.globalAlpha = baseAlpha * this.iconAlpha;
             let multiplier = 0.125;
             if (this.unlocking === true) {
                 this.iconAlpha *= 0.92 ** delta;
@@ -63510,11 +63591,13 @@ class Door extends passageway_1.Passageway {
                     this.removeLockIcon();
                 }
             }
+            // Use a shared game-level frame for the floating sine animation.
+            const frame = this.game.doorIconFloatFrame;
             if (this.doorDir === game_1.Direction.UP) {
                 //if top door
                 game_1.Game.drawFX(this.iconTileX, 2, 1, 1, this.x + this.iconXOffset, this.y -
                     1.25 +
-                    multiplier * Math.sin((this.frame * Math.PI) / 50) +
+                    multiplier * Math.sin((frame * Math.PI) / 50) +
                     this.iconYOffset, 1, 1);
             }
             else {
@@ -63522,10 +63605,10 @@ class Door extends passageway_1.Passageway {
                     this.iconYOffset = -0.5;
                 game_1.Game.drawFX(this.iconTileX, 2, 1, 1, this.x + this.iconXOffset, this.y -
                     1.25 +
-                    multiplier * Math.sin((this.frame * Math.PI) / 50) +
+                    multiplier * Math.sin((frame * Math.PI) / 50) +
                     this.iconYOffset, 1, 1); //if not top door
             }
-            game_1.Game.ctx.globalAlpha = 1;
+            game_1.Game.ctx.globalAlpha = baseAlpha;
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("D");
         this.opened = false;

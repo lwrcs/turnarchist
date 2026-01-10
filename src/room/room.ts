@@ -326,6 +326,12 @@ export class Room {
   playerTicked: Player;
   skin: SkinType;
   entered: boolean; // has the player entered this level
+  /**
+   * Alpha for the "over shade" (above-shading / top overlay) pass.
+   * Driven by `Game` so rooms can smoothly fade out on exit and stay hidden
+   * until they are re-entered.
+   */
+  overShadeAlpha: number = 0;
   lightSources: Array<LightSource>;
   shadeColor = "#000000";
   innerWalls: Array<Wall>;
@@ -3788,9 +3794,13 @@ export class Room {
   drawOverShade = (
     delta: number,
     zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
+    alpha: number = 1,
   ) => {
+    if (alpha <= 0.001) return;
     const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer;
     Game.ctx.save();
+    const baseAlpha = Game.ctx.globalAlpha;
+    Game.ctx.globalAlpha = baseAlpha * alpha;
     for (const e of this.entities) {
       if ((e?.z ?? 0) !== zLayer) continue;
       e.drawTopLayer(delta); // health bars
@@ -3812,6 +3822,10 @@ export class Room {
       if (((s as any)?.worldZ ?? 0) !== zLayer) continue;
       s.drawTopLayer(delta);
     }
+
+    // Some top-layer draws may mutate globalAlpha and not restore it.
+    // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
+    Game.ctx.globalAlpha = baseAlpha * alpha;
     // draw over dithered shading
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -3819,11 +3833,13 @@ export class Room {
       }
     }
     //added for coin animation
+    Game.ctx.globalAlpha = baseAlpha * alpha;
     for (const i of this.items) {
       if ((i?.z ?? 0) !== zLayer) continue;
       i.drawAboveShading(delta);
     }
 
+    Game.ctx.globalAlpha = baseAlpha;
     Game.ctx.restore();
   };
 

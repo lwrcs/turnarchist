@@ -280,7 +280,8 @@ export class HitWarning extends Drawable {
       Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
       Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1
     ) {
-      Game.ctx.globalAlpha = this.alpha;
+      const baseAlpha = Game.ctx.globalAlpha;
+      Game.ctx.globalAlpha = baseAlpha * this.alpha;
       if (
         this.isEnemy &&
         Utils.distance(
@@ -317,14 +318,15 @@ export class HitWarning extends Drawable {
           1,
         );
       }
-      Game.ctx.globalAlpha = 1;
+      Game.ctx.globalAlpha = baseAlpha;
     }
   };
 
   drawTopLayer = (delta: number) => {
     this.fadeHitwarnings(delta);
 
-    Game.ctx.globalAlpha = this.alpha;
+    const baseAlpha = Game.ctx.globalAlpha;
+    Game.ctx.globalAlpha = baseAlpha * this.alpha;
 
     if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
       //white arrow top layer
@@ -339,16 +341,24 @@ export class HitWarning extends Drawable {
         1,
       );
     }
-    if (
-      Utils.distance(
-        this.x,
-        this.y,
-        this.game.players[this.game.localPlayerID].x,
-        this.game.players[this.game.localPlayerID].y,
-      ) <= 1
-    ) {
-      if (!this.dirOnly) {
-        // Red X that renders 1 square away for top layer
+    if (!this.dirOnly) {
+      // Fade the X based on proximity (instead of hard on/off).
+      // Full strength within 1 tile, then fades to 0 by 2 tiles away.
+      const player = this.game.players[this.game.localPlayerID];
+      // Use rendered position (x - drawX) so transitions don't cause proximity to snap.
+      const playerX = player.x - player.drawX;
+      const playerY = player.y - player.drawY;
+      const dist = Utils.distance(this.x, this.y, playerX, playerY);
+      const fadeStart = 1;
+      const fadeEnd = 2;
+      let proximityAlpha = 0;
+      if (dist <= fadeStart) proximityAlpha = 1;
+      else if (dist >= fadeEnd) proximityAlpha = 0;
+      else proximityAlpha = 1 - (dist - fadeStart) / (fadeEnd - fadeStart);
+
+      if (proximityAlpha > 0.001) {
+        // Temporarily apply proximity fade on top of the hitwarning's own alpha.
+        Game.ctx.globalAlpha = baseAlpha * this.alpha * proximityAlpha;
         Game.drawFX(
           18 + Math.floor(HitWarning.frame),
           6,
@@ -359,8 +369,10 @@ export class HitWarning extends Drawable {
           1,
           1,
         );
+        // Restore for any subsequent draws in this hitwarning.
+        Game.ctx.globalAlpha = baseAlpha * this.alpha;
       }
     }
-    Game.ctx.globalAlpha = 1;
+    Game.ctx.globalAlpha = baseAlpha;
   };
 }

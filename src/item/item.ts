@@ -348,6 +348,7 @@ export class Item extends Drawable {
   };
 
   drawAboveShading = (delta: number) => {
+    const baseAlpha = Game.ctx.globalAlpha;
     if (this.pickedUp) {
       if (this.animateToInventory === true && this.player) {
         // Lerp towards the inventory button with ease-out
@@ -392,7 +393,7 @@ export class Item extends Drawable {
         }
 
         if (GameConstants.ALPHA_ENABLED)
-          Game.ctx.globalAlpha = Math.max(0, this.alpha);
+          Game.ctx.globalAlpha = baseAlpha * Math.max(0, this.alpha);
         this.x = Math.floor(posX);
         this.y = Math.floor(posY);
 
@@ -408,7 +409,7 @@ export class Item extends Drawable {
           this.level.shadeColor,
           this.shadeAmount(),
         );
-        Game.ctx.globalAlpha = 1.0;
+        Game.ctx.globalAlpha = baseAlpha;
 
         if (this.animT >= 1) {
           //this.animateToInventory = false;
@@ -419,6 +420,7 @@ export class Item extends Drawable {
         return;
       }
     }
+    Game.ctx.globalAlpha = baseAlpha;
   };
 
   // Function to draw the top layer of the item

@@ -8,21 +8,12 @@ export class Backplate extends Equippable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     // Reuse the existing armor tile for now (requested).
-    this.tileX = 5;
-    this.tileY = 0;
+    this.tileX = 10;
+    this.tileY = 4;
     this.stackable = false;
     this.name = Backplate.itemName;
     this.description = "Blocks damage from behind based on your facing.";
   }
-
-  outline = () => {
-    return {
-      color: "#639bff", // blue
-      opacity: 0.5,
-      offset: 1,
-      manhattan: true,
-    };
-  };
 
   coEquippable = (other: Equippable): boolean => {
     // Only allow one backplate.
@@ -30,5 +21,3 @@ export class Backplate extends Equippable {
     return true;
   };
 }
-
-
