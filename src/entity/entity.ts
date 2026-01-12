@@ -99,7 +99,7 @@ export class Entity extends Drawable {
   protected exclamationFrame: number;
   lastX: number;
   lastY: number;
-  protected hitBy: Player;
+  protected hitBy: Player | null;
   protected crushX: number;
   protected crushY: number;
   protected crushVertical: boolean;
@@ -278,6 +278,29 @@ export class Entity extends Drawable {
     this.extendShadow = false;
     if (this.drop) this.drops.push(this.drop);
   }
+
+  /**
+   * Returns true if this entity occupies the given tile coordinate, accounting for footprint.
+   * Useful for interactions involving 2x2+ enemies where `x/y` alone is insufficient.
+   */
+  occupiesTile = (tx: number, ty: number, tz?: number): boolean => {
+    if (typeof tz === "number" && (this.z ?? 0) !== tz) return false;
+    const w = this.w ?? 1;
+    const h = this.h ?? 1;
+    return tx >= this.x && tx < this.x + w && ty >= this.y && ty < this.y + h;
+  };
+
+  /**
+   * Returns the nearest tile coordinate on this entity's footprint to the given point.
+   * This prevents "diagonal" misclassification when large enemies hit from their far edge.
+   */
+  closestTileToPoint = (px: number, py: number): { x: number; y: number } => {
+    const w = this.w ?? 1;
+    const h = this.h ?? 1;
+    const x = Math.max(this.x, Math.min(px, this.x + w - 1));
+    const y = Math.max(this.y, Math.min(py, this.y + h - 1));
+    return { x, y };
+  };
 
   static add<
     T extends new (
@@ -748,7 +771,7 @@ export class Entity extends Drawable {
   ) => {};
 
   hurt = (
-    playerHitBy: Player,
+    playerHitBy: Player | null,
     damage: number,
     type: "none" | "poison" | "blood" | "heal" = "none",
   ) => {

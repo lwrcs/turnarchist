@@ -1715,6 +1715,12 @@ export class Game {
         enabled = GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
         this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
         break;
+      case "armorflat":
+        GameplaySettings.ARMOR_FLAT_REDUCTION =
+          !GameplaySettings.ARMOR_FLAT_REDUCTION;
+        enabled = GameplaySettings.ARMOR_FLAT_REDUCTION ? "enabled" : "disabled";
+        this.pushMessage(`Armor flat reduction (-0.5) is now ${enabled}`);
+        break;
       case "inline":
         GameConstants.SHADE_INLINE_IN_ENTITY_LAYER =
           !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;

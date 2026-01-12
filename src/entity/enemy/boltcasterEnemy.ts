@@ -8,6 +8,7 @@ import { Enemy } from "./enemy";
 import { HitWarning } from "../../drawable/hitWarning";
 import { ArrowParticle } from "../../particle/arrowParticle";
 import { GameConstants } from "../../game/gameConstants";
+import { Entity } from "../entity";
 
 enum BoltcasterState {
   SEEK_LINE,
@@ -61,7 +62,11 @@ export class BoltcasterEnemy extends Enemy {
       const tile = this.room.roomArray[cx]?.[cy];
       if (!tile || tile.isSolid()) return false;
       // Any entity blocks line except the player at the end
-      if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+      if (
+        this.room.entities.some(
+          (e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0),
+        )
+      )
         return false;
     }
   };
@@ -145,7 +150,11 @@ export class BoltcasterEnemy extends Enemy {
       if (!this.room.tileInside(cx, cy)) return false;
       const tile = this.room.roomArray[cx]?.[cy];
       if (!tile || tile.isSolid()) return false;
-      if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+      if (
+        this.room.entities.some(
+          (e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0),
+        )
+      )
         return false;
     }
   };
@@ -191,7 +200,7 @@ export class BoltcasterEnemy extends Enemy {
     let endY = cy;
     let lastFreeX = cx;
     let lastFreeY = cy;
-    let hitEntity: any = null;
+    let hitEntity: Entity | null = null;
     let hitPlayer = false;
 
     while (true) {
@@ -223,7 +232,9 @@ export class BoltcasterEnemy extends Enemy {
         hitPlayer = true;
         break;
       }
-      const entity = this.room.entities.find((e) => e.x === cx && e.y === cy);
+      const entity = this.room.entities.find(
+        (e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0),
+      );
       if (entity) {
         hitEntity = entity;
         endX = cx;
@@ -250,9 +261,12 @@ export class BoltcasterEnemy extends Enemy {
 
     // Apply damage
     if (hitPlayer && player) {
-      player.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+      const src = this.closestTileToPoint(player.x, player.y);
+      player.hurt(this.hit(), this.name, { source: { x: src.x, y: src.y } });
     } else if (hitEntity) {
-      (hitEntity as any).hurt?.(this as any, 1);
+      // Enemy-to-enemy damage should not feed an Enemy instance into `hurt()`.
+      // `hurt()` expects a Player (for aggro/targeting) or null (environmental/neutral damage).
+      hitEntity.hurt(null, 1);
     }
   };
 

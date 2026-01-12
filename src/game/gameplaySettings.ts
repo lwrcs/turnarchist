@@ -10,6 +10,13 @@ export class GameplaySettings {
   static NO_ENEMIES = false;
   static EQUIP_USES_TURN = false;
   static UNBREAKABLE_ITEMGROUP_LOOT = false;
+
+  /**
+   * Armor directional mitigation mode:
+   * - false (default): halve damage, clamped to a minimum of 0.5
+   * - true: subtract 0.5 damage, clamped to a minimum of 0
+   */
+  static ARMOR_FLAT_REDUCTION = true;
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
   static readonly TUTORIAL_ENABLED = false;

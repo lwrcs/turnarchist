@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.25821f5dfaf86c2d6f90.png";
+module.exports = __webpack_require__.p + "assets/itemset.17f79504ebf7ad5f5da2.png";
 
 /***/ }),
 
@@ -10295,7 +10295,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
             return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
-            this.handleEnemyCase(playerHitBy);
+            this.handleEnemyCase(playerHitBy ?? undefined);
             let hitShield = false;
             let shieldHealth = 0;
             if (this.shielded) {
@@ -10396,7 +10396,9 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -11610,7 +11612,9 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                         continue;
                                     if (wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)) {
                                         const closestTile = this.closestTile(this.game.players[i]);
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: closestTile.x, y: closestTile.y },
+                                        });
                                         this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
                                         this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -12022,7 +12026,10 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                                     break;
                                             }
                                             if (playerHit) {
-                                                this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                                const src = this.closestTileToPoint(this.game.players[i].x, this.game.players[i].y);
+                                                this.game.players[i].hurt(this.hit(), this.name, {
+                                                    source: { x: src.x, y: src.y },
+                                                });
                                                 this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                                 this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                                 if (this.game.players[i] ===
@@ -12184,7 +12191,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
             return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
-            this.handleEnemyCase(playerHitBy);
+            this.handleEnemyCase(playerHitBy ?? undefined);
             let hitShield = false;
             let shieldHealth = 0;
             if (this.shielded) {
@@ -12318,7 +12325,9 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                     const closestTile = this.closestTile(this.game.players[i]);
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         wouldHit(this.game.players[i], moveX, moveY)) {
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -12623,7 +12632,10 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                                 break;
                                         }
                                         if (playerHit) {
-                                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                            const src = this.closestTileToPoint(this.game.players[i].x, this.game.players[i].y);
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: src.x, y: src.y },
+                                            });
                                             this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                             this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                             if (this.game.players[i] ===
@@ -13043,7 +13055,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 if (!tile || tile.isSolid())
                     return false;
                 // Any entity blocks line except the player at the end
-                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                if (this.room.entities.some((e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0)))
                     return false;
             }
         };
@@ -13120,7 +13132,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 const tile = this.room.roomArray[cx]?.[cy];
                 if (!tile || tile.isSolid())
                     return false;
-                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                if (this.room.entities.some((e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0)))
                     return false;
             }
         };
@@ -13199,7 +13211,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     hitPlayer = true;
                     break;
                 }
-                const entity = this.room.entities.find((e) => e.x === cx && e.y === cy);
+                const entity = this.room.entities.find((e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0));
                 if (entity) {
                     hitEntity = entity;
                     endX = cx;
@@ -13221,10 +13233,13 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, startX, startY, finalEndX, finalEndY));
             // Apply damage
             if (hitPlayer && player) {
-                player.hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                const src = this.closestTileToPoint(player.x, player.y);
+                player.hurt(this.hit(), this.name, { source: { x: src.x, y: src.y } });
             }
             else if (hitEntity) {
-                hitEntity.hurt?.(this, 1);
+                // Enemy-to-enemy damage should not feed an Enemy instance into `hurt()`.
+                // `hurt()` expects a Player (for aggro/targeting) or null (environmental/neutral damage).
+                hitEntity.hurt(null, 1);
             }
         };
         this.draw = (delta) => {
@@ -17708,7 +17723,7 @@ class SkullEnemy extends enemy_1.Enemy {
             return this.damage;
         };
         this.hurt = (playerHitBy, damage, type = "none") => {
-            this.handleEnemyCase(playerHitBy);
+            this.handleEnemyCase(playerHitBy ?? undefined);
             let hitShield = false;
             let shieldHealth = 0;
             if (this.shielded) {
@@ -17802,7 +17817,9 @@ class SkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                        this.game.players[i].hurt(this.hit(), this.name, {
+                                            source: { x: this.x, y: this.y },
+                                        });
                                         this.drawX = 0.5 * (this.x - this.game.players[i].x);
                                         this.drawY = 0.5 * (this.y - this.game.players[i].y);
                                         if (this.game.players[i] ===
@@ -19711,6 +19728,28 @@ class Entity extends drawable_1.Drawable {
         this.lootDropped = false;
         this.seeThroughAlpha = 1;
         this.softSeeThroughAlpha = 1;
+        /**
+         * Returns true if this entity occupies the given tile coordinate, accounting for footprint.
+         * Useful for interactions involving 2x2+ enemies where `x/y` alone is insufficient.
+         */
+        this.occupiesTile = (tx, ty, tz) => {
+            if (typeof tz === "number" && (this.z ?? 0) !== tz)
+                return false;
+            const w = this.w ?? 1;
+            const h = this.h ?? 1;
+            return tx >= this.x && tx < this.x + w && ty >= this.y && ty < this.y + h;
+        };
+        /**
+         * Returns the nearest tile coordinate on this entity's footprint to the given point.
+         * This prevents "diagonal" misclassification when large enemies hit from their far edge.
+         */
+        this.closestTileToPoint = (px, py) => {
+            const w = this.w ?? 1;
+            const h = this.h ?? 1;
+            const x = Math.max(this.x, Math.min(px, this.x + w - 1));
+            const y = Math.max(this.y, Math.min(py, this.y + h - 1));
+            return { x, y };
+        };
         this.hoverText = () => {
             return this.name;
         };
@@ -25355,6 +25394,12 @@ class Game {
                     gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN = !gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN;
                     enabled = gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN ? "enabled" : "disabled";
                     this.pushMessage(`Equipping an item takes a turn is now ${enabled}`);
+                    break;
+                case "armorflat":
+                    gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION =
+                        !gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION;
+                    enabled = gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION ? "enabled" : "disabled";
+                    this.pushMessage(`Armor flat reduction (-0.5) is now ${enabled}`);
                     break;
                 case "inline":
                     gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER =
@@ -32279,6 +32324,12 @@ GameplaySettings.THROTTLE_SPAWNERS = true;
 GameplaySettings.NO_ENEMIES = false;
 GameplaySettings.EQUIP_USES_TURN = false;
 GameplaySettings.UNBREAKABLE_ITEMGROUP_LOOT = false;
+/**
+ * Armor directional mitigation mode:
+ * - false (default): halve damage, clamped to a minimum of 0.5
+ * - true: subtract 0.5 damage, clamped to a minimum of 0
+ */
+GameplaySettings.ARMOR_FLAT_REDUCTION = true;
 GameplaySettings.PRESET_BOSSES = false;
 GameplaySettings.PNG_LEVEL_PROBABILITY = 0.1;
 GameplaySettings.TUTORIAL_ENABLED = false;
@@ -50581,73 +50632,62 @@ class Player extends drawable_1.Drawable {
             return this.inventory.getChestPlate();
         };
         this.isAttackFromBehind = (source) => {
-            const dx = source.x - this.x;
-            const dy = source.y - this.y;
-            if (dx === 0 && dy === 0)
+            const incoming = this.getIncomingAttackDirection(source);
+            if (incoming === null)
                 return false;
-            // Backplate only blocks straight-behind hits, not back-diagonals.
-            if (dx !== 0 && dy !== 0)
-                return false;
-            // Choose the dominant axis to decide which "side" the attack is coming from.
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                // Horizontal
-                if (dx > 0)
-                    return this.defenseFacing === game_1.Direction.LEFT;
-                if (dx < 0)
-                    return this.defenseFacing === game_1.Direction.RIGHT;
-                return false;
+            // Backplate blocks "behind" cardinal hits only (never diagonals).
+            switch (this.defenseFacing) {
+                case game_1.Direction.UP:
+                    return incoming === game_1.Direction.DOWN;
+                case game_1.Direction.DOWN:
+                    return incoming === game_1.Direction.UP;
+                case game_1.Direction.LEFT:
+                    return incoming === game_1.Direction.RIGHT;
+                case game_1.Direction.RIGHT:
+                    return incoming === game_1.Direction.LEFT;
+                default:
+                    return false;
             }
-            // Vertical
-            if (dy > 0)
-                return this.defenseFacing === game_1.Direction.UP;
-            if (dy < 0)
-                return this.defenseFacing === game_1.Direction.DOWN;
-            return false;
         };
         this.isAttackDiagonal = (source) => {
-            const dx = source.x - this.x;
-            const dy = source.y - this.y;
-            if (dx === 0 && dy === 0)
+            const incoming = this.getIncomingAttackDirection(source);
+            if (incoming === null)
                 return false;
-            return dx !== 0 && dy !== 0;
+            return (incoming === game_1.Direction.UP_LEFT ||
+                incoming === game_1.Direction.UP_RIGHT ||
+                incoming === game_1.Direction.DOWN_LEFT ||
+                incoming === game_1.Direction.DOWN_RIGHT);
         };
         this.isAttackFromSideNoDiagonal = (source) => {
-            const dx = source.x - this.x;
-            const dy = source.y - this.y;
-            // Same-tile or diagonal doesn't count.
-            if (dx === 0 && dy === 0)
+            const incoming = this.getIncomingAttackDirection(source);
+            if (incoming === null)
                 return false;
-            if (dx !== 0 && dy !== 0)
-                return false;
-            // Sides are defined relative to the player's locked defenseFacing.
-            // Facing UP/DOWN => sides are EAST/WEST. Facing LEFT/RIGHT => sides are NORTH/SOUTH.
+            // Gauntlets block left/right relative to defenseFacing (cardinal only).
             switch (this.defenseFacing) {
                 case game_1.Direction.UP:
                 case game_1.Direction.DOWN:
-                    return dy === 0; // horizontal hit
+                    return incoming === game_1.Direction.LEFT || incoming === game_1.Direction.RIGHT;
                 case game_1.Direction.LEFT:
                 case game_1.Direction.RIGHT:
-                    return dx === 0; // vertical hit
+                    return incoming === game_1.Direction.UP || incoming === game_1.Direction.DOWN;
                 default:
                     return false;
             }
         };
         this.isAttackFromFrontNoDiagonal = (source) => {
-            const dx = source.x - this.x;
-            const dy = source.y - this.y;
-            if (dx === 0 && dy === 0)
+            const incoming = this.getIncomingAttackDirection(source);
+            if (incoming === null)
                 return false;
-            if (dx !== 0 && dy !== 0)
-                return false;
+            // Chestplate blocks "front" cardinal hits only (never diagonals).
             switch (this.defenseFacing) {
                 case game_1.Direction.UP:
-                    return dx === 0 && dy < 0;
+                    return incoming === game_1.Direction.UP;
                 case game_1.Direction.DOWN:
-                    return dx === 0 && dy > 0;
+                    return incoming === game_1.Direction.DOWN;
                 case game_1.Direction.LEFT:
-                    return dy === 0 && dx < 0;
+                    return incoming === game_1.Direction.LEFT;
                 case game_1.Direction.RIGHT:
-                    return dy === 0 && dx > 0;
+                    return incoming === game_1.Direction.RIGHT;
                 default:
                     return false;
             }
@@ -50657,20 +50697,38 @@ class Player extends drawable_1.Drawable {
             const dy = source.y - this.y;
             if (dx === 0 && dy === 0)
                 return null;
-            // If diagonal, preserve diagonal direction for diagonal block FX.
+            // 8-way quantization:
+            // - Pure axis-aligned => cardinal.
+            // - If both axes present, choose diagonal only when magnitudes tie; otherwise choose dominant axis.
             if (dx !== 0 && dy !== 0) {
-                if (dx > 0 && dy < 0)
-                    return game_1.Direction.UP_RIGHT;
-                if (dx < 0 && dy < 0)
-                    return game_1.Direction.UP_LEFT;
-                if (dx < 0 && dy > 0)
-                    return game_1.Direction.DOWN_LEFT;
-                return game_1.Direction.DOWN_RIGHT;
+                if (Math.abs(dx) === Math.abs(dy)) {
+                    if (dx > 0 && dy < 0)
+                        return game_1.Direction.UP_RIGHT;
+                    if (dx < 0 && dy < 0)
+                        return game_1.Direction.UP_LEFT;
+                    if (dx < 0 && dy > 0)
+                        return game_1.Direction.DOWN_LEFT;
+                    return game_1.Direction.DOWN_RIGHT;
+                }
+                // Dominant axis wins (cardinal), so armor that blocks "no diagonals" doesn't
+                // accidentally treat shallow angles as diagonal hits.
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    return dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+                }
+                return dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
             }
             if (Math.abs(dx) >= Math.abs(dy)) {
                 return dx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
             }
             return dy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+        };
+        this.clampPlayerIncomingDamage = (damage) => {
+            // We support 0.5 increments but must never produce 0.25 increments.
+            // - Half mode: minimum 0.5 (so 0.5 stays 0.5)
+            // - Flat mode: minimum 0 (so 0.5 can become 0)
+            const snappedDownToHalf = Math.floor(damage * 2) / 2;
+            const min = gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION ? 0 : 0.5;
+            return Math.max(min, snappedDownToHalf);
         };
         this.spawnDirectionalBlockFX = (source) => {
             const dir = this.getIncomingAttackDirection(source);
@@ -50717,24 +50775,40 @@ class Player extends drawable_1.Drawable {
                 const shoulders = this.getEquippedShoulderPlates();
                 if (shoulders && this.isAttackDiagonal(source)) {
                     this.spawnDirectionalBlockFX(source);
-                    damage *= 0.5;
+                    if (gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION)
+                        damage -= 0.5;
+                    else
+                        damage *= 0.5;
                 }
                 else {
                     // Gauntlets: halve hits that come from the sides (axis-aligned only, no diagonal).
                     const gauntlets = this.getEquippedGauntlets();
                     if (gauntlets && this.isAttackFromSideNoDiagonal(source)) {
                         this.spawnDirectionalBlockFX(source);
-                        damage *= 0.5;
+                        if (gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION)
+                            damage -= 0.5;
+                        else
+                            damage *= 0.5;
                     }
                     else {
                         // Chest plate: halve hits that come from the front (axis-aligned only).
                         const chestPlate = this.getEquippedChestPlate();
                         if (chestPlate && this.isAttackFromFrontNoDiagonal(source)) {
                             this.spawnDirectionalBlockFX(source);
-                            damage *= 0.5;
+                            if (gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION)
+                                damage -= 0.5;
+                            else
+                                damage *= 0.5;
                         }
                     }
                 }
+            }
+            // Ensure damage is in 0.5 increments (never 0.25), regardless of reductions above.
+            damage = this.clampPlayerIncomingDamage(damage);
+            // Fully mitigated by directional armor.
+            if (damage <= 0) {
+                this.lastHitBy = enemy;
+                return;
             }
             // Handle armor damage
             const armor = this.inventory.getArmor();
@@ -54020,16 +54094,21 @@ class Explosion extends projectile_1.Projectile {
                 entity.hurt(playerHitBy, damage);
             }
         }
-        // Z/room: only hurt the player if they're on the same z and in the same room.
+        // Z/room: hurt any players on the blast tile (independent of who lit the bomb).
         try {
-            const playerRoom = playerHitBy?.getRoom
-                ? playerHitBy.getRoom()
-                : this.parent?.room?.game?.rooms?.[playerHitBy.levelID];
-            if (playerRoom === this.parent.room &&
-                (playerHitBy?.z ?? 0) === (this.z ?? 0) &&
-                playerHitBy.x === this.x &&
-                playerHitBy.y === this.y) {
-                playerHitBy.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
+            const game = this.parent?.room?.game;
+            if (game) {
+                for (const p of Object.values(game.players)) {
+                    if (!p)
+                        continue;
+                    const pRoom = p.getRoom ? p.getRoom() : game.rooms?.[p.levelID];
+                    if (pRoom === this.parent.room &&
+                        (p.z ?? 0) === (this.z ?? 0) &&
+                        p.x === this.x &&
+                        p.y === this.y) {
+                        p.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
+                    }
+                }
             }
         }
         catch { }

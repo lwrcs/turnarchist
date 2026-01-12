@@ -170,7 +170,13 @@ export class BigKnightEnemy extends Enemy {
                       if (playerHit) break;
                     }
                     if (playerHit) {
-                      this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                      const src = this.closestTileToPoint(
+                        this.game.players[i].x,
+                        this.game.players[i].y,
+                      );
+                      this.game.players[i].hurt(this.hit(), this.name, {
+                        source: { x: src.x, y: src.y },
+                      });
                       this.drawX = 0.5 * (this.x - this.game.players[i].x);
                       this.drawY = 0.5 * (this.y - this.game.players[i].y);
                       if (

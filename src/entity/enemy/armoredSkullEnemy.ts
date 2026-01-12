@@ -50,11 +50,11 @@ export class ArmoredSkullEnemy extends Enemy {
   };
 
   hurt = (
-    playerHitBy: Player,
+    playerHitBy: Player | null,
     damage: number,
     type: "none" | "poison" | "blood" | "heal" = "none",
   ) => {
-    this.handleEnemyCase(playerHitBy);
+    this.handleEnemyCase(playerHitBy ?? undefined);
 
     let hitShield = false;
     let shieldHealth = 0;
@@ -165,7 +165,9 @@ export class ArmoredSkullEnemy extends Enemy {
                   this.game.players[i].x === moveX &&
                   this.game.players[i].y === moveY
                 ) {
-                  this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                  this.game.players[i].hurt(this.hit(), this.name, {
+                    source: { x: this.x, y: this.y },
+                  });
                   this.drawX = 0.5 * (this.x - this.game.players[i].x);
                   this.drawY = 0.5 * (this.y - this.game.players[i].y);
                   if (

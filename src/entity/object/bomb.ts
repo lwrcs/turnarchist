@@ -89,7 +89,7 @@ export class Bomb extends Entity {
     this.hasBloom = true;
   };
 
-  hurt = (playerHitBy: Player, damage: number) => {
+  hurt = (playerHitBy: Player | null, damage: number) => {
     if (!this.lit) {
       this.lit = true;
       this.createLightSource();

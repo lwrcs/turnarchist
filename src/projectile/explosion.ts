@@ -14,7 +14,12 @@ export class Explosion extends Projectile {
   parent: Entity;
   offsetFrame: number;
 
-  constructor(entity: Entity, x: number, y: number, playerHitBy: Player) {
+  constructor(
+    entity: Entity,
+    x: number,
+    y: number,
+    playerHitBy: Player | null,
+  ) {
     super(entity, x, y);
     this.state = 0;
     this.frame = 6;
@@ -56,18 +61,22 @@ export class Explosion extends Projectile {
       }
     }
 
-    // Z/room: only hurt the player if they're on the same z and in the same room.
+    // Z/room: hurt any players on the blast tile (independent of who lit the bomb).
     try {
-      const playerRoom = playerHitBy?.getRoom
-        ? playerHitBy.getRoom()
-        : this.parent?.room?.game?.rooms?.[playerHitBy.levelID];
-      if (
-        playerRoom === this.parent.room &&
-        (playerHitBy?.z ?? 0) === (this.z ?? 0) &&
-        playerHitBy.x === this.x &&
-        playerHitBy.y === this.y
-      ) {
-        playerHitBy.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
+      const game = this.parent?.room?.game;
+      if (game) {
+        for (const p of Object.values(game.players)) {
+          if (!p) continue;
+          const pRoom = p.getRoom ? p.getRoom() : game.rooms?.[p.levelID];
+          if (
+            pRoom === this.parent.room &&
+            (p.z ?? 0) === (this.z ?? 0) &&
+            p.x === this.x &&
+            p.y === this.y
+          ) {
+            p.hurt(damage, "bomb", { source: { x: this.x, y: this.y } });
+          }
+        }
       }
     } catch {}
   }
