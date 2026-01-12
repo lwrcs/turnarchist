@@ -78,6 +78,42 @@ export class GameConstants {
   static SHADE_LEVELS = 50; //25
   static ENTITY_SHADE_LEVELS = 40; //10
 
+  /**
+   * Hard cap on the number of cached shaded sprite canvases in `Game.shade_canvases`.
+   * Prevents unbounded growth (which can lead to “sprites disappear / screen goes black” failures).
+   */
+  static SHADE_CANVAS_CACHE_MAX = 12000;
+  /**
+   * Quantization levels for shadeColor when generating shade cache keys.
+   * Lower = fewer unique colors = smaller cache, at the cost of slightly less smooth color tinting.
+   */
+  static SHADE_COLOR_LEVELS = 16;
+
+  /**
+   * Hard cap on cached text canvases in `Game.text_rendering_canvases`.
+   */
+  static TEXT_CANVAS_CACHE_MAX = 8000;
+
+  /**
+   * Debug: poison the shade cache by building cached shaded sprites from a transparent source.
+   * This reproduces the "game runs but all sprites disappear" symptom without console errors.
+   */
+  static DEBUG_POISON_SHADE_CACHE = false;
+  /**
+   * When DEBUG_POISON_SHADE_CACHE is enabled via command, keep it active for this many frames.
+   */
+  static DEBUG_POISON_SHADE_CACHE_FRAMES = 0;
+
+  /**
+   * Auto-recovery: detect when the shaded sprite cache has been poisoned (all sprites disappear)
+   * and clear/rebuild caches automatically.
+   */
+  static AUTO_RECOVER_POISONED_SHADE_CACHE = true;
+  /**
+   * Throttle for the auto-recovery canary, in milliseconds.
+   */
+  static AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS = 200;
+
   static readonly TILESIZE = 16;
   static SCALE = null;
   static SOFT_SCALE = 6;
@@ -190,6 +226,60 @@ export class GameConstants {
   static SHADE_INLINE_IN_ENTITY_LAYER = true;
   static USE_OPTIMIZED_SHADING = false;
   static SMOOTH_LIGHTING = true;
+  // Diagnostics / repro toggles (off by default)
+  /**
+   * If true, skip shadeOpacity quantization in `Game.drawHelper`.
+   * This will rapidly increase `Game.shade_canvases` size if shadeOpacity varies continuously.
+   */
+  static DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION = false;
+  /**
+   * If true, do not clear global canvas caches in `Room.exitLevel()`.
+   * Useful to test cache accumulation vs. per-room canvas memory.
+   */
+  static DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES = false;
+  /**
+   * If true, periodically logs cache stats to the console.
+   */
+  static DEBUG_LOG_CANVAS_CACHE_STATS = false;
+  /**
+   * If true, forces `Game.shade_canvases` growth by salting the cache key so entries
+   * cannot be reused. Use with caution: this can explode memory quickly.
+   */
+  static DEBUG_FORCE_SHADE_CACHE_GROWTH = false;
+  /**
+   * Controls how often we salt the shade cache key. Lower = more aggressive growth.
+   * Example: 1 salts every `drawHelper` call; 10 salts ~every 10 calls.
+   */
+  static DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE = 1;
+  /**
+   * If true, forces WebGL blur result canvas cache growth by salting the cache key in
+   * `WebGLBlurRenderer.getCachedCanvas()`. This can quickly increase memory usage.
+   */
+  static DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH = false;
+  /**
+   * Controls how often we salt the WebGL blur result canvas cache key. Lower = more aggressive growth.
+   */
+  static DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE = 1;
+  /**
+   * Max size for WebGL blur result canvas cache. Higher can reproduce memory pressure faster.
+   */
+  static DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE = 10;
+  /**
+   * Default extra padding (in tiles) for per-room offscreen canvases:
+   * `colorOffscreenCanvas`, `shadeOffscreenCanvas`, `bloomOffscreenCanvas`.
+   * Increasing this makes memory pressure happen sooner (useful for repro).
+   */
+  static DEBUG_ROOM_OFFSCREEN_PAD_TILES = 10;
+  /**
+   * If true, periodically reallocate the Canvas2D shade blur temp canvas used by
+   * inline sliced shading (when WebGL blur is off). Useful to reproduce canvas/memory bugs.
+   */
+  static DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS = false;
+  /**
+   * Controls how often we reallocate the shade blur temp canvas when thrashing is enabled.
+   * 1 = every call (very aggressive).
+   */
+  static DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE = 1;
   static ctxBlurEnabled = true;
   static BLUR_ENABLED = true;
   static USE_WEBGL_BLUR = false;

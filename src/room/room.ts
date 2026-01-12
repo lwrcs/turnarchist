@@ -535,12 +535,16 @@ export class Room {
     this.walls = Array<Wall>();
     this.decorations = Array<Decoration>();
     this.underwater = envType === EnvType.FLOODED_CAVE;
+    const padTiles = Math.max(
+      0,
+      Math.floor(GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES),
+    );
     // Initialize Color Offscreen Canvas
     this.colorOffscreenCanvas = document.createElement("canvas");
     this.colorOffscreenCanvas.width =
-      (this.width + 10) * GameConstants.TILESIZE;
+      (this.width + padTiles) * GameConstants.TILESIZE;
     this.colorOffscreenCanvas.height =
-      (this.height + 10) * GameConstants.TILESIZE;
+      (this.height + padTiles) * GameConstants.TILESIZE;
     const colorCtx = this.colorOffscreenCanvas.getContext("2d");
     if (!colorCtx) {
       throw new Error("Failed to initialize color offscreen canvas context.");
@@ -550,9 +554,9 @@ export class Room {
     // Initialize Shade Offscreen Canvas
     this.shadeOffscreenCanvas = document.createElement("canvas");
     this.shadeOffscreenCanvas.width =
-      (this.width + 10) * GameConstants.TILESIZE;
+      (this.width + padTiles) * GameConstants.TILESIZE;
     this.shadeOffscreenCanvas.height =
-      (this.height + 10) * GameConstants.TILESIZE;
+      (this.height + padTiles) * GameConstants.TILESIZE;
     const shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
     if (!shadeCtx) {
       throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -562,9 +566,9 @@ export class Room {
     // Initialize Bloom Offscreen Canvas
     this.bloomOffscreenCanvas = document.createElement("canvas");
     this.bloomOffscreenCanvas.width =
-      (this.width + 10) * GameConstants.TILESIZE;
+      (this.width + padTiles) * GameConstants.TILESIZE;
     this.bloomOffscreenCanvas.height =
-      (this.height + 10) * GameConstants.TILESIZE;
+      (this.height + padTiles) * GameConstants.TILESIZE;
     const bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
     if (!bloomCtx) {
       throw new Error("Failed to initialize bloom offscreen canvas context.");
@@ -1282,8 +1286,15 @@ export class Room {
   exitLevel = () => {
     //this.game.onResize(); // stupid hack to keep fps high
 
-    Game.shade_canvases = {};
-    Game.text_rendering_canvases = {};
+    if (!GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES) {
+      Game.shade_canvases = {};
+      Game.text_rendering_canvases = {};
+      // Keep FIFO order arrays in sync with the cleared caches.
+      try {
+        Game.shade_canvas_order = [];
+        Game.text_canvas_order = [];
+      } catch {}
+    }
 
     for (let door of this.doors) {
       if (!door || !door.linkedDoor) continue;
@@ -3175,6 +3186,27 @@ export class Room {
     } else {
       // Canvas2D blur path: we cannot use ctx.filter during main slicing draws.
       // So we pre-blur into a temporary canvas once.
+      if (
+        GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS &&
+        Math.max(
+          1,
+          Math.floor(GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE),
+        ) > 0
+      ) {
+        // Periodically drop the temp canvas so we force reallocations (repro tool).
+        const stride = Math.max(
+          1,
+          Math.floor(GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE),
+        );
+        (this as any).__shadeBlurThrashCounter =
+          ((this as any).__shadeBlurThrashCounter ?? 0) + 1;
+        const n = (this as any).__shadeBlurThrashCounter as number;
+        if (n % stride === 0) {
+          this.shadeBlurTempCanvas = undefined;
+          this.shadeBlurTempCtx = undefined;
+        }
+      }
+
       if (!this.shadeBlurTempCanvas) {
         this.shadeBlurTempCanvas = document.createElement("canvas");
         this.shadeBlurTempCanvas.width = this.shadeOffscreenCanvas.width;
@@ -5234,5 +5266,61 @@ export class Room {
         this.blurCache.lastLightingUpdate = this.lastLightingUpdate;
       }
     }
+  };
+
+  /**
+   * Debug/diagnostics: estimate bytes used by this room's major offscreen canvases.
+   * Note: browsers may allocate more internally; this is a lower-bound estimate (RGBA8).
+   */
+  estimateOffscreenCanvasBytes = (): number => {
+    const bytesFor = (c?: HTMLCanvasElement | null) =>
+      c ? c.width * c.height * 4 : 0;
+    let total = 0;
+    total += bytesFor(this.colorOffscreenCanvas);
+    total += bytesFor(this.shadeOffscreenCanvas);
+    total += bytesFor(this.bloomOffscreenCanvas);
+    total += bytesFor(this.shadeBlurTempCanvas);
+    total += bytesFor(this.shadeSliceTempCanvas);
+    total += bytesFor(this.blurCache?.color6px);
+    total += bytesFor(this.blurCache?.color8px);
+    total += bytesFor(this.blurCache?.color12px);
+    total += bytesFor(this.blurCache?.shade5px);
+    total += bytesFor(this.blurCache?.bloom8px);
+    return total;
+  };
+
+  /**
+   * Debug/repro: resize this room's offscreen canvases to change memory pressure characteristics.
+   * Use with care; large sizes can freeze/crash the tab.
+   */
+  resizeOffscreenCanvases = (padTiles: number) => {
+    const pad = Math.max(0, Math.floor(padTiles));
+    const w = (this.width + pad) * GameConstants.TILESIZE;
+    const h = (this.height + pad) * GameConstants.TILESIZE;
+
+    this.colorOffscreenCanvas.width = w;
+    this.colorOffscreenCanvas.height = h;
+    const cctx = this.colorOffscreenCanvas.getContext("2d");
+    if (!cctx) throw new Error("Failed to re-init color offscreen canvas ctx.");
+    this.colorOffscreenCtx = cctx;
+
+    this.shadeOffscreenCanvas.width = w;
+    this.shadeOffscreenCanvas.height = h;
+    const sctx = this.shadeOffscreenCanvas.getContext("2d");
+    if (!sctx) throw new Error("Failed to re-init shade offscreen canvas ctx.");
+    this.shadeOffscreenCtx = sctx;
+
+    this.bloomOffscreenCanvas.width = w;
+    this.bloomOffscreenCanvas.height = h;
+    const bctx = this.bloomOffscreenCanvas.getContext("2d");
+    if (!bctx) throw new Error("Failed to re-init bloom offscreen canvas ctx.");
+    this.bloomOffscreenCtx = bctx;
+
+    // Drop temp + cached blur results (they're sized to prior canvases)
+    this.shadeBlurTempCanvas = undefined;
+    this.shadeBlurTempCtx = undefined;
+    this.shadeSliceTempCanvas = undefined;
+    this.shadeSliceTempCtx = undefined;
+    this.invalidateBlurCache();
   };
 }

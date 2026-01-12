@@ -432,7 +432,23 @@ export class WebGLBlurRenderer {
   }
 
   private getCachedCanvas(width: number, height: number): HTMLCanvasElement {
-    const key = `${width}x${height}`;
+    let key = `${width}x${height}`;
+
+    // Debug: force cache growth by salting the key periodically.
+    // This is useful to reproduce blur-cache/memory pressure issues quickly.
+    if (GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH) {
+      const stride = Math.max(
+        1,
+        Math.floor(GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE),
+      );
+      const anyThis = this as any;
+      anyThis.__blurCacheSaltCounter =
+        (anyThis.__blurCacheSaltCounter ?? 0) + 1;
+      const n = anyThis.__blurCacheSaltCounter as number;
+      if (n % stride === 0) {
+        key += `,salt=${n}`;
+      }
+    }
     let canvas = this.resultCanvasCache.get(key);
 
     if (!canvas) {
@@ -441,7 +457,13 @@ export class WebGLBlurRenderer {
       canvas.height = height;
 
       // Manage cache size
-      if (this.resultCanvasCache.size >= this.maxCacheSize) {
+      const max = GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH
+        ? Math.max(
+            1,
+            Math.floor(GameConstants.DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE),
+          )
+        : this.maxCacheSize;
+      if (this.resultCanvasCache.size >= max) {
         const firstKey = this.resultCanvasCache.keys().next().value;
         this.resultCanvasCache.delete(firstKey);
       }

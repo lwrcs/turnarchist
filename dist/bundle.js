@@ -24546,6 +24546,129 @@ let getShadeCanvasKey = (set, sX, sY, sW, sH, opacity, shadeColor, fadeDir) => {
         ",fade=" +
         (fadeDir || "none"));
 };
+const quantizeHexColor = (hex, levels) => {
+    // Expect #RRGGBB
+    if (!hex || hex[0] !== "#" || hex.length !== 7)
+        return hex;
+    const n = parseInt(hex.slice(1), 16);
+    if (!Number.isFinite(n))
+        return hex;
+    const r = (n >> 16) & 255;
+    const g = (n >> 8) & 255;
+    const b = n & 255;
+    const lv = Math.max(2, Math.floor(levels));
+    const step = 255 / (lv - 1);
+    const q = (v) => {
+        const qq = Math.round(v / step) * step;
+        return Math.max(0, Math.min(255, Math.round(qq)));
+    };
+    const rq = q(r);
+    const gq = q(g);
+    const bq = q(b);
+    return ("#" +
+        ((1 << 24) + (rq << 16) + (gq << 8) + bq)
+            .toString(16)
+            .slice(1)
+            .toUpperCase());
+};
+const sampleCanvasRGBA = (args) => {
+    const { canvas, points } = args;
+    const out = [];
+    try {
+        const ctx = canvas.getContext("2d");
+        if (!ctx)
+            return out;
+        for (const [x, y] of points) {
+            if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height)
+                continue;
+            const d = ctx.getImageData(x, y, 1, 1).data;
+            out.push({ x, y, r: d[0], g: d[1], b: d[2], a: d[3] });
+        }
+    }
+    catch {
+        return out;
+    }
+    return out;
+};
+const imageHasAnyOpaquePixel = (img) => {
+    try {
+        if (!img)
+            return false;
+        const w = img?.naturalWidth ?? 0;
+        const h = img?.naturalHeight ?? 0;
+        if (w <= 0 || h <= 0)
+            return false;
+        // Downsample the full image to a small probe and scan.
+        const probe = document.createElement("canvas");
+        probe.width = 32;
+        probe.height = 32;
+        const ctx = probe.getContext("2d");
+        if (!ctx)
+            return false;
+        ctx.clearRect(0, 0, probe.width, probe.height);
+        ctx.drawImage(img, 0, 0, w, h, 0, 0, probe.width, probe.height);
+        const data = ctx.getImageData(0, 0, probe.width, probe.height).data;
+        // Scan every Nth pixel for speed.
+        for (let i = 3; i < data.length; i += 16 * 4) {
+            if (data[i] > 0)
+                return true;
+        }
+        return false;
+    }
+    catch {
+        return false;
+    }
+};
+const canvasLooksBlankOrBlack = (canvas) => {
+    try {
+        const w = canvas.width;
+        const h = canvas.height;
+        if (w <= 0 || h <= 0)
+            return true;
+        const ctx = canvas.getContext("2d");
+        if (!ctx)
+            return true;
+        // Sample a few points; if all alpha=0, treat as blank.
+        // Also treat "solid black" (rgb=0 with alpha>0 everywhere we sample) as poisoned.
+        const pts = [
+            [Math.floor(w / 2), Math.floor(h / 2)],
+            [1, 1],
+            [w - 2, 1],
+            [1, h - 2],
+            [w - 2, h - 2],
+            [Math.floor(w / 4), Math.floor(h / 4)],
+            [Math.floor((3 * w) / 4), Math.floor(h / 4)],
+            [Math.floor(w / 4), Math.floor((3 * h) / 4)],
+            [Math.floor((3 * w) / 4), Math.floor((3 * h) / 4)],
+        ].filter((p) => {
+            const x = p[0];
+            const y = p[1];
+            return x >= 0 && y >= 0 && x < w && y < h;
+        });
+        let anyAlpha = false;
+        let anyNonBlack = false;
+        for (const [x, y] of pts) {
+            const d = ctx.getImageData(x, y, 1, 1).data;
+            const r = d[0];
+            const g = d[1];
+            const b = d[2];
+            const a = d[3];
+            if (a > 0)
+                anyAlpha = true;
+            if (a > 0 && (r > 0 || g > 0 || b > 0))
+                anyNonBlack = true;
+        }
+        if (!anyAlpha)
+            return true;
+        if (!anyNonBlack)
+            return true;
+        return false;
+    }
+    catch {
+        // If getImageData fails (tainted/etc), assume not blank so we don't thrash caches.
+        return false;
+    }
+};
 // fps counter
 const times = [];
 let fps = 60;
@@ -24672,6 +24795,11 @@ class Game {
         this.lastDroppedShieldPiece = null;
         this.tip = tips_1.Tips.getRandomTip();
         this.currentLevelGenerator = null;
+        this._lastAutoRecoverCheckMs = 0;
+        this._lastAutoRecoverTriggeredMs = 0;
+        this._autoRecoverDebug = false;
+        this._lastSheetProbeMs = 0;
+        this._lastSheetProbeOk = true;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -24686,6 +24814,209 @@ class Game {
         this.startMenu = null;
         this.startMenuActive = false;
         this.feedbackButton = null;
+        /**
+         * Debug helper: verify that sprite sheets are still drawable.
+         * This catches cases where the renderer process hiccups and HTMLImageElement-backed draws stop working.
+         */
+        this.debugSpriteSheetStatus = () => {
+            const probeCanvas = document.createElement("canvas");
+            probeCanvas.width = 1;
+            probeCanvas.height = 1;
+            const pctx = probeCanvas.getContext("2d");
+            if (!pctx)
+                return [];
+            const sheets = [
+                { name: "tileset", img: Game.tileset },
+                { name: "objset", img: Game.objset },
+                { name: "mobset", img: Game.mobset },
+                { name: "itemset", img: Game.itemset },
+                { name: "fxset", img: Game.fxset },
+                { name: "fontsheet", img: Game.fontsheet },
+            ];
+            return sheets.map(({ name, img }) => {
+                let ok = true;
+                let err = null;
+                try {
+                    pctx.clearRect(0, 0, 1, 1);
+                    // drawImage throws InvalidStateError if the image has no intrinsic size (naturalWidth=0).
+                    pctx.drawImage(img, 0, 0, 1, 1, 0, 0, 1, 1);
+                }
+                catch (e) {
+                    ok = false;
+                    err = e?.message ?? String(e);
+                }
+                return {
+                    name,
+                    ok,
+                    complete: !!img?.complete,
+                    w: img?.naturalWidth ?? 0,
+                    h: img?.naturalHeight ?? 0,
+                    err,
+                };
+            });
+        };
+        /**
+         * Debug helper: reload spritesheets + clear caches.
+         * Intended as a recovery tool if HTMLImageElement draws stop working.
+         */
+        this.debugReloadSpriteSheets = () => {
+            try {
+                // Clear caches that depend on sheet sources
+                Game.shade_canvases = {};
+                Game.text_rendering_canvases = {};
+                Game.shade_canvas_order = [];
+                Game.text_canvas_order = [];
+            }
+            catch { }
+            try {
+                // Force reload by reassigning src.
+                // (Browser may still use cache, but it reinitializes the image decode/texture upload path.)
+                if (Game.tileset)
+                    Game.tileset.src = tilesetUrl;
+                if (Game.objset)
+                    Game.objset.src = objsetUrl;
+                if (Game.mobset)
+                    Game.mobset.src = mobsetUrl;
+                if (Game.itemset)
+                    Game.itemset.src = itemsetUrl;
+                if (Game.fxset)
+                    Game.fxset.src = fxsetUrl;
+                if (Game.fontsheet)
+                    Game.fontsheet.src = fontUrl;
+            }
+            catch { }
+        };
+        /**
+         * Auto-recovery canary: if cached shaded sprites look blank while direct spritesheet draws are OK,
+         * we clear the shade cache so sprites repopulate.
+         */
+        this.maybeAutoRecoverPoisonedShadeCache = () => {
+            if (!gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE)
+                return;
+            const now = Date.now();
+            const interval = Math.max(100, Math.floor(gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS));
+            if (now - this._lastAutoRecoverCheckMs < interval)
+                return;
+            this._lastAutoRecoverCheckMs = now;
+            try {
+                // 1) Robust spritesheet health probe: check that at least one sheet has any opaque pixel.
+                // (Sampling a specific tile/pixel is unreliable because many pixels are transparent by design.)
+                const sheets = [
+                    Game.tileset,
+                    Game.objset,
+                    Game.mobset,
+                    Game.itemset,
+                    Game.fxset,
+                    Game.fontsheet,
+                ];
+                // Expensive probe (draw + getImageData) is cached; run it periodically.
+                // Between probes, fall back to intrinsic size + cached result.
+                const probeIntervalMs = 2000;
+                const sheetsHaveSize = sheets.some((img) => {
+                    const w = img?.naturalWidth ?? 0;
+                    const h = img?.naturalHeight ?? 0;
+                    return w > 0 && h > 0;
+                });
+                if (now - this._lastSheetProbeMs > probeIntervalMs) {
+                    this._lastSheetProbeMs = now;
+                    this._lastSheetProbeOk = sheets.some((img) => imageHasAnyOpaquePixel(img));
+                }
+                const anySheetOk = sheetsHaveSize && this._lastSheetProbeOk;
+                if (this._autoRecoverDebug) {
+                    console.log("[auto-recover] direct probe samples", {
+                        anySheetOk,
+                        sheets: [
+                            {
+                                name: "tileset",
+                                complete: !!Game.tileset?.complete,
+                                w: Game.tileset?.naturalWidth ?? 0,
+                                h: Game.tileset?.naturalHeight ?? 0,
+                            },
+                            {
+                                name: "objset",
+                                complete: !!Game.objset?.complete,
+                                w: Game.objset?.naturalWidth ?? 0,
+                                h: Game.objset?.naturalHeight ?? 0,
+                            },
+                            {
+                                name: "mobset",
+                                complete: !!Game.mobset?.complete,
+                                w: Game.mobset?.naturalWidth ?? 0,
+                                h: Game.mobset?.naturalHeight ?? 0,
+                            },
+                            {
+                                name: "itemset",
+                                complete: !!Game.itemset?.complete,
+                                w: Game.itemset?.naturalWidth ?? 0,
+                                h: Game.itemset?.naturalHeight ?? 0,
+                            },
+                            {
+                                name: "fxset",
+                                complete: !!Game.fxset?.complete,
+                                w: Game.fxset?.naturalWidth ?? 0,
+                                h: Game.fxset?.naturalHeight ?? 0,
+                            },
+                            {
+                                name: "fontsheet",
+                                complete: !!Game.fontsheet?.complete,
+                                w: Game.fontsheet?.naturalWidth ?? 0,
+                                h: Game.fontsheet?.naturalHeight ?? 0,
+                            },
+                        ],
+                    });
+                }
+                // If no sheets look drawable, don't clear caches (could be a genuine resource failure).
+                if (!anySheetOk)
+                    return;
+                // 2) Cache poison detection: sample a handful of cached shaded canvases.
+                const keys = Object.keys(Game.shade_canvases || {});
+                if (keys.length < 50)
+                    return; // not enough evidence
+                const sampleCount = Math.min(12, keys.length);
+                let poisoned = 0;
+                for (let i = 0; i < sampleCount; i++) {
+                    const k = keys[(Math.random() * keys.length) | 0];
+                    const c = Game.shade_canvases[k];
+                    if (c && canvasLooksBlankOrBlack(c))
+                        poisoned++;
+                }
+                const poisonRatio = poisoned / sampleCount;
+                if (this._autoRecoverDebug) {
+                    console.log("[auto-recover] cache sample", {
+                        shadeCacheCount: keys.length,
+                        sampleCount,
+                        poisoned,
+                        poisonRatio,
+                    });
+                }
+                // 3) If most cached shaded sprites look blank/black, caches are likely poisoned.
+                if (poisonRatio >= 0.8) {
+                    // Prevent spamming clears every interval; allow once every few seconds.
+                    if (now - this._lastAutoRecoverTriggeredMs < 2500)
+                        return;
+                    this._lastAutoRecoverTriggeredMs = now;
+                    try {
+                        Game.shade_canvases = {};
+                        Game.shade_canvas_order = [];
+                    }
+                    catch { }
+                    // Text cache uses spritesheet too; clear it as well to be safe.
+                    try {
+                        Game.text_rendering_canvases = {};
+                        Game.text_canvas_order = [];
+                    }
+                    catch { }
+                    console.warn("[auto-recover] Cleared poisoned shade/text caches (spritesheets OK, cached sprites mostly blank/black).");
+                    try {
+                        this.pushMessage("Recovered sprites (cleared poisoned caches).");
+                    }
+                    catch { }
+                }
+            }
+            catch {
+                // Never crash the game from the recovery path.
+            }
+        };
         this.updateDepth = (depth) => {
             //this.previousDepth = this.currentDepth;
             this.currentDepth = depth;
@@ -24926,6 +25257,14 @@ class Game {
             // Shared per-frame animations
             this.updateDoorIconFloatFrame(delta);
             this.updateRoomOverShadeAlphas(delta);
+            // Debug: countdown for shade-cache poisoning mode.
+            if (gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE &&
+                gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES > 0) {
+                gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES--;
+                if (gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES <= 0) {
+                    gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE = false;
+                }
+            }
             //delta = 0.025;
             // Update FPS tracking
             while (times.length > 0 && times[0] <= timestamp - 1000) {
@@ -24944,6 +25283,8 @@ class Game {
             }
             //delta = 0.1;
             // Render the frame with capped delta
+            // Auto-recovery check before drawing (so caches rebuild on this same frame).
+            this.maybeAutoRecoverPoisonedShadeCache();
             this.draw(delta *
                 gameConstants_1.GameConstants.ANIMATION_SPEED *
                 1 *
@@ -25209,6 +25550,327 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command === "spritediag") {
+                const rows = this.debugSpriteSheetStatus();
+                if (!rows || rows.length === 0) {
+                    this.pushMessage("Sprite diag: unavailable");
+                    return;
+                }
+                const bad = rows.filter((r) => !r.ok);
+                this.pushMessage(`Sprite diag: ${bad.length === 0 ? "OK" : `${bad.length} broken`} (see console)`);
+                console.log("[spritediag]", rows);
+                return;
+            }
+            if (command === "reloadsprites") {
+                this.debugReloadSpriteSheets();
+                this.pushMessage("Reloading spritesheets + clearing caches (see console for spritediag)");
+                console.log("[reloadsprites] issued reload");
+                return;
+            }
+            if (command.startsWith("poisoncache") ||
+                command.startsWith("poisoncaches")) {
+                // Debug/repro: poison the shade cache for N frames (creates blank cached sprites without errors).
+                // Usage: poisoncaches <frames>
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: poisoncache(s) <frames>=1.. (try 120)");
+                    return;
+                }
+                // Clear caches so we repopulate them during the poison window.
+                try {
+                    Game.shade_canvases = {};
+                    Game.text_rendering_canvases = {};
+                    Game.shade_canvas_order = [];
+                    Game.text_canvas_order = [];
+                }
+                catch { }
+                gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE = true;
+                gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES = Math.floor(n);
+                this.pushMessage(`Poisoning shade cache for ${gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES} frame(s). Use 'clearcaches' to recover.`);
+                return;
+            }
+            if (command === "breaksprites" || command === "breakspritesfxonly") {
+                // Debug/repro: intentionally break spritesheet-backed draws by assigning an invalid data URL.
+                // This forces HTMLImageElement to have no intrinsic size and causes drawImage to throw.
+                const breakAll = command === "breaksprites";
+                try {
+                    // Clear caches that depend on sheet sources so failures are immediate/obvious.
+                    Game.shade_canvases = {};
+                    Game.text_rendering_canvases = {};
+                    Game.shade_canvas_order = [];
+                    Game.text_canvas_order = [];
+                }
+                catch { }
+                // Intentionally invalid image URL (will fire error, naturalWidth/Height stay 0).
+                const bad = "data:image/png;base64,";
+                try {
+                    if (breakAll) {
+                        if (Game.tileset)
+                            Game.tileset.src = bad;
+                        if (Game.objset)
+                            Game.objset.src = bad;
+                        if (Game.mobset)
+                            Game.mobset.src = bad;
+                        if (Game.itemset)
+                            Game.itemset.src = bad;
+                        if (Game.fxset)
+                            Game.fxset.src = bad;
+                        if (Game.fontsheet)
+                            Game.fontsheet.src = bad;
+                    }
+                    else {
+                        // FX-only break can mimic certain partial failures without killing tiles/items/mobs.
+                        if (Game.fxset)
+                            Game.fxset.src = bad;
+                    }
+                }
+                catch (e) {
+                    console.warn("breaksprites: failed to set bad src", e);
+                }
+                this.pushMessage(breakAll
+                    ? "Spritesheets intentionally broken. Use 'spritediag' then 'reloadsprites' to recover."
+                    : "FX spritesheet intentionally broken. Use 'spritediag' then 'reloadsprites' to recover.");
+                return;
+            }
+            if (command === "reproblack") {
+                // Force the "sprites disappear / world goes black but bloom+UI remain" repro conditions.
+                // We set flags explicitly (avoid toggle desync), clear caches, then enable aggressive growth/logging.
+                try {
+                    // Clear caches first
+                    Game.shade_canvases = {};
+                    Game.text_rendering_canvases = {};
+                    Game.shade_canvas_order = [];
+                    Game.text_canvas_order = [];
+                }
+                catch { }
+                // Remove the safety rails / maximize key diversity and growth
+                gameConstants_1.GameConstants.SHADE_COLOR_LEVELS = 256; // effectively disables color quantization
+                gameConstants_1.GameConstants.SHADE_CANVAS_CACHE_MAX = 200000;
+                gameConstants_1.GameConstants.TEXT_CANVAS_CACHE_MAX = 200000;
+                gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES = true;
+                gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS = true;
+                // Make shade cache explode
+                gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH = true;
+                gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE = 1;
+                gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION = true;
+                this.pushMessage("Repro mode enabled: forcing shade cache growth (type 'clearcaches' to reset, or manually disable debug toggles).");
+                return;
+            }
+            if (command === "reproblackoff") {
+                // Restore safer defaults for caches/quantization (does not touch other gameplay settings).
+                gameConstants_1.GameConstants.SHADE_COLOR_LEVELS = 16;
+                gameConstants_1.GameConstants.SHADE_CANVAS_CACHE_MAX = 12000;
+                gameConstants_1.GameConstants.TEXT_CANVAS_CACHE_MAX = 8000;
+                gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES = false;
+                gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS = false;
+                gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH = false;
+                gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE = 1;
+                gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION = false;
+                try {
+                    Game.shade_canvases = {};
+                    Game.text_rendering_canvases = {};
+                    Game.shade_canvas_order = [];
+                    Game.text_canvas_order = [];
+                }
+                catch { }
+                this.pushMessage("Repro mode disabled and caches cleared.");
+                return;
+            }
+            if (command.startsWith("shadecachegrowrate")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: shadecachegrowrate <n>=1.. (lower is more aggressive)");
+                    return;
+                }
+                gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE = Math.floor(n);
+                this.pushMessage(`Shade cache growth stride set to ${gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE}`);
+                return;
+            }
+            if (command.startsWith("shadecollevels")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 2) {
+                    this.pushMessage("Usage: shadecollevels <n>=2.. (higher = less quantization)");
+                    return;
+                }
+                gameConstants_1.GameConstants.SHADE_COLOR_LEVELS = Math.floor(n);
+                this.pushMessage(`Shade color quantization levels set to ${gameConstants_1.GameConstants.SHADE_COLOR_LEVELS}`);
+                return;
+            }
+            if (command.startsWith("shadecachesizemax")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: shadecachesizemax <n>=1..");
+                    return;
+                }
+                gameConstants_1.GameConstants.SHADE_CANVAS_CACHE_MAX = Math.floor(n);
+                this.pushMessage(`Shade canvas cache max set to ${gameConstants_1.GameConstants.SHADE_CANVAS_CACHE_MAX}`);
+                return;
+            }
+            if (command.startsWith("textcachesizemax")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: textcachesizemax <n>=1..");
+                    return;
+                }
+                gameConstants_1.GameConstants.TEXT_CANVAS_CACHE_MAX = Math.floor(n);
+                this.pushMessage(`Text canvas cache max set to ${gameConstants_1.GameConstants.TEXT_CANVAS_CACHE_MAX}`);
+                return;
+            }
+            if (command === "clearcaches") {
+                try {
+                    Game.shade_canvases = {};
+                    Game.text_rendering_canvases = {};
+                    Game.shade_canvas_order = [];
+                    Game.text_canvas_order = [];
+                }
+                catch { }
+                this.pushMessage("Cleared shade + text canvas caches");
+                return;
+            }
+            if (command === "autorecoversprites") {
+                gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE =
+                    !gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE;
+                enabled = gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE
+                    ? "enabled"
+                    : "disabled";
+                this.pushMessage(`Auto-recover sprites is now ${enabled}`);
+                return;
+            }
+            if (command.startsWith("autorecoverrate")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 50) {
+                    this.pushMessage("Usage: autorecoverrate <ms>=50..");
+                    return;
+                }
+                gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS =
+                    Math.floor(n);
+                this.pushMessage(`Auto-recover check interval set to ${gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS}ms`);
+                return;
+            }
+            if (command === "autorecoverspritesdebug") {
+                this._autoRecoverDebug = !this._autoRecoverDebug;
+                enabled = this._autoRecoverDebug ? "enabled" : "disabled";
+                this.pushMessage(`Auto-recover debug logging is now ${enabled}`);
+                return;
+            }
+            if (command === "canarydump") {
+                // Run the auto-recover check immediately with debug logging enabled for this call.
+                const prev = this._autoRecoverDebug;
+                this._autoRecoverDebug = true;
+                try {
+                    this.maybeAutoRecoverPoisonedShadeCache();
+                }
+                finally {
+                    this._autoRecoverDebug = prev;
+                }
+                this.pushMessage("Canary dump logged to console.");
+                return;
+            }
+            if (command.startsWith("blurcachegrowrate")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: blurcachegrowrate <n>=1.. (lower is more aggressive)");
+                    return;
+                }
+                gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE = Math.floor(n);
+                this.pushMessage(`WebGL blur cache growth stride set to ${gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE}`);
+                return;
+            }
+            if (command.startsWith("blurcacheresultmax")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: blurcacheresultmax <n>=1..");
+                    return;
+                }
+                gameConstants_1.GameConstants.DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE = Math.floor(n);
+                this.pushMessage(`WebGL blur result cache max size set to ${gameConstants_1.GameConstants.DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE}`);
+                return;
+            }
+            if (command.startsWith("roomcanvaspad")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 0) {
+                    this.pushMessage("Usage: roomcanvaspad <padTiles>=0.. [all]");
+                    return;
+                }
+                gameConstants_1.GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES = Math.floor(n);
+                const applyAll = parts.includes("all");
+                const rooms = applyAll ? this.rooms : [this.room];
+                for (const r of rooms) {
+                    try {
+                        r.resizeOffscreenCanvases(gameConstants_1.GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES);
+                    }
+                    catch (e) {
+                        console.warn("roomcanvaspad: resize failed for room", r?.globalId, e);
+                    }
+                }
+                this.pushMessage(`Room offscreen pad tiles set to ${gameConstants_1.GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES} (${applyAll ? "all rooms resized" : "current room resized"})`);
+                return;
+            }
+            if (command === "roomcanvasstats") {
+                try {
+                    let total = 0;
+                    for (const r of this.rooms || [])
+                        total += r.estimateOffscreenCanvasBytes();
+                    const mb = (total / (1024 * 1024)).toFixed(1);
+                    this.pushMessage(`Room canvas estimate: ${mb} MB (lower bound)`);
+                    console.log(`[room-canvas] estimatedBytes=${total} (~${mb}MB) rooms=${(this.rooms || []).length}`);
+                }
+                catch { }
+                return;
+            }
+            if (command.startsWith("lightingstress")) {
+                // Debug/repro: run multiple lighting updates back-to-back (can force OOM/crash if there are leaks/alloc spikes).
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: lightingstress <n>=1..");
+                    return;
+                }
+                const iters = Math.min(500, Math.floor(n));
+                const r = this.room;
+                if (!r)
+                    return;
+                for (let i = 0; i < iters; i++) {
+                    try {
+                        r.updateLighting();
+                    }
+                    catch (e) {
+                        console.error("lightingstress: updateLighting crashed", e);
+                        break;
+                    }
+                }
+                this.pushMessage(`Lighting stress ran ${iters} update(s)`);
+                return;
+            }
+            if (command === "shadeblurtempthrash") {
+                gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS =
+                    !gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS;
+                enabled = gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS
+                    ? "enabled"
+                    : "disabled";
+                this.pushMessage(`Shade blur temp canvas thrash is now ${enabled}`);
+                return;
+            }
+            if (command.startsWith("shadeblurtempthrashrate")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: shadeblurtempthrashrate <n>=1..");
+                    return;
+                }
+                gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE = Math.floor(n);
+                this.pushMessage(`Shade blur temp canvas thrash stride set to ${gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE}`);
+                return;
+            }
             // Handle "new" command with optional seed parameter
             if (command.startsWith("new")) {
                 if (command.startsWith("new ")) {
@@ -25396,6 +26058,46 @@ class Game {
                     enabled = gameConstants_1.GameConstants.drawOtherRooms ? "enabled" : "disabled";
                     this.pushMessage(`Drawing other rooms is now ${enabled}`);
                     break;
+                case "shadecachelog":
+                    gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS =
+                        !gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS;
+                    enabled = gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Shade cache logging is now ${enabled}`);
+                    break;
+                case "shadecacheunquant":
+                    gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION =
+                        !gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION;
+                    enabled = gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Shade cache quantization is now ${enabled ? "disabled" : "enabled"}`);
+                    break;
+                case "shadecachepreserve":
+                    gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES =
+                        !gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES;
+                    enabled = gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Preserve global canvas caches on room exit is now ${enabled}`);
+                    break;
+                case "shadecachegrow":
+                    gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH =
+                        !gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH;
+                    enabled = gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Force shade cache growth is now ${enabled}`);
+                    break;
+                case "blurcachegrow":
+                    gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH =
+                        !gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH;
+                    enabled = gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH
+                        ? "enabled"
+                        : "disabled";
+                    this.pushMessage(`Force WebGL blur cache growth is now ${enabled}`);
+                    break;
                 case "opq":
                     gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT = !gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT;
                     enabled = gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT ? "enabled" : "disabled";
@@ -25415,7 +26117,9 @@ class Game {
                 case "armorflat":
                     gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION =
                         !gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION;
-                    enabled = gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION ? "enabled" : "disabled";
+                    enabled = gameplaySettings_1.GameplaySettings.ARMOR_FLAT_REDUCTION
+                        ? "enabled"
+                        : "disabled";
                     this.pushMessage(`Armor flat reduction (-0.5) is now ${enabled}`);
                     break;
                 case "inline":
@@ -27158,7 +27862,12 @@ class Game {
 exports.Game = Game;
 // Replay manager singleton
 Game._replayManager = null;
+// Insertion order for simple FIFO eviction of shade cache
+Game.shade_canvas_order = [];
+// Debug: a transparent canvas used to intentionally poison cached shaded sprites.
+Game._debugTransparent1x1 = null;
 Game.inputReceived = false;
+Game.text_canvas_order = [];
 Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
 Game.letter_widths = [
     4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
@@ -27174,6 +27883,18 @@ Game.rand = (min, max, rand) => {
 };
 Game.randTable = (table, rand) => {
     return table[Game.rand(0, table.length - 1, rand)];
+};
+Game.getDebugTransparent1x1 = () => {
+    if (Game._debugTransparent1x1)
+        return Game._debugTransparent1x1;
+    const c = document.createElement("canvas");
+    c.width = 1;
+    c.height = 1;
+    const ctx = c.getContext("2d");
+    if (ctx)
+        ctx.clearRect(0, 0, 1, 1); // fully transparent
+    Game._debugTransparent1x1 = c;
+    return c;
 };
 Game.measureText = (text) => {
     let w = 0;
@@ -27227,6 +27948,17 @@ Game.fillText = (text, x, y, maxWidth) => {
                 bx.globalCompositeOperation = "source-in";
                 bx.fillRect(0, 0, Game.text_rendering_canvases[key].width, Game.text_rendering_canvases[key].height);
                 Game.ctx.drawImage(Game.text_rendering_canvases[key], x, y);
+                // Evict oldest cached text canvases if we exceed cap
+                try {
+                    Game.text_canvas_order.push(key);
+                    const max = Math.max(1, Math.floor(gameConstants_1.GameConstants.TEXT_CANVAS_CACHE_MAX));
+                    while (Game.text_canvas_order.length > max) {
+                        const oldest = Game.text_canvas_order.shift();
+                        if (oldest)
+                            delete Game.text_rendering_canvases[oldest];
+                    }
+                }
+                catch { }
             }
             else {
                 Game.ctx.drawImage(Game.text_rendering_canvases[key], x, y);
@@ -27278,13 +28010,30 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
     const shadeLevel = entity
         ? gameConstants_1.GameConstants.ENTITY_SHADE_LEVELS
         : gameConstants_1.GameConstants.SHADE_LEVELS;
-    shadeOpacity =
-        // Round shadeOpacity to nearest increment based on shade levels (min 12 increments)
-        // e.g. if shadeLevel=8, uses 12 increments, so opacity rounds to multiples of 1/12
-        Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
-            Math.max(shadeLevel, 12);
+    if (!gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION) {
+        shadeOpacity =
+            // Round shadeOpacity to nearest increment based on shade levels (min 12 increments)
+            // e.g. if shadeLevel=8, uses 12 increments, so opacity rounds to multiples of 1/12
+            Math.round(shadeOpacity * Math.max(shadeLevel, 12)) /
+                Math.max(shadeLevel, 12);
+    }
+    // Quantize shadeColor to avoid explosive cache growth from smooth color transitions.
+    // (e.g. Entity.softShadeColor interpolates every frame, which would otherwise produce a new cache entry constantly.)
+    const shadeColorLevels = Math.max(2, Math.floor(gameConstants_1.GameConstants.SHADE_COLOR_LEVELS));
+    const quantizedShadeColor = quantizeHexColor(shadeColor, shadeColorLevels);
     // Build a cache key that includes shade amount, color and optional fade direction
-    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, shadeColor, fadeDir);
+    let key = getShadeCanvasKey(set, sX, sY, sW, sH, shadeOpacity, quantizedShadeColor, fadeDir);
+    // Debug: force unbounded cache growth by adding a salt to the key periodically.
+    // This helps reproduce cache/memory pressure bugs quickly.
+    if (gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH) {
+        const stride = Math.max(1, Math.floor(gameConstants_1.GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE));
+        const gAny = Game;
+        gAny.__shadeCacheSaltCounter = (gAny.__shadeCacheSaltCounter ?? 0) + 1;
+        const n = gAny.__shadeCacheSaltCounter;
+        if (n % stride === 0) {
+            key += `,salt=${n}`;
+        }
+    }
     if (outlineColor && outlineOpacity > 0)
         key += `,outline=${outlineColor}:${Math.max(0, Math.min(1, outlineOpacity))}`;
     if (outlineColor && outlineOpacity > 0 && outlineOffset)
@@ -27310,16 +28059,18 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         const dx = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
         const dy = outlineColor && outlineOpacity > 0 ? outlinePad : 0;
         shCtx.globalCompositeOperation = "source-over";
-        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
+        const poisonActive = gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE &&
+            gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES > 0;
+        shCtx.drawImage(poisonActive ? Game.getDebugTransparent1x1() : set, poisonActive ? 0 : Math.round(sX * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 0 : Math.round(sY * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sW * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
         // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
         shCtx.globalAlpha = shadeOpacity;
-        shCtx.fillStyle = shadeColor;
+        shCtx.fillStyle = quantizedShadeColor;
         shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         shCtx.globalAlpha = 1.0;
         // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
         shCtx.globalCompositeOperation = "destination-in";
         // Base alpha mask from sprite bounds
-        shCtx.drawImage(set, Math.round(sX * gameConstants_1.GameConstants.TILESIZE), Math.round(sY * gameConstants_1.GameConstants.TILESIZE), Math.round(sW * gameConstants_1.GameConstants.TILESIZE), Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
+        shCtx.drawImage(poisonActive ? Game.getDebugTransparent1x1() : set, poisonActive ? 0 : Math.round(sX * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 0 : Math.round(sY * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sW * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
         // 4) Optional directional fade: multiplies in a 1→0 gradient (feathered edge)
         if (fadeDir) {
             const w = Game.shade_canvases[key].width;
@@ -27400,6 +28151,17 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             shCtx.drawImage(outlineCanvas, dx - oPad, dy - oPad);
             shCtx.globalCompositeOperation = "source-over";
         }
+        // Evict oldest cached shade canvases if we exceed cap (simple FIFO).
+        try {
+            Game.shade_canvas_order.push(key);
+            const max = Math.max(1, Math.floor(gameConstants_1.GameConstants.SHADE_CANVAS_CACHE_MAX));
+            while (Game.shade_canvas_order.length > max) {
+                const oldest = Game.shade_canvas_order.shift();
+                if (oldest)
+                    delete Game.shade_canvases[oldest];
+            }
+        }
+        catch { }
     }
     // Blit the pre-shaded sprite to the main canvas at the destination position/size
     Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE) -
@@ -27415,6 +28177,24 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         (outlineColor && outlineOpacity > 0
             ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
             : 0));
+    // Optional: lightweight cache stats logging (helps diagnose cache growth / memory pressure)
+    if (gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS) {
+        // Throttle: log at most ~once per 5 seconds.
+        const now = Date.now();
+        const gAny = Game;
+        const last = typeof gAny.__lastCanvasCacheLog === "number"
+            ? gAny.__lastCanvasCacheLog
+            : 0;
+        if (now - last > 5000) {
+            gAny.__lastCanvasCacheLog = now;
+            try {
+                const shadeCount = Object.keys(Game.shade_canvases || {}).length;
+                const textCount = Object.keys(Game.text_rendering_canvases || {}).length;
+                console.log(`[canvas-cache] shade=${shadeCount} text=${textCount} quantize=${!gameConstants_1.GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION} preserveOnExit=${gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES}`);
+            }
+            catch { }
+        }
+    }
     Game.ctx.restore(); // Restore the canvas to the previous state
 };
 /**
@@ -29601,6 +30381,38 @@ GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
 GameConstants.ENTITY_SHADE_LEVELS = 40; //10
+/**
+ * Hard cap on the number of cached shaded sprite canvases in `Game.shade_canvases`.
+ * Prevents unbounded growth (which can lead to “sprites disappear / screen goes black” failures).
+ */
+GameConstants.SHADE_CANVAS_CACHE_MAX = 12000;
+/**
+ * Quantization levels for shadeColor when generating shade cache keys.
+ * Lower = fewer unique colors = smaller cache, at the cost of slightly less smooth color tinting.
+ */
+GameConstants.SHADE_COLOR_LEVELS = 16;
+/**
+ * Hard cap on cached text canvases in `Game.text_rendering_canvases`.
+ */
+GameConstants.TEXT_CANVAS_CACHE_MAX = 8000;
+/**
+ * Debug: poison the shade cache by building cached shaded sprites from a transparent source.
+ * This reproduces the "game runs but all sprites disappear" symptom without console errors.
+ */
+GameConstants.DEBUG_POISON_SHADE_CACHE = false;
+/**
+ * When DEBUG_POISON_SHADE_CACHE is enabled via command, keep it active for this many frames.
+ */
+GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES = 0;
+/**
+ * Auto-recovery: detect when the shaded sprite cache has been poisoned (all sprites disappear)
+ * and clear/rebuild caches automatically.
+ */
+GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE = true;
+/**
+ * Throttle for the auto-recovery canary, in milliseconds.
+ */
+GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS = 200;
 GameConstants.TILESIZE = 16;
 GameConstants.SCALE = null;
 GameConstants.SOFT_SCALE = 6;
@@ -29697,6 +30509,60 @@ GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = true;
+// Diagnostics / repro toggles (off by default)
+/**
+ * If true, skip shadeOpacity quantization in `Game.drawHelper`.
+ * This will rapidly increase `Game.shade_canvases` size if shadeOpacity varies continuously.
+ */
+GameConstants.DEBUG_DISABLE_SHADE_CACHE_QUANTIZATION = false;
+/**
+ * If true, do not clear global canvas caches in `Room.exitLevel()`.
+ * Useful to test cache accumulation vs. per-room canvas memory.
+ */
+GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES = false;
+/**
+ * If true, periodically logs cache stats to the console.
+ */
+GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS = false;
+/**
+ * If true, forces `Game.shade_canvases` growth by salting the cache key so entries
+ * cannot be reused. Use with caution: this can explode memory quickly.
+ */
+GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH = false;
+/**
+ * Controls how often we salt the shade cache key. Lower = more aggressive growth.
+ * Example: 1 salts every `drawHelper` call; 10 salts ~every 10 calls.
+ */
+GameConstants.DEBUG_FORCE_SHADE_CACHE_GROWTH_STRIDE = 1;
+/**
+ * If true, forces WebGL blur result canvas cache growth by salting the cache key in
+ * `WebGLBlurRenderer.getCachedCanvas()`. This can quickly increase memory usage.
+ */
+GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH = false;
+/**
+ * Controls how often we salt the WebGL blur result canvas cache key. Lower = more aggressive growth.
+ */
+GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE = 1;
+/**
+ * Max size for WebGL blur result canvas cache. Higher can reproduce memory pressure faster.
+ */
+GameConstants.DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE = 10;
+/**
+ * Default extra padding (in tiles) for per-room offscreen canvases:
+ * `colorOffscreenCanvas`, `shadeOffscreenCanvas`, `bloomOffscreenCanvas`.
+ * Increasing this makes memory pressure happen sooner (useful for repro).
+ */
+GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES = 10;
+/**
+ * If true, periodically reallocate the Canvas2D shade blur temp canvas used by
+ * inline sliced shading (when WebGL blur is off). Useful to reproduce canvas/memory bugs.
+ */
+GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS = false;
+/**
+ * Controls how often we reallocate the shade blur temp canvas when thrashing is enabled.
+ * 1 = every call (very aggressive).
+ */
+GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE = 1;
 GameConstants.ctxBlurEnabled = true;
 GameConstants.BLUR_ENABLED = true;
 GameConstants.USE_WEBGL_BLUR = false;
@@ -36554,14 +37420,29 @@ class WebGLBlurRenderer {
         return { width: currentWidth, height: currentHeight };
     }
     getCachedCanvas(width, height) {
-        const key = `${width}x${height}`;
+        let key = `${width}x${height}`;
+        // Debug: force cache growth by salting the key periodically.
+        // This is useful to reproduce blur-cache/memory pressure issues quickly.
+        if (gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH) {
+            const stride = Math.max(1, Math.floor(gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH_STRIDE));
+            const anyThis = this;
+            anyThis.__blurCacheSaltCounter =
+                (anyThis.__blurCacheSaltCounter ?? 0) + 1;
+            const n = anyThis.__blurCacheSaltCounter;
+            if (n % stride === 0) {
+                key += `,salt=${n}`;
+            }
+        }
         let canvas = this.resultCanvasCache.get(key);
         if (!canvas) {
             canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
             // Manage cache size
-            if (this.resultCanvasCache.size >= this.maxCacheSize) {
+            const max = gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH
+                ? Math.max(1, Math.floor(gameConstants_1.GameConstants.DEBUG_WEBGL_BLUR_RESULT_CACHE_MAX_SIZE))
+                : this.maxCacheSize;
+            if (this.resultCanvasCache.size >= max) {
                 const firstKey = this.resultCanvasCache.keys().next().value;
                 this.resultCanvasCache.delete(firstKey);
             }
@@ -55464,8 +56345,16 @@ class Room {
         };
         this.exitLevel = () => {
             //this.game.onResize(); // stupid hack to keep fps high
-            game_1.Game.shade_canvases = {};
-            game_1.Game.text_rendering_canvases = {};
+            if (!gameConstants_1.GameConstants.DEBUG_PRESERVE_GLOBAL_CANVAS_CACHES) {
+                game_1.Game.shade_canvases = {};
+                game_1.Game.text_rendering_canvases = {};
+                // Keep FIFO order arrays in sync with the cleared caches.
+                try {
+                    game_1.Game.shade_canvas_order = [];
+                    game_1.Game.text_canvas_order = [];
+                }
+                catch { }
+            }
             for (let door of this.doors) {
                 if (!door || !door.linkedDoor)
                     continue;
@@ -56910,6 +57799,18 @@ class Room {
             else {
                 // Canvas2D blur path: we cannot use ctx.filter during main slicing draws.
                 // So we pre-blur into a temporary canvas once.
+                if (gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS &&
+                    Math.max(1, Math.floor(gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE)) > 0) {
+                    // Periodically drop the temp canvas so we force reallocations (repro tool).
+                    const stride = Math.max(1, Math.floor(gameConstants_1.GameConstants.DEBUG_THRASH_SHADE_BLUR_TEMP_CANVAS_STRIDE));
+                    this.__shadeBlurThrashCounter =
+                        (this.__shadeBlurThrashCounter ?? 0) + 1;
+                    const n = this.__shadeBlurThrashCounter;
+                    if (n % stride === 0) {
+                        this.shadeBlurTempCanvas = undefined;
+                        this.shadeBlurTempCtx = undefined;
+                    }
+                }
                 if (!this.shadeBlurTempCanvas) {
                     this.shadeBlurTempCanvas = document.createElement("canvas");
                     this.shadeBlurTempCanvas.width = this.shadeOffscreenCanvas.width;
@@ -58177,6 +59078,58 @@ class Room {
                 }
             }
         };
+        /**
+         * Debug/diagnostics: estimate bytes used by this room's major offscreen canvases.
+         * Note: browsers may allocate more internally; this is a lower-bound estimate (RGBA8).
+         */
+        this.estimateOffscreenCanvasBytes = () => {
+            const bytesFor = (c) => c ? c.width * c.height * 4 : 0;
+            let total = 0;
+            total += bytesFor(this.colorOffscreenCanvas);
+            total += bytesFor(this.shadeOffscreenCanvas);
+            total += bytesFor(this.bloomOffscreenCanvas);
+            total += bytesFor(this.shadeBlurTempCanvas);
+            total += bytesFor(this.shadeSliceTempCanvas);
+            total += bytesFor(this.blurCache?.color6px);
+            total += bytesFor(this.blurCache?.color8px);
+            total += bytesFor(this.blurCache?.color12px);
+            total += bytesFor(this.blurCache?.shade5px);
+            total += bytesFor(this.blurCache?.bloom8px);
+            return total;
+        };
+        /**
+         * Debug/repro: resize this room's offscreen canvases to change memory pressure characteristics.
+         * Use with care; large sizes can freeze/crash the tab.
+         */
+        this.resizeOffscreenCanvases = (padTiles) => {
+            const pad = Math.max(0, Math.floor(padTiles));
+            const w = (this.width + pad) * gameConstants_1.GameConstants.TILESIZE;
+            const h = (this.height + pad) * gameConstants_1.GameConstants.TILESIZE;
+            this.colorOffscreenCanvas.width = w;
+            this.colorOffscreenCanvas.height = h;
+            const cctx = this.colorOffscreenCanvas.getContext("2d");
+            if (!cctx)
+                throw new Error("Failed to re-init color offscreen canvas ctx.");
+            this.colorOffscreenCtx = cctx;
+            this.shadeOffscreenCanvas.width = w;
+            this.shadeOffscreenCanvas.height = h;
+            const sctx = this.shadeOffscreenCanvas.getContext("2d");
+            if (!sctx)
+                throw new Error("Failed to re-init shade offscreen canvas ctx.");
+            this.shadeOffscreenCtx = sctx;
+            this.bloomOffscreenCanvas.width = w;
+            this.bloomOffscreenCanvas.height = h;
+            const bctx = this.bloomOffscreenCanvas.getContext("2d");
+            if (!bctx)
+                throw new Error("Failed to re-init bloom offscreen canvas ctx.");
+            this.bloomOffscreenCtx = bctx;
+            // Drop temp + cached blur results (they're sized to prior canvases)
+            this.shadeBlurTempCanvas = undefined;
+            this.shadeBlurTempCtx = undefined;
+            this.shadeSliceTempCanvas = undefined;
+            this.shadeSliceTempCtx = undefined;
+            this.invalidateBlurCache();
+        };
         this.globalId = IdGenerator_1.IdGenerator.generate("R");
         this.pathId = "main";
         this.game = game;
@@ -58207,12 +59160,13 @@ class Room {
         this.walls = Array();
         this.decorations = Array();
         this.underwater = envType === environmentTypes_1.EnvType.FLOODED_CAVE;
+        const padTiles = Math.max(0, Math.floor(gameConstants_1.GameConstants.DEBUG_ROOM_OFFSCREEN_PAD_TILES));
         // Initialize Color Offscreen Canvas
         this.colorOffscreenCanvas = document.createElement("canvas");
         this.colorOffscreenCanvas.width =
-            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.width + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         this.colorOffscreenCanvas.height =
-            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.height + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         const colorCtx = this.colorOffscreenCanvas.getContext("2d");
         if (!colorCtx) {
             throw new Error("Failed to initialize color offscreen canvas context.");
@@ -58221,9 +59175,9 @@ class Room {
         // Initialize Shade Offscreen Canvas
         this.shadeOffscreenCanvas = document.createElement("canvas");
         this.shadeOffscreenCanvas.width =
-            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.width + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         this.shadeOffscreenCanvas.height =
-            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.height + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         const shadeCtx = this.shadeOffscreenCanvas.getContext("2d");
         if (!shadeCtx) {
             throw new Error("Failed to initialize shade offscreen canvas context.");
@@ -58232,9 +59186,9 @@ class Room {
         // Initialize Bloom Offscreen Canvas
         this.bloomOffscreenCanvas = document.createElement("canvas");
         this.bloomOffscreenCanvas.width =
-            (this.width + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.width + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         this.bloomOffscreenCanvas.height =
-            (this.height + 10) * gameConstants_1.GameConstants.TILESIZE;
+            (this.height + padTiles) * gameConstants_1.GameConstants.TILESIZE;
         const bloomCtx = this.bloomOffscreenCanvas.getContext("2d");
         if (!bloomCtx) {
             throw new Error("Failed to initialize bloom offscreen canvas context.");
