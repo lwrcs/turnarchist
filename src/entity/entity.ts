@@ -1757,6 +1757,10 @@ export class Entity extends Drawable {
       const targetX = hx + x;
       const targetY = hy + y;
       if (this.isWithinRoomBounds(targetX, targetY)) {
+        // For 2x2+ enemies, avoid placing warnings on tiles the attacker occupies.
+        // This is the simplest "overlap" cull (tile-space).
+        if (this.occupiesTile(targetX, targetY, this.z ?? 0)) return;
+
         const hitWarning = new HitWarning(
           this.game,
           targetX,

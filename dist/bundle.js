@@ -11967,11 +11967,15 @@ class BigKnightEnemy extends enemy_1.Enemy {
                             // Knight cadence: warn on even ticks, move on odd ticks
                             if (this.ticks % 2 === 0) {
                                 this.rumbling = true;
+                                this.unconscious = false;
+                                // Match KnightEnemy: warnings should be based on the current facing to target.
+                                this.facePlayer(this.targetPlayer);
                                 this.makeBigHitWarnings();
                                 return;
                             }
                             const oldX = this.x;
                             const oldY = this.y;
+                            this.rumbling = true;
                             // Build disabled positions (entities and active spike traps)
                             let disablePositions = Array();
                             for (const e of this.room.entities) {
@@ -12056,6 +12060,9 @@ class BigKnightEnemy extends enemy_1.Enemy {
                             else {
                                 this.facePlayer(this.targetPlayer);
                             }
+                            // Mirror KnightEnemy cadence: after acting, become "unconscious" until next warn turn.
+                            this.rumbling = false;
+                            this.unconscious = true;
                             // Handle regeneration while damaged
                             if (this.health < this.maxHealth) {
                                 this.ticksSinceFirstHit++;
@@ -20815,6 +20822,10 @@ class Entity extends drawable_1.Drawable {
                 const targetX = hx + x;
                 const targetY = hy + y;
                 if (this.isWithinRoomBounds(targetX, targetY)) {
+                    // For 2x2+ enemies, avoid placing warnings on tiles the attacker occupies.
+                    // This is the simplest "overlap" cull (tile-space).
+                    if (this.occupiesTile(targetX, targetY, this.z ?? 0))
+                        return;
                     const hitWarning = new hitWarning_1.HitWarning(this.game, targetX, targetY, hx, hy, true, arrowsOnly, this);
                     this.room.hitwarnings.push(hitWarning);
                     //this.hitWarnings.push(hitWarning);

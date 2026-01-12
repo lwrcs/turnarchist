@@ -103,12 +103,16 @@ export class BigKnightEnemy extends Enemy {
             // Knight cadence: warn on even ticks, move on odd ticks
             if (this.ticks % 2 === 0) {
               this.rumbling = true;
+              this.unconscious = false;
+              // Match KnightEnemy: warnings should be based on the current facing to target.
+              this.facePlayer(this.targetPlayer);
               this.makeBigHitWarnings();
               return;
             }
 
             const oldX = this.x;
             const oldY = this.y;
+            this.rumbling = true;
 
             // Build disabled positions (entities and active spike traps)
             let disablePositions = Array<astar.Position>();
@@ -200,6 +204,10 @@ export class BigKnightEnemy extends Enemy {
             } else {
               this.facePlayer(this.targetPlayer);
             }
+
+            // Mirror KnightEnemy cadence: after acting, become "unconscious" until next warn turn.
+            this.rumbling = false;
+            this.unconscious = true;
 
             // Handle regeneration while damaged
             if (this.health < this.maxHealth) {
