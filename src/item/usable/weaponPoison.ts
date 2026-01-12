@@ -28,7 +28,7 @@ export class WeaponPoison extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon) {
-      other.applyStatus({ poison: true, blood: false });
+      other.applyStatus({ poison: true, blood: false, curse: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
         `You apply the poison to your ${other.name}.`,

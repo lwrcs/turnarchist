@@ -162,6 +162,13 @@ export abstract class Enemy extends Entity {
     }
   };
 
+  /**
+   * Placeholder for "curse" weapon status. Intentionally no-op for now.
+   * This exists so WeaponCurse can be applied and routed through the same pipeline
+   * as poison/bleed without affecting gameplay yet.
+   */
+  curse = () => {};
+
   tickPoison = () => {
     if (this.status.poison.active && this.targetPlayer) {
       if (

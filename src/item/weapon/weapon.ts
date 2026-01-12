@@ -15,6 +15,7 @@ import { computePushChain, applyPushChain } from "../../utility/pushChain";
 interface WeaponStatus {
   poison: boolean;
   blood: boolean;
+  curse: boolean;
 }
 
 export abstract class Weapon extends Equippable {
@@ -40,7 +41,7 @@ export abstract class Weapon extends Equippable {
     this.canMine = false;
     this.range = 1;
     this.damage = 1;
-    this.status = status || { poison: false, blood: false };
+    this.status = status || { poison: false, blood: false, curse: false };
     this.durability = 50;
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
@@ -63,7 +64,7 @@ export abstract class Weapon extends Equippable {
     //this.wielder.inventory.removeItem(this);
     //this.wielder = null;
     this.game.pushMessage("Your weapon breaks");
-    if (this.status.poison || this.status.blood) {
+    if (this.status.poison || this.status.blood || this.status.curse) {
       this.clearStatus();
     }
     this.broken = true;
@@ -83,27 +84,42 @@ export abstract class Weapon extends Equippable {
   };
 
   clearStatus = () => {
-    const status = this.status.poison ? "poison" : "bleed";
+    const status = this.status.poison
+      ? "poison"
+      : this.status.blood
+        ? "bleed"
+        : "curse";
     this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
 
-    this.status = { poison: false, blood: false };
+    this.status = { poison: false, blood: false, curse: false };
     this.statusApplicationCount = 0;
   };
 
   statusEffect = (entity: Entity) => {
     if (!entity.isEnemy) return;
     const enemy = entity as Enemy;
-    if (!enemy.status.poison.active && !enemy.status.bleed.active) {
-      if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
-        this.statusApplicationCount++;
-        const message = this.status.poison
-          ? `Your weapon poisons the ${enemy.name}`
-          : `Your cursed weapon draws blood from the ${enemy.name}`;
 
-        //this.game.pushMessage(message);
+    // Poison/Bleed are gated by existing enemy status; curse is intentionally a no-op for now
+    // but still "pipes through" via Player.applyStatus.
+    const shouldApply = this.status.poison
+      ? !enemy.status.poison.active
+      : this.status.blood
+        ? !enemy.status.bleed.active
+        : this.status.curse;
 
-        //if (this.statusApplicationCount >= 10) this.clearStatus();
-      }
+    if (!shouldApply) return;
+
+    if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
+      this.statusApplicationCount++;
+      const message = this.status.poison
+        ? `Your weapon poisons the ${enemy.name}`
+        : this.status.blood
+          ? `Your cursed weapon draws blood from the ${enemy.name}`
+          : `Your weapon curses the ${enemy.name}`;
+
+      // this.game.pushMessage(message);
+
+      // if (this.statusApplicationCount >= 10) this.clearStatus();
     }
   };
 
@@ -234,18 +250,19 @@ export abstract class Weapon extends Equippable {
   };
 
   drawStatus = (x: number, y: number) => {
-    if (this.status.poison || this.status.blood) {
+    if (this.status.poison || this.status.blood || this.status.curse) {
       let tileX = 3;
-      if (this.status.poison) {
-        tileX = 4;
-      }
-      if (this.status.blood) {
-        tileX = 3;
+      let tileY = 0;
+      if (this.status.poison) tileX = 4;
+      if (this.status.blood) tileX = 3;
+      if (this.status.curse) {
+        tileX = 17;
+        tileY = 1;
       }
 
       Game.drawFX(
         tileX,
-        0,
+        tileY,
         1,
         1,
         x - 1 / GameConstants.TILESIZE,
@@ -262,6 +279,7 @@ export abstract class Weapon extends Equippable {
     let durability = "";
     if (this.status.poison) status.push("Poison");
     if (this.status.blood) status.push(" Bleed");
+    if (this.status.curse) status.push(" Curse");
     if (this.durability < this.durabilityMax)
       durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
     return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;

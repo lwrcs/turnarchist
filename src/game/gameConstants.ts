@@ -56,6 +56,7 @@ import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 import { IronBar } from "../item/resource/ironBar";
+import { WeaponCurse } from "../item/usable/weaponCurse";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -413,6 +414,7 @@ export class GameConstants {
     Scythe,
     Sword,
     DualDagger,
+    WeaponCurse,
 
     Coal,
     Coal,

@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png";
+module.exports = __webpack_require__.p + "assets/fxset.43c34bcfcab0c39c080c.png";
 
 /***/ }),
 
@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.d3b34c63a8ba82acf140.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.17f79504ebf7ad5f5da2.png";
+module.exports = __webpack_require__.p + "assets/itemset.486b5bad212eb9240fa5.png";
 
 /***/ }),
 
@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.17f79504ebf7ad5f5da2.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.129c664bdc0df72912de.png";
+module.exports = __webpack_require__.p + "assets/mobset.5ccf9d04ba2a8f7e1802.png";
 
 /***/ }),
 
@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.129c664bdc0df72912de.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.b5676c8fdf62e96c0af7.png";
+module.exports = __webpack_require__.p + "assets/objset.ebb393a34f882dfe572d.png";
 
 /***/ }),
 
@@ -14580,6 +14580,12 @@ class Enemy extends entity_1.Entity {
                 };
             }
         };
+        /**
+         * Placeholder for "curse" weapon status. Intentionally no-op for now.
+         * This exists so WeaponCurse can be applied and routed through the same pipeline
+         * as poison/bleed without affecting gameplay yet.
+         */
+        this.curse = () => { };
         this.tickPoison = () => {
             if (this.status.poison.active && this.targetPlayer) {
                 if (this.ticks % 3 === this.status.poison.effectTick &&
@@ -29571,6 +29577,7 @@ const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gau
 const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/chestPlate.ts");
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
+const weaponCurse_1 = __webpack_require__(/*! ../item/usable/weaponCurse */ "./src/item/usable/weaponCurse.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -29868,6 +29875,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     scythe_1.Scythe,
     sword_1.Sword,
     dualdagger_1.DualDagger,
+    weaponCurse_1.WeaponCurse,
     coal_1.Coal,
     coal_1.Coal,
     coal_1.Coal,
@@ -41761,7 +41769,7 @@ class WeaponBlood extends usable_1.Usable {
         };
         this.useOnOther = (player, other) => {
             if (other instanceof weapon_1.Weapon) {
-                other.applyStatus({ blood: true, poison: false });
+                other.applyStatus({ blood: true, poison: false, curse: false });
                 player.inventory.removeItem(this);
                 this.level.game.pushMessage(`You coat your ${other.name} in cursed blood.`);
             }
@@ -41773,11 +41781,61 @@ class WeaponBlood extends usable_1.Usable {
         this.tileY = 4;
         this.offsetY = -0.3;
         this.canUseOnOther = true;
+        this.name = WeaponBlood.itemName;
+        this.description = "Can be applied to weapons to deal bleed damage";
     }
 }
 exports.WeaponBlood = WeaponBlood;
 WeaponBlood.itemName = "cursed blood";
 WeaponBlood.examineText = "A vial of cursed blood. It stains the light.";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/weaponCurse.ts":
+/*!****************************************!*\
+  !*** ./src/item/usable/weaponCurse.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WeaponCurse = void 0;
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
+class WeaponCurse extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            player.health = Math.min(player.maxHealth, player.health + 1);
+            if (this.level.game.rooms[player.levelID] === this.level.game.room)
+                sound_1.Sound.heal();
+            //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
+        };
+        this.useOnOther = (player, other) => {
+            if (other instanceof weapon_1.Weapon) {
+                other.applyStatus({ poison: false, blood: false, curse: true });
+                player.inventory.removeItem(this);
+                this.level.game.pushMessage(`You apply the curse to your ${other.name}.`);
+                console.log(`weapon curse used on ${other.name}`);
+            }
+        };
+        this.getDescription = () => {
+            return "WEAPON CURSE\nCan be applied to weapons to deal curse damage";
+        };
+        this.tileX = 15;
+        this.tileY = 4;
+        this.offsetY = -0.3;
+        this.canUseOnOther = true;
+        this.name = WeaponCurse.itemName;
+        this.description = "Can be applied to weapons.";
+    }
+}
+exports.WeaponCurse = WeaponCurse;
+WeaponCurse.itemName = "weapon curse";
+WeaponCurse.examineText = "A vial of cursed ectoplasm. It stains the light.";
 
 
 /***/ }),
@@ -41867,7 +41925,7 @@ class WeaponPoison extends usable_1.Usable {
         };
         this.useOnOther = (player, other) => {
             if (other instanceof weapon_1.Weapon) {
-                other.applyStatus({ poison: true, blood: false });
+                other.applyStatus({ poison: true, blood: false, curse: false });
                 player.inventory.removeItem(this);
                 this.level.game.pushMessage(`You apply the poison to your ${other.name}.`);
                 console.log(`weapon poison used on ${other.name}`);
@@ -43538,7 +43596,7 @@ class Weapon extends equippable_1.Equippable {
             //this.wielder.inventory.removeItem(this);
             //this.wielder = null;
             this.game.pushMessage("Your weapon breaks");
-            if (this.status.poison || this.status.blood) {
+            if (this.status.poison || this.status.blood || this.status.curse) {
                 this.clearStatus();
             }
             this.broken = true;
@@ -43556,24 +43614,37 @@ class Weapon extends equippable_1.Equippable {
             }
         };
         this.clearStatus = () => {
-            const status = this.status.poison ? "poison" : "bleed";
+            const status = this.status.poison
+                ? "poison"
+                : this.status.blood
+                    ? "bleed"
+                    : "curse";
             this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
-            this.status = { poison: false, blood: false };
+            this.status = { poison: false, blood: false, curse: false };
             this.statusApplicationCount = 0;
         };
         this.statusEffect = (entity) => {
             if (!entity.isEnemy)
                 return;
             const enemy = entity;
-            if (!enemy.status.poison.active && !enemy.status.bleed.active) {
-                if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
-                    this.statusApplicationCount++;
-                    const message = this.status.poison
-                        ? `Your weapon poisons the ${enemy.name}`
-                        : `Your cursed weapon draws blood from the ${enemy.name}`;
-                    //this.game.pushMessage(message);
-                    //if (this.statusApplicationCount >= 10) this.clearStatus();
-                }
+            // Poison/Bleed are gated by existing enemy status; curse is intentionally a no-op for now
+            // but still "pipes through" via Player.applyStatus.
+            const shouldApply = this.status.poison
+                ? !enemy.status.poison.active
+                : this.status.blood
+                    ? !enemy.status.bleed.active
+                    : this.status.curse;
+            if (!shouldApply)
+                return;
+            if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
+                this.statusApplicationCount++;
+                const message = this.status.poison
+                    ? `Your weapon poisons the ${enemy.name}`
+                    : this.status.blood
+                        ? `Your cursed weapon draws blood from the ${enemy.name}`
+                        : `Your weapon curses the ${enemy.name}`;
+                // this.game.pushMessage(message);
+                // if (this.statusApplicationCount >= 10) this.clearStatus();
             }
         };
         this.disassemble = () => {
@@ -43682,15 +43753,18 @@ class Weapon extends equippable_1.Equippable {
             sound_1.Sound.hit();
         };
         this.drawStatus = (x, y) => {
-            if (this.status.poison || this.status.blood) {
+            if (this.status.poison || this.status.blood || this.status.curse) {
                 let tileX = 3;
-                if (this.status.poison) {
+                let tileY = 0;
+                if (this.status.poison)
                     tileX = 4;
-                }
-                if (this.status.blood) {
+                if (this.status.blood)
                     tileX = 3;
+                if (this.status.curse) {
+                    tileX = 17;
+                    tileY = 1;
                 }
-                game_1.Game.drawFX(tileX, 0, 1, 1, x - 1 / gameConstants_1.GameConstants.TILESIZE, y - 1 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
+                game_1.Game.drawFX(tileX, tileY, 1, 1, x - 1 / gameConstants_1.GameConstants.TILESIZE, y - 1 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
             }
         };
         this.getDescription = () => {
@@ -43701,6 +43775,8 @@ class Weapon extends equippable_1.Equippable {
                 status.push("Poison");
             if (this.status.blood)
                 status.push(" Bleed");
+            if (this.status.curse)
+                status.push(" Curse");
             if (this.durability < this.durabilityMax)
                 durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
             return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
@@ -43760,7 +43836,7 @@ class Weapon extends equippable_1.Equippable {
         this.canMine = false;
         this.range = 1;
         this.damage = 1;
-        this.status = status || { poison: false, blood: false };
+        this.status = status || { poison: false, blood: false, curse: false };
         this.durability = 50;
         this.durabilityMax = 50;
         this.statusApplicationCount = 0;
@@ -50018,6 +50094,10 @@ class Player extends drawable_1.Drawable {
                 }
                 if (status.blood) {
                     enemy.bleed();
+                    return true;
+                }
+                if (status.curse) {
+                    enemy.curse();
                     return true;
                 }
             }

@@ -15,6 +15,8 @@ export class WeaponBlood extends Usable {
     this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;
+    this.name = WeaponBlood.itemName;
+    this.description = "Can be applied to weapons to deal bleed damage";
   }
 
   onUse = (player: Player) => {
@@ -27,7 +29,7 @@ export class WeaponBlood extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon) {
-      other.applyStatus({ blood: true, poison: false });
+      other.applyStatus({ blood: true, poison: false, curse: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
         `You coat your ${other.name} in cursed blood.`,
