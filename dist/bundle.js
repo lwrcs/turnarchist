@@ -24575,13 +24575,25 @@ const sampleCanvasRGBA = (args) => {
     const { canvas, points } = args;
     const out = [];
     try {
-        const ctx = canvas.getContext("2d");
-        if (!ctx)
+        // Use a dedicated small readback canvas (with willReadFrequently) to avoid
+        // forcing readbacks on potentially GPU-backed source canvases.
+        const rb = getReadbackCanvas();
+        const rctx = rb.getContext("2d", {
+            willReadFrequently: true,
+        });
+        if (!rctx)
             return out;
+        const rw = rb.width;
+        const rh = rb.height;
+        rctx.clearRect(0, 0, rw, rh);
+        rctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, rw, rh);
         for (const [x, y] of points) {
-            if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height)
-                continue;
-            const d = ctx.getImageData(x, y, 1, 1).data;
+            // Points are expressed in source-canvas space; map to readback space.
+            const sx = canvas.width > 0 ? x / canvas.width : 0;
+            const sy = canvas.height > 0 ? y / canvas.height : 0;
+            const rx = Math.max(0, Math.min(rw - 1, Math.floor(sx * rw)));
+            const ry = Math.max(0, Math.min(rh - 1, Math.floor(sy * rh)));
+            const d = rctx.getImageData(rx, ry, 1, 1).data;
             out.push({ x, y, r: d[0], g: d[1], b: d[2], a: d[3] });
         }
     }
@@ -24589,6 +24601,17 @@ const sampleCanvasRGBA = (args) => {
         return out;
     }
     return out;
+};
+let _readbackCanvas = null;
+const getReadbackCanvas = () => {
+    // Small fixed-size canvas to sample pixels quickly.
+    if (_readbackCanvas)
+        return _readbackCanvas;
+    const c = document.createElement("canvas");
+    c.width = 32;
+    c.height = 32;
+    _readbackCanvas = c;
+    return c;
 };
 const imageHasAnyOpaquePixel = (img) => {
     try {
@@ -24602,7 +24625,9 @@ const imageHasAnyOpaquePixel = (img) => {
         const probe = document.createElement("canvas");
         probe.width = 32;
         probe.height = 32;
-        const ctx = probe.getContext("2d");
+        const ctx = probe.getContext("2d", {
+            willReadFrequently: true,
+        });
         if (!ctx)
             return false;
         ctx.clearRect(0, 0, probe.width, probe.height);
@@ -24619,48 +24644,45 @@ const imageHasAnyOpaquePixel = (img) => {
         return false;
     }
 };
-const canvasLooksBlankOrBlack = (canvas) => {
+const canvasLooksBlank = (canvas) => {
     try {
         const w = canvas.width;
         const h = canvas.height;
         if (w <= 0 || h <= 0)
             return true;
-        const ctx = canvas.getContext("2d");
+        // Sample via the readback canvas (willReadFrequently) to avoid expensive GPU readbacks.
+        const rb = getReadbackCanvas();
+        const ctx = rb.getContext("2d", {
+            willReadFrequently: true,
+        });
         if (!ctx)
             return true;
+        ctx.clearRect(0, 0, rb.width, rb.height);
+        ctx.drawImage(canvas, 0, 0, w, h, 0, 0, rb.width, rb.height);
         // Sample a few points; if all alpha=0, treat as blank.
-        // Also treat "solid black" (rgb=0 with alpha>0 everywhere we sample) as poisoned.
         const pts = [
-            [Math.floor(w / 2), Math.floor(h / 2)],
+            [Math.floor(rb.width / 2), Math.floor(rb.height / 2)],
             [1, 1],
-            [w - 2, 1],
-            [1, h - 2],
-            [w - 2, h - 2],
-            [Math.floor(w / 4), Math.floor(h / 4)],
-            [Math.floor((3 * w) / 4), Math.floor(h / 4)],
-            [Math.floor(w / 4), Math.floor((3 * h) / 4)],
-            [Math.floor((3 * w) / 4), Math.floor((3 * h) / 4)],
+            [rb.width - 2, 1],
+            [1, rb.height - 2],
+            [rb.width - 2, rb.height - 2],
+            [Math.floor(rb.width / 4), Math.floor(rb.height / 4)],
+            [Math.floor((3 * rb.width) / 4), Math.floor(rb.height / 4)],
+            [Math.floor(rb.width / 4), Math.floor((3 * rb.height) / 4)],
+            [Math.floor((3 * rb.width) / 4), Math.floor((3 * rb.height) / 4)],
         ].filter((p) => {
             const x = p[0];
             const y = p[1];
-            return x >= 0 && y >= 0 && x < w && y < h;
+            return x >= 0 && y >= 0 && x < rb.width && y < rb.height;
         });
         let anyAlpha = false;
-        let anyNonBlack = false;
         for (const [x, y] of pts) {
             const d = ctx.getImageData(x, y, 1, 1).data;
-            const r = d[0];
-            const g = d[1];
-            const b = d[2];
             const a = d[3];
             if (a > 0)
                 anyAlpha = true;
-            if (a > 0 && (r > 0 || g > 0 || b > 0))
-                anyNonBlack = true;
         }
         if (!anyAlpha)
-            return true;
-        if (!anyNonBlack)
             return true;
         return false;
     }
@@ -24800,6 +24822,8 @@ class Game {
         this._autoRecoverDebug = false;
         this._lastSheetProbeMs = 0;
         this._lastSheetProbeOk = true;
+        this._autoRecoverSuppressUntilMs = 0;
+        this._lastAutoRecoverChatMs = 0;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -24894,6 +24918,8 @@ class Game {
             if (!gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE)
                 return;
             const now = Date.now();
+            if (now < this._autoRecoverSuppressUntilMs)
+                return;
             const interval = Math.max(100, Math.floor(gameConstants_1.GameConstants.AUTO_RECOVER_POISONED_SHADE_CACHE_INTERVAL_MS));
             if (now - this._lastAutoRecoverCheckMs < interval)
                 return;
@@ -24968,29 +24994,27 @@ class Game {
                 // If no sheets look drawable, don't clear caches (could be a genuine resource failure).
                 if (!anySheetOk)
                     return;
-                // 2) Cache poison detection: sample a handful of cached shaded canvases.
-                const keys = Object.keys(Game.shade_canvases || {});
-                if (keys.length < 50)
-                    return; // not enough evidence
-                const sampleCount = Math.min(12, keys.length);
-                let poisoned = 0;
-                for (let i = 0; i < sampleCount; i++) {
-                    const k = keys[(Math.random() * keys.length) | 0];
-                    const c = Game.shade_canvases[k];
-                    if (c && canvasLooksBlankOrBlack(c))
-                        poisoned++;
+                // 2) Canary cache entry: create (or reuse) a known-unshaded cached sprite and see if it's blank.
+                // If this is blank while sheets are healthy, the cache is poisoned.
+                const shadeColorLevels = Math.max(2, Math.floor(gameConstants_1.GameConstants.SHADE_COLOR_LEVELS));
+                // shadeOpacity=0 => unshaded base sprite (not a black silhouette)
+                const canaryKey = getShadeCanvasKey(Game.fxset, 18, 6, 1, 1, 0, quantizeHexColor("#FFFFFF", shadeColorLevels), undefined);
+                if (!Game.shade_canvases?.[canaryKey]) {
+                    // Build it by drawing far offscreen (no visible side effects).
+                    Game.drawFX(18, 6, 1, 1, -99999, -99999, 1, 1, "#FFFFFF", 0);
                 }
-                const poisonRatio = poisoned / sampleCount;
+                const canary = Game.shade_canvases?.[canaryKey];
+                const canaryBlank = canary ? canvasLooksBlank(canary) : false;
                 if (this._autoRecoverDebug) {
-                    console.log("[auto-recover] cache sample", {
-                        shadeCacheCount: keys.length,
-                        sampleCount,
-                        poisoned,
-                        poisonRatio,
+                    console.log("[auto-recover] canary", {
+                        canaryKey,
+                        exists: !!canary,
+                        w: canary?.width ?? 0,
+                        h: canary?.height ?? 0,
+                        canaryBlank,
                     });
                 }
-                // 3) If most cached shaded sprites look blank/black, caches are likely poisoned.
-                if (poisonRatio >= 0.8) {
+                if (canary && canaryBlank) {
                     // Prevent spamming clears every interval; allow once every few seconds.
                     if (now - this._lastAutoRecoverTriggeredMs < 2500)
                         return;
@@ -25006,11 +25030,17 @@ class Game {
                         Game.text_canvas_order = [];
                     }
                     catch { }
-                    console.warn("[auto-recover] Cleared poisoned shade/text caches (spritesheets OK, cached sprites mostly blank/black).");
-                    try {
-                        this.pushMessage("Recovered sprites (cleared poisoned caches).");
+                    console.warn("[auto-recover] Cleared poisoned shade/text caches (spritesheets OK, canary cached sprite blank).");
+                    // Give caches a moment to rebuild before running the canary again.
+                    this._autoRecoverSuppressUntilMs = now + 1200;
+                    // Avoid chat spam: at most once every 20s.
+                    if (now - this._lastAutoRecoverChatMs > 20000) {
+                        this._lastAutoRecoverChatMs = now;
+                        try {
+                            this.pushMessage("Recovered sprites (auto-cleared poisoned caches).");
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
             }
             catch {
