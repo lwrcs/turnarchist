@@ -532,6 +532,10 @@ export const Input = {
       }
     }
 
+    // If a touch started in UI, do not treat it as a world swipe gesture.
+    // UI (inventory/bestiary/etc) owns the gesture and can implement its own behavior.
+    if (Input.touchStartedInUI) return;
+
     // Check if we've swiped
     if (xDiff ** 2 + yDiff ** 2 >= GameConstants.SWIPE_THRESH) {
       // Any real swipe cancels long press.

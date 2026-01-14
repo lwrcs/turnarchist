@@ -17,6 +17,10 @@ export class PlayerInputHandler {
   mostRecentMoveInput: string;
   moveStartTime: number;
   private mouseHoldInitialDirection: Direction | null = null;
+  private bestiaryTouchMoveHandler: ((x: number, y: number) => void) | null =
+    null;
+  private bestiaryTouchEndHandler: ((x: number, y: number) => void) | null =
+    null;
 
   constructor(player: Player) {
     this.player = player;
@@ -53,15 +57,43 @@ export class PlayerInputHandler {
     Input.touchStartListeners.push((x: number, y: number) => {
       const inventory = this.player.inventory;
       const bestiary = this.player.bestiary;
+      // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
+      if (bestiary && bestiary.handleTouchStart(x, y)) return true;
       return (
         inventory.isPointInInventoryButton(x, y) ||
         inventory.isPointInQuickbarBounds(x, y).inBounds ||
         (inventory.isOpen &&
           inventory.isPointInInventoryBounds(x, y).inBounds) ||
         Menu.isPointInOpenMenuButtonBounds(x, y) ||
-        (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false)
+        (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+        (bestiary ? bestiary.isPointInBookBounds(x, y) : false)
       );
     });
+
+    // Bestiary drag-follow (mobile): track touch movement while the bestiary is open.
+    // Use stable handler references so re-running setup can de-dupe correctly.
+    if (this.bestiaryTouchMoveHandler) {
+      Input.touchMoveListeners = Input.touchMoveListeners.filter(
+        (fn) => fn !== this.bestiaryTouchMoveHandler,
+      );
+    }
+    if (this.bestiaryTouchEndHandler) {
+      Input.touchEndListeners = Input.touchEndListeners.filter(
+        (fn) => fn !== this.bestiaryTouchEndHandler,
+      );
+    }
+    this.bestiaryTouchMoveHandler = (x: number, y: number) => {
+      const bestiary = this.player.bestiary;
+      if (!bestiary?.isOpen) return;
+      bestiary.handleTouchMove(x, y);
+    };
+    this.bestiaryTouchEndHandler = (x: number, y: number) => {
+      const bestiary = this.player.bestiary;
+      if (!bestiary?.isOpen) return;
+      bestiary.handleTouchEnd(x, y);
+    };
+    Input.touchMoveListeners.push(this.bestiaryTouchMoveHandler);
+    Input.touchEndListeners.push(this.bestiaryTouchEndHandler);
     Input.mouseDownListeners.push((x: number, y: number, button: number) =>
       this.handleMouseDown(x, y, button),
     );

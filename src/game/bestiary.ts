@@ -251,6 +251,40 @@ export class Bestiary {
   private nextStateRect: { x: number; y: number; w: number; h: number } | null =
     null;
 
+  // Slide transition for swipe/page navigation (mobile-friendly).
+  private pageTransition: {
+    startMs: number;
+    durationMs: number;
+    mode: "commit" | "cancel";
+    dir: -1 | 1;
+    fromEntryIndex: number;
+    toEntryIndex: number;
+    fromSubpage: 0 | 1;
+    toSubpage: 0 | 1;
+    startOffsetPx: number;
+    endOffsetPx: number;
+  } | null = null;
+
+  // Fade the bestiary in/out on open/close.
+  private openFade: {
+    kind: "opening" | "closing";
+    startMs: number;
+    durationMs: number;
+  } | null = null;
+
+  // Touch drag-follow (mobile): track finger and slide pages with it.
+  private touchDrag: {
+    active: boolean;
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+    offsetPx: number;
+    dir: -1 | 1;
+    toEntryIndex: number;
+    toSubpage: 0 | 1;
+  } | null = null;
+
   constructor(game: Game, player: Player) {
     this.game = game;
     this.player = player;
@@ -299,6 +333,7 @@ export class Bestiary {
     this.openTime = Date.now();
     this.previewAnimT = 0;
     this.entryViewStartTime = Date.now();
+    this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
     // Ensure layout mode reflects the current screen size at the moment of opening.
     this.handleResize();
   };
@@ -307,7 +342,12 @@ export class Bestiary {
    * Closes the logbook window.
    */
   close = () => {
-    this.isOpen = false;
+    if (!this.isOpen) return;
+    // Keep drawing while we fade out; we'll set `isOpen=false` once opacity hits 0.
+    this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
+    // Stop any in-progress gestures/animations so the close feels immediate.
+    this.touchDrag = null;
+    this.pageTransition = null;
   };
 
   entryUp = () => {
@@ -323,6 +363,133 @@ export class Bestiary {
    */
   toggleOpen = () => {
     this.isOpen ? this.close() : this.open();
+  };
+
+  private openAlpha = (): number => {
+    if (!this.isOpen) return 0;
+    if (!this.openFade) return 1;
+    const now = Date.now();
+    const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
+    const t = Math.max(0, Math.min(1, tRaw));
+    // Ease-out quadratic (matches page slide feel).
+    const ease = t * (2 - t);
+    if (this.openFade.kind === "opening") {
+      if (t >= 1) this.openFade = null;
+      return ease;
+    }
+    // closing
+    const a = 1 - ease;
+    if (t >= 1) {
+      this.openFade = null;
+      this.isOpen = false;
+      // Ensure hitboxes are cleared when fully closed.
+      this.leftArrowRect = null;
+      this.rightArrowRect = null;
+      this.closeRect = null;
+      this.prevStateRect = null;
+      this.nextStateRect = null;
+    }
+    return a;
+  };
+
+  private computeBookRect = (): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } => {
+    const margin = this.marginPx();
+    const w = Math.min(GameConstants.WIDTH - margin * 2, 420);
+    const h = Math.min(GameConstants.HEIGHT - margin * 2, 260);
+    const x = Math.round(0.5 * GameConstants.WIDTH - 0.5 * w);
+    const y = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * h);
+    return { x, y, w, h };
+  };
+
+  isPointInBookBounds = (x: number, y: number): boolean => {
+    if (!this.isOpen) return false;
+    const r = this.computeBookRect();
+    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  };
+
+  handleTouchStart = (x: number, y: number): boolean => {
+    if (!this.isOpen) return false;
+    if (!this.isPointInBookBounds(x, y)) return false;
+    // Do not begin a drag until we've moved enough; this just arms it.
+    this.touchDrag = {
+      active: false,
+      startX: x,
+      startY: y,
+      x,
+      y,
+      offsetPx: 0,
+      dir: 1,
+      toEntryIndex: this.activeEntryIndex,
+      toSubpage: this.activeEntrySubpage,
+    };
+    return true;
+  };
+
+  handleTouchMove = (x: number, y: number): void => {
+    if (!this.isOpen) return;
+    if (!this.touchDrag) return;
+    if (this.pageTransition) return;
+
+    const r = this.computeBookRect();
+    const dx = x - this.touchDrag.startX;
+    const dy = y - this.touchDrag.startY;
+
+    // Only start horizontal drags; ignore tiny jitter.
+    const START_PX = 14; // align with Input's drag threshold
+    if (!this.touchDrag.active) {
+      if (dx * dx + dy * dy < START_PX * START_PX) return;
+      if (Math.abs(dx) < Math.abs(dy)) return;
+      this.touchDrag.active = true;
+    }
+
+    const clamped = Math.max(-r.w, Math.min(r.w, dx));
+    const dir: -1 | 1 = clamped < 0 ? 1 : -1;
+    const next = this.computeNextPage(dir);
+
+    this.touchDrag.x = x;
+    this.touchDrag.y = y;
+    this.touchDrag.offsetPx = clamped;
+    this.touchDrag.dir = dir;
+    this.touchDrag.toEntryIndex = next.entryIndex;
+    this.touchDrag.toSubpage = next.subpage;
+  };
+
+  handleTouchEnd = (_x: number, _y: number): void => {
+    if (!this.isOpen) return;
+    if (!this.touchDrag) return;
+
+    const r = this.computeBookRect();
+    const drag = this.touchDrag;
+    this.touchDrag = null;
+
+    if (!drag.active) return;
+
+    const commitThreshold = r.w * 0.22;
+    const commit = Math.abs(drag.offsetPx) >= commitThreshold;
+    if (commit) {
+      this.startPageTransition({
+        dir: drag.dir,
+        toEntryIndex: drag.toEntryIndex,
+        toSubpage: drag.toSubpage,
+        startOffsetPx: drag.offsetPx,
+        mode: "commit",
+      });
+    } else {
+      // Snap back smoothly.
+      this.startPageTransition({
+        dir: drag.dir,
+        // Keep rendering the candidate page while snapping back, so chrome doesn't pop.
+        toEntryIndex: drag.toEntryIndex,
+        toSubpage: drag.toSubpage,
+        startOffsetPx: drag.offsetPx,
+        mode: "cancel",
+      });
+    }
   };
 
   isPointInBestiaryButton = (x: number, y: number): boolean => {
@@ -439,6 +606,8 @@ export class Bestiary {
 
   pageLeft = () => {
     if (this.entries.length <= 0) return;
+    if (this.pageTransition) return;
+    if (this.touchDrag?.active) return;
     const subpageMode =
       this.isCompactMode() && !GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
     if (subpageMode) {
@@ -447,16 +616,30 @@ export class Bestiary {
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
       const next = (current - 1 + totalPages) % totalPages;
       const nextEntry = Math.floor(next / 2);
-      this.activeEntrySubpage = (next % 2) as 0 | 1;
-      this.setActiveEntryIndex(nextEntry);
+      const nextSub = (next % 2) as 0 | 1;
+      this.startPageTransition({
+        dir: -1,
+        toEntryIndex: nextEntry,
+        toSubpage: nextSub,
+      });
       return;
     }
 
-    this.setActiveEntryIndex(this.activeEntryIndex - 1);
+    const nextEntry =
+      (((this.activeEntryIndex - 1) % this.entries.length) +
+        this.entries.length) %
+      this.entries.length;
+    this.startPageTransition({
+      dir: -1,
+      toEntryIndex: nextEntry,
+      toSubpage: 0,
+    });
   };
 
   pageRight = () => {
     if (this.entries.length <= 0) return;
+    if (this.pageTransition) return;
+    if (this.touchDrag?.active) return;
     const subpageMode =
       this.isCompactMode() && !GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
     if (subpageMode) {
@@ -464,16 +647,82 @@ export class Bestiary {
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
       const next = (current + 1) % totalPages;
       const nextEntry = Math.floor(next / 2);
-      this.activeEntrySubpage = (next % 2) as 0 | 1;
-      this.setActiveEntryIndex(nextEntry);
+      const nextSub = (next % 2) as 0 | 1;
+      this.startPageTransition({
+        dir: 1,
+        toEntryIndex: nextEntry,
+        toSubpage: nextSub,
+      });
       return;
     }
 
-    this.setActiveEntryIndex(this.activeEntryIndex + 1);
+    const nextEntry = (this.activeEntryIndex + 1) % this.entries.length;
+    this.startPageTransition({ dir: 1, toEntryIndex: nextEntry, toSubpage: 0 });
+  };
+
+  private startPageTransition = (args: {
+    dir: -1 | 1;
+    toEntryIndex: number;
+    toSubpage: 0 | 1;
+    startOffsetPx?: number;
+    mode?: "commit" | "cancel";
+  }): void => {
+    // If animation would be meaningless, just snap.
+    if (this.entries.length <= 1) {
+      this.activeEntrySubpage = args.toSubpage;
+      this.setActiveEntryIndex(args.toEntryIndex);
+      return;
+    }
+    const r = this.computeBookRect();
+    const mode = args.mode ?? "commit";
+    const startOffsetPx = args.startOffsetPx ?? 0;
+    const endOffsetPx = mode === "commit" ? -args.dir * r.w : 0;
+    this.pageTransition = {
+      startMs: Date.now(),
+      durationMs: 180,
+      mode,
+      dir: args.dir,
+      fromEntryIndex: this.activeEntryIndex,
+      toEntryIndex: args.toEntryIndex,
+      fromSubpage: this.activeEntrySubpage,
+      toSubpage: args.toSubpage,
+      startOffsetPx,
+      endOffsetPx,
+    };
+  };
+
+  private pageAlphaForOffset = (offsetPx: number, bookW: number): number => {
+    const visibleFraction = 1 - Math.abs(offsetPx) / Math.max(1, bookW);
+    // Full opacity once the page is ~75% on-screen.
+    const a = visibleFraction / 0.75;
+    return Math.max(0, Math.min(1, a));
+  };
+
+  private computeNextPage = (
+    dir: -1 | 1,
+  ): { entryIndex: number; subpage: 0 | 1 } => {
+    const compactMode = this.isCompactMode();
+    const stackedMode =
+      compactMode && GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
+    const subpageMode = compactMode && !stackedMode;
+
+    if (!subpageMode) {
+      const nextEntry =
+        (((this.activeEntryIndex + dir) % this.entries.length) +
+          this.entries.length) %
+        this.entries.length;
+      return { entryIndex: nextEntry, subpage: 0 };
+    }
+
+    const totalPages = this.entries.length * 2;
+    const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
+    const next = (current + dir + totalPages) % totalPages;
+    return { entryIndex: Math.floor(next / 2), subpage: (next % 2) as 0 | 1 };
   };
 
   handleInput = (input: "escape" | "left" | "right") => {
     if (!this.isOpen) return;
+    if (this.openFade?.kind === "closing") return;
     if (input === "escape") {
       this.close();
       return;
@@ -484,6 +733,10 @@ export class Bestiary {
 
   handleMouseDown = (x: number, y: number) => {
     if (!this.isOpen) return;
+    if (this.openFade?.kind === "closing") return;
+    // Avoid dispatching clicks during the slide animation (hitboxes are ambiguous).
+    if (this.pageTransition) return;
+    if (this.touchDrag?.active) return;
     // Allow the inventory-style button to close the bestiary.
     if (this.isPointInBestiaryButton(x, y)) {
       this.close();
@@ -526,6 +779,15 @@ export class Bestiary {
   draw = (delta: number) => {
     if (!this.isOpen) return;
     Game.ctx.save();
+    const baseAlpha = Game.ctx.globalAlpha;
+    const a = this.openAlpha();
+    // If we finished fading out this frame, stop drawing.
+    if (a <= 0) {
+      Game.ctx.restore();
+      return;
+    }
+    // Apply overall bestiary opacity once; per-page swipe alpha multiplies on top inside `drawBookAt`.
+    Game.ctx.globalAlpha = baseAlpha * a;
     HitWarning.updatePreviewFrame(delta);
     this.previewAnimT += delta;
     const theme = this.getTheme();
@@ -535,16 +797,170 @@ export class Bestiary {
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
     // Book rect
-    const margin = this.marginPx();
-    const bookW = Math.min(GameConstants.WIDTH - margin * 2, 420);
-    const bookH = Math.min(GameConstants.HEIGHT - margin * 2, 260);
-    const bookX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * bookW);
-    const bookY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * bookH);
+    const { x: bookX, y: bookY, w: bookW, h: bookH } = this.computeBookRect();
     const compactMode = this.isCompactMode();
     const stackedMode =
       compactMode && GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
     const subpageMode = compactMode && !stackedMode;
-    if (!subpageMode) this.activeEntrySubpage = 0;
+
+    if (this.touchDrag?.active) {
+      // Disable hitboxes during drag-follow (tap should not fire on release).
+      this.leftArrowRect = null;
+      this.rightArrowRect = null;
+      this.closeRect = null;
+      this.prevStateRect = null;
+      this.nextStateRect = null;
+
+      const dir = this.touchDrag.dir;
+      const outgoingOffset = this.touchDrag.offsetPx;
+      const incomingOffset = outgoingOffset + dir * bookW;
+      const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
+      const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
+
+      this.drawBookAt({
+        theme,
+        bookX,
+        bookY,
+        bookW,
+        bookH,
+        compactMode,
+        stackedMode,
+        subpageMode,
+        entryIndex: this.activeEntryIndex,
+        subpage: this.activeEntrySubpage,
+        xOffsetPx: outgoingOffset,
+        alpha: outgoingAlpha,
+        enableHitboxes: false,
+        drawChrome: true,
+      });
+      this.drawBookAt({
+        theme,
+        bookX,
+        bookY,
+        bookW,
+        bookH,
+        compactMode,
+        stackedMode,
+        subpageMode,
+        entryIndex: this.touchDrag.toEntryIndex,
+        subpage: this.touchDrag.toSubpage,
+        xOffsetPx: incomingOffset,
+        alpha: incomingAlpha,
+        enableHitboxes: false,
+        drawChrome: true,
+      });
+    } else if (this.pageTransition) {
+      // Disable hitboxes during animation.
+      this.leftArrowRect = null;
+      this.rightArrowRect = null;
+      this.closeRect = null;
+      this.prevStateRect = null;
+      this.nextStateRect = null;
+
+      const now = Date.now();
+      const tRaw =
+        (now - this.pageTransition.startMs) / this.pageTransition.durationMs;
+      const t = Math.max(0, Math.min(1, tRaw));
+      // Ease-out quadratic.
+      const ease = t * (2 - t);
+      const outgoingOffset =
+        this.pageTransition.startOffsetPx +
+        (this.pageTransition.endOffsetPx - this.pageTransition.startOffsetPx) *
+          ease;
+      const incomingOffset = outgoingOffset + this.pageTransition.dir * bookW;
+      const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
+      const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
+
+      this.drawBookAt({
+        theme,
+        bookX,
+        bookY,
+        bookW,
+        bookH,
+        compactMode,
+        stackedMode,
+        subpageMode,
+        entryIndex: this.pageTransition.fromEntryIndex,
+        subpage: this.pageTransition.fromSubpage,
+        xOffsetPx: outgoingOffset,
+        alpha: outgoingAlpha,
+        enableHitboxes: false,
+        drawChrome: true,
+      });
+      this.drawBookAt({
+        theme,
+        bookX,
+        bookY,
+        bookW,
+        bookH,
+        compactMode,
+        stackedMode,
+        subpageMode,
+        entryIndex: this.pageTransition.toEntryIndex,
+        subpage: this.pageTransition.toSubpage,
+        xOffsetPx: incomingOffset,
+        alpha: incomingAlpha,
+        enableHitboxes: false,
+        drawChrome: true,
+      });
+
+      if (t >= 1) {
+        const done = this.pageTransition;
+        this.pageTransition = null;
+        if (done.mode === "commit") {
+          this.activeEntrySubpage = subpageMode ? done.toSubpage : 0;
+          this.setActiveEntryIndex(done.toEntryIndex);
+        }
+      }
+    } else {
+      const effectiveSubpage = subpageMode ? this.activeEntrySubpage : 0;
+      this.activeEntrySubpage = effectiveSubpage;
+      this.drawBookAt({
+        theme,
+        bookX,
+        bookY,
+        bookW,
+        bookH,
+        compactMode,
+        stackedMode,
+        subpageMode,
+        entryIndex: this.activeEntryIndex,
+        subpage: effectiveSubpage,
+        xOffsetPx: 0,
+        alpha: 1,
+        enableHitboxes: true,
+        drawChrome: true,
+      });
+    }
+
+    Game.ctx.restore();
+  };
+
+  private drawBookAt = (args: {
+    theme: ReturnType<Bestiary["getTheme"]>;
+    bookX: number;
+    bookY: number;
+    bookW: number;
+    bookH: number;
+    compactMode: boolean;
+    stackedMode: boolean;
+    subpageMode: boolean;
+    entryIndex: number;
+    subpage: 0 | 1;
+    xOffsetPx: number;
+    alpha: number;
+    enableHitboxes: boolean;
+    drawChrome: boolean;
+  }): void => {
+    Game.ctx.save();
+    const baseAlpha = Game.ctx.globalAlpha;
+    Game.ctx.globalAlpha = baseAlpha * Math.max(0, Math.min(1, args.alpha));
+
+    const theme = args.theme;
+    const bookX = args.bookX + Math.round(args.xOffsetPx);
+    const bookY = args.bookY;
+    const bookW = args.bookW;
+    const bookH = args.bookH;
 
     // Cover/border
     Game.ctx.fillStyle = theme.coverFill;
@@ -555,7 +971,7 @@ export class Bestiary {
 
     // Spine (only in two-page mode)
     const spineX = Math.round(bookX + bookW / 2);
-    if (!compactMode) {
+    if (!args.compactMode) {
       Game.ctx.strokeStyle = theme.spineStroke;
       Game.ctx.lineWidth = 2;
       Game.ctx.beginPath();
@@ -566,7 +982,7 @@ export class Bestiary {
 
     // Page panels
     const pad = this.innerPadPx();
-    const pageW = compactMode
+    const pageW = args.compactMode
       ? bookW - pad * 2
       : Math.floor(bookW / 2) - pad * 2;
     const pageH = bookH - pad * 2 - 22; // reserve bottom row for arrows
@@ -579,27 +995,29 @@ export class Bestiary {
     Game.ctx.strokeStyle = theme.pageStroke;
     Game.ctx.lineWidth = 1;
     Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
-    if (!compactMode) {
+    if (!args.compactMode) {
       Game.ctx.fillRect(rightX, pageY, pageW, pageH);
       Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
     }
 
-    // Close button (top-right corner of book)
-    const closeSize = 18;
-    this.closeRect = {
-      x: bookX + bookW - closeSize - 6,
-      y: bookY + 6,
-      w: closeSize,
-      h: closeSize,
-    };
+    // Close button (top-right corner of book) - smaller, tucked into the corner.
+    const closeSize = 13;
+    const closePad = 2;
+    const closeX = bookX + bookW - closeSize - closePad;
+    const closeY = bookY + closePad;
+    if (args.drawChrome && args.enableHitboxes) {
+      this.closeRect = { x: closeX, y: closeY, w: closeSize, h: closeSize };
+    } else if (args.drawChrome) {
+      this.closeRect = null;
+    }
 
-    const entry = this.entries[this.activeEntryIndex] ?? null;
+    const entry = this.entries[args.entryIndex] ?? null;
     if (!entry) {
       Game.ctx.fillStyle = theme.text;
       Game.fillText("No entries", leftX + 6, pageY + 6);
     } else {
       const inset = this.pageInsetPx();
-      if (stackedMode) {
+      if (args.stackedMode) {
         const contentX = leftX + inset;
         const contentY = pageY + inset;
         const contentW = pageW - inset * 2;
@@ -637,7 +1055,12 @@ export class Bestiary {
         Game.ctx.fillStyle = theme.spritePanelFill;
         Game.ctx.strokeStyle = theme.spritePanelStroke;
         Game.ctx.lineWidth = 1;
-        Game.ctx.fillRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
+        Game.ctx.fillRect(
+          spriteRect.x,
+          spriteRect.y,
+          spriteRect.w,
+          spriteRect.h,
+        );
         Game.ctx.strokeRect(
           spriteRect.x,
           spriteRect.y,
@@ -649,7 +1072,7 @@ export class Bestiary {
 
         this.drawStateCycleButton({
           theme,
-          compactMode,
+          compactMode: args.compactMode,
           leftX,
           rightX,
           pageY,
@@ -660,7 +1083,7 @@ export class Bestiary {
           spriteRect,
         });
       } else {
-        if (!compactMode || this.activeEntrySubpage === 0) {
+        if (!args.compactMode || args.subpage === 0) {
           // Info page
           Game.ctx.fillStyle = theme.text;
           Game.fillText(entry.displayName, leftX + inset, pageY + inset);
@@ -672,17 +1095,22 @@ export class Bestiary {
           );
         }
 
-        if (!compactMode || this.activeEntrySubpage === 1) {
+        if (!args.compactMode || args.subpage === 1) {
           // Sprite page (right page in wide mode, single page in compact mode)
           Game.ctx.fillStyle = theme.spritePanelFill;
           Game.ctx.strokeStyle = theme.spritePanelStroke;
           Game.ctx.lineWidth = 1;
-          const rightInnerX = (compactMode ? leftX : rightX) + inset;
+          const rightInnerX = (args.compactMode ? leftX : rightX) + inset;
           const rightInnerY = pageY + inset;
           const rightInnerW = pageW - inset * 2;
           const rightInnerH = pageH - inset * 2;
           Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
-          Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+          Game.ctx.strokeRect(
+            rightInnerX,
+            rightInnerY,
+            rightInnerW,
+            rightInnerH,
+          );
 
           this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
             x: rightInnerX,
@@ -693,7 +1121,7 @@ export class Bestiary {
 
           this.drawStateCycleButton({
             theme,
-            compactMode,
+            compactMode: args.compactMode,
             leftX,
             rightX,
             pageY,
@@ -706,53 +1134,57 @@ export class Bestiary {
       }
     }
 
-    // Page turn arrows
-    const arrowY = bookY + bookH - 20;
-    const arrowW = 28;
-    const arrowH = 14;
-    if (this.entries.length > 1) {
-      this.leftArrowRect = {
+    // Page turn arrows + indicator
+    if (args.drawChrome) {
+      const arrowY = bookY + bookH - 20;
+      const arrowW = 28;
+      const arrowH = 14;
+      const leftRect = {
         x: spineX - arrowW - 18,
         y: arrowY,
         w: arrowW,
         h: arrowH,
       };
-      this.rightArrowRect = {
+      const rightRect = {
         x: spineX + 18,
         y: arrowY,
         w: arrowW,
         h: arrowH,
       };
-      this.drawArrow(this.leftArrowRect, "left");
-      this.drawArrow(this.rightArrowRect, "right");
-    } else {
-      this.leftArrowRect = null;
-      this.rightArrowRect = null;
-    }
-
-    // Page indicator (entry index stays the same even in compact mode)
-    if (this.entries.length > 0) {
-      const indicator = `${this.activeEntryIndex + 1}/${this.entries.length}`;
-      const iw = Game.measureText(indicator).width;
-      Game.ctx.fillStyle = theme.accentText;
-      Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
-      if (subpageMode) {
-        const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
-        Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
+      if (this.entries.length > 1) {
+        if (args.enableHitboxes) {
+          this.leftArrowRect = leftRect;
+          this.rightArrowRect = rightRect;
+        }
+        this.drawArrow(leftRect, "left");
+        this.drawArrow(rightRect, "right");
+      } else {
+        if (args.enableHitboxes) {
+          this.leftArrowRect = null;
+          this.rightArrowRect = null;
+        }
       }
-    }
 
-    // Close button should draw on top of everything else in the bestiary.
-    if (this.closeRect) {
+      if (this.entries.length > 0) {
+        const indicator = `${args.entryIndex + 1}/${this.entries.length}`;
+        const iw = Game.measureText(indicator).width;
+        Game.ctx.fillStyle = theme.accentText;
+        Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
+        if (args.subpageMode) {
+          const sub = args.subpage === 0 ? "Info" : "Sprite";
+          Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
+        }
+      }
+
+      // Close button should draw on top of everything else in the bestiary.
       Game.ctx.fillStyle = theme.closeFill;
-      Game.ctx.fillRect(
-        this.closeRect.x,
-        this.closeRect.y,
-        this.closeRect.w,
-        this.closeRect.h,
-      );
+      Game.ctx.fillRect(closeX, closeY, closeSize, closeSize);
       Game.ctx.fillStyle = theme.closeText;
-      Game.fillText("X", this.closeRect.x + 6, this.closeRect.y + 6);
+      const xw = Game.measureText("X").width;
+      const xh = Game.letter_height;
+      const xt = Math.round(closeX + (closeSize - xw) / 2);
+      const yt = Math.round(closeY + (closeSize - xh) / 2);
+      Game.fillText("X", xt, yt);
     }
 
     Game.ctx.restore();
@@ -772,10 +1204,7 @@ export class Bestiary {
     // render on the right page again).
     if (!this.compactMode) this.activeEntrySubpage = 0;
     // In stacked compact layout we never want to "stick" on the sprite-only subpage.
-    if (
-      this.compactMode &&
-      GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW
-    ) {
+    if (this.compactMode && GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW) {
       this.activeEntrySubpage = 0;
     }
   };
