@@ -12,6 +12,7 @@ import { BESTIARY_ENEMIES } from "./bestiaryEnemyRegistry";
 import { Entity } from "../entity/entity";
 import { HitWarning, HitWarningDirection } from "../drawable/hitWarning";
 import { HealthBar } from "../drawable/healthbar";
+import { GameplaySettings } from "./gameplaySettings";
 
 interface BestiaryEntry {
   typeName: string;
@@ -438,7 +439,9 @@ export class Bestiary {
 
   pageLeft = () => {
     if (this.entries.length <= 0) return;
-    if (this.isCompactMode()) {
+    const subpageMode =
+      this.isCompactMode() && !GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
+    if (subpageMode) {
       // Linear navigation across (entry, subpage).
       const totalPages = this.entries.length * 2;
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
@@ -454,7 +457,9 @@ export class Bestiary {
 
   pageRight = () => {
     if (this.entries.length <= 0) return;
-    if (this.isCompactMode()) {
+    const subpageMode =
+      this.isCompactMode() && !GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
+    if (subpageMode) {
       const totalPages = this.entries.length * 2;
       const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
       const next = (current + 1) % totalPages;
@@ -536,7 +541,10 @@ export class Bestiary {
     const bookX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * bookW);
     const bookY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * bookH);
     const compactMode = this.isCompactMode();
-    if (!compactMode) this.activeEntrySubpage = 0;
+    const stackedMode =
+      compactMode && GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
+    const subpageMode = compactMode && !stackedMode;
+    if (!subpageMode) this.activeEntrySubpage = 0;
 
     // Cover/border
     Game.ctx.fillStyle = theme.coverFill;
@@ -591,36 +599,53 @@ export class Bestiary {
       Game.fillText("No entries", leftX + 6, pageY + 6);
     } else {
       const inset = this.pageInsetPx();
-      if (!compactMode || this.activeEntrySubpage === 0) {
-        // Info page
+      if (stackedMode) {
+        const contentX = leftX + inset;
+        const contentY = pageY + inset;
+        const contentW = pageW - inset * 2;
+        const contentH = pageH - inset * 2;
+
+        const gap = 6;
+        const minInfoH = 44;
+        const minSpriteH = 68;
+        let infoH = Math.floor(contentH * 0.42);
+        infoH = Math.max(
+          minInfoH,
+          Math.min(infoH, Math.max(minInfoH, contentH - minSpriteH - gap)),
+        );
+
+        // Info region (clipped so text can't spill into sprite region)
+        Game.ctx.save();
+        Game.ctx.beginPath();
+        Game.ctx.rect(contentX, contentY, contentW, infoH);
+        Game.ctx.clip();
         Game.ctx.fillStyle = theme.text;
-        Game.fillText(entry.displayName, leftX + inset, pageY + inset);
+        Game.fillText(entry.displayName, contentX, contentY);
         this.drawWrappedText(
           entry.description || "???",
-          leftX + inset,
-          pageY + inset + 14,
-          pageW - inset * 2,
+          contentX,
+          contentY + 14,
+          contentW,
         );
-      }
+        Game.ctx.restore();
 
-      if (!compactMode || this.activeEntrySubpage === 1) {
-        // Sprite page (right page in wide mode, single page in compact mode)
+        // Sprite region
+        const spriteY = contentY + infoH + gap;
+        const spriteH = Math.max(0, contentY + contentH - spriteY);
+        const spriteRect = { x: contentX, y: spriteY, w: contentW, h: spriteH };
+
         Game.ctx.fillStyle = theme.spritePanelFill;
         Game.ctx.strokeStyle = theme.spritePanelStroke;
         Game.ctx.lineWidth = 1;
-        const rightInnerX = (compactMode ? leftX : rightX) + inset;
-        const rightInnerY = pageY + inset;
-        const rightInnerW = pageW - inset * 2;
-        const rightInnerH = pageH - inset * 2;
-        Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
-        Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+        Game.ctx.fillRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
+        Game.ctx.strokeRect(
+          spriteRect.x,
+          spriteRect.y,
+          spriteRect.w,
+          spriteRect.h,
+        );
 
-        this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
-          x: rightInnerX,
-          y: rightInnerY,
-          w: rightInnerW,
-          h: rightInnerH,
-        });
+        this.drawSpritesWithHitWarnings(entry.sprites ?? [], spriteRect);
 
         this.drawStateCycleButton({
           theme,
@@ -632,7 +657,52 @@ export class Bestiary {
           pageH,
           inset,
           entry,
+          spriteRect,
         });
+      } else {
+        if (!compactMode || this.activeEntrySubpage === 0) {
+          // Info page
+          Game.ctx.fillStyle = theme.text;
+          Game.fillText(entry.displayName, leftX + inset, pageY + inset);
+          this.drawWrappedText(
+            entry.description || "???",
+            leftX + inset,
+            pageY + inset + 14,
+            pageW - inset * 2,
+          );
+        }
+
+        if (!compactMode || this.activeEntrySubpage === 1) {
+          // Sprite page (right page in wide mode, single page in compact mode)
+          Game.ctx.fillStyle = theme.spritePanelFill;
+          Game.ctx.strokeStyle = theme.spritePanelStroke;
+          Game.ctx.lineWidth = 1;
+          const rightInnerX = (compactMode ? leftX : rightX) + inset;
+          const rightInnerY = pageY + inset;
+          const rightInnerW = pageW - inset * 2;
+          const rightInnerH = pageH - inset * 2;
+          Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+          Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+
+          this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
+            x: rightInnerX,
+            y: rightInnerY,
+            w: rightInnerW,
+            h: rightInnerH,
+          });
+
+          this.drawStateCycleButton({
+            theme,
+            compactMode,
+            leftX,
+            rightX,
+            pageY,
+            pageW,
+            pageH,
+            inset,
+            entry,
+          });
+        }
       }
     }
 
@@ -666,7 +736,7 @@ export class Bestiary {
       const iw = Game.measureText(indicator).width;
       Game.ctx.fillStyle = theme.accentText;
       Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
-      if (compactMode) {
+      if (subpageMode) {
         const sub = this.activeEntrySubpage === 0 ? "Info" : "Sprite";
         Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
       }
@@ -701,6 +771,13 @@ export class Bestiary {
     // If we just switched to wide mode, ensure we're on the info page (since sprites will
     // render on the right page again).
     if (!this.compactMode) this.activeEntrySubpage = 0;
+    // In stacked compact layout we never want to "stick" on the sprite-only subpage.
+    if (
+      this.compactMode &&
+      GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW
+    ) {
+      this.activeEntrySubpage = 0;
+    }
   };
 
   private isCompactMode = (): boolean => {
@@ -970,6 +1047,7 @@ export class Bestiary {
     pageH: number;
     inset: number;
     entry: BestiaryEntry;
+    spriteRect?: { x: number; y: number; w: number; h: number };
   }): void => {
     const count = args.entry.sprites?.length ?? 0;
     const shouldShow = this.manualStateCycling && count > 1;
@@ -984,13 +1062,19 @@ export class Bestiary {
     const arrowH = 12;
     const gap = 14;
 
-    // Place at the bottom of the sprite page, centered, inside the page panel.
-    const pageX = args.compactMode ? args.leftX : args.rightX;
-    const centerX = pageX + args.pageW / 2;
+    // Place at the bottom of the sprite region/page, centered.
+    const centerX =
+      args.spriteRect?.x !== undefined
+        ? args.spriteRect.x + args.spriteRect.w / 2
+        : (args.compactMode ? args.leftX : args.rightX) + args.pageW / 2;
     const totalW = arrowW * 2 + gap;
     const leftX = Math.round(centerX - totalW / 2);
     const rightX = leftX + arrowW + gap;
-    const y = Math.round(args.pageY + args.pageH - arrowH - 4);
+    const y = Math.round(
+      args.spriteRect?.y !== undefined
+        ? args.spriteRect.y + args.spriteRect.h - arrowH - 6
+        : args.pageY + args.pageH - arrowH - 4,
+    );
 
     this.prevStateRect = { x: leftX, y, w: arrowW, h: arrowH };
     this.nextStateRect = { x: rightX, y, w: arrowW, h: arrowH };

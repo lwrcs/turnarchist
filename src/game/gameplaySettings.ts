@@ -24,6 +24,15 @@ export class GameplaySettings {
 
   static readonly OXYGEN_LINE_MAX_LENGTH = 25;
 
+  // === UI ===
+  /**
+   * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
+   * vertically-stacked layout instead (text on top, sprite below).
+   *
+   * Enabled by default for better mobile UX.
+   */
+  static BESTIARY_STACK_PANELS_ON_NARROW = true;
+
   // === ORGANIC TUNNELS DEBUG/FEATURE FLAGS ===
   static ORGANIC_TUNNELS_ENABLED = true; // allow populator to use organic tunnels when appropriate
   static ORGANIC_TUNNELS_FORCE = false; // force usage regardless of environment/type gating
