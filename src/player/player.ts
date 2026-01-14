@@ -697,6 +697,47 @@ export class Player extends Drawable {
     mousePos: { x: number; y: number },
     mouseTile: { x: number; y: number },
   ): string => {
+    // If the menu is open, it visually owns the cursor: don't let world interactions behind
+    // the menu influence the cursor icon.
+    if (this.menu?.open) {
+      const { x, y } = mousePos;
+      const inMenuButton = this.menu.isPointInMenuBounds(x, y).inBounds;
+      const inCloseButton = this.menu.isPointInCloseButton(x, y);
+      return inMenuButton || inCloseButton ? "hand" : "arrow";
+    }
+
+    // If the bestiary is open, prevent world interactions behind it from affecting the cursor.
+    // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
+    if (this.bestiary?.isOpen) {
+      const { x, y } = mousePos;
+      const inBestiaryButton = this.bestiary.isPointInBestiaryButton(x, y);
+      const inControls = this.bestiary.isPointInBestiaryControls(x, y);
+      return inBestiaryButton || inControls ? "hand" : "arrow";
+    }
+
+    // If the inventory is open, prevent world interactions *behind the inventory UI* from
+    // affecting the cursor. Only show the UI pointer when hovering an occupied slot
+    // (or the inventory button); empty slots are the default arrow.
+    if (this.inventory?.isOpen) {
+      const { x, y } = mousePos;
+      const inv = this.inventory;
+      if (inv.isPointInInventoryButton(x, y)) return "hand";
+
+      const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+      if (inQuickbar) {
+        const idx = inv.getQuickbarSlotIndexAtPoint(x, y);
+        if (idx === null) return "arrow";
+        return inv.items[idx] ? "hand" : "arrow";
+      }
+
+      const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+      if (inInventoryPanel) {
+        const idx = inv.getInventorySlotIndexAtPoint(x, y);
+        if (idx === null) return "arrow";
+        return inv.items[idx] ? "hand" : "arrow";
+      }
+    }
+
     // 1. Check UI interactions
     if (this.isMouseInUI(mousePos)) {
       return "hand";

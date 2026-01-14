@@ -24,7 +24,9 @@ import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 
-let OPEN_TIME = 100; // milliseconds
+// Inventory overlay transition timings (no size scaling; fade only).
+const INVENTORY_FADE_IN_MS = 160;
+const INVENTORY_FADE_OUT_MS = 140;
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
 // Very dark blue-gray color used for outlines and borders
@@ -45,6 +47,14 @@ export class Inventory {
   game: Game;
   isOpen: boolean = false;
   openTime: number = Date.now();
+  private openFade: {
+    kind: "opening" | "closing";
+    startMs: number;
+    durationMs: number;
+  } | null = null;
+  // Offscreen buffer for the full inventory overlay (so fade applies uniformly).
+  private overlayCanvas: HTMLCanvasElement | null = null;
+  private overlayCanvasCtx: CanvasRenderingContext2D | null = null;
   coins: number = 0;
   equipAnimAmount: Array<number>;
   weapon: Weapon | null = null;
@@ -142,14 +152,18 @@ export class Inventory {
   }
 
   open = () => {
-    this.isOpen = !this.isOpen;
-    if (this.isOpen) {
-      this.openTime = Date.now();
-      // Close map if it's open when inventory opens
-      if (this.player?.map?.mapOpen) {
-        this.player.map.mapOpen = false;
-        this.player.map.mapOpenProgress = 0;
-      }
+    if (this.isOpen) return;
+    this.isOpen = true;
+    this.openTime = Date.now();
+    this.openFade = {
+      kind: "opening",
+      startMs: Date.now(),
+      durationMs: INVENTORY_FADE_IN_MS,
+    };
+    // Close map if it's open when inventory opens
+    if (this.player?.map?.mapOpen) {
+      this.player.map.mapOpen = false;
+      this.player.map.mapOpenProgress = 0;
     }
   };
 
@@ -163,18 +177,68 @@ export class Inventory {
 
   close = () => {
     if (!this.isOpen) return;
-    this.isOpen = false;
     this.closeTime = Date.now();
+    // Keep drawing while we fade out; `isOpen=false` is applied when opacity hits 0.
+    this.openFade = {
+      kind: "closing",
+      startMs: Date.now(),
+      durationMs: INVENTORY_FADE_OUT_MS,
+    };
     if (this.selY > 0) {
       this.selY = 0;
     }
     this.usingItem = null;
     this.usingItemIndex = null;
+    this._isDragging = false;
+    this.grabbedItem = null;
+    this._dragStartItem = null;
+    this.dragStartMouseX = null;
+    this.dragStartMouseY = null;
 
     // Dismiss any inventory-related tip (e.g., "open inventory" pointer)
     try {
       (this.game as any).removePointer?.("open-inventory");
     } catch {}
+  };
+
+  private openAlpha = (): number => {
+    if (!this.isOpen) return 0;
+    if (!this.openFade) return 1;
+    const now = Date.now();
+    const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
+    const t = Math.max(0, Math.min(1, tRaw));
+    // Ease-out quadratic.
+    const ease = t * (2 - t);
+    if (this.openFade.kind === "opening") {
+      if (t >= 1) this.openFade = null;
+      return ease;
+    }
+    // closing
+    const a = 1 - ease;
+    if (t >= 1) {
+      this.openFade = null;
+      this.isOpen = false;
+    }
+    return a;
+  };
+
+  private ensureOverlayCanvasCtx = (): CanvasRenderingContext2D | null => {
+    // Inventory rendering is browser-only; guard for safety.
+    if (typeof document === "undefined") return null;
+    if (!this.overlayCanvas) {
+      this.overlayCanvas = document.createElement("canvas");
+      this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+    }
+    if (!this.overlayCanvas || !this.overlayCanvasCtx) return null;
+
+    if (
+      this.overlayCanvas.width !== GameConstants.WIDTH ||
+      this.overlayCanvas.height !== GameConstants.HEIGHT
+    ) {
+      this.overlayCanvas.width = GameConstants.WIDTH;
+      this.overlayCanvas.height = GameConstants.HEIGHT;
+    }
+    return this.overlayCanvasCtx;
   };
 
   left = () => {
@@ -309,9 +373,7 @@ export class Inventory {
 
     if (bounds.inBounds) {
       this.mostRecentInput = "mouse";
-      const s = this.isOpen
-        ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-        : 18;
+      const s = 18;
       const b = 2;
       const g = -2;
 
@@ -790,7 +852,7 @@ export class Inventory {
   };
 
   pointInside = (x: number, y: number): boolean => {
-    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+    const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -1031,9 +1093,7 @@ export class Inventory {
     Game.ctx.imageSmoothingQuality = "low";
     const { x, y } = MouseCursor.getInstance().getPosition();
     const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
-    const s = Math.floor(
-      Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME),
-    ); // size of box
+    const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -1052,17 +1112,28 @@ export class Inventory {
     Menu.drawOpenMenuButton();
     XPCounter.draw(delta);
 
-    if (this.isOpen) {
+    const overlayAlpha = this.openAlpha();
+    if (overlayAlpha > 0) {
+      const offCtx = this.ensureOverlayCanvasCtx();
+      if (!offCtx || !this.overlayCanvas) return;
+      offCtx.save();
+      offCtx.clearRect(
+        0,
+        0,
+        this.overlayCanvas.width,
+        this.overlayCanvas.height,
+      );
+      offCtx.imageSmoothingEnabled = false;
+
+      const prevCtx = Game.ctx;
+      Game.ctx = offCtx;
+      Game.ctx.save();
       // Draw semi-transparent background for full inventory
       Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
-      Game.ctx.globalAlpha = 1;
-
       // Define dimensions and styling variables (similar to drawQuickbar)
-      const s = Math.floor(
-        Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME),
-      ); // size of box
+      const s = 18; // size of box
       const b = 2; // border
       const g = -2; // gap
       const hg = Math.floor(
@@ -1156,8 +1227,8 @@ export class Inventory {
         }
       }
 
-      // Draw item icons after animation delay (similar to drawQuickbar, but for all items)
-      if (Date.now() - this.openTime >= OPEN_TIME) {
+      // No size-scaling animation; draw selection immediately.
+      {
         this.items.forEach((item, idx) => {
           if (item === null) return;
           const x = idx % this.cols;
@@ -1328,21 +1399,27 @@ export class Inventory {
           });
         }
       }
-    }
-    if (this.isOpen) {
+      // Overlay-only highlights + dragged item.
       this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
-    }
+      this.drawDraggedItem(delta);
 
-    this.drawDraggedItem(delta);
+      // Finish offscreen render and composite to the main canvas with a single alpha.
+      Game.ctx.restore();
+      Game.ctx = prevCtx;
+      offCtx.restore();
+
+      prevCtx.save();
+      prevCtx.globalAlpha = prevCtx.globalAlpha * overlayAlpha;
+      prevCtx.drawImage(this.overlayCanvas, 0, 0);
+      prevCtx.restore();
+    }
   };
 
   isPointInInventoryBounds = (
     x: number,
     y: number,
   ): { inBounds: boolean; startX: number; startY: number } => {
-    const s = this.isOpen
-      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-      : 18;
+    const s = 18;
     const b = 2; // border
     const g = -2; // gap
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -1381,9 +1458,7 @@ export class Inventory {
     x: number,
     y: number,
   ): { inBounds: boolean; startX: number; startY: number } => {
-    const s = this.isOpen
-      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-      : 18;
+    const s = 18;
     const b = 2; // border
     const g = -2; // gap
     const width = this.cols * (s + 2 * b + g) - g;
@@ -1408,7 +1483,7 @@ export class Inventory {
     if (!this.isOpen) return null;
     const bounds = this.isPointInInventoryBounds(x, y);
     if (!bounds.inBounds) return null;
-    const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME);
+    const s = 18;
     const b = 2;
     const g = -2;
     const stride = s + 2 * b + g;
@@ -1423,9 +1498,7 @@ export class Inventory {
   getQuickbarSlotIndexAtPoint = (x: number, y: number): number | null => {
     const bounds = this.isPointInQuickbarBounds(x, y);
     if (!bounds.inBounds) return null;
-    const s = this.isOpen
-      ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-      : 18;
+    const s = 18;
     const b = 2;
     const g = -2;
     const stride = s + 2 * b + g;
@@ -1524,6 +1597,7 @@ export class Inventory {
         this.dragStartMouseX = x;
         this.dragStartMouseY = y;
       }
+      Game.ctx.restore();
     }
   };
 

@@ -141,9 +141,9 @@ export class Menu {
   }
 
   initializeCloseButton() {
-    // Match the menu button dimensions
-    const buttonWidth = Math.round(GameConstants.TILESIZE * 1.5 - 2);
-    const buttonHeight = Math.round(GameConstants.TILESIZE * 1.5 - 2);
+    // Smaller close button (match Bestiary close button feel)
+    const buttonWidth = 13;
+    const buttonHeight = 13;
 
     this.closeButton = new guiButton(
       0,
@@ -511,8 +511,8 @@ export class Menu {
     // Draw X text
     Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
     const textWidth = Game.measureText(this.closeButton.text).width;
-    const textX = bx + (bw - textWidth) / 2;
-    const textY = by + bh / 2 - Game.letter_height / 2;
+    const textX = Math.round(bx + (bw - textWidth) / 2);
+    const textY = Math.round(by + (bh - Game.letter_height) / 2);
 
     Game.fillText(this.closeButton.text, textX, textY);
     Game.ctx.restore();
@@ -618,6 +618,8 @@ export class Menu {
   openMenu() {
     this.open = true;
     this.selectedButton = -1;
+    // Recompute layout/centering on open, so buttons don't appear off-center after resizes/scale changes.
+    this.positionButtons();
     this.buttons.forEach((button, index) => {});
   }
 
@@ -679,8 +681,9 @@ export class Menu {
 
     // Position close button to match menu button position
     if (this.showCloseButton && this.closeButton) {
-      this.closeButton.x = 1;
-      this.closeButton.y = GameConstants.TILESIZE / 2;
+      // Keep it tucked in the corner near the Menu icon, but small.
+      this.closeButton.x = 2;
+      this.closeButton.y = Math.round(GameConstants.TILESIZE / 2) + 2;
     }
 
     // Layout parameters: tighter margins and smaller spacing

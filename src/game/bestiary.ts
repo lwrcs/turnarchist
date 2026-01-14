@@ -272,6 +272,10 @@ export class Bestiary {
     durationMs: number;
   } | null = null;
 
+  // Offscreen buffer for the bestiary overlay (so open/close fade applies uniformly).
+  private overlayCanvas: HTMLCanvasElement | null = null;
+  private overlayCanvasCtx: CanvasRenderingContext2D | null = null;
+
   // Touch drag-follow (mobile): track finger and slide pages with it.
   private touchDrag: {
     active: boolean;
@@ -390,6 +394,25 @@ export class Bestiary {
       this.nextStateRect = null;
     }
     return a;
+  };
+
+  private ensureOverlayCanvasCtx = (): CanvasRenderingContext2D | null => {
+    // Bestiary rendering is browser-only; guard for safety.
+    if (typeof document === "undefined") return null;
+    if (!this.overlayCanvas) {
+      this.overlayCanvas = document.createElement("canvas");
+      this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+    }
+    if (!this.overlayCanvas || !this.overlayCanvasCtx) return null;
+
+    if (
+      this.overlayCanvas.width !== GameConstants.WIDTH ||
+      this.overlayCanvas.height !== GameConstants.HEIGHT
+    ) {
+      this.overlayCanvas.width = GameConstants.WIDTH;
+      this.overlayCanvas.height = GameConstants.HEIGHT;
+    }
+    return this.overlayCanvasCtx;
   };
 
   private computeBookRect = (): {
@@ -764,6 +787,25 @@ export class Bestiary {
     }
   };
 
+  /**
+   * True if the given point is hovering an actual bestiary UI control (close / arrows / state-cycle).
+   * Used for cursor icon selection so the rest of the book doesn't show the UI pointer.
+   */
+  isPointInBestiaryControls = (x: number, y: number): boolean => {
+    if (!this.isOpen) return false;
+    if (this.openFade?.kind === "closing") return false;
+    if (this.closeRect && this.pointInRect(x, y, this.closeRect)) return true;
+    if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect))
+      return true;
+    if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect))
+      return true;
+    if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect))
+      return true;
+    if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect))
+      return true;
+    return false;
+  };
+
   private pointInRect = (
     x: number,
     y: number,
@@ -778,16 +820,23 @@ export class Bestiary {
    */
   draw = (delta: number) => {
     if (!this.isOpen) return;
-    Game.ctx.save();
-    const baseAlpha = Game.ctx.globalAlpha;
     const a = this.openAlpha();
-    // If we finished fading out this frame, stop drawing.
     if (a <= 0) {
-      Game.ctx.restore();
       return;
     }
-    // Apply overall bestiary opacity once; per-page swipe alpha multiplies on top inside `drawBookAt`.
-    Game.ctx.globalAlpha = baseAlpha * a;
+
+    const offCtx = this.ensureOverlayCanvasCtx();
+    if (!offCtx || !this.overlayCanvas) return;
+
+    // Render bestiary to offscreen at full opacity, then composite once with `a`.
+    offCtx.save();
+    offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+    offCtx.imageSmoothingEnabled = false;
+
+    const prevCtx = Game.ctx;
+    Game.ctx = offCtx;
+    Game.ctx.save();
+
     HitWarning.updatePreviewFrame(delta);
     this.previewAnimT += delta;
     const theme = this.getTheme();
@@ -934,6 +983,13 @@ export class Bestiary {
     }
 
     Game.ctx.restore();
+    Game.ctx = prevCtx;
+    offCtx.restore();
+
+    prevCtx.save();
+    prevCtx.globalAlpha = prevCtx.globalAlpha * a;
+    prevCtx.drawImage(this.overlayCanvas, 0, 0);
+    prevCtx.restore();
   };
 
   private drawBookAt = (args: {

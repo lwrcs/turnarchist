@@ -28525,6 +28525,9 @@ class Bestiary {
         this.pageTransition = null;
         // Fade the bestiary in/out on open/close.
         this.openFade = null;
+        // Offscreen buffer for the bestiary overlay (so open/close fade applies uniformly).
+        this.overlayCanvas = null;
+        this.overlayCanvasCtx = null;
         // Touch drag-follow (mobile): track finger and slide pages with it.
         this.touchDrag = null;
         /**
@@ -28591,6 +28594,23 @@ class Bestiary {
                 this.nextStateRect = null;
             }
             return a;
+        };
+        this.ensureOverlayCanvasCtx = () => {
+            // Bestiary rendering is browser-only; guard for safety.
+            if (typeof document === "undefined")
+                return null;
+            if (!this.overlayCanvas) {
+                this.overlayCanvas = document.createElement("canvas");
+                this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+            }
+            if (!this.overlayCanvas || !this.overlayCanvasCtx)
+                return null;
+            if (this.overlayCanvas.width !== gameConstants_1.GameConstants.WIDTH ||
+                this.overlayCanvas.height !== gameConstants_1.GameConstants.HEIGHT) {
+                this.overlayCanvas.width = gameConstants_1.GameConstants.WIDTH;
+                this.overlayCanvas.height = gameConstants_1.GameConstants.HEIGHT;
+            }
+            return this.overlayCanvasCtx;
         };
         this.computeBookRect = () => {
             const margin = this.marginPx();
@@ -28930,6 +28950,27 @@ class Bestiary {
                 return;
             }
         };
+        /**
+         * True if the given point is hovering an actual bestiary UI control (close / arrows / state-cycle).
+         * Used for cursor icon selection so the rest of the book doesn't show the UI pointer.
+         */
+        this.isPointInBestiaryControls = (x, y) => {
+            if (!this.isOpen)
+                return false;
+            if (this.openFade?.kind === "closing")
+                return false;
+            if (this.closeRect && this.pointInRect(x, y, this.closeRect))
+                return true;
+            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect))
+                return true;
+            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect))
+                return true;
+            if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect))
+                return true;
+            if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect))
+                return true;
+            return false;
+        };
         this.pointInRect = (x, y, r) => {
             return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
         };
@@ -28940,16 +28981,20 @@ class Bestiary {
         this.draw = (delta) => {
             if (!this.isOpen)
                 return;
-            game_1.Game.ctx.save();
-            const baseAlpha = game_1.Game.ctx.globalAlpha;
             const a = this.openAlpha();
-            // If we finished fading out this frame, stop drawing.
             if (a <= 0) {
-                game_1.Game.ctx.restore();
                 return;
             }
-            // Apply overall bestiary opacity once; per-page swipe alpha multiplies on top inside `drawBookAt`.
-            game_1.Game.ctx.globalAlpha = baseAlpha * a;
+            const offCtx = this.ensureOverlayCanvasCtx();
+            if (!offCtx || !this.overlayCanvas)
+                return;
+            // Render bestiary to offscreen at full opacity, then composite once with `a`.
+            offCtx.save();
+            offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+            offCtx.imageSmoothingEnabled = false;
+            const prevCtx = game_1.Game.ctx;
+            game_1.Game.ctx = offCtx;
+            game_1.Game.ctx.save();
             hitWarning_1.HitWarning.updatePreviewFrame(delta);
             this.previewAnimT += delta;
             const theme = this.getTheme();
@@ -29086,6 +29131,12 @@ class Bestiary {
                 });
             }
             game_1.Game.ctx.restore();
+            game_1.Game.ctx = prevCtx;
+            offCtx.restore();
+            prevCtx.save();
+            prevCtx.globalAlpha = prevCtx.globalAlpha * a;
+            prevCtx.drawImage(this.overlayCanvas, 0, 0);
+            prevCtx.restore();
         };
         this.drawBookAt = (args) => {
             game_1.Game.ctx.save();
@@ -36752,9 +36803,9 @@ class Menu {
         return { x, y, w, h };
     }
     initializeCloseButton() {
-        // Match the menu button dimensions
-        const buttonWidth = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
-        const buttonHeight = Math.round(gameConstants_1.GameConstants.TILESIZE * 1.5 - 2);
+        // Smaller close button (match Bestiary close button feel)
+        const buttonWidth = 13;
+        const buttonHeight = 13;
         this.closeButton = new guiButton_1.guiButton(0, -1, Math.round(buttonWidth), Math.round(buttonHeight), "X", () => this.close(), false, this);
     }
     initializeMainMenu() {
@@ -36983,8 +37034,8 @@ class Menu {
         // Draw X text
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 1)"; // White X
         const textWidth = game_1.Game.measureText(this.closeButton.text).width;
-        const textX = bx + (bw - textWidth) / 2;
-        const textY = by + bh / 2 - game_1.Game.letter_height / 2;
+        const textX = Math.round(bx + (bw - textWidth) / 2);
+        const textY = Math.round(by + (bh - game_1.Game.letter_height) / 2);
         game_1.Game.fillText(this.closeButton.text, textX, textY);
         game_1.Game.ctx.restore();
     }
@@ -37071,6 +37122,8 @@ class Menu {
     openMenu() {
         this.open = true;
         this.selectedButton = -1;
+        // Recompute layout/centering on open, so buttons don't appear off-center after resizes/scale changes.
+        this.positionButtons();
         this.buttons.forEach((button, index) => { });
     }
     toggleOpen() {
@@ -37103,8 +37156,9 @@ class Menu {
         const buttonCount = this.buttons.length;
         // Position close button to match menu button position
         if (this.showCloseButton && this.closeButton) {
-            this.closeButton.x = 1;
-            this.closeButton.y = gameConstants_1.GameConstants.TILESIZE / 2;
+            // Keep it tucked in the corner near the Menu icon, but small.
+            this.closeButton.x = 2;
+            this.closeButton.y = Math.round(gameConstants_1.GameConstants.TILESIZE / 2) + 2;
         }
         // Layout parameters: tighter margins and smaller spacing
         const maxButtonWidth = Math.min(260, Math.floor(screenWidth * 0.8));
@@ -38458,7 +38512,9 @@ const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/bac
 const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/chestPlate.ts");
-let OPEN_TIME = 100; // milliseconds
+// Inventory overlay transition timings (no size scaling; fade only).
+const INVENTORY_FADE_IN_MS = 160;
+const INVENTORY_FADE_OUT_MS = 140;
 // Dark gray color used for the background of inventory slots
 let FILL_COLOR = "#5a595b";
 // Very dark blue-gray color used for outlines and borders
@@ -38475,6 +38531,10 @@ class Inventory {
         this.selY = 0;
         this.isOpen = false;
         this.openTime = Date.now();
+        this.openFade = null;
+        // Offscreen buffer for the full inventory overlay (so fade applies uniformly).
+        this.overlayCanvas = null;
+        this.overlayCanvasCtx = null;
         this.coins = 0;
         this.weapon = null;
         this._expansion = gameConstants_1.GameConstants.DEVELOPER_MODE ? 3 : 0;
@@ -38503,14 +38563,19 @@ class Inventory {
             this.equipAnimAmount.fill(0);
         };
         this.open = () => {
-            this.isOpen = !this.isOpen;
-            if (this.isOpen) {
-                this.openTime = Date.now();
-                // Close map if it's open when inventory opens
-                if (this.player?.map?.mapOpen) {
-                    this.player.map.mapOpen = false;
-                    this.player.map.mapOpenProgress = 0;
-                }
+            if (this.isOpen)
+                return;
+            this.isOpen = true;
+            this.openTime = Date.now();
+            this.openFade = {
+                kind: "opening",
+                startMs: Date.now(),
+                durationMs: INVENTORY_FADE_IN_MS,
+            };
+            // Close map if it's open when inventory opens
+            if (this.player?.map?.mapOpen) {
+                this.player.map.mapOpen = false;
+                this.player.map.mapOpenProgress = 0;
             }
         };
         this.toggleOpen = () => {
@@ -38524,18 +38589,68 @@ class Inventory {
         this.close = () => {
             if (!this.isOpen)
                 return;
-            this.isOpen = false;
             this.closeTime = Date.now();
+            // Keep drawing while we fade out; `isOpen=false` is applied when opacity hits 0.
+            this.openFade = {
+                kind: "closing",
+                startMs: Date.now(),
+                durationMs: INVENTORY_FADE_OUT_MS,
+            };
             if (this.selY > 0) {
                 this.selY = 0;
             }
             this.usingItem = null;
             this.usingItemIndex = null;
+            this._isDragging = false;
+            this.grabbedItem = null;
+            this._dragStartItem = null;
+            this.dragStartMouseX = null;
+            this.dragStartMouseY = null;
             // Dismiss any inventory-related tip (e.g., "open inventory" pointer)
             try {
                 this.game.removePointer?.("open-inventory");
             }
             catch { }
+        };
+        this.openAlpha = () => {
+            if (!this.isOpen)
+                return 0;
+            if (!this.openFade)
+                return 1;
+            const now = Date.now();
+            const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
+            const t = Math.max(0, Math.min(1, tRaw));
+            // Ease-out quadratic.
+            const ease = t * (2 - t);
+            if (this.openFade.kind === "opening") {
+                if (t >= 1)
+                    this.openFade = null;
+                return ease;
+            }
+            // closing
+            const a = 1 - ease;
+            if (t >= 1) {
+                this.openFade = null;
+                this.isOpen = false;
+            }
+            return a;
+        };
+        this.ensureOverlayCanvasCtx = () => {
+            // Inventory rendering is browser-only; guard for safety.
+            if (typeof document === "undefined")
+                return null;
+            if (!this.overlayCanvas) {
+                this.overlayCanvas = document.createElement("canvas");
+                this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+            }
+            if (!this.overlayCanvas || !this.overlayCanvasCtx)
+                return null;
+            if (this.overlayCanvas.width !== gameConstants_1.GameConstants.WIDTH ||
+                this.overlayCanvas.height !== gameConstants_1.GameConstants.HEIGHT) {
+                this.overlayCanvas.width = gameConstants_1.GameConstants.WIDTH;
+                this.overlayCanvas.height = gameConstants_1.GameConstants.HEIGHT;
+            }
+            return this.overlayCanvasCtx;
         };
         this.left = () => {
             if (this.selX > 0) {
@@ -38656,9 +38771,7 @@ class Inventory {
             const bounds = this.isPointInInventoryBounds(x, y);
             if (bounds.inBounds) {
                 this.mostRecentInput = "mouse";
-                const s = this.isOpen
-                    ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-                    : 18;
+                const s = 18;
                 const b = 2;
                 const g = -2;
                 const oldSelX = this.selX;
@@ -39047,7 +39160,7 @@ class Inventory {
             */
         };
         this.pointInside = (x, y) => {
-            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME); // size of box
+            const s = 18; // size of box
             const b = 2; // border
             const g = -2; // gap
             const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -39218,7 +39331,7 @@ class Inventory {
             game_1.Game.ctx.imageSmoothingQuality = "low";
             const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
             const isInBounds = this.isPointInInventoryBounds(x, y).inBounds;
-            const s = Math.floor(Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)); // size of box
+            const s = 18; // size of box
             const b = 2; // border
             const g = -2; // gap
             const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -39235,13 +39348,22 @@ class Inventory {
             this.drawInventoryButton(delta);
             menu_1.Menu.drawOpenMenuButton();
             xpCounter_1.XPCounter.draw(delta);
-            if (this.isOpen) {
+            const overlayAlpha = this.openAlpha();
+            if (overlayAlpha > 0) {
+                const offCtx = this.ensureOverlayCanvasCtx();
+                if (!offCtx || !this.overlayCanvas)
+                    return;
+                offCtx.save();
+                offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                offCtx.imageSmoothingEnabled = false;
+                const prevCtx = game_1.Game.ctx;
+                game_1.Game.ctx = offCtx;
+                game_1.Game.ctx.save();
                 // Draw semi-transparent background for full inventory
                 game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
                 game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-                game_1.Game.ctx.globalAlpha = 1;
                 // Define dimensions and styling variables (similar to drawQuickbar)
-                const s = Math.floor(Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)); // size of box
+                const s = 18; // size of box
                 const b = 2; // border
                 const g = -2; // gap
                 const hg = Math.floor(1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5)); // highlighted growth
@@ -39304,8 +39426,8 @@ class Inventory {
                         }
                     }
                 }
-                // Draw item icons after animation delay (similar to drawQuickbar, but for all items)
-                if (Date.now() - this.openTime >= OPEN_TIME) {
+                // No size-scaling animation; draw selection immediately.
+                {
                     this.items.forEach((item, idx) => {
                         if (item === null)
                             return;
@@ -39422,16 +39544,21 @@ class Inventory {
                         });
                     }
                 }
-            }
-            if (this.isOpen) {
+                // Overlay-only highlights + dragged item.
                 this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
+                this.drawDraggedItem(delta);
+                // Finish offscreen render and composite to the main canvas with a single alpha.
+                game_1.Game.ctx.restore();
+                game_1.Game.ctx = prevCtx;
+                offCtx.restore();
+                prevCtx.save();
+                prevCtx.globalAlpha = prevCtx.globalAlpha * overlayAlpha;
+                prevCtx.drawImage(this.overlayCanvas, 0, 0);
+                prevCtx.restore();
             }
-            this.drawDraggedItem(delta);
         };
         this.isPointInInventoryBounds = (x, y) => {
-            const s = this.isOpen
-                ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-                : 18;
+            const s = 18;
             const b = 2; // border
             const g = -2; // gap
             const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
@@ -39463,9 +39590,7 @@ class Inventory {
             };
         };
         this.isPointInQuickbarBounds = (x, y) => {
-            const s = this.isOpen
-                ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-                : 18;
+            const s = 18;
             const b = 2; // border
             const g = -2; // gap
             const width = this.cols * (s + 2 * b + g) - g;
@@ -39488,7 +39613,7 @@ class Inventory {
             const bounds = this.isPointInInventoryBounds(x, y);
             if (!bounds.inBounds)
                 return null;
-            const s = Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME);
+            const s = 18;
             const b = 2;
             const g = -2;
             const stride = s + 2 * b + g;
@@ -39505,9 +39630,7 @@ class Inventory {
             const bounds = this.isPointInQuickbarBounds(x, y);
             if (!bounds.inBounds)
                 return null;
-            const s = this.isOpen
-                ? Math.min(18, (18 * (Date.now() - this.openTime)) / OPEN_TIME)
-                : 18;
+            const s = 18;
             const b = 2;
             const g = -2;
             const stride = s + 2 * b + g;
@@ -39591,6 +39714,7 @@ class Inventory {
                     this.dragStartMouseX = x;
                     this.dragStartMouseY = y;
                 }
+                game_1.Game.ctx.restore();
             }
         };
         /**
@@ -51799,6 +51923,45 @@ class Player extends drawable_1.Drawable {
             cursor.setIcon(cursorState);
         };
         this.getCursorState = (mousePos, mouseTile) => {
+            // If the menu is open, it visually owns the cursor: don't let world interactions behind
+            // the menu influence the cursor icon.
+            if (this.menu?.open) {
+                const { x, y } = mousePos;
+                const inMenuButton = this.menu.isPointInMenuBounds(x, y).inBounds;
+                const inCloseButton = this.menu.isPointInCloseButton(x, y);
+                return inMenuButton || inCloseButton ? "hand" : "arrow";
+            }
+            // If the bestiary is open, prevent world interactions behind it from affecting the cursor.
+            // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
+            if (this.bestiary?.isOpen) {
+                const { x, y } = mousePos;
+                const inBestiaryButton = this.bestiary.isPointInBestiaryButton(x, y);
+                const inControls = this.bestiary.isPointInBestiaryControls(x, y);
+                return inBestiaryButton || inControls ? "hand" : "arrow";
+            }
+            // If the inventory is open, prevent world interactions *behind the inventory UI* from
+            // affecting the cursor. Only show the UI pointer when hovering an occupied slot
+            // (or the inventory button); empty slots are the default arrow.
+            if (this.inventory?.isOpen) {
+                const { x, y } = mousePos;
+                const inv = this.inventory;
+                if (inv.isPointInInventoryButton(x, y))
+                    return "hand";
+                const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+                if (inQuickbar) {
+                    const idx = inv.getQuickbarSlotIndexAtPoint(x, y);
+                    if (idx === null)
+                        return "arrow";
+                    return inv.items[idx] ? "hand" : "arrow";
+                }
+                const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+                if (inInventoryPanel) {
+                    const idx = inv.getInventorySlotIndexAtPoint(x, y);
+                    if (idx === null)
+                        return "arrow";
+                    return inv.items[idx] ? "hand" : "arrow";
+                }
+            }
             // 1. Check UI interactions
             if (this.isMouseInUI(mousePos)) {
                 return "hand";
