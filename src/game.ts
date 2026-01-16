@@ -455,6 +455,36 @@ const canvasLooksBlank = (canvas: HTMLCanvasElement): boolean => {
 const times = [];
 let fps = 60;
 
+type DrawProfileCounter = { calls: number; totalMs: number };
+type DrawProfileRow = {
+  name: string;
+  calls: number;
+  totalMs: number;
+  avgMs: number;
+};
+type DrawProfileRoomSummaryRow = {
+  room: string;
+  totalMs: number;
+  calls: number;
+  sections: number;
+};
+type DrawProfileRoomSectionRow = {
+  room: string;
+  name: string;
+  calls: number;
+  totalMs: number;
+  avgMs: number;
+};
+type DrawProfileFrame = {
+  frameId: number;
+  capturedAt: number;
+  roomCount: number;
+  totals: DrawProfileRow[];
+  game: DrawProfileRow[];
+  rooms: DrawProfileRoomSummaryRow[];
+  roomSections: DrawProfileRoomSectionRow[];
+};
+
 export class Game {
   /**
    * Shared animation frame used for door icon "floating" sine motion.
@@ -675,6 +705,14 @@ export class Game {
   private _lastSheetProbeOk: boolean = true;
   private _autoRecoverSuppressUntilMs: number = 0;
   private _lastAutoRecoverChatMs: number = 0;
+  // Draw profiling (off by default; enable via command `profiledraw` or `logdraw`)
+  private _drawProfileEnabled: boolean = false;
+  private _drawProfileFrameId: number = 0;
+  private _drawProfileRoomsThisFrame: Set<Room> = new Set();
+  private _drawProfileGame: Map<string, DrawProfileCounter> = new Map();
+  private _lastDrawProfileFrame?: DrawProfileFrame;
+  private _drawProfileHistory: DrawProfileFrame[] = [];
+  private _drawProfileHistoryMax: number = 120;
   static readonly letters =
     "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
   static readonly letter_widths = [
@@ -1223,6 +1261,115 @@ export class Game {
       // Never crash the game from the recovery path.
     }
   };
+
+  isDrawProfilingEnabled(): boolean {
+    return this._drawProfileEnabled;
+  }
+
+  private drawProfileStart(_name: string): number | undefined {
+    if (!this._drawProfileEnabled) return undefined;
+    return performance.now();
+  }
+
+  private drawProfileEnd(name: string, start?: number): void {
+    if (start === undefined) return;
+    const dt = performance.now() - start;
+    const prev = this._drawProfileGame.get(name);
+    if (prev) {
+      prev.calls += 1;
+      prev.totalMs += dt;
+    } else {
+      this._drawProfileGame.set(name, { calls: 1, totalMs: dt });
+    }
+  }
+
+  private markRoomProfiled(room: Room): void {
+    if (!this._drawProfileEnabled) return;
+    this._drawProfileRoomsThisFrame.add(room);
+    room.beginDrawProfileFrame(this._drawProfileFrameId, true);
+  }
+
+  private finalizeDrawProfileFrame(): void {
+    if (!this._drawProfileEnabled) return;
+    const rooms = Array.from(this._drawProfileRoomsThisFrame);
+
+    const totals = new Map<string, DrawProfileCounter>();
+    const roomSections: DrawProfileRoomSectionRow[] = [];
+    const roomsSummary: DrawProfileRoomSummaryRow[] = [];
+
+    for (const room of rooms) {
+      const label = room.getDrawProfileLabel();
+      const entries = room.getDrawProfileEntries();
+      let roomTotalMs = 0;
+      let roomCalls = 0;
+      for (const e of entries) {
+        roomTotalMs += e.totalMs;
+        roomCalls += e.calls;
+        roomSections.push({
+          room: label,
+          name: e.name,
+          calls: e.calls,
+          totalMs: e.totalMs,
+          avgMs: e.calls > 0 ? e.totalMs / e.calls : 0,
+        });
+        const prev = totals.get(e.name);
+        if (prev) {
+          prev.calls += e.calls;
+          prev.totalMs += e.totalMs;
+        } else {
+          totals.set(e.name, { calls: e.calls, totalMs: e.totalMs });
+        }
+      }
+      roomsSummary.push({
+        room: label,
+        totalMs: roomTotalMs,
+        calls: roomCalls,
+        sections: entries.length,
+      });
+    }
+
+    const totalRows: DrawProfileRow[] = Array.from(totals.entries()).map(
+      ([name, c]) => ({
+        name,
+        calls: c.calls,
+        totalMs: c.totalMs,
+        avgMs: c.calls > 0 ? c.totalMs / c.calls : 0,
+      }),
+    );
+    totalRows.sort((a, b) => b.totalMs - a.totalMs);
+
+    const gameRows: DrawProfileRow[] = Array.from(
+      this._drawProfileGame.entries(),
+    ).map(([name, c]) => ({
+      name,
+      calls: c.calls,
+      totalMs: c.totalMs,
+      avgMs: c.calls > 0 ? c.totalMs / c.calls : 0,
+    }));
+    gameRows.sort((a, b) => b.totalMs - a.totalMs);
+
+    roomsSummary.sort((a, b) => b.totalMs - a.totalMs);
+    roomSections.sort((a, b) => b.totalMs - a.totalMs);
+
+    this._lastDrawProfileFrame = {
+      frameId: this._drawProfileFrameId,
+      capturedAt: Date.now(),
+      roomCount: rooms.length,
+      totals: totalRows,
+      game: gameRows,
+      rooms: roomsSummary,
+      roomSections,
+    };
+
+    // Keep a small rolling history for averaging (helps with timing noise / 0ms floors)
+    this._drawProfileHistory.push(this._lastDrawProfileFrame);
+    if (this._drawProfileHistory.length > this._drawProfileHistoryMax) {
+      this._drawProfileHistory.splice(
+        0,
+        this._drawProfileHistory.length - this._drawProfileHistoryMax,
+      );
+    }
+  }
 
   updateDepth = (depth: number) => {
     //this.previousDepth = this.currentDepth;
@@ -1900,6 +2047,147 @@ export class Game {
     command = command.toLowerCase();
     let enabled = "";
 
+    if (command === "profiledraw") {
+      this._drawProfileEnabled = !this._drawProfileEnabled;
+      this.pushMessage(
+        `Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`,
+      );
+      return;
+    }
+
+    if (command === "logdraw") {
+      // Ensure profiling is enabled so we capture subsequent frames.
+      if (!this._drawProfileEnabled) {
+        this._drawProfileEnabled = true;
+        this.pushMessage("Draw profiling enabled. Run 'logdraw' again in ~1s.");
+      }
+      const frame = this._lastDrawProfileFrame;
+      if (!frame) {
+        console.log("[logdraw] No draw profile frame captured yet.");
+        return;
+      }
+
+      const sumMs = (rows: Array<{ totalMs: number }>): number => {
+        let s = 0;
+        for (const r of rows) s += r.totalMs;
+        return s;
+      };
+      const sumCalls = (rows: Array<{ calls: number }>): number => {
+        let s = 0;
+        for (const r of rows) s += r.calls;
+        return s;
+      };
+
+      const topN = <T extends { totalMs: number }>(rows: T[], n: number): T[] =>
+        rows.slice(0, Math.max(0, Math.min(rows.length, n)));
+
+      console.groupCollapsed(
+        `[logdraw] frame=${frame.frameId} rooms=${frame.roomCount} t=${new Date(
+          frame.capturedAt,
+        ).toISOString()}`,
+      );
+      console.log("[logdraw] summary", {
+        rooms: frame.roomCount,
+        totalsMs: sumMs(frame.totals),
+        totalsCalls: sumCalls(frame.totals),
+        gameMs: sumMs(frame.game),
+        gameCalls: sumCalls(frame.game),
+      });
+      console.log("[logdraw] totals (aggregated across rendered rooms)");
+      console.table(frame.totals);
+      console.log("[logdraw] totals top 10");
+      console.table(topN(frame.totals, 10));
+      console.log("[logdraw] game (coarse game-level sections)");
+      console.table(frame.game);
+      console.log("[logdraw] rooms (per-room totals)");
+      console.table(frame.rooms);
+      console.log("[logdraw] rooms top 10");
+      console.table(topN(frame.rooms, 10));
+      console.log("[logdraw] room sections (per-room, per-section)");
+      console.table(frame.roomSections);
+      console.log("[logdraw] room sections top 25");
+      console.table(topN(frame.roomSections, 25));
+      console.log(
+        "[logdraw] raw snapshot (copy/paste this object if needed)",
+        frame,
+      );
+      console.groupEnd();
+
+      this.pushMessage("Logged draw profile to console.");
+      return;
+    }
+
+    if (command.startsWith("logdrawavg")) {
+      // Usage: logdrawavg <nFrames>=1..120
+      const parts = command.split(/\s+/).filter((p) => p.length > 0);
+      const nReq = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+      const n = Number.isFinite(nReq) ? Math.floor(nReq) : 60;
+      const maxN = Math.max(1, Math.floor(this._drawProfileHistoryMax));
+      const count = Math.max(1, Math.min(maxN, n));
+      const hist =
+        this._drawProfileHistory.length > count
+          ? this._drawProfileHistory.slice(
+              this._drawProfileHistory.length - count,
+            )
+          : this._drawProfileHistory.slice();
+      if (hist.length === 0) {
+        console.log("[logdrawavg] No draw profile history yet.");
+        return;
+      }
+
+      const mergeRows = (
+        frames: DrawProfileFrame[],
+        pick: (f: DrawProfileFrame) => DrawProfileRow[],
+      ): DrawProfileRow[] => {
+        const m = new Map<string, DrawProfileCounter>();
+        for (const f of frames) {
+          for (const r of pick(f)) {
+            const prev = m.get(r.name);
+            if (prev) {
+              prev.calls += r.calls;
+              prev.totalMs += r.totalMs;
+            } else {
+              m.set(r.name, { calls: r.calls, totalMs: r.totalMs });
+            }
+          }
+        }
+        const out: DrawProfileRow[] = [];
+        for (const [name, c] of m) {
+          const totalMs = c.totalMs / frames.length;
+          const calls = c.calls / frames.length;
+          out.push({
+            name,
+            calls,
+            totalMs,
+            avgMs: calls > 0 ? totalMs / calls : 0,
+          });
+        }
+        out.sort((a, b) => b.totalMs - a.totalMs);
+        return out;
+      };
+
+      const avgTotals = mergeRows(hist, (f) => f.totals);
+      const avgGame = mergeRows(hist, (f) => f.game);
+
+      let avgRooms = 0;
+      for (const f of hist) avgRooms += f.roomCount;
+      avgRooms /= hist.length;
+
+      console.groupCollapsed(
+        `[logdrawavg] frames=${hist.length} avgRooms=${avgRooms.toFixed(
+          2,
+        )} (last frame=${hist[hist.length - 1].frameId})`,
+      );
+      console.log("[logdrawavg] totals (avg per frame)");
+      console.table(avgTotals.slice(0, 25));
+      console.log("[logdrawavg] game (avg per frame)");
+      console.table(avgGame.slice(0, 25));
+      console.groupEnd();
+
+      this.pushMessage(`Logged averaged draw profile (${hist.length} frames).`);
+      return;
+    }
+
     if (command === "spritediag") {
       const rows = this.debugSpriteSheetStatus();
       if (!rows || rows.length === 0) {
@@ -2038,6 +2326,45 @@ export class Game {
       } catch {}
 
       this.pushMessage("Repro mode disabled and caches cleared.");
+      return;
+    }
+
+    if (command === "roomson" || command === "roomsoff") {
+      GameConstants.drawOtherRooms = command === "roomson";
+      this.pushMessage(
+        `Drawing other rooms is now ${GameConstants.drawOtherRooms ? "enabled" : "disabled"}`,
+      );
+      return;
+    }
+
+    if (command === "inlineon" || command === "inlineoff") {
+      GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = command === "inlineon";
+      this.pushMessage(
+        `Inline tile shading ${GameConstants.SHADE_INLINE_IN_ENTITY_LAYER ? "enabled" : "disabled"}`,
+      );
+      return;
+    }
+
+    if (command === "inlinefadecache") {
+      GameConstants.INLINE_SHADE_FADE_TILE_CACHE =
+        !GameConstants.INLINE_SHADE_FADE_TILE_CACHE;
+      this.pushMessage(
+        `Inline fade tile cache is now ${GameConstants.INLINE_SHADE_FADE_TILE_CACHE ? "enabled" : "disabled"}`,
+      );
+      return;
+    }
+
+    if (command.startsWith("inlinefadecachemax")) {
+      const parts = command.split(/\s+/).filter((p) => p.length > 0);
+      const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+      if (!Number.isFinite(n) || n < 1) {
+        this.pushMessage("Usage: inlinefadecachemax <n>=1..");
+        return;
+      }
+      GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX = Math.floor(n);
+      this.pushMessage(
+        `Inline fade tile cache max set to ${GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX}`,
+      );
       return;
     }
 
@@ -3056,32 +3383,41 @@ export class Game {
     skipLocalPlayer: boolean = false,
     zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
   ) => {
-    if (!GameConstants.drawOtherRooms) {
-      // Ensure current room is drawn even if flags are stale
-      if (!this.room || this.room.pathId !== this.currentPathId) return;
-      this.room.draw(delta);
-      this.room.drawEntities(delta, true, zLayer);
-    } else if (GameConstants.drawOtherRooms) {
-      // Create a sorted copy of the rooms array based on roomY + height
-      const sortedRooms = this.rooms
-        .filter((r) => r.pathId === this.currentPathId)
-        .slice()
-        .sort((a, b) => {
-          const aPosition = a.roomY + a.height;
-          const bPosition = b.roomY + b.height;
-          return aPosition - bPosition; // Ascending order
-        });
+    const tTotal = this.drawProfileStart("Game.drawRooms.total");
+    try {
+      if (!GameConstants.drawOtherRooms) {
+        // Ensure current room is drawn even if flags are stale
+        if (!this.room || this.room.pathId !== this.currentPathId) return;
+        this.markRoomProfiled(this.room);
+        this.room.draw(delta);
+        this.room.drawEntities(delta, true, zLayer);
+      } else if (GameConstants.drawOtherRooms) {
+        // Create a sorted copy of the rooms array based on roomY + height
+        const sortedRooms = this.rooms
+          .filter((r) => r.pathId === this.currentPathId)
+          .slice()
+          .sort((a, b) => {
+            const aPosition = a.roomY + a.height;
+            const bPosition = b.roomY + b.height;
+            return aPosition - bPosition; // Ascending order
+          });
 
-      for (const room of sortedRooms) {
-        const shouldDraw =
-          room === this.room || room.active || (room.entered && room.onScreen);
-        if (shouldDraw) {
-          room.draw(delta);
+        for (const room of sortedRooms) {
+          const shouldDraw =
+            room === this.room ||
+            room.active ||
+            (room.entered && room.onScreen);
+          if (shouldDraw) {
+            this.markRoomProfiled(room);
+            room.draw(delta);
 
-          room.drawEntities(delta, skipLocalPlayer, zLayer);
-          //room.drawShade(delta); // this used to come after the color layer
+            room.drawEntities(delta, skipLocalPlayer, zLayer);
+            //room.drawShade(delta); // this used to come after the color layer
+          }
         }
       }
+    } finally {
+      this.drawProfileEnd("Game.drawRooms.total", tTotal);
     }
   };
 
@@ -3093,17 +3429,25 @@ export class Game {
     delta: number,
     zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
   ) => {
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      const shouldDraw = room === this.room || room.active || room.entered;
-      if (!shouldDraw) continue;
-      if (
-        GameConstants.SMOOTH_LIGHTING &&
-        !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
-      ) {
-        room.drawShadeLayer();
+    const tTotal = this.drawProfileStart(
+      "Game.drawRoomLightingLayersOnce.total",
+    );
+    try {
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        const shouldDraw = room === this.room || room.active || room.entered;
+        if (!shouldDraw) continue;
+        this.markRoomProfiled(room);
+        if (
+          GameConstants.SMOOTH_LIGHTING &&
+          !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+        ) {
+          room.drawShadeLayer();
+        }
+        room.drawColorLayer();
       }
-      room.drawColorLayer();
+    } finally {
+      this.drawProfileEnd("Game.drawRoomLightingLayersOnce.total", tTotal);
     }
   };
 
@@ -3112,11 +3456,17 @@ export class Game {
    * in the same translated pass as the corresponding entity layer.
    */
   private drawRoomBloomForZ = (delta: number, zLayer: number) => {
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      const shouldDraw = room === this.room || room.active || room.entered;
-      if (!shouldDraw) continue;
-      room.drawBloomLayer(delta, zLayer);
+    const tTotal = this.drawProfileStart("Game.drawRoomBloomForZ.total");
+    try {
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        const shouldDraw = room === this.room || room.active || room.entered;
+        if (!shouldDraw) continue;
+        this.markRoomProfiled(room);
+        room.drawBloomLayer(delta, zLayer);
+      }
+    } finally {
+      this.drawProfileEnd("Game.drawRoomBloomForZ.total", tTotal);
     }
   };
 
@@ -3125,84 +3475,106 @@ export class Game {
    * These are not part of the per-room lighting layers.
    */
   private drawRoomOverlaysForZ = (delta: number, zLayer: number) => {
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      // Above-shading should draw for entered rooms even if they are not currently active.
-      const shouldDrawOver = room === this.room || room.active || room.entered;
-      if (shouldDrawOver) {
-        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+    const tTotal = this.drawProfileStart("Game.drawRoomOverlaysForZ.total");
+    try {
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        // Above-shading should draw for entered rooms even if they are not currently active.
+        const shouldDrawOver =
+          room === this.room || room.active || room.entered;
+        if (shouldDrawOver) {
+          this.markRoomProfiled(room);
+          room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+        }
       }
-    }
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      const shouldDrawTop =
-        room === this.room || room.active || (room.entered && room.onScreen);
-      if (shouldDrawTop) {
-        room.drawTopBeams(delta, zLayer);
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        const shouldDrawTop =
+          room === this.room || room.active || (room.entered && room.onScreen);
+        if (shouldDrawTop) {
+          this.markRoomProfiled(room);
+          room.drawTopBeams(delta, zLayer);
+        }
       }
+    } finally {
+      this.drawProfileEnd("Game.drawRoomOverlaysForZ.total", tTotal);
     }
   };
 
   private drawZLayers = (delta: number) => {
-    const layerHeightPx = 1 * GameConstants.TILESIZE; // this.getZLayerHeightPx();
-    const maxZ = this.getMaxZInCurrentPath();
-    const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
-    for (let z = 0; z <= maxZ; z++) {
-      Game.ctx.save();
-      Game.ctx.translate(0, -z * layerHeightPx);
-      this.drawRooms(delta, false, z);
-      // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
-      // and keep active-z bloom in the post-pass below to preserve the current look/order.
-      if (z !== activeZ) {
-        this.drawRoomBloomForZ(delta, z);
+    const tTotal = this.drawProfileStart("Game.drawZLayers.total");
+    try {
+      const layerHeightPx = 1 * GameConstants.TILESIZE; // this.getZLayerHeightPx();
+      const maxZ = this.getMaxZInCurrentPath();
+      const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
+      for (let z = 0; z <= maxZ; z++) {
+        Game.ctx.save();
+        Game.ctx.translate(0, -z * layerHeightPx);
+        this.drawRooms(delta, false, z);
+        // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
+        // and keep active-z bloom in the post-pass below to preserve the current look/order.
+        if (z !== activeZ) {
+          this.drawRoomBloomForZ(delta, z);
+        }
+        Game.ctx.restore();
       }
+
+      // Non-z-layered post passes: position on active z.
+      // Match transition draw order: shade/color -> bloom -> overlays.
+      Game.ctx.save();
+      this.drawRoomLightingLayersOnce(delta, activeZ);
+
+      Game.ctx.translate(0, -activeZ * layerHeightPx);
+      this.drawRoomBloomForZ(delta, activeZ);
+      this.drawRoomOverlaysForZ(delta, activeZ);
       Game.ctx.restore();
+    } finally {
+      this.drawProfileEnd("Game.drawZLayers.total", tTotal);
     }
-
-    // Non-z-layered post passes: position on active z.
-    // Match transition draw order: shade/color -> bloom -> overlays.
-    Game.ctx.save();
-    this.drawRoomLightingLayersOnce(delta, activeZ);
-
-    Game.ctx.translate(0, -activeZ * layerHeightPx);
-    this.drawRoomBloomForZ(delta, activeZ);
-    this.drawRoomOverlaysForZ(delta, activeZ);
-    Game.ctx.restore();
   };
 
   drawRoomShadeAndColor = (
     delta: number,
     zLayer: number = this.players?.[this.localPlayerID]?.z ?? 0,
   ) => {
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      const shouldDraw = room === this.room || room.active || room.entered;
-      if (shouldDraw) {
-        if (
-          GameConstants.SMOOTH_LIGHTING &&
-          !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
-        )
-          room.drawShadeLayer();
-        room.drawColorLayer();
-        room.drawBloomLayer(delta, zLayer);
+    const tTotal = this.drawProfileStart("Game.drawRoomShadeAndColor.total");
+    try {
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        const shouldDraw = room === this.room || room.active || room.entered;
+        if (shouldDraw) {
+          this.markRoomProfiled(room);
+          if (
+            GameConstants.SMOOTH_LIGHTING &&
+            !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+          )
+            room.drawShadeLayer();
+          room.drawColorLayer();
+          room.drawBloomLayer(delta, zLayer);
+        }
       }
-    }
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      // Above-shading should draw for entered rooms even if they are not currently active.
-      const shouldDrawOver = room === this.room || room.active || room.entered;
-      if (shouldDrawOver) {
-        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        // Above-shading should draw for entered rooms even if they are not currently active.
+        const shouldDrawOver =
+          room === this.room || room.active || room.entered;
+        if (shouldDrawOver) {
+          this.markRoomProfiled(room);
+          room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+        }
       }
-    }
 
-    for (const room of this.rooms) {
-      if (room.pathId !== this.currentPathId) continue;
-      const shouldDrawTop =
-        room === this.room || room.active || (room.entered && room.onScreen);
-      if (shouldDrawTop) {
-        room.drawTopBeams(delta, zLayer);
+      for (const room of this.rooms) {
+        if (room.pathId !== this.currentPathId) continue;
+        const shouldDrawTop =
+          room === this.room || room.active || (room.entered && room.onScreen);
+        if (shouldDrawTop) {
+          this.markRoomProfiled(room);
+          room.drawTopBeams(delta, zLayer);
+        }
       }
+    } finally {
+      this.drawProfileEnd("Game.drawRoomShadeAndColor.total", tTotal);
     }
   };
 
@@ -3367,119 +3739,126 @@ export class Game {
   };
 
   draw = (delta: number) => {
-    if (GameConstants.SOFT_SCALE !== GameConstants.SCALE) {
-      this.updateScale(delta);
-      this.onResize();
+    if (this._drawProfileEnabled) {
+      this._drawProfileFrameId += 1;
+      this._drawProfileRoomsThisFrame.clear();
+      this._drawProfileGame.clear();
     }
-    //Game.ctx.canvas.setAttribute("role", "presentation");
-
-    Game.ctx.clearRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-    Game.ctx.save(); // Save the current canvas state
-
-    // Reset transformations to ensure the black background covers the entire canvas
-    Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-    Game.ctx.globalAlpha = 1;
-    Game.ctx.globalCompositeOperation = "source-over";
-    Game.ctx.fillStyle = "black";
-    Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-    //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
-    //else Game.ctx.fillStyle = "black";
-    //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-
-    if (this.levelState === LevelState.TRANSITIONING) {
-      this.screenShakeX = 0;
-      this.screenShakeY = 0;
-      this.screenShakeActive = false;
-
-      let levelOffsetX = Math.floor(
-        this.lerp(
-          (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
-          0,
-          -this.transitionX,
-        ),
-      );
-      let levelOffsetY = Math.floor(
-        this.lerp(
-          (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
-          0,
-          -this.transitionY,
-        ),
-      );
-      let playerOffsetX = levelOffsetX - this.transitionX;
-      let playerOffsetY = levelOffsetY - this.transitionY;
-
-      let playerCX =
-        (this.players[this.localPlayerID].x -
-          this.players[this.localPlayerID].drawX +
-          0.5) *
-        GameConstants.TILESIZE;
-      let playerCY =
-        (this.players[this.localPlayerID].y -
-          this.players[this.localPlayerID].drawY +
-          0.5) *
-        GameConstants.TILESIZE;
-
-      const transitionCameraX = Math.round(
-        playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH,
-      );
-      const transitionCameraY = Math.round(
-        playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT,
-      );
-      this.currentCameraOriginX = transitionCameraX;
-      this.currentCameraOriginY = transitionCameraY;
-
-      Game.ctx.translate(-transitionCameraX, -transitionCameraY);
-
-      let extraTileLerp = Math.floor(
-        this.lerp(
-          (Date.now() - this.transitionStartTime) /
-            LevelConstants.LEVEL_TRANSITION_TIME,
-          0,
-          GameConstants.TILESIZE,
-        ),
-      );
-
-      let newLevelOffsetX = playerOffsetX;
-      let newLevelOffsetY = playerOffsetY;
-
-      if (this.sideTransition) {
-        if (this.sideTransitionDirection > 0) {
-          levelOffsetX += extraTileLerp;
-          newLevelOffsetX += extraTileLerp + GameConstants.TILESIZE;
-        } else {
-          levelOffsetX -= extraTileLerp;
-          newLevelOffsetX -= extraTileLerp + GameConstants.TILESIZE;
-        }
-      } else if (this.upwardTransition) {
-        levelOffsetY -= extraTileLerp;
-        newLevelOffsetY -= extraTileLerp + GameConstants.TILESIZE;
-      } else {
-        levelOffsetY += extraTileLerp;
-        newLevelOffsetY += extraTileLerp + GameConstants.TILESIZE;
+    const tTotal = this.drawProfileStart("Game.draw.total");
+    try {
+      if (GameConstants.SOFT_SCALE !== GameConstants.SCALE) {
+        this.updateScale(delta);
+        this.onResize();
       }
+      //Game.ctx.canvas.setAttribute("role", "presentation");
 
-      let ditherFrame = Math.floor(
-        (7 * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME,
-      );
+      Game.ctx.clearRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+      Game.ctx.save(); // Save the current canvas state
 
-      Game.ctx.translate(levelOffsetX, levelOffsetY);
-      if (!GameConstants.drawOtherRooms) {
-        this.prevLevel.draw(delta);
-        this.prevLevel.drawEntities(delta);
-        this.prevLevel.drawColorLayer();
-        this.prevLevel.drawShade(delta);
-        this.prevLevel.drawOverShade(
-          delta,
-          undefined,
-          this.prevLevel.overShadeAlpha,
+      // Reset transformations to ensure the black background covers the entire canvas
+      Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      Game.ctx.globalAlpha = 1;
+      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.fillStyle = "black";
+      Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+      //else Game.ctx.fillStyle = "black";
+      //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+      if (this.levelState === LevelState.TRANSITIONING) {
+        this.screenShakeX = 0;
+        this.screenShakeY = 0;
+        this.screenShakeActive = false;
+
+        let levelOffsetX = Math.floor(
+          this.lerp(
+            (Date.now() - this.transitionStartTime) /
+              LevelConstants.LEVEL_TRANSITION_TIME,
+            0,
+            -this.transitionX,
+          ),
+        );
+        let levelOffsetY = Math.floor(
+          this.lerp(
+            (Date.now() - this.transitionStartTime) /
+              LevelConstants.LEVEL_TRANSITION_TIME,
+            0,
+            -this.transitionY,
+          ),
+        );
+        let playerOffsetX = levelOffsetX - this.transitionX;
+        let playerOffsetY = levelOffsetY - this.transitionY;
+
+        let playerCX =
+          (this.players[this.localPlayerID].x -
+            this.players[this.localPlayerID].drawX +
+            0.5) *
+          GameConstants.TILESIZE;
+        let playerCY =
+          (this.players[this.localPlayerID].y -
+            this.players[this.localPlayerID].drawY +
+            0.5) *
+          GameConstants.TILESIZE;
+
+        const transitionCameraX = Math.round(
+          playerCX + playerOffsetX - 0.5 * GameConstants.WIDTH,
+        );
+        const transitionCameraY = Math.round(
+          playerCY + playerOffsetY - 0.5 * GameConstants.HEIGHT,
+        );
+        this.currentCameraOriginX = transitionCameraX;
+        this.currentCameraOriginY = transitionCameraY;
+
+        Game.ctx.translate(-transitionCameraX, -transitionCameraY);
+
+        let extraTileLerp = Math.floor(
+          this.lerp(
+            (Date.now() - this.transitionStartTime) /
+              LevelConstants.LEVEL_TRANSITION_TIME,
+            0,
+            GameConstants.TILESIZE,
+          ),
         );
 
-        /*
+        let newLevelOffsetX = playerOffsetX;
+        let newLevelOffsetY = playerOffsetY;
+
+        if (this.sideTransition) {
+          if (this.sideTransitionDirection > 0) {
+            levelOffsetX += extraTileLerp;
+            newLevelOffsetX += extraTileLerp + GameConstants.TILESIZE;
+          } else {
+            levelOffsetX -= extraTileLerp;
+            newLevelOffsetX -= extraTileLerp + GameConstants.TILESIZE;
+          }
+        } else if (this.upwardTransition) {
+          levelOffsetY -= extraTileLerp;
+          newLevelOffsetY -= extraTileLerp + GameConstants.TILESIZE;
+        } else {
+          levelOffsetY += extraTileLerp;
+          newLevelOffsetY += extraTileLerp + GameConstants.TILESIZE;
+        }
+
+        let ditherFrame = Math.floor(
+          (7 * (Date.now() - this.transitionStartTime)) /
+            LevelConstants.LEVEL_TRANSITION_TIME,
+        );
+
+        Game.ctx.translate(levelOffsetX, levelOffsetY);
+        if (!GameConstants.drawOtherRooms) {
+          this.prevLevel.draw(delta);
+          this.prevLevel.drawEntities(delta);
+          this.prevLevel.drawColorLayer();
+          this.prevLevel.drawShade(delta);
+          this.prevLevel.drawOverShade(
+            delta,
+            undefined,
+            this.prevLevel.overShadeAlpha,
+          );
+
+          /*
         for (
           let x = this.prevLevel.roomX - 1;
           x <= this.prevLevel.roomX + this.prevLevel.width;
@@ -3495,198 +3874,211 @@ export class Game {
         }
 
       */
-      }
-      Game.ctx.translate(-levelOffsetX, -levelOffsetY);
+        }
+        Game.ctx.translate(-levelOffsetX, -levelOffsetY);
 
-      Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-
-      if (GameConstants.drawOtherRooms) {
-        this.drawRooms(delta, true);
-
-        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-        Game.ctx.translate(playerOffsetX, playerOffsetY);
-        this.players[this.localPlayerID].draw(delta); // draw the translation
-
-        Game.ctx.translate(-playerOffsetX, -playerOffsetY);
         Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
 
-        this.drawRoomShadeAndColor(delta);
-      } else {
-        // When we don't draw other rooms during transitions, we still want the NEW room's
-        // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
-        // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
-        this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
-      }
+        if (GameConstants.drawOtherRooms) {
+          this.drawRooms(delta, true);
 
-      for (
-        let x = this.room.roomX - 1;
-        x <= this.room.roomX + this.room.width;
-        x++
-      ) {
+          Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+          Game.ctx.translate(playerOffsetX, playerOffsetY);
+          this.players[this.localPlayerID].draw(delta); // draw the translation
+
+          Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+          Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+
+          this.drawRoomShadeAndColor(delta);
+        } else {
+          // When we don't draw other rooms during transitions, we still want the NEW room's
+          // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
+          // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
+          this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
+        }
+
         for (
-          let y = this.room.roomY - 1;
-          y <= this.room.roomY + this.room.height;
-          y++
+          let x = this.room.roomX - 1;
+          x <= this.room.roomX + this.room.width;
+          x++
         ) {
-          //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+          for (
+            let y = this.room.roomY - 1;
+            y <= this.room.roomY + this.room.height;
+            y++
+          ) {
+            //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+          }
         }
+
+        //this.drawStuff(delta);
+
+        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+
+        Game.ctx.translate(transitionCameraX, transitionCameraY);
+
+        this.players[this.localPlayerID].drawGUI(delta);
+        this.justTransitioned = true;
+
+        //for (const i in this.players) this.players[i].updateDrawXY(delta);
+      } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+        let playerCX =
+          (this.players[this.localPlayerID].x -
+            this.players[this.localPlayerID].drawX +
+            0.5) *
+          GameConstants.TILESIZE;
+        let playerCY =
+          (this.players[this.localPlayerID].y -
+            this.players[this.localPlayerID].drawY +
+            0.5) *
+          GameConstants.TILESIZE;
+
+        const ladderCameraX = Math.round(playerCX - 0.5 * GameConstants.WIDTH);
+        const ladderCameraY = Math.round(playerCY - 0.5 * GameConstants.HEIGHT);
+        this.currentCameraOriginX = ladderCameraX;
+        this.currentCameraOriginY = ladderCameraY;
+
+        Game.ctx.translate(-ladderCameraX, -ladderCameraY);
+
+        let deadFrames = 6;
+        let ditherFrame = Math.floor(
+          ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
+            LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
+        );
+
+        Game.ctx.translate(ladderCameraX, ladderCameraY);
+
+        if (ditherFrame < 7) {
+          this.drawRooms(delta);
+          this.drawRoomShadeAndColor(delta);
+
+          if (!GameConstants.drawOtherRooms) {
+            for (
+              let x = this.room.roomX - 1;
+              x <= this.room.roomX + this.room.width;
+              x++
+            ) {
+              for (
+                let y = this.room.roomY - 1;
+                y <= this.room.roomY + this.room.height;
+                y++
+              ) {
+                Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+              }
+            }
+          }
+        } else if (ditherFrame >= 7 + deadFrames) {
+          if (this.transitioningLadder) {
+            // this.prevLevel = this.room;
+            // this.room.exitLevel();
+            this.room = this.transitioningLadder.linkedRoom;
+
+            // this.players[this.localPlayerID].levelID = this.room.id;
+            this.room.enterLevel(this.players[this.localPlayerID]);
+            this.transitioningLadder = null;
+          }
+
+          this.drawRooms(delta);
+          this.drawRoomShadeAndColor(delta);
+
+          //        this.room.draw(delta);
+          //        this.room.drawEntities(delta);
+          //        this.drawStuff(delta);
+          if (!GameConstants.drawOtherRooms) {
+            for (
+              let x = this.room.roomX - 1;
+              x <= this.room.roomX + this.room.width;
+              x++
+            ) {
+              for (
+                let y = this.room.roomY - 1;
+                y <= this.room.roomY + this.room.height;
+                y++
+              ) {
+                Game.drawFX(
+                  ditherFrame - (7 + deadFrames),
+                  10,
+                  1,
+                  1,
+                  x,
+                  y,
+                  1,
+                  1,
+                );
+              }
+            }
+          }
+        }
+        //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
+        //for (const i in this.players) this.players[i].updateDrawXY(delta);
+        this.drawTextScreen("loading level");
+      } else if (this.levelState === LevelState.LEVEL_GENERATION) {
+        this.levelgen.draw(delta);
+      } else if (this.levelState === LevelState.IN_LEVEL) {
+        // Start of Selection
+
+        this.drawScreenShake(delta);
+
+        const { cameraX, cameraY } = this.applyCamera(delta);
+
+        Game.ctx.translate(-cameraX, -cameraY);
+        this.drawZLayers(delta);
+
+        //      this.room.draw(delta);
+        //      this.room.drawEntities(delta);
+
+        // this.drawStuff(delta);
+
+        Game.ctx.translate(cameraX, cameraY);
+
+        this.room.drawTopLayer(delta);
+        // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
+        if (!this.startMenuActive) {
+          if (!this.tutorialFlags.initPointers) {
+            try {
+              this.setupInitialPointers();
+            } catch {}
+            this.tutorialFlags.initPointers = true;
+          }
+        }
+        // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
+        this.drawPointers(delta);
+        this.players[this.localPlayerID].drawGUI(delta);
+        //for (const i in this.players) this.players[i].updateDrawXY(delta);
       }
+      this.drawChat(delta);
+      this.drawAlerts(delta);
 
-      //this.drawStuff(delta);
-
-      Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-
-      Game.ctx.translate(transitionCameraX, transitionCameraY);
-
-      this.players[this.localPlayerID].drawGUI(delta);
-      this.justTransitioned = true;
-
-      //for (const i in this.players) this.players[i].updateDrawXY(delta);
-    } else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
-      let playerCX =
-        (this.players[this.localPlayerID].x -
-          this.players[this.localPlayerID].drawX +
-          0.5) *
-        GameConstants.TILESIZE;
-      let playerCY =
-        (this.players[this.localPlayerID].y -
-          this.players[this.localPlayerID].drawY +
-          0.5) *
-        GameConstants.TILESIZE;
-
-      const ladderCameraX = Math.round(playerCX - 0.5 * GameConstants.WIDTH);
-      const ladderCameraY = Math.round(playerCY - 0.5 * GameConstants.HEIGHT);
-      this.currentCameraOriginX = ladderCameraX;
-      this.currentCameraOriginY = ladderCameraY;
-
-      Game.ctx.translate(-ladderCameraX, -ladderCameraY);
-
-      let deadFrames = 6;
-      let ditherFrame = Math.floor(
-        ((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-          LevelConstants.LEVEL_TRANSITION_TIME_LADDER,
+      // game version
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+      Game.fillText(
+        GameConstants.VERSION,
+        GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
+        1,
       );
+      Game.ctx.globalAlpha = 1;
 
-      Game.ctx.translate(ladderCameraX, ladderCameraY);
-
-      if (ditherFrame < 7) {
-        this.drawRooms(delta);
-        this.drawRoomShadeAndColor(delta);
-
-        if (!GameConstants.drawOtherRooms) {
-          for (
-            let x = this.room.roomX - 1;
-            x <= this.room.roomX + this.room.width;
-            x++
-          ) {
-            for (
-              let y = this.room.roomY - 1;
-              y <= this.room.roomY + this.room.height;
-              y++
-            ) {
-              Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
-            }
-          }
-        }
-      } else if (ditherFrame >= 7 + deadFrames) {
-        if (this.transitioningLadder) {
-          // this.prevLevel = this.room;
-          // this.room.exitLevel();
-          this.room = this.transitioningLadder.linkedRoom;
-
-          // this.players[this.localPlayerID].levelID = this.room.id;
-          this.room.enterLevel(this.players[this.localPlayerID]);
-          this.transitioningLadder = null;
-        }
-
-        this.drawRooms(delta);
-        this.drawRoomShadeAndColor(delta);
-
-        //        this.room.draw(delta);
-        //        this.room.drawEntities(delta);
-        //        this.drawStuff(delta);
-        if (!GameConstants.drawOtherRooms) {
-          for (
-            let x = this.room.roomX - 1;
-            x <= this.room.roomX + this.room.width;
-            x++
-          ) {
-            for (
-              let y = this.room.roomY - 1;
-              y <= this.room.roomY + this.room.height;
-              y++
-            ) {
-              Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
-            }
-          }
-        }
+      // fps
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+      Game.fillText(fps + "fps", 1, 1);
+      Game.ctx.globalAlpha = 1;
+      if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
+        this.drawStartScreen(delta * 10);
       }
-      //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
-      //for (const i in this.players) this.players[i].updateDrawXY(delta);
-      this.drawTextScreen("loading level");
-    } else if (this.levelState === LevelState.LEVEL_GENERATION) {
-      this.levelgen.draw(delta);
-    } else if (this.levelState === LevelState.IN_LEVEL) {
-      // Start of Selection
 
-      this.drawScreenShake(delta);
-
-      const { cameraX, cameraY } = this.applyCamera(delta);
-
-      Game.ctx.translate(-cameraX, -cameraY);
-      this.drawZLayers(delta);
-
-      //      this.room.draw(delta);
-      //      this.room.drawEntities(delta);
-
-      // this.drawStuff(delta);
-
-      Game.ctx.translate(cameraX, cameraY);
-
-      this.room.drawTopLayer(delta);
-      // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
-      if (!this.startMenuActive) {
-        if (!this.tutorialFlags.initPointers) {
-          try {
-            this.setupInitialPointers();
-          } catch {}
-          this.tutorialFlags.initPointers = true;
-        }
+      // Draw level generator if active
+      if (this.currentLevelGenerator) {
+        this.currentLevelGenerator.draw(10, 10, 3);
       }
-      // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
-      this.drawPointers(delta);
-      this.players[this.localPlayerID].drawGUI(delta);
-      //for (const i in this.players) this.players[i].updateDrawXY(delta);
+
+      MouseCursor.getInstance().draw(delta, this.isMobile);
+      Game.ctx.restore(); // Restore the canvas state
+    } finally {
+      this.drawProfileEnd("Game.draw.total", tTotal);
+      this.finalizeDrawProfileFrame();
     }
-    this.drawChat(delta);
-    this.drawAlerts(delta);
-
-    // game version
-    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-    Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-    Game.fillText(
-      GameConstants.VERSION,
-      GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
-      1,
-    );
-    Game.ctx.globalAlpha = 1;
-
-    // fps
-    if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-    Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-    Game.fillText(fps + "fps", 1, 1);
-    Game.ctx.globalAlpha = 1;
-    if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
-      this.drawStartScreen(delta * 10);
-    }
-
-    // Draw level generator if active
-    if (this.currentLevelGenerator) {
-      this.currentLevelGenerator.draw(10, 10, 3);
-    }
-
-    MouseCursor.getInstance().draw(delta, this.isMobile);
-    Game.ctx.restore(); // Restore the canvas state
   };
 
   private drawPointers = (delta: number) => {

@@ -224,6 +224,16 @@ export class GameConstants {
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
   // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
   static SHADE_INLINE_IN_ENTITY_LAYER = true;
+  /**
+   * Cache the *result* of fade-tile masking for inline shade slicing.
+   * Fade tiles (doors / below-door walls) are expensive because they require destination-in compositing.
+   * This cache only stays valid while `Room.lastLightingUpdate` is unchanged.
+   */
+  static INLINE_SHADE_FADE_TILE_CACHE = true;
+  /**
+   * Max cached fade tiles per room (FIFO eviction). Each entry is a TILESIZE x TILESIZE canvas.
+   */
+  static INLINE_SHADE_FADE_TILE_CACHE_MAX = 128;
   static USE_OPTIMIZED_SHADING = false;
   static SMOOTH_LIGHTING = true;
   // Diagnostics / repro toggles (off by default)

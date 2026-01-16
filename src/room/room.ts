@@ -272,6 +272,8 @@ interface BlurCache {
   lastLightingUpdate: number;
 }
 
+type DrawProfileCounter = { calls: number; totalMs: number };
+
 export class Room {
   globalId: string;
   // Path identifier to group rooms that belong to the same path/sidepath
@@ -306,6 +308,15 @@ export class Room {
   private shadeSliceTempCtx?: CanvasRenderingContext2D;
   // Border tiles around shade content for sliced shading (ensures blur has room to spill)
   private shadeSliceBorderTiles: number = 1;
+  // Cache small per-tile gradient masks for inline shade slicing (keyed by tile size)
+  private static _shadeSliceFadeMaskByTs: Map<
+    number,
+    Record<"left" | "right" | "up" | "down", HTMLCanvasElement>
+  > = new Map();
+  // Cache masked fade-tile results for inline slicing (keyed by lighting version)
+  private _inlineFadeSliceCache?: Map<string, HTMLCanvasElement>;
+  private _inlineFadeSliceCacheOrder?: string[];
+  private _inlineFadeSliceCacheLightingVersion: number = -1;
   private bloomOffscreenCanvas: HTMLCanvasElement;
   private bloomOffscreenCtx: CanvasRenderingContext2D;
 
@@ -489,6 +500,58 @@ export class Room {
   estimatedLightingTiles: number = 0;
   // Fast lookup for opaque entities blocking light this frame (when enabled)
   private opaqueEntityPositions?: Set<string>;
+  // Per-frame draw profiling (populated only when Game enables profiling)
+  private _drawProfileFrameId: number = -1;
+  private _drawProfileEnabledThisFrame: boolean = false;
+  private _drawProfile: Map<string, DrawProfileCounter> = new Map();
+
+  // Inline shade slicing: cache blurred shade source across frames when soft visibility is unchanged.
+  private _softVisVersion: number = 0;
+  private _inlineShadeSrcKey: string = "";
+  private _inlineShadeSrcCanvas: HTMLCanvasElement | null = null;
+
+  beginDrawProfileFrame(frameId: number, enabled: boolean): void {
+    this._drawProfileEnabledThisFrame = enabled;
+    if (!enabled) return;
+    if (this._drawProfileFrameId !== frameId) {
+      this._drawProfileFrameId = frameId;
+      this._drawProfile.clear();
+    }
+  }
+
+  getDrawProfileEntries(): Array<{ name: string; calls: number; totalMs: number }> {
+    const out: Array<{ name: string; calls: number; totalMs: number }> = [];
+    for (const [name, c] of this._drawProfile) {
+      out.push({ name, calls: c.calls, totalMs: c.totalMs });
+    }
+    return out;
+  }
+
+  getDrawProfileLabel(): string {
+    const flags = [
+      this.active ? "active" : "inactive",
+      this.onScreen ? "onScreen" : "offScreen",
+      this.entered ? "entered" : "notEntered",
+    ].join(",");
+    return `${this.globalId} (${this.roomX},${this.roomY}) ${this.width}x${this.height} ${flags}`;
+  }
+
+  private drawProfileStart(_name: string): number | undefined {
+    if (!this._drawProfileEnabledThisFrame) return undefined;
+    return performance.now();
+  }
+
+  private drawProfileEnd(name: string, start?: number): void {
+    if (start === undefined) return;
+    const dt = performance.now() - start;
+    const prev = this._drawProfile.get(name);
+    if (prev) {
+      prev.calls += 1;
+      prev.totalMs += dt;
+    } else {
+      this._drawProfile.set(name, { calls: 1, totalMs: dt });
+    }
+  }
 
   constructor(
     game: Game,
@@ -2658,169 +2721,203 @@ export class Room {
 
   draw = (delta: number) => {
     if (!this.onScreen) return;
+    const tTotal = this.drawProfileStart("Room.draw.total");
 
-    if (this.active) {
-      HitWarning.updateFrame(delta);
-      this.drawInterval = 4;
-    } else if (!this.active) {
-      this.drawInterval = 8;
-    }
+    try {
+      if (this.active) {
+        const t = this.drawProfileStart("Room.draw.hitWarningUpdate");
+        HitWarning.updateFrame(delta);
+        this.drawProfileEnd("Room.draw.hitWarningUpdate", t);
+        this.drawInterval = 4;
+      } else if (!this.active) {
+        this.drawInterval = 8;
+      }
 
-    this.drawTimestamp += delta;
+      this.drawTimestamp += delta;
 
-    if (this.drawTimestamp - this.lastDraw >= this.drawInterval) {
-      this.fadeRgb(delta + this.drawInterval);
-      this.fadeLighting(delta + this.drawInterval);
-      this.lastDraw = this.drawTimestamp;
+      if (this.drawTimestamp - this.lastDraw >= this.drawInterval) {
+        const tRgb = this.drawProfileStart("Room.draw.fadeRgb");
+        this.fadeRgb(delta + this.drawInterval);
+        this.drawProfileEnd("Room.draw.fadeRgb", tRgb);
+
+        const tLight = this.drawProfileStart("Room.draw.fadeLighting");
+        this.fadeLighting(delta + this.drawInterval);
+        this.drawProfileEnd("Room.draw.fadeLighting", tLight);
+        // softVis/softCol smoothing changed -> any cached inline shade source is now invalid.
+        this._softVisVersion++;
+        this._inlineShadeSrcCanvas = null;
+        this._inlineShadeSrcKey = "";
+
+        this.lastDraw = this.drawTimestamp;
+      }
+    } finally {
+      this.drawProfileEnd("Room.draw.total", tTotal);
     }
   };
   // added a multiplier to the input rgb values to avoid clipping to white
   drawColorLayer = () => {
     if (!this.onScreen) return;
+    const tTotal = this.drawProfileStart("Room.drawColorLayer.total");
 
     Game.ctx.save();
-    // Clear the offscreen color canvas
-    this.colorOffscreenCtx.clearRect(
-      0,
-      0,
-      this.colorOffscreenCanvas.width,
-      this.colorOffscreenCanvas.height,
-    );
+    try {
+      // Clear the offscreen color canvas
+      const tClear = this.drawProfileStart("Room.drawColorLayer.clearOffscreen");
+      this.colorOffscreenCtx.clearRect(
+        0,
+        0,
+        this.colorOffscreenCanvas.width,
+        this.colorOffscreenCanvas.height,
+      );
+      this.drawProfileEnd("Room.drawColorLayer.clearOffscreen", tClear);
 
-    let lastFillStyle = "";
-    // Match original shade layer positioning using the blur offsets
-    const offsetX = this.blurOffsetX;
-    const offsetY = this.blurOffsetY;
+      let lastFillStyle = "";
+      // Match original shade layer positioning using the blur offsets
+      const offsetX = this.blurOffsetX;
+      const offsetY = this.blurOffsetY;
 
-    // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
-    const bufferTiles = 3;
-    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        const [r, g, b] = this.softCol[x][y];
-        if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
+      // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
+      const tFill = this.drawProfileStart("Room.drawColorLayer.fillTiles");
+      const bufferTiles = 3;
+      const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          const [r, g, b] = this.softCol[x][y];
+          if (r === 0 && g === 0 && b === 0) continue; // Skip if no color
 
-        const fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+          const fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
 
-        if (fillStyle !== lastFillStyle) {
-          this.colorOffscreenCtx.fillStyle = fillStyle;
-          lastFillStyle = fillStyle;
+          if (fillStyle !== lastFillStyle) {
+            this.colorOffscreenCtx.fillStyle = fillStyle;
+            lastFillStyle = fillStyle;
+          }
+
+          this.colorOffscreenCtx.fillRect(
+            (x - this.roomX + offsetX) * GameConstants.TILESIZE,
+            (y - this.roomY + offsetY) * GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+            GameConstants.TILESIZE,
+          );
         }
-
-        this.colorOffscreenCtx.fillRect(
-          (x - this.roomX + offsetX) * GameConstants.TILESIZE,
-          (y - this.roomY + offsetY) * GameConstants.TILESIZE,
-          GameConstants.TILESIZE,
-          GameConstants.TILESIZE,
-        );
       }
-    }
+      this.drawProfileEnd("Room.drawColorLayer.fillTiles", tFill);
 
-    // Choose blur method based on setting
-    if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
-      const blurRenderer = WebGLBlurRenderer.getInstance();
+      const tBlur = this.drawProfileStart("Room.drawColorLayer.blurAndComposite");
+      // Choose blur method based on setting
+      if (GameConstants.USE_WEBGL_BLUR) {
+        // Use WebGL blur with caching
+        const blurRenderer = WebGLBlurRenderer.getInstance();
 
-      // Check if we can use cached results
-      if (
-        this.shouldUseBlurCache() &&
-        this.blurCache.color6px &&
-        this.blurCache.color12px
-      ) {
-        // Use cached blurred results
-        Game.ctx.globalCompositeOperation = "soft-light";
-        Game.ctx.globalAlpha = 0.6;
-        Game.ctx.drawImage(
-          this.blurCache.color6px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
+        // Check if we can use cached results
+        if (
+          this.shouldUseBlurCache() &&
+          this.blurCache.color6px &&
+          this.blurCache.color12px
+        ) {
+          // Use cached blurred results
+          Game.ctx.globalCompositeOperation = "soft-light";
+          Game.ctx.globalAlpha = 0.6;
+          Game.ctx.drawImage(
+            this.blurCache.color6px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
 
-        Game.ctx.globalCompositeOperation = "lighten";
-        Game.ctx.globalAlpha = 0.05;
-        Game.ctx.drawImage(
-          this.blurCache.color12px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
+          Game.ctx.globalCompositeOperation = "lighten";
+          Game.ctx.globalAlpha = 0.05;
+          Game.ctx.drawImage(
+            this.blurCache.color12px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+        } else {
+          // Generate new blur and cache if inactive
+          Game.ctx.globalCompositeOperation = "soft-light";
+          Game.ctx.globalAlpha = 0.6;
+
+          // Apply 6px blur using WebGL
+          const blurred8px = blurRenderer.applyBlur(
+            this.colorOffscreenCanvas,
+            8,
+          );
+          Game.ctx.drawImage(
+            blurred8px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+
+          // Cache the result if room is inactive
+          if (!this.active) {
+            this.cacheBlurResult("color8px", blurred8px);
+          }
+
+          Game.ctx.globalCompositeOperation = "lighten";
+          Game.ctx.globalAlpha = 0.05;
+
+          // Apply 12px blur using WebGL
+          const blurred12px = blurRenderer.applyBlur(
+            this.colorOffscreenCanvas,
+            12,
+          );
+          Game.ctx.drawImage(
+            blurred12px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+
+          // Cache the result if room is inactive
+          if (!this.active) {
+            this.cacheBlurResult("color12px", blurred12px);
+          }
+        }
       } else {
-        // Generate new blur and cache if inactive
-        Game.ctx.globalCompositeOperation = "soft-light";
+        // Use Canvas2D blur (fallback) - matching original settings
+        Game.ctx.globalCompositeOperation =
+          GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
         Game.ctx.globalAlpha = 0.6;
 
-        // Apply 6px blur using WebGL
-        const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+        if (GameConstants.ctxBlurEnabled) {
+          Game.ctx.filter = "blur(6px)";
+        }
+
         Game.ctx.drawImage(
-          blurred8px,
+          this.colorOffscreenCanvas,
           (this.roomX - offsetX) * GameConstants.TILESIZE,
           (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("color8px", blurred8px);
-        }
-
+        // Draw slight haze
         Game.ctx.globalCompositeOperation = "lighten";
         Game.ctx.globalAlpha = 0.05;
 
-        // Apply 12px blur using WebGL
-        const blurred12px = blurRenderer.applyBlur(
-          this.colorOffscreenCanvas,
-          12,
-        );
+        if (GameConstants.ctxBlurEnabled) {
+          Game.ctx.filter = "blur(12px)";
+        }
+
         Game.ctx.drawImage(
-          blurred12px,
+          this.colorOffscreenCanvas,
           (this.roomX - offsetX) * GameConstants.TILESIZE,
           (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("color12px", blurred12px);
-        }
+        Game.ctx.filter = "none";
       }
-    } else {
-      // Use Canvas2D blur (fallback) - matching original settings
-      Game.ctx.globalCompositeOperation =
-        GameConstants.COLOR_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
-      Game.ctx.globalAlpha = 0.6;
+      this.drawProfileEnd("Room.drawColorLayer.blurAndComposite", tBlur);
 
-      if (GameConstants.ctxBlurEnabled) {
-        Game.ctx.filter = "blur(6px)";
-      }
-
-      Game.ctx.drawImage(
-        this.colorOffscreenCanvas,
-        (this.roomX - offsetX) * GameConstants.TILESIZE,
-        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      const tClear2 = this.drawProfileStart(
+        "Room.drawColorLayer.clearOffscreenPost",
       );
-
-      // Draw slight haze
-      Game.ctx.globalCompositeOperation = "lighten";
-      Game.ctx.globalAlpha = 0.05;
-
-      if (GameConstants.ctxBlurEnabled) {
-        Game.ctx.filter = "blur(12px)";
-      }
-
-      Game.ctx.drawImage(
-        this.colorOffscreenCanvas,
-        (this.roomX - offsetX) * GameConstants.TILESIZE,
-        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      this.colorOffscreenCtx.clearRect(
+        0,
+        0,
+        this.colorOffscreenCanvas.width,
+        this.colorOffscreenCanvas.height,
       );
-
-      Game.ctx.filter = "none";
+      this.drawProfileEnd("Room.drawColorLayer.clearOffscreenPost", tClear2);
+    } finally {
+      Game.ctx.restore();
+      this.drawProfileEnd("Room.drawColorLayer.total", tTotal);
     }
-
-    this.colorOffscreenCtx.clearRect(
-      0,
-      0,
-      this.colorOffscreenCanvas.width,
-      this.colorOffscreenCanvas.height,
-    );
-
-    Game.ctx.restore();
   };
 
   drawShadeLayer = () => {
@@ -2828,185 +2925,198 @@ export class Room {
     if (GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) return; // handled inline in drawEntities
     if (!this.onScreen) return;
     if (GameConstants.SHADING_DISABLED) return;
+    const tTotal = this.drawProfileStart("Room.drawShadeLayer.total");
 
     Game.ctx.save();
+    try {
 
-    Game.ctx.globalCompositeOperation =
-      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+      Game.ctx.globalCompositeOperation =
+        GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
 
-    // Clear the offscreen shade canvas
-    this.shadeOffscreenCtx.clearRect(
-      0,
-      0,
-      this.shadeOffscreenCanvas.width,
-      this.shadeOffscreenCanvas.height,
-    );
+      // Clear the offscreen shade canvas
+      const tClear = this.drawProfileStart("Room.drawShadeLayer.clearOffscreen");
+      this.shadeOffscreenCtx.clearRect(
+        0,
+        0,
+        this.shadeOffscreenCanvas.width,
+        this.shadeOffscreenCanvas.height,
+      );
+      this.drawProfileEnd("Room.drawShadeLayer.clearOffscreen", tClear);
 
-    const offsetX = this.shadeSliceBorderTiles;
-    const offsetY = this.shadeSliceBorderTiles;
+      const offsetX = this.shadeSliceBorderTiles;
+      const offsetY = this.shadeSliceBorderTiles;
 
-    let lastFillStyle = "";
+      let lastFillStyle = "";
 
-    // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
-    const shadeBufferTiles = 4;
-    for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
-      for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
-        if (!this.isTileOnScreen(x, y, shadeBufferTiles)) continue;
-        const tile = this.roomArray[x]?.[y];
-        //if (!tile) return;
+      // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
+      const tFill = this.drawProfileStart("Room.drawShadeLayer.fillTiles");
+      const shadeBufferTiles = 4;
+      for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
+        for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+          if (!this.isTileOnScreen(x, y, shadeBufferTiles)) continue;
+          const tile = this.roomArray[x]?.[y];
+          //if (!tile) return;
 
-        let alpha =
-          this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
-        if (tile instanceof WallTorch) continue;
-        let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
-        let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
-        let computedAlpha = alpha ** factor * smoothFactor;
+          let alpha =
+            this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
+          if (tile instanceof WallTorch) continue;
+          let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+          let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
+          let computedAlpha = alpha ** factor * smoothFactor;
 
-        let fillX = x;
-        let fillY = y;
-        let fillWidth = 1;
-        let fillHeight = 1;
-        if (tile instanceof Wall) {
-          const wall = tile as Wall;
-          if (!this.innerWalls.includes(wall)) {
-            switch (wall.direction) {
+          let fillX = x;
+          let fillY = y;
+          let fillWidth = 1;
+          let fillHeight = 1;
+          if (tile instanceof Wall) {
+            const wall = tile as Wall;
+            if (!this.innerWalls.includes(wall)) {
+              switch (wall.direction) {
+                case Direction.UP:
+                  fillY = y - 0.5;
+                  fillHeight = 0.5;
+                  break;
+                case Direction.DOWN:
+                  fillY = y - 0.5;
+                  fillHeight = 1.5;
+                  break;
+                case Direction.LEFT:
+                  fillX = x + 0.25;
+                  fillWidth = 0.75;
+                  break;
+                case Direction.RIGHT:
+                  fillX = x;
+                  fillWidth = 0.75;
+                  break;
+                case Direction.DOWN_LEFT:
+                  fillX = x + 0.25;
+                  fillY = y - 0.5;
+                  fillWidth = 0.75;
+                  fillHeight = 1.5;
+                  break;
+                case Direction.DOWN_RIGHT:
+                  fillX = x;
+                  fillY = y - 0.5;
+                  fillWidth = 0.75;
+                  fillHeight = 1.5;
+                  break;
+                case Direction.UP_LEFT:
+                  fillX = x + 0.25;
+                  fillY = y - 0.5;
+                  fillWidth = 0.75;
+                  fillHeight = 0.5;
+                  break;
+                case Direction.UP_RIGHT:
+                  fillX = x - 0.5;
+                  fillY = y - 0.5;
+                  fillWidth = 0.75;
+                  fillHeight = 0.5;
+                  break;
+              }
+            }
+          } else if (tile instanceof Door) {
+            const door = tile as Door;
+            if (door.opened === true) computedAlpha = computedAlpha / 2;
+            switch (door.doorDir) {
               case Direction.UP:
                 fillY = y - 0.5;
-                fillHeight = 0.5;
+                fillHeight = 1.5;
                 break;
               case Direction.DOWN:
                 fillY = y - 0.5;
                 fillHeight = 1.5;
                 break;
-              case Direction.LEFT:
-                fillX = x + 0.25;
-                fillWidth = 0.75;
-                break;
               case Direction.RIGHT:
-                fillX = x;
-                fillWidth = 0.75;
-                break;
-              case Direction.DOWN_LEFT:
-                fillX = x + 0.25;
-                fillY = y - 0.5;
-                fillWidth = 0.75;
-                fillHeight = 1.5;
-                break;
-              case Direction.DOWN_RIGHT:
-                fillX = x;
-                fillY = y - 0.5;
-                fillWidth = 0.75;
-                fillHeight = 1.5;
-                break;
-              case Direction.UP_LEFT:
-                fillX = x + 0.25;
-                fillY = y - 0.5;
-                fillWidth = 0.75;
-                fillHeight = 0.5;
-                break;
-              case Direction.UP_RIGHT:
                 fillX = x - 0.5;
-                fillY = y - 0.5;
-                fillWidth = 0.75;
-                fillHeight = 0.5;
+                fillY = y - 1.25;
+                fillWidth = 1.5;
+                fillHeight = 2;
+                break;
+              case Direction.LEFT:
+                fillX = x;
+                fillY = y - 1.25;
+                fillWidth = 1.5;
+                fillHeight = 2;
                 break;
             }
           }
-        } else if (tile instanceof Door) {
-          const door = tile as Door;
-          if (door.opened === true) computedAlpha = computedAlpha / 2;
-          switch (door.doorDir) {
-            case Direction.UP:
-              fillY = y - 0.5;
-              fillHeight = 1.5;
-              break;
-            case Direction.DOWN:
-              fillY = y - 0.5;
-              fillHeight = 1.5;
-              break;
-            case Direction.RIGHT:
-              fillX = x - 0.5;
-              fillY = y - 1.25;
-              fillWidth = 1.5;
-              fillHeight = 2;
-              break;
-            case Direction.LEFT:
-              fillX = x;
-              fillY = y - 1.25;
-              fillWidth = 1.5;
-              fillHeight = 2;
-              break;
+          const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
+
+          const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
+
+          if (fillStyle !== lastFillStyle) {
+            this.shadeOffscreenCtx.fillStyle = fillStyle;
+            lastFillStyle = fillStyle;
+          }
+
+          this.shadeOffscreenCtx.fillRect(
+            (fillX - this.roomX + offsetX) * GameConstants.TILESIZE,
+            (fillY - this.roomY + offsetY) * GameConstants.TILESIZE,
+            fillWidth * GameConstants.TILESIZE,
+            fillHeight * GameConstants.TILESIZE,
+          );
+        }
+      }
+      this.drawProfileEnd("Room.drawShadeLayer.fillTiles", tFill);
+
+      const tBlur = this.drawProfileStart("Room.drawShadeLayer.blurAndComposite");
+      // Choose blur method based on setting
+      if (GameConstants.USE_WEBGL_BLUR) {
+        // Use WebGL blur with caching
+        const blurRenderer = WebGLBlurRenderer.getInstance();
+
+        // Check if we can use cached results
+        if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
+          // Use cached blurred result
+          Game.ctx.globalAlpha = 1;
+          Game.ctx.drawImage(
+            this.blurCache.shade5px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+        } else {
+          // Generate new blur and cache if inactive
+          Game.ctx.globalAlpha = 1;
+
+          // Apply 5px blur using WebGL
+          const blurred5px = blurRenderer.applyBlur(
+            this.shadeOffscreenCanvas,
+            5,
+          );
+          Game.ctx.drawImage(
+            blurred5px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+
+          // Cache the result if room is inactive
+          if (!this.active) {
+            this.cacheBlurResult("shade5px", blurred5px);
           }
         }
-        const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
-
-        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
-
-        if (fillStyle !== lastFillStyle) {
-          this.shadeOffscreenCtx.fillStyle = fillStyle;
-          lastFillStyle = fillStyle;
-        }
-
-        this.shadeOffscreenCtx.fillRect(
-          (fillX - this.roomX + offsetX) * GameConstants.TILESIZE,
-          (fillY - this.roomY + offsetY) * GameConstants.TILESIZE,
-          fillWidth * GameConstants.TILESIZE,
-          fillHeight * GameConstants.TILESIZE,
-        );
-      }
-    }
-
-    // Choose blur method based on setting
-    if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
-      const blurRenderer = WebGLBlurRenderer.getInstance();
-
-      // Check if we can use cached results
-      if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
-        // Use cached blurred result
-        Game.ctx.globalAlpha = 1;
-        Game.ctx.drawImage(
-          this.blurCache.shade5px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
       } else {
-        // Generate new blur and cache if inactive
+        // Use Canvas2D blur (fallback) - matching original settings
         Game.ctx.globalAlpha = 1;
 
-        // Apply 5px blur using WebGL
-        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+        const blurAmount = !GameConstants.SMOOTH_LIGHTING ? 5 : 5;
+
+        if (GameConstants.ctxBlurEnabled) {
+          Game.ctx.filter = `blur(${blurAmount}px)`;
+        }
+
         Game.ctx.drawImage(
-          blurred5px,
+          this.shadeOffscreenCanvas,
           (this.roomX - offsetX) * GameConstants.TILESIZE,
           (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("shade5px", blurred5px);
-        }
+        Game.ctx.filter = "none";
       }
-    } else {
-      // Use Canvas2D blur (fallback) - matching original settings
-      Game.ctx.globalAlpha = 1;
-
-      const blurAmount = !GameConstants.SMOOTH_LIGHTING ? 5 : 5;
-
-      if (GameConstants.ctxBlurEnabled) {
-        Game.ctx.filter = `blur(${blurAmount}px)`;
-      }
-
-      Game.ctx.drawImage(
-        this.shadeOffscreenCanvas,
-        (this.roomX - offsetX) * GameConstants.TILESIZE,
-        (this.roomY - offsetY) * GameConstants.TILESIZE,
-      );
-
-      Game.ctx.filter = "none";
+      this.drawProfileEnd("Room.drawShadeLayer.blurAndComposite", tBlur);
+    } finally {
+      Game.ctx.restore();
+      this.drawProfileEnd("Room.drawShadeLayer.total", tTotal);
     }
-
-    Game.ctx.restore();
   };
 
   // Build the unblurred shade offscreen using the exact logic as drawShadeLayer's fill pass
@@ -3252,6 +3362,50 @@ export class Room {
       return;
     }
 
+    // Apply cached gradient alpha mask (destination-in)
+    let masks = Room._shadeSliceFadeMaskByTs.get(ts);
+    if (!masks) {
+      const makeMask = (
+        dir: "left" | "right" | "up" | "down",
+      ): HTMLCanvasElement => {
+        const c = document.createElement("canvas");
+        c.width = ts;
+        c.height = ts;
+        const mctx = c.getContext("2d") as CanvasRenderingContext2D | null;
+        if (!mctx) return c;
+        let grad: CanvasGradient;
+        if (dir === "right") {
+          grad = mctx.createLinearGradient(0, 0, ts, 0);
+          grad.addColorStop(0, "rgba(0,0,0,0)");
+          grad.addColorStop(1, "rgba(0,0,0,1)");
+        } else if (dir === "left") {
+          grad = mctx.createLinearGradient(0, 0, ts, 0);
+          grad.addColorStop(0, "rgba(0,0,0,1)");
+          grad.addColorStop(1, "rgba(0,0,0,0)");
+        } else if (dir === "up") {
+          grad = mctx.createLinearGradient(0, 0, 0, ts);
+          grad.addColorStop(0, "rgba(0,0,0,0)");
+          grad.addColorStop(1, "rgba(0,0,0,1)");
+        } else {
+          // down
+          grad = mctx.createLinearGradient(0, 0, 0, ts);
+          grad.addColorStop(0, "rgba(0,0,0,1)");
+          grad.addColorStop(1, "rgba(0,0,0,0)");
+        }
+        mctx.globalCompositeOperation = "source-over";
+        mctx.fillStyle = grad;
+        mctx.fillRect(0, 0, ts, ts);
+        return c;
+      };
+      masks = {
+        left: makeMask("left"),
+        right: makeMask("right"),
+        up: makeMask("up"),
+        down: makeMask("down"),
+      };
+      Room._shadeSliceFadeMaskByTs.set(ts, masks);
+    }
+
     // Lazy init temp slice canvas
     if (!this.shadeSliceTempCanvas) {
       this.shadeSliceTempCanvas = document.createElement("canvas");
@@ -3262,203 +3416,199 @@ export class Room {
       ) as CanvasRenderingContext2D;
     }
     const tctx = this.shadeSliceTempCtx as CanvasRenderingContext2D;
-    tctx.clearRect(0, 0, ts, ts);
-    // Copy slice into temp
-    tctx.globalCompositeOperation = "source-over";
+    // Copy slice into temp (use 'copy' to avoid clearRect + avoids blending)
+    tctx.globalCompositeOperation = "copy";
     tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
-    // Apply gradient alpha mask (destination-in)
-    let grad: CanvasGradient | null = null;
-    if (fadeDir === "right") {
-      grad = tctx.createLinearGradient(0, 0, ts, 0);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(1, "rgba(0,0,0,1)");
-    } else if (fadeDir === "left") {
-      grad = tctx.createLinearGradient(0, 0, ts, 0);
-      grad.addColorStop(0, "rgba(0,0,0,1)");
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-    } else if (fadeDir === "up") {
-      grad = tctx.createLinearGradient(0, 0, 0, ts);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(1, "rgba(0,0,0,1)");
-    } else if (fadeDir === "down") {
-      grad = tctx.createLinearGradient(0, 0, 0, ts);
-      grad.addColorStop(0, "rgba(0,0,0,1)");
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-    }
-    if (grad) {
-      tctx.globalCompositeOperation = "destination-in";
-      tctx.fillStyle = grad;
-      tctx.fillRect(0, 0, ts, ts);
-    }
+
+    tctx.globalCompositeOperation = "destination-in";
+    tctx.drawImage(masks[fadeDir], 0, 0);
     // Blit to main ctx
     Game.ctx.drawImage(this.shadeSliceTempCanvas as HTMLCanvasElement, dx, dy);
   };
 
   drawBloomLayer = (delta: number, zLayer: number = this.getActiveZ()) => {
     if (!this.onScreen) return;
+    const tTotal = this.drawProfileStart("Room.drawBloomLayer.total");
 
     Game.ctx.save();
-    // Clear the offscreen shade canvas
-    this.bloomOffscreenCtx.clearRect(
-      0,
-      0,
-      this.bloomOffscreenCanvas.width,
-      this.bloomOffscreenCanvas.height,
-    );
-    const offsetX = this.blurOffsetX;
-    const offsetY = this.blurOffsetY;
-
-    let lastFillStyle = "";
-
-    // Draw bloom for entities on the requested z-layer only.
-    const entitiesOnLayer = this.entities
-      .concat(this.deadEntities)
-      .filter((e) => (e?.z ?? 0) === zLayer);
-    for (const e of entitiesOnLayer) {
-      if (!e.hasBloom) continue;
-      e.updateBloom(delta);
-      const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
-      this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
-      this.bloomOffscreenCtx.fillStyle = e.bloomColor;
-
-      this.bloomOffscreenCtx.fillRect(
-        (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-          GameConstants.TILESIZE,
-        (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
-          GameConstants.TILESIZE +
-          e.bloomOffsetY,
-        GameConstants.TILESIZE * e.bloomSize,
-        GameConstants.TILESIZE * e.bloomSize,
+    try {
+      // Clear the offscreen bloom canvas
+      const tClear = this.drawProfileStart("Room.drawBloomLayer.clearOffscreen");
+      this.bloomOffscreenCtx.clearRect(
+        0,
+        0,
+        this.bloomOffscreenCanvas.width,
+        this.bloomOffscreenCanvas.height,
       );
-    }
+      this.drawProfileEnd("Room.drawBloomLayer.clearOffscreen", tClear);
 
-    // Player bloom derived from equipped light (uses Drawable bloom smoothing)
-    for (const key in this.game.players) {
-      const player = this.game.players[key];
-      if (player.getRoom() !== this) continue;
-      if ((player?.z ?? 0) !== zLayer) continue;
+      const offsetX = this.blurOffsetX;
+      const offsetY = this.blurOffsetY;
 
-      //player.hasBloom = true;
-      const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
-      player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
-      player.bloomAlpha = 0.5;
-      player.updateBloom(delta);
+      // Draw bloom sources (entities/tiles/projectiles/players)
+      const tSrc = this.drawProfileStart("Room.drawBloomLayer.drawSources");
+      // Draw bloom for entities on the requested z-layer only.
+      const entitiesOnLayer = this.entities
+        .concat(this.deadEntities)
+        .filter((e) => (e?.z ?? 0) === zLayer);
+      for (const e of entitiesOnLayer) {
+        if (!e.hasBloom) continue;
+        e.updateBloom(delta);
+        const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
+        this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
+        this.bloomOffscreenCtx.fillStyle = e.bloomColor;
 
-      this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
-      this.bloomOffscreenCtx.fillStyle = player.bloomColor;
-      this.bloomOffscreenCtx.fillRect(
-        (player.x - player.drawX - this.roomX + offsetX) *
-          GameConstants.TILESIZE,
-        (player.y - player.drawY - this.roomY + offsetY - 0.5) *
-          GameConstants.TILESIZE,
-
-        GameConstants.TILESIZE,
-        GameConstants.TILESIZE,
-      );
-    }
-
-    const shadeBufferTiles = 4;
-    const { minX, maxX, minY, maxY } =
-      this.getVisibleTileBounds(shadeBufferTiles);
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        if (this.roomArray[x][y].hasBloom) {
-          this.roomArray[x][y].updateBloom(delta);
-          const tVis = this.softVis?.[x]?.[y] ?? 1;
-          this.bloomOffscreenCtx.globalAlpha =
-            1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
-          this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
-
-          this.bloomOffscreenCtx.fillRect(
-            (x - this.roomX + offsetX) * GameConstants.TILESIZE,
-            (y -
-              this.roomY -
-              0.25 +
-              offsetY -
-              this.roomArray[x][y].bloomOffsetY) *
-              GameConstants.TILESIZE,
+        this.bloomOffscreenCtx.fillRect(
+          (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
             GameConstants.TILESIZE,
-            GameConstants.TILESIZE * 0.75,
+          (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
+            GameConstants.TILESIZE +
+            e.bloomOffsetY,
+          GameConstants.TILESIZE * e.bloomSize,
+          GameConstants.TILESIZE * e.bloomSize,
+        );
+      }
+
+      // Player bloom derived from equipped light (uses Drawable bloom smoothing)
+      for (const key in this.game.players) {
+        const player = this.game.players[key];
+        if (player.getRoom() !== this) continue;
+        if ((player?.z ?? 0) !== zLayer) continue;
+
+        const [r, g, b] =
+          this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
+        player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
+        player.bloomAlpha = 0.5;
+        player.updateBloom(delta);
+
+        this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
+        this.bloomOffscreenCtx.fillStyle = player.bloomColor;
+        this.bloomOffscreenCtx.fillRect(
+          (player.x - player.drawX - this.roomX + offsetX) *
+            GameConstants.TILESIZE,
+          (player.y - player.drawY - this.roomY + offsetY - 0.5) *
+            GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+        );
+      }
+
+      const shadeBufferTiles = 4;
+      const { minX, maxX, minY, maxY } =
+        this.getVisibleTileBounds(shadeBufferTiles);
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          if (this.roomArray[x][y].hasBloom) {
+            this.roomArray[x][y].updateBloom(delta);
+            const tVis = this.softVis?.[x]?.[y] ?? 1;
+            this.bloomOffscreenCtx.globalAlpha =
+              1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
+            this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
+
+            this.bloomOffscreenCtx.fillRect(
+              (x - this.roomX + offsetX) * GameConstants.TILESIZE,
+              (y -
+                this.roomY -
+                0.25 +
+                offsetY -
+                this.roomArray[x][y].bloomOffsetY) *
+                GameConstants.TILESIZE,
+              GameConstants.TILESIZE,
+              GameConstants.TILESIZE * 0.75,
+            );
+          }
+        }
+      }
+
+      for (const p of this.projectiles) {
+        if ((p?.z ?? 0) !== zLayer) continue;
+        if (!p.hasBloom) continue;
+        p.updateBloom(delta);
+        const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
+        this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
+        this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+
+        this.bloomOffscreenCtx.fillRect(
+          (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
+          (p.y - this.roomY + offsetY + p.bloomOffsetY) *
+            GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+          GameConstants.TILESIZE,
+        );
+      }
+      this.drawProfileEnd("Room.drawBloomLayer.drawSources", tSrc);
+
+      const tBlur = this.drawProfileStart("Room.drawBloomLayer.blurAndComposite");
+      // Choose blur method based on setting
+      if (GameConstants.USE_WEBGL_BLUR) {
+        // Use WebGL blur with caching
+        const blurRenderer = WebGLBlurRenderer.getInstance();
+
+        // Check if we can use cached results
+        if (this.shouldUseBlurCache() && this.blurCache.bloom8px) {
+          // Use cached blurred result
+          Game.ctx.globalCompositeOperation = "screen";
+          Game.ctx.globalAlpha = 1;
+          Game.ctx.drawImage(
+            this.blurCache.bloom8px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
           );
+        } else {
+          // Generate new blur and cache if inactive
+          Game.ctx.globalCompositeOperation = "screen";
+          Game.ctx.globalAlpha = 1;
+
+          // Apply 8px blur using WebGL
+          const blurred8px = blurRenderer.applyBlur(
+            this.bloomOffscreenCanvas,
+            8,
+          );
+          Game.ctx.drawImage(
+            blurred8px,
+            (this.roomX - offsetX) * GameConstants.TILESIZE,
+            (this.roomY - offsetY) * GameConstants.TILESIZE,
+          );
+
+          // Cache the result if room is inactive
+          if (!this.active) {
+            this.cacheBlurResult("bloom8px", blurred8px);
+          }
         }
-      }
-    }
-
-    for (const p of this.projectiles) {
-      if ((p?.z ?? 0) !== zLayer) continue;
-      if (!p.hasBloom) continue;
-      p.updateBloom(delta);
-      const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
-      this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
-      this.bloomOffscreenCtx.fillStyle = p.bloomColor;
-
-      this.bloomOffscreenCtx.fillRect(
-        (p.x - this.roomX + offsetX) * GameConstants.TILESIZE,
-        (p.y - this.roomY + offsetY + p.bloomOffsetY) * GameConstants.TILESIZE,
-        GameConstants.TILESIZE,
-        GameConstants.TILESIZE,
-      );
-    }
-
-    // Choose blur method based on setting
-    if (GameConstants.USE_WEBGL_BLUR) {
-      // Use WebGL blur with caching
-      const blurRenderer = WebGLBlurRenderer.getInstance();
-
-      // Check if we can use cached results
-      if (this.shouldUseBlurCache() && this.blurCache.bloom8px) {
-        // Use cached blurred result
-        Game.ctx.globalCompositeOperation = "screen";
-        Game.ctx.globalAlpha = 1;
-        Game.ctx.drawImage(
-          this.blurCache.bloom8px,
-          (this.roomX - offsetX) * GameConstants.TILESIZE,
-          (this.roomY - offsetY) * GameConstants.TILESIZE,
-        );
       } else {
-        // Generate new blur and cache if inactive
+        // Use Canvas2D blur (fallback) - matching original settings
         Game.ctx.globalCompositeOperation = "screen";
         Game.ctx.globalAlpha = 1;
 
-        // Apply 8px blur using WebGL
-        const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
+        if (GameConstants.ctxBlurEnabled) {
+          Game.ctx.filter = "blur(8px)";
+        }
+
         Game.ctx.drawImage(
-          blurred8px,
+          this.bloomOffscreenCanvas,
           (this.roomX - offsetX) * GameConstants.TILESIZE,
           (this.roomY - offsetY) * GameConstants.TILESIZE,
         );
 
-        // Cache the result if room is inactive
-        if (!this.active) {
-          this.cacheBlurResult("bloom8px", blurred8px);
-        }
+        Game.ctx.filter = "none";
       }
-    } else {
-      // Use Canvas2D blur (fallback) - matching original settings
-      Game.ctx.globalCompositeOperation = "screen";
-      Game.ctx.globalAlpha = 1;
+      this.drawProfileEnd("Room.drawBloomLayer.blurAndComposite", tBlur);
 
-      if (GameConstants.ctxBlurEnabled) {
-        Game.ctx.filter = "blur(8px)";
-      }
-
-      Game.ctx.drawImage(
-        this.bloomOffscreenCanvas,
-        (this.roomX - offsetX) * GameConstants.TILESIZE,
-        (this.roomY - offsetY) * GameConstants.TILESIZE,
+      const tClear2 = this.drawProfileStart(
+        "Room.drawBloomLayer.clearOffscreenPost",
       );
-
-      Game.ctx.filter = "none";
+      this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
+      this.bloomOffscreenCtx.fillRect(
+        0,
+        0,
+        this.bloomOffscreenCanvas.width,
+        this.bloomOffscreenCanvas.height,
+      );
+      this.drawProfileEnd("Room.drawBloomLayer.clearOffscreenPost", tClear2);
+    } finally {
+      Game.ctx.restore();
+      this.drawProfileEnd("Room.drawBloomLayer.total", tTotal);
     }
-
-    this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
-    this.bloomOffscreenCtx.fillRect(
-      0,
-      0,
-      this.bloomOffscreenCanvas.width,
-      this.bloomOffscreenCanvas.height,
-    );
-    Game.ctx.restore();
   };
 
   drawEntities = (
@@ -3467,121 +3617,171 @@ export class Room {
     zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
   ) => {
     if (!this.onScreen) return;
+    const tTotal = this.drawProfileStart("Room.drawEntities.total");
 
-    // Render-time particle cleanup (in-place, avoids allocations).
-    // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
-    // while the game is idling; bubbles are spawned from `Player.draw()`.
-    this.particleCleanupAccumulator += delta;
-    if (this.particleCleanupAccumulator >= 10) {
-      this.particleCleanupAccumulator = 0;
-      if (this.particles.length > 0) {
-        let w = 0;
-        for (let r = 0; r < this.particles.length; r++) {
-          const p = this.particles[r];
-          if (p && !p.dead) {
-            this.particles[w++] = p;
-          }
-        }
-        if (w !== this.particles.length) this.particles.length = w;
-      }
-    }
-
-    this.updateOxygenLineBeams();
-
-    Game.ctx.save();
-    // If using inline sliced shade, prepare the blurred shade source once
-    let useInlineShade =
-      GameConstants.SHADE_ENABLED && GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
-    let shadeSrc: HTMLCanvasElement | null = null;
-    if (useInlineShade && !GameConstants.SHADING_DISABLED) {
-      // Build unblurred shade and get blurred source
-      this.buildShadeOffscreenForSlicing();
-      shadeSrc = this.getBlurredShadeSourceForSlicing();
-    }
-
-    let tiles = [];
-    // Iterate only within the currently visible tile bounds (with a small buffer)
-    const tileBuffer = 3;
-    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        const tile = this.roomArray[x][y];
-        // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
-        if (GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
-          const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
-          if (override) {
-            // Air draws nothing; only collect non-solid tiles for drawables.
-            if (!override.isSolid()) {
-              override.drawUnderPlayer(delta);
-              tiles.push(override);
+    try {
+      const tCleanup = this.drawProfileStart("Room.drawEntities.particleCleanup");
+      // Render-time particle cleanup (in-place, avoids allocations).
+      // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
+      // while the game is idling; bubbles are spawned from `Player.draw()`.
+      this.particleCleanupAccumulator += delta;
+      if (this.particleCleanupAccumulator >= 10) {
+        this.particleCleanupAccumulator = 0;
+        if (this.particles.length > 0) {
+          let w = 0;
+          for (let r = 0; r < this.particles.length; r++) {
+            const p = this.particles[r];
+            if (p && !p.dead) {
+              this.particles[w++] = p;
             }
-            continue;
+          }
+          if (w !== this.particles.length) this.particles.length = w;
+        }
+      }
+      this.drawProfileEnd("Room.drawEntities.particleCleanup", tCleanup);
+
+      const tO2 = this.drawProfileStart("Room.drawEntities.oxygenLineBeams");
+      this.updateOxygenLineBeams();
+      this.drawProfileEnd("Room.drawEntities.oxygenLineBeams", tO2);
+
+      Game.ctx.save();
+      try {
+        // If using inline sliced shade, prepare the blurred shade source once
+        const tInlineShadePrep = this.drawProfileStart(
+          "Room.drawEntities.inlineShadePrep",
+        );
+        let useInlineShade =
+          GameConstants.SHADE_ENABLED && GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+        let shadeSrc: HTMLCanvasElement | null = null;
+        if (useInlineShade && !GameConstants.SHADING_DISABLED) {
+          // Cache the blurred shade source across frames when soft visibility is unchanged.
+          // Key includes lighting version (hard changes) + soft-vis version (fadeLighting smoothing).
+          const key = `${this.lastLightingUpdate}|${this._softVisVersion}`;
+          if (this._inlineShadeSrcCanvas && this._inlineShadeSrcKey === key) {
+            const tHit = this.drawProfileStart(
+              "Room.drawEntities.inlineShadePrepCacheHit",
+            );
+            shadeSrc = this._inlineShadeSrcCanvas;
+            this.drawProfileEnd(
+              "Room.drawEntities.inlineShadePrepCacheHit",
+              tHit,
+            );
+          } else {
+            const tMiss = this.drawProfileStart(
+              "Room.drawEntities.inlineShadePrepCacheMiss",
+            );
+            // Build unblurred shade and get blurred source
+            this.buildShadeOffscreenForSlicing();
+            shadeSrc = this.getBlurredShadeSourceForSlicing();
+            this._inlineShadeSrcCanvas = shadeSrc;
+            this._inlineShadeSrcKey = key;
+            this.drawProfileEnd(
+              "Room.drawEntities.inlineShadePrepCacheMiss",
+              tMiss,
+            );
           }
         }
+        this.drawProfileEnd(
+          "Room.drawEntities.inlineShadePrep",
+          tInlineShadePrep,
+        );
 
-        tile.drawUnderPlayer(delta);
-        tiles.push(tile);
-      }
-    }
+        const tTiles = this.drawProfileStart("Room.drawEntities.collectTiles");
+        let tiles = [];
+        // Iterate only within the currently visible tile bounds (with a small buffer)
+        const tileBuffer = 3;
+        const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
+        for (let x = minX; x <= maxX; x++) {
+          for (let y = minY; y <= maxY; y++) {
+            const tile = this.roomArray[x][y];
+            // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
+            if (
+              GameConstants.Z_DEBUG_MODE &&
+              zLayer === 1 &&
+              this.zDebugZ1Tiles
+            ) {
+              const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+              if (override) {
+                // Air draws nothing; only collect non-solid tiles for drawables.
+                if (!override.isSolid()) {
+                  override.drawUnderPlayer(delta);
+                  tiles.push(override);
+                }
+                continue;
+              }
+            }
 
-    let drawables: Drawable[] = [];
-    const activeZ =
-      this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
-    const entities: Entity[] = ([] as Entity[]).concat(
-      this.entities,
-      this.deadEntities,
-    );
-    const entitiesOnLayer = entities.filter((e) => (e?.z ?? 0) === zLayer);
-    const projectilesOnLayer = this.projectiles.filter(
-      (p) => (p?.z ?? 0) === zLayer,
-    );
-    const itemsOnLayer = this.items.filter((i) => (i?.z ?? 0) === zLayer);
-    const particlesOnLayer = this.particles.filter(
-      (p) => ((p as any)?.worldZ ?? 0) === zLayer,
-    );
-    const hitwarningsOnLayer = zLayer === activeZ ? this.hitwarnings : [];
-
-    drawables.push(
-      ...tiles,
-      ...this.decorations,
-      ...entitiesOnLayer,
-      ...hitwarningsOnLayer,
-      ...projectilesOnLayer,
-      ...particlesOnLayer,
-      ...itemsOnLayer,
-    );
-
-    // Filter out drawables that are completely off-screen (with a small tile buffer)
-    drawables = drawables.filter((d) => {
-      const dx = (d as any).x;
-      const dy = (d as any).y;
-      if (typeof dx !== "number" || typeof dy !== "number") return true;
-      const dw = Math.max(1, Math.ceil((d as any)?.w || 1));
-      const dh = Math.max(1, Math.ceil((d as any)?.h || 1));
-      const bufferTiles = 3;
-      for (let ox = 0; ox < dw; ox++) {
-        for (let oy = 0; oy < dh; oy++) {
-          if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles)) return true;
+            tile.drawUnderPlayer(delta);
+            tiles.push(tile);
+          }
         }
-      }
-      return false;
-    });
+        this.drawProfileEnd("Room.drawEntities.collectTiles", tTiles);
 
-    for (const i in this.game.players) {
-      const player = this.game.players[i];
-      if (player.getRoom?.() === this) {
-        if ((player.z ?? 0) !== zLayer) continue;
-        if (
-          !(
-            skipLocalPlayer &&
-            player === this.game.players[this.game.localPlayerID]
-          )
-        )
-          drawables.push(player);
-      }
-    }
+        const tAssemble = this.drawProfileStart("Room.drawEntities.assembleDrawables");
+        let drawables: Drawable[] = [];
+        const activeZ =
+          this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
+        const entities: Entity[] = ([] as Entity[]).concat(
+          this.entities,
+          this.deadEntities,
+        );
+        const entitiesOnLayer = entities.filter((e) => (e?.z ?? 0) === zLayer);
+        const projectilesOnLayer = this.projectiles.filter(
+          (p) => (p?.z ?? 0) === zLayer,
+        );
+        const itemsOnLayer = this.items.filter((i) => (i?.z ?? 0) === zLayer);
+        const particlesOnLayer = this.particles.filter(
+          (p) => ((p as any)?.worldZ ?? 0) === zLayer,
+        );
+        const hitwarningsOnLayer = zLayer === activeZ ? this.hitwarnings : [];
 
-    drawables.sort((a, b) => {
+        drawables.push(
+          ...tiles,
+          ...this.decorations,
+          ...entitiesOnLayer,
+          ...hitwarningsOnLayer,
+          ...projectilesOnLayer,
+          ...particlesOnLayer,
+          ...itemsOnLayer,
+        );
+        this.drawProfileEnd("Room.drawEntities.assembleDrawables", tAssemble);
+
+        const tCull = this.drawProfileStart("Room.drawEntities.cullOffscreen");
+        // Filter out drawables that are completely off-screen (with a small tile buffer)
+        drawables = drawables.filter((d) => {
+          const dx = (d as any).x;
+          const dy = (d as any).y;
+          if (typeof dx !== "number" || typeof dy !== "number") return true;
+          const dw = Math.max(1, Math.ceil((d as any)?.w || 1));
+          const dh = Math.max(1, Math.ceil((d as any)?.h || 1));
+          const bufferTiles = 3;
+          for (let ox = 0; ox < dw; ox++) {
+            for (let oy = 0; oy < dh; oy++) {
+              if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles)) return true;
+            }
+          }
+          return false;
+        });
+        this.drawProfileEnd("Room.drawEntities.cullOffscreen", tCull);
+
+        const tPlayers = this.drawProfileStart("Room.drawEntities.addPlayers");
+        for (const i in this.game.players) {
+          const player = this.game.players[i];
+          if (player.getRoom?.() === this) {
+            if ((player.z ?? 0) !== zLayer) continue;
+            if (
+              !(
+                skipLocalPlayer &&
+                player === this.game.players[this.game.localPlayerID]
+              )
+            )
+              drawables.push(player);
+          }
+        }
+        this.drawProfileEnd("Room.drawEntities.addPlayers", tPlayers);
+
+        const tSort = this.drawProfileStart("Room.drawEntities.sort");
+        drawables.sort((a, b) => {
       if (a instanceof Floor || a instanceof SpawnFloor) {
         return -1;
       } else if (b instanceof Floor || b instanceof SpawnFloor) {
@@ -3617,98 +3817,229 @@ export class Room {
       } else {
         return a.drawableY - b.drawableY;
       }
-    });
+        });
+        this.drawProfileEnd("Room.drawEntities.sort", tSort);
 
-    // Draw in sorted order; apply inline tile shade immediately after each tile
-    for (const d of drawables) {
-      d.draw(delta);
-      if (useInlineShade && shadeSrc && d instanceof Tile) {
-        const tx = (d as Tile).x;
-        const ty = (d as Tile).y;
-        const sv =
-          this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
-        if (sv > 0) {
-          const prevOp = Game.ctx
-            .globalCompositeOperation as GlobalCompositeOperation;
-          if (
-            prevOp !==
-            (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
-          ) {
-            Game.ctx.globalCompositeOperation =
-              GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
-          }
+        const tDraw = this.drawProfileStart("Room.drawEntities.drawablesDraw");
+        // Draw in sorted order; apply inline tile shade immediately after each tile
+        for (const d of drawables) {
+          d.draw(delta);
+          if (useInlineShade && shadeSrc && d instanceof Tile) {
+            const tx = (d as Tile).x;
+            const ty = (d as Tile).y;
+            const sv =
+              this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+            if (sv > 0) {
+              const prevOp = Game.ctx
+                .globalCompositeOperation as GlobalCompositeOperation;
+              if (
+                prevOp !==
+                (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
+              ) {
+                Game.ctx.globalCompositeOperation =
+                  GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+              }
 
-          const prevAlpha = Game.ctx.globalAlpha;
-          Game.ctx.globalAlpha = 1;
+              const prevAlpha = Game.ctx.globalAlpha;
+              Game.ctx.globalAlpha = 1;
 
-          let fade: "left" | "right" | "up" | "down" | undefined;
-          if (d instanceof Door && d.opened) {
-            switch (d.doorDir) {
-              case Direction.LEFT:
-                fade = "left";
-                break;
-              case Direction.RIGHT:
-                fade = "right";
-                break;
-              case Direction.UP:
-                fade = undefined;
-                break;
-              case Direction.DOWN:
-                // No gradient mask for down doors
-                fade = "down";
-                break;
-            }
-          } else if (d instanceof Wall) {
-            const info = this.wallInfo.get(`${tx},${ty}`);
-            if (info && (info as any).isBelowDoorWall) {
-              const below = this.roomArray[tx]?.[ty + 1];
-              if (below instanceof Door && below.opened) {
-                if (below.doorDir === Direction.LEFT) fade = "left";
-                else if (below.doorDir === Direction.RIGHT) fade = "right";
+              let fade: "left" | "right" | "up" | "down" | undefined;
+              if (d instanceof Door && d.opened) {
+                switch (d.doorDir) {
+                  case Direction.LEFT:
+                    fade = "left";
+                    break;
+                  case Direction.RIGHT:
+                    fade = "right";
+                    break;
+                  case Direction.UP:
+                    fade = undefined;
+                    break;
+                  case Direction.DOWN:
+                    // No gradient mask for down doors
+                    fade = "down";
+                    break;
+                }
+              } else if (d instanceof Wall) {
+                const info = this.wallInfo.get(`${tx},${ty}`);
+                if (info && (info as any).isBelowDoorWall) {
+                  const below = this.roomArray[tx]?.[ty + 1];
+                  if (below instanceof Door && below.opened) {
+                    if (below.doorDir === Direction.LEFT) fade = "left";
+                    else if (below.doorDir === Direction.RIGHT) fade = "right";
+                  }
+                }
+              }
+
+              const tShadeTile = this.drawProfileStart(
+                fade
+                  ? "Room.drawEntities.inlineShadeTileFade"
+                  : "Room.drawEntities.inlineShadeTile",
+              );
+              if (
+                fade &&
+                GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true
+              ) {
+                // Cache is valid only while lighting version is unchanged.
+                if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate) {
+                  this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
+                  if (this._inlineFadeSliceCache) this._inlineFadeSliceCache.clear();
+                  if (this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder.length = 0;
+                }
+                if (!this._inlineFadeSliceCache) this._inlineFadeSliceCache = new Map();
+                if (!this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder = [];
+
+                const key = `${zLayer}|${tx}|${ty}|${fade}`;
+                const cached = this._inlineFadeSliceCache.get(key);
+                if (cached) {
+                  const tHit = this.drawProfileStart(
+                    "Room.drawEntities.inlineShadeTileFadeCacheHit",
+                  );
+                  Game.ctx.drawImage(cached, tx * GameConstants.TILESIZE, ty * GameConstants.TILESIZE);
+                  this.drawProfileEnd(
+                    "Room.drawEntities.inlineShadeTileFadeCacheHit",
+                    tHit,
+                  );
+                } else {
+                  const tMiss = this.drawProfileStart(
+                    "Room.drawEntities.inlineShadeTileFadeCacheMiss",
+                  );
+                  const ts = GameConstants.TILESIZE;
+                  const sx = (tx + 1 - this.roomX + this.blurOffsetX) * ts;
+                  const sy = (ty + 1 - this.roomY + this.blurOffsetY) * ts;
+
+                  // Ensure fade masks exist (cached globally by tile size)
+                  let masks = Room._shadeSliceFadeMaskByTs.get(ts);
+                  if (!masks) {
+                    const makeMask = (
+                      dir: "left" | "right" | "up" | "down",
+                    ): HTMLCanvasElement => {
+                      const c = document.createElement("canvas");
+                      c.width = ts;
+                      c.height = ts;
+                      const mctx = c.getContext("2d") as
+                        | CanvasRenderingContext2D
+                        | null;
+                      if (!mctx) return c;
+                      let grad: CanvasGradient;
+                      if (dir === "right") {
+                        grad = mctx.createLinearGradient(0, 0, ts, 0);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,1)");
+                      } else if (dir === "left") {
+                        grad = mctx.createLinearGradient(0, 0, ts, 0);
+                        grad.addColorStop(0, "rgba(0,0,0,1)");
+                        grad.addColorStop(1, "rgba(0,0,0,0)");
+                      } else if (dir === "up") {
+                        grad = mctx.createLinearGradient(0, 0, 0, ts);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,1)");
+                      } else {
+                        grad = mctx.createLinearGradient(0, 0, 0, ts);
+                        grad.addColorStop(0, "rgba(0,0,0,1)");
+                        grad.addColorStop(1, "rgba(0,0,0,0)");
+                      }
+                      mctx.globalCompositeOperation = "source-over";
+                      mctx.fillStyle = grad;
+                      mctx.fillRect(0, 0, ts, ts);
+                      return c;
+                    };
+                    masks = {
+                      left: makeMask("left"),
+                      right: makeMask("right"),
+                      up: makeMask("up"),
+                      down: makeMask("down"),
+                    };
+                    Room._shadeSliceFadeMaskByTs.set(ts, masks);
+                  }
+
+                  const c = document.createElement("canvas");
+                  c.width = ts;
+                  c.height = ts;
+                  const cctx = c.getContext("2d") as CanvasRenderingContext2D | null;
+                  if (cctx) {
+                    cctx.globalCompositeOperation = "copy";
+                    cctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+                    cctx.globalCompositeOperation = "destination-in";
+                    cctx.drawImage(masks[fade], 0, 0);
+                  }
+
+                  // Store and evict FIFO
+                  this._inlineFadeSliceCache.set(key, c);
+                  this._inlineFadeSliceCacheOrder.push(key);
+                  const max = Math.max(
+                    1,
+                    Math.floor(GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX),
+                  );
+                  while (this._inlineFadeSliceCacheOrder.length > max) {
+                    const oldest = this._inlineFadeSliceCacheOrder.shift();
+                    if (oldest) this._inlineFadeSliceCache.delete(oldest);
+                  }
+
+                  Game.ctx.drawImage(c, tx * ts, ty * ts);
+                  this.drawProfileEnd(
+                    "Room.drawEntities.inlineShadeTileFadeCacheMiss",
+                    tMiss,
+                  );
+                }
+              } else {
+                this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
+              }
+              this.drawProfileEnd(
+                fade
+                  ? "Room.drawEntities.inlineShadeTileFade"
+                  : "Room.drawEntities.inlineShadeTile",
+                tShadeTile,
+              );
+              Game.ctx.globalAlpha = prevAlpha;
+              if (
+                prevOp !==
+                (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
+              ) {
+                Game.ctx.globalCompositeOperation = prevOp;
               }
             }
           }
+        }
+        this.drawProfileEnd("Room.drawEntities.drawablesDraw", tDraw);
 
-          this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
-          Game.ctx.globalAlpha = prevAlpha;
-          if (
-            prevOp !==
-            (GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation)
-          ) {
-            Game.ctx.globalCompositeOperation = prevOp;
+        const tZDebug = this.drawProfileStart("Room.drawEntities.zDebugMarkers");
+        // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
+        if (GameConstants.Z_DEBUG_MODE) {
+          if (zLayer === 0 && this.zDebugUpStairs) {
+            for (const key of this.zDebugUpStairs) {
+              const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+              if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+              Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+            }
+          }
+          if (zLayer === 1 && this.zDebugDownStairs) {
+            for (const key of this.zDebugDownStairs) {
+              const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+              if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+              Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
+            }
           }
         }
-      }
-    }
+        this.drawProfileEnd("Room.drawEntities.zDebugMarkers", tZDebug);
 
-    // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
-    if (GameConstants.Z_DEBUG_MODE) {
-      if (zLayer === 0 && this.zDebugUpStairs) {
-        for (const key of this.zDebugUpStairs) {
-          const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
-          if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
-          Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+        const tPost = this.drawProfileStart("Room.drawEntities.postPasses");
+        this.drawAbovePlayer(delta);
+        for (const i of itemsOnLayer) {
+          i.drawTopLayer(delta);
         }
-      }
-      if (zLayer === 1 && this.zDebugDownStairs) {
-        for (const key of this.zDebugDownStairs) {
-          const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
-          if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
-          Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
+        for (const t of drawables) {
+          if (t instanceof Passageway) {
+            t.drawFloodedCaveFX();
+          }
         }
+        this.drawProfileEnd("Room.drawEntities.postPasses", tPost);
+      } finally {
+        Game.ctx.restore();
       }
+    } finally {
+      this.drawProfileEnd("Room.drawEntities.total", tTotal);
     }
-
-    this.drawAbovePlayer(delta);
-    for (const i of itemsOnLayer) {
-      i.drawTopLayer(delta);
-    }
-    for (const t of drawables) {
-      if (t instanceof Passageway) {
-        t.drawFloodedCaveFX();
-      }
-    }
-    Game.ctx.restore();
   };
 
   private updateOxygenLineBeams = () => {
@@ -3831,49 +4162,60 @@ export class Room {
   ) => {
     if (alpha <= 0.001) return;
     const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer;
+    const tTotal = this.drawProfileStart("Room.drawOverShade.total");
     Game.ctx.save();
-    const baseAlpha = Game.ctx.globalAlpha;
-    Game.ctx.globalAlpha = baseAlpha * alpha;
-    for (const e of this.entities) {
-      if ((e?.z ?? 0) !== zLayer) continue;
-      e.drawTopLayer(delta); // health bars
-    }
+    try {
+      const baseAlpha = Game.ctx.globalAlpha;
+      Game.ctx.globalAlpha = baseAlpha * alpha;
 
-    for (const p of this.projectiles) {
-      if ((p?.z ?? 0) !== zLayer) continue;
-      p.drawTopLayer(delta);
-    }
-    //Game.ctx.globalCompositeOperation = "overlay";
-    if (zLayer === activeZ) {
-      for (const h of this.hitwarnings) {
-        h.drawTopLayer(delta);
+      const tTop = this.drawProfileStart("Room.drawOverShade.topLayers");
+      for (const e of this.entities) {
+        if ((e?.z ?? 0) !== zLayer) continue;
+        e.drawTopLayer(delta); // health bars
       }
-    }
-    //Game.ctx.globalCompositeOperation = "source-over";
 
-    for (const s of this.particles) {
-      if (((s as any)?.worldZ ?? 0) !== zLayer) continue;
-      s.drawTopLayer(delta);
-    }
-
-    // Some top-layer draws may mutate globalAlpha and not restore it.
-    // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
-    Game.ctx.globalAlpha = baseAlpha * alpha;
-    // draw over dithered shading
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.roomArray[x][y].drawAboveShading(delta);
+      for (const p of this.projectiles) {
+        if ((p?.z ?? 0) !== zLayer) continue;
+        p.drawTopLayer(delta);
       }
-    }
-    //added for coin animation
-    Game.ctx.globalAlpha = baseAlpha * alpha;
-    for (const i of this.items) {
-      if ((i?.z ?? 0) !== zLayer) continue;
-      i.drawAboveShading(delta);
-    }
+      if (zLayer === activeZ) {
+        for (const h of this.hitwarnings) {
+          h.drawTopLayer(delta);
+        }
+      }
 
-    Game.ctx.globalAlpha = baseAlpha;
-    Game.ctx.restore();
+      for (const s of this.particles) {
+        if (((s as any)?.worldZ ?? 0) !== zLayer) continue;
+        s.drawTopLayer(delta);
+      }
+      this.drawProfileEnd("Room.drawOverShade.topLayers", tTop);
+
+      // Some top-layer draws may mutate globalAlpha and not restore it.
+      // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
+      Game.ctx.globalAlpha = baseAlpha * alpha;
+      const tTiles = this.drawProfileStart("Room.drawOverShade.tiles");
+      // draw over dithered shading
+      for (let x = this.roomX; x < this.roomX + this.width; x++) {
+        for (let y = this.roomY; y < this.roomY + this.height; y++) {
+          this.roomArray[x][y].drawAboveShading(delta);
+        }
+      }
+      this.drawProfileEnd("Room.drawOverShade.tiles", tTiles);
+
+      Game.ctx.globalAlpha = baseAlpha * alpha;
+      const tItems = this.drawProfileStart("Room.drawOverShade.items");
+      //added for coin animation
+      for (const i of this.items) {
+        if ((i?.z ?? 0) !== zLayer) continue;
+        i.drawAboveShading(delta);
+      }
+      this.drawProfileEnd("Room.drawOverShade.items", tItems);
+
+      Game.ctx.globalAlpha = baseAlpha;
+    } finally {
+      Game.ctx.restore();
+      this.drawProfileEnd("Room.drawOverShade.total", tTotal);
+    }
   };
 
   // for stuff rendered on top of the player
@@ -3899,12 +4241,14 @@ export class Room {
     delta: number,
     zLayer: number = this.game?.players?.[this.game.localPlayerID]?.z ?? 0,
   ) => {
+    const tTotal = this.drawProfileStart("Room.drawTopBeams.total");
     for (const projectile of this.projectiles) {
       if ((projectile?.z ?? 0) !== zLayer) continue;
       if (projectile instanceof BeamEffect && projectile.drawOnTop) {
         projectile.drawTopLayer(delta);
       }
     }
+    this.drawProfileEnd("Room.drawTopBeams.total", tTotal);
   };
 
   hasTopBeams = (): boolean => {

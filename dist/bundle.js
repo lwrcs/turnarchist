@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -9646,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.43c34bcfcab0c39c080c.png";
+module.exports = __webpack_require__.p + "assets/fxset.ba6c04352414fbe5b5fb.png";
 
 /***/ }),
 
@@ -9657,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.43c34bcfcab0c39c080c.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.486b5bad212eb9240fa5.png";
+module.exports = __webpack_require__.p + "assets/itemset.9c9a77978cc0f48b60b3.png";
 
 /***/ }),
 
@@ -9668,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.486b5bad212eb9240fa5.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.5ccf9d04ba2a8f7e1802.png";
+module.exports = __webpack_require__.p + "assets/mobset.7bd845a04c7b6369f1f0.png";
 
 /***/ }),
 
@@ -9679,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.5ccf9d04ba2a8f7e1802.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.ebb393a34f882dfe572d.png";
+module.exports = __webpack_require__.p + "assets/objset.65527068090ac8940c69.png";
 
 /***/ }),
 
@@ -24893,6 +24824,13 @@ class Game {
         this._lastSheetProbeOk = true;
         this._autoRecoverSuppressUntilMs = 0;
         this._lastAutoRecoverChatMs = 0;
+        // Draw profiling (off by default; enable via command `profiledraw` or `logdraw`)
+        this._drawProfileEnabled = false;
+        this._drawProfileFrameId = 0;
+        this._drawProfileRoomsThisFrame = new Set();
+        this._drawProfileGame = new Map();
+        this._drawProfileHistory = [];
+        this._drawProfileHistoryMax = 120;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -25649,6 +25587,119 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command === "profiledraw") {
+                this._drawProfileEnabled = !this._drawProfileEnabled;
+                this.pushMessage(`Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`);
+                return;
+            }
+            if (command === "logdraw") {
+                // Ensure profiling is enabled so we capture subsequent frames.
+                if (!this._drawProfileEnabled) {
+                    this._drawProfileEnabled = true;
+                    this.pushMessage("Draw profiling enabled. Run 'logdraw' again in ~1s.");
+                }
+                const frame = this._lastDrawProfileFrame;
+                if (!frame) {
+                    console.log("[logdraw] No draw profile frame captured yet.");
+                    return;
+                }
+                const sumMs = (rows) => {
+                    let s = 0;
+                    for (const r of rows)
+                        s += r.totalMs;
+                    return s;
+                };
+                const sumCalls = (rows) => {
+                    let s = 0;
+                    for (const r of rows)
+                        s += r.calls;
+                    return s;
+                };
+                const topN = (rows, n) => rows.slice(0, Math.max(0, Math.min(rows.length, n)));
+                console.groupCollapsed(`[logdraw] frame=${frame.frameId} rooms=${frame.roomCount} t=${new Date(frame.capturedAt).toISOString()}`);
+                console.log("[logdraw] summary", {
+                    rooms: frame.roomCount,
+                    totalsMs: sumMs(frame.totals),
+                    totalsCalls: sumCalls(frame.totals),
+                    gameMs: sumMs(frame.game),
+                    gameCalls: sumCalls(frame.game),
+                });
+                console.log("[logdraw] totals (aggregated across rendered rooms)");
+                console.table(frame.totals);
+                console.log("[logdraw] totals top 10");
+                console.table(topN(frame.totals, 10));
+                console.log("[logdraw] game (coarse game-level sections)");
+                console.table(frame.game);
+                console.log("[logdraw] rooms (per-room totals)");
+                console.table(frame.rooms);
+                console.log("[logdraw] rooms top 10");
+                console.table(topN(frame.rooms, 10));
+                console.log("[logdraw] room sections (per-room, per-section)");
+                console.table(frame.roomSections);
+                console.log("[logdraw] room sections top 25");
+                console.table(topN(frame.roomSections, 25));
+                console.log("[logdraw] raw snapshot (copy/paste this object if needed)", frame);
+                console.groupEnd();
+                this.pushMessage("Logged draw profile to console.");
+                return;
+            }
+            if (command.startsWith("logdrawavg")) {
+                // Usage: logdrawavg <nFrames>=1..120
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const nReq = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                const n = Number.isFinite(nReq) ? Math.floor(nReq) : 60;
+                const maxN = Math.max(1, Math.floor(this._drawProfileHistoryMax));
+                const count = Math.max(1, Math.min(maxN, n));
+                const hist = this._drawProfileHistory.length > count
+                    ? this._drawProfileHistory.slice(this._drawProfileHistory.length - count)
+                    : this._drawProfileHistory.slice();
+                if (hist.length === 0) {
+                    console.log("[logdrawavg] No draw profile history yet.");
+                    return;
+                }
+                const mergeRows = (frames, pick) => {
+                    const m = new Map();
+                    for (const f of frames) {
+                        for (const r of pick(f)) {
+                            const prev = m.get(r.name);
+                            if (prev) {
+                                prev.calls += r.calls;
+                                prev.totalMs += r.totalMs;
+                            }
+                            else {
+                                m.set(r.name, { calls: r.calls, totalMs: r.totalMs });
+                            }
+                        }
+                    }
+                    const out = [];
+                    for (const [name, c] of m) {
+                        const totalMs = c.totalMs / frames.length;
+                        const calls = c.calls / frames.length;
+                        out.push({
+                            name,
+                            calls,
+                            totalMs,
+                            avgMs: calls > 0 ? totalMs / calls : 0,
+                        });
+                    }
+                    out.sort((a, b) => b.totalMs - a.totalMs);
+                    return out;
+                };
+                const avgTotals = mergeRows(hist, (f) => f.totals);
+                const avgGame = mergeRows(hist, (f) => f.game);
+                let avgRooms = 0;
+                for (const f of hist)
+                    avgRooms += f.roomCount;
+                avgRooms /= hist.length;
+                console.groupCollapsed(`[logdrawavg] frames=${hist.length} avgRooms=${avgRooms.toFixed(2)} (last frame=${hist[hist.length - 1].frameId})`);
+                console.log("[logdrawavg] totals (avg per frame)");
+                console.table(avgTotals.slice(0, 25));
+                console.log("[logdrawavg] game (avg per frame)");
+                console.table(avgGame.slice(0, 25));
+                console.groupEnd();
+                this.pushMessage(`Logged averaged draw profile (${hist.length} frames).`);
+                return;
+            }
             if (command === "spritediag") {
                 const rows = this.debugSpriteSheetStatus();
                 if (!rows || rows.length === 0) {
@@ -25774,6 +25825,33 @@ class Game {
                 }
                 catch { }
                 this.pushMessage("Repro mode disabled and caches cleared.");
+                return;
+            }
+            if (command === "roomson" || command === "roomsoff") {
+                gameConstants_1.GameConstants.drawOtherRooms = command === "roomson";
+                this.pushMessage(`Drawing other rooms is now ${gameConstants_1.GameConstants.drawOtherRooms ? "enabled" : "disabled"}`);
+                return;
+            }
+            if (command === "inlineon" || command === "inlineoff") {
+                gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = command === "inlineon";
+                this.pushMessage(`Inline tile shading ${gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER ? "enabled" : "disabled"}`);
+                return;
+            }
+            if (command === "inlinefadecache") {
+                gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE =
+                    !gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE;
+                this.pushMessage(`Inline fade tile cache is now ${gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE ? "enabled" : "disabled"}`);
+                return;
+            }
+            if (command.startsWith("inlinefadecachemax")) {
+                const parts = command.split(/\s+/).filter((p) => p.length > 0);
+                const n = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+                if (!Number.isFinite(n) || n < 1) {
+                    this.pushMessage("Usage: inlinefadecachemax <n>=1..");
+                    return;
+                }
+                gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX = Math.floor(n);
+                this.pushMessage(`Inline fade tile cache max set to ${gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX}`);
                 return;
             }
             if (command.startsWith("shadecachegrowrate")) {
@@ -26556,31 +26634,41 @@ class Game {
             }
         };
         this.drawRooms = (delta, skipLocalPlayer = false, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
-            if (!gameConstants_1.GameConstants.drawOtherRooms) {
-                // Ensure current room is drawn even if flags are stale
-                if (!this.room || this.room.pathId !== this.currentPathId)
-                    return;
-                this.room.draw(delta);
-                this.room.drawEntities(delta, true, zLayer);
-            }
-            else if (gameConstants_1.GameConstants.drawOtherRooms) {
-                // Create a sorted copy of the rooms array based on roomY + height
-                const sortedRooms = this.rooms
-                    .filter((r) => r.pathId === this.currentPathId)
-                    .slice()
-                    .sort((a, b) => {
-                    const aPosition = a.roomY + a.height;
-                    const bPosition = b.roomY + b.height;
-                    return aPosition - bPosition; // Ascending order
-                });
-                for (const room of sortedRooms) {
-                    const shouldDraw = room === this.room || room.active || (room.entered && room.onScreen);
-                    if (shouldDraw) {
-                        room.draw(delta);
-                        room.drawEntities(delta, skipLocalPlayer, zLayer);
-                        //room.drawShade(delta); // this used to come after the color layer
+            const tTotal = this.drawProfileStart("Game.drawRooms.total");
+            try {
+                if (!gameConstants_1.GameConstants.drawOtherRooms) {
+                    // Ensure current room is drawn even if flags are stale
+                    if (!this.room || this.room.pathId !== this.currentPathId)
+                        return;
+                    this.markRoomProfiled(this.room);
+                    this.room.draw(delta);
+                    this.room.drawEntities(delta, true, zLayer);
+                }
+                else if (gameConstants_1.GameConstants.drawOtherRooms) {
+                    // Create a sorted copy of the rooms array based on roomY + height
+                    const sortedRooms = this.rooms
+                        .filter((r) => r.pathId === this.currentPathId)
+                        .slice()
+                        .sort((a, b) => {
+                        const aPosition = a.roomY + a.height;
+                        const bPosition = b.roomY + b.height;
+                        return aPosition - bPosition; // Ascending order
+                    });
+                    for (const room of sortedRooms) {
+                        const shouldDraw = room === this.room ||
+                            room.active ||
+                            (room.entered && room.onScreen);
+                        if (shouldDraw) {
+                            this.markRoomProfiled(room);
+                            room.draw(delta);
+                            room.drawEntities(delta, skipLocalPlayer, zLayer);
+                            //room.drawShade(delta); // this used to come after the color layer
+                        }
                     }
                 }
+            }
+            finally {
+                this.drawProfileEnd("Game.drawRooms.total", tTotal);
             }
         };
         /**
@@ -26588,17 +26676,24 @@ class Game {
          * We draw them once and position them on the active z-layer in the main draw loop.
          */
         this.drawRoomLightingLayersOnce = (delta, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                const shouldDraw = room === this.room || room.active || room.entered;
-                if (!shouldDraw)
-                    continue;
-                if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
-                    !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) {
-                    room.drawShadeLayer();
+            const tTotal = this.drawProfileStart("Game.drawRoomLightingLayersOnce.total");
+            try {
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    const shouldDraw = room === this.room || room.active || room.entered;
+                    if (!shouldDraw)
+                        continue;
+                    this.markRoomProfiled(room);
+                    if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                        !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) {
+                        room.drawShadeLayer();
+                    }
+                    room.drawColorLayer();
                 }
-                room.drawColorLayer();
+            }
+            finally {
+                this.drawProfileEnd("Game.drawRoomLightingLayersOnce.total", tTotal);
             }
         };
         /**
@@ -26606,13 +26701,20 @@ class Game {
          * in the same translated pass as the corresponding entity layer.
          */
         this.drawRoomBloomForZ = (delta, zLayer) => {
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                const shouldDraw = room === this.room || room.active || room.entered;
-                if (!shouldDraw)
-                    continue;
-                room.drawBloomLayer(delta, zLayer);
+            const tTotal = this.drawProfileStart("Game.drawRoomBloomForZ.total");
+            try {
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    const shouldDraw = room === this.room || room.active || room.entered;
+                    if (!shouldDraw)
+                        continue;
+                    this.markRoomProfiled(room);
+                    room.drawBloomLayer(delta, zLayer);
+                }
+            }
+            finally {
+                this.drawProfileEnd("Game.drawRoomBloomForZ.total", tTotal);
             }
         };
         /**
@@ -26620,77 +26722,100 @@ class Game {
          * These are not part of the per-room lighting layers.
          */
         this.drawRoomOverlaysForZ = (delta, zLayer) => {
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                // Above-shading should draw for entered rooms even if they are not currently active.
-                const shouldDrawOver = room === this.room || room.active || room.entered;
-                if (shouldDrawOver) {
-                    room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+            const tTotal = this.drawProfileStart("Game.drawRoomOverlaysForZ.total");
+            try {
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    // Above-shading should draw for entered rooms even if they are not currently active.
+                    const shouldDrawOver = room === this.room || room.active || room.entered;
+                    if (shouldDrawOver) {
+                        this.markRoomProfiled(room);
+                        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+                    }
+                }
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
+                    if (shouldDrawTop) {
+                        this.markRoomProfiled(room);
+                        room.drawTopBeams(delta, zLayer);
+                    }
                 }
             }
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
-                if (shouldDrawTop) {
-                    room.drawTopBeams(delta, zLayer);
-                }
+            finally {
+                this.drawProfileEnd("Game.drawRoomOverlaysForZ.total", tTotal);
             }
         };
         this.drawZLayers = (delta) => {
-            const layerHeightPx = 1 * gameConstants_1.GameConstants.TILESIZE; // this.getZLayerHeightPx();
-            const maxZ = this.getMaxZInCurrentPath();
-            const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
-            for (let z = 0; z <= maxZ; z++) {
-                Game.ctx.save();
-                Game.ctx.translate(0, -z * layerHeightPx);
-                this.drawRooms(delta, false, z);
-                // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
-                // and keep active-z bloom in the post-pass below to preserve the current look/order.
-                if (z !== activeZ) {
-                    this.drawRoomBloomForZ(delta, z);
+            const tTotal = this.drawProfileStart("Game.drawZLayers.total");
+            try {
+                const layerHeightPx = 1 * gameConstants_1.GameConstants.TILESIZE; // this.getZLayerHeightPx();
+                const maxZ = this.getMaxZInCurrentPath();
+                const activeZ = this.players?.[this.localPlayerID]?.z ?? 0;
+                for (let z = 0; z <= maxZ; z++) {
+                    Game.ctx.save();
+                    Game.ctx.translate(0, -z * layerHeightPx);
+                    this.drawRooms(delta, false, z);
+                    // Bloom should draw for all z-layers. We draw non-active z bloom here (in-layer),
+                    // and keep active-z bloom in the post-pass below to preserve the current look/order.
+                    if (z !== activeZ) {
+                        this.drawRoomBloomForZ(delta, z);
+                    }
+                    Game.ctx.restore();
                 }
+                // Non-z-layered post passes: position on active z.
+                // Match transition draw order: shade/color -> bloom -> overlays.
+                Game.ctx.save();
+                this.drawRoomLightingLayersOnce(delta, activeZ);
+                Game.ctx.translate(0, -activeZ * layerHeightPx);
+                this.drawRoomBloomForZ(delta, activeZ);
+                this.drawRoomOverlaysForZ(delta, activeZ);
                 Game.ctx.restore();
             }
-            // Non-z-layered post passes: position on active z.
-            // Match transition draw order: shade/color -> bloom -> overlays.
-            Game.ctx.save();
-            this.drawRoomLightingLayersOnce(delta, activeZ);
-            Game.ctx.translate(0, -activeZ * layerHeightPx);
-            this.drawRoomBloomForZ(delta, activeZ);
-            this.drawRoomOverlaysForZ(delta, activeZ);
-            Game.ctx.restore();
+            finally {
+                this.drawProfileEnd("Game.drawZLayers.total", tTotal);
+            }
         };
         this.drawRoomShadeAndColor = (delta, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                const shouldDraw = room === this.room || room.active || room.entered;
-                if (shouldDraw) {
-                    if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
-                        !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
-                        room.drawShadeLayer();
-                    room.drawColorLayer();
-                    room.drawBloomLayer(delta, zLayer);
+            const tTotal = this.drawProfileStart("Game.drawRoomShadeAndColor.total");
+            try {
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    const shouldDraw = room === this.room || room.active || room.entered;
+                    if (shouldDraw) {
+                        this.markRoomProfiled(room);
+                        if (gameConstants_1.GameConstants.SMOOTH_LIGHTING &&
+                            !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
+                            room.drawShadeLayer();
+                        room.drawColorLayer();
+                        room.drawBloomLayer(delta, zLayer);
+                    }
+                }
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    // Above-shading should draw for entered rooms even if they are not currently active.
+                    const shouldDrawOver = room === this.room || room.active || room.entered;
+                    if (shouldDrawOver) {
+                        this.markRoomProfiled(room);
+                        room.drawOverShade(delta, zLayer, room.overShadeAlpha);
+                    }
+                }
+                for (const room of this.rooms) {
+                    if (room.pathId !== this.currentPathId)
+                        continue;
+                    const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
+                    if (shouldDrawTop) {
+                        this.markRoomProfiled(room);
+                        room.drawTopBeams(delta, zLayer);
+                    }
                 }
             }
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                // Above-shading should draw for entered rooms even if they are not currently active.
-                const shouldDrawOver = room === this.room || room.active || room.entered;
-                if (shouldDrawOver) {
-                    room.drawOverShade(delta, zLayer, room.overShadeAlpha);
-                }
-            }
-            for (const room of this.rooms) {
-                if (room.pathId !== this.currentPathId)
-                    continue;
-                const shouldDrawTop = room === this.room || room.active || (room.entered && room.onScreen);
-                if (shouldDrawTop) {
-                    room.drawTopBeams(delta, zLayer);
-                }
+            finally {
+                this.drawProfileEnd("Game.drawRoomShadeAndColor.total", tTotal);
             }
         };
         this.drawStartScreen = (delta) => {
@@ -26734,229 +26859,241 @@ class Game {
             Game.fillText(tip, gameConstants_1.GameConstants.WIDTH / 2 - Game.measureText(tip).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - Game.letter_height + 2);
         };
         this.draw = (delta) => {
-            if (gameConstants_1.GameConstants.SOFT_SCALE !== gameConstants_1.GameConstants.SCALE) {
-                this.updateScale(delta);
-                this.onResize();
+            if (this._drawProfileEnabled) {
+                this._drawProfileFrameId += 1;
+                this._drawProfileRoomsThisFrame.clear();
+                this._drawProfileGame.clear();
             }
-            //Game.ctx.canvas.setAttribute("role", "presentation");
-            Game.ctx.clearRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            Game.ctx.save(); // Save the current canvas state
-            // Reset transformations to ensure the black background covers the entire canvas
-            Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
-            Game.ctx.globalAlpha = 1;
-            Game.ctx.globalCompositeOperation = "source-over";
-            Game.ctx.fillStyle = "black";
-            Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
-            //else Game.ctx.fillStyle = "black";
-            //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
-            if (this.levelState === LevelState.TRANSITIONING) {
-                this.screenShakeX = 0;
-                this.screenShakeY = 0;
-                this.screenShakeActive = false;
-                let levelOffsetX = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
-                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -this.transitionX));
-                let levelOffsetY = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
-                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -this.transitionY));
-                let playerOffsetX = levelOffsetX - this.transitionX;
-                let playerOffsetY = levelOffsetY - this.transitionY;
-                let playerCX = (this.players[this.localPlayerID].x -
-                    this.players[this.localPlayerID].drawX +
-                    0.5) *
-                    gameConstants_1.GameConstants.TILESIZE;
-                let playerCY = (this.players[this.localPlayerID].y -
-                    this.players[this.localPlayerID].drawY +
-                    0.5) *
-                    gameConstants_1.GameConstants.TILESIZE;
-                const transitionCameraX = Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH);
-                const transitionCameraY = Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
-                this.currentCameraOriginX = transitionCameraX;
-                this.currentCameraOriginY = transitionCameraY;
-                Game.ctx.translate(-transitionCameraX, -transitionCameraY);
-                let extraTileLerp = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
-                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, gameConstants_1.GameConstants.TILESIZE));
-                let newLevelOffsetX = playerOffsetX;
-                let newLevelOffsetY = playerOffsetY;
-                if (this.sideTransition) {
-                    if (this.sideTransitionDirection > 0) {
-                        levelOffsetX += extraTileLerp;
-                        newLevelOffsetX += extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
+            const tTotal = this.drawProfileStart("Game.draw.total");
+            try {
+                if (gameConstants_1.GameConstants.SOFT_SCALE !== gameConstants_1.GameConstants.SCALE) {
+                    this.updateScale(delta);
+                    this.onResize();
+                }
+                //Game.ctx.canvas.setAttribute("role", "presentation");
+                Game.ctx.clearRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+                Game.ctx.save(); // Save the current canvas state
+                // Reset transformations to ensure the black background covers the entire canvas
+                Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                Game.ctx.globalAlpha = 1;
+                Game.ctx.globalCompositeOperation = "source-over";
+                Game.ctx.fillStyle = "black";
+                Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+                //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
+                //else Game.ctx.fillStyle = "black";
+                //Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+                if (this.levelState === LevelState.TRANSITIONING) {
+                    this.screenShakeX = 0;
+                    this.screenShakeY = 0;
+                    this.screenShakeActive = false;
+                    let levelOffsetX = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
+                        levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -this.transitionX));
+                    let levelOffsetY = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
+                        levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, -this.transitionY));
+                    let playerOffsetX = levelOffsetX - this.transitionX;
+                    let playerOffsetY = levelOffsetY - this.transitionY;
+                    let playerCX = (this.players[this.localPlayerID].x -
+                        this.players[this.localPlayerID].drawX +
+                        0.5) *
+                        gameConstants_1.GameConstants.TILESIZE;
+                    let playerCY = (this.players[this.localPlayerID].y -
+                        this.players[this.localPlayerID].drawY +
+                        0.5) *
+                        gameConstants_1.GameConstants.TILESIZE;
+                    const transitionCameraX = Math.round(playerCX + playerOffsetX - 0.5 * gameConstants_1.GameConstants.WIDTH);
+                    const transitionCameraY = Math.round(playerCY + playerOffsetY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
+                    this.currentCameraOriginX = transitionCameraX;
+                    this.currentCameraOriginY = transitionCameraY;
+                    Game.ctx.translate(-transitionCameraX, -transitionCameraY);
+                    let extraTileLerp = Math.floor(this.lerp((Date.now() - this.transitionStartTime) /
+                        levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME, 0, gameConstants_1.GameConstants.TILESIZE));
+                    let newLevelOffsetX = playerOffsetX;
+                    let newLevelOffsetY = playerOffsetY;
+                    if (this.sideTransition) {
+                        if (this.sideTransitionDirection > 0) {
+                            levelOffsetX += extraTileLerp;
+                            newLevelOffsetX += extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
+                        }
+                        else {
+                            levelOffsetX -= extraTileLerp;
+                            newLevelOffsetX -= extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
+                        }
+                    }
+                    else if (this.upwardTransition) {
+                        levelOffsetY -= extraTileLerp;
+                        newLevelOffsetY -= extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
                     }
                     else {
-                        levelOffsetX -= extraTileLerp;
-                        newLevelOffsetX -= extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
+                        levelOffsetY += extraTileLerp;
+                        newLevelOffsetY += extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
                     }
-                }
-                else if (this.upwardTransition) {
-                    levelOffsetY -= extraTileLerp;
-                    newLevelOffsetY -= extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
-                }
-                else {
-                    levelOffsetY += extraTileLerp;
-                    newLevelOffsetY += extraTileLerp + gameConstants_1.GameConstants.TILESIZE;
-                }
-                let ditherFrame = Math.floor((7 * (Date.now() - this.transitionStartTime)) /
-                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME);
-                Game.ctx.translate(levelOffsetX, levelOffsetY);
-                if (!gameConstants_1.GameConstants.drawOtherRooms) {
-                    this.prevLevel.draw(delta);
-                    this.prevLevel.drawEntities(delta);
-                    this.prevLevel.drawColorLayer();
-                    this.prevLevel.drawShade(delta);
-                    this.prevLevel.drawOverShade(delta, undefined, this.prevLevel.overShadeAlpha);
-                    /*
-                    for (
-                      let x = this.prevLevel.roomX - 1;
-                      x <= this.prevLevel.roomX + this.prevLevel.width;
-                      x++
-                    ) {
+                    let ditherFrame = Math.floor((7 * (Date.now() - this.transitionStartTime)) /
+                        levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME);
+                    Game.ctx.translate(levelOffsetX, levelOffsetY);
+                    if (!gameConstants_1.GameConstants.drawOtherRooms) {
+                        this.prevLevel.draw(delta);
+                        this.prevLevel.drawEntities(delta);
+                        this.prevLevel.drawColorLayer();
+                        this.prevLevel.drawShade(delta);
+                        this.prevLevel.drawOverShade(delta, undefined, this.prevLevel.overShadeAlpha);
+                        /*
                       for (
-                        let y = this.prevLevel.roomY - 1;
-                        y <= this.prevLevel.roomY + this.prevLevel.height;
-                        y++
+                        let x = this.prevLevel.roomX - 1;
+                        x <= this.prevLevel.roomX + this.prevLevel.width;
+                        x++
                       ) {
-                        Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+                        for (
+                          let y = this.prevLevel.roomY - 1;
+                          y <= this.prevLevel.roomY + this.prevLevel.height;
+                          y++
+                        ) {
+                          Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+                        }
                       }
+              
+                    */
                     }
-            
-                  */
-                }
-                Game.ctx.translate(-levelOffsetX, -levelOffsetY);
-                Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-                if (gameConstants_1.GameConstants.drawOtherRooms) {
-                    this.drawRooms(delta, true);
-                    Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-                    Game.ctx.translate(playerOffsetX, playerOffsetY);
-                    this.players[this.localPlayerID].draw(delta); // draw the translation
-                    Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+                    Game.ctx.translate(-levelOffsetX, -levelOffsetY);
                     Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
-                    this.drawRoomShadeAndColor(delta);
-                }
-                else {
-                    // When we don't draw other rooms during transitions, we still want the NEW room's
-                    // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
-                    // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
-                    this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
-                }
-                for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
-                    for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
-                        //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+                    if (gameConstants_1.GameConstants.drawOtherRooms) {
+                        this.drawRooms(delta, true);
+                        Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+                        Game.ctx.translate(playerOffsetX, playerOffsetY);
+                        this.players[this.localPlayerID].draw(delta); // draw the translation
+                        Game.ctx.translate(-playerOffsetX, -playerOffsetY);
+                        Game.ctx.translate(newLevelOffsetX, newLevelOffsetY);
+                        this.drawRoomShadeAndColor(delta);
                     }
+                    else {
+                        // When we don't draw other rooms during transitions, we still want the NEW room's
+                        // above-shading (door icons, etc.) to fade in smoothly (symmetry with prevLevel fade out).
+                        // The rest of the room visuals are handled by the transition draw path; this pass is just overlays.
+                        this.room.drawOverShade(delta, undefined, this.room.overShadeAlpha);
+                    }
+                    for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
+                        for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
+                            //Game.drawFX(ditherFrame, 10, 1, 1, x, y, 1, 1);
+                        }
+                    }
+                    //this.drawStuff(delta);
+                    Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
+                    Game.ctx.translate(transitionCameraX, transitionCameraY);
+                    this.players[this.localPlayerID].drawGUI(delta);
+                    this.justTransitioned = true;
+                    //for (const i in this.players) this.players[i].updateDrawXY(delta);
                 }
-                //this.drawStuff(delta);
-                Game.ctx.translate(-newLevelOffsetX, -newLevelOffsetY);
-                Game.ctx.translate(transitionCameraX, transitionCameraY);
-                this.players[this.localPlayerID].drawGUI(delta);
-                this.justTransitioned = true;
-                //for (const i in this.players) this.players[i].updateDrawXY(delta);
-            }
-            else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
-                let playerCX = (this.players[this.localPlayerID].x -
-                    this.players[this.localPlayerID].drawX +
-                    0.5) *
-                    gameConstants_1.GameConstants.TILESIZE;
-                let playerCY = (this.players[this.localPlayerID].y -
-                    this.players[this.localPlayerID].drawY +
-                    0.5) *
-                    gameConstants_1.GameConstants.TILESIZE;
-                const ladderCameraX = Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH);
-                const ladderCameraY = Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
-                this.currentCameraOriginX = ladderCameraX;
-                this.currentCameraOriginY = ladderCameraY;
-                Game.ctx.translate(-ladderCameraX, -ladderCameraY);
-                let deadFrames = 6;
-                let ditherFrame = Math.floor(((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
-                    levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER);
-                Game.ctx.translate(ladderCameraX, ladderCameraY);
-                if (ditherFrame < 7) {
-                    this.drawRooms(delta);
-                    this.drawRoomShadeAndColor(delta);
-                    if (!gameConstants_1.GameConstants.drawOtherRooms) {
-                        for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
-                            for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
-                                Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+                else if (this.levelState === LevelState.TRANSITIONING_LADDER) {
+                    let playerCX = (this.players[this.localPlayerID].x -
+                        this.players[this.localPlayerID].drawX +
+                        0.5) *
+                        gameConstants_1.GameConstants.TILESIZE;
+                    let playerCY = (this.players[this.localPlayerID].y -
+                        this.players[this.localPlayerID].drawY +
+                        0.5) *
+                        gameConstants_1.GameConstants.TILESIZE;
+                    const ladderCameraX = Math.round(playerCX - 0.5 * gameConstants_1.GameConstants.WIDTH);
+                    const ladderCameraY = Math.round(playerCY - 0.5 * gameConstants_1.GameConstants.HEIGHT);
+                    this.currentCameraOriginX = ladderCameraX;
+                    this.currentCameraOriginY = ladderCameraY;
+                    Game.ctx.translate(-ladderCameraX, -ladderCameraY);
+                    let deadFrames = 6;
+                    let ditherFrame = Math.floor(((7 * 2 + deadFrames) * (Date.now() - this.transitionStartTime)) /
+                        levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME_LADDER);
+                    Game.ctx.translate(ladderCameraX, ladderCameraY);
+                    if (ditherFrame < 7) {
+                        this.drawRooms(delta);
+                        this.drawRoomShadeAndColor(delta);
+                        if (!gameConstants_1.GameConstants.drawOtherRooms) {
+                            for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
+                                for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
+                                    Game.drawFX(7 - ditherFrame, 10, 1, 1, x, y, 1, 1);
+                                }
                             }
                         }
                     }
-                }
-                else if (ditherFrame >= 7 + deadFrames) {
-                    if (this.transitioningLadder) {
-                        // this.prevLevel = this.room;
-                        // this.room.exitLevel();
-                        this.room = this.transitioningLadder.linkedRoom;
-                        // this.players[this.localPlayerID].levelID = this.room.id;
-                        this.room.enterLevel(this.players[this.localPlayerID]);
-                        this.transitioningLadder = null;
-                    }
-                    this.drawRooms(delta);
-                    this.drawRoomShadeAndColor(delta);
-                    //        this.room.draw(delta);
-                    //        this.room.drawEntities(delta);
-                    //        this.drawStuff(delta);
-                    if (!gameConstants_1.GameConstants.drawOtherRooms) {
-                        for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
-                            for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
-                                Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
+                    else if (ditherFrame >= 7 + deadFrames) {
+                        if (this.transitioningLadder) {
+                            // this.prevLevel = this.room;
+                            // this.room.exitLevel();
+                            this.room = this.transitioningLadder.linkedRoom;
+                            // this.players[this.localPlayerID].levelID = this.room.id;
+                            this.room.enterLevel(this.players[this.localPlayerID]);
+                            this.transitioningLadder = null;
+                        }
+                        this.drawRooms(delta);
+                        this.drawRoomShadeAndColor(delta);
+                        //        this.room.draw(delta);
+                        //        this.room.drawEntities(delta);
+                        //        this.drawStuff(delta);
+                        if (!gameConstants_1.GameConstants.drawOtherRooms) {
+                            for (let x = this.room.roomX - 1; x <= this.room.roomX + this.room.width; x++) {
+                                for (let y = this.room.roomY - 1; y <= this.room.roomY + this.room.height; y++) {
+                                    Game.drawFX(ditherFrame - (7 + deadFrames), 10, 1, 1, x, y, 1, 1);
+                                }
                             }
                         }
                     }
+                    //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
+                    //for (const i in this.players) this.players[i].updateDrawXY(delta);
+                    this.drawTextScreen("loading level");
                 }
-                //this.players[this.localPlayerID].drawGUI(delta);  // removed this to prevent drawing gui during level transition
-                //for (const i in this.players) this.players[i].updateDrawXY(delta);
-                this.drawTextScreen("loading level");
-            }
-            else if (this.levelState === LevelState.LEVEL_GENERATION) {
-                this.levelgen.draw(delta);
-            }
-            else if (this.levelState === LevelState.IN_LEVEL) {
-                // Start of Selection
-                this.drawScreenShake(delta);
-                const { cameraX, cameraY } = this.applyCamera(delta);
-                Game.ctx.translate(-cameraX, -cameraY);
-                this.drawZLayers(delta);
-                //      this.room.draw(delta);
-                //      this.room.drawEntities(delta);
-                // this.drawStuff(delta);
-                Game.ctx.translate(cameraX, cameraY);
-                this.room.drawTopLayer(delta);
-                // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
-                if (!this.startMenuActive) {
-                    if (!this.tutorialFlags.initPointers) {
-                        try {
-                            this.setupInitialPointers();
+                else if (this.levelState === LevelState.LEVEL_GENERATION) {
+                    this.levelgen.draw(delta);
+                }
+                else if (this.levelState === LevelState.IN_LEVEL) {
+                    // Start of Selection
+                    this.drawScreenShake(delta);
+                    const { cameraX, cameraY } = this.applyCamera(delta);
+                    Game.ctx.translate(-cameraX, -cameraY);
+                    this.drawZLayers(delta);
+                    //      this.room.draw(delta);
+                    //      this.room.drawEntities(delta);
+                    // this.drawStuff(delta);
+                    Game.ctx.translate(cameraX, cameraY);
+                    this.room.drawTopLayer(delta);
+                    // Initialize tutorial pointers on first IN_LEVEL frame (before drawing them)
+                    if (!this.startMenuActive) {
+                        if (!this.tutorialFlags.initPointers) {
+                            try {
+                                this.setupInitialPointers();
+                            }
+                            catch { }
+                            this.tutorialFlags.initPointers = true;
                         }
-                        catch { }
-                        this.tutorialFlags.initPointers = true;
                     }
+                    // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
+                    this.drawPointers(delta);
+                    this.players[this.localPlayerID].drawGUI(delta);
+                    //for (const i in this.players) this.players[i].updateDrawXY(delta);
                 }
-                // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
-                this.drawPointers(delta);
-                this.players[this.localPlayerID].drawGUI(delta);
-                //for (const i in this.players) this.players[i].updateDrawXY(delta);
+                this.drawChat(delta);
+                this.drawAlerts(delta);
+                // game version
+                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                    Game.ctx.globalAlpha = 0.1;
+                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
+                Game.ctx.globalAlpha = 1;
+                // fps
+                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                    Game.ctx.globalAlpha = 0.1;
+                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                Game.fillText(fps + "fps", 1, 1);
+                Game.ctx.globalAlpha = 1;
+                if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
+                    this.drawStartScreen(delta * 10);
+                }
+                // Draw level generator if active
+                if (this.currentLevelGenerator) {
+                    this.currentLevelGenerator.draw(10, 10, 3);
+                }
+                mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
+                Game.ctx.restore(); // Restore the canvas state
             }
-            this.drawChat(delta);
-            this.drawAlerts(delta);
-            // game version
-            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                Game.ctx.globalAlpha = 0.1;
-            Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
-            Game.ctx.globalAlpha = 1;
-            // fps
-            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                Game.ctx.globalAlpha = 0.1;
-            Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            Game.fillText(fps + "fps", 1, 1);
-            Game.ctx.globalAlpha = 1;
-            if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
-                this.drawStartScreen(delta * 10);
+            finally {
+                this.drawProfileEnd("Game.draw.total", tTotal);
+                this.finalizeDrawProfileFrame();
             }
-            // Draw level generator if active
-            if (this.currentLevelGenerator) {
-                this.currentLevelGenerator.draw(10, 10, 3);
-            }
-            mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
-            Game.ctx.restore(); // Restore the canvas state
         };
         this.drawPointers = (delta) => {
             if (!this.pointers || this.pointers.size === 0)
@@ -27848,6 +27985,102 @@ class Game {
         // Add focus/blur event listeners
         //window.addEventListener("blur", this.handleWindowBlur);
         //window.addEventListener("focus", this.handleWindowFocus);
+    }
+    isDrawProfilingEnabled() {
+        return this._drawProfileEnabled;
+    }
+    drawProfileStart(_name) {
+        if (!this._drawProfileEnabled)
+            return undefined;
+        return performance.now();
+    }
+    drawProfileEnd(name, start) {
+        if (start === undefined)
+            return;
+        const dt = performance.now() - start;
+        const prev = this._drawProfileGame.get(name);
+        if (prev) {
+            prev.calls += 1;
+            prev.totalMs += dt;
+        }
+        else {
+            this._drawProfileGame.set(name, { calls: 1, totalMs: dt });
+        }
+    }
+    markRoomProfiled(room) {
+        if (!this._drawProfileEnabled)
+            return;
+        this._drawProfileRoomsThisFrame.add(room);
+        room.beginDrawProfileFrame(this._drawProfileFrameId, true);
+    }
+    finalizeDrawProfileFrame() {
+        if (!this._drawProfileEnabled)
+            return;
+        const rooms = Array.from(this._drawProfileRoomsThisFrame);
+        const totals = new Map();
+        const roomSections = [];
+        const roomsSummary = [];
+        for (const room of rooms) {
+            const label = room.getDrawProfileLabel();
+            const entries = room.getDrawProfileEntries();
+            let roomTotalMs = 0;
+            let roomCalls = 0;
+            for (const e of entries) {
+                roomTotalMs += e.totalMs;
+                roomCalls += e.calls;
+                roomSections.push({
+                    room: label,
+                    name: e.name,
+                    calls: e.calls,
+                    totalMs: e.totalMs,
+                    avgMs: e.calls > 0 ? e.totalMs / e.calls : 0,
+                });
+                const prev = totals.get(e.name);
+                if (prev) {
+                    prev.calls += e.calls;
+                    prev.totalMs += e.totalMs;
+                }
+                else {
+                    totals.set(e.name, { calls: e.calls, totalMs: e.totalMs });
+                }
+            }
+            roomsSummary.push({
+                room: label,
+                totalMs: roomTotalMs,
+                calls: roomCalls,
+                sections: entries.length,
+            });
+        }
+        const totalRows = Array.from(totals.entries()).map(([name, c]) => ({
+            name,
+            calls: c.calls,
+            totalMs: c.totalMs,
+            avgMs: c.calls > 0 ? c.totalMs / c.calls : 0,
+        }));
+        totalRows.sort((a, b) => b.totalMs - a.totalMs);
+        const gameRows = Array.from(this._drawProfileGame.entries()).map(([name, c]) => ({
+            name,
+            calls: c.calls,
+            totalMs: c.totalMs,
+            avgMs: c.calls > 0 ? c.totalMs / c.calls : 0,
+        }));
+        gameRows.sort((a, b) => b.totalMs - a.totalMs);
+        roomsSummary.sort((a, b) => b.totalMs - a.totalMs);
+        roomSections.sort((a, b) => b.totalMs - a.totalMs);
+        this._lastDrawProfileFrame = {
+            frameId: this._drawProfileFrameId,
+            capturedAt: Date.now(),
+            roomCount: rooms.length,
+            totals: totalRows,
+            game: gameRows,
+            rooms: roomsSummary,
+            roomSections,
+        };
+        // Keep a small rolling history for averaging (helps with timing noise / 0ms floors)
+        this._drawProfileHistory.push(this._lastDrawProfileFrame);
+        if (this._drawProfileHistory.length > this._drawProfileHistoryMax) {
+            this._drawProfileHistory.splice(0, this._drawProfileHistory.length - this._drawProfileHistoryMax);
+        }
     }
     startFreshWorld(seed) {
         //gs = new GameState();
@@ -31078,6 +31311,16 @@ GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
+/**
+ * Cache the *result* of fade-tile masking for inline shade slicing.
+ * Fade tiles (doors / below-door walls) are expensive because they require destination-in compositing.
+ * This cache only stays valid while `Room.lastLightingUpdate` is unchanged.
+ */
+GameConstants.INLINE_SHADE_FADE_TILE_CACHE = true;
+/**
+ * Max cached fade tiles per room (FIFO eviction). Each entry is a TILESIZE x TILESIZE canvas.
+ */
+GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX = 128;
 GameConstants.USE_OPTIMIZED_SHADING = false;
 GameConstants.SMOOTH_LIGHTING = true;
 // Diagnostics / repro toggles (off by default)
@@ -56907,9 +57150,52 @@ class Room {
             return;
         }
     }
+    beginDrawProfileFrame(frameId, enabled) {
+        this._drawProfileEnabledThisFrame = enabled;
+        if (!enabled)
+            return;
+        if (this._drawProfileFrameId !== frameId) {
+            this._drawProfileFrameId = frameId;
+            this._drawProfile.clear();
+        }
+    }
+    getDrawProfileEntries() {
+        const out = [];
+        for (const [name, c] of this._drawProfile) {
+            out.push({ name, calls: c.calls, totalMs: c.totalMs });
+        }
+        return out;
+    }
+    getDrawProfileLabel() {
+        const flags = [
+            this.active ? "active" : "inactive",
+            this.onScreen ? "onScreen" : "offScreen",
+            this.entered ? "entered" : "notEntered",
+        ].join(",");
+        return `${this.globalId} (${this.roomX},${this.roomY}) ${this.width}x${this.height} ${flags}`;
+    }
+    drawProfileStart(_name) {
+        if (!this._drawProfileEnabledThisFrame)
+            return undefined;
+        return performance.now();
+    }
+    drawProfileEnd(name, start) {
+        if (start === undefined)
+            return;
+        const dt = performance.now() - start;
+        const prev = this._drawProfile.get(name);
+        if (prev) {
+            prev.calls += 1;
+            prev.totalMs += dt;
+        }
+        else {
+            this._drawProfile.set(name, { calls: 1, totalMs: dt });
+        }
+    }
     constructor(game, x, y, w, h, type, depth, mapGroup, level, rand = random_1.Random.rand, envType) {
         // Border tiles around shade content for sliced shading (ensures blur has room to spill)
         this.shadeSliceBorderTiles = 1;
+        this._inlineFadeSliceCacheLightingVersion = -1;
         this.name = "";
         /**
          * Alpha for the "over shade" (above-shading / top overlay) pass.
@@ -56944,6 +57230,14 @@ class Room {
         this.isUpdatingLighting = false;
         // Estimated number of tiles touched during lighting for dynamic tuning
         this.estimatedLightingTiles = 0;
+        // Per-frame draw profiling (populated only when Game enables profiling)
+        this._drawProfileFrameId = -1;
+        this._drawProfileEnabledThisFrame = false;
+        this._drawProfile = new Map();
+        // Inline shade slicing: cache blurred shade source across frames when soft visibility is unchanged.
+        this._softVisVersion = 0;
+        this._inlineShadeSrcKey = "";
+        this._inlineShadeSrcCanvas = null;
         this.playMusic = () => {
             if (this.envType === environmentTypes_1.EnvType.FOREST) {
                 sound_1.Sound.stopMusic();
@@ -58112,105 +58406,135 @@ class Room {
         this.draw = (delta) => {
             if (!this.onScreen)
                 return;
-            if (this.active) {
-                hitWarning_1.HitWarning.updateFrame(delta);
-                this.drawInterval = 4;
+            const tTotal = this.drawProfileStart("Room.draw.total");
+            try {
+                if (this.active) {
+                    const t = this.drawProfileStart("Room.draw.hitWarningUpdate");
+                    hitWarning_1.HitWarning.updateFrame(delta);
+                    this.drawProfileEnd("Room.draw.hitWarningUpdate", t);
+                    this.drawInterval = 4;
+                }
+                else if (!this.active) {
+                    this.drawInterval = 8;
+                }
+                this.drawTimestamp += delta;
+                if (this.drawTimestamp - this.lastDraw >= this.drawInterval) {
+                    const tRgb = this.drawProfileStart("Room.draw.fadeRgb");
+                    this.fadeRgb(delta + this.drawInterval);
+                    this.drawProfileEnd("Room.draw.fadeRgb", tRgb);
+                    const tLight = this.drawProfileStart("Room.draw.fadeLighting");
+                    this.fadeLighting(delta + this.drawInterval);
+                    this.drawProfileEnd("Room.draw.fadeLighting", tLight);
+                    // softVis/softCol smoothing changed -> any cached inline shade source is now invalid.
+                    this._softVisVersion++;
+                    this._inlineShadeSrcCanvas = null;
+                    this._inlineShadeSrcKey = "";
+                    this.lastDraw = this.drawTimestamp;
+                }
             }
-            else if (!this.active) {
-                this.drawInterval = 8;
-            }
-            this.drawTimestamp += delta;
-            if (this.drawTimestamp - this.lastDraw >= this.drawInterval) {
-                this.fadeRgb(delta + this.drawInterval);
-                this.fadeLighting(delta + this.drawInterval);
-                this.lastDraw = this.drawTimestamp;
+            finally {
+                this.drawProfileEnd("Room.draw.total", tTotal);
             }
         };
         // added a multiplier to the input rgb values to avoid clipping to white
         this.drawColorLayer = () => {
             if (!this.onScreen)
                 return;
+            const tTotal = this.drawProfileStart("Room.drawColorLayer.total");
             game_1.Game.ctx.save();
-            // Clear the offscreen color canvas
-            this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
-            let lastFillStyle = "";
-            // Match original shade layer positioning using the blur offsets
-            const offsetX = this.blurOffsetX;
-            const offsetY = this.blurOffsetY;
-            // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
-            const bufferTiles = 3;
-            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
-            for (let x = minX; x <= maxX; x++) {
-                for (let y = minY; y <= maxY; y++) {
-                    const [r, g, b] = this.softCol[x][y];
-                    if (r === 0 && g === 0 && b === 0)
-                        continue; // Skip if no color
-                    const fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
-                    if (fillStyle !== lastFillStyle) {
-                        this.colorOffscreenCtx.fillStyle = fillStyle;
-                        lastFillStyle = fillStyle;
+            try {
+                // Clear the offscreen color canvas
+                const tClear = this.drawProfileStart("Room.drawColorLayer.clearOffscreen");
+                this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
+                this.drawProfileEnd("Room.drawColorLayer.clearOffscreen", tClear);
+                let lastFillStyle = "";
+                // Match original shade layer positioning using the blur offsets
+                const offsetX = this.blurOffsetX;
+                const offsetY = this.blurOffsetY;
+                // Draw only on-screen tiles (with a buffer) into the offscreen color canvas
+                const tFill = this.drawProfileStart("Room.drawColorLayer.fillTiles");
+                const bufferTiles = 3;
+                const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(bufferTiles);
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        const [r, g, b] = this.softCol[x][y];
+                        if (r === 0 && g === 0 && b === 0)
+                            continue; // Skip if no color
+                        const fillStyle = `rgba(${r}, ${g}, ${b}, 1)`;
+                        if (fillStyle !== lastFillStyle) {
+                            this.colorOffscreenCtx.fillStyle = fillStyle;
+                            lastFillStyle = fillStyle;
+                        }
+                        this.colorOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                     }
-                    this.colorOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
                 }
-            }
-            // Choose blur method based on setting
-            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
-                // Use WebGL blur with caching
-                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
-                // Check if we can use cached results
-                if (this.shouldUseBlurCache() &&
-                    this.blurCache.color6px &&
-                    this.blurCache.color12px) {
-                    // Use cached blurred results
-                    game_1.Game.ctx.globalCompositeOperation = "soft-light";
-                    game_1.Game.ctx.globalAlpha = 0.6;
-                    game_1.Game.ctx.drawImage(this.blurCache.color6px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    game_1.Game.ctx.globalCompositeOperation = "lighten";
-                    game_1.Game.ctx.globalAlpha = 0.05;
-                    game_1.Game.ctx.drawImage(this.blurCache.color12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                this.drawProfileEnd("Room.drawColorLayer.fillTiles", tFill);
+                const tBlur = this.drawProfileStart("Room.drawColorLayer.blurAndComposite");
+                // Choose blur method based on setting
+                if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                    // Use WebGL blur with caching
+                    const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                    // Check if we can use cached results
+                    if (this.shouldUseBlurCache() &&
+                        this.blurCache.color6px &&
+                        this.blurCache.color12px) {
+                        // Use cached blurred results
+                        game_1.Game.ctx.globalCompositeOperation = "soft-light";
+                        game_1.Game.ctx.globalAlpha = 0.6;
+                        game_1.Game.ctx.drawImage(this.blurCache.color6px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                        game_1.Game.ctx.globalCompositeOperation = "lighten";
+                        game_1.Game.ctx.globalAlpha = 0.05;
+                        game_1.Game.ctx.drawImage(this.blurCache.color12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    }
+                    else {
+                        // Generate new blur and cache if inactive
+                        game_1.Game.ctx.globalCompositeOperation = "soft-light";
+                        game_1.Game.ctx.globalAlpha = 0.6;
+                        // Apply 6px blur using WebGL
+                        const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
+                        game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                        // Cache the result if room is inactive
+                        if (!this.active) {
+                            this.cacheBlurResult("color8px", blurred8px);
+                        }
+                        game_1.Game.ctx.globalCompositeOperation = "lighten";
+                        game_1.Game.ctx.globalAlpha = 0.05;
+                        // Apply 12px blur using WebGL
+                        const blurred12px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 12);
+                        game_1.Game.ctx.drawImage(blurred12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                        // Cache the result if room is inactive
+                        if (!this.active) {
+                            this.cacheBlurResult("color12px", blurred12px);
+                        }
+                    }
                 }
                 else {
-                    // Generate new blur and cache if inactive
-                    game_1.Game.ctx.globalCompositeOperation = "soft-light";
+                    // Use Canvas2D blur (fallback) - matching original settings
+                    game_1.Game.ctx.globalCompositeOperation =
+                        gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
                     game_1.Game.ctx.globalAlpha = 0.6;
-                    // Apply 6px blur using WebGL
-                    const blurred8px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 8);
-                    game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if room is inactive
-                    if (!this.active) {
-                        this.cacheBlurResult("color8px", blurred8px);
+                    if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                        game_1.Game.ctx.filter = "blur(6px)";
                     }
+                    game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    // Draw slight haze
                     game_1.Game.ctx.globalCompositeOperation = "lighten";
                     game_1.Game.ctx.globalAlpha = 0.05;
-                    // Apply 12px blur using WebGL
-                    const blurred12px = blurRenderer.applyBlur(this.colorOffscreenCanvas, 12);
-                    game_1.Game.ctx.drawImage(blurred12px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if room is inactive
-                    if (!this.active) {
-                        this.cacheBlurResult("color12px", blurred12px);
+                    if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                        game_1.Game.ctx.filter = "blur(12px)";
                     }
+                    game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    game_1.Game.ctx.filter = "none";
                 }
+                this.drawProfileEnd("Room.drawColorLayer.blurAndComposite", tBlur);
+                const tClear2 = this.drawProfileStart("Room.drawColorLayer.clearOffscreenPost");
+                this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
+                this.drawProfileEnd("Room.drawColorLayer.clearOffscreenPost", tClear2);
             }
-            else {
-                // Use Canvas2D blur (fallback) - matching original settings
-                game_1.Game.ctx.globalCompositeOperation =
-                    gameConstants_1.GameConstants.COLOR_LAYER_COMPOSITE_OPERATION;
-                game_1.Game.ctx.globalAlpha = 0.6;
-                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
-                    game_1.Game.ctx.filter = "blur(6px)";
-                }
-                game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                // Draw slight haze
-                game_1.Game.ctx.globalCompositeOperation = "lighten";
-                game_1.Game.ctx.globalAlpha = 0.05;
-                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
-                    game_1.Game.ctx.filter = "blur(12px)";
-                }
-                game_1.Game.ctx.drawImage(this.colorOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                game_1.Game.ctx.filter = "none";
+            finally {
+                game_1.Game.ctx.restore();
+                this.drawProfileEnd("Room.drawColorLayer.total", tTotal);
             }
-            this.colorOffscreenCtx.clearRect(0, 0, this.colorOffscreenCanvas.width, this.colorOffscreenCanvas.height);
-            game_1.Game.ctx.restore();
         };
         this.drawShadeLayer = () => {
             if (gameConstants_1.GameConstants.isIOS || !gameConstants_1.GameConstants.SHADE_ENABLED)
@@ -58221,148 +58545,160 @@ class Room {
                 return;
             if (gameConstants_1.GameConstants.SHADING_DISABLED)
                 return;
+            const tTotal = this.drawProfileStart("Room.drawShadeLayer.total");
             game_1.Game.ctx.save();
-            game_1.Game.ctx.globalCompositeOperation =
-                gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
-            // Clear the offscreen shade canvas
-            this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
-            const offsetX = this.shadeSliceBorderTiles;
-            const offsetY = this.shadeSliceBorderTiles;
-            let lastFillStyle = "";
-            // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
-            const shadeBufferTiles = 4;
-            for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
-                for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
-                    if (!this.isTileOnScreen(x, y, shadeBufferTiles))
-                        continue;
-                    const tile = this.roomArray[x]?.[y];
-                    //if (!tile) return;
-                    let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
-                    if (tile instanceof wallTorch_1.WallTorch)
-                        continue;
-                    let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
-                    let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
-                    let computedAlpha = alpha ** factor * smoothFactor;
-                    let fillX = x;
-                    let fillY = y;
-                    let fillWidth = 1;
-                    let fillHeight = 1;
-                    if (tile instanceof wall_1.Wall) {
-                        const wall = tile;
-                        if (!this.innerWalls.includes(wall)) {
-                            switch (wall.direction) {
+            try {
+                game_1.Game.ctx.globalCompositeOperation =
+                    gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
+                // Clear the offscreen shade canvas
+                const tClear = this.drawProfileStart("Room.drawShadeLayer.clearOffscreen");
+                this.shadeOffscreenCtx.clearRect(0, 0, this.shadeOffscreenCanvas.width, this.shadeOffscreenCanvas.height);
+                this.drawProfileEnd("Room.drawShadeLayer.clearOffscreen", tClear);
+                const offsetX = this.shadeSliceBorderTiles;
+                const offsetY = this.shadeSliceBorderTiles;
+                let lastFillStyle = "";
+                // Draw only tiles on-screen (with a larger buffer for blur spill) into the offscreen shade canvas
+                const tFill = this.drawProfileStart("Room.drawShadeLayer.fillTiles");
+                const shadeBufferTiles = 4;
+                for (let x = this.roomX - 2; x < this.roomX + this.width + 4; x++) {
+                    for (let y = this.roomY - 2; y < this.roomY + this.height + 4; y++) {
+                        if (!this.isTileOnScreen(x, y, shadeBufferTiles))
+                            continue;
+                        const tile = this.roomArray[x]?.[y];
+                        //if (!tile) return;
+                        let alpha = this.softVis[x] && this.softVis[x][y] ? this.softVis[x][y] : 0;
+                        if (tile instanceof wallTorch_1.WallTorch)
+                            continue;
+                        let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
+                        let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
+                        let computedAlpha = alpha ** factor * smoothFactor;
+                        let fillX = x;
+                        let fillY = y;
+                        let fillWidth = 1;
+                        let fillHeight = 1;
+                        if (tile instanceof wall_1.Wall) {
+                            const wall = tile;
+                            if (!this.innerWalls.includes(wall)) {
+                                switch (wall.direction) {
+                                    case game_1.Direction.UP:
+                                        fillY = y - 0.5;
+                                        fillHeight = 0.5;
+                                        break;
+                                    case game_1.Direction.DOWN:
+                                        fillY = y - 0.5;
+                                        fillHeight = 1.5;
+                                        break;
+                                    case game_1.Direction.LEFT:
+                                        fillX = x + 0.25;
+                                        fillWidth = 0.75;
+                                        break;
+                                    case game_1.Direction.RIGHT:
+                                        fillX = x;
+                                        fillWidth = 0.75;
+                                        break;
+                                    case game_1.Direction.DOWN_LEFT:
+                                        fillX = x + 0.25;
+                                        fillY = y - 0.5;
+                                        fillWidth = 0.75;
+                                        fillHeight = 1.5;
+                                        break;
+                                    case game_1.Direction.DOWN_RIGHT:
+                                        fillX = x;
+                                        fillY = y - 0.5;
+                                        fillWidth = 0.75;
+                                        fillHeight = 1.5;
+                                        break;
+                                    case game_1.Direction.UP_LEFT:
+                                        fillX = x + 0.25;
+                                        fillY = y - 0.5;
+                                        fillWidth = 0.75;
+                                        fillHeight = 0.5;
+                                        break;
+                                    case game_1.Direction.UP_RIGHT:
+                                        fillX = x - 0.5;
+                                        fillY = y - 0.5;
+                                        fillWidth = 0.75;
+                                        fillHeight = 0.5;
+                                        break;
+                                }
+                            }
+                        }
+                        else if (tile instanceof door_1.Door) {
+                            const door = tile;
+                            if (door.opened === true)
+                                computedAlpha = computedAlpha / 2;
+                            switch (door.doorDir) {
                                 case game_1.Direction.UP:
                                     fillY = y - 0.5;
-                                    fillHeight = 0.5;
+                                    fillHeight = 1.5;
                                     break;
                                 case game_1.Direction.DOWN:
                                     fillY = y - 0.5;
                                     fillHeight = 1.5;
                                     break;
-                                case game_1.Direction.LEFT:
-                                    fillX = x + 0.25;
-                                    fillWidth = 0.75;
-                                    break;
                                 case game_1.Direction.RIGHT:
-                                    fillX = x;
-                                    fillWidth = 0.75;
-                                    break;
-                                case game_1.Direction.DOWN_LEFT:
-                                    fillX = x + 0.25;
-                                    fillY = y - 0.5;
-                                    fillWidth = 0.75;
-                                    fillHeight = 1.5;
-                                    break;
-                                case game_1.Direction.DOWN_RIGHT:
-                                    fillX = x;
-                                    fillY = y - 0.5;
-                                    fillWidth = 0.75;
-                                    fillHeight = 1.5;
-                                    break;
-                                case game_1.Direction.UP_LEFT:
-                                    fillX = x + 0.25;
-                                    fillY = y - 0.5;
-                                    fillWidth = 0.75;
-                                    fillHeight = 0.5;
-                                    break;
-                                case game_1.Direction.UP_RIGHT:
                                     fillX = x - 0.5;
-                                    fillY = y - 0.5;
-                                    fillWidth = 0.75;
-                                    fillHeight = 0.5;
+                                    fillY = y - 1.25;
+                                    fillWidth = 1.5;
+                                    fillHeight = 2;
+                                    break;
+                                case game_1.Direction.LEFT:
+                                    fillX = x;
+                                    fillY = y - 1.25;
+                                    fillWidth = 1.5;
+                                    fillHeight = 2;
                                     break;
                             }
                         }
+                        const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
+                        const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
+                        if (fillStyle !== lastFillStyle) {
+                            this.shadeOffscreenCtx.fillStyle = fillStyle;
+                            lastFillStyle = fillStyle;
+                        }
+                        this.shadeOffscreenCtx.fillRect((fillX - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
                     }
-                    else if (tile instanceof door_1.Door) {
-                        const door = tile;
-                        if (door.opened === true)
-                            computedAlpha = computedAlpha / 2;
-                        switch (door.doorDir) {
-                            case game_1.Direction.UP:
-                                fillY = y - 0.5;
-                                fillHeight = 1.5;
-                                break;
-                            case game_1.Direction.DOWN:
-                                fillY = y - 0.5;
-                                fillHeight = 1.5;
-                                break;
-                            case game_1.Direction.RIGHT:
-                                fillX = x - 0.5;
-                                fillY = y - 1.25;
-                                fillWidth = 1.5;
-                                fillHeight = 2;
-                                break;
-                            case game_1.Direction.LEFT:
-                                fillX = x;
-                                fillY = y - 1.25;
-                                fillWidth = 1.5;
-                                fillHeight = 2;
-                                break;
+                }
+                this.drawProfileEnd("Room.drawShadeLayer.fillTiles", tFill);
+                const tBlur = this.drawProfileStart("Room.drawShadeLayer.blurAndComposite");
+                // Choose blur method based on setting
+                if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                    // Use WebGL blur with caching
+                    const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                    // Check if we can use cached results
+                    if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
+                        // Use cached blurred result
+                        game_1.Game.ctx.globalAlpha = 1;
+                        game_1.Game.ctx.drawImage(this.blurCache.shade5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    }
+                    else {
+                        // Generate new blur and cache if inactive
+                        game_1.Game.ctx.globalAlpha = 1;
+                        // Apply 5px blur using WebGL
+                        const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
+                        game_1.Game.ctx.drawImage(blurred5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                        // Cache the result if room is inactive
+                        if (!this.active) {
+                            this.cacheBlurResult("shade5px", blurred5px);
                         }
                     }
-                    const alphaMultiplier = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
-                    const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
-                    if (fillStyle !== lastFillStyle) {
-                        this.shadeOffscreenCtx.fillStyle = fillStyle;
-                        lastFillStyle = fillStyle;
-                    }
-                    this.shadeOffscreenCtx.fillRect((fillX - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (fillY - this.roomY + offsetY) * gameConstants_1.GameConstants.TILESIZE, fillWidth * gameConstants_1.GameConstants.TILESIZE, fillHeight * gameConstants_1.GameConstants.TILESIZE);
-                }
-            }
-            // Choose blur method based on setting
-            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
-                // Use WebGL blur with caching
-                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
-                // Check if we can use cached results
-                if (this.shouldUseBlurCache() && this.blurCache.shade5px) {
-                    // Use cached blurred result
-                    game_1.Game.ctx.globalAlpha = 1;
-                    game_1.Game.ctx.drawImage(this.blurCache.shade5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
                 }
                 else {
-                    // Generate new blur and cache if inactive
+                    // Use Canvas2D blur (fallback) - matching original settings
                     game_1.Game.ctx.globalAlpha = 1;
-                    // Apply 5px blur using WebGL
-                    const blurred5px = blurRenderer.applyBlur(this.shadeOffscreenCanvas, 5);
-                    game_1.Game.ctx.drawImage(blurred5px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if room is inactive
-                    if (!this.active) {
-                        this.cacheBlurResult("shade5px", blurred5px);
+                    const blurAmount = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 5 : 5;
+                    if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                        game_1.Game.ctx.filter = `blur(${blurAmount}px)`;
                     }
+                    game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    game_1.Game.ctx.filter = "none";
                 }
+                this.drawProfileEnd("Room.drawShadeLayer.blurAndComposite", tBlur);
             }
-            else {
-                // Use Canvas2D blur (fallback) - matching original settings
-                game_1.Game.ctx.globalAlpha = 1;
-                const blurAmount = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 5 : 5;
-                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
-                    game_1.Game.ctx.filter = `blur(${blurAmount}px)`;
-                }
-                game_1.Game.ctx.drawImage(this.shadeOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                game_1.Game.ctx.filter = "none";
+            finally {
+                game_1.Game.ctx.restore();
+                this.drawProfileEnd("Room.drawShadeLayer.total", tTotal);
             }
-            game_1.Game.ctx.restore();
         };
         // Build the unblurred shade offscreen using the exact logic as drawShadeLayer's fill pass
         this.buildShadeOffscreenForSlicing = () => {
@@ -58566,6 +58902,51 @@ class Room {
                 game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
                 return;
             }
+            // Apply cached gradient alpha mask (destination-in)
+            let masks = Room._shadeSliceFadeMaskByTs.get(ts);
+            if (!masks) {
+                const makeMask = (dir) => {
+                    const c = document.createElement("canvas");
+                    c.width = ts;
+                    c.height = ts;
+                    const mctx = c.getContext("2d");
+                    if (!mctx)
+                        return c;
+                    let grad;
+                    if (dir === "right") {
+                        grad = mctx.createLinearGradient(0, 0, ts, 0);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,1)");
+                    }
+                    else if (dir === "left") {
+                        grad = mctx.createLinearGradient(0, 0, ts, 0);
+                        grad.addColorStop(0, "rgba(0,0,0,1)");
+                        grad.addColorStop(1, "rgba(0,0,0,0)");
+                    }
+                    else if (dir === "up") {
+                        grad = mctx.createLinearGradient(0, 0, 0, ts);
+                        grad.addColorStop(0, "rgba(0,0,0,0)");
+                        grad.addColorStop(1, "rgba(0,0,0,1)");
+                    }
+                    else {
+                        // down
+                        grad = mctx.createLinearGradient(0, 0, 0, ts);
+                        grad.addColorStop(0, "rgba(0,0,0,1)");
+                        grad.addColorStop(1, "rgba(0,0,0,0)");
+                    }
+                    mctx.globalCompositeOperation = "source-over";
+                    mctx.fillStyle = grad;
+                    mctx.fillRect(0, 0, ts, ts);
+                    return c;
+                };
+                masks = {
+                    left: makeMask("left"),
+                    right: makeMask("right"),
+                    up: makeMask("up"),
+                    down: makeMask("down"),
+                };
+                Room._shadeSliceFadeMaskByTs.set(ts, masks);
+            }
             // Lazy init temp slice canvas
             if (!this.shadeSliceTempCanvas) {
                 this.shadeSliceTempCanvas = document.createElement("canvas");
@@ -58574,375 +58955,512 @@ class Room {
                 this.shadeSliceTempCtx = this.shadeSliceTempCanvas.getContext("2d");
             }
             const tctx = this.shadeSliceTempCtx;
-            tctx.clearRect(0, 0, ts, ts);
-            // Copy slice into temp
-            tctx.globalCompositeOperation = "source-over";
+            // Copy slice into temp (use 'copy' to avoid clearRect + avoids blending)
+            tctx.globalCompositeOperation = "copy";
             tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
-            // Apply gradient alpha mask (destination-in)
-            let grad = null;
-            if (fadeDir === "right") {
-                grad = tctx.createLinearGradient(0, 0, ts, 0);
-                grad.addColorStop(0, "rgba(0,0,0,0)");
-                grad.addColorStop(1, "rgba(0,0,0,1)");
-            }
-            else if (fadeDir === "left") {
-                grad = tctx.createLinearGradient(0, 0, ts, 0);
-                grad.addColorStop(0, "rgba(0,0,0,1)");
-                grad.addColorStop(1, "rgba(0,0,0,0)");
-            }
-            else if (fadeDir === "up") {
-                grad = tctx.createLinearGradient(0, 0, 0, ts);
-                grad.addColorStop(0, "rgba(0,0,0,0)");
-                grad.addColorStop(1, "rgba(0,0,0,1)");
-            }
-            else if (fadeDir === "down") {
-                grad = tctx.createLinearGradient(0, 0, 0, ts);
-                grad.addColorStop(0, "rgba(0,0,0,1)");
-                grad.addColorStop(1, "rgba(0,0,0,0)");
-            }
-            if (grad) {
-                tctx.globalCompositeOperation = "destination-in";
-                tctx.fillStyle = grad;
-                tctx.fillRect(0, 0, ts, ts);
-            }
+            tctx.globalCompositeOperation = "destination-in";
+            tctx.drawImage(masks[fadeDir], 0, 0);
             // Blit to main ctx
             game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
         };
         this.drawBloomLayer = (delta, zLayer = this.getActiveZ()) => {
             if (!this.onScreen)
                 return;
+            const tTotal = this.drawProfileStart("Room.drawBloomLayer.total");
             game_1.Game.ctx.save();
-            // Clear the offscreen shade canvas
-            this.bloomOffscreenCtx.clearRect(0, 0, this.bloomOffscreenCanvas.width, this.bloomOffscreenCanvas.height);
-            const offsetX = this.blurOffsetX;
-            const offsetY = this.blurOffsetY;
-            let lastFillStyle = "";
-            // Draw bloom for entities on the requested z-layer only.
-            const entitiesOnLayer = this.entities
-                .concat(this.deadEntities)
-                .filter((e) => (e?.z ?? 0) === zLayer);
-            for (const e of entitiesOnLayer) {
-                if (!e.hasBloom)
-                    continue;
-                e.updateBloom(delta);
-                const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
-                this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
-                this.bloomOffscreenCtx.fillStyle = e.bloomColor;
-                this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-                    gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
-                    gameConstants_1.GameConstants.TILESIZE +
-                    e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
-            }
-            // Player bloom derived from equipped light (uses Drawable bloom smoothing)
-            for (const key in this.game.players) {
-                const player = this.game.players[key];
-                if (player.getRoom() !== this)
-                    continue;
-                if ((player?.z ?? 0) !== zLayer)
-                    continue;
-                //player.hasBloom = true;
-                const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
-                player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
-                player.bloomAlpha = 0.5;
-                player.updateBloom(delta);
-                this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
-                this.bloomOffscreenCtx.fillStyle = player.bloomColor;
-                this.bloomOffscreenCtx.fillRect((player.x - player.drawX - this.roomX + offsetX) *
-                    gameConstants_1.GameConstants.TILESIZE, (player.y - player.drawY - this.roomY + offsetY - 0.5) *
-                    gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
-            }
-            const shadeBufferTiles = 4;
-            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(shadeBufferTiles);
-            for (let x = minX; x <= maxX; x++) {
-                for (let y = minY; y <= maxY; y++) {
-                    if (this.roomArray[x][y].hasBloom) {
-                        this.roomArray[x][y].updateBloom(delta);
-                        const tVis = this.softVis?.[x]?.[y] ?? 1;
-                        this.bloomOffscreenCtx.globalAlpha =
-                            1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
-                        this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
-                        this.bloomOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y -
-                            this.roomY -
-                            0.25 +
-                            offsetY -
-                            this.roomArray[x][y].bloomOffsetY) *
-                            gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
+            try {
+                // Clear the offscreen bloom canvas
+                const tClear = this.drawProfileStart("Room.drawBloomLayer.clearOffscreen");
+                this.bloomOffscreenCtx.clearRect(0, 0, this.bloomOffscreenCanvas.width, this.bloomOffscreenCanvas.height);
+                this.drawProfileEnd("Room.drawBloomLayer.clearOffscreen", tClear);
+                const offsetX = this.blurOffsetX;
+                const offsetY = this.blurOffsetY;
+                // Draw bloom sources (entities/tiles/projectiles/players)
+                const tSrc = this.drawProfileStart("Room.drawBloomLayer.drawSources");
+                // Draw bloom for entities on the requested z-layer only.
+                const entitiesOnLayer = this.entities
+                    .concat(this.deadEntities)
+                    .filter((e) => (e?.z ?? 0) === zLayer);
+                for (const e of entitiesOnLayer) {
+                    if (!e.hasBloom)
+                        continue;
+                    e.updateBloom(delta);
+                    const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
+                    this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
+                    this.bloomOffscreenCtx.fillStyle = e.bloomColor;
+                    this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
+                        gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
+                        gameConstants_1.GameConstants.TILESIZE +
+                        e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
+                }
+                // Player bloom derived from equipped light (uses Drawable bloom smoothing)
+                for (const key in this.game.players) {
+                    const player = this.game.players[key];
+                    if (player.getRoom() !== this)
+                        continue;
+                    if ((player?.z ?? 0) !== zLayer)
+                        continue;
+                    const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
+                    player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
+                    player.bloomAlpha = 0.5;
+                    player.updateBloom(delta);
+                    this.bloomOffscreenCtx.globalAlpha = player.softBloomAlpha;
+                    this.bloomOffscreenCtx.fillStyle = player.bloomColor;
+                    this.bloomOffscreenCtx.fillRect((player.x - player.drawX - this.roomX + offsetX) *
+                        gameConstants_1.GameConstants.TILESIZE, (player.y - player.drawY - this.roomY + offsetY - 0.5) *
+                        gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                }
+                const shadeBufferTiles = 4;
+                const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(shadeBufferTiles);
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        if (this.roomArray[x][y].hasBloom) {
+                            this.roomArray[x][y].updateBloom(delta);
+                            const tVis = this.softVis?.[x]?.[y] ?? 1;
+                            this.bloomOffscreenCtx.globalAlpha =
+                                1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
+                            this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
+                            this.bloomOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y -
+                                this.roomY -
+                                0.25 +
+                                offsetY -
+                                this.roomArray[x][y].bloomOffsetY) *
+                                gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE * 0.75);
+                        }
                     }
                 }
-            }
-            for (const p of this.projectiles) {
-                if ((p?.z ?? 0) !== zLayer)
-                    continue;
-                if (!p.hasBloom)
-                    continue;
-                p.updateBloom(delta);
-                const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
-                this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
-                this.bloomOffscreenCtx.fillStyle = p.bloomColor;
-                this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
-            }
-            // Choose blur method based on setting
-            if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
-                // Use WebGL blur with caching
-                const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
-                // Check if we can use cached results
-                if (this.shouldUseBlurCache() && this.blurCache.bloom8px) {
-                    // Use cached blurred result
-                    game_1.Game.ctx.globalCompositeOperation = "screen";
-                    game_1.Game.ctx.globalAlpha = 1;
-                    game_1.Game.ctx.drawImage(this.blurCache.bloom8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                for (const p of this.projectiles) {
+                    if ((p?.z ?? 0) !== zLayer)
+                        continue;
+                    if (!p.hasBloom)
+                        continue;
+                    p.updateBloom(delta);
+                    const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
+                    this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
+                    this.bloomOffscreenCtx.fillStyle = p.bloomColor;
+                    this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) *
+                        gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
+                }
+                this.drawProfileEnd("Room.drawBloomLayer.drawSources", tSrc);
+                const tBlur = this.drawProfileStart("Room.drawBloomLayer.blurAndComposite");
+                // Choose blur method based on setting
+                if (gameConstants_1.GameConstants.USE_WEBGL_BLUR) {
+                    // Use WebGL blur with caching
+                    const blurRenderer = webglBlurRenderer_1.WebGLBlurRenderer.getInstance();
+                    // Check if we can use cached results
+                    if (this.shouldUseBlurCache() && this.blurCache.bloom8px) {
+                        // Use cached blurred result
+                        game_1.Game.ctx.globalCompositeOperation = "screen";
+                        game_1.Game.ctx.globalAlpha = 1;
+                        game_1.Game.ctx.drawImage(this.blurCache.bloom8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    }
+                    else {
+                        // Generate new blur and cache if inactive
+                        game_1.Game.ctx.globalCompositeOperation = "screen";
+                        game_1.Game.ctx.globalAlpha = 1;
+                        // Apply 8px blur using WebGL
+                        const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
+                        game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                        // Cache the result if room is inactive
+                        if (!this.active) {
+                            this.cacheBlurResult("bloom8px", blurred8px);
+                        }
+                    }
                 }
                 else {
-                    // Generate new blur and cache if inactive
+                    // Use Canvas2D blur (fallback) - matching original settings
                     game_1.Game.ctx.globalCompositeOperation = "screen";
                     game_1.Game.ctx.globalAlpha = 1;
-                    // Apply 8px blur using WebGL
-                    const blurred8px = blurRenderer.applyBlur(this.bloomOffscreenCanvas, 8);
-                    game_1.Game.ctx.drawImage(blurred8px, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                    // Cache the result if room is inactive
-                    if (!this.active) {
-                        this.cacheBlurResult("bloom8px", blurred8px);
+                    if (gameConstants_1.GameConstants.ctxBlurEnabled) {
+                        game_1.Game.ctx.filter = "blur(8px)";
                     }
+                    game_1.Game.ctx.drawImage(this.bloomOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
+                    game_1.Game.ctx.filter = "none";
                 }
+                this.drawProfileEnd("Room.drawBloomLayer.blurAndComposite", tBlur);
+                const tClear2 = this.drawProfileStart("Room.drawBloomLayer.clearOffscreenPost");
+                this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
+                this.bloomOffscreenCtx.fillRect(0, 0, this.bloomOffscreenCanvas.width, this.bloomOffscreenCanvas.height);
+                this.drawProfileEnd("Room.drawBloomLayer.clearOffscreenPost", tClear2);
             }
-            else {
-                // Use Canvas2D blur (fallback) - matching original settings
-                game_1.Game.ctx.globalCompositeOperation = "screen";
-                game_1.Game.ctx.globalAlpha = 1;
-                if (gameConstants_1.GameConstants.ctxBlurEnabled) {
-                    game_1.Game.ctx.filter = "blur(8px)";
-                }
-                game_1.Game.ctx.drawImage(this.bloomOffscreenCanvas, (this.roomX - offsetX) * gameConstants_1.GameConstants.TILESIZE, (this.roomY - offsetY) * gameConstants_1.GameConstants.TILESIZE);
-                game_1.Game.ctx.filter = "none";
+            finally {
+                game_1.Game.ctx.restore();
+                this.drawProfileEnd("Room.drawBloomLayer.total", tTotal);
             }
-            this.bloomOffscreenCtx.fillStyle = "rgba(0, 0, 0, 1)";
-            this.bloomOffscreenCtx.fillRect(0, 0, this.bloomOffscreenCanvas.width, this.bloomOffscreenCanvas.height);
-            game_1.Game.ctx.restore();
         };
         this.drawEntities = (delta, skipLocalPlayer, zLayer = this.game?.players?.[this.game.localPlayerID]?.z ?? 0) => {
             if (!this.onScreen)
                 return;
-            // Render-time particle cleanup (in-place, avoids allocations).
-            // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
-            // while the game is idling; bubbles are spawned from `Player.draw()`.
-            this.particleCleanupAccumulator += delta;
-            if (this.particleCleanupAccumulator >= 10) {
-                this.particleCleanupAccumulator = 0;
-                if (this.particles.length > 0) {
-                    let w = 0;
-                    for (let r = 0; r < this.particles.length; r++) {
-                        const p = this.particles[r];
-                        if (p && !p.dead) {
-                            this.particles[w++] = p;
-                        }
-                    }
-                    if (w !== this.particles.length)
-                        this.particles.length = w;
-                }
-            }
-            this.updateOxygenLineBeams();
-            game_1.Game.ctx.save();
-            // If using inline sliced shade, prepare the blurred shade source once
-            let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED && gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
-            let shadeSrc = null;
-            if (useInlineShade && !gameConstants_1.GameConstants.SHADING_DISABLED) {
-                // Build unblurred shade and get blurred source
-                this.buildShadeOffscreenForSlicing();
-                shadeSrc = this.getBlurredShadeSourceForSlicing();
-            }
-            let tiles = [];
-            // Iterate only within the currently visible tile bounds (with a small buffer)
-            const tileBuffer = 3;
-            const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
-            for (let x = minX; x <= maxX; x++) {
-                for (let y = minY; y <= maxY; y++) {
-                    const tile = this.roomArray[x][y];
-                    // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
-                    if (gameConstants_1.GameConstants.Z_DEBUG_MODE && zLayer === 1 && this.zDebugZ1Tiles) {
-                        const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
-                        if (override) {
-                            // Air draws nothing; only collect non-solid tiles for drawables.
-                            if (!override.isSolid()) {
-                                override.drawUnderPlayer(delta);
-                                tiles.push(override);
+            const tTotal = this.drawProfileStart("Room.drawEntities.total");
+            try {
+                const tCleanup = this.drawProfileStart("Room.drawEntities.particleCleanup");
+                // Render-time particle cleanup (in-place, avoids allocations).
+                // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
+                // while the game is idling; bubbles are spawned from `Player.draw()`.
+                this.particleCleanupAccumulator += delta;
+                if (this.particleCleanupAccumulator >= 10) {
+                    this.particleCleanupAccumulator = 0;
+                    if (this.particles.length > 0) {
+                        let w = 0;
+                        for (let r = 0; r < this.particles.length; r++) {
+                            const p = this.particles[r];
+                            if (p && !p.dead) {
+                                this.particles[w++] = p;
                             }
-                            continue;
+                        }
+                        if (w !== this.particles.length)
+                            this.particles.length = w;
+                    }
+                }
+                this.drawProfileEnd("Room.drawEntities.particleCleanup", tCleanup);
+                const tO2 = this.drawProfileStart("Room.drawEntities.oxygenLineBeams");
+                this.updateOxygenLineBeams();
+                this.drawProfileEnd("Room.drawEntities.oxygenLineBeams", tO2);
+                game_1.Game.ctx.save();
+                try {
+                    // If using inline sliced shade, prepare the blurred shade source once
+                    const tInlineShadePrep = this.drawProfileStart("Room.drawEntities.inlineShadePrep");
+                    let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED && gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+                    let shadeSrc = null;
+                    if (useInlineShade && !gameConstants_1.GameConstants.SHADING_DISABLED) {
+                        // Cache the blurred shade source across frames when soft visibility is unchanged.
+                        // Key includes lighting version (hard changes) + soft-vis version (fadeLighting smoothing).
+                        const key = `${this.lastLightingUpdate}|${this._softVisVersion}`;
+                        if (this._inlineShadeSrcCanvas && this._inlineShadeSrcKey === key) {
+                            const tHit = this.drawProfileStart("Room.drawEntities.inlineShadePrepCacheHit");
+                            shadeSrc = this._inlineShadeSrcCanvas;
+                            this.drawProfileEnd("Room.drawEntities.inlineShadePrepCacheHit", tHit);
+                        }
+                        else {
+                            const tMiss = this.drawProfileStart("Room.drawEntities.inlineShadePrepCacheMiss");
+                            // Build unblurred shade and get blurred source
+                            this.buildShadeOffscreenForSlicing();
+                            shadeSrc = this.getBlurredShadeSourceForSlicing();
+                            this._inlineShadeSrcCanvas = shadeSrc;
+                            this._inlineShadeSrcKey = key;
+                            this.drawProfileEnd("Room.drawEntities.inlineShadePrepCacheMiss", tMiss);
                         }
                     }
-                    tile.drawUnderPlayer(delta);
-                    tiles.push(tile);
-                }
-            }
-            let drawables = [];
-            const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
-            const entities = [].concat(this.entities, this.deadEntities);
-            const entitiesOnLayer = entities.filter((e) => (e?.z ?? 0) === zLayer);
-            const projectilesOnLayer = this.projectiles.filter((p) => (p?.z ?? 0) === zLayer);
-            const itemsOnLayer = this.items.filter((i) => (i?.z ?? 0) === zLayer);
-            const particlesOnLayer = this.particles.filter((p) => (p?.worldZ ?? 0) === zLayer);
-            const hitwarningsOnLayer = zLayer === activeZ ? this.hitwarnings : [];
-            drawables.push(...tiles, ...this.decorations, ...entitiesOnLayer, ...hitwarningsOnLayer, ...projectilesOnLayer, ...particlesOnLayer, ...itemsOnLayer);
-            // Filter out drawables that are completely off-screen (with a small tile buffer)
-            drawables = drawables.filter((d) => {
-                const dx = d.x;
-                const dy = d.y;
-                if (typeof dx !== "number" || typeof dy !== "number")
-                    return true;
-                const dw = Math.max(1, Math.ceil(d?.w || 1));
-                const dh = Math.max(1, Math.ceil(d?.h || 1));
-                const bufferTiles = 3;
-                for (let ox = 0; ox < dw; ox++) {
-                    for (let oy = 0; oy < dh; oy++) {
-                        if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles))
+                    this.drawProfileEnd("Room.drawEntities.inlineShadePrep", tInlineShadePrep);
+                    const tTiles = this.drawProfileStart("Room.drawEntities.collectTiles");
+                    let tiles = [];
+                    // Iterate only within the currently visible tile bounds (with a small buffer)
+                    const tileBuffer = 3;
+                    const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
+                    for (let x = minX; x <= maxX; x++) {
+                        for (let y = minY; y <= maxY; y++) {
+                            const tile = this.roomArray[x][y];
+                            // Z-debug: on z=1, use the explicit z=1 tilemap (Floor vs Air)
+                            if (gameConstants_1.GameConstants.Z_DEBUG_MODE &&
+                                zLayer === 1 &&
+                                this.zDebugZ1Tiles) {
+                                const override = this.zDebugZ1Tiles.get(this.zKey(x, y));
+                                if (override) {
+                                    // Air draws nothing; only collect non-solid tiles for drawables.
+                                    if (!override.isSolid()) {
+                                        override.drawUnderPlayer(delta);
+                                        tiles.push(override);
+                                    }
+                                    continue;
+                                }
+                            }
+                            tile.drawUnderPlayer(delta);
+                            tiles.push(tile);
+                        }
+                    }
+                    this.drawProfileEnd("Room.drawEntities.collectTiles", tTiles);
+                    const tAssemble = this.drawProfileStart("Room.drawEntities.assembleDrawables");
+                    let drawables = [];
+                    const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
+                    const entities = [].concat(this.entities, this.deadEntities);
+                    const entitiesOnLayer = entities.filter((e) => (e?.z ?? 0) === zLayer);
+                    const projectilesOnLayer = this.projectiles.filter((p) => (p?.z ?? 0) === zLayer);
+                    const itemsOnLayer = this.items.filter((i) => (i?.z ?? 0) === zLayer);
+                    const particlesOnLayer = this.particles.filter((p) => (p?.worldZ ?? 0) === zLayer);
+                    const hitwarningsOnLayer = zLayer === activeZ ? this.hitwarnings : [];
+                    drawables.push(...tiles, ...this.decorations, ...entitiesOnLayer, ...hitwarningsOnLayer, ...projectilesOnLayer, ...particlesOnLayer, ...itemsOnLayer);
+                    this.drawProfileEnd("Room.drawEntities.assembleDrawables", tAssemble);
+                    const tCull = this.drawProfileStart("Room.drawEntities.cullOffscreen");
+                    // Filter out drawables that are completely off-screen (with a small tile buffer)
+                    drawables = drawables.filter((d) => {
+                        const dx = d.x;
+                        const dy = d.y;
+                        if (typeof dx !== "number" || typeof dy !== "number")
                             return true;
-                    }
-                }
-                return false;
-            });
-            for (const i in this.game.players) {
-                const player = this.game.players[i];
-                if (player.getRoom?.() === this) {
-                    if ((player.z ?? 0) !== zLayer)
-                        continue;
-                    if (!(skipLocalPlayer &&
-                        player === this.game.players[this.game.localPlayerID]))
-                        drawables.push(player);
-                }
-            }
-            drawables.sort((a, b) => {
-                if (a instanceof floor_1.Floor || a instanceof spawnfloor_1.SpawnFloor) {
-                    return -1;
-                }
-                else if (b instanceof floor_1.Floor || b instanceof spawnfloor_1.SpawnFloor) {
-                    return 1;
-                }
-                else if (a instanceof decoration_1.Decoration) {
-                    return -1;
-                }
-                else if (b instanceof decoration_1.Decoration) {
-                    return 1;
-                }
-                if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
-                    const aAbove = a.shouldDrawAbovePlayer === true;
-                    const bAbove = b.shouldDrawAbovePlayer === true;
-                    // Special-case: when tied in Y, draw flagged objects above players
-                    if (a instanceof player_1.Player && bAbove) {
-                        return -1; // player before flagged -> flagged drawn later
-                    }
-                    else if (b instanceof player_1.Player && aAbove) {
-                        return 1; // flagged after player
-                    }
-                    // Default near-equal behavior
-                    if (a instanceof player_1.Player) {
-                        return 1;
-                    }
-                    else if (b instanceof player_1.Player) {
-                        return -1;
-                    }
-                    else if (a instanceof entity_1.Entity) {
-                        return 1;
-                    }
-                    else if (b instanceof entity_1.Entity) {
-                        return -1;
-                    }
-                    else if (a instanceof particle_1.Particle) {
-                        return 1;
-                    }
-                    else if (b instanceof particle_1.Particle) {
-                        return -1;
-                    }
-                    else
-                        return 0;
-                }
-                else {
-                    return a.drawableY - b.drawableY;
-                }
-            });
-            // Draw in sorted order; apply inline tile shade immediately after each tile
-            for (const d of drawables) {
-                d.draw(delta);
-                if (useInlineShade && shadeSrc && d instanceof tile_1.Tile) {
-                    const tx = d.x;
-                    const ty = d.y;
-                    const sv = this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
-                    if (sv > 0) {
-                        const prevOp = game_1.Game.ctx
-                            .globalCompositeOperation;
-                        if (prevOp !==
-                            gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
-                            game_1.Game.ctx.globalCompositeOperation =
-                                gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
-                        }
-                        const prevAlpha = game_1.Game.ctx.globalAlpha;
-                        game_1.Game.ctx.globalAlpha = 1;
-                        let fade;
-                        if (d instanceof door_1.Door && d.opened) {
-                            switch (d.doorDir) {
-                                case game_1.Direction.LEFT:
-                                    fade = "left";
-                                    break;
-                                case game_1.Direction.RIGHT:
-                                    fade = "right";
-                                    break;
-                                case game_1.Direction.UP:
-                                    fade = undefined;
-                                    break;
-                                case game_1.Direction.DOWN:
-                                    // No gradient mask for down doors
-                                    fade = "down";
-                                    break;
+                        const dw = Math.max(1, Math.ceil(d?.w || 1));
+                        const dh = Math.max(1, Math.ceil(d?.h || 1));
+                        const bufferTiles = 3;
+                        for (let ox = 0; ox < dw; ox++) {
+                            for (let oy = 0; oy < dh; oy++) {
+                                if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles))
+                                    return true;
                             }
                         }
-                        else if (d instanceof wall_1.Wall) {
-                            const info = this.wallInfo.get(`${tx},${ty}`);
-                            if (info && info.isBelowDoorWall) {
-                                const below = this.roomArray[tx]?.[ty + 1];
-                                if (below instanceof door_1.Door && below.opened) {
-                                    if (below.doorDir === game_1.Direction.LEFT)
-                                        fade = "left";
-                                    else if (below.doorDir === game_1.Direction.RIGHT)
-                                        fade = "right";
+                        return false;
+                    });
+                    this.drawProfileEnd("Room.drawEntities.cullOffscreen", tCull);
+                    const tPlayers = this.drawProfileStart("Room.drawEntities.addPlayers");
+                    for (const i in this.game.players) {
+                        const player = this.game.players[i];
+                        if (player.getRoom?.() === this) {
+                            if ((player.z ?? 0) !== zLayer)
+                                continue;
+                            if (!(skipLocalPlayer &&
+                                player === this.game.players[this.game.localPlayerID]))
+                                drawables.push(player);
+                        }
+                    }
+                    this.drawProfileEnd("Room.drawEntities.addPlayers", tPlayers);
+                    const tSort = this.drawProfileStart("Room.drawEntities.sort");
+                    drawables.sort((a, b) => {
+                        if (a instanceof floor_1.Floor || a instanceof spawnfloor_1.SpawnFloor) {
+                            return -1;
+                        }
+                        else if (b instanceof floor_1.Floor || b instanceof spawnfloor_1.SpawnFloor) {
+                            return 1;
+                        }
+                        else if (a instanceof decoration_1.Decoration) {
+                            return -1;
+                        }
+                        else if (b instanceof decoration_1.Decoration) {
+                            return 1;
+                        }
+                        if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
+                            const aAbove = a.shouldDrawAbovePlayer === true;
+                            const bAbove = b.shouldDrawAbovePlayer === true;
+                            // Special-case: when tied in Y, draw flagged objects above players
+                            if (a instanceof player_1.Player && bAbove) {
+                                return -1; // player before flagged -> flagged drawn later
+                            }
+                            else if (b instanceof player_1.Player && aAbove) {
+                                return 1; // flagged after player
+                            }
+                            // Default near-equal behavior
+                            if (a instanceof player_1.Player) {
+                                return 1;
+                            }
+                            else if (b instanceof player_1.Player) {
+                                return -1;
+                            }
+                            else if (a instanceof entity_1.Entity) {
+                                return 1;
+                            }
+                            else if (b instanceof entity_1.Entity) {
+                                return -1;
+                            }
+                            else if (a instanceof particle_1.Particle) {
+                                return 1;
+                            }
+                            else if (b instanceof particle_1.Particle) {
+                                return -1;
+                            }
+                            else
+                                return 0;
+                        }
+                        else {
+                            return a.drawableY - b.drawableY;
+                        }
+                    });
+                    this.drawProfileEnd("Room.drawEntities.sort", tSort);
+                    const tDraw = this.drawProfileStart("Room.drawEntities.drawablesDraw");
+                    // Draw in sorted order; apply inline tile shade immediately after each tile
+                    for (const d of drawables) {
+                        d.draw(delta);
+                        if (useInlineShade && shadeSrc && d instanceof tile_1.Tile) {
+                            const tx = d.x;
+                            const ty = d.y;
+                            const sv = this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+                            if (sv > 0) {
+                                const prevOp = game_1.Game.ctx
+                                    .globalCompositeOperation;
+                                if (prevOp !==
+                                    gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
+                                    game_1.Game.ctx.globalCompositeOperation =
+                                        gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
+                                }
+                                const prevAlpha = game_1.Game.ctx.globalAlpha;
+                                game_1.Game.ctx.globalAlpha = 1;
+                                let fade;
+                                if (d instanceof door_1.Door && d.opened) {
+                                    switch (d.doorDir) {
+                                        case game_1.Direction.LEFT:
+                                            fade = "left";
+                                            break;
+                                        case game_1.Direction.RIGHT:
+                                            fade = "right";
+                                            break;
+                                        case game_1.Direction.UP:
+                                            fade = undefined;
+                                            break;
+                                        case game_1.Direction.DOWN:
+                                            // No gradient mask for down doors
+                                            fade = "down";
+                                            break;
+                                    }
+                                }
+                                else if (d instanceof wall_1.Wall) {
+                                    const info = this.wallInfo.get(`${tx},${ty}`);
+                                    if (info && info.isBelowDoorWall) {
+                                        const below = this.roomArray[tx]?.[ty + 1];
+                                        if (below instanceof door_1.Door && below.opened) {
+                                            if (below.doorDir === game_1.Direction.LEFT)
+                                                fade = "left";
+                                            else if (below.doorDir === game_1.Direction.RIGHT)
+                                                fade = "right";
+                                        }
+                                    }
+                                }
+                                const tShadeTile = this.drawProfileStart(fade
+                                    ? "Room.drawEntities.inlineShadeTileFade"
+                                    : "Room.drawEntities.inlineShadeTile");
+                                if (fade &&
+                                    gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true) {
+                                    // Cache is valid only while lighting version is unchanged.
+                                    if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate) {
+                                        this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
+                                        if (this._inlineFadeSliceCache)
+                                            this._inlineFadeSliceCache.clear();
+                                        if (this._inlineFadeSliceCacheOrder)
+                                            this._inlineFadeSliceCacheOrder.length = 0;
+                                    }
+                                    if (!this._inlineFadeSliceCache)
+                                        this._inlineFadeSliceCache = new Map();
+                                    if (!this._inlineFadeSliceCacheOrder)
+                                        this._inlineFadeSliceCacheOrder = [];
+                                    const key = `${zLayer}|${tx}|${ty}|${fade}`;
+                                    const cached = this._inlineFadeSliceCache.get(key);
+                                    if (cached) {
+                                        const tHit = this.drawProfileStart("Room.drawEntities.inlineShadeTileFadeCacheHit");
+                                        game_1.Game.ctx.drawImage(cached, tx * gameConstants_1.GameConstants.TILESIZE, ty * gameConstants_1.GameConstants.TILESIZE);
+                                        this.drawProfileEnd("Room.drawEntities.inlineShadeTileFadeCacheHit", tHit);
+                                    }
+                                    else {
+                                        const tMiss = this.drawProfileStart("Room.drawEntities.inlineShadeTileFadeCacheMiss");
+                                        const ts = gameConstants_1.GameConstants.TILESIZE;
+                                        const sx = (tx + 1 - this.roomX + this.blurOffsetX) * ts;
+                                        const sy = (ty + 1 - this.roomY + this.blurOffsetY) * ts;
+                                        // Ensure fade masks exist (cached globally by tile size)
+                                        let masks = Room._shadeSliceFadeMaskByTs.get(ts);
+                                        if (!masks) {
+                                            const makeMask = (dir) => {
+                                                const c = document.createElement("canvas");
+                                                c.width = ts;
+                                                c.height = ts;
+                                                const mctx = c.getContext("2d");
+                                                if (!mctx)
+                                                    return c;
+                                                let grad;
+                                                if (dir === "right") {
+                                                    grad = mctx.createLinearGradient(0, 0, ts, 0);
+                                                    grad.addColorStop(0, "rgba(0,0,0,0)");
+                                                    grad.addColorStop(1, "rgba(0,0,0,1)");
+                                                }
+                                                else if (dir === "left") {
+                                                    grad = mctx.createLinearGradient(0, 0, ts, 0);
+                                                    grad.addColorStop(0, "rgba(0,0,0,1)");
+                                                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                                                }
+                                                else if (dir === "up") {
+                                                    grad = mctx.createLinearGradient(0, 0, 0, ts);
+                                                    grad.addColorStop(0, "rgba(0,0,0,0)");
+                                                    grad.addColorStop(1, "rgba(0,0,0,1)");
+                                                }
+                                                else {
+                                                    grad = mctx.createLinearGradient(0, 0, 0, ts);
+                                                    grad.addColorStop(0, "rgba(0,0,0,1)");
+                                                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                                                }
+                                                mctx.globalCompositeOperation = "source-over";
+                                                mctx.fillStyle = grad;
+                                                mctx.fillRect(0, 0, ts, ts);
+                                                return c;
+                                            };
+                                            masks = {
+                                                left: makeMask("left"),
+                                                right: makeMask("right"),
+                                                up: makeMask("up"),
+                                                down: makeMask("down"),
+                                            };
+                                            Room._shadeSliceFadeMaskByTs.set(ts, masks);
+                                        }
+                                        const c = document.createElement("canvas");
+                                        c.width = ts;
+                                        c.height = ts;
+                                        const cctx = c.getContext("2d");
+                                        if (cctx) {
+                                            cctx.globalCompositeOperation = "copy";
+                                            cctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+                                            cctx.globalCompositeOperation = "destination-in";
+                                            cctx.drawImage(masks[fade], 0, 0);
+                                        }
+                                        // Store and evict FIFO
+                                        this._inlineFadeSliceCache.set(key, c);
+                                        this._inlineFadeSliceCacheOrder.push(key);
+                                        const max = Math.max(1, Math.floor(gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE_MAX));
+                                        while (this._inlineFadeSliceCacheOrder.length > max) {
+                                            const oldest = this._inlineFadeSliceCacheOrder.shift();
+                                            if (oldest)
+                                                this._inlineFadeSliceCache.delete(oldest);
+                                        }
+                                        game_1.Game.ctx.drawImage(c, tx * ts, ty * ts);
+                                        this.drawProfileEnd("Room.drawEntities.inlineShadeTileFadeCacheMiss", tMiss);
+                                    }
+                                }
+                                else {
+                                    this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
+                                }
+                                this.drawProfileEnd(fade
+                                    ? "Room.drawEntities.inlineShadeTileFade"
+                                    : "Room.drawEntities.inlineShadeTile", tShadeTile);
+                                game_1.Game.ctx.globalAlpha = prevAlpha;
+                                if (prevOp !==
+                                    gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
+                                    game_1.Game.ctx.globalCompositeOperation = prevOp;
                                 }
                             }
                         }
-                        this.drawShadeSliceForTile(shadeSrc, tx, ty, fade);
-                        game_1.Game.ctx.globalAlpha = prevAlpha;
-                        if (prevOp !==
-                            gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION) {
-                            game_1.Game.ctx.globalCompositeOperation = prevOp;
+                    }
+                    this.drawProfileEnd("Room.drawEntities.drawablesDraw", tDraw);
+                    const tZDebug = this.drawProfileStart("Room.drawEntities.zDebugMarkers");
+                    // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
+                    if (gameConstants_1.GameConstants.Z_DEBUG_MODE) {
+                        if (zLayer === 0 && this.zDebugUpStairs) {
+                            for (const key of this.zDebugUpStairs) {
+                                const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+                                if (!Number.isFinite(sx) || !Number.isFinite(sy))
+                                    continue;
+                                game_1.Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+                            }
+                        }
+                        if (zLayer === 1 && this.zDebugDownStairs) {
+                            for (const key of this.zDebugDownStairs) {
+                                const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
+                                if (!Number.isFinite(sx) || !Number.isFinite(sy))
+                                    continue;
+                                game_1.Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
+                            }
                         }
                     }
-                }
-            }
-            // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
-            if (gameConstants_1.GameConstants.Z_DEBUG_MODE) {
-                if (zLayer === 0 && this.zDebugUpStairs) {
-                    for (const key of this.zDebugUpStairs) {
-                        const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
-                        if (!Number.isFinite(sx) || !Number.isFinite(sy))
-                            continue;
-                        game_1.Game.drawFX(2, 0, 1, 1, sx, sy, 1, 1);
+                    this.drawProfileEnd("Room.drawEntities.zDebugMarkers", tZDebug);
+                    const tPost = this.drawProfileStart("Room.drawEntities.postPasses");
+                    this.drawAbovePlayer(delta);
+                    for (const i of itemsOnLayer) {
+                        i.drawTopLayer(delta);
                     }
-                }
-                if (zLayer === 1 && this.zDebugDownStairs) {
-                    for (const key of this.zDebugDownStairs) {
-                        const [sx, sy] = key.split(",").map((v) => parseInt(v, 10));
-                        if (!Number.isFinite(sx) || !Number.isFinite(sy))
-                            continue;
-                        game_1.Game.drawFX(3, 0, 1, 1, sx, sy, 1, 1);
+                    for (const t of drawables) {
+                        if (t instanceof passageway_1.Passageway) {
+                            t.drawFloodedCaveFX();
+                        }
                     }
+                    this.drawProfileEnd("Room.drawEntities.postPasses", tPost);
+                }
+                finally {
+                    game_1.Game.ctx.restore();
                 }
             }
-            this.drawAbovePlayer(delta);
-            for (const i of itemsOnLayer) {
-                i.drawTopLayer(delta);
+            finally {
+                this.drawProfileEnd("Room.drawEntities.total", tTotal);
             }
-            for (const t of drawables) {
-                if (t instanceof passageway_1.Passageway) {
-                    t.drawFloodedCaveFX();
-                }
-            }
-            game_1.Game.ctx.restore();
         };
         this.updateOxygenLineBeams = () => {
             if (!this.active)
@@ -59035,49 +59553,59 @@ class Room {
             if (alpha <= 0.001)
                 return;
             const activeZ = this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer;
+            const tTotal = this.drawProfileStart("Room.drawOverShade.total");
             game_1.Game.ctx.save();
-            const baseAlpha = game_1.Game.ctx.globalAlpha;
-            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
-            for (const e of this.entities) {
-                if ((e?.z ?? 0) !== zLayer)
-                    continue;
-                e.drawTopLayer(delta); // health bars
-            }
-            for (const p of this.projectiles) {
-                if ((p?.z ?? 0) !== zLayer)
-                    continue;
-                p.drawTopLayer(delta);
-            }
-            //Game.ctx.globalCompositeOperation = "overlay";
-            if (zLayer === activeZ) {
-                for (const h of this.hitwarnings) {
-                    h.drawTopLayer(delta);
+            try {
+                const baseAlpha = game_1.Game.ctx.globalAlpha;
+                game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
+                const tTop = this.drawProfileStart("Room.drawOverShade.topLayers");
+                for (const e of this.entities) {
+                    if ((e?.z ?? 0) !== zLayer)
+                        continue;
+                    e.drawTopLayer(delta); // health bars
                 }
-            }
-            //Game.ctx.globalCompositeOperation = "source-over";
-            for (const s of this.particles) {
-                if ((s?.worldZ ?? 0) !== zLayer)
-                    continue;
-                s.drawTopLayer(delta);
-            }
-            // Some top-layer draws may mutate globalAlpha and not restore it.
-            // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
-            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
-            // draw over dithered shading
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    this.roomArray[x][y].drawAboveShading(delta);
+                for (const p of this.projectiles) {
+                    if ((p?.z ?? 0) !== zLayer)
+                        continue;
+                    p.drawTopLayer(delta);
                 }
+                if (zLayer === activeZ) {
+                    for (const h of this.hitwarnings) {
+                        h.drawTopLayer(delta);
+                    }
+                }
+                for (const s of this.particles) {
+                    if ((s?.worldZ ?? 0) !== zLayer)
+                        continue;
+                    s.drawTopLayer(delta);
+                }
+                this.drawProfileEnd("Room.drawOverShade.topLayers", tTop);
+                // Some top-layer draws may mutate globalAlpha and not restore it.
+                // Re-assert the intended room fade alpha before drawing above-shading tiles/items.
+                game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
+                const tTiles = this.drawProfileStart("Room.drawOverShade.tiles");
+                // draw over dithered shading
+                for (let x = this.roomX; x < this.roomX + this.width; x++) {
+                    for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                        this.roomArray[x][y].drawAboveShading(delta);
+                    }
+                }
+                this.drawProfileEnd("Room.drawOverShade.tiles", tTiles);
+                game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
+                const tItems = this.drawProfileStart("Room.drawOverShade.items");
+                //added for coin animation
+                for (const i of this.items) {
+                    if ((i?.z ?? 0) !== zLayer)
+                        continue;
+                    i.drawAboveShading(delta);
+                }
+                this.drawProfileEnd("Room.drawOverShade.items", tItems);
+                game_1.Game.ctx.globalAlpha = baseAlpha;
             }
-            //added for coin animation
-            game_1.Game.ctx.globalAlpha = baseAlpha * alpha;
-            for (const i of this.items) {
-                if ((i?.z ?? 0) !== zLayer)
-                    continue;
-                i.drawAboveShading(delta);
+            finally {
+                game_1.Game.ctx.restore();
+                this.drawProfileEnd("Room.drawOverShade.total", tTotal);
             }
-            game_1.Game.ctx.globalAlpha = baseAlpha;
-            game_1.Game.ctx.restore();
         };
         // for stuff rendered on top of the player
         this.drawTopLayer = (delta) => {
@@ -59092,6 +59620,7 @@ class Room {
             game_1.Game.ctx.restore();
         };
         this.drawTopBeams = (delta, zLayer = this.game?.players?.[this.game.localPlayerID]?.z ?? 0) => {
+            const tTotal = this.drawProfileStart("Room.drawTopBeams.total");
             for (const projectile of this.projectiles) {
                 if ((projectile?.z ?? 0) !== zLayer)
                     continue;
@@ -59099,6 +59628,7 @@ class Room {
                     projectile.drawTopLayer(delta);
                 }
             }
+            this.drawProfileEnd("Room.drawTopBeams.total", tTotal);
         };
         this.hasTopBeams = () => {
             for (const projectile of this.projectiles) {
@@ -60857,6 +61387,8 @@ class Room {
     }
 }
 exports.Room = Room;
+// Cache small per-tile gradient masks for inline shade slicing (keyed by tile size)
+Room._shadeSliceFadeMaskByTs = new Map();
 
 
 /***/ }),
