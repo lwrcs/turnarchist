@@ -3317,8 +3317,8 @@ export class Room {
     for (const e of entitiesOnLayer) {
       if (!e.hasBloom) continue;
       e.updateBloom(delta);
-      this.bloomOffscreenCtx.globalAlpha =
-        1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
+      const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
+      this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
       this.bloomOffscreenCtx.fillStyle = e.bloomColor;
 
       this.bloomOffscreenCtx.fillRect(
@@ -3339,7 +3339,7 @@ export class Room {
       if ((player?.z ?? 0) !== zLayer) continue;
 
       //player.hasBloom = true;
-      const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
+      const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
       player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
       player.bloomAlpha = 0.5;
       player.updateBloom(delta);
@@ -3364,8 +3364,9 @@ export class Room {
       for (let y = minY; y <= maxY; y++) {
         if (this.roomArray[x][y].hasBloom) {
           this.roomArray[x][y].updateBloom(delta);
+          const tVis = this.softVis?.[x]?.[y] ?? 1;
           this.bloomOffscreenCtx.globalAlpha =
-            1 * (1 - this.softVis[x][y]) * this.roomArray[x][y].softBloomAlpha;
+            1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
           this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
 
           this.bloomOffscreenCtx.fillRect(
@@ -3387,8 +3388,8 @@ export class Room {
       if ((p?.z ?? 0) !== zLayer) continue;
       if (!p.hasBloom) continue;
       p.updateBloom(delta);
-      this.bloomOffscreenCtx.globalAlpha =
-        1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
+      const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
+      this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
       this.bloomOffscreenCtx.fillStyle = p.bloomColor;
 
       this.bloomOffscreenCtx.fillRect(

@@ -58625,8 +58625,8 @@ class Room {
                 if (!e.hasBloom)
                     continue;
                 e.updateBloom(delta);
-                this.bloomOffscreenCtx.globalAlpha =
-                    1 * (1 - this.softVis[e.x][e.y]) * e.softBloomAlpha;
+                const eVis = this.softVis?.[e.x]?.[e.y] ?? 1;
+                this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
                 this.bloomOffscreenCtx.fillStyle = e.bloomColor;
                 this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
                     gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
@@ -58641,7 +58641,7 @@ class Room {
                 if ((player?.z ?? 0) !== zLayer)
                     continue;
                 //player.hasBloom = true;
-                const [r, g, b] = this.softCol[player.x][player.y] || [255, 255, 255];
+                const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
                 player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
                 player.bloomAlpha = 0.5;
                 player.updateBloom(delta);
@@ -58657,8 +58657,9 @@ class Room {
                 for (let y = minY; y <= maxY; y++) {
                     if (this.roomArray[x][y].hasBloom) {
                         this.roomArray[x][y].updateBloom(delta);
+                        const tVis = this.softVis?.[x]?.[y] ?? 1;
                         this.bloomOffscreenCtx.globalAlpha =
-                            1 * (1 - this.softVis[x][y]) * this.roomArray[x][y].softBloomAlpha;
+                            1 * (1 - tVis) * this.roomArray[x][y].softBloomAlpha;
                         this.bloomOffscreenCtx.fillStyle = this.roomArray[x][y].bloomColor;
                         this.bloomOffscreenCtx.fillRect((x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (y -
                             this.roomY -
@@ -58675,8 +58676,8 @@ class Room {
                 if (!p.hasBloom)
                     continue;
                 p.updateBloom(delta);
-                this.bloomOffscreenCtx.globalAlpha =
-                    1 * (1 - this.softVis[p.x][p.y]) * p.softBloomAlpha;
+                const pVis = this.softVis?.[p.x]?.[p.y] ?? 1;
+                this.bloomOffscreenCtx.globalAlpha = 1 * (1 - pVis) * p.softBloomAlpha;
                 this.bloomOffscreenCtx.fillStyle = p.bloomColor;
                 this.bloomOffscreenCtx.fillRect((p.x - this.roomX + offsetX) * gameConstants_1.GameConstants.TILESIZE, (p.y - this.roomY + offsetY + p.bloomOffsetY) * gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE, gameConstants_1.GameConstants.TILESIZE);
             }
