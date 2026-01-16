@@ -57196,6 +57196,7 @@ class Room {
         // Border tiles around shade content for sliced shading (ensures blur has room to spill)
         this.shadeSliceBorderTiles = 1;
         this._inlineFadeSliceCacheLightingVersion = -1;
+        this._inlineFadeSliceCacheSoftVisVersion = -1;
         this.name = "";
         /**
          * Alpha for the "over shade" (above-shading / top overlay) pass.
@@ -58429,6 +58430,14 @@ class Room {
                     this._softVisVersion++;
                     this._inlineShadeSrcCanvas = null;
                     this._inlineShadeSrcKey = "";
+                    // Fade-tile cache depends on the blurred shade source (derived from softVis),
+                    // so invalidate it whenever softVis smoothing advances too.
+                    if (this._inlineFadeSliceCache)
+                        this._inlineFadeSliceCache.clear();
+                    if (this._inlineFadeSliceCacheOrder)
+                        this._inlineFadeSliceCacheOrder.length = 0;
+                    this._inlineFadeSliceCacheLightingVersion = -1;
+                    this._inlineFadeSliceCacheSoftVisVersion = -1;
                     this.lastDraw = this.drawTimestamp;
                 }
             }
@@ -59316,8 +59325,10 @@ class Room {
                                 if (fade &&
                                     gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true) {
                                     // Cache is valid only while lighting version is unchanged.
-                                    if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate) {
+                                    if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate ||
+                                        this._inlineFadeSliceCacheSoftVisVersion !== this._softVisVersion) {
                                         this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
+                                        this._inlineFadeSliceCacheSoftVisVersion = this._softVisVersion;
                                         if (this._inlineFadeSliceCache)
                                             this._inlineFadeSliceCache.clear();
                                         if (this._inlineFadeSliceCacheOrder)

@@ -317,6 +317,7 @@ export class Room {
   private _inlineFadeSliceCache?: Map<string, HTMLCanvasElement>;
   private _inlineFadeSliceCacheOrder?: string[];
   private _inlineFadeSliceCacheLightingVersion: number = -1;
+  private _inlineFadeSliceCacheSoftVisVersion: number = -1;
   private bloomOffscreenCanvas: HTMLCanvasElement;
   private bloomOffscreenCtx: CanvasRenderingContext2D;
 
@@ -2747,6 +2748,12 @@ export class Room {
         this._softVisVersion++;
         this._inlineShadeSrcCanvas = null;
         this._inlineShadeSrcKey = "";
+        // Fade-tile cache depends on the blurred shade source (derived from softVis),
+        // so invalidate it whenever softVis smoothing advances too.
+        if (this._inlineFadeSliceCache) this._inlineFadeSliceCache.clear();
+        if (this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder.length = 0;
+        this._inlineFadeSliceCacheLightingVersion = -1;
+        this._inlineFadeSliceCacheSoftVisVersion = -1;
 
         this.lastDraw = this.drawTimestamp;
       }
@@ -3881,8 +3888,12 @@ export class Room {
                 GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true
               ) {
                 // Cache is valid only while lighting version is unchanged.
-                if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate) {
+                if (
+                  this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate ||
+                  this._inlineFadeSliceCacheSoftVisVersion !== this._softVisVersion
+                ) {
                   this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
+                  this._inlineFadeSliceCacheSoftVisVersion = this._softVisVersion;
                   if (this._inlineFadeSliceCache) this._inlineFadeSliceCache.clear();
                   if (this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder.length = 0;
                 }
