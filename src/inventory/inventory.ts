@@ -406,6 +406,10 @@ export class Inventory {
     // Long-press is reserved for context menus.
     if (
       this.player.game.isMobile &&
+      // If a context menu is open (often opened via long-press), do not initiate a drag.
+      // Also clear any pending drag candidate so we don't "ghost drag" on subsequent movement.
+      !this.player.contextMenu?.open &&
+      !Input.touchLongPressFired &&
       !this._isDragging &&
       this._dragStartItem !== null &&
       this.dragStartMouseX !== null &&
@@ -418,6 +422,41 @@ export class Inventory {
         this.initiateDrag();
       }
     }
+
+    if (
+      this.player.game.isMobile &&
+      (this.player.contextMenu?.open || Input.touchLongPressFired) &&
+      (this._dragStartItem !== null ||
+        this.dragStartMouseX !== null ||
+        this.dragStartMouseY !== null)
+    ) {
+      // Cancel pending drag candidate when long-press/context menu happens.
+      this._dragStartItem = null;
+      this._dragStartSlot = null;
+      this.dragStartMouseX = null;
+      this.dragStartMouseY = null;
+    }
+  };
+
+  private cancelDragAndRestore = () => {
+    // If we had already removed the item from its original slot, put it back.
+    if (
+      this._isDragging &&
+      this.grabbedItem !== null &&
+      this._dragStartSlot !== null
+    ) {
+      const from = this._dragStartSlot;
+      // Only restore if the slot is still empty (most common case).
+      if (this.items[from] === null) {
+        this.items[from] = this.grabbedItem;
+      }
+    }
+    this._isDragging = false;
+    this.grabbedItem = null;
+    this._dragStartItem = null;
+    this._dragStartSlot = null;
+    this.dragStartMouseX = null;
+    this.dragStartMouseY = null;
   };
 
   moveItemToSlot = (
@@ -1594,16 +1633,20 @@ export class Inventory {
     // Ignore if not left click
     if (button !== 0) return;
 
-    const bounds = this.isPointInInventoryBounds(x, y);
-    if (bounds.inBounds) {
-      const selectedItem = this.itemAtSelectedSlot();
+    // Determine slot under pointer and set selection immediately.
+    const idx = this.isOpen
+      ? this.getInventorySlotIndexAtPoint(x, y)
+      : this.getQuickbarSlotIndexAtPoint(x, y);
+    if (idx !== null) {
+      this.selX = idx % this.cols;
+      this.selY = Math.floor(idx / this.cols);
+      const selectedItem = this.items[idx];
       if (selectedItem !== null) {
         this._dragStartItem = selectedItem;
-        this._dragStartSlot = this.selX + this.selY * this.cols;
+        this._dragStartSlot = idx;
         this.dragStartMouseX = x;
         this.dragStartMouseY = y;
       }
-      Game.ctx.restore();
     }
   };
 
@@ -1650,19 +1693,23 @@ export class Inventory {
   };
 
   handleMouseUp = (x: number, y: number, button: number) => {
+    // Always clear drag-start tracking on release (even if a modal UI is open).
+    // Otherwise long-press context menu can leave a stale drag candidate.
+    this.dragStartMouseX = null;
+    this.dragStartMouseY = null;
+
     if (
       this.player.menu.open ||
       this.player.bestiary?.isOpen ||
       this.player.contextMenu?.open
-    )
+    ) {
+      // If a context menu is open, cancel any drag to avoid losing items.
+      this.cancelDragAndRestore();
       return;
+    }
 
     // Ignore if not left click
     if (button !== 0) return;
-
-    // Reset drag-start tracking on release
-    this.dragStartMouseX = null;
-    this.dragStartMouseY = null;
 
     const invBounds = this.isPointInInventoryBounds(x, y);
     const quickbarBounds = this.isPointInQuickbarBounds(x, y);
