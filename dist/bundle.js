@@ -19670,6 +19670,7 @@ const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const entityExamineText_1 = __webpack_require__(/*! ../examine/entityExamineText */ "./src/examine/entityExamineText.ts");
+const skillBalance_1 = __webpack_require__(/*! ../game/skillBalance */ "./src/game/skillBalance.ts");
 var EntityDirection;
 (function (EntityDirection) {
     EntityDirection[EntityDirection["DOWN"] = 0] = "DOWN";
@@ -20035,6 +20036,13 @@ class Entity extends drawable_1.Drawable {
         this.onHurt = (damage = 1, type = "none") => { };
         this.hurt = (playerHitBy, damage, type = "none") => {
             this.handleEnemyCase(playerHitBy);
+            this.hitBy = playerHitBy ?? null;
+            const weapon = playerHitBy?.inventory?.getWeapon?.() ?? null;
+            if (weapon) {
+                this.lastHitWeapon = weapon;
+                this.lastHitCombatSkill = weapon.combatSkill ?? "melee";
+                this.lastHitKillXpMultiplier = weapon.killXpMultiplier ?? 1;
+            }
             let hitShield = false;
             let shieldHealth = 0;
             if (this.shielded) {
@@ -20068,7 +20076,7 @@ class Entity extends drawable_1.Drawable {
                 this.createHitParticles();
             }
             if (this.health <= 0) {
-                this.kill();
+                this.kill(playerHitBy ?? undefined);
                 this.bloomAlpha = 0;
             }
             else
@@ -20304,6 +20312,8 @@ class Entity extends drawable_1.Drawable {
             this.dead = true;
             if (this.cloned)
                 return;
+            if (player)
+                this.hitBy = player;
             this.emitEnemyKilled();
             this.dropLoot();
             const deadEntity = this.clone();
@@ -20397,17 +20407,23 @@ class Entity extends drawable_1.Drawable {
             return this.softShadeColor;
         };
         this.emitEnemyKilled = () => {
-            let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
-            console.log(depthMultiplier);
-            let multiplier = 1;
-            if (this.isEnemy)
-                multiplier = 5;
-            const xp = Math.ceil(this.defaultMaxHealth * multiplier * depthMultiplier);
             if (!this.isEnemy)
                 return;
+            const baseXp = (0, skillBalance_1.computeEnemyKillBaseXp)({
+                maxHealth: this.defaultMaxHealth,
+                depth: this.room.depth,
+            });
+            const skill = this.lastHitCombatSkill ?? "melee";
+            const xpMultiplier = this.lastHitKillXpMultiplier && this.lastHitKillXpMultiplier > 0
+                ? this.lastHitKillXpMultiplier
+                : 1;
+            const xp = Math.ceil(baseXp * xpMultiplier);
             eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
                 enemyId: this.name,
                 xp: xp,
+                skill,
+                baseXp,
+                xpMultiplier,
             });
             const player = this.getPlayer();
             if (!player)
@@ -20883,6 +20899,9 @@ class Entity extends drawable_1.Drawable {
         this.lastX = x;
         this.lastY = y;
         this.hitBy = null;
+        this.lastHitWeapon = null;
+        this.lastHitCombatSkill = "melee";
+        this.lastHitKillXpMultiplier = 1;
         this.crushX = 1;
         this.crushY = 1;
         this.crushVertical = false;
@@ -22168,6 +22187,7 @@ const fish_1 = __webpack_require__(/*! ../../item/usable/fish */ "./src/item/usa
 const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
 const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
 class FishingSpot extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -22197,9 +22217,12 @@ class FishingSpot extends entity_1.Entity {
                     }
                     message = "You catch a fish.";
                     sound_1.Sound.playFishingCatch();
-                    let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
-                    let xp = Math.ceil((random_1.Random.rand() * 50 + 100) * depthMultiplier);
-                    stats_1.statsTracker.increaseXp(xp);
+                    const depthMultiplier = (0, skillBalance_1.depthXpMultiplier)(this.room.depth);
+                    const base = random_1.Random.rand() *
+                        (skillBalance_1.GATHERING_XP.fishing.baseMax - skillBalance_1.GATHERING_XP.fishing.baseMin) +
+                        skillBalance_1.GATHERING_XP.fishing.baseMin;
+                    const xp = Math.ceil(base * depthMultiplier);
+                    stats_1.statsTracker.awardSkillXp("fishing", xp);
                     if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
                         this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
                     }
@@ -22217,12 +22240,7 @@ class FishingSpot extends entity_1.Entity {
             this.room.tick(player);
         };
         this.tryFish = () => {
-            if (random_1.Random.rand() < 0.3) {
-                return true;
-            }
-            else {
-                return false;
-            }
+            return random_1.Random.rand() < skillBalance_1.GATHERING_XP.fishing.chanceToCatch;
         };
         this.interact = (player) => {
             this.fish(player);
@@ -23203,6 +23221,10 @@ const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
+const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
+const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 class Tree extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -23212,6 +23234,15 @@ class Tree extends entity_1.Entity {
             if (this.cloned)
                 return;
             sound_1.Sound.playWood();
+            // Award woodcutting XP if a player chopped it down (attributed via Entity.hurt -> hitBy).
+            const p = this.hitBy;
+            if (p) {
+                const xp = (0, skillBalance_1.computeWoodcuttingXp)({ depth: this.room.depth });
+                stats_1.statsTracker.awardSkillXp("woodcutting", xp);
+                if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
+                    this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
+                }
+            }
         };
         this.draw = (delta) => {
             const player = this.room.getPlayer();
@@ -23950,6 +23981,10 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
+const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
+const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 class Resource extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
@@ -23980,6 +24015,16 @@ class Resource extends entity_1.Entity {
             this.removeLightSource(this.lightSource);
             if ((player !== null && player.inventory?.canMine()) || player === null) {
                 this.dropLoot();
+                if (player) {
+                    const xp = (0, skillBalance_1.computeMiningXp)({
+                        nodeName: this.name,
+                        depth: this.room.depth,
+                    });
+                    stats_1.statsTracker.awardSkillXp("mining", xp);
+                    if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
+                        this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
+                    }
+                }
                 //this.game.pushMessage("You use your pickaxe to collect the resource.");
             }
             this.uniqueKillBehavior();
@@ -35172,6 +35217,235 @@ exports.loadSettings = loadSettings;
 
 /***/ }),
 
+/***/ "./src/game/skillBalance.ts":
+/*!**********************************!*\
+  !*** ./src/game/skillBalance.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
+exports.ENEMY_XP = {
+    enemyHpMultiplier: 5,
+    depthMultiplierBase: 1.5,
+};
+function computeEnemyKillBaseXp(args) {
+    const depthMultiplier = Math.pow(exports.ENEMY_XP.depthMultiplierBase, args.depth);
+    return Math.ceil(args.maxHealth * exports.ENEMY_XP.enemyHpMultiplier * depthMultiplier);
+}
+exports.computeEnemyKillBaseXp = computeEnemyKillBaseXp;
+exports.GATHERING_XP = {
+    fishing: {
+        baseMin: 100,
+        baseMax: 150,
+        chanceToCatch: 0.3,
+    },
+    miningByNodeName: {
+        rock: 60,
+        coal: 70,
+        iron: 85,
+        gold: 110,
+        obsidian: 95,
+        emerald: 140,
+        garnet: 140,
+        zircon: 140,
+        amber: 140,
+    },
+    woodcutting: {
+        base: 80,
+    },
+    depthMultiplierBase: 1.5,
+};
+function depthXpMultiplier(depth) {
+    return Math.pow(exports.GATHERING_XP.depthMultiplierBase, depth);
+}
+exports.depthXpMultiplier = depthXpMultiplier;
+function computeMiningXp(args) {
+    const base = exports.GATHERING_XP.miningByNodeName[args.nodeName.toLowerCase()] ?? 60;
+    return Math.ceil(base * depthXpMultiplier(args.depth));
+}
+exports.computeMiningXp = computeMiningXp;
+function computeWoodcuttingXp(args) {
+    return Math.ceil(exports.GATHERING_XP.woodcutting.base * depthXpMultiplier(args.depth));
+}
+exports.computeWoodcuttingXp = computeWoodcuttingXp;
+exports.CRAFTING_XP = {
+    smithingPerBar: 90,
+    goldRing: 120,
+    ringGemEmbed: 80,
+    scytheAssemble: 220,
+};
+/**
+ * Keyed by weapon static `itemName` (lowercase).
+ * Keep all tuning here so it’s easy to iterate without hunting through weapon classes.
+ */
+exports.WEAPON_SKILL_RULES = {
+    dagger: {
+        requiredSkill: "melee",
+        requiredLevel: 1,
+        killXpMultiplier: 1,
+        combatSkill: "melee",
+    },
+    sword: {
+        requiredSkill: "melee",
+        requiredLevel: 5,
+        killXpMultiplier: 3,
+        combatSkill: "melee",
+    },
+    scythe: {
+        requiredSkill: "melee",
+        requiredLevel: 10,
+        killXpMultiplier: 6,
+        combatSkill: "melee",
+    },
+    spellbook: {
+        requiredSkill: "magic",
+        requiredLevel: 1,
+        killXpMultiplier: 2,
+        combatSkill: "magic",
+    },
+    slingshot: {
+        requiredSkill: "ranged",
+        requiredLevel: 1,
+        killXpMultiplier: 2,
+        combatSkill: "ranged",
+    },
+    shotgun: {
+        requiredSkill: "ranged",
+        requiredLevel: 1,
+        killXpMultiplier: 2,
+        combatSkill: "ranged",
+    },
+    crossbow: {
+        requiredSkill: "ranged",
+        requiredLevel: 1,
+        killXpMultiplier: 2,
+        combatSkill: "ranged",
+    },
+};
+
+
+/***/ }),
+
+/***/ "./src/game/skills.ts":
+/*!****************************!*\
+  !*** ./src/game/skills.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xpUntilNextLevel = exports.levelForXp = exports.xpForLevel = exports.MAX_SKILL_LEVEL = exports.createEmptySkillsXp = exports.isSkill = exports.SKILL_DISPLAY_NAME = exports.SKILLS = void 0;
+exports.SKILLS = [
+    "melee",
+    "magic",
+    "ranged",
+    "fishing",
+    "mining",
+    "smithing",
+    "crafting",
+    "woodcutting",
+];
+exports.SKILL_DISPLAY_NAME = {
+    melee: "Melee",
+    magic: "Magic",
+    ranged: "Ranged",
+    fishing: "Fishing",
+    mining: "Mining",
+    smithing: "Smithing",
+    crafting: "Crafting",
+    woodcutting: "Woodcutting",
+};
+function isSkill(value) {
+    return (typeof value === "string" && exports.SKILLS.includes(value));
+}
+exports.isSkill = isSkill;
+function createEmptySkillsXp() {
+    return {
+        melee: 0,
+        magic: 0,
+        ranged: 0,
+        fishing: 0,
+        mining: 0,
+        smithing: 0,
+        crafting: 0,
+        woodcutting: 0,
+    };
+}
+exports.createEmptySkillsXp = createEmptySkillsXp;
+exports.MAX_SKILL_LEVEL = 99;
+/**
+ * RuneScape-inspired XP curve.
+ *
+ * - Level 1 requires 0 XP.
+ * - XP thresholds are monotonically increasing.
+ */
+let xpTable = null;
+function ensureXpTable() {
+    if (xpTable)
+        return xpTable;
+    // xpTable[level] => total XP required to reach `level`
+    const t = new Array(exports.MAX_SKILL_LEVEL + 2).fill(0);
+    t[1] = 0;
+    let points = 0;
+    for (let level = 2; level <= exports.MAX_SKILL_LEVEL + 1; level++) {
+        const i = level - 1;
+        points += Math.floor(i + 300 * Math.pow(2, i / 7));
+        t[level] = Math.floor(points / 4);
+    }
+    xpTable = t;
+    return t;
+}
+function xpForLevel(level) {
+    const t = ensureXpTable();
+    const clamped = Math.max(1, Math.min(exports.MAX_SKILL_LEVEL + 1, Math.floor(level)));
+    return t[clamped] ?? 0;
+}
+exports.xpForLevel = xpForLevel;
+function levelForXp(xp) {
+    const t = ensureXpTable();
+    const x = Math.max(0, Math.floor(xp));
+    // Binary search over [1..MAX_SKILL_LEVEL+1]
+    let lo = 1;
+    let hi = exports.MAX_SKILL_LEVEL + 1;
+    while (lo < hi) {
+        const mid = Math.floor((lo + hi + 1) / 2);
+        if (t[mid] <= x)
+            lo = mid;
+        else
+            hi = mid - 1;
+    }
+    // Map "reached threshold for L+1" to displayed level L
+    const displayed = Math.min(exports.MAX_SKILL_LEVEL, Math.max(1, lo));
+    return displayed;
+}
+exports.levelForXp = levelForXp;
+function xpUntilNextLevel(xp) {
+    const level = levelForXp(xp);
+    const currentLevelXp = xpForLevel(level);
+    const nextLevel = Math.min(exports.MAX_SKILL_LEVEL, level + 1);
+    const nextLevelXp = xpForLevel(nextLevel);
+    const x = Math.max(0, Math.floor(xp));
+    const xpIntoLevel = Math.max(0, x - currentLevelXp);
+    const xpThisLevel = Math.max(0, nextLevelXp - currentLevelXp);
+    const xpRemaining = Math.max(0, nextLevelXp - x);
+    return {
+        level,
+        nextLevel,
+        xpIntoLevel,
+        xpThisLevel,
+        xpNextLevel: nextLevelXp,
+        xpRemaining,
+    };
+}
+exports.xpUntilNextLevel = xpUntilNextLevel;
+
+
+/***/ }),
+
 /***/ "./src/game/stats.ts":
 /*!***************************!*\
   !*** ./src/game/stats.ts ***!
@@ -35185,14 +35459,14 @@ exports.statsTracker = exports.StatsTracker = void 0;
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
+const skills_1 = __webpack_require__(/*! ./skills */ "./src/game/skills.ts");
 class StatsTracker {
     constructor() {
         this.stats = StatsTracker.initialStats();
         this.handleEnemyKilled = (payload) => {
             this.stats.enemiesKilled += 1;
             this.stats.enemies.push(payload.enemyId);
-            this.stats.xp += payload.xp;
-            this.stats.level = Math.floor(this.stats.xp / 100) + 1;
+            this.awardSkillXp(payload.skill, payload.xp);
             //console.log(`Enemy killed: ${payload.enemyId}`);
         };
         this.handleDamageDone = (payload) => {
@@ -35230,6 +35504,8 @@ class StatsTracker {
             sidePathsEntered: [],
             xp: 0,
             level: 1,
+            skillsXp: (0, skills_1.createEmptySkillsXp)(),
+            skillsVersion: 1,
         };
     }
     initializeListeners() {
@@ -35246,8 +35522,39 @@ class StatsTracker {
     getXp() {
         return this.stats.xp;
     }
+    /**
+     * Award XP to a specific skill (central entry point).
+     */
+    awardSkillXp(skill, xp) {
+        const amount = Math.max(0, Math.floor(xp));
+        if (amount <= 0)
+            return;
+        // Ensure skillsXp exists (migration safety)
+        if (!this.stats.skillsXp) {
+            this.stats.skillsXp = (0, skills_1.createEmptySkillsXp)();
+            this.stats.skillsVersion = 1;
+        }
+        this.stats.skillsXp[skill] = (this.stats.skillsXp[skill] ?? 0) + amount;
+        this.recomputeTotals();
+    }
+    /**
+     * Back-compat wrapper: award to melee.
+     */
     increaseXp(xp) {
-        this.stats.xp += xp;
+        this.awardSkillXp("melee", xp);
+    }
+    getSkillXp(skill) {
+        return this.stats.skillsXp?.[skill] ?? 0;
+    }
+    getSkillLevel(skill) {
+        return (0, skills_1.levelForXp)(this.getSkillXp(skill));
+    }
+    getAllSkillsXp() {
+        // Return a stable shape for callers.
+        const out = (0, skills_1.createEmptySkillsXp)();
+        for (const s of skills_1.SKILLS)
+            out[s] = this.getSkillXp(s);
+        return out;
     }
     recordWeaponChoice(weaponChoice) {
         this.stats.weaponChoice = weaponChoice;
@@ -35263,7 +35570,33 @@ class StatsTracker {
         //console.log("Stats have been reset.");
     }
     setStats(stats) {
-        this.stats = stats;
+        // Migration: older saves may not have skillsXp/skillsVersion.
+        const incoming = stats;
+        const migrated = {
+            ...StatsTracker.initialStats(),
+            ...incoming,
+            skillsXp: incoming.skillsXp ?? (0, skills_1.createEmptySkillsXp)(),
+            skillsVersion: 1,
+        };
+        // If old save had total XP but no skill breakdown, preserve progress as melee XP.
+        if ((!incoming.skillsXp ||
+            Object.keys(incoming.skillsXp).length ===
+                0) &&
+            typeof incoming.xp === "number" &&
+            incoming.xp > 0) {
+            migrated.skillsXp.melee = Math.max(0, Math.floor(incoming.xp));
+        }
+        this.stats = migrated;
+        this.recomputeTotals();
+    }
+    recomputeTotals() {
+        // Keep total XP + overall level in sync.
+        const skillsXp = this.stats.skillsXp ?? (0, skills_1.createEmptySkillsXp)();
+        let total = 0;
+        for (const s of skills_1.SKILLS)
+            total += skillsXp[s] ?? 0;
+        this.stats.xp = total;
+        this.stats.level = (0, skills_1.levelForXp)(total);
     }
 }
 exports.StatsTracker = StatsTracker;
@@ -35903,6 +36236,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const menu_1 = __webpack_require__(/*! ./menu */ "./src/gui/menu.ts");
+const xpCounter_1 = __webpack_require__(/*! ./xpCounter */ "./src/gui/xpCounter.ts");
 class HoverText {
     static getHoverText(x, y, room, player, drawFor) {
         // Handle undefined mouse coordinates
@@ -35933,6 +36267,10 @@ class HoverText {
             }
             if (menu_1.Menu.isPointInOpenMenuButtonBounds(input_1.Input.mouseX, input_1.Input.mouseY)) {
                 strings.push(player.menu.open ? "Close Menu" : "Open Menu");
+                return strings;
+            }
+            if (xpCounter_1.XPCounter.isPointInBounds(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                strings.push(player.skillsMenu?.open ? "Close Skills" : "Open Skills");
                 return strings;
             }
         }
@@ -37747,6 +38085,286 @@ PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
 
 /***/ }),
 
+/***/ "./src/gui/skillsMenu.ts":
+/*!*******************************!*\
+  !*** ./src/gui/skillsMenu.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SkillsMenu = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const skills_1 = __webpack_require__(/*! ../game/skills */ "./src/game/skills.ts");
+class SkillsMenu {
+    constructor() {
+        this.open = false;
+        this.selectedSkill = "melee";
+        this.detailSide = "right";
+        this.openFade = null;
+        this.overlayCanvas = null;
+        this.overlayCanvasCtx = null;
+    }
+    toggleOpen() {
+        if (this.open) {
+            this.close();
+        }
+        else {
+            this.open = true;
+            // Prefer a stable placement side to avoid jitter from per-frame rounding.
+            this.detailSide = "right";
+            this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
+        }
+    }
+    openAlpha() {
+        if (!this.open)
+            return 0;
+        if (!this.openFade)
+            return 1;
+        const now = Date.now();
+        const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
+        const t = Math.max(0, Math.min(1, tRaw));
+        // Ease-out quadratic.
+        const ease = t * (2 - t);
+        if (this.openFade.kind === "opening") {
+            if (t >= 1)
+                this.openFade = null;
+            return ease;
+        }
+        // closing
+        const a = 1 - ease;
+        if (t >= 1) {
+            this.openFade = null;
+            this.open = false;
+        }
+        return a;
+    }
+    close() {
+        if (!this.open)
+            return;
+        this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
+    }
+    panelRect() {
+        const tile = gameConstants_1.GameConstants.TILESIZE;
+        const w = Math.round(tile * 8);
+        const rowH = Math.round(tile * 0.7);
+        const headerH = Math.round(tile * 0.9);
+        const h = headerH + skills_1.SKILLS.length * rowH + Math.round(tile * 0.6);
+        const x = Math.round(gameConstants_1.GameConstants.WIDTH / 2 - w / 2);
+        const y = Math.round(gameConstants_1.GameConstants.HEIGHT / 2 - h / 2);
+        return { x, y, w, h, rowH, headerH };
+    }
+    isPointInBounds(x, y) {
+        if (!this.open || this.openAlpha() <= 0)
+            return false;
+        const r = this.panelRect();
+        return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+    }
+    handleClick(x, y) {
+        if (!this.open || this.openAlpha() <= 0)
+            return false;
+        const r = this.panelRect();
+        // Click outside closes (modal-ish)
+        if (!(x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h)) {
+            this.close();
+            return true;
+        }
+        // Row selection
+        const startY = r.y + r.headerH;
+        for (let i = 0; i < skills_1.SKILLS.length; i++) {
+            const ry = startY + i * r.rowH;
+            if (y >= ry && y <= ry + r.rowH) {
+                this.selectedSkill = skills_1.SKILLS[i];
+                return true;
+            }
+        }
+        return true;
+    }
+    ensureOverlayCanvasCtx() {
+        if (typeof document === "undefined")
+            return null;
+        if (!this.overlayCanvas) {
+            this.overlayCanvas = document.createElement("canvas");
+            this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+        }
+        if (!this.overlayCanvas || !this.overlayCanvasCtx)
+            return null;
+        if (this.overlayCanvas.width !== gameConstants_1.GameConstants.WIDTH ||
+            this.overlayCanvas.height !== gameConstants_1.GameConstants.HEIGHT) {
+            this.overlayCanvas.width = gameConstants_1.GameConstants.WIDTH;
+            this.overlayCanvas.height = gameConstants_1.GameConstants.HEIGHT;
+        }
+        return this.overlayCanvasCtx;
+    }
+    computeDetailRect(panel) {
+        const pad = 10;
+        const desiredW = Math.round(gameConstants_1.GameConstants.TILESIZE * 6.5);
+        const h = Math.round(gameConstants_1.GameConstants.TILESIZE * 3);
+        const rightX = panel.x + panel.w + pad;
+        const rightSpace = gameConstants_1.GameConstants.WIDTH - pad - rightX;
+        const leftSpace = panel.x - 2 * pad;
+        // Choose a deterministic side first (to avoid left/right flipping due to 1px ties),
+        // then fall back only if that side truly can't fit a minimum usable width.
+        const MIN_W = 120;
+        const canFitRight = rightSpace >= MIN_W;
+        const canFitLeft = leftSpace >= MIN_W;
+        let side = this.detailSide;
+        if (side === "right" && !canFitRight && canFitLeft)
+            side = "left";
+        if (side === "left" && !canFitLeft && canFitRight)
+            side = "right";
+        // If neither side can fit MIN_W, keep preferred side but clamp aggressively below.
+        const sideSpace = side === "right" ? rightSpace : leftSpace;
+        const w = Math.max(60, Math.min(desiredW, Math.max(0, sideSpace)));
+        let x = side === "right" ? rightX : panel.x - w - pad;
+        x = Math.max(pad, Math.min(gameConstants_1.GameConstants.WIDTH - w - pad, x));
+        // Clamp vertically too (in case panel is near top/bottom).
+        let y = panel.y;
+        y = Math.max(pad, Math.min(gameConstants_1.GameConstants.HEIGHT - h - pad, y));
+        return { x, y, w, h };
+    }
+    textWrap(text, x, y, maxWidth) {
+        // Mirrors Inventory.textWrap: returns y for next line.
+        if (text === "" || maxWidth <= 0)
+            return y;
+        const lineHeight = 8;
+        const words = text.split(" ");
+        let line = "";
+        const drawLine = (lineToDraw) => {
+            const trimmed = lineToDraw.trim();
+            if (trimmed === "")
+                return;
+            game_1.Game.fillText(trimmed, x, y);
+            y += lineHeight;
+        };
+        const findFittingPrefixLength = (s) => {
+            if (s.length === 0)
+                return 0;
+            if (game_1.Game.measureText(s[0]).width > maxWidth)
+                return 0;
+            let lo = 1;
+            let hi = s.length;
+            while (lo < hi) {
+                const mid = Math.floor((lo + hi + 1) / 2);
+                if (game_1.Game.measureText(s.slice(0, mid)).width <= maxWidth)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+            return lo;
+        };
+        while (words.length > 0) {
+            const word = words[0];
+            const testLine = line === "" ? word : line + " " + word;
+            if (game_1.Game.measureText(testLine).width <= maxWidth) {
+                line = testLine;
+                words.shift();
+                continue;
+            }
+            if (line !== "") {
+                drawLine(line);
+                line = "";
+                continue;
+            }
+            // Single word doesn't fit; split into chunks.
+            let remaining = word;
+            while (remaining.length > 0) {
+                const prefixLen = findFittingPrefixLength(remaining);
+                if (prefixLen <= 0)
+                    break;
+                drawLine(remaining.slice(0, prefixLen));
+                remaining = remaining.slice(prefixLen);
+            }
+            words.shift();
+        }
+        if (line.trim() !== "")
+            drawLine(line);
+        return y;
+    }
+    draw(delta) {
+        const overlayAlpha = this.openAlpha();
+        if (overlayAlpha <= 0)
+            return;
+        const r = this.panelRect();
+        const offCtx = this.ensureOverlayCanvasCtx();
+        if (!offCtx || !this.overlayCanvas)
+            return;
+        offCtx.save();
+        offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+        offCtx.imageSmoothingEnabled = false;
+        const prevCtx = game_1.Game.ctx;
+        game_1.Game.ctx = offCtx;
+        game_1.Game.ctx.save();
+        // Backdrop
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        // Panel
+        game_1.Game.ctx.fillStyle = "rgba(50, 50, 50, 0.9)";
+        game_1.Game.ctx.fillRect(r.x, r.y, r.w, r.h);
+        game_1.Game.ctx.strokeStyle = "rgba(255, 255, 255, 1)";
+        game_1.Game.ctx.lineWidth = 1;
+        game_1.Game.ctx.strokeRect(r.x, r.y, r.w, r.h);
+        // Header
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        game_1.Game.fillText("Skills", r.x + 10, r.y + 8);
+        // Rows
+        const mx = input_1.Input.mouseX ?? -1;
+        const my = input_1.Input.mouseY ?? -1;
+        let hovered = null;
+        const startY = r.y + r.headerH;
+        for (let i = 0; i < skills_1.SKILLS.length; i++) {
+            const skill = skills_1.SKILLS[i];
+            const ry = startY + i * r.rowH;
+            const isHovered = mx >= r.x && mx <= r.x + r.w && my >= ry && my <= ry + r.rowH;
+            if (isHovered)
+                hovered = skill;
+            const isSelected = this.selectedSkill === skill;
+            if (isHovered || isSelected) {
+                game_1.Game.ctx.fillStyle = "rgba(100, 100, 100, 0.7)";
+                game_1.Game.ctx.fillRect(r.x + 1, ry, r.w - 2, r.rowH);
+            }
+            const lvl = stats_1.statsTracker.getSkillLevel(skill);
+            game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+            game_1.Game.fillText(`${skills_1.SKILL_DISPLAY_NAME[skill]}: ${lvl}`, r.x + 10, ry + 4);
+        }
+        // Details panel (hover > selected)
+        const detailSkill = hovered ?? this.selectedSkill;
+        const xp = stats_1.statsTracker.getSkillXp(detailSkill);
+        const info = (0, skills_1.xpUntilNextLevel)(xp);
+        const detail = this.computeDetailRect(r);
+        game_1.Game.ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+        game_1.Game.ctx.fillRect(detail.x, detail.y, detail.w, detail.h);
+        game_1.Game.ctx.strokeStyle = "rgba(255, 255, 255, 1)";
+        game_1.Game.ctx.strokeRect(detail.x, detail.y, detail.w, detail.h);
+        game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        const leftPadding = 8;
+        const topPadding = 6;
+        const gutter = 8;
+        const maxWidth = Math.max(0, detail.w - leftPadding * 2 - gutter);
+        let nextY = detail.y + topPadding;
+        nextY = this.textWrap(skills_1.SKILL_DISPLAY_NAME[detailSkill], detail.x + leftPadding, nextY, maxWidth);
+        nextY = this.textWrap(`XP: ${xp}`, detail.x + leftPadding, nextY, maxWidth);
+        nextY = this.textWrap(`Next level in: ${info.xpRemaining}`, detail.x + leftPadding, nextY, maxWidth);
+        // Finish offscreen render and restore contexts.
+        game_1.Game.ctx.restore();
+        game_1.Game.ctx = prevCtx;
+        offCtx.restore();
+        // Composite overlay with fade alpha.
+        prevCtx.save();
+        prevCtx.globalAlpha = overlayAlpha;
+        prevCtx.drawImage(this.overlayCanvas, 0, 0);
+        prevCtx.restore();
+    }
+}
+exports.SkillsMenu = SkillsMenu;
+
+
+/***/ }),
+
 /***/ "./src/gui/waterOverlay.ts":
 /*!*********************************!*\
   !*** ./src/gui/waterOverlay.ts ***!
@@ -38701,19 +39319,31 @@ WebGLWaterOverlayRenderer.supportCache = null;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XPCounter = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const menu_1 = __webpack_require__(/*! ./menu */ "./src/gui/menu.ts");
 class XPCounter {
-    constructor() {
-        this.xp = 0;
-        this.level = 1;
+    static getRect() {
+        const tile = gameConstants_1.GameConstants.TILESIZE;
+        const menu = menu_1.Menu.getOpenMenuButtonRect();
+        const x = menu.x;
+        // Align text with the Menu label above; use text-line spacing instead of tile spacing.
+        const y = 10 + (game_1.Game.letter_height + 6) - 2;
+        const w = menu.w;
+        const h = game_1.Game.letter_height + 8;
+        return { x, y, w, h };
+    }
+    static isPointInBounds(x, y) {
+        const r = XPCounter.getRect();
+        return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
     }
     static draw(delta) {
-        const xp = stats_1.statsTracker.getXp();
-        // draw the xp counter
+        // draw the skills button (formerly XP counter)
+        const r = XPCounter.getRect();
         game_1.Game.ctx.save();
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        // Match Menu button opacity and style (text-only, no background).
         game_1.Game.ctx.globalAlpha = 0.1;
-        game_1.Game.fillText(`XP: ${xp}`, 1, 20);
+        game_1.Game.fillText("Skills", 10, r.y + 2);
         game_1.Game.ctx.restore();
     }
 }
@@ -39096,12 +39726,15 @@ class Inventory {
         this.drawDraggedItem = (delta) => {
             if (this.grabbedItem === null)
                 return;
+            // Draw above everything else; isolate canvas state.
+            game_1.Game.ctx.save();
             const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
             const drawX = Math.round(x - 0.5 * gameConstants_1.GameConstants.TILESIZE);
             const drawY = Math.round(y - 0.5 * gameConstants_1.GameConstants.TILESIZE);
             const drawXScaled = drawX / gameConstants_1.GameConstants.TILESIZE;
             const drawYScaled = drawY / gameConstants_1.GameConstants.TILESIZE;
             this.grabbedItem.drawIcon(delta, drawXScaled, drawYScaled);
+            game_1.Game.ctx.restore();
         };
         this.drop = () => {
             if (!this.isOpen)
@@ -39789,7 +40422,6 @@ class Inventory {
                 }
                 // Overlay-only highlights + dragged item.
                 this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
-                this.drawDraggedItem(delta);
                 // Finish offscreen render and composite to the main canvas with a single alpha.
                 game_1.Game.ctx.restore();
                 game_1.Game.ctx = prevCtx;
@@ -39799,6 +40431,9 @@ class Inventory {
                 prevCtx.drawImage(this.overlayCanvas, 0, 0);
                 prevCtx.restore();
             }
+            // Always draw dragged item last, regardless of whether the full inventory overlay is open.
+            // (Dragging can happen in quickbar-only mode too.)
+            this.drawDraggedItem(delta);
         };
         this.isPointInInventoryBounds = (x, y) => {
             const s = 18;
@@ -43743,6 +44378,8 @@ const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.t
 const arrowParticle_1 = __webpack_require__(/*! ../../particle/arrowParticle */ "./src/particle/arrowParticle.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ./crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const skills_1 = __webpack_require__(/*! ../../game/skills */ "./src/game/skills.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
 var CrossbowState;
 (function (CrossbowState) {
     CrossbowState[CrossbowState["EMPTY"] = 0] = "EMPTY";
@@ -43754,6 +44391,14 @@ class Crossbow extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.toggleEquip = () => {
+            // Skill requirement gate (crossbow has a custom state-machine equip flow).
+            if (this.wielder && this.requiredSkill) {
+                const lvl = stats_1.statsTracker.getSkillLevel(this.requiredSkill);
+                if (lvl < this.requiredLevel) {
+                    this.level.game.pushMessage(`Requires ${skills_1.SKILL_DISPLAY_NAME[this.requiredSkill]} level ${this.requiredLevel}.`);
+                    return;
+                }
+            }
             if (!this.broken &&
                 this.cooldown <= 0 &&
                 this.state === CrossbowState.COCKED) {
@@ -45362,9 +46007,47 @@ const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const pushChain_1 = __webpack_require__(/*! ../../utility/pushChain */ "./src/utility/pushChain.ts");
+const skills_1 = __webpack_require__(/*! ../../game/skills */ "./src/game/skills.ts");
+const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
+        this.toggleEquip = () => {
+            // Respect base Equippable gating (broken/cooldown) but add skill requirements for weapons.
+            const reqSkill = this.requiredSkill;
+            if (reqSkill && this.wielder) {
+                const level = stats_1.statsTracker.getSkillLevel(reqSkill);
+                if (level < this.requiredLevel) {
+                    this.level.game.pushMessage(`Requires ${skills_1.SKILL_DISPLAY_NAME[reqSkill]} level ${this.requiredLevel}.`);
+                    return;
+                }
+            }
+            // NOTE: Equippable.toggleEquip is an instance field (arrow function), not a prototype method,
+            // so `super.toggleEquip()` is not valid here.
+            if (!this.broken && this.cooldown <= 0) {
+                if (!this.equipped && this.wielder?.inventory?.weapon) {
+                    this.previousWeapon = this.wielder.inventory.weapon;
+                }
+                this.equipped = !this.equipped;
+                if (this.equipped)
+                    this.onEquip();
+                else
+                    this.onUnequip();
+            }
+            else if (this.broken) {
+                this.equipped = false;
+                const pronoun = this.name.endsWith("s") ? "them" : "it";
+                this.level.game.pushMessage("You'll have to fix your " +
+                    this.name +
+                    " before you can use " +
+                    pronoun +
+                    ".");
+            }
+            else if (this.cooldown > 0) {
+                this.level.game.pushMessage("Cooldown: " + this.cooldown);
+            }
+        };
         this.hoverText = () => {
             //return "Equip " + this.name;
             return this.name;
@@ -45627,6 +46310,30 @@ class Weapon extends equippable_1.Equippable {
         this.twoHanded = false;
         this.knockbackDistance = 0;
         this._swingHitIds = null;
+        // Defaults (can be overridden by rules)
+        this.combatSkill = "melee";
+        this.requiredSkill = null;
+        this.requiredLevel = 1;
+        this.killXpMultiplier = 1;
+        this.applySkillRule();
+    }
+    getWeaponRuleKey() {
+        const ctor = this.constructor;
+        if (typeof ctor.itemName === "string")
+            return ctor.itemName.toLowerCase();
+        if (typeof this.name === "string" && this.name.trim().length > 0)
+            return this.name.toLowerCase();
+        return "";
+    }
+    applySkillRule() {
+        const key = this.getWeaponRuleKey();
+        const rule = skillBalance_1.WEAPON_SKILL_RULES[key];
+        if (!rule)
+            return;
+        this.combatSkill = rule.combatSkill;
+        this.requiredSkill = rule.requiredSkill;
+        this.requiredLevel = rule.requiredLevel;
+        this.killXpMultiplier = rule.killXpMultiplier;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
@@ -51786,6 +52493,8 @@ const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const oxygenLine_1 = __webpack_require__(/*! ./oxygenLine */ "./src/player/oxygenLine.ts");
+const skillsMenu_1 = __webpack_require__(/*! ../gui/skillsMenu */ "./src/gui/skillsMenu.ts");
+const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -52166,6 +52875,12 @@ class Player extends drawable_1.Drawable {
             cursor.setIcon(cursorState);
         };
         this.getCursorState = (mousePos, mouseTile) => {
+            // Skills menu is modal: while open, cursor state is determined ONLY by skills UI.
+            if (this.skillsMenu?.open) {
+                const { x, y } = mousePos;
+                const inSkillsPanel = this.skillsMenu.isPointInBounds(x, y);
+                return inSkillsPanel ? "hand" : "arrow";
+            }
             // If the menu is open, it visually owns the cursor: don't let world interactions behind
             // the menu influence the cursor icon.
             if (this.menu?.open) {
@@ -52229,6 +52944,7 @@ class Player extends drawable_1.Drawable {
             const { x, y } = mousePos;
             return (this.inventory.isPointInInventoryButton(x, y) ||
                 menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
+                xpCounter_1.XPCounter.isPointInBounds(x, y) ||
                 (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
                 this.isInventoryItemInteraction(x, y));
         };
@@ -52982,6 +53698,7 @@ class Player extends drawable_1.Drawable {
         this.isLocalPlayer = isLocalPlayer;
         this.depth = 0;
         this.menu = new menu_1.Menu(this);
+        this.skillsMenu = new skillsMenu_1.SkillsMenu();
         this.busyAnimating = false;
         this.mapToggled = true;
         this.health = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
@@ -53151,6 +53868,7 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
+const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.mouseHoldInitialDirection = null;
@@ -53256,6 +53974,7 @@ class PlayerInputHandler {
         input_1.Input.touchStartListeners.push((x, y) => {
             const inventory = this.player.inventory;
             const bestiary = this.player.bestiary;
+            const skillsMenu = this.player.skillsMenu;
             // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
             if (bestiary && bestiary.handleTouchStart(x, y))
                 return true;
@@ -53264,6 +53983,8 @@ class PlayerInputHandler {
                 (inventory.isOpen &&
                     inventory.isPointInInventoryBounds(x, y).inBounds) ||
                 menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
+                xpCounter_1.XPCounter.isPointInBounds(x, y) ||
+                (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
                 (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
                 (bestiary ? bestiary.isPointInBookBounds(x, y) : false));
         });
@@ -53330,6 +54051,11 @@ class PlayerInputHandler {
                 case input_1.InputEnum.RIGHT:
                     this.player.bestiary.handleInput("right");
                     return;
+                case input_1.InputEnum.RIGHT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.handleMouseRightClickAt(x, y);
+                    return;
+                }
                 case input_1.InputEnum.LEFT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                     this.player.bestiary.handleMouseDown(x, y);
@@ -53359,7 +54085,37 @@ class PlayerInputHandler {
                     return;
             }
         }
+        // Skills menu is modal while open.
+        if (this.player.skillsMenu?.open) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.skillsMenu.close();
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.skillsMenu.handleClick(x, y);
+                    return;
+                }
+                case input_1.InputEnum.RIGHT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.handleMouseRightClickAt(x, y);
+                    return;
+                }
+                case input_1.InputEnum.MOUSE_MOVE:
+                    // Do not update facing/tile cursor/world hover while skills UI is open.
+                    this.setMostRecentInput("mouse");
+                    return;
+                default:
+                    return;
+            }
+        }
         if (this.player.menu.open) {
+            // Allow context menu on right-click even while the menu is open (options are overlay-scoped).
+            if (input === input_1.InputEnum.RIGHT_CLICK) {
+                const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                this.handleMouseRightClickAt(x, y);
+                return;
+            }
             this.player.menu.inputHandler(input);
             return;
         }
@@ -53535,13 +54291,20 @@ class PlayerInputHandler {
                 this.player.game.decreaseScale();
                 break;
             case input_1.InputEnum.ESCAPE:
-                this.player.inventory.close();
+                if (this.player.skillsMenu?.open) {
+                    this.player.skillsMenu.close();
+                }
+                else {
+                    this.player.inventory.close();
+                }
                 break;
         }
     }
     handleMouseWheel(deltaY) {
         // Only handle while in-game
         if (this.player.game.levelState !== game_1.LevelState.IN_LEVEL)
+            return;
+        if (this.player.skillsMenu?.open)
             return;
         const inv = this.player.inventory;
         // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -53563,6 +54326,31 @@ class PlayerInputHandler {
         const menu = player.contextMenu;
         if (!menu)
             return;
+        // If the context menu is already open, route right-click to it (modal behavior).
+        if (menu.open) {
+            menu.handleMouseDown(x, y, 2);
+            return;
+        }
+        // If an overlay UI is open, do not populate context menu from the background/world.
+        // For now:
+        // - Menu / Skills / Bestiary => Cancel only
+        // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
+        if (player.menu?.open ||
+            player.skillsMenu?.open ||
+            player.bestiary?.isOpen) {
+            menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
+            return;
+        }
+        if (player.inventory?.isOpen) {
+            const inv = player.inventory;
+            const inInvButton = inv.isPointInInventoryButton(x, y);
+            const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+            const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+            if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+                menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
+                return;
+            }
+        }
         // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
         player.frozenMouseAngleRad = this.mouseAngle();
         const items = [];
@@ -53900,6 +54688,7 @@ class PlayerInputHandler {
         if (button !== 0)
             return; // Only handle left mouse button
         const player = this.player;
+        const skillsMenu = player.skillsMenu;
         // Context menu consumes clicks while open (click outside closes).
         if (player.contextMenu?.open) {
             player.contextMenu.handleMouseDown(x, y, 0);
@@ -53965,6 +54754,11 @@ class PlayerInputHandler {
             input_1.Input.mouseDownHandled = true;
             return;
         }
+        if (skillsMenu?.open) {
+            skillsMenu.handleClick(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // Handle game not started
         if (!player.game.started) {
             if (player.game.startMenuActive) {
@@ -53991,6 +54785,12 @@ class PlayerInputHandler {
         // Bestiary button toggle should not affect inventory open/close state.
         if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
             bestiary.toggleOpen();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        // Skills button toggle should not affect inventory open/close state.
+        if (xpCounter_1.XPCounter.isPointInBounds(x, y)) {
+            skillsMenu?.toggleOpen();
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -54031,7 +54831,9 @@ class PlayerInputHandler {
             inventory.isPointInInventoryButton(x, y) ||
             inventory.isPointInQuickbarBounds(x, y).inBounds ||
             inventory.isOpen ||
-            this.isPointInMenuButtonBounds(x, y);
+            this.isPointInMenuButtonBounds(x, y) ||
+            xpCounter_1.XPCounter.isPointInBounds(x, y) ||
+            (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false);
         if (!isUIInteraction) {
             // Handle movement
             if (!player.busyAnimating && !player.game.cameraAnimation.active) {
@@ -54072,11 +54874,21 @@ class PlayerInputHandler {
             player.bestiary.handleMouseDown(x, y);
             return;
         }
+        // Skills menu is modal-ish while open.
+        if (player.skillsMenu?.open) {
+            player.skillsMenu.handleClick(x, y);
+            return;
+        }
         const inventory = player.inventory;
         const bestiary = player.bestiary;
         // If the menu is open, it consumes clicks and should not affect inventory open/close state.
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(x, y);
+            return;
+        }
+        // Skills button toggle should not affect inventory open/close state.
+        if (xpCounter_1.XPCounter.isPointInBounds(x, y)) {
+            player.skillsMenu?.toggleOpen();
             return;
         }
         // Bestiary button toggle should not affect inventory open/close state.
@@ -54149,6 +54961,10 @@ class PlayerInputHandler {
             this.player.menu.mouseInputHandler(input_1.Input.mouseX, input_1.Input.mouseY);
             return;
         }
+        if (this.player.skillsMenu?.open) {
+            this.player.skillsMenu.handleClick(input_1.Input.mouseX, input_1.Input.mouseY);
+            return;
+        }
         const x = input_1.Input.mouseX;
         const y = input_1.Input.mouseY;
         const bestiary = this.player.bestiary;
@@ -54177,6 +54993,10 @@ class PlayerInputHandler {
         }
         if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
             bestiary.toggleOpen();
+            return;
+        }
+        if (xpCounter_1.XPCounter.isPointInBounds(x, y)) {
+            this.player.skillsMenu?.toggleOpen();
             return;
         }
         // Check if tap is on menu button
@@ -54521,6 +55341,11 @@ const deviceDetector_1 = __webpack_require__(/*! ../utility/deviceDetector */ ".
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 class PlayerRenderer {
     constructor(player) {
+        // When any overlay UI is open, freeze the player's visual facing (cardinal/diagonal pose)
+        // so it doesn't jitter due to mouse movement behind menus.
+        this.uiPoseFrozen = false;
+        this.frozenPoseDirection = game_1.Direction.DOWN;
+        this.frozenPoseAngleRad = null;
         this.divingHelmetTileX = 0;
         this.divingHelmetTileY = 12;
         this.hurt = () => {
@@ -54614,26 +55439,53 @@ class PlayerRenderer {
          */
         this.drawPlayerSprite = (delta) => {
             const player = this.player;
+            const anyOverlayOpen = Boolean(player.menu?.open) ||
+                Boolean(player.skillsMenu?.open) ||
+                Boolean(player.bestiary?.isOpen) ||
+                Boolean(player.inventory?.isOpen) ||
+                Boolean(player.contextMenu?.open);
+            // Snapshot pose once when an overlay opens; release when all overlays close.
+            if (anyOverlayOpen && !this.uiPoseFrozen) {
+                this.uiPoseFrozen = true;
+                this.frozenPoseDirection = player.direction;
+                this.frozenPoseAngleRad =
+                    !gameConstants_1.GameConstants.isMobile && player.inputHandler?.mostRecentMoveInput === "mouse"
+                        ? player.inputHandler.mouseAngle()
+                        : null;
+                // Context menu already snapshots mouse angle; prefer it if it exists.
+                if (player.contextMenu?.open &&
+                    typeof player.frozenMouseAngleRad === "number") {
+                    this.frozenPoseAngleRad = player.frozenMouseAngleRad;
+                }
+            }
+            else if (!anyOverlayOpen && this.uiPoseFrozen) {
+                this.uiPoseFrozen = false;
+                this.frozenPoseAngleRad = null;
+            }
             const divingHelmet = player.inventory.divingHelmetEquipped();
             const tileX = divingHelmet
                 ? this.divingHelmetTileX
                 : 1 + Math.floor(this.frame);
+            const renderDirection = this.uiPoseFrozen
+                ? this.frozenPoseDirection
+                : player.direction;
             const tileY = divingHelmet
-                ? this.divingHelmetTileY + player.direction * 2
-                : 8 + player.direction * 2;
+                ? this.divingHelmetTileY + renderDirection * 2
+                : 8 + renderDirection * 2;
             game_1.Game.ctx.save(); // Save the current canvas state
             const divingHelmetOffsetY = divingHelmet ? 2 : 0;
             if (this.drawSmear()) {
                 game_1.Game.drawMob(this.setSmearFrame().x, this.setSmearFrame().y, 1, 2, player.x - this.drawX - this.hitX, player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ, 1, 2, this.shadeColor(), undefined, undefined, this.outlineColor(), this.outlineOpacity());
             }
             else if (!gameConstants_1.GameConstants.isMobile) {
-                // While the context menu is open, freeze the diagonal mouse-angle pose at the moment it opened.
-                const angleRad = player.contextMenu?.open &&
-                    typeof player.frozenMouseAngleRad === "number"
-                    ? player.frozenMouseAngleRad
-                    : player.inputHandler.mostRecentMoveInput === "mouse"
-                        ? player.inputHandler.mouseAngle()
-                        : null;
+                // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
+                const angleRad = this.uiPoseFrozen
+                    ? this.frozenPoseAngleRad
+                    : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
+                        ? player.frozenMouseAngleRad
+                        : player.inputHandler.mostRecentMoveInput === "mouse"
+                            ? player.inputHandler.mouseAngle()
+                            : null;
                 const angleDeg = angleRad === null ? null : (angleRad * 180) / Math.PI;
                 const isDiagonal = angleDeg !== null &&
                     ((angleDeg > 30 && angleDeg < 60) ||
@@ -54996,9 +55848,9 @@ class PlayerRenderer {
                 if (armor)
                     armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 if (!transitioning) {
-                    this.player.inventory.draw(delta);
-                    // Inventory-style bestiary button (bottom-left), drawn alongside other UI.
+                    // Draw the bestiary button first so the inventory can draw over it (requested layering).
                     this.player.bestiary?.drawBestiaryButton(delta);
+                    this.player.inventory.draw(delta);
                 }
                 const inventoryOpen = this.player.inventory.isOpen;
                 const quickbarOpen = this.player.inventory.isPointInQuickbarBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds && !this.player.inventory.isOpen;
@@ -55033,8 +55885,6 @@ class PlayerRenderer {
                 // Draw bestiary last so it renders above inventory/quickbar.
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
-                // Context menu should draw above all other UI (inventory/bestiary).
-                this.player.contextMenu?.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -55195,8 +56045,15 @@ class PlayerRenderer {
             this.drawTileCursor(delta);
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
+            // Overlay ordering (top-most last):
+            // - Bestiary is drawn above inventory earlier in the frame.
+            // - Skills menu should appear above bestiary/inventory.
+            // - Menu should appear above skills (and everything else).
+            // - Context menu should appear above EVERYTHING (including Menu/Skills) so right-click is never hidden.
+            this.player.skillsMenu?.draw(delta);
             if (this.player.menu.open)
                 this.player.menu.draw(delta);
+            this.player.contextMenu?.draw(delta);
             game_1.Game.ctx.restore();
         };
         this.drawBreathStatus = (quickbarStartX) => {
@@ -55288,6 +56145,8 @@ class PlayerRenderer {
          */
         this.drawTileCursor = (delta) => {
             if (this.player.inventory.isOpen ||
+                this.player.menu?.open ||
+                this.player.skillsMenu?.open ||
                 this.player.contextMenu?.open ||
                 this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
                 gameConstants_1.GameConstants.isMobile)

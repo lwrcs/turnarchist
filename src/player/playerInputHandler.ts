@@ -10,6 +10,7 @@ import { Menu } from "../gui/menu";
 import { Equippable } from "../item/equippable";
 import { Usable } from "../item/usable/usable";
 import { Weapon } from "../item/weapon/weapon";
+import { XPCounter } from "../gui/xpCounter";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -57,6 +58,7 @@ export class PlayerInputHandler {
     Input.touchStartListeners.push((x: number, y: number) => {
       const inventory = this.player.inventory;
       const bestiary = this.player.bestiary;
+      const skillsMenu = this.player.skillsMenu;
       // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
       if (bestiary && bestiary.handleTouchStart(x, y)) return true;
       return (
@@ -65,6 +67,8 @@ export class PlayerInputHandler {
         (inventory.isOpen &&
           inventory.isPointInInventoryBounds(x, y).inBounds) ||
         Menu.isPointInOpenMenuButtonBounds(x, y) ||
+        XPCounter.isPointInBounds(x, y) ||
+        (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
         (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
         (bestiary ? bestiary.isPointInBookBounds(x, y) : false)
       );
@@ -142,6 +146,11 @@ export class PlayerInputHandler {
         case InputEnum.RIGHT:
           this.player.bestiary.handleInput("right");
           return;
+        case InputEnum.RIGHT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.handleMouseRightClickAt(x, y);
+          return;
+        }
         case InputEnum.LEFT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
           this.player.bestiary.handleMouseDown(x, y);
@@ -173,7 +182,38 @@ export class PlayerInputHandler {
       }
     }
 
+    // Skills menu is modal while open.
+    if (this.player.skillsMenu?.open) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.skillsMenu.close();
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.skillsMenu.handleClick(x, y);
+          return;
+        }
+        case InputEnum.RIGHT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.handleMouseRightClickAt(x, y);
+          return;
+        }
+        case InputEnum.MOUSE_MOVE:
+          // Do not update facing/tile cursor/world hover while skills UI is open.
+          this.setMostRecentInput("mouse");
+          return;
+        default:
+          return;
+      }
+    }
+
     if (this.player.menu.open) {
+      // Allow context menu on right-click even while the menu is open (options are overlay-scoped).
+      if (input === InputEnum.RIGHT_CLICK) {
+        const { x, y } = MouseCursor.getInstance().getPosition();
+        this.handleMouseRightClickAt(x, y);
+        return;
+      }
       this.player.menu.inputHandler(input);
       return;
     }
@@ -372,7 +412,11 @@ export class PlayerInputHandler {
         this.player.game.decreaseScale();
         break;
       case InputEnum.ESCAPE:
-        this.player.inventory.close();
+        if (this.player.skillsMenu?.open) {
+          this.player.skillsMenu.close();
+        } else {
+          this.player.inventory.close();
+        }
         break;
     }
   }
@@ -380,6 +424,7 @@ export class PlayerInputHandler {
   private handleMouseWheel(deltaY: number) {
     // Only handle while in-game
     if (this.player.game.levelState !== LevelState.IN_LEVEL) return;
+    if (this.player.skillsMenu?.open) return;
     const inv = this.player.inventory;
 
     // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -424,6 +469,36 @@ export class PlayerInputHandler {
     const player = this.player;
     const menu = player.contextMenu;
     if (!menu) return;
+
+    // If the context menu is already open, route right-click to it (modal behavior).
+    if (menu.open) {
+      menu.handleMouseDown(x, y, 2);
+      return;
+    }
+
+    // If an overlay UI is open, do not populate context menu from the background/world.
+    // For now:
+    // - Menu / Skills / Bestiary => Cancel only
+    // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
+    if (
+      player.menu?.open ||
+      player.skillsMenu?.open ||
+      player.bestiary?.isOpen
+    ) {
+      menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
+      return;
+    }
+
+    if (player.inventory?.isOpen) {
+      const inv = player.inventory;
+      const inInvButton = inv.isPointInInventoryButton(x, y);
+      const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+      const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+      if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+        menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
+        return;
+      }
+    }
 
     // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
     player.frozenMouseAngleRad = this.mouseAngle();
@@ -790,6 +865,7 @@ export class PlayerInputHandler {
     if (button !== 0) return; // Only handle left mouse button
 
     const player = this.player;
+    const skillsMenu = player.skillsMenu;
 
     // Context menu consumes clicks while open (click outside closes).
     if (player.contextMenu?.open) {
@@ -868,6 +944,12 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (skillsMenu?.open) {
+      skillsMenu.handleClick(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     // Handle game not started
     if (!player.game.started) {
       if ((player.game as any).startMenuActive) {
@@ -897,6 +979,13 @@ export class PlayerInputHandler {
     // Bestiary button toggle should not affect inventory open/close state.
     if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
       bestiary.toggleOpen();
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    // Skills button toggle should not affect inventory open/close state.
+    if (XPCounter.isPointInBounds(x, y)) {
+      skillsMenu?.toggleOpen();
       Input.mouseDownHandled = true;
       return;
     }
@@ -950,7 +1039,9 @@ export class PlayerInputHandler {
       inventory.isPointInInventoryButton(x, y) ||
       inventory.isPointInQuickbarBounds(x, y).inBounds ||
       inventory.isOpen ||
-      this.isPointInMenuButtonBounds(x, y);
+      this.isPointInMenuButtonBounds(x, y) ||
+      XPCounter.isPointInBounds(x, y) ||
+      (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false);
 
     if (!isUIInteraction) {
       // Handle movement
@@ -999,12 +1090,24 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Skills menu is modal-ish while open.
+    if (player.skillsMenu?.open) {
+      player.skillsMenu.handleClick(x, y);
+      return;
+    }
+
     const inventory = player.inventory;
     const bestiary = player.bestiary;
 
     // If the menu is open, it consumes clicks and should not affect inventory open/close state.
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(x, y);
+      return;
+    }
+
+    // Skills button toggle should not affect inventory open/close state.
+    if (XPCounter.isPointInBounds(x, y)) {
+      player.skillsMenu?.toggleOpen();
       return;
     }
 
@@ -1109,6 +1212,11 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (this.player.skillsMenu?.open) {
+      this.player.skillsMenu.handleClick(Input.mouseX, Input.mouseY);
+      return;
+    }
+
     const x = Input.mouseX;
     const y = Input.mouseY;
     const bestiary = this.player.bestiary;
@@ -1141,6 +1249,11 @@ export class PlayerInputHandler {
 
     if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
       bestiary.toggleOpen();
+      return;
+    }
+
+    if (XPCounter.isPointInBounds(x, y)) {
+      this.player.skillsMenu?.toggleOpen();
       return;
     }
 

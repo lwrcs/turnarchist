@@ -10,6 +10,10 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { Apple } from "../../item/usable/apple";
 import { Sound } from "../../sound/sound";
 import { Random } from "../../utility/random";
+import { statsTracker } from "../../game/stats";
+import { computeWoodcuttingXp } from "../../game/skillBalance";
+import { XPPopup } from "../../particle/xpPopup";
+import { GameConstants } from "../../game/gameConstants";
 
 export class Tree extends Entity {
   static examineText = "A tree. Blocks sight and takes hits.";
@@ -42,6 +46,16 @@ export class Tree extends Entity {
   uniqueKillBehavior = () => {
     if (this.cloned) return;
     Sound.playWood();
+
+    // Award woodcutting XP if a player chopped it down (attributed via Entity.hurt -> hitBy).
+    const p = this.hitBy;
+    if (p) {
+      const xp = computeWoodcuttingXp({ depth: this.room.depth });
+      statsTracker.awardSkillXp("woodcutting", xp);
+      if (GameConstants.XP_POPUP_ENABLED) {
+        this.room.particles.push(new XPPopup(this.room, this.x, this.y, xp));
+      }
+    }
   };
 
   draw = (delta: number) => {

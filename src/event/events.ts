@@ -27,6 +27,7 @@ export const EVENTS = {
 } as const;
 
 // **TypeScript Interfaces for Event Payloads:**
+import type { Skill } from "../game/skills";
 
 export interface MouseClickEvent {
   x: number;
@@ -60,6 +61,9 @@ export interface EnemySeenPlayerEvent {
 export interface EnemyKilledEvent {
   enemyId: string;
   xp: number;
+  skill: Skill;
+  baseXp?: number;
+  xpMultiplier?: number;
 }
 
 export interface DamageDoneEvent {

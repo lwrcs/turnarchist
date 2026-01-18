@@ -4,6 +4,7 @@ import { Input } from "../game/input";
 import { Menu } from "./menu";
 import { Player } from "../player/player";
 import { Room } from "../room/room";
+import { XPCounter } from "./xpCounter";
 
 export class HoverText {
   static getHoverText(
@@ -58,6 +59,10 @@ export class HoverText {
       }
       if (Menu.isPointInOpenMenuButtonBounds(Input.mouseX, Input.mouseY)) {
         strings.push(player.menu.open ? "Close Menu" : "Open Menu");
+        return strings;
+      }
+      if (XPCounter.isPointInBounds(Input.mouseX, Input.mouseY)) {
+        strings.push(player.skillsMenu?.open ? "Close Skills" : "Open Skills");
         return strings;
       }
     } catch {}

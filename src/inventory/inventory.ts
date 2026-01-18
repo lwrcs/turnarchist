@@ -484,6 +484,8 @@ export class Inventory {
 
   drawDraggedItem = (delta: number) => {
     if (this.grabbedItem === null) return;
+    // Draw above everything else; isolate canvas state.
+    Game.ctx.save();
     const { x, y } = MouseCursor.getInstance().getPosition();
 
     const drawX = Math.round(x - 0.5 * GameConstants.TILESIZE);
@@ -491,6 +493,7 @@ export class Inventory {
     const drawXScaled = drawX / GameConstants.TILESIZE;
     const drawYScaled = drawY / GameConstants.TILESIZE;
     this.grabbedItem.drawIcon(delta, drawXScaled, drawYScaled);
+    Game.ctx.restore();
   };
 
   drop = () => {
@@ -1401,7 +1404,6 @@ export class Inventory {
       }
       // Overlay-only highlights + dragged item.
       this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
-      this.drawDraggedItem(delta);
 
       // Finish offscreen render and composite to the main canvas with a single alpha.
       Game.ctx.restore();
@@ -1413,6 +1415,10 @@ export class Inventory {
       prevCtx.drawImage(this.overlayCanvas, 0, 0);
       prevCtx.restore();
     }
+
+    // Always draw dragged item last, regardless of whether the full inventory overlay is open.
+    // (Dragging can happen in quickbar-only mode too.)
+    this.drawDraggedItem(delta);
   };
 
   isPointInInventoryBounds = (

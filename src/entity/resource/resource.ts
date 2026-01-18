@@ -12,6 +12,10 @@ import { Pickaxe } from "../../item/tool/pickaxe";
 import { Spellbook } from "../../item/weapon/spellbook";
 import { EntityType } from "../entity";
 import { Sound } from "../../sound/sound";
+import { statsTracker } from "../../game/stats";
+import { computeMiningXp } from "../../game/skillBalance";
+import { XPPopup } from "../../particle/xpPopup";
+import { GameConstants } from "../../game/gameConstants";
 
 export class Resource extends Entity {
   constructor(room: Room, game: Game, x: number, y: number) {
@@ -59,6 +63,16 @@ export class Resource extends Entity {
 
     if ((player !== null && player.inventory?.canMine()) || player === null) {
       this.dropLoot();
+      if (player) {
+        const xp = computeMiningXp({
+          nodeName: this.name,
+          depth: this.room.depth,
+        });
+        statsTracker.awardSkillXp("mining", xp);
+        if (GameConstants.XP_POPUP_ENABLED) {
+          this.room.particles.push(new XPPopup(this.room, this.x, this.y, xp));
+        }
+      }
       //this.game.pushMessage("You use your pickaxe to collect the resource.");
     }
     this.uniqueKillBehavior();

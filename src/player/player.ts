@@ -40,6 +40,8 @@ import { Room } from "../room/room";
 import { BubbleImageParticle } from "../particle/imageParticle";
 import { Random } from "../utility/random";
 import { AnchorOptions, OxygenLine } from "./oxygenLine";
+import { SkillsMenu } from "../gui/skillsMenu";
+import { XPCounter } from "../gui/xpCounter";
 
 export enum PlayerDirection {
   DOWN,
@@ -103,6 +105,7 @@ export class Player extends Drawable {
   justMoved: DrawDirection;
   depth: number;
   menu: Menu;
+  skillsMenu: SkillsMenu;
   busyAnimating: boolean;
   lightColor: [number, number, number];
   damageBonus: number;
@@ -179,6 +182,7 @@ export class Player extends Drawable {
     this.isLocalPlayer = isLocalPlayer;
     this.depth = 0;
     this.menu = new Menu(this);
+    this.skillsMenu = new SkillsMenu();
     this.busyAnimating = false;
 
     this.mapToggled = true;
@@ -697,6 +701,13 @@ export class Player extends Drawable {
     mousePos: { x: number; y: number },
     mouseTile: { x: number; y: number },
   ): string => {
+    // Skills menu is modal: while open, cursor state is determined ONLY by skills UI.
+    if (this.skillsMenu?.open) {
+      const { x, y } = mousePos;
+      const inSkillsPanel = this.skillsMenu.isPointInBounds(x, y);
+      return inSkillsPanel ? "hand" : "arrow";
+    }
+
     // If the menu is open, it visually owns the cursor: don't let world interactions behind
     // the menu influence the cursor icon.
     if (this.menu?.open) {
@@ -769,6 +780,7 @@ export class Player extends Drawable {
     return (
       this.inventory.isPointInInventoryButton(x, y) ||
       Menu.isPointInOpenMenuButtonBounds(x, y) ||
+      XPCounter.isPointInBounds(x, y) ||
       (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
       this.isInventoryItemInteraction(x, y)
     );

@@ -4,6 +4,8 @@ import { GenericParticle } from "../../particle/genericParticle";
 import { ArrowParticle } from "../../particle/arrowParticle";
 import { GameplaySettings } from "../../game/gameplaySettings";
 import { CrossbowBolt } from "./crossbowBolt";
+import { SKILL_DISPLAY_NAME } from "../../game/skills";
+import { statsTracker } from "../../game/stats";
 
 enum CrossbowState {
   EMPTY,
@@ -28,6 +30,17 @@ export class Crossbow extends Weapon {
   }
 
   toggleEquip = () => {
+    // Skill requirement gate (crossbow has a custom state-machine equip flow).
+    if (this.wielder && this.requiredSkill) {
+      const lvl = statsTracker.getSkillLevel(this.requiredSkill);
+      if (lvl < this.requiredLevel) {
+        this.level.game.pushMessage(
+          `Requires ${SKILL_DISPLAY_NAME[this.requiredSkill]} level ${this.requiredLevel}.`,
+        );
+        return;
+      }
+    }
+
     if (
       !this.broken &&
       this.cooldown <= 0 &&

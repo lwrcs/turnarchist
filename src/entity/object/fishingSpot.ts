@@ -15,6 +15,7 @@ import { Fish } from "../../item/usable/fish";
 import { statsTracker } from "../../game/stats";
 import { XPPopup } from "../../particle/xpPopup";
 import { GameConstants } from "../../game/gameConstants";
+import { GATHERING_XP, depthXpMultiplier } from "../../game/skillBalance";
 
 export class FishingSpot extends Entity {
   static examineText = "A fishing spot. Bring a rod.";
@@ -75,9 +76,13 @@ export class FishingSpot extends Entity {
         }
         message = "You catch a fish.";
         Sound.playFishingCatch();
-        let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
-        let xp = Math.ceil((Random.rand() * 50 + 100) * depthMultiplier);
-        statsTracker.increaseXp(xp);
+        const depthMultiplier = depthXpMultiplier(this.room.depth);
+        const base =
+          Random.rand() *
+            (GATHERING_XP.fishing.baseMax - GATHERING_XP.fishing.baseMin) +
+          GATHERING_XP.fishing.baseMin;
+        const xp = Math.ceil(base * depthMultiplier);
+        statsTracker.awardSkillXp("fishing", xp);
 
         if (GameConstants.XP_POPUP_ENABLED) {
           this.room.particles.push(new XPPopup(this.room, this.x, this.y, xp));
@@ -97,11 +102,7 @@ export class FishingSpot extends Entity {
   };
 
   tryFish = (): boolean => {
-    if (Random.rand() < 0.3) {
-      return true;
-    } else {
-      return false;
-    }
+    return Random.rand() < GATHERING_XP.fishing.chanceToCatch;
   };
 
   interact = (player: Player): void => {

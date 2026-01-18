@@ -11,6 +11,9 @@ import { AttackAnimation } from "../../particle/attackAnimation";
 import { Direction } from "../../game";
 import { Armor } from "../armor";
 import { computePushChain, applyPushChain } from "../../utility/pushChain";
+import { SKILL_DISPLAY_NAME, type Skill } from "../../game/skills";
+import { WEAPON_SKILL_RULES } from "../../game/skillBalance";
+import { statsTracker } from "../../game/stats";
 
 interface WeaponStatus {
   poison: boolean;
@@ -33,6 +36,25 @@ export abstract class Weapon extends Equippable {
   twoHanded: boolean;
   knockbackDistance: number;
   private _swingHitIds: Set<string> | null;
+
+  /**
+   * Skill used for kill attribution when this weapon lands the finishing blow.
+   * Defaults to melee; ranged/magic weapons should be configured via `WEAPON_SKILL_RULES`.
+   */
+  combatSkill: Skill;
+
+  /**
+   * Skill requirement for equipping/using this weapon.
+   * Controlled via `WEAPON_SKILL_RULES` for easy iteration.
+   */
+  requiredSkill: Skill | null;
+  requiredLevel: number;
+
+  /**
+   * Multiplier applied to skill XP gained from kills with this weapon.
+   */
+  killXpMultiplier: number;
+
   constructor(level: Room, x: number, y: number, status?: WeaponStatus) {
     super(level, x, y);
 
@@ -52,7 +74,72 @@ export abstract class Weapon extends Equippable {
     this.twoHanded = false;
     this.knockbackDistance = 0;
     this._swingHitIds = null;
+
+    // Defaults (can be overridden by rules)
+    this.combatSkill = "melee";
+    this.requiredSkill = null;
+    this.requiredLevel = 1;
+    this.killXpMultiplier = 1;
+    this.applySkillRule();
   }
+
+  private getWeaponRuleKey(): string {
+    const ctor = this.constructor as unknown as { itemName?: unknown };
+    if (typeof ctor.itemName === "string") return ctor.itemName.toLowerCase();
+    if (typeof this.name === "string" && this.name.trim().length > 0)
+      return this.name.toLowerCase();
+    return "";
+  }
+
+  private applySkillRule(): void {
+    const key = this.getWeaponRuleKey();
+    const rule = WEAPON_SKILL_RULES[key];
+    if (!rule) return;
+
+    this.combatSkill = rule.combatSkill;
+    this.requiredSkill = rule.requiredSkill;
+    this.requiredLevel = rule.requiredLevel;
+    this.killXpMultiplier = rule.killXpMultiplier;
+  }
+
+  toggleEquip = () => {
+    // Respect base Equippable gating (broken/cooldown) but add skill requirements for weapons.
+    const reqSkill = this.requiredSkill;
+    if (reqSkill && this.wielder) {
+      const level = statsTracker.getSkillLevel(reqSkill);
+      if (level < this.requiredLevel) {
+        this.level.game.pushMessage(
+          `Requires ${SKILL_DISPLAY_NAME[reqSkill]} level ${this.requiredLevel}.`,
+        );
+        return;
+      }
+    }
+
+    // NOTE: Equippable.toggleEquip is an instance field (arrow function), not a prototype method,
+    // so `super.toggleEquip()` is not valid here.
+    if (!this.broken && this.cooldown <= 0) {
+      if (!this.equipped && this.wielder?.inventory?.weapon) {
+        this.previousWeapon = this.wielder.inventory.weapon;
+      }
+
+      this.equipped = !this.equipped;
+
+      if (this.equipped) this.onEquip();
+      else this.onUnequip();
+    } else if (this.broken) {
+      this.equipped = false;
+      const pronoun = this.name.endsWith("s") ? "them" : "it";
+      this.level.game.pushMessage(
+        "You'll have to fix your " +
+          this.name +
+          " before you can use " +
+          pronoun +
+          ".",
+      );
+    } else if (this.cooldown > 0) {
+      this.level.game.pushMessage("Cooldown: " + this.cooldown);
+    }
+  };
   hoverText = () => {
     //return "Equip " + this.name;
     return this.name;

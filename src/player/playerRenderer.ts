@@ -35,6 +35,11 @@ export class PlayerRenderer {
   private lowHealthFrame: number;
   private flashing: boolean;
   private lightingDirectionBucket: number | null;
+  // When any overlay UI is open, freeze the player's visual facing (cardinal/diagonal pose)
+  // so it doesn't jitter due to mouse movement behind menus.
+  private uiPoseFrozen: boolean = false;
+  private frozenPoseDirection: Direction = Direction.DOWN;
+  private frozenPoseAngleRad: number | null = null;
 
   private readonly divingHelmetTileX: number = 0;
   private readonly divingHelmetTileY: number = 12;
@@ -165,13 +170,43 @@ export class PlayerRenderer {
    */
   drawPlayerSprite = (delta: number) => {
     const player = this.player;
+    const anyOverlayOpen =
+      Boolean(player.menu?.open) ||
+      Boolean(player.skillsMenu?.open) ||
+      Boolean(player.bestiary?.isOpen) ||
+      Boolean(player.inventory?.isOpen) ||
+      Boolean(player.contextMenu?.open);
+
+    // Snapshot pose once when an overlay opens; release when all overlays close.
+    if (anyOverlayOpen && !this.uiPoseFrozen) {
+      this.uiPoseFrozen = true;
+      this.frozenPoseDirection = player.direction;
+      this.frozenPoseAngleRad =
+        !GameConstants.isMobile && player.inputHandler?.mostRecentMoveInput === "mouse"
+          ? player.inputHandler.mouseAngle()
+          : null;
+      // Context menu already snapshots mouse angle; prefer it if it exists.
+      if (
+        player.contextMenu?.open &&
+        typeof player.frozenMouseAngleRad === "number"
+      ) {
+        this.frozenPoseAngleRad = player.frozenMouseAngleRad;
+      }
+    } else if (!anyOverlayOpen && this.uiPoseFrozen) {
+      this.uiPoseFrozen = false;
+      this.frozenPoseAngleRad = null;
+    }
+
     const divingHelmet = player.inventory.divingHelmetEquipped();
     const tileX = divingHelmet
       ? this.divingHelmetTileX
       : 1 + Math.floor(this.frame);
+    const renderDirection = this.uiPoseFrozen
+      ? this.frozenPoseDirection
+      : player.direction;
     const tileY = divingHelmet
-      ? this.divingHelmetTileY + player.direction * 2
-      : 8 + player.direction * 2;
+      ? this.divingHelmetTileY + renderDirection * 2
+      : 8 + renderDirection * 2;
     Game.ctx.save(); // Save the current canvas state
     const divingHelmetOffsetY = divingHelmet ? 2 : 0;
 
@@ -192,10 +227,10 @@ export class PlayerRenderer {
         this.outlineOpacity(),
       );
     } else if (!GameConstants.isMobile) {
-      // While the context menu is open, freeze the diagonal mouse-angle pose at the moment it opened.
-      const angleRad =
-        player.contextMenu?.open &&
-        typeof player.frozenMouseAngleRad === "number"
+      // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
+      const angleRad = this.uiPoseFrozen
+        ? this.frozenPoseAngleRad
+        : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
           ? player.frozenMouseAngleRad
           : player.inputHandler.mostRecentMoveInput === "mouse"
             ? player.inputHandler.mouseAngle()
@@ -694,9 +729,9 @@ export class PlayerRenderer {
       this.drawBreathStatus(quickbarStartX);
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
       if (!transitioning) {
-        this.player.inventory.draw(delta);
-        // Inventory-style bestiary button (bottom-left), drawn alongside other UI.
+        // Draw the bestiary button first so the inventory can draw over it (requested layering).
         this.player.bestiary?.drawBestiaryButton(delta);
+        this.player.inventory.draw(delta);
       }
       const inventoryOpen = this.player.inventory.isOpen;
       const quickbarOpen =
@@ -759,9 +794,6 @@ export class PlayerRenderer {
 
       // Draw bestiary last so it renders above inventory/quickbar.
       if (this.player.bestiary) this.player.bestiary.draw(delta);
-
-      // Context menu should draw above all other UI (inventory/bestiary).
-      this.player.contextMenu?.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();
@@ -975,7 +1007,14 @@ export class PlayerRenderer {
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
+    // Overlay ordering (top-most last):
+    // - Bestiary is drawn above inventory earlier in the frame.
+    // - Skills menu should appear above bestiary/inventory.
+    // - Menu should appear above skills (and everything else).
+    // - Context menu should appear above EVERYTHING (including Menu/Skills) so right-click is never hidden.
+    this.player.skillsMenu?.draw(delta);
     if (this.player.menu.open) this.player.menu.draw(delta);
+    this.player.contextMenu?.draw(delta);
     Game.ctx.restore();
   };
 
@@ -1114,6 +1153,8 @@ export class PlayerRenderer {
   drawTileCursor = (delta: number) => {
     if (
       this.player.inventory.isOpen ||
+      this.player.menu?.open ||
+      this.player.skillsMenu?.open ||
       this.player.contextMenu?.open ||
       this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
       GameConstants.isMobile

@@ -31,6 +31,8 @@ import { BeamEffect } from "../projectile/beamEffect";
 import { Lighting } from "../lighting/lighting";
 import { Enemy } from "./enemy/enemy";
 import { ENTITY_EXAMINE_TEXT } from "../examine/entityExamineText";
+import type { Skill } from "../game/skills";
+import { computeEnemyKillBaseXp } from "../game/skillBalance";
 
 export enum EntityDirection {
   DOWN,
@@ -100,6 +102,9 @@ export class Entity extends Drawable {
   lastX: number;
   lastY: number;
   protected hitBy: Player | null;
+  protected lastHitWeapon: Weapon | null;
+  protected lastHitCombatSkill: Skill;
+  protected lastHitKillXpMultiplier: number;
   protected crushX: number;
   protected crushY: number;
   protected crushVertical: boolean;
@@ -236,6 +241,9 @@ export class Entity extends Drawable {
     this.lastX = x;
     this.lastY = y;
     this.hitBy = null;
+    this.lastHitWeapon = null;
+    this.lastHitCombatSkill = "melee";
+    this.lastHitKillXpMultiplier = 1;
     this.crushX = 1;
     this.crushY = 1;
     this.crushVertical = false;
@@ -776,6 +784,13 @@ export class Entity extends Drawable {
     type: "none" | "poison" | "blood" | "heal" = "none",
   ) => {
     this.handleEnemyCase(playerHitBy);
+    this.hitBy = playerHitBy ?? null;
+    const weapon = playerHitBy?.inventory?.getWeapon?.() ?? null;
+    if (weapon) {
+      this.lastHitWeapon = weapon;
+      this.lastHitCombatSkill = weapon.combatSkill ?? "melee";
+      this.lastHitKillXpMultiplier = weapon.killXpMultiplier ?? 1;
+    }
 
     let hitShield = false;
     let shieldHealth = 0;
@@ -816,7 +831,7 @@ export class Entity extends Drawable {
     }
 
     if (this.health <= 0) {
-      this.kill();
+      this.kill(playerHitBy ?? undefined);
       this.bloomAlpha = 0;
     } else this.hurtCallback();
   };
@@ -1086,6 +1101,7 @@ export class Entity extends Drawable {
     this.dead = true;
 
     if (this.cloned) return;
+    if (player) this.hitBy = player;
 
     this.emitEnemyKilled();
     this.dropLoot();
@@ -1196,16 +1212,23 @@ export class Entity extends Drawable {
   };
 
   emitEnemyKilled = () => {
-    let depthMultiplier = 1.5 ** this.room.depth; //Math.log((this.room.depth + 1) * 5);
-    console.log(depthMultiplier);
-
-    let multiplier = 1;
-    if (this.isEnemy) multiplier = 5;
-    const xp = Math.ceil(this.defaultMaxHealth * multiplier * depthMultiplier);
     if (!this.isEnemy) return;
+    const baseXp = computeEnemyKillBaseXp({
+      maxHealth: this.defaultMaxHealth,
+      depth: this.room.depth,
+    });
+    const skill = this.lastHitCombatSkill ?? "melee";
+    const xpMultiplier =
+      this.lastHitKillXpMultiplier && this.lastHitKillXpMultiplier > 0
+        ? this.lastHitKillXpMultiplier
+        : 1;
+    const xp = Math.ceil(baseXp * xpMultiplier);
     globalEventBus.emit(EVENTS.ENEMY_KILLED, {
       enemyId: this.name,
       xp: xp,
+      skill,
+      baseXp,
+      xpMultiplier,
     });
     const player = this.getPlayer();
     if (!player) return;
