@@ -38624,6 +38624,9 @@ class WebGLBlurRenderer {
         // Cache for result canvases to avoid recreation
         this.resultCanvasCache = new Map();
         this.maxCacheSize = 10;
+        // Stable IDs for source canvases so we can reuse result canvases without cross-call overwrites
+        this.sourceCanvasIds = new WeakMap();
+        this.nextSourceCanvasId = 1;
         // Vertex shader source (shared)
         this.vertexShaderSource = `
     precision mediump float;
@@ -38634,7 +38637,7 @@ class WebGLBlurRenderer {
     
     void main() {
       vec2 zeroToOne = a_position / u_resolution;
-      vec2 zeroToTwo = zeroToOne * 2.0;
+      vec2 zeroToTwo = zeroToOne * 2.0; 
       vec2 clipSpace = zeroToTwo - 1.0;
       gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
       v_texCoord = a_texCoord;
@@ -38866,8 +38869,16 @@ class WebGLBlurRenderer {
         }
         return { width: currentWidth, height: currentHeight };
     }
-    getCachedCanvas(width, height) {
-        let key = `${width}x${height}`;
+    getSourceCanvasId(sourceCanvas) {
+        const existing = this.sourceCanvasIds.get(sourceCanvas);
+        if (existing)
+            return existing;
+        const id = `src${this.nextSourceCanvasId++}`;
+        this.sourceCanvasIds.set(sourceCanvas, id);
+        return id;
+    }
+    getCachedCanvas(cacheKey, width, height) {
+        let key = cacheKey;
         // Debug: force cache growth by salting the key periodically.
         // This is useful to reproduce blur-cache/memory pressure issues quickly.
         if (gameConstants_1.GameConstants.DEBUG_FORCE_WEBGL_BLUR_CACHE_GROWTH) {
@@ -38919,9 +38930,15 @@ class WebGLBlurRenderer {
         // Apply blur to the downsampled canvas
         const blurredDownsampledCanvas = this.applyBlurToCanvas(this.downsampleCanvas, blurRadius / downsampleFactor, // Adjust blur radius for smaller canvas
         downsampledWidth, downsampledHeight);
-        // Return result at original size - the caller will handle upscaling
-        // For now, we'll create a canvas at original size and let the GPU upscale
-        const resultCanvas = this.getCachedCanvas(originalWidth, originalHeight);
+        // Return result at original size.
+        // IMPORTANT: Callers may hold onto the returned canvas (e.g. per-room caches).
+        // We must avoid reusing the same result canvas for different sources of the same size,
+        // otherwise later blurs overwrite earlier results "silently".
+        const sourceId = this.getSourceCanvasId(sourceCanvas);
+        const quality = gameConstants_1.GameConstants.HIGH_QUALITY_BLUR ? "hq" : "perf";
+        const ds = Math.max(1, Math.floor(gameConstants_1.GameConstants.BLUR_DOWNSAMPLE_FACTOR));
+        const key = `w=${originalWidth} h=${originalHeight} src=${sourceId} r=${blurRadius} ds=${ds} q=${quality}`;
+        const resultCanvas = this.getCachedCanvas(key, originalWidth, originalHeight);
         const resultCtx = resultCanvas.getContext("2d");
         resultCtx.clearRect(0, 0, originalWidth, originalHeight);
         // Use bilinear filtering for upscaling (GPU accelerated)

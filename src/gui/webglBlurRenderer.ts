@@ -35,6 +35,9 @@ export class WebGLBlurRenderer {
   // Cache for result canvases to avoid recreation
   private resultCanvasCache: Map<string, HTMLCanvasElement> = new Map();
   private maxCacheSize: number = 10;
+  // Stable IDs for source canvases so we can reuse result canvases without cross-call overwrites
+  private sourceCanvasIds: WeakMap<HTMLCanvasElement, string> = new WeakMap();
+  private nextSourceCanvasId: number = 1;
 
   // Vertex shader source (shared)
   private vertexShaderSource = `
@@ -46,7 +49,7 @@ export class WebGLBlurRenderer {
     
     void main() {
       vec2 zeroToOne = a_position / u_resolution;
-      vec2 zeroToTwo = zeroToOne * 2.0;
+      vec2 zeroToTwo = zeroToOne * 2.0; 
       vec2 clipSpace = zeroToTwo - 1.0;
       gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
       v_texCoord = a_texCoord;
@@ -431,8 +434,20 @@ export class WebGLBlurRenderer {
     return { width: currentWidth, height: currentHeight };
   }
 
-  private getCachedCanvas(width: number, height: number): HTMLCanvasElement {
-    let key = `${width}x${height}`;
+  private getSourceCanvasId(sourceCanvas: HTMLCanvasElement): string {
+    const existing = this.sourceCanvasIds.get(sourceCanvas);
+    if (existing) return existing;
+    const id = `src${this.nextSourceCanvasId++}`;
+    this.sourceCanvasIds.set(sourceCanvas, id);
+    return id;
+  }
+
+  private getCachedCanvas(
+    cacheKey: string,
+    width: number,
+    height: number,
+  ): HTMLCanvasElement {
+    let key = cacheKey;
 
     // Debug: force cache growth by salting the key periodically.
     // This is useful to reproduce blur-cache/memory pressure issues quickly.
@@ -526,9 +541,15 @@ export class WebGLBlurRenderer {
       downsampledHeight,
     );
 
-    // Return result at original size - the caller will handle upscaling
-    // For now, we'll create a canvas at original size and let the GPU upscale
-    const resultCanvas = this.getCachedCanvas(originalWidth, originalHeight);
+    // Return result at original size.
+    // IMPORTANT: Callers may hold onto the returned canvas (e.g. per-room caches).
+    // We must avoid reusing the same result canvas for different sources of the same size,
+    // otherwise later blurs overwrite earlier results "silently".
+    const sourceId = this.getSourceCanvasId(sourceCanvas);
+    const quality = GameConstants.HIGH_QUALITY_BLUR ? "hq" : "perf";
+    const ds = Math.max(1, Math.floor(GameConstants.BLUR_DOWNSAMPLE_FACTOR));
+    const key = `w=${originalWidth} h=${originalHeight} src=${sourceId} r=${blurRadius} ds=${ds} q=${quality}`;
+    const resultCanvas = this.getCachedCanvas(key, originalWidth, originalHeight);
     const resultCtx = resultCanvas.getContext("2d");
     resultCtx.clearRect(0, 0, originalWidth, originalHeight);
 
