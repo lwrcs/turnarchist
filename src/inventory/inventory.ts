@@ -317,10 +317,19 @@ export class Inventory {
         }
       } else if (item instanceof Equippable) {
         // Existing equipping logic
+        const prevEquipped = item.equipped;
+        const prevWeapon = this.weapon;
         item.toggleEquip();
         if (item instanceof Weapon) {
+          // If the weapon couldn't be equipped (e.g. skill level too low), do not clear the
+          // currently equipped weapon. `Weapon.toggleEquip()` can early-return without changing `equipped`.
           if (item.broken || item.cooldown > 0 || item.disabled) return;
-          this.weapon = item.equipped ? item : null;
+          const changed = item.equipped !== prevEquipped;
+          if (!changed && prevEquipped === false) {
+            this.weapon = prevWeapon;
+          } else {
+            this.weapon = item.equipped ? item : null;
+          }
         }
         if (item.equipped) {
           this.items.forEach((i, idx) => {
