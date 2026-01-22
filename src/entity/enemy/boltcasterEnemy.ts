@@ -34,6 +34,7 @@ export class BoltcasterEnemy extends Enemy {
     this.tileY = 8;
     this.health = 2;
     this.maxHealth = 2;
+    this.defaultMaxHealth = 2;
     this.dropChance = 1;
     this.state = BoltcasterState.SEEK_LINE;
     this.isLoading = false;

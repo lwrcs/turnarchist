@@ -13515,6 +13515,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
         this.tileY = 8;
         this.health = 2;
         this.maxHealth = 2;
+        this.defaultMaxHealth = 2;
         this.dropChance = 1;
         this.state = BoltcasterState.SEEK_LINE;
         this.isLoading = false;
@@ -15615,6 +15616,7 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.health = 6;
         this.lastHealth = this.health;
         this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
         this.tileX = 59;
         this.tileY = 8;
         this.seenPlayer = true;
@@ -17188,6 +17190,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.health = 6;
         this.lastHealth = this.health;
         this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
         this.tileX = 55;
         this.tileY = 8;
         this.seenPlayer = true;
@@ -35375,15 +35378,15 @@ exports.GATHERING_XP = {
         chanceToCatch: 0.3,
     },
     miningByNodeName: {
-        rock: 60,
-        coal: 70,
-        iron: 85,
-        gold: 110,
-        obsidian: 95,
-        emerald: 140,
-        garnet: 140,
-        zircon: 140,
-        amber: 140,
+        rock: 5,
+        coal: 25,
+        iron: 100,
+        gold: 250,
+        obsidian: 75,
+        emerald: 750,
+        garnet: 1250,
+        zircon: 750,
+        amber: 750,
     },
     woodcutting: {
         base: 80,
@@ -35420,10 +35423,40 @@ exports.WEAPON_SKILL_RULES = {
         killXpMultiplier: 1,
         combatSkill: "melee",
     },
+    quarterstaff: {
+        requiredSkill: "melee",
+        requiredLevel: 5,
+        killXpMultiplier: 2,
+        combatSkill: "melee",
+    },
     sword: {
         requiredSkill: "melee",
         requiredLevel: 10,
         // "Training tier" weapon: big multiplier to make pushing toward higher melee gates feasible.
+        killXpMultiplier: 4,
+        combatSkill: "melee",
+    },
+    spear: {
+        requiredSkill: "melee",
+        requiredLevel: 15,
+        killXpMultiplier: 3,
+        combatSkill: "melee",
+    },
+    "dual daggers": {
+        requiredSkill: "melee",
+        requiredLevel: 18,
+        killXpMultiplier: 3,
+        combatSkill: "melee",
+    },
+    warhammer: {
+        requiredSkill: "melee",
+        requiredLevel: 22,
+        killXpMultiplier: 4,
+        combatSkill: "melee",
+    },
+    greataxe: {
+        requiredSkill: "melee",
+        requiredLevel: 25,
         killXpMultiplier: 4,
         combatSkill: "melee",
     },

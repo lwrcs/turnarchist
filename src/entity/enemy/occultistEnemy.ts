@@ -31,6 +31,7 @@ export class OccultistEnemy extends Enemy {
     this.health = 6;
     this.lastHealth = this.health;
     this.maxHealth = 6;
+    this.defaultMaxHealth = 6;
     this.tileX = 55;
     this.tileY = 8;
     this.seenPlayer = true;

@@ -32,6 +32,7 @@ export class ExalterEnemy extends Enemy {
     this.health = 6;
     this.lastHealth = this.health;
     this.maxHealth = 6;
+    this.defaultMaxHealth = 6;
     this.tileX = 59;
     this.tileY = 8;
     this.seenPlayer = true;
