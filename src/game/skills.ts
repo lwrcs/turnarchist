@@ -44,12 +44,29 @@ export function createEmptySkillsXp(): Record<Skill, number> {
 export const MAX_SKILL_LEVEL = 99;
 
 /**
- * RuneScape-inspired XP curve.
+ * RuneScape-inspired XP curve, tuned to be more aggressive at higher levels.
  *
  * - Level 1 requires 0 XP.
  * - XP thresholds are monotonically increasing.
  */
 let xpTable: number[] | null = null;
+
+const XP_CURVE = {
+  /**
+   * Higher => easier. Vanilla RS-like is ~7.
+   * Lower => steeper curve at higher levels.
+   */
+  exponentDivisor: 6.3,
+  /** Base growth term; vanilla RS-like is 300. */
+  base: 360,
+  /**
+   * Higher => easier. Vanilla RS-like is 4.
+   * Lower => more XP required for the same level.
+   */
+  divisor: 3,
+  /** Small linear term to keep early levels smooth. */
+  linearMultiplier: 1.1,
+} as const;
 
 function ensureXpTable(): number[] {
   if (xpTable) return xpTable;
@@ -61,8 +78,11 @@ function ensureXpTable(): number[] {
   let points = 0;
   for (let level = 2; level <= MAX_SKILL_LEVEL + 1; level++) {
     const i = level - 1;
-    points += Math.floor(i + 300 * Math.pow(2, i / 7));
-    t[level] = Math.floor(points / 4);
+    points += Math.floor(
+      XP_CURVE.linearMultiplier * i +
+        XP_CURVE.base * Math.pow(2, i / XP_CURVE.exponentDivisor),
+    );
+    t[level] = Math.floor(points / XP_CURVE.divisor);
   }
 
   xpTable = t;

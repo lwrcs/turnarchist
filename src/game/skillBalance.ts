@@ -2,7 +2,9 @@ import type { Skill } from "./skills";
 
 export const ENEMY_XP = {
   enemyHpMultiplier: 5,
-  depthMultiplierBase: 1.5,
+  // Combat skill XP scales with depth so deeper floors are meaningfully better for training,
+  // but keep the curve tame enough that weapon multipliers remain the primary "tier" lever.
+  depthMultiplierBase: 1.3,
 } as const;
 
 export function computeEnemyKillBaseXp(args: {
@@ -87,13 +89,15 @@ export const WEAPON_SKILL_RULES: Record<string, WeaponSkillRule> = {
   },
   sword: {
     requiredSkill: "melee",
-    requiredLevel: 5,
-    killXpMultiplier: 3,
+    requiredLevel: 10,
+    // "Training tier" weapon: big multiplier to make pushing toward higher melee gates feasible.
+    killXpMultiplier: 4,
     combatSkill: "melee",
   },
   scythe: {
     requiredSkill: "melee",
-    requiredLevel: 10,
+    // High-tier melee gate.
+    requiredLevel: 30,
     killXpMultiplier: 6,
     combatSkill: "melee",
   },

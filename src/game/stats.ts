@@ -1,7 +1,12 @@
 import { EnvType, getEnvTypeName } from "../constants/environmentTypes";
 import { globalEventBus } from "../event/eventBus";
 import { AppEvents, EventPayloads, EVENTS } from "../event/events";
-import { createEmptySkillsXp, levelForXp, type Skill, SKILLS } from "./skills";
+import {
+  createEmptySkillsXp,
+  levelForXp,
+  type Skill,
+  SKILLS,
+} from "./skills";
 
 export interface Stats {
   enemiesKilled: number;
@@ -128,8 +133,23 @@ export class StatsTracker {
       this.stats.skillsVersion = 1;
     }
 
-    this.stats.skillsXp[skill] = (this.stats.skillsXp[skill] ?? 0) + amount;
+    const prevXp = this.stats.skillsXp[skill] ?? 0;
+    const prevLevel = levelForXp(prevXp);
+
+    const nextXp = prevXp + amount;
+    const nextLevel = levelForXp(nextXp);
+
+    this.stats.skillsXp[skill] = nextXp;
     this.recomputeTotals();
+
+    if (nextLevel > prevLevel) {
+      for (let lvl = prevLevel + 1; lvl <= nextLevel; lvl++) {
+        globalEventBus.emit(EVENTS.SKILL_LEVEL_UP, {
+          skill,
+          level: lvl,
+        } satisfies EventPayloads[typeof EVENTS.SKILL_LEVEL_UP]);
+      }
+    }
   }
 
   /**

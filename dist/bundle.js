@@ -8,9 +8,16 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
+/**
+ * Create a bound version of a function with a specified `this` context
+ *
+ * @param {Function} fn - The function to bind
+ * @param {*} thisArg - The value to be passed as the `this` parameter
+ * @returns {Function} A new function that will call the original function with the specified `this` context
+ */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1263,7 +1270,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   * @returns {void}
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2229,27 +2236,38 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure) {
-      const cookie = [name + '=' + encodeURIComponent(value)];
+    write(name, value, expires, path, domain, secure, sameSite) {
+      if (typeof document === 'undefined') return;
 
-      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+      const cookie = [`${name}=${encodeURIComponent(value)}`];
 
-      utils$1.isString(path) && cookie.push('path=' + path);
-
-      utils$1.isString(domain) && cookie.push('domain=' + domain);
-
-      secure === true && cookie.push('secure');
+      if (utils$1.isNumber(expires)) {
+        cookie.push(`expires=${new Date(expires).toUTCString()}`);
+      }
+      if (utils$1.isString(path)) {
+        cookie.push(`path=${path}`);
+      }
+      if (utils$1.isString(domain)) {
+        cookie.push(`domain=${domain}`);
+      }
+      if (secure === true) {
+        cookie.push('secure');
+      }
+      if (utils$1.isString(sameSite)) {
+        cookie.push(`SameSite=${sameSite}`);
+      }
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
-      return (match ? decodeURIComponent(match[3]) : null);
+      if (typeof document === 'undefined') return null;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000);
+      this.write(name, '', Date.now() - 86400000, '/');
     }
   }
 
@@ -2338,11 +2356,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop , caseless) {
+  function mergeDeepProperties(a, b, prop, caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop , caseless);
+      return getMergedValue(a, b, prop, caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop , caseless);
+      return getMergedValue(undefined, a, prop, caseless);
     }
   }
 
@@ -2400,7 +2418,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3040,7 +3058,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = config ? config.env : {};
+  let env = (config && config.env) || {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3063,6 +3081,15 @@ const getFetch = (config) => {
 
 getFetch();
 
+/**
+ * Known adapters mapping.
+ * Provides environment-specific adapters for Axios:
+ * - `http` for Node.js
+ * - `xhr` for browsers
+ * - `fetch` for fetch API-based requests
+ * 
+ * @type {Object<string, Function|Object>}
+ */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3071,71 +3098,107 @@ const knownAdapters = {
   }
 };
 
+// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', {value});
+      Object.defineProperty(fn, 'name', { value });
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', {value});
+    Object.defineProperty(fn, 'adapterName', { value });
   }
 });
 
+/**
+ * Render a rejection reason string for unknown or unsupported adapters
+ * 
+ * @param {string} reason
+ * @returns {string}
+ */
 const renderReason = (reason) => `- ${reason}`;
 
+/**
+ * Check if the adapter is resolved (function, null, or false)
+ * 
+ * @param {Function|null|false} adapter
+ * @returns {boolean}
+ */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-var adapters = {
-  getAdapter: (adapters, config) => {
-    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+/**
+ * Get the first suitable adapter from the provided list.
+ * Tries each adapter in order until a supported one is found.
+ * Throws an AxiosError if no adapter is suitable.
+ * 
+ * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
+ * @param {Object} config - Axios request configuration
+ * @throws {AxiosError} If no suitable adapter is available
+ * @returns {Function} The resolved adapter function
+ */
+function getAdapter(adapters, config) {
+  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-    const {length} = adapters;
-    let nameOrAdapter;
-    let adapter;
+  const { length } = adapters;
+  let nameOrAdapter;
+  let adapter;
 
-    const rejectedReasons = {};
+  const rejectedReasons = {};
 
-    for (let i = 0; i < length; i++) {
-      nameOrAdapter = adapters[i];
-      let id;
+  for (let i = 0; i < length; i++) {
+    nameOrAdapter = adapters[i];
+    let id;
 
-      adapter = nameOrAdapter;
+    adapter = nameOrAdapter;
 
-      if (!isResolvedHandle(nameOrAdapter)) {
-        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+    if (!isResolvedHandle(nameOrAdapter)) {
+      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
 
-        if (adapter === undefined) {
-          throw new AxiosError(`Unknown adapter '${id}'`);
-        }
+      if (adapter === undefined) {
+        throw new AxiosError(`Unknown adapter '${id}'`);
       }
-
-      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-        break;
-      }
-
-      rejectedReasons[id || '#' + i] = adapter;
     }
 
-    if (!adapter) {
+    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+      break;
+    }
 
-      const reasons = Object.entries(rejectedReasons)
-        .map(([id, state]) => `adapter ${id} ` +
-          (state === false ? 'is not supported by the environment' : 'is not available in the build')
-        );
+    rejectedReasons[id || '#' + i] = adapter;
+  }
 
-      let s = length ?
-        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-        'as no adapter specified';
-
-      throw new AxiosError(
-        `There is no suitable adapter to dispatch the request ` + s,
-        'ERR_NOT_SUPPORT'
+  if (!adapter) {
+    const reasons = Object.entries(rejectedReasons)
+      .map(([id, state]) => `adapter ${id} ` +
+        (state === false ? 'is not supported by the environment' : 'is not available in the build')
       );
-    }
 
-    return adapter;
-  },
+    let s = length ?
+      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+      'as no adapter specified';
+
+    throw new AxiosError(
+      `There is no suitable adapter to dispatch the request ` + s,
+      'ERR_NOT_SUPPORT'
+    );
+  }
+
+  return adapter;
+}
+
+/**
+ * Exports Axios adapters and utility to resolve an adapter
+ */
+var adapters = {
+  /**
+   * Resolve an adapter from a list of adapter names or functions.
+   * @type {Function}
+   */
+  getAdapter,
+
+  /**
+   * Exposes all known adapters
+   * @type {Object<string, Function|Object>}
+   */
   adapters: knownAdapters
 };
 
@@ -3212,7 +3275,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.12.2";
+const VERSION = "1.13.2";
 
 const validators$1 = {};
 
@@ -3771,6 +3834,12 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
+  WebServerIsDown: 521,
+  ConnectionTimedOut: 522,
+  OriginIsUnreachable: 523,
+  TimeoutOccurred: 524,
+  SslHandshakeFailed: 525,
+  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -24243,6 +24312,7 @@ exports.EVENTS = {
     CHAT_MESSAGE: "ChatMessage",
     ENEMY_SEEN_PLAYER: "EnemySeenPlayer",
     ENEMY_KILLED: "ENEMY_KILLED",
+    SKILL_LEVEL_UP: "SKILL_LEVEL_UP",
     DAMAGE_DONE: "DAMAGE_DONE",
     DAMAGE_TAKEN: "DAMAGE_TAKEN",
     TURN_PASSED: "TURN_PASSED",
@@ -24428,6 +24498,8 @@ const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/rand
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/game/replayManager.ts");
 const environmentTypes_1 = __webpack_require__(/*! ./constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const skills_1 = __webpack_require__(/*! ./game/skills */ "./src/game/skills.ts");
+const floatingTextPopup_1 = __webpack_require__(/*! ./particle/floatingTextPopup */ "./src/particle/floatingTextPopup.ts");
 const tilesetUrl = __webpack_require__(/*! ../res/tileset.png */ "./res/tileset.png");
 const objsetUrl = __webpack_require__(/*! ../res/objset.png */ "./res/objset.png");
 const mobsetUrl = __webpack_require__(/*! ../res/mobset.png */ "./res/mobset.png");
@@ -24437,6 +24509,7 @@ const fontUrl = __webpack_require__(/*! ../res/font.png */ "./res/font.png");
 const feedbackButton_1 = __webpack_require__(/*! ./gui/feedbackButton */ "./src/gui/feedbackButton.ts");
 const oneTimeEventTracker_1 = __webpack_require__(/*! ./game/oneTimeEventTracker */ "./src/game/oneTimeEventTracker.ts");
 const tutorialFlags_1 = __webpack_require__(/*! ./game/tutorialFlags */ "./src/game/tutorialFlags.ts");
+const xpCounter_1 = __webpack_require__(/*! ./gui/xpCounter */ "./src/gui/xpCounter.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -27318,7 +27391,9 @@ class Game {
                 }
                 else if (dir === "up") {
                     const apx = Math.floor(rect.x + rect.w / 2);
-                    const apy = Math.min(gameConstants_1.GameConstants.HEIGHT - margin, rect.y + rect.h + 1);
+                    const apyBase = Math.min(gameConstants_1.GameConstants.HEIGHT - margin, rect.y + rect.h + 1);
+                    // Nudge upward slightly so it hugs the target UI element more closely.
+                    const apy = Math.max(margin, apyBase - 2);
                     drawArrowAtApex(apx, apy, "up");
                 }
                 else if (dir === "left") {
@@ -27466,6 +27541,37 @@ class Game {
                 zIndex: 10,
             });
             this.tutorialFlags.openInventoryShown = true;
+        };
+        // Show a pointer prompting the user to open the skills panel after their first skill level-up.
+        this.maybeShowOpenSkillsPointer = () => {
+            if (this.tutorialFlags.openSkillsShown)
+                return;
+            if (this.levelState !== LevelState.IN_LEVEL)
+                return;
+            const player = this.players?.[this.localPlayerID];
+            if (!player)
+                return;
+            const skillsMenu = player.skillsMenu;
+            if (!skillsMenu)
+                return;
+            const id = "open-skills";
+            const resolver = () => xpCounter_1.XPCounter.getRect();
+            const until = () => skillsMenu.open === true;
+            const safety = [() => this.levelState !== LevelState.IN_LEVEL, () => player.dead];
+            this.addPointer({
+                id,
+                text: this.isMobile ? "Tap Skills" : "Click Skills",
+                resolver,
+                until,
+                safety,
+                // Place the text underneath the button, with an arrow pointing up.
+                arrowDirection: "up",
+                textDy: 2,
+                timeoutMs: 45000,
+                tags: ["tutorial"],
+                zIndex: 10,
+            });
+            this.tutorialFlags.openSkillsShown = true;
         };
         this.drawAlerts = (delta) => {
             // Draw ghosts first (behind the main alert)
@@ -28026,6 +28132,30 @@ class Game {
         });
         eventBus_1.globalEventBus.on(events_1.EVENTS.LEVEL_GENERATION_COMPLETED, () => {
             this.levelState = LevelState.IN_LEVEL;
+        });
+        eventBus_1.globalEventBus.on(events_1.EVENTS.CHAT_MESSAGE, (payload) => {
+            // Centralize chat pushes behind the Game instance.
+            this.pushMessage(payload.message);
+        });
+        eventBus_1.globalEventBus.on(events_1.EVENTS.SKILL_LEVEL_UP, (payload) => {
+            const player = this.players?.[this.localPlayerID];
+            if (!player)
+                return;
+            const room = player.getRoom?.() ?? this.room;
+            if (!room)
+                return;
+            // First-time prompt: point at the Skills button in the top-left UI.
+            try {
+                this.maybeShowOpenSkillsPointer();
+            }
+            catch { }
+            const text = `${skills_1.SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
+            room.particles.push(new floatingTextPopup_1.FloatingTextPopup({
+                room,
+                anchor: player,
+                text,
+                color: "yellow",
+            }));
         });
         // Add focus/blur event listeners
         //window.addEventListener("blur", this.handleWindowBlur);
@@ -35229,7 +35359,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
 exports.ENEMY_XP = {
     enemyHpMultiplier: 5,
-    depthMultiplierBase: 1.5,
+    // Combat skill XP scales with depth so deeper floors are meaningfully better for training,
+    // but keep the curve tame enough that weapon multipliers remain the primary "tier" lever.
+    depthMultiplierBase: 1.3,
 };
 function computeEnemyKillBaseXp(args) {
     const depthMultiplier = Math.pow(exports.ENEMY_XP.depthMultiplierBase, args.depth);
@@ -35290,13 +35422,15 @@ exports.WEAPON_SKILL_RULES = {
     },
     sword: {
         requiredSkill: "melee",
-        requiredLevel: 5,
-        killXpMultiplier: 3,
+        requiredLevel: 10,
+        // "Training tier" weapon: big multiplier to make pushing toward higher melee gates feasible.
+        killXpMultiplier: 4,
         combatSkill: "melee",
     },
     scythe: {
         requiredSkill: "melee",
-        requiredLevel: 10,
+        // High-tier melee gate.
+        requiredLevel: 30,
         killXpMultiplier: 6,
         combatSkill: "melee",
     },
@@ -35378,12 +35512,28 @@ function createEmptySkillsXp() {
 exports.createEmptySkillsXp = createEmptySkillsXp;
 exports.MAX_SKILL_LEVEL = 99;
 /**
- * RuneScape-inspired XP curve.
+ * RuneScape-inspired XP curve, tuned to be more aggressive at higher levels.
  *
  * - Level 1 requires 0 XP.
  * - XP thresholds are monotonically increasing.
  */
 let xpTable = null;
+const XP_CURVE = {
+    /**
+     * Higher => easier. Vanilla RS-like is ~7.
+     * Lower => steeper curve at higher levels.
+     */
+    exponentDivisor: 6.3,
+    /** Base growth term; vanilla RS-like is 300. */
+    base: 360,
+    /**
+     * Higher => easier. Vanilla RS-like is 4.
+     * Lower => more XP required for the same level.
+     */
+    divisor: 3,
+    /** Small linear term to keep early levels smooth. */
+    linearMultiplier: 1.1,
+};
 function ensureXpTable() {
     if (xpTable)
         return xpTable;
@@ -35393,8 +35543,9 @@ function ensureXpTable() {
     let points = 0;
     for (let level = 2; level <= exports.MAX_SKILL_LEVEL + 1; level++) {
         const i = level - 1;
-        points += Math.floor(i + 300 * Math.pow(2, i / 7));
-        t[level] = Math.floor(points / 4);
+        points += Math.floor(XP_CURVE.linearMultiplier * i +
+            XP_CURVE.base * Math.pow(2, i / XP_CURVE.exponentDivisor));
+        t[level] = Math.floor(points / XP_CURVE.divisor);
     }
     xpTable = t;
     return t;
@@ -35534,8 +35685,20 @@ class StatsTracker {
             this.stats.skillsXp = (0, skills_1.createEmptySkillsXp)();
             this.stats.skillsVersion = 1;
         }
-        this.stats.skillsXp[skill] = (this.stats.skillsXp[skill] ?? 0) + amount;
+        const prevXp = this.stats.skillsXp[skill] ?? 0;
+        const prevLevel = (0, skills_1.levelForXp)(prevXp);
+        const nextXp = prevXp + amount;
+        const nextLevel = (0, skills_1.levelForXp)(nextXp);
+        this.stats.skillsXp[skill] = nextXp;
         this.recomputeTotals();
+        if (nextLevel > prevLevel) {
+            for (let lvl = prevLevel + 1; lvl <= nextLevel; lvl++) {
+                eventBus_1.globalEventBus.emit(events_1.EVENTS.SKILL_LEVEL_UP, {
+                    skill,
+                    level: lvl,
+                });
+            }
+        }
     }
     /**
      * Back-compat wrapper: award to melee.
@@ -35889,6 +36052,7 @@ class TutorialFlags {
     constructor() {
         this.initPointers = false;
         this.openInventoryShown = false;
+        this.openSkillsShown = false;
         this.purchasedFromVendingMachine = false;
     }
 }
@@ -51351,6 +51515,79 @@ class DamageNumber extends particle_1.Particle {
     }
 }
 exports.DamageNumber = DamageNumber;
+
+
+/***/ }),
+
+/***/ "./src/particle/floatingTextPopup.ts":
+/*!*******************************************!*\
+  !*** ./src/particle/floatingTextPopup.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FloatingTextPopup = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
+class FloatingTextPopup extends particle_1.Particle {
+    constructor(args) {
+        super();
+        this.frame = 0;
+        this.alpha = 1;
+        this.riseTiles = 0;
+        this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
+            // Keep anchored to the player (and on the same z-layer).
+            this.x = this.anchor.x;
+            this.y = this.anchor.y;
+            this.worldZ = this.anchor.z ?? 0;
+            this.frame += delta;
+            this.riseTiles += FloatingTextPopup.RISE_TILES_PER_FRAME * delta;
+            if (this.frame > FloatingTextPopup.FADE_START_FRAME) {
+                this.alpha -= FloatingTextPopup.FADE_PER_FRAME * delta;
+            }
+            if (this.alpha <= 0.01) {
+                this.alpha = 0;
+                this.dead = true;
+                return;
+            }
+            // Draw centered above the player's head, following drawX/drawY for smooth motion.
+            const drawX = this.anchor.drawX ?? 0;
+            const drawY = this.anchor.drawY ?? 0;
+            const px = (this.anchor.x - drawX + 0.5) * gameConstants_1.GameConstants.TILESIZE;
+            const py = (this.anchor.y -
+                drawY -
+                FloatingTextPopup.HEAD_OFFSET_TILES -
+                this.riseTiles) *
+                gameConstants_1.GameConstants.TILESIZE;
+            const w = game_1.Game.measureText(this.text).width;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha *= this.alpha;
+            game_1.Game.fillTextOutline(this.text, Math.round(px - w / 2), Math.round(py), this.outlineColor, this.color);
+            game_1.Game.ctx.restore();
+        };
+        this.room = args.room;
+        this.anchor = args.anchor;
+        this.text = args.text;
+        this.color = args.color ?? "yellow";
+        this.outlineColor = args.outlineColor ?? gameConstants_1.GameConstants.OUTLINE;
+        // Initialize for culling/shading.
+        this.x = this.anchor.x;
+        this.y = this.anchor.y;
+        this.worldZ = this.anchor.z ?? 0;
+        this.dead = false;
+    }
+}
+exports.FloatingTextPopup = FloatingTextPopup;
+FloatingTextPopup.HEAD_OFFSET_TILES = 1.0;
+FloatingTextPopup.RISE_TILES_PER_FRAME = 0.015;
+// Fade later + more slowly so the popup rises higher before disappearing.
+FloatingTextPopup.FADE_START_FRAME = 32;
+FloatingTextPopup.FADE_PER_FRAME = 0.008;
 
 
 /***/ }),

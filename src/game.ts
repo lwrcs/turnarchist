@@ -27,7 +27,7 @@ import { globalEventBus } from "./event/eventBus";
 import { ReverbEngine } from "./sound/reverb";
 import { Level } from "./level/level";
 import { statsTracker } from "./game/stats";
-import { EVENTS } from "./event/events";
+import { EVENTS, type EventPayloads } from "./event/events";
 import { UpLadder } from "./tile/upLadder";
 import { CameraAnimation } from "./game/cameraAnimation";
 import { Tips } from "./tips";
@@ -37,6 +37,8 @@ import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
 import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
+import { SKILL_DISPLAY_NAME } from "./game/skills";
+import { FloatingTextPopup } from "./particle/floatingTextPopup";
 import tilesetUrl = require("../res/tileset.png");
 import objsetUrl = require("../res/objset.png");
 import mobsetUrl = require("../res/mobset.png");
@@ -46,6 +48,7 @@ import fontUrl = require("../res/font.png");
 import { FeedbackButton } from "./gui/feedbackButton";
 import { OneTimeEventTracker } from "./game/oneTimeEventTracker";
 import { TutorialFlags } from "./game/tutorialFlags";
+import { XPCounter } from "./gui/xpCounter";
 
 export enum LevelState {
   IN_LEVEL,
@@ -1022,6 +1025,38 @@ export class Game {
     globalEventBus.on(EVENTS.LEVEL_GENERATION_COMPLETED, () => {
       this.levelState = LevelState.IN_LEVEL;
     });
+    globalEventBus.on<EventPayloads[typeof EVENTS.CHAT_MESSAGE]>(
+      EVENTS.CHAT_MESSAGE,
+      (payload) => {
+        // Centralize chat pushes behind the Game instance.
+        this.pushMessage(payload.message);
+      },
+    );
+
+    globalEventBus.on<EventPayloads[typeof EVENTS.SKILL_LEVEL_UP]>(
+      EVENTS.SKILL_LEVEL_UP,
+      (payload) => {
+        const player = this.players?.[this.localPlayerID];
+        if (!player) return;
+        const room = player.getRoom?.() ?? this.room;
+        if (!room) return;
+
+        // First-time prompt: point at the Skills button in the top-left UI.
+        try {
+          this.maybeShowOpenSkillsPointer();
+        } catch {}
+
+        const text = `${SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
+        room.particles.push(
+          new FloatingTextPopup({
+            room,
+            anchor: player,
+            text,
+            color: "yellow",
+          }),
+        );
+      },
+    );
 
     // Add focus/blur event listeners
     //window.addEventListener("blur", this.handleWindowBlur);
@@ -4271,10 +4306,12 @@ export class Game {
         drawArrowAtApex(apx, apy, "down");
       } else if (dir === "up") {
         const apx = Math.floor(rect.x + rect.w / 2);
-        const apy = Math.min(
+        const apyBase = Math.min(
           GameConstants.HEIGHT - margin,
           rect.y + rect.h + 1,
         );
+        // Nudge upward slightly so it hugs the target UI element more closely.
+        const apy = Math.max(margin, apyBase - 2);
         drawArrowAtApex(apx, apy, "up");
       } else if (dir === "left") {
         const apx = Math.min(GameConstants.WIDTH - margin, rect.x + rect.w + 1);
@@ -4425,6 +4462,36 @@ export class Game {
       zIndex: 10,
     });
     this.tutorialFlags.openInventoryShown = true;
+  };
+
+  // Show a pointer prompting the user to open the skills panel after their first skill level-up.
+  public maybeShowOpenSkillsPointer = () => {
+    if (this.tutorialFlags.openSkillsShown) return;
+    if (this.levelState !== LevelState.IN_LEVEL) return;
+    const player = this.players?.[this.localPlayerID];
+    if (!player) return;
+    const skillsMenu = player.skillsMenu;
+    if (!skillsMenu) return;
+
+    const id = "open-skills";
+    const resolver: PointerAnchorResolver = () => XPCounter.getRect();
+    const until = () => skillsMenu.open === true;
+    const safety = [() => this.levelState !== LevelState.IN_LEVEL, () => player.dead];
+
+    this.addPointer({
+      id,
+      text: this.isMobile ? "Tap Skills" : "Click Skills",
+      resolver,
+      until,
+      safety,
+      // Place the text underneath the button, with an arrow pointing up.
+      arrowDirection: "up",
+      textDy: 2,
+      timeoutMs: 45000,
+      tags: ["tutorial"],
+      zIndex: 10,
+    });
+    this.tutorialFlags.openSkillsShown = true;
   };
 
   private drawAlerts = (delta: number) => {

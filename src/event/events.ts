@@ -16,6 +16,7 @@ export const EVENTS = {
   CHAT_MESSAGE: "ChatMessage",
   ENEMY_SEEN_PLAYER: "EnemySeenPlayer",
   ENEMY_KILLED: "ENEMY_KILLED",
+  SKILL_LEVEL_UP: "SKILL_LEVEL_UP",
   DAMAGE_DONE: "DAMAGE_DONE",
   DAMAGE_TAKEN: "DAMAGE_TAKEN",
   TURN_PASSED: "TURN_PASSED",
@@ -66,6 +67,11 @@ export interface EnemyKilledEvent {
   xpMultiplier?: number;
 }
 
+export interface SkillLevelUpEvent {
+  skill: Skill;
+  level: number;
+}
+
 export interface DamageDoneEvent {
   amount: number;
 }
@@ -99,6 +105,7 @@ export type AppEvents =
   | typeof EVENTS.CHAT_MESSAGE
   | typeof EVENTS.ENEMY_SEEN_PLAYER
   | typeof EVENTS.ENEMY_KILLED
+  | typeof EVENTS.SKILL_LEVEL_UP
   | typeof EVENTS.DAMAGE_DONE
   | typeof EVENTS.DAMAGE_TAKEN
   | typeof EVENTS.TURN_PASSED
@@ -126,6 +133,7 @@ export type EventPayloads = {
   [EVENTS.CHAT_MESSAGE]: ChatMessageEvent;
   [EVENTS.ENEMY_SEEN_PLAYER]: EnemySeenPlayerEvent;
   [EVENTS.ENEMY_KILLED]: EnemyKilledEvent;
+  [EVENTS.SKILL_LEVEL_UP]: SkillLevelUpEvent;
   [EVENTS.DAMAGE_DONE]: DamageDoneEvent;
   [EVENTS.DAMAGE_TAKEN]: DamageTakenEvent;
   [EVENTS.TURN_PASSED]: void;
