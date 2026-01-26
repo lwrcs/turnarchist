@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -9646,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.ba6c04352414fbe5b5fb.png";
+module.exports = __webpack_require__.p + "assets/fxset.d61ee8f9414883c73a44.png";
 
 /***/ }),
 

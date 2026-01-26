@@ -19,30 +19,50 @@
     <meta name="author" content="" />
 
     <title>Help</title>
-  </head>
-
-  <link rel="icon" href="/res/favicon.png" />
-  <link
-    rel="apple-touch-icon-precomposed"
-    href="apple-touch-icon-precomposed.png"
-  />
-
-  <body>
+    <link rel="icon" href="../res/favicon.png" />
     <link rel="stylesheet" type="text/css" href="../pagestyle.css" />
 
+    <script>
+      // Redirect mobile devices to the mobile controls page, unless explicitly overridden.
+      (function () {
+        try {
+          const url = new URL(window.location.href);
+          const forceDesktop =
+            url.searchParams.has("desktop") ||
+            url.searchParams.get("mode") === "desktop";
+          const forceMobile =
+            url.searchParams.has("mobile") || url.searchParams.get("mode") === "mobile";
 
+          const ua = navigator.userAgent || "";
+          const isMobileUA =
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|CriOS/i.test(
+              ua,
+            );
+          const isTouchDevice =
+            typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 0;
+
+          // Prefer explicit query params over detection.
+          const shouldGoMobile = forceMobile || (!forceDesktop && (isMobileUA || isTouchDevice));
+          if (shouldGoMobile) {
+            // Keep query params so users can force desktop/mobile from links.
+            window.location.replace("./mobile/" + window.location.search);
+          }
+        } catch {}
+      })();
+    </script>
+  </head>
+
+  <body>
     <nav>
      Turnarchist
       </nav>
 
     <h1>Instructions</h1> 
 
-  </header>
-
     <p>
       <style>
         p {
-          font-size: 1em; 
+          font-size: 1em;
         }
       </style>
       Turnarchist is turn-based, like chess! <br></br>
@@ -55,14 +75,24 @@
 
     <p>
 
-      Movement and Attacking: <b><mark>Arrow Keys</mark></b> or <b><mark>WASD</mark></b> <br></br>
-      Inventory: <b><mark>I</mark></b> or Clicking Inventory in the bottom right<br></br>
-      Using and Equipping items: <b><mark>Space Bar</mark></b> or <b><mark>Left Mouse</mark></b><br></br>
-      Drop Item: <b><mark>Q</mark></b> or dragging outside of the inventory<br></br>
-      Zoom in or out: <b><mark>+</mark></b> or <b><mark>-</mark></b><br></br>
+      Movement and attacking: <b><mark>Arrow Keys</mark></b> or <b><mark>WASD</mark></b><br></br>
+      Mouse movement: <b><mark>Left click</mark></b> in a direction to step; <b><mark>hold click</mark></b> to keep moving<br></br>
+      Inventory: <b><mark>I</mark></b> or clicking the Inventory button (bottom-right)<br></br>
+      Use / equip selected item: <b><mark>Space</mark></b> or <b><mark>left click</mark></b> an item in the quickbar/inventory<br></br>
+      Drop item: <b><mark>Q</mark></b> or drag an item outside the inventory UI<br></br>
+      Quickbar select: <b><mark>1–5</mark></b>, or cycle with <b><mark>,</mark></b> / <b><mark>.</mark></b> (mouse wheel also cycles)<br></br>
+      Map: <b><mark>M</mark></b> or click the minimap to open the full map<br></br>
+      Context menu (actions/examine): <b><mark>Right click</mark></b><br></br>
+      Close menus: <b><mark>Esc</mark></b><br></br>
+      Chat: <b><mark>C</mark></b> (or <b><mark>/</mark></b>)<br></br>
+      Zoom in/out: <b><mark>+</mark></b> / <b><mark>-</mark></b><br></br>
     </p>
 
-    <br>     <a href="/play.html" class="btn">I'm ready to play!</a>
+    <p>
+      On a phone/tablet? See the <a href="./mobile/">mobile controls guide</a>.
+    </p>
+
+    <br>     <a href="../play.html" class="btn">I'm ready to play!</a>
 
 
     <script>

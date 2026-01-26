@@ -43,8 +43,8 @@
 <!-- Main Content (Appears Below Video) -->
 <div class="main-content">
   <h1>Links to play</h1>
-  <a href="/play.html" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'play_button'});">Play now!<br><span class="small">I know what I'm doing.</span></a>
-  <a href="/help/" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'help_button'});">I'm new here...</a>
+  <a href="play.html" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'play_button'});">Play now!<br><span class="small">I know what I'm doing.</span></a>
+  <a id="helpLink" href="help/index.html" class="btn" onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'help_button'});">I'm new here...</a>
 </div>
 
 <!-- Social Media Container -->
@@ -71,6 +71,38 @@
 </div>
     
     <footer>© 2025 Turnarchist. All rights reserved.</footer>
+    <script>
+      // Make the Help button route to the best page for the device.
+      // - Desktop: help/index.html
+      // - Mobile/touch: help/mobile/index.html
+      (function () {
+        try {
+          const helpLink = document.getElementById("helpLink");
+          if (!helpLink) return;
+
+          const url = new URL(window.location.href);
+          const forceDesktop =
+            url.searchParams.has("desktop") ||
+            url.searchParams.get("mode") === "desktop";
+          const forceMobile =
+            url.searchParams.has("mobile") || url.searchParams.get("mode") === "mobile";
+
+          const ua = navigator.userAgent || "";
+          const isMobileUA =
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|CriOS/i.test(
+              ua,
+            );
+          const isTouchDevice =
+            typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 0;
+
+          if (forceMobile || (!forceDesktop && (isMobileUA || isTouchDevice))) {
+            helpLink.setAttribute("href", "help/mobile/index.html" + window.location.search);
+          } else {
+            helpLink.setAttribute("href", "help/index.html" + window.location.search);
+          }
+        } catch {}
+      })();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
