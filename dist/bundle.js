@@ -37507,8 +37507,10 @@ class Menu {
         const x = 0;
         const y = Math.round(0.5 * tile);
         // Preserve the historical 1.5-tile-wide hit area used for clicking.
-        const w = Math.round(1.5 * tile);
-        const h = tile;
+        // Expand hit area slightly to the right so Menu/Skills are easier to tap/click.
+        const w = Math.round(1.5 * tile) + 8;
+        // Shrink vertical hit area slightly so it doesn't overlap the Skills button below.
+        const h = Math.max(1, tile - 6);
         return { x, y, w, h };
     }
     initializeCloseButton() {
@@ -39471,10 +39473,11 @@ class XPCounter {
         const tile = gameConstants_1.GameConstants.TILESIZE;
         const menu = menu_1.Menu.getOpenMenuButtonRect();
         const x = menu.x;
-        // Align text with the Menu label above; use text-line spacing instead of tile spacing.
-        const y = 10 + (game_1.Game.letter_height + 6) - 2;
+        // Mirror `Menu.drawOpenMenuButton()` placement, but one tile lower.
+        // This makes the hit area match the icon+label style of the Menu button.
+        const y = menu.y + tile - 6;
         const w = menu.w;
-        const h = game_1.Game.letter_height + 8;
+        const h = tile;
         return { x, y, w, h };
     }
     static isPointInBounds(x, y) {
@@ -39484,11 +39487,19 @@ class XPCounter {
     static draw(delta) {
         // draw the skills button (formerly XP counter)
         const r = XPCounter.getRect();
+        const tile = gameConstants_1.GameConstants.TILESIZE;
+        const menu = menu_1.Menu.getOpenMenuButtonRect();
         game_1.Game.ctx.save();
         game_1.Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
         // Match Menu button opacity and style (text-only, no background).
         game_1.Game.ctx.globalAlpha = 0.1;
-        game_1.Game.fillText("Skills", 10, r.y + 2);
+        // Skills icon: same as menu icon, but tile is directly below on fxset (tileY + 1).
+        // Draw position is also one tile below the menu icon.
+        const iconX = 0;
+        const iconY = r.y / tile; // keep icon aligned with the Skills button's pixel Y (supports small offsets)
+        game_1.Game.drawFX(18, 1, 1, 1, iconX, iconY, 1, 1);
+        // Label aligned like Menu label (Menu uses y=10).
+        game_1.Game.fillText("Skills", 10, 10 + tile - 6);
         game_1.Game.ctx.restore();
     }
 }

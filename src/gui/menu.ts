@@ -135,8 +135,10 @@ export class Menu {
     const x = 0;
     const y = Math.round(0.5 * tile);
     // Preserve the historical 1.5-tile-wide hit area used for clicking.
-    const w = Math.round(1.5 * tile);
-    const h = tile;
+    // Expand hit area slightly to the right so Menu/Skills are easier to tap/click.
+    const w = Math.round(1.5 * tile) + 8;
+    // Shrink vertical hit area slightly so it doesn't overlap the Skills button below.
+    const h = Math.max(1, tile - 6);
     return { x, y, w, h };
   }
 
