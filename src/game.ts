@@ -38,6 +38,7 @@ import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
 import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
 import { SKILL_DISPLAY_NAME } from "./game/skills";
+import type { Skill } from "./game/skills";
 import { FloatingTextPopup } from "./particle/floatingTextPopup";
 import tilesetUrl = require("../res/tileset.png");
 import objsetUrl = require("../res/objset.png");
@@ -49,6 +50,8 @@ import { FeedbackButton } from "./gui/feedbackButton";
 import { OneTimeEventTracker } from "./game/oneTimeEventTracker";
 import { TutorialFlags } from "./game/tutorialFlags";
 import { XPCounter } from "./gui/xpCounter";
+import { Crate } from "./entity/object/crate";
+import { Barrel } from "./entity/object/barrel";
 
 export enum LevelState {
   IN_LEVEL,
@@ -1033,8 +1036,9 @@ export class Game {
       },
     );
 
-    globalEventBus.on<EventPayloads[typeof EVENTS.SKILL_LEVEL_UP]>(
-      EVENTS.SKILL_LEVEL_UP,
+    type SkillLevelUpEventPayload = { skill: Skill; level: number };
+    globalEventBus.on<SkillLevelUpEventPayload>(
+      "SKILL_LEVEL_UP",
       (payload) => {
         const player = this.players?.[this.localPlayerID];
         if (!player) return;
@@ -2087,6 +2091,12 @@ export class Game {
       this.pushMessage(
         `Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`,
       );
+      return;
+    }
+
+    if (command === "slow") {
+      const slowMotionEnabled = this.players[this.localPlayerID].toggleSlowMotion();
+      this.pushMessage(`Slow motion is now ${slowMotionEnabled ? "enabled" : "disabled"}`);
       return;
     }
 
@@ -4922,6 +4932,10 @@ export class Game {
     outlineManhattan: boolean = false,
   ) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
+    // Critical: disable smoothing on the *destination* context that performs the scaling drawImage().
+    // This ensures squish scaling stays pixel-crisp (nearest-neighbor).
+    Game.ctx.imageSmoothingEnabled = false;
+    Game.ctx.imageSmoothingQuality = "low";
 
     // Snap to nearest shading increment
     const shadeLevel = entity
@@ -5028,6 +5042,8 @@ export class Game {
         Game.shade_canvases[key].height,
       );
       shCtx.globalAlpha = 1.0;
+      shCtx.imageSmoothingEnabled = false;
+      shCtx.imageSmoothingQuality = "low";
 
       // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
       shCtx.globalCompositeOperation = "destination-in";

@@ -56,27 +56,32 @@ export function applyPushChain(
 ): boolean {
   const behindTile = room.roomArray?.[nextX]?.[nextY];
   const canCrush = (behindTile && behindTile.canCrushEnemy?.()) || enemyEnd;
+  const tailToCrush = canCrush && chain.length > 0 ? chain[chain.length - 1] : null;
 
   // If there is no chain and the next tile would crush or is blocked by a non-chainPushable,
   // crush the starting entity instead of moving it (mirrors player push behavior)
   if (chain.length === 0 && canCrush) {
-    start.crush();
+    start.crush(dx, dy);
     return false;
   }
 
   for (const f of chain) {
     f.lastX = f.x;
     f.lastY = f.y;
+    // If this is the one that will be crushed, don't animate a push onto the blocker first.
+    // `crush()` will snap it into the blocking tile and drive the visual via crush anim.
+    if (f === tailToCrush) continue;
     f.x += dx;
     f.y += dy;
     f.drawX = dx;
     f.drawY = dy;
     f.skipNextTurns = 1; // ensure the pushed ones skip next turn, like player push
+    f.markPushedMove();
   }
 
   if (canCrush && chain.length > 0) {
     const tail = chain[chain.length - 1];
-    tail.crush();
+    tail.crush(dx, dy);
   }
 
   start.lastX = start.x;
@@ -85,5 +90,8 @@ export function applyPushChain(
   start.y += dy;
   start.drawX = dx;
   start.drawY = dy;
+  // Mark the head as pushed too so its animation speed matches the chain.
+  start.skipNextTurns = 1;
+  start.markPushedMove();
   return true;
 }

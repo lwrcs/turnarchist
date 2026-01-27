@@ -235,7 +235,7 @@ export class ChargeEnemy extends Enemy {
       }
 
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX + Math.floor(this.frame),
         this.tileY + this.direction * 2,
         1,

@@ -19,9 +19,10 @@ export class PlayerRenderer {
   private flashingFrame: number;
   private guiHeartFrame: number;
   private hurtAlpha: number;
-  private jumpY: number;
+  private _jumpY: number;
   private motionSpeed: number;
   slowMotionEnabled: boolean;
+  slowMotionOverride: boolean = false;
   private jumpHeight: number;
   private hurting: boolean;
   private hurtingShield: boolean;
@@ -137,18 +138,42 @@ export class PlayerRenderer {
     this.slowMotionEnabled = false;
   };
 
+  toggleSlowMotion = () => {
+    this.slowMotionOverride = !this.slowMotionOverride;
+    if (this.motionSpeed === 1) this.motionSpeed = 0.25;
+    else this.motionSpeed = 1;
+    return this.motionSpeed !== 1;
+  };
+
   setNewDrawXY = (x: number, y: number, z: number) => {
+    // Consume any "next move is a push" marker so push easing only applies to that move.
+    if (this.nextMoveIsPush) {
+      this.pushingMove = true;
+      this.nextMoveIsPush = false;
+    } else {
+      this.pushingMove = false;
+    }
     this.drawX += x - this.player.x;
     this.drawY += y - this.player.y;
     this.drawZ += z - this.player.z;
+    if (this.pushingMove) {
+      const mag = Math.max(
+        Math.abs(this.drawX),
+        Math.abs(this.drawY),
+        Math.abs(this.drawZ),
+      );
+      this.pushAnimStartMag = Math.max(0.0001, mag);
+    } else {
+      this.pushAnimStartMag = 0;
+    }
   };
 
   enableSlowMotion = () => {
-    if (this.motionSpeed < 1 && !this.slowMotionEnabled) {
+    if (this.motionSpeed < 1 && !this.slowMotionEnabled && !this.slowMotionOverride) {
       this.motionSpeed *= 1.08;
       if (this.motionSpeed >= 1) this.motionSpeed = 1;
     }
-    if (this.slowMotionEnabled && this.motionSpeed > 0.25) {
+    if (this.slowMotionEnabled && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
       this.motionSpeed *= 0.95;
       if (this.motionSpeed < 0.25) this.motionSpeed = 0.25;
     }
@@ -162,6 +187,17 @@ export class PlayerRenderer {
   getJumpOffset = (): number => {
     return this.jumpY;
   };
+
+  /**
+   * Jump offset accessor.
+   * Centralizes "no hop while pushing" without needing special-case draw logic.
+   */
+  get jumpY(): number {
+    return this.pushingMove ? 0 : this._jumpY;
+  }
+  set jumpY(v: number) {
+    this._jumpY = v;
+  }
 
   /**
    * Draws the player sprite to the canvas.
@@ -563,14 +599,48 @@ export class PlayerRenderer {
     Game.ctx.restore(); // Restore the canvas state
   };
 
+  private pushingMove: boolean = false;
+  private nextMoveIsPush: boolean = false;
+  private pushAnimStartMag: number = 1;
+
+  markPushingMove = (): void => {
+    // Mark the *next* movement delta as a push (consumed by setNewDrawXY).
+    this.nextMoveIsPush = true;
+  };
+
   updateDrawXY = (delta: number) => {
+    // Safety: if we're fully stopped, never keep push easing armed.
+    if (this.pushingMove && this.doneMoving()) this.pushingMove = false;
     if (!this.doneMoving()) {
-      this.drawX *= 0.85 ** delta;
-      this.drawY *= 0.85 ** delta;
-      this.drawZ *= 0.85 ** delta;
+      const speed = this.pushingMove
+        ? (() => {
+            const mag = Math.max(
+              Math.abs(this.drawX),
+              Math.abs(this.drawY),
+              Math.abs(this.drawZ),
+            );
+            // Capture start magnitude lazily the first frame we animate this push.
+            if (this.pushAnimStartMag <= 0.0001) {
+              this.pushAnimStartMag = Math.max(0.0001, mag);
+            }
+            const start = Math.max(0.0001, this.pushAnimStartMag);
+            const t = Math.max(0, Math.min(1, 1 - mag / start));
+            const tt = t * t; // ease-in
+            const slow = GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_START;
+            const fast = GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_END;
+            return slow + (fast - slow) * tt;
+          })()
+        : GameConstants.PLAYER_DRAW_MOVE_SPEED;
+      this.drawX *= speed ** delta;
+      this.drawY *= speed ** delta;
+      this.drawZ *= speed ** delta;
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
       this.drawZ = Math.abs(this.drawZ) < 0.01 ? 0 : this.drawZ;
+      if (this.doneMoving()) {
+        this.pushingMove = false;
+        this.pushAnimStartMag = 0;
+      }
     }
     if (this.doneHitting()) {
       this.jump(delta);
@@ -582,6 +652,7 @@ export class PlayerRenderer {
 
     this.enableSlowMotion();
     GameConstants.ANIMATION_SPEED = this.motionSpeed;
+    this.player.updatePushMoveInputLock();
   };
 
   updateHitXY = (delta: number) => {
@@ -1187,8 +1258,9 @@ export class PlayerRenderer {
 
   jump = (delta: number) => {
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
-    if (Math.abs(this.jumpY) < 0.01) this.jumpY = 0;
-    if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
+    let jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
+    if (Math.abs(jumpY) < 0.01) jumpY = 0;
+    if (jumpY > this.jumpHeight) jumpY = this.jumpHeight;
+    this.jumpY = jumpY;
   };
 }

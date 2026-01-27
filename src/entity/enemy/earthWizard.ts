@@ -209,7 +209,7 @@ export class EarthWizardEnemy extends WizardEnemy {
       if (this.hasShadow && this.state !== WizardState.idle)
         this.drawShadow(delta);
       if (this.frame >= 0) {
-        Game.drawMob(
+        this.drawMobWithCrush(
           Math.floor(this.frame) + 5,
           20,
           1,
@@ -224,7 +224,7 @@ export class EarthWizardEnemy extends WizardEnemy {
         this.frame += 0.4 * delta;
         if (this.frame > 12) this.frame = -1;
       } else {
-        Game.drawMob(
+        this.drawMobWithCrush(
           this.tileX,
           this.tileY,
           1,

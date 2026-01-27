@@ -335,15 +335,23 @@ export class CrusherEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow) this.drawShadow(delta);
+
+      const rect = this.applyCrushToDrawRect({
+        dX: this.x - this.drawX + rumbleX - 0.5,
+        dY: this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY,
+        dW: 2,
+        dH: 2,
+      });
+
       Game.drawObj(
         this.tileX,
         this.tileY,
         2,
         2,
-        this.x - this.drawX + rumbleX - 0.5,
-        this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY,
-        2 * this.crushX,
-        2 * this.crushY,
+        rect.dX,
+        rect.dY,
+        rect.dW,
+        rect.dH,
         this.softShadeColor,
         this.shadeAmount(),
       );

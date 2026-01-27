@@ -355,7 +355,7 @@ export class BigSkullEnemy extends Enemy {
       if (this.frame >= 4) this.frame = 0;
 
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX,
         this.tileY + this.direction * 3,
         2,

@@ -215,7 +215,7 @@ export class BishopEnemy extends Enemy {
       if (this.frame >= 4) this.frame = 0;
 
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX + Math.floor(this.frame),
         this.tileY + offsetTileY,
         1,

@@ -15,6 +15,7 @@ import { StunAnimation } from "../../projectile/stunAnimation";
 import { DownLadder } from "../../tile/downLadder";
 import { Random } from "../../utility/random";
 import { GameplaySettings } from "../../game/gameplaySettings";
+import { GameConstants } from "../../game/gameConstants";
 
 enum EnemyState {
   SLEEP,
@@ -48,7 +49,7 @@ export abstract class Enemy extends Entity {
   targetPlayer: Player;
   drop: Item;
   status: EnemyStatus;
-  protected jumpY: number;
+  protected _jumpY: number;
   protected jumpHeight: number;
   static difficulty: number = 1;
   private effectStartTick: number;
@@ -97,6 +98,19 @@ export abstract class Enemy extends Entity {
     this.diagonalAttack = false;
     this.baseDamage = 1;
     //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+  }
+
+  /**
+   * Jump offset accessor.
+   * Centralizes "no hop while being pushed" without touching child classes:
+   * any render path that reads `this.jumpY` will receive 0 during push animation.
+   */
+  get jumpY(): number {
+    // No hop while being pushed OR while playing the crushed death-clone animation.
+    return this.isPushAnimating() || (this.cloned && this.crushed) ? 0 : this._jumpY;
+  }
+  set jumpY(v: number) {
+    this._jumpY = v;
   }
 
   hit = (): number => {
@@ -734,15 +748,22 @@ export abstract class Enemy extends Entity {
     //putting this here bc i'm lazy
     this.updateHurtFrame(delta);
     this.animateDying(delta);
+    this.updateCrushAnimation(delta);
 
     if (!this.doneMoving()) {
-      this.drawX *= this.drawMoveSpeed ** delta;
-      this.drawY *= this.drawMoveSpeed ** delta;
+      const isBeingPushed = this.isPushAnimating();
+      const speed = isBeingPushed
+        ? this.getPushEaseInDecayBase()
+        : this.drawMoveSpeed;
+
+      this.drawX *= speed ** delta;
+      this.drawY *= speed ** delta;
 
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
       this.jump(delta);
     }
+    this.updatePushAnimFlag();
 
     this.updateShadeColor(delta);
   };
@@ -812,7 +833,8 @@ export abstract class Enemy extends Entity {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+
+      this.drawMobWithCrush(
         this.tileX + Math.floor(this.frame),
         this.tileY + this.direction * 2,
         1,

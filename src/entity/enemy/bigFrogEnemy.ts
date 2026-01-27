@@ -561,7 +561,7 @@ export class BigFrogEnemy extends Enemy {
         this.animationSpeed = 0.1;
       }
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX +
           (this.tileX !== 59 && !this.rumbling && !this.cloned
             ? Math.floor(this.frame)

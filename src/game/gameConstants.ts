@@ -130,6 +130,19 @@ export class GameConstants {
   static MOVEMENT_COOLDOWN = 50; // milliseconds
   static MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
+  // When pushing entities, block movement inputs until pushed objects have visually progressed this far (0..1).
+  static readonly PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0.9;
+
+  /**
+   * Draw smoothing factors (exponential decay bases).
+   * Higher values => slower animation (takes longer for drawX/drawY to decay to 0).
+   */
+  static readonly PLAYER_DRAW_MOVE_SPEED = 0.85;
+  // Push moves use an "ease-in" profile: start slow (base close to 1) then accelerate (base decreases).
+  static readonly PLAYER_PUSH_DRAW_MOVE_SPEED_START = 0.95;
+  static readonly PLAYER_PUSH_DRAW_MOVE_SPEED_END = 0.87;
+  static readonly ENTITY_PUSH_DRAW_MOVE_SPEED_START = 0.97;
+  static readonly ENTITY_PUSH_DRAW_MOVE_SPEED_END = 0.9;
   static SLOW_INPUTS_NEAR_ENEMIES = false;
   static SCREEN_SHAKE_ENABLED = true;
 
@@ -480,7 +493,7 @@ export class GameConstants {
   static readonly STARTING_DEV_INVENTORY = [
     Dagger,
     Torch,
-    BestiaryBook,
+    QuarterStaff,
     GlowStick,
     GodStone,
     Spellbook,

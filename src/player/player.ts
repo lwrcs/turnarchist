@@ -107,6 +107,8 @@ export class Player extends Drawable {
   menu: Menu;
   skillsMenu: SkillsMenu;
   busyAnimating: boolean;
+  private pushMoveInputLockActive: boolean = false;
+  private pushMoveInputLockEntities: Entity[] = [];
   lightColor: [number, number, number];
   damageBonus: number;
   magicDamageBonus: number;
@@ -885,6 +887,34 @@ export class Player extends Drawable {
     this.deathScreenPageCount = 1;
   };
 
+  beginPushMoveInputLock = (entities: Entity[]): void => {
+    // De-dupe while preserving order
+    const uniq: Entity[] = [];
+    for (const e of entities) {
+      if (!e) continue;
+      if (uniq.includes(e)) continue;
+      uniq.push(e);
+    }
+    this.pushMoveInputLockEntities = uniq;
+    this.pushMoveInputLockActive = uniq.length > 0;
+  };
+
+  isPushMoveInputLocked = (): boolean => {
+    return this.pushMoveInputLockActive;
+  };
+
+  /** Called from the renderer each frame to release the lock once visuals have mostly settled. */
+  updatePushMoveInputLock = (): void => {
+    if (!this.pushMoveInputLockActive) return;
+    const threshold = GameConstants.PUSH_VISUAL_INPUT_UNLOCK_PROGRESS;
+    const entities = this.pushMoveInputLockEntities;
+    const allSettled = entities.every((e) => e.dead || e.getPushAnimProgress01() >= threshold);
+    if (allSettled) {
+      this.pushMoveInputLockActive = false;
+      this.pushMoveInputLockEntities = [];
+    }
+  };
+
   hit = (): number => {
     return 1;
   };
@@ -998,24 +1028,28 @@ export class Player extends Drawable {
             if (this.getRoom() === this.game.room) Sound.push();
             // here pushedEnemies may still be []
 
+            const shouldCrushTail =
+              this.getRoom().roomArray[nextX][nextY].canCrushEnemy() || enemyEnd;
+            const tailToCrush =
+              shouldCrushTail && pushedEnemies.length > 0
+                ? pushedEnemies[pushedEnemies.length - 1]
+                : null;
+
             for (const f of pushedEnemies) {
               f.lastX = f.x;
               f.lastY = f.y;
+              // Don't animate the soon-to-be-crushed entity pushing onto the blocker first.
+              if (f === tailToCrush) continue;
               f.x += dx;
               f.y += dy;
               f.drawX = dx;
               f.drawY = dy;
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
+              f.markPushedMove();
             }
-            if (
-              this.getRoom().roomArray[nextX][nextY].canCrushEnemy() ||
-              enemyEnd
-            ) {
-              const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
-              pushedEnemy.crush();
-              if (pushedEnemy.isEnemy) {
-                Sound.playSquish();
-              }
+            if (tailToCrush) {
+              tailToCrush.crush(dx, dy);
+              if (tailToCrush.isEnemy) Sound.playSquish();
               if (this.getRoom() === this.game.room) Sound.hit();
             }
 
@@ -1023,6 +1057,13 @@ export class Player extends Drawable {
             e.y += dy;
             e.drawX = dx;
             e.drawY = dy;
+            // Ensure the pushed head object animates as "being pushed" just like the rest of the chain.
+            e.skipNextTurns = 1;
+            e.markPushedMove();
+            // Gate movement inputs until the pushed objects have mostly reached their new tile visually.
+            this.beginPushMoveInputLock([e, ...pushedEnemies]);
+            // This move is a push; slow the player's movement easing to match the push feel.
+            this.renderer?.markPushingMove?.();
             this.move(x, y);
             this.moveDistance++;
             this.getRoom().tick(this);
@@ -1364,6 +1405,10 @@ export class Player extends Drawable {
 
   endSlowMotion = () => {
     this.renderer.endSlowMotion();
+  };
+  
+  toggleSlowMotion = () => {
+    return this.renderer.toggleSlowMotion();
   };
 
   move = (x: number, y: number, z: number = this.z) => {

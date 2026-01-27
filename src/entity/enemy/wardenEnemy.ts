@@ -381,7 +381,7 @@ export class WardenEnemy extends Enemy {
     this.frame += 0.1 * delta;
     if (this.frame >= 4) this.frame = 0;
     if (this.hasShadow) this.drawShadow(delta);
-    Game.drawMob(
+    this.drawMobWithCrush(
       this.tileX + 2 * Math.floor(this.frame),
       this.tileY,
       2,

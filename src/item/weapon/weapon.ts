@@ -495,11 +495,10 @@ export abstract class Weapon extends Equippable {
     const dx = Math.sign(targetX - this.wielder.x);
     const dy = Math.sign(targetY - this.wielder.y);
 
-    // Deal damage to first enemy
-    this.attack(enemy, this.damage + this.wielder.damageBonus);
-
     // If enemy is not chainPushable, do not attempt knockback or crush
     if (enemy.chainPushable === false) {
+      // Deal normal damage only (no push/crush behavior)
+      this.attack(enemy, this.damage + this.wielder.damageBonus);
       this.applyHitDelay(true);
       this.hitSound();
       this.wielder.setHitXY(targetX, targetY);
@@ -523,6 +522,23 @@ export abstract class Weapon extends Equippable {
       !!behindTile &&
       (!behindTile.isSolid?.() || behindTile.canCrushEnemy?.() || enemyEnd);
 
+    // Special case: single enemy directly against a crushable blocker (wall or solid end-entity).
+    // If we apply normal damage *and* crush, we can end up cloning two different death animations.
+    // In this case, let `crush()` be the only kill path.
+    const willCrushStart =
+      !!behindTile && (behindTile.canCrushEnemy?.() || enemyEnd) && chain.length === 0;
+    if (willCrushStart) {
+      enemy.crush(dx, dy);
+      this.applyHitDelay(true);
+      this.hitSound();
+      this.wielder.setHitXY(targetX, targetY);
+      this.attackAnimation(targetX, targetY);
+      if (room) room.tick(this.wielder);
+      this.shakeScreen(targetX, targetY);
+      this.degrade();
+      return true;
+    }
+
     let moved = false;
     if (canMoveOrCrush) {
       // Push one tile per hit
@@ -538,6 +554,9 @@ export abstract class Weapon extends Equippable {
       );
     }
 
+    // Deal damage to the initial target (push + damage behavior), but only if we didn't crush it above.
+    this.attack(enemy, this.damage + this.wielder.damageBonus);
+
     // Apply standard hit side-effects
     this.applyHitDelay(true);
     this.hitSound();
@@ -546,7 +565,10 @@ export abstract class Weapon extends Equippable {
     if (room) room.tick(this.wielder);
     this.shakeScreen(targetX, targetY);
     // Only skip enemy's next turn if we actually pushed them
-    if (moved) enemy.skipNextTurns = 1;
+    if (moved) {
+      enemy.skipNextTurns = 1;
+      enemy.markPushedMove();
+    }
     this.degrade();
 
     return true;

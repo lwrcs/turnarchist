@@ -218,15 +218,23 @@ export class CrabEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow) this.drawShadow(delta);
+
+      const rect = this.applyCrushToDrawRect({
+        dX: this.x - this.drawX + rumbleX,
+        dY: this.y - this.drawYOffset - this.drawY + rumbleY,
+        dW: 1,
+        dH: 1,
+      });
+
       Game.drawMob(
         this.tileX,
         this.tileY + this.direction,
         1,
         1,
-        this.x - this.drawX + rumbleX,
-        this.y - this.drawYOffset - this.drawY + rumbleY,
-        1 * this.crushX,
-        1 * this.crushY,
+        rect.dX,
+        rect.dY,
+        rect.dW,
+        rect.dH,
         this.softShadeColor,
         this.shadeAmount(),
         undefined,

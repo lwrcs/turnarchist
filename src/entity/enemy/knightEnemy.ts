@@ -188,7 +188,7 @@ export class KnightEnemy extends Enemy {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)),
         this.tileY + this.direction * 2,
         1,

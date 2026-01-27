@@ -265,7 +265,7 @@ export class BigKnightEnemy extends Enemy {
           : this.tileX;
       const tileY = this.ticks % 2 === 0 ? this.tileY : this.tileY + 4;
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         tileX,
         tileY,
         2,

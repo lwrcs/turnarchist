@@ -520,7 +520,7 @@ export class Spawner extends Enemy {
       if (this.frame >= 4) this.frame = 0;
 
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         this.tileX,
         this.tileY,
         1,

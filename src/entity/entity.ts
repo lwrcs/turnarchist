@@ -108,7 +108,23 @@ export class Entity extends Drawable {
   protected crushX: number;
   protected crushY: number;
   protected crushVertical: boolean;
+  // Used to ease-in the crush squish animation (slow → fast), similar to push easing.
+  protected crushAnimStartScale: number;
   protected crushed: boolean;
+  /**
+   * Direction of the force that caused the crush.
+   * - (1,0) means pushed right into a crush tile
+   * - (-1,0) means pushed left
+   * - (0,1) means pushed down
+   * - (0,-1) means pushed up
+   *
+   * Used only for rendering offsets (so crushed death clones don't disappear inside walls).
+   */
+  protected crushPushDX: number;
+  protected crushPushDY: number;
+  // Crush animation decay factor per ~60fps tick (higher = slower squish).
+  // Applied as `pow(factor, delta)` so it's stable across frame rates.
+  protected static readonly CRUSH_DECAY_60FPS = 0.985;
   rumbling: boolean;
   protected animationSpeed: number;
   drawYOffset: number;
@@ -247,7 +263,10 @@ export class Entity extends Drawable {
     this.crushX = 1;
     this.crushY = 1;
     this.crushVertical = false;
+    this.crushAnimStartScale = 1;
     this.crushed = false;
+    this.crushPushDX = 0;
+    this.crushPushDY = 0;
     this.rumbling = false;
     this.animationSpeed = 0.1;
     this.drawYOffset = 1.175;
@@ -377,6 +396,18 @@ export class Entity extends Drawable {
       bloomSize: original.bloomSize,
       bloomOffsetY: original.bloomOffsetY,
       dyingFrame: 30,
+      // Preserve "pushed" easing state so if an entity is pushed and dies from damage
+      // (not crush), the death animation still uses the push easing profile.
+      pushAnimActive: original.pushAnimActive,
+      pushAnimStartMag: original.pushAnimStartMag,
+      // Preserve crush state so the death clone can animate squishing when crushed into walls.
+      crushed: original.crushed,
+      crushX: original.crushX,
+      crushY: original.crushY,
+      crushVertical: original.crushVertical,
+      crushPushDX: original.crushPushDX,
+      crushPushDY: original.crushPushDY,
+      crushAnimStartScale: original.crushAnimStartScale,
     });
 
     // Add to room's dead entities
@@ -619,17 +650,154 @@ export class Entity extends Drawable {
     //putting this here bc i'm lazy
     this.updateHurtFrame(delta);
     this.animateDying(delta);
+    this.updateCrushAnimation(delta);
     this.updateShadeColor(delta);
     //this.updateBloom(delta);
 
     if (!this.doneMoving()) {
-      this.drawX *= this.drawMoveSpeed ** delta;
-      this.drawY *= this.drawMoveSpeed ** delta;
+      const speed = this.isPushAnimating()
+        ? this.getPushEaseInDecayBase()
+        : this.drawMoveSpeed;
+
+      this.drawX *= speed ** delta;
+      this.drawY *= speed ** delta;
 
       this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
       this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
     }
+    this.updatePushAnimFlag();
   };
+
+  /**
+   * Drive crush squish animation for death-clones (so the "crushed into wall" corpse compresses over time).
+   * Kept centralized so both enemies and non-enemy entities (pushables, etc) animate consistently.
+   */
+  protected updateCrushAnimation = (delta: number): void => {
+    if (!this.cloned || !this.crushed) return;
+    this.crushAnim(delta);
+  };
+
+  private pushAnimActive: boolean = false;
+  private pushAnimStartMag: number = 1;
+
+  /**
+   * Mark that this entity is currently being moved via a push (not its own normal movement).
+   * This flag persists until `doneMoving()` so it is stable even if turn-based counters
+   * like `skipNextTurns` get consumed/reset before draw offsets settle.
+   */
+  markPushedMove = (): void => {
+    this.pushAnimActive = true;
+    const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    this.pushAnimStartMag = Math.max(0.0001, mag);
+  };
+
+  /**
+   * 0..1 progress for the current pushed movement animation.
+   * 0 = just pushed, 1 = visually settled (draw offsets near zero).
+   */
+  getPushAnimProgress01 = (): number => {
+    if (!this.isPushAnimating()) return 1;
+    const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    const start = Math.max(0.0001, this.pushAnimStartMag);
+    return Math.max(0, Math.min(1, 1 - mag / start));
+  };
+
+  protected updatePushAnimFlag = (): void => {
+    if (this.pushAnimActive && this.doneMoving()) this.pushAnimActive = false;
+  };
+
+  protected getPushEaseInDecayBase = (): number => {
+    const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+    const start = Math.max(0.0001, this.pushAnimStartMag);
+    const t = Math.max(0, Math.min(1, 1 - mag / start)); // 0->1 as we approach the destination
+    const tt = t * t; // ease-in (slow start, faster later)
+    const slow = GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_START;
+    const fast = GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_END;
+    return slow + (fast - slow) * tt;
+  };
+
+  protected isPushAnimating = (): boolean => {
+    // Prefer explicit push flag; fall back to legacy heuristic.
+    if (this.pushAnimActive) return true;
+    return (
+      (this.skipNextTurns ?? 0) > 0 &&
+      (Math.abs(this.drawX) > 0.01 || Math.abs(this.drawY) > 0.01)
+    );
+  };
+
+  /**
+   * Wrapper around `Game.drawMob` that applies the "crushed into wall" render transform
+   * when this entity died via `crush()` (clone-only).
+   */
+  protected drawMobWithCrush(
+    sX: number,
+    sY: number,
+    sW: number,
+    sH: number,
+    dX: number,
+    dY: number,
+    dW: number,
+    dH: number,
+    shadeColor = "black",
+    shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
+  ): void {
+    const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
+    Game.drawMob(
+      sX,
+      sY,
+      sW,
+      sH,
+      rect.dX,
+      rect.dY,
+      rect.dW,
+      rect.dH,
+      shadeColor,
+      shadeOpacity,
+      fadeDir,
+      outlineColor,
+      outlineOpacity,
+      outlineOffset,
+      outlineManhattan,
+    );
+  }
+
+  /**
+   * Wrapper around `Game.drawObj` that applies the "crushed into wall" render transform
+   * when this entity died via `crush()` (clone-only).
+   */
+  protected drawObjWithCrush(
+    sX: number,
+    sY: number,
+    sW: number,
+    sH: number,
+    dX: number,
+    dY: number,
+    dW: number,
+    dH: number,
+    shadeColor = "black",
+    shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
+  ): void {
+    const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
+    Game.drawObj(
+      sX,
+      sY,
+      sW,
+      sH,
+      rect.dX,
+      rect.dY,
+      rect.dW,
+      rect.dH,
+      shadeColor,
+      shadeOpacity,
+      fadeDir,
+    );
+  }
 
   setDrawXY = (x: number, y: number) => {
     this.drawX += this.x - x;
@@ -1478,24 +1646,142 @@ export class Entity extends Drawable {
     }
   };
 
-  crush = () => {
+  crush = (pushDX?: number, pushDY?: number) => {
     this.crushed = true;
-    let player: Player;
-    for (let i in this.game.players) {
-      player = this.game.players[i];
+    // Determine crush direction:
+    // - Prefer explicit direction from the caller (push/knockback knows this).
+    // - Otherwise fall back to drawX/drawY (some callers set these to the push direction).
+    const dx =
+      typeof pushDX === "number" && Number.isFinite(pushDX) ? Math.sign(pushDX) : Math.sign(this.drawX ?? 0);
+    const dy =
+      typeof pushDY === "number" && Number.isFinite(pushDY) ? Math.sign(pushDY) : Math.sign(this.drawY ?? 0);
+    this.crushPushDX = dx;
+    this.crushPushDY = dy;
+    this.crushVertical = dy !== 0;
+
+    // Crushed entities should not also animate as "being pushed".
+    // Snap any push draw offsets immediately; the visual is handled by crush squish + draw compensation.
+    this.pushAnimActive = false;
+    this.pushAnimStartMag = 1;
+    this.drawX = 0;
+    this.drawY = 0;
+
+    // The entity is logically crushed *into* the blocking tile; move it into the wall immediately.
+    // (The death-clone will render pulled out via applyCrushToDrawRect.)
+    if (dx !== 0 || dy !== 0) {
+      const nx = this.x + dx;
+      const ny = this.y + dy;
+      // Only shift if the tile exists (it may be solid; that's expected).
+      if (this.room?.roomArray?.[nx]?.[ny]) {
+        this.lastX = this.x;
+        this.lastY = this.y;
+        this.x = nx;
+        this.y = ny;
+      }
     }
-    if (this.x == player.x) {
-      this.crushVertical = true;
-    }
+
+    // Reset squish scale so the animation always starts from full size.
+    this.crushX = 1;
+    this.crushY = 1;
+    this.crushAnimStartScale = 1;
+
     this.kill();
   };
 
+  protected getCrushEaseInDecayBase = (): number => {
+    // Ease-in in terms of decay base: start closer to 1 (slow), move toward a smaller base (fast).
+    const currentScale = this.crushVertical ? (this.crushY ?? 1) : (this.crushX ?? 1);
+    const start = Math.max(0.0001, this.crushAnimStartScale || 1);
+    const t = Math.max(0, Math.min(1, 1 - currentScale / start)); // 0->1 as we compress
+    const tt = t * t; // ease-in
+    const slow = GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_START;
+    const fast = GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_END;
+    return slow + (fast - slow) * tt;
+  };
+
   crushAnim = (delta: number) => {
+    // Follow the same ease-in profile as pushed movement (slow start, speed up).
+    const decayBase = this.getCrushEaseInDecayBase();
+    const decay = Math.pow(decayBase, delta);
     if (this.crushVertical && this.crushY >= 0) {
-      this.crushY *= 0.95;
+      this.crushY *= decay;
     } else if (this.crushX >= 0) {
-      this.crushX *= 0.95;
+      this.crushX *= decay;
     }
+  };
+
+  /**
+   * Apply a "crushed into wall" rendering transform:
+   * - Shrinks width/height using crushX/crushY
+   * - Offsets the draw position so the clone doesn't render fully inside the crush tile
+   * - Adds a scale-compensation offset because scaling happens from the top-left corner
+   */
+  protected applyCrushToDrawRect = (rect: {
+    dX: number;
+    dY: number;
+    dW: number;
+    dH: number;
+  }): { dX: number; dY: number; dW: number; dH: number } => {
+    // Only apply to the dying clone (post-death render). Live entities should not be affected.
+    if (!this.crushed || !this.cloned) return rect;
+
+    const baseW = rect.dW;
+    const baseH = rect.dH;
+    const crushX = this.crushX ?? 1;
+    const crushY = this.crushY ?? 1;
+    const dW = baseW * crushX;
+    const dH = baseH * crushY;
+
+    // Position compensation:
+    // The crushed clone's logical position is inside the wall tile; we need to pull it back out
+    // by ~1 tile. Additionally, as the sprite shrinks, we compensate by ~half the shrink distance.
+    //
+    // Empirically, the right/down crush directions tend to "bounce" if we use the same rule as left/up.
+    // So we use direction-aware anchoring:
+    // - pushing LEFT/UP: pull out by 1 tile + half the shrink distance (keeps it locked on the wall edge)
+    // - pushing RIGHT/DOWN: pull out by 1 tile but anchor using (1 - half the current size), not half-shrink
+    const pushDX = this.crushPushDX ?? 0;
+    const pushDY = this.crushPushDY ?? 0;
+    const shrinkDX = baseW - dW;
+    const shrinkDY = baseH - dH;
+    const shrink = shrinkDX > shrinkDY ? dW / baseW : dH / baseH;
+    const differential = shrink * 0.5 + 0.5
+    let offX = 0;
+    let offY = 0;
+    let scaleX = 0
+    let scaleY = 0
+
+    if (pushDX < 0) {
+      // Pulled out to the right; start at +1 tile, then increase slightly as it shrinks.
+      offX = differential + shrinkDX * 0.5;
+      scaleY = (1 - shrink);
+      //enemies generally have smaller sprites than the measurements, so we need to compensate for that
+      offY = (-scaleY - (0.25 * scaleY)) * 0.5
+    } else if (pushDX > 0) {
+      // Pulled out to the left; anchor via (1 - half current width) to avoid over-travel.
+      offX = (-differential + (shrinkDX * 0.5));
+      scaleY = (1 - shrink);
+      offY = (-scaleY - (0.25 * scaleY)) * 0.5
+    }
+
+    if (pushDY < 0) {
+      // Pulled out downward
+      offY = differential + shrinkDY * 0.75;
+      scaleX = (1 - shrink);
+      offX = -scaleX * 0.5
+    } else if (pushDY > 0) {
+      // Pulled out upward
+      offY = (-differential + (shrinkDY * 0.75));
+      scaleX = (1 - shrink);
+      offX = -scaleX * 0.5
+    }
+
+    return {
+      dX: rect.dX + offX,
+      dY: rect.dY + offY,
+      dW: dW + scaleX,
+      dH: dH + scaleY,
+    };
   };
   //set rumbling in the tick function for the enemies
   //create variables for the rumbling x and y offsets

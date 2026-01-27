@@ -41,7 +41,7 @@ export class Barrel extends Entity {
       if (this.hasShadow) this.drawShadow(delta);
 
       this.updateDrawXY(delta);
-      Game.drawObj(
+      this.drawObjWithCrush(
         this.tileX,
         this.tileY,
         1,

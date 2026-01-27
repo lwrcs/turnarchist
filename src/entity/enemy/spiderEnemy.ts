@@ -620,15 +620,22 @@ export class SpiderEnemy extends Enemy {
       if (this.hasShadow) this.drawShadow(delta);
       if (this.state === SpiderState.VISIBLE) {
         //only draw when visible
+        const rect = this.applyCrushToDrawRect({      
+          dX: this.x - this.drawX + rumble - 0.5,
+          dY: this.y - this.drawYOffset - this.drawY - this.jumpY,
+          dW: 2,
+          dH: 2,
+        });
+
         Game.drawMob(
           this.tileX,
           this.tileY, // + this.direction,
           2,
           2,
-          this.x - this.drawX + rumble - 0.5,
-          this.y - this.drawYOffset - this.drawY - this.jumpY,
-          2 * this.crushX,
-          2 * this.crushY,
+          rect.dX,
+          rect.dY,
+          rect.dW,
+          rect.dH,
           this.softShadeColor,
           this.shadeAmount(),
           undefined,

@@ -247,6 +247,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(-1);
           break;
         }
+        if (this.player.isPushMoveInputLocked()) break;
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -261,6 +262,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(1);
           break;
         }
+        if (this.player.isPushMoveInputLocked()) break;
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -275,6 +277,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(-1);
           break;
         }
+        if (this.player.isPushMoveInputLocked()) break;
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -289,6 +292,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(1);
           break;
         }
+        if (this.player.isPushMoveInputLocked()) break;
         if (!this.ignoreDirectionInput())
           this.player.actionProcessor.process({
             type: "Move",
@@ -1158,6 +1162,7 @@ export class PlayerInputHandler {
 
     // Only handle movement if it wasn't already handled on mousedown
     if (notInInventoryUI && !Input.mouseDownHandled) {
+      if (player.isPushMoveInputLocked()) return;
       player.moveWithMouse();
     }
   }

@@ -285,7 +285,7 @@ export class BoltcasterEnemy extends Enemy {
     let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
     let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
 
-    Game.drawMob(
+    this.drawMobWithCrush(
       this.tileX, // + Math.floor(this.frame),
       this.tileY, // + this.direction * 2,
       1,

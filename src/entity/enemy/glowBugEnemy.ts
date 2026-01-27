@@ -110,7 +110,7 @@ export class GlowBugEnemy extends Entity {
       if (this.frame >= 4) this.frame = 0;
       this.tileX = 8 + this.frame;
       if (this.hasShadow) this.drawShadow(delta);
-      Game.drawMob(
+      this.drawMobWithCrush(
         Math.floor(this.tileX),
         this.tileY,
         1,

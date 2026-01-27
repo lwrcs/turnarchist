@@ -151,6 +151,8 @@ export enum EnemyType {
   boltcaster = "boltcaster",
   earthwizard = "earthwizard",
   tallSucculent = "succulent",
+  barrel = "barrel",
+  crate = "crate",
   // Add other enemy types here
 }
 
@@ -193,6 +195,8 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.boltcaster]: BoltcasterEnemy,
   [EnemyType.earthwizard]: EarthWizardEnemy,
   [EnemyType.tallSucculent]: TallSucculent,
+  [EnemyType.barrel]: Barrel,
+  [EnemyType.crate]: Crate,
   // Add other enemy mappings here
 };
 

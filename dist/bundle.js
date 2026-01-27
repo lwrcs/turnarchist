@@ -10512,7 +10512,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX +
+                this.drawMobWithCrush(this.tileX +
                     (this.tileX % 5 && !this.unconscious && !this.dying
                         ? Math.floor(this.frame)
                         : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
@@ -10733,7 +10733,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -11322,8 +11322,14 @@ class BeetleEnemy extends enemy_1.Enemy {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 //only draw when visible
+                const rect = this.applyCrushToDrawRect({
+                    dX: this.x - this.drawX + rumble - 0.5,
+                    dY: this.y - this.drawYOffset - this.drawY - this.jumpY,
+                    dW: 2,
+                    dH: 2,
+                });
                 game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                2, 2, rect.dX, rect.dY, rect.dW, rect.dH, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -11848,7 +11854,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                 }
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX +
+                this.drawMobWithCrush(this.tileX +
                     (this.tileX !== 59 && !this.rumbling && !this.cloned
                         ? Math.floor(this.frame)
                         : 0) *
@@ -12114,7 +12120,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                 const tileY = this.ticks % 2 === 0 ? this.tileY : this.tileY + 4;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(tileX, tileY, 2, 4, this.x - this.drawX + rumbleX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(tileX, tileY, 2, 4, this.x - this.drawX + rumbleX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -12457,7 +12463,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX, this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - 1.5 - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
                         this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
@@ -12753,7 +12759,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
+            this.drawMobWithCrush(this.tileX, // + Math.floor(this.frame),
             this.tileY + this.direction * 3, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 3, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -12975,7 +12981,7 @@ class BishopEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -13264,7 +13270,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             this.rumbling = this.isLoading;
             let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
             let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
-            game_1.Game.drawMob(this.tileX, // + Math.floor(this.frame),
+            this.drawMobWithCrush(this.tileX, // + Math.floor(this.frame),
             this.tileY, // + this.direction * 2,
             1, 2, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY - this.jumpY + rumbleY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
@@ -13645,7 +13651,7 @@ class ChargeEnemy extends enemy_1.Enemy {
                 }
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (!this.cloned) {
                     if (this.state === ChargeEnemyState.IDLE) {
                         this.drawSleepingZs(delta);
@@ -13921,7 +13927,13 @@ class CrabEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, this.x - this.drawX + rumbleX, this.y - this.drawYOffset - this.drawY + rumbleY, 1 * this.crushX, 1 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                const rect = this.applyCrushToDrawRect({
+                    dX: this.x - this.drawX + rumbleX,
+                    dY: this.y - this.drawYOffset - this.drawY + rumbleY,
+                    dW: 1,
+                    dH: 1,
+                });
+                game_1.Game.drawMob(this.tileX, this.tileY + this.direction, 1, 1, rect.dX, rect.dY, rect.dW, rect.dH, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -14227,7 +14239,13 @@ class CrusherEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, this.x - this.drawX + rumbleX - 0.5, this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount());
+                const rect = this.applyCrushToDrawRect({
+                    dX: this.x - this.drawX + rumbleX - 0.5,
+                    dY: this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY,
+                    dW: 2,
+                    dH: 2,
+                });
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 2, rect.dX, rect.dY, rect.dW, rect.dH, this.softShadeColor, this.shadeAmount());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -14447,13 +14465,13 @@ class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
                 if (this.hasShadow && this.state !== WizardState.idle)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 5, 20, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    this.drawMobWithCrush(Math.floor(this.frame) + 5, 20, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.4 * delta;
                     if (this.frame > 12)
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    this.drawMobWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -14990,13 +15008,19 @@ class Enemy extends entity_1.Entity {
             //putting this here bc i'm lazy
             this.updateHurtFrame(delta);
             this.animateDying(delta);
+            this.updateCrushAnimation(delta);
             if (!this.doneMoving()) {
-                this.drawX *= this.drawMoveSpeed ** delta;
-                this.drawY *= this.drawMoveSpeed ** delta;
+                const isBeingPushed = this.isPushAnimating();
+                const speed = isBeingPushed
+                    ? this.getPushEaseInDecayBase()
+                    : this.drawMoveSpeed;
+                this.drawX *= speed ** delta;
+                this.drawY *= speed ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
                 this.jump(delta);
             }
+            this.updatePushAnimFlag();
             this.updateShadeColor(delta);
         };
         this.setDrawXY = (x, y) => {
@@ -15047,7 +15071,7 @@ class Enemy extends entity_1.Entity {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount());
             }
             if (!this.dying) {
                 if (!this.seenPlayer) {
@@ -15090,6 +15114,18 @@ class Enemy extends entity_1.Entity {
         this.diagonalAttack = false;
         this.baseDamage = 1;
         //this.getDrop(["weapon", "equipment", "consumable", "gem", "tool", "coin"]);
+    }
+    /**
+     * Jump offset accessor.
+     * Centralizes "no hop while being pushed" without touching child classes:
+     * any render path that reads `this.jumpY` will receive 0 during push animation.
+     */
+    get jumpY() {
+        // No hop while being pushed OR while playing the crushed death-clone animation.
+        return this.isPushAnimating() || (this.cloned && this.crushed) ? 0 : this._jumpY;
+    }
+    set jumpY(v) {
+        this._jumpY = v;
     }
     get damage() {
         return this.buffed ? 2 * this.baseDamage : this.baseDamage;
@@ -15229,13 +15265,13 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
                 if (this.hasShadow && this.state !== WizardState.teleport)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    this.drawMobWithCrush(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.4 * delta;
                     if (this.frame > 12)
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    this.drawMobWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -15539,7 +15575,7 @@ class ExalterEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             game_1.Game.ctx.restore();
         };
@@ -15732,13 +15768,13 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                 if (this.hasShadow && this.state !== WizardState.idle)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 5, 18, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
+                    this.drawMobWithCrush(Math.floor(this.frame) + 5, 18, 1, 2, this.x, this.y - 1.3, 1, 2, this.softShadeColor, this.shadeAmount());
                     this.frame += 0.4 * delta;
                     if (this.frame > 12)
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    this.drawMobWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.cloned) {
                     if (!this.seenPlayer) {
@@ -16048,7 +16084,7 @@ class FrogEnemy extends enemy_1.Enemy {
                 }
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX +
+                this.drawMobWithCrush(this.tileX +
                     (this.tileX !== 12 && !this.rumbling ? Math.floor(this.frame) : 0), this.tileY /*+ this.direction * 2,*/, 1, 2, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
@@ -16157,7 +16193,7 @@ class GlowBugEnemy extends entity_1.Entity {
                 this.tileX = 8 + this.frame;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(Math.floor(this.tileX), this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 1, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 if (this.crushed) {
                     this.crushAnim(delta);
                 }
@@ -16364,7 +16400,7 @@ class KingEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY - 1, 1, 3, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY - 1, 1, 3, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -16558,7 +16594,7 @@ class KnightEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX + rumbleX, this.y -
+                this.drawMobWithCrush(this.tileX + (this.tileX === 4 ? 0 : Math.floor(this.frame)), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX + rumbleX, this.y -
                     this.drawYOffset -
                     this.drawY +
                     (this.tileX === 4 ? 0.1875 : 0), 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
@@ -16805,7 +16841,7 @@ class MummyEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -17113,7 +17149,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             game_1.Game.ctx.restore();
         };
@@ -17320,7 +17356,7 @@ class PawnEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -17507,7 +17543,7 @@ class QueenEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + offsetTileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount() * (1 + this.jumpY / 3), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -17676,7 +17712,7 @@ class RookEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY, // + offsetTileY,
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, // + offsetTileY,
                 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
@@ -17945,7 +17981,7 @@ class SkullEnemy extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX + (this.tileX === 5 ? Math.floor(this.frame) : 0), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.cloned) {
                 if (!this.seenPlayer) {
@@ -18267,7 +18303,7 @@ class Spawner extends enemy_1.Enemy {
                     this.frame = 0;
                 if (this.hasShadow)
                     this.drawShadow(delta);
-                game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                this.drawMobWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             }
             if (!this.dying) {
                 if (!this.seenPlayer) {
@@ -18835,8 +18871,14 @@ class SpiderEnemy extends enemy_1.Enemy {
                     this.drawShadow(delta);
                 if (this.state === SpiderState.VISIBLE) {
                     //only draw when visible
+                    const rect = this.applyCrushToDrawRect({
+                        dX: this.x - this.drawX + rumble - 0.5,
+                        dY: this.y - this.drawYOffset - this.drawY - this.jumpY,
+                        dW: 2,
+                        dH: 2,
+                    });
                     game_1.Game.drawMob(this.tileX, this.tileY, // + this.direction,
-                    2, 2, this.x - this.drawX + rumble - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2 * this.crushX, 2 * this.crushY, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    2, 2, rect.dX, rect.dY, rect.dW, rect.dH, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (this.crushed) {
                     this.crushAnim(delta);
@@ -19162,7 +19204,7 @@ class WardenEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + 2 * Math.floor(this.frame), this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            this.drawMobWithCrush(this.tileX + 2 * Math.floor(this.frame), this.tileY, 2, 2, this.x - this.drawX - 0.5, this.y - this.drawYOffset - this.drawY - this.jumpY, 2, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -19371,13 +19413,13 @@ class WizardEnemy extends enemy_1.Enemy {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 if (this.frame >= 0) {
-                    game_1.Game.drawMob(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    this.drawMobWithCrush(Math.floor(this.frame) + 6, 2, 1, 2, this.x, this.y - 1.5, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                     this.frame += 0.2 * delta;
                     if (this.frame > 11)
                         this.frame = -1;
                 }
                 else {
-                    game_1.Game.drawMob(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                    this.drawMobWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - 1.3 - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
                 }
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -19600,7 +19642,7 @@ class ZombieEnemy extends enemy_1.Enemy {
                 this.frame = 0;
             if (this.hasShadow)
                 this.drawShadow(delta);
-            game_1.Game.drawMob(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -19903,14 +19945,71 @@ class Entity extends drawable_1.Drawable {
             //putting this here bc i'm lazy
             this.updateHurtFrame(delta);
             this.animateDying(delta);
+            this.updateCrushAnimation(delta);
             this.updateShadeColor(delta);
             //this.updateBloom(delta);
             if (!this.doneMoving()) {
-                this.drawX *= this.drawMoveSpeed ** delta;
-                this.drawY *= this.drawMoveSpeed ** delta;
+                const speed = this.isPushAnimating()
+                    ? this.getPushEaseInDecayBase()
+                    : this.drawMoveSpeed;
+                this.drawX *= speed ** delta;
+                this.drawY *= speed ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
             }
+            this.updatePushAnimFlag();
+        };
+        /**
+         * Drive crush squish animation for death-clones (so the "crushed into wall" corpse compresses over time).
+         * Kept centralized so both enemies and non-enemy entities (pushables, etc) animate consistently.
+         */
+        this.updateCrushAnimation = (delta) => {
+            if (!this.cloned || !this.crushed)
+                return;
+            this.crushAnim(delta);
+        };
+        this.pushAnimActive = false;
+        this.pushAnimStartMag = 1;
+        /**
+         * Mark that this entity is currently being moved via a push (not its own normal movement).
+         * This flag persists until `doneMoving()` so it is stable even if turn-based counters
+         * like `skipNextTurns` get consumed/reset before draw offsets settle.
+         */
+        this.markPushedMove = () => {
+            this.pushAnimActive = true;
+            const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            this.pushAnimStartMag = Math.max(0.0001, mag);
+        };
+        /**
+         * 0..1 progress for the current pushed movement animation.
+         * 0 = just pushed, 1 = visually settled (draw offsets near zero).
+         */
+        this.getPushAnimProgress01 = () => {
+            if (!this.isPushAnimating())
+                return 1;
+            const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            const start = Math.max(0.0001, this.pushAnimStartMag);
+            return Math.max(0, Math.min(1, 1 - mag / start));
+        };
+        this.updatePushAnimFlag = () => {
+            if (this.pushAnimActive && this.doneMoving())
+                this.pushAnimActive = false;
+        };
+        this.getPushEaseInDecayBase = () => {
+            const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+            const start = Math.max(0.0001, this.pushAnimStartMag);
+            const t = Math.max(0, Math.min(1, 1 - mag / start)); // 0->1 as we approach the destination
+            const tt = t * t; // ease-in (slow start, faster later)
+            const slow = gameConstants_1.GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_START;
+            const fast = gameConstants_1.GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_END;
+            return slow + (fast - slow) * tt;
+        };
+        this.isPushAnimating = () => {
+            // Prefer explicit push flag; fall back to legacy heuristic.
+            if (this.pushAnimActive)
+                return true;
+            return ((this.skipNextTurns ?? 0) > 0 &&
+                (Math.abs(this.drawX) > 0.01 || Math.abs(this.drawY) > 0.01));
         };
         this.setDrawXY = (x, y) => {
             this.drawX += this.x - x;
@@ -20628,24 +20727,127 @@ class Entity extends drawable_1.Drawable {
                 game_1.Game.fillTextOutline("!", (this.x + 0.5) * gameConstants_1.GameConstants.TILESIZE - width / 2 + offsetX, (this.y - 0.75) * gameConstants_1.GameConstants.TILESIZE + yoff + offsetY, gameConstants_1.GameConstants.OUTLINE, gameConstants_1.GameConstants.WARNING_RED);
             }
         };
-        this.crush = () => {
+        this.crush = (pushDX, pushDY) => {
             this.crushed = true;
-            let player;
-            for (let i in this.game.players) {
-                player = this.game.players[i];
+            // Determine crush direction:
+            // - Prefer explicit direction from the caller (push/knockback knows this).
+            // - Otherwise fall back to drawX/drawY (some callers set these to the push direction).
+            const dx = typeof pushDX === "number" && Number.isFinite(pushDX) ? Math.sign(pushDX) : Math.sign(this.drawX ?? 0);
+            const dy = typeof pushDY === "number" && Number.isFinite(pushDY) ? Math.sign(pushDY) : Math.sign(this.drawY ?? 0);
+            this.crushPushDX = dx;
+            this.crushPushDY = dy;
+            this.crushVertical = dy !== 0;
+            // Crushed entities should not also animate as "being pushed".
+            // Snap any push draw offsets immediately; the visual is handled by crush squish + draw compensation.
+            this.pushAnimActive = false;
+            this.pushAnimStartMag = 1;
+            this.drawX = 0;
+            this.drawY = 0;
+            // The entity is logically crushed *into* the blocking tile; move it into the wall immediately.
+            // (The death-clone will render pulled out via applyCrushToDrawRect.)
+            if (dx !== 0 || dy !== 0) {
+                const nx = this.x + dx;
+                const ny = this.y + dy;
+                // Only shift if the tile exists (it may be solid; that's expected).
+                if (this.room?.roomArray?.[nx]?.[ny]) {
+                    this.lastX = this.x;
+                    this.lastY = this.y;
+                    this.x = nx;
+                    this.y = ny;
+                }
             }
-            if (this.x == player.x) {
-                this.crushVertical = true;
-            }
+            // Reset squish scale so the animation always starts from full size.
+            this.crushX = 1;
+            this.crushY = 1;
+            this.crushAnimStartScale = 1;
             this.kill();
         };
+        this.getCrushEaseInDecayBase = () => {
+            // Ease-in in terms of decay base: start closer to 1 (slow), move toward a smaller base (fast).
+            const currentScale = this.crushVertical ? (this.crushY ?? 1) : (this.crushX ?? 1);
+            const start = Math.max(0.0001, this.crushAnimStartScale || 1);
+            const t = Math.max(0, Math.min(1, 1 - currentScale / start)); // 0->1 as we compress
+            const tt = t * t; // ease-in
+            const slow = gameConstants_1.GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_START;
+            const fast = gameConstants_1.GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_END;
+            return slow + (fast - slow) * tt;
+        };
         this.crushAnim = (delta) => {
+            // Follow the same ease-in profile as pushed movement (slow start, speed up).
+            const decayBase = this.getCrushEaseInDecayBase();
+            const decay = Math.pow(decayBase, delta);
             if (this.crushVertical && this.crushY >= 0) {
-                this.crushY *= 0.95;
+                this.crushY *= decay;
             }
             else if (this.crushX >= 0) {
-                this.crushX *= 0.95;
+                this.crushX *= decay;
             }
+        };
+        /**
+         * Apply a "crushed into wall" rendering transform:
+         * - Shrinks width/height using crushX/crushY
+         * - Offsets the draw position so the clone doesn't render fully inside the crush tile
+         * - Adds a scale-compensation offset because scaling happens from the top-left corner
+         */
+        this.applyCrushToDrawRect = (rect) => {
+            // Only apply to the dying clone (post-death render). Live entities should not be affected.
+            if (!this.crushed || !this.cloned)
+                return rect;
+            const baseW = rect.dW;
+            const baseH = rect.dH;
+            const crushX = this.crushX ?? 1;
+            const crushY = this.crushY ?? 1;
+            const dW = baseW * crushX;
+            const dH = baseH * crushY;
+            // Position compensation:
+            // The crushed clone's logical position is inside the wall tile; we need to pull it back out
+            // by ~1 tile. Additionally, as the sprite shrinks, we compensate by ~half the shrink distance.
+            //
+            // Empirically, the right/down crush directions tend to "bounce" if we use the same rule as left/up.
+            // So we use direction-aware anchoring:
+            // - pushing LEFT/UP: pull out by 1 tile + half the shrink distance (keeps it locked on the wall edge)
+            // - pushing RIGHT/DOWN: pull out by 1 tile but anchor using (1 - half the current size), not half-shrink
+            const pushDX = this.crushPushDX ?? 0;
+            const pushDY = this.crushPushDY ?? 0;
+            const shrinkDX = baseW - dW;
+            const shrinkDY = baseH - dH;
+            const shrink = shrinkDX > shrinkDY ? dW / baseW : dH / baseH;
+            const differential = shrink * 0.5 + 0.5;
+            let offX = 0;
+            let offY = 0;
+            let scaleX = 0;
+            let scaleY = 0;
+            if (pushDX < 0) {
+                // Pulled out to the right; start at +1 tile, then increase slightly as it shrinks.
+                offX = differential + shrinkDX * 0.5;
+                scaleY = (1 - shrink);
+                //enemies generally have smaller sprites than the measurements, so we need to compensate for that
+                offY = (-scaleY - (0.25 * scaleY)) * 0.5;
+            }
+            else if (pushDX > 0) {
+                // Pulled out to the left; anchor via (1 - half current width) to avoid over-travel.
+                offX = (-differential + (shrinkDX * 0.5));
+                scaleY = (1 - shrink);
+                offY = (-scaleY - (0.25 * scaleY)) * 0.5;
+            }
+            if (pushDY < 0) {
+                // Pulled out downward
+                offY = differential + shrinkDY * 0.75;
+                scaleX = (1 - shrink);
+                offX = -scaleX * 0.5;
+            }
+            else if (pushDY > 0) {
+                // Pulled out upward
+                offY = (-differential + (shrinkDY * 0.75));
+                scaleX = (1 - shrink);
+                offX = -scaleX * 0.5;
+            }
+            return {
+                dX: rect.dX + offX,
+                dY: rect.dY + offY,
+                dW: dW + scaleX,
+                dH: dH + scaleY,
+            };
         };
         //set rumbling in the tick function for the enemies
         //create variables for the rumbling x and y offsets
@@ -20908,7 +21110,10 @@ class Entity extends drawable_1.Drawable {
         this.crushX = 1;
         this.crushY = 1;
         this.crushVertical = false;
+        this.crushAnimStartScale = 1;
         this.crushed = false;
+        this.crushPushDX = 0;
+        this.crushPushDY = 0;
         this.rumbling = false;
         this.animationSpeed = 0.1;
         this.drawYOffset = 1.175;
@@ -20995,6 +21200,18 @@ class Entity extends drawable_1.Drawable {
             bloomSize: original.bloomSize,
             bloomOffsetY: original.bloomOffsetY,
             dyingFrame: 30,
+            // Preserve "pushed" easing state so if an entity is pushed and dies from damage
+            // (not crush), the death animation still uses the push easing profile.
+            pushAnimActive: original.pushAnimActive,
+            pushAnimStartMag: original.pushAnimStartMag,
+            // Preserve crush state so the death clone can animate squishing when crushed into walls.
+            crushed: original.crushed,
+            crushX: original.crushX,
+            crushY: original.crushY,
+            crushVertical: original.crushVertical,
+            crushPushDX: original.crushPushDX,
+            crushPushDY: original.crushPushDY,
+            crushAnimStartScale: original.crushAnimStartScale,
         });
         // Add to room's dead entities
         original.room.deadEntities.push(cloned);
@@ -21015,6 +21232,22 @@ class Entity extends drawable_1.Drawable {
     get type() {
         return EntityType.ENEMY;
     }
+    /**
+     * Wrapper around `Game.drawMob` that applies the "crushed into wall" render transform
+     * when this entity died via `crush()` (clone-only).
+     */
+    drawMobWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) {
+        const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
+        game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
+    }
+    /**
+     * Wrapper around `Game.drawObj` that applies the "crushed into wall" render transform
+     * when this entity died via `crush()` (clone-only).
+     */
+    drawObjWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) {
+        const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
+        game_1.Game.drawObj(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir);
+    }
     calculateProjectileOffsets(targetX, targetY, attackLength) {
         const dx = targetX - this.x;
         const dy = targetY - this.y;
@@ -21030,6 +21263,9 @@ class Entity extends drawable_1.Drawable {
     }
 }
 exports.Entity = Entity;
+// Crush animation decay factor per ~60fps tick (higher = slower squish).
+// Applied as `pow(factor, delta)` so it's stable across frame rates.
+Entity.CRUSH_DECAY_60FPS = 0.985;
 /**
  * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
  * Useful for bestiary pages without instantiating enemies.
@@ -21079,7 +21315,7 @@ class Barrel extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -21141,7 +21377,7 @@ class BishopStatue extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -21801,7 +22037,7 @@ class Crate extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -21861,7 +22097,7 @@ class DarkCrate extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -21921,7 +22157,7 @@ class DarkPillar extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -22088,7 +22324,7 @@ class DecoBlock extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -22556,7 +22792,7 @@ class PawnStatue extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -22800,7 +23036,7 @@ class RookStatue extends entity_1.Entity {
                 if (this.hasShadow)
                     this.drawShadow(delta);
                 this.updateDrawXY(delta);
-                game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+                this.drawObjWithCrush(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
@@ -25644,6 +25880,11 @@ class Game {
                 this.pushMessage(`Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`);
                 return;
             }
+            if (command === "slow") {
+                const slowMotionEnabled = this.players[this.localPlayerID].toggleSlowMotion();
+                this.pushMessage(`Slow motion is now ${slowMotionEnabled ? "enabled" : "disabled"}`);
+                return;
+            }
             if (command === "logdraw") {
                 // Ensure profiling is enabled so we capture subsequent frames.
                 if (!this._drawProfileEnabled) {
@@ -28071,7 +28312,7 @@ class Game {
             // Centralize chat pushes behind the Game instance.
             this.pushMessage(payload.message);
         });
-        eventBus_1.globalEventBus.on(events_1.EVENTS.SKILL_LEVEL_UP, (payload) => {
+        eventBus_1.globalEventBus.on("SKILL_LEVEL_UP", (payload) => {
             const player = this.players?.[this.localPlayerID];
             if (!player)
                 return;
@@ -28447,6 +28688,10 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  */
 Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
+    // Critical: disable smoothing on the *destination* context that performs the scaling drawImage().
+    // This ensures squish scaling stays pixel-crisp (nearest-neighbor).
+    Game.ctx.imageSmoothingEnabled = false;
+    Game.ctx.imageSmoothingQuality = "low";
     // Snap to nearest shading increment
     const shadeLevel = entity
         ? gameConstants_1.GameConstants.ENTITY_SHADE_LEVELS
@@ -28508,6 +28753,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         shCtx.fillStyle = quantizedShadeColor;
         shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
         shCtx.globalAlpha = 1.0;
+        shCtx.imageSmoothingEnabled = false;
+        shCtx.imageSmoothingQuality = "low";
         // 3) Keep only the sprite’s opaque pixels by masking with the sprite alpha
         shCtx.globalCompositeOperation = "destination-in";
         // Base alpha mask from sprite bounds
@@ -31247,7 +31494,6 @@ const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weap
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
-const bestiaryBook_1 = __webpack_require__(/*! ../item/bestiaryBook */ "./src/item/bestiaryBook.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
@@ -31262,6 +31508,7 @@ const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
+const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
@@ -31340,6 +31587,18 @@ GameConstants.SWIPE_HOLD_INITIAL_DELAY = 10;
 GameConstants.MOVEMENT_COOLDOWN = 50; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
+// When pushing entities, block movement inputs until pushed objects have visually progressed this far (0..1).
+GameConstants.PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0.9;
+/**
+ * Draw smoothing factors (exponential decay bases).
+ * Higher values => slower animation (takes longer for drawX/drawY to decay to 0).
+ */
+GameConstants.PLAYER_DRAW_MOVE_SPEED = 0.85;
+// Push moves use an "ease-in" profile: start slow (base close to 1) then accelerate (base decreases).
+GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_START = 0.95;
+GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_END = 0.87;
+GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_START = 0.97;
+GameConstants.ENTITY_PUSH_DRAW_MOVE_SPEED_END = 0.9;
 GameConstants.SLOW_INPUTS_NEAR_ENEMIES = false;
 GameConstants.SCREEN_SHAKE_ENABLED = true;
 GameConstants.CHAT_APPEAR_TIME = 1000;
@@ -31630,7 +31889,7 @@ GameConstants.STARTING_INVENTORY = [dagger_1.Dagger, candle_1.Candle];
 GameConstants.STARTING_DEV_INVENTORY = [
     dagger_1.Dagger,
     torch_1.Torch,
-    bestiaryBook_1.BestiaryBook,
+    quarterStaff_1.QuarterStaff,
     glowStick_1.GlowStick,
     godStone_1.GodStone,
     spellbook_1.Spellbook,
@@ -41784,32 +42043,18 @@ DropTable.addNewItem = (itemType, entity) => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.EntitySpawner = void 0;
 const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
-const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
-const bishopEnemy_1 = __webpack_require__(/*! ../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
 class EntitySpawner extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => { };
         this.spawnEntity = (entity) => {
-            entity_1.Entity.add(this.room, this.player.game, this.player.x, this.player.y);
-            //console.log("Entity spawned");
+            // Legacy placeholder; this item shouldn't exist in normal gameplay.
+            // If you do end up with it, it does nothing rather than interfering with chat commands.
+            void entity;
         };
         this.commandHandler = (command) => {
-            const player = this.room.game.players[0];
-            command = command.toLowerCase();
-            if (!command.startsWith("/new")) {
-                return;
-            }
-            switch (command.split(" ")[1]) {
-                case "bishop":
-                    this.spawnEntity(new bishopEnemy_1.BishopEnemy(this.room, this.player.game, this.player.x, this.player.y));
-                    break;
-                default:
-                    //console.log(`Unknown command: ${command}`);
-                    break;
-            }
-            //console.log(`Command executed: ${command}`);
+            void command;
         };
         this.getDescription = () => {
             return "YOU SHOULD NOT HAVE THIS";
@@ -41818,14 +42063,14 @@ class EntitySpawner extends usable_1.Usable {
         this.count = 0;
         this.tileX = 31;
         this.tileY = 0;
-        this.setupEventListeners();
+        // Intentionally do not hook chat commands here; Game owns chat commands (including spawn/new).
         this.player = this.room.game.players[0];
         this.stackable = false;
     }
     setupEventListeners() {
-        //console.log("Setting up event listeners");
-        eventBus_1.globalEventBus.on("ChatMessage", this.commandHandler.bind(this));
-        //console.log("Event listeners set up");
+        // No-op: intentionally not registering chat listeners here.
+        // Keeping the method to avoid rippling changes across old references.
+        void eventBus_1.globalEventBus;
     }
 }
 exports.EntitySpawner = EntitySpawner;
@@ -46618,10 +46863,10 @@ class Weapon extends equippable_1.Equippable {
         const enemy = targets[0];
         const dx = Math.sign(targetX - this.wielder.x);
         const dy = Math.sign(targetY - this.wielder.y);
-        // Deal damage to first enemy
-        this.attack(enemy, this.damage + this.wielder.damageBonus);
         // If enemy is not chainPushable, do not attempt knockback or crush
         if (enemy.chainPushable === false) {
+            // Deal normal damage only (no push/crush behavior)
+            this.attack(enemy, this.damage + this.wielder.damageBonus);
             this.applyHitDelay(true);
             this.hitSound();
             this.wielder.setHitXY(targetX, targetY);
@@ -46637,11 +46882,29 @@ class Weapon extends equippable_1.Equippable {
         const behindTile = room.roomArray?.[nextX]?.[nextY];
         const canMoveOrCrush = !!behindTile &&
             (!behindTile.isSolid?.() || behindTile.canCrushEnemy?.() || enemyEnd);
+        // Special case: single enemy directly against a crushable blocker (wall or solid end-entity).
+        // If we apply normal damage *and* crush, we can end up cloning two different death animations.
+        // In this case, let `crush()` be the only kill path.
+        const willCrushStart = !!behindTile && (behindTile.canCrushEnemy?.() || enemyEnd) && chain.length === 0;
+        if (willCrushStart) {
+            enemy.crush(dx, dy);
+            this.applyHitDelay(true);
+            this.hitSound();
+            this.wielder.setHitXY(targetX, targetY);
+            this.attackAnimation(targetX, targetY);
+            if (room)
+                room.tick(this.wielder);
+            this.shakeScreen(targetX, targetY);
+            this.degrade();
+            return true;
+        }
         let moved = false;
         if (canMoveOrCrush) {
             // Push one tile per hit
             moved = (0, pushChain_1.applyPushChain)(room, enemy, chain, dx, dy, nextX, nextY, enemyEnd);
         }
+        // Deal damage to the initial target (push + damage behavior), but only if we didn't crush it above.
+        this.attack(enemy, this.damage + this.wielder.damageBonus);
         // Apply standard hit side-effects
         this.applyHitDelay(true);
         this.hitSound();
@@ -46651,8 +46914,10 @@ class Weapon extends equippable_1.Equippable {
             room.tick(this.wielder);
         this.shakeScreen(targetX, targetY);
         // Only skip enemy's next turn if we actually pushed them
-        if (moved)
+        if (moved) {
             enemy.skipNextTurns = 1;
+            enemy.markPushedMove();
+        }
         this.degrade();
         return true;
     }
@@ -52790,6 +53055,8 @@ var DrawDirection;
 class Player extends drawable_1.Drawable {
     constructor(game, x, y, isLocalPlayer, z = 0) {
         super();
+        this.pushMoveInputLockActive = false;
+        this.pushMoveInputLockEntities = [];
         this.drowningDamageSteps = [5, 4, 3, 2, 1];
         this.drowningDamageAmount = 0.5;
         this.divingHelmetRefillPerTurn = 12;
@@ -53310,6 +53577,34 @@ class Player extends drawable_1.Drawable {
             this.deathScreenPageIndex = 0;
             this.deathScreenPageCount = 1;
         };
+        this.beginPushMoveInputLock = (entities) => {
+            // De-dupe while preserving order
+            const uniq = [];
+            for (const e of entities) {
+                if (!e)
+                    continue;
+                if (uniq.includes(e))
+                    continue;
+                uniq.push(e);
+            }
+            this.pushMoveInputLockEntities = uniq;
+            this.pushMoveInputLockActive = uniq.length > 0;
+        };
+        this.isPushMoveInputLocked = () => {
+            return this.pushMoveInputLockActive;
+        };
+        /** Called from the renderer each frame to release the lock once visuals have mostly settled. */
+        this.updatePushMoveInputLock = () => {
+            if (!this.pushMoveInputLockActive)
+                return;
+            const threshold = gameConstants_1.GameConstants.PUSH_VISUAL_INPUT_UNLOCK_PROGRESS;
+            const entities = this.pushMoveInputLockEntities;
+            const allSettled = entities.every((e) => e.dead || e.getPushAnimProgress01() >= threshold);
+            if (allSettled) {
+                this.pushMoveInputLockActive = false;
+                this.pushMoveInputLockEntities = [];
+            }
+        };
         this.hit = () => {
             return 1;
         };
@@ -53419,22 +53714,27 @@ class Player extends drawable_1.Drawable {
                             if (this.getRoom() === this.game.room)
                                 sound_1.Sound.push();
                             // here pushedEnemies may still be []
+                            const shouldCrushTail = this.getRoom().roomArray[nextX][nextY].canCrushEnemy() || enemyEnd;
+                            const tailToCrush = shouldCrushTail && pushedEnemies.length > 0
+                                ? pushedEnemies[pushedEnemies.length - 1]
+                                : null;
                             for (const f of pushedEnemies) {
                                 f.lastX = f.x;
                                 f.lastY = f.y;
+                                // Don't animate the soon-to-be-crushed entity pushing onto the blocker first.
+                                if (f === tailToCrush)
+                                    continue;
                                 f.x += dx;
                                 f.y += dy;
                                 f.drawX = dx;
                                 f.drawY = dy;
                                 f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
+                                f.markPushedMove();
                             }
-                            if (this.getRoom().roomArray[nextX][nextY].canCrushEnemy() ||
-                                enemyEnd) {
-                                const pushedEnemy = pushedEnemies[pushedEnemies.length - 1];
-                                pushedEnemy.crush();
-                                if (pushedEnemy.isEnemy) {
+                            if (tailToCrush) {
+                                tailToCrush.crush(dx, dy);
+                                if (tailToCrush.isEnemy)
                                     sound_1.Sound.playSquish();
-                                }
                                 if (this.getRoom() === this.game.room)
                                     sound_1.Sound.hit();
                             }
@@ -53442,6 +53742,13 @@ class Player extends drawable_1.Drawable {
                             e.y += dy;
                             e.drawX = dx;
                             e.drawY = dy;
+                            // Ensure the pushed head object animates as "being pushed" just like the rest of the chain.
+                            e.skipNextTurns = 1;
+                            e.markPushedMove();
+                            // Gate movement inputs until the pushed objects have mostly reached their new tile visually.
+                            this.beginPushMoveInputLock([e, ...pushedEnemies]);
+                            // This move is a push; slow the player's movement easing to match the push feel.
+                            this.renderer?.markPushingMove?.();
                             this.move(x, y);
                             this.moveDistance++;
                             this.getRoom().tick(this);
@@ -53757,6 +54064,9 @@ class Player extends drawable_1.Drawable {
         };
         this.endSlowMotion = () => {
             this.renderer.endSlowMotion();
+        };
+        this.toggleSlowMotion = () => {
+            return this.renderer.toggleSlowMotion();
         };
         this.move = (x, y, z = this.z) => {
             this.updateLastPosition(this.x, this.y);
@@ -54427,6 +54737,8 @@ class PlayerInputHandler {
                     this.navigateDeathScreen(-1);
                     break;
                 }
+                if (this.player.isPushMoveInputLocked())
+                    break;
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -54440,6 +54752,8 @@ class PlayerInputHandler {
                     this.navigateDeathScreen(1);
                     break;
                 }
+                if (this.player.isPushMoveInputLocked())
+                    break;
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -54453,6 +54767,8 @@ class PlayerInputHandler {
                     this.navigateDeathScreen(-1);
                     break;
                 }
+                if (this.player.isPushMoveInputLocked())
+                    break;
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -54466,6 +54782,8 @@ class PlayerInputHandler {
                     this.navigateDeathScreen(1);
                     break;
                 }
+                if (this.player.isPushMoveInputLocked())
+                    break;
                 if (!this.ignoreDirectionInput())
                     this.player.actionProcessor.process({
                         type: "Move",
@@ -55205,6 +55523,8 @@ class PlayerInputHandler {
             !(bestiary ? bestiary.isPointInBestiaryButton(x, y) : false);
         // Only handle movement if it wasn't already handled on mousedown
         if (notInInventoryUI && !input_1.Input.mouseDownHandled) {
+            if (player.isPushMoveInputLocked())
+                return;
             player.moveWithMouse();
         }
     }
@@ -55621,6 +55941,7 @@ const deviceDetector_1 = __webpack_require__(/*! ../utility/deviceDetector */ ".
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 class PlayerRenderer {
     constructor(player) {
+        this.slowMotionOverride = false;
         // When any overlay UI is open, freeze the player's visual facing (cardinal/diagonal pose)
         // so it doesn't jitter due to mouse movement behind menus.
         this.uiPoseFrozen = false;
@@ -55686,18 +56007,41 @@ class PlayerRenderer {
         this.endSlowMotion = () => {
             this.slowMotionEnabled = false;
         };
+        this.toggleSlowMotion = () => {
+            this.slowMotionOverride = !this.slowMotionOverride;
+            if (this.motionSpeed === 1)
+                this.motionSpeed = 0.25;
+            else
+                this.motionSpeed = 1;
+            return this.motionSpeed !== 1;
+        };
         this.setNewDrawXY = (x, y, z) => {
+            // Consume any "next move is a push" marker so push easing only applies to that move.
+            if (this.nextMoveIsPush) {
+                this.pushingMove = true;
+                this.nextMoveIsPush = false;
+            }
+            else {
+                this.pushingMove = false;
+            }
             this.drawX += x - this.player.x;
             this.drawY += y - this.player.y;
             this.drawZ += z - this.player.z;
+            if (this.pushingMove) {
+                const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY), Math.abs(this.drawZ));
+                this.pushAnimStartMag = Math.max(0.0001, mag);
+            }
+            else {
+                this.pushAnimStartMag = 0;
+            }
         };
         this.enableSlowMotion = () => {
-            if (this.motionSpeed < 1 && !this.slowMotionEnabled) {
+            if (this.motionSpeed < 1 && !this.slowMotionEnabled && !this.slowMotionOverride) {
                 this.motionSpeed *= 1.08;
                 if (this.motionSpeed >= 1)
                     this.motionSpeed = 1;
             }
-            if (this.slowMotionEnabled && this.motionSpeed > 0.25) {
+            if (this.slowMotionEnabled && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
                 this.motionSpeed *= 0.95;
                 if (this.motionSpeed < 0.25)
                     this.motionSpeed = 0.25;
@@ -56006,14 +56350,43 @@ class PlayerRenderer {
             this.player.healthBar.draw(delta, this.player.health, this.player.maxHealth, this.player.x - this.drawX, this.player.y - this.drawY - this.drawZ, !this.flashing || Math.floor(this.flashingFrame) % 2 === 0);
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
+        this.pushingMove = false;
+        this.nextMoveIsPush = false;
+        this.pushAnimStartMag = 1;
+        this.markPushingMove = () => {
+            // Mark the *next* movement delta as a push (consumed by setNewDrawXY).
+            this.nextMoveIsPush = true;
+        };
         this.updateDrawXY = (delta) => {
+            // Safety: if we're fully stopped, never keep push easing armed.
+            if (this.pushingMove && this.doneMoving())
+                this.pushingMove = false;
             if (!this.doneMoving()) {
-                this.drawX *= 0.85 ** delta;
-                this.drawY *= 0.85 ** delta;
-                this.drawZ *= 0.85 ** delta;
+                const speed = this.pushingMove
+                    ? (() => {
+                        const mag = Math.max(Math.abs(this.drawX), Math.abs(this.drawY), Math.abs(this.drawZ));
+                        // Capture start magnitude lazily the first frame we animate this push.
+                        if (this.pushAnimStartMag <= 0.0001) {
+                            this.pushAnimStartMag = Math.max(0.0001, mag);
+                        }
+                        const start = Math.max(0.0001, this.pushAnimStartMag);
+                        const t = Math.max(0, Math.min(1, 1 - mag / start));
+                        const tt = t * t; // ease-in
+                        const slow = gameConstants_1.GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_START;
+                        const fast = gameConstants_1.GameConstants.PLAYER_PUSH_DRAW_MOVE_SPEED_END;
+                        return slow + (fast - slow) * tt;
+                    })()
+                    : gameConstants_1.GameConstants.PLAYER_DRAW_MOVE_SPEED;
+                this.drawX *= speed ** delta;
+                this.drawY *= speed ** delta;
+                this.drawZ *= speed ** delta;
                 this.drawX = Math.abs(this.drawX) < 0.01 ? 0 : this.drawX;
                 this.drawY = Math.abs(this.drawY) < 0.01 ? 0 : this.drawY;
                 this.drawZ = Math.abs(this.drawZ) < 0.01 ? 0 : this.drawZ;
+                if (this.doneMoving()) {
+                    this.pushingMove = false;
+                    this.pushAnimStartMag = 0;
+                }
             }
             if (this.doneHitting()) {
                 this.jump(delta);
@@ -56023,6 +56396,7 @@ class PlayerRenderer {
             }
             this.enableSlowMotion();
             gameConstants_1.GameConstants.ANIMATION_SPEED = this.motionSpeed;
+            this.player.updatePushMoveInputLock();
         };
         this.updateHitXY = (delta) => {
             // Use exponential decay like updateDrawXY for stable behavior with variable frame rates
@@ -56443,11 +56817,12 @@ class PlayerRenderer {
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-            this.jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
-            if (Math.abs(this.jumpY) < 0.01)
-                this.jumpY = 0;
-            if (this.jumpY > this.jumpHeight)
-                this.jumpY = this.jumpHeight;
+            let jumpY = Math.abs(Math.sin(j * Math.PI) * this.jumpHeight);
+            if (Math.abs(jumpY) < 0.01)
+                jumpY = 0;
+            if (jumpY > this.jumpHeight)
+                jumpY = this.jumpHeight;
+            this.jumpY = jumpY;
         };
         this.player = player;
         this.jumpY = 0;
@@ -56469,6 +56844,16 @@ class PlayerRenderer {
         this.lowHealthFrame = 0;
         this.frame = 0;
         this.lightingDirectionBucket = null;
+    }
+    /**
+     * Jump offset accessor.
+     * Centralizes "no hop while pushing" without needing special-case draw logic.
+     */
+    get jumpY() {
+        return this.pushingMove ? 0 : this._jumpY;
+    }
+    set jumpY(v) {
+        this._jumpY = v;
     }
 }
 exports.PlayerRenderer = PlayerRenderer;
@@ -58133,6 +58518,8 @@ var EnemyType;
     EnemyType["boltcaster"] = "boltcaster";
     EnemyType["earthwizard"] = "earthwizard";
     EnemyType["tallSucculent"] = "succulent";
+    EnemyType["barrel"] = "barrel";
+    EnemyType["crate"] = "crate";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -58174,6 +58561,8 @@ exports.EnemyTypeMap = {
     [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,
     [EnemyType.earthwizard]: earthWizard_1.EarthWizardEnemy,
     [EnemyType.tallSucculent]: tallSucculent_1.TallSucculent,
+    [EnemyType.barrel]: barrel_1.Barrel,
+    [EnemyType.crate]: crate_1.Crate,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -69246,24 +69635,30 @@ exports.computePushChain = computePushChain;
 function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
     const behindTile = room.roomArray?.[nextX]?.[nextY];
     const canCrush = (behindTile && behindTile.canCrushEnemy?.()) || enemyEnd;
+    const tailToCrush = canCrush && chain.length > 0 ? chain[chain.length - 1] : null;
     // If there is no chain and the next tile would crush or is blocked by a non-chainPushable,
     // crush the starting entity instead of moving it (mirrors player push behavior)
     if (chain.length === 0 && canCrush) {
-        start.crush();
+        start.crush(dx, dy);
         return false;
     }
     for (const f of chain) {
         f.lastX = f.x;
         f.lastY = f.y;
+        // If this is the one that will be crushed, don't animate a push onto the blocker first.
+        // `crush()` will snap it into the blocking tile and drive the visual via crush anim.
+        if (f === tailToCrush)
+            continue;
         f.x += dx;
         f.y += dy;
         f.drawX = dx;
         f.drawY = dy;
         f.skipNextTurns = 1; // ensure the pushed ones skip next turn, like player push
+        f.markPushedMove();
     }
     if (canCrush && chain.length > 0) {
         const tail = chain[chain.length - 1];
-        tail.crush();
+        tail.crush(dx, dy);
     }
     start.lastX = start.x;
     start.lastY = start.y;
@@ -69271,6 +69666,9 @@ function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
     start.y += dy;
     start.drawX = dx;
     start.drawY = dy;
+    // Mark the head as pushed too so its animation speed matches the chain.
+    start.skipNextTurns = 1;
+    start.markPushedMove();
     return true;
 }
 exports.applyPushChain = applyPushChain;
