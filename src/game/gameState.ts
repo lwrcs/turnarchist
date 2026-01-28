@@ -1679,15 +1679,7 @@ export class GameState {
   levelGID?: string;
   roomGIDs?: string[];
   currentPathId?: string;
-  sidepathMeta?: Array<{
-    pathId: string;
-    rooms: number;
-    envType?: EnvType;
-    mapWidth?: number;
-    mapHeight?: number;
-    /** Indicates the single-room alternate forest sidepath layout was used. */
-    altForestSidepathLayout?: boolean;
-  }>;
+  sidepathMeta?: Array<{ pathId: string; rooms: number }>;
   lastDroppedScythePiece: "handle" | "blade" | null = null;
   lastDroppedShieldPiece: "left" | "right" | null = null;
   lastDroppedCrossbowPiece: "stock" | "limb" | null = null;
@@ -1783,84 +1775,14 @@ export const createGameState = (game: Game): GameState => {
 
     // Save sidepath metadata: count rooms per non-main pathId
     try {
-      const byPid = new Map<
-        string,
-        {
-          rooms: number;
-          envType?: EnvType;
-          mapWidth?: number;
-          mapHeight?: number;
-          altForestSidepathLayout?: boolean;
-        }
-      >();
-
-      const inferDimsFromTiles = (
-        rs: RoomState,
-      ): { mapWidth?: number; mapHeight?: number } => {
-        try {
-          const tiles = (rs as any).tiles as Array<Array<any> | undefined>;
-          if (!tiles) return {};
-          const xs = Object.keys(tiles)
-            .map((k) => Number(k))
-            .filter((n) => Number.isFinite(n))
-            .sort((a, b) => a - b);
-          if (xs.length === 0) return {};
-          const minX = xs[0];
-          const maxX = xs[xs.length - 1];
-          // Determine y-range across rows (assume all rows share the same y indexing)
-          let minY = Infinity;
-          let maxY = -Infinity;
-          for (const x of xs) {
-            const row = tiles[x];
-            if (!row) continue;
-            const ys = Object.keys(row)
-              .map((k) => Number(k))
-              .filter((n) => Number.isFinite(n));
-            for (const y of ys) {
-              if (y < minY) minY = y;
-              if (y > maxY) maxY = y;
-            }
-          }
-          if (!Number.isFinite(minY) || !Number.isFinite(maxY)) return {};
-
-          // tiles span is (room.width + 2) and (room.height + 2)
-          const roomWidth = maxX - minX + 1 - 2;
-          const roomHeight = maxY - minY + 1 - 2;
-          // partition size is (room.size - 2)
-          const mapWidth = roomWidth - 2;
-          const mapHeight = roomHeight - 2;
-          return {
-            mapWidth: mapWidth > 0 ? mapWidth : undefined,
-            mapHeight: mapHeight > 0 ? mapHeight : undefined,
-          };
-        } catch {
-          return {};
-        }
-      };
-
+      const byPid = new Map<string, number>();
       for (const rs of gs.rooms) {
         const pid = ((rs as any).pathId as string) || "main";
         if (pid === "main") continue;
-        const prev = byPid.get(pid);
-        const nextRooms = (prev?.rooms ?? 0) + 1;
-        const envType = prev?.envType ?? ((rs as any).envType as EnvType | undefined);
-        const dims = prev?.mapWidth !== undefined && prev?.mapHeight !== undefined ? {} : inferDimsFromTiles(rs);
-        const mapWidth = prev?.mapWidth ?? dims.mapWidth;
-        const mapHeight = prev?.mapHeight ?? dims.mapHeight;
-        const altForestSidepathLayout =
-          prev?.altForestSidepathLayout ??
-          (envType === EnvType.FOREST && nextRooms === 1 ? true : undefined);
-        byPid.set(pid, { rooms: nextRooms, envType, mapWidth, mapHeight, altForestSidepathLayout });
+        byPid.set(pid, (byPid.get(pid) || 0) + 1);
       }
       (gs as any).sidepathMeta = Array.from(byPid.entries()).map(
-        ([pathId, meta]) => ({
-          pathId,
-          rooms: meta.rooms,
-          envType: meta.envType,
-          mapWidth: meta.mapWidth,
-          mapHeight: meta.mapHeight,
-          altForestSidepathLayout: meta.altForestSidepathLayout,
-        }),
+        ([pathId, rooms]) => ({ pathId, rooms }),
       );
     } catch {}
 
@@ -1978,27 +1900,21 @@ export const loadGameState = (
             if (alreadyExists) continue;
             const beforeCount = game.rooms.length;
 
-            const meta = (gameState as any).sidepathMeta
-              ? (gameState as any).sidepathMeta.find((m) => m.pathId === sp.pid)
-              : undefined;
-            const spEnv: EnvType =
-              (meta?.envType as EnvType | undefined) ?? gameState.level.envType;
             await game.levelgen.generate(
               game,
               gameState.level.depth,
               true,
               () => {},
-              spEnv,
+              gameState.level.envType,
               !newWorld,
               sp.pid,
               // Use saved sidepath room count if available for determinism
-              meta
+              (gameState as any).sidepathMeta
                 ? {
-                    caveRooms: meta.rooms ?? undefined,
-                    mapWidth: meta.mapWidth ?? undefined,
-                    mapHeight: meta.mapHeight ?? undefined,
-                    altForestSidepathLayout:
-                      meta.altForestSidepathLayout === true ? true : undefined,
+                    caveRooms:
+                      (gameState as any).sidepathMeta.find(
+                        (m) => m.pathId === sp.pid,
+                      )?.rooms ?? undefined,
                   }
                 : undefined,
             );

@@ -44,13 +44,6 @@ export class GameplaySettings {
   static ORGANIC_TUNNELS_PATH_MODE: "linear" | "bezier" = "linear"; // choose tunnel carving path
   static ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT = true; // favor perimeter-biased routing by default
 
-  // === SIDE PATH LAYOUT TOGGLES ===
-  /**
-   * When enabled, forest sidepaths can use an alternate, single-room node-driven layout.
-   * Default OFF to preserve existing generation behavior.
-   */
-  static ALT_FOREST_SIDEPATH_LAYOUT = false;
-
   // === DEBUG ===
   static LIGHTING_DEBUG = true; // log visible tile bounds and counts
 
