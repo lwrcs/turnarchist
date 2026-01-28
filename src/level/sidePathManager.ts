@@ -17,6 +17,11 @@ export interface SidePathOptions {
   giantCentralRoom?: boolean; // enable giant central room layout
   giantRoomScale?: number; // 0..1 fraction of width/height for central room size (default ~0.65)
   organicTunnelsAvoidCenter?: boolean; // favor perimeter-biased tunnel routing
+  /**
+   * Enables the alternate forest sidepath layout (single oversized room with node-driven tunnels).
+   * Must be gated by a higher-level toggle; when unset/false, existing behavior is unchanged.
+   */
+  altForestSidepathLayout?: boolean;
 }
 
 /**

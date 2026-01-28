@@ -12,6 +12,210 @@ export class RoomBuilder {
     this.buildEmptyRoom();
   }
 
+  /**
+   * Alternate forest-sidepath layout: carve a single-room, node-driven tunnel network
+   * from an entry point, optionally with a large blob chamber in deep solid space.
+   *
+   * This is intended for toggle-gated sidepath generation only.
+   */
+  generateAltForestSidepathNodeLayout(
+    entry: { x: number; y: number },
+    rand: () => number,
+    cfg?: {
+      nodeCount?: number;
+      /** Favor perimeter-biased node selection / routing. */
+      avoidCenter?: boolean;
+      /** 0..1: add extra random connections between nodes. */
+      loopiness?: number;
+      /** 0..1: probability of adding an extra connection during chaining. */
+      branching?: number;
+      /** Tunnel radius constraints (radius ~= half tunnel width). */
+      minRadius?: number;
+      maxRadius?: number;
+      /** Whether to carve a large blob-like chamber in deep solid space. */
+      carveChamber?: boolean;
+      /** Approx target chamber area in tiles (best effort). */
+      chamberArea?: number;
+    },
+  ): { entry: { x: number; y: number }; nodes: Array<{ x: number; y: number }> } {
+    // Step 0: fill interior with walls we can carve from
+    this.fillInteriorWithWalls();
+
+    const minR = Math.max(1, Math.floor(cfg?.minRadius ?? 1));
+    const maxR = Math.max(minR, Math.floor(cfg?.maxRadius ?? 3));
+    const avoidCenter = cfg?.avoidCenter === true;
+    const loopiness = Math.max(0, Math.min(1, cfg?.loopiness ?? 0.25));
+    const branching = Math.max(0, Math.min(1, cfg?.branching ?? 0.2));
+    const nodeCount = Math.max(4, Math.floor(cfg?.nodeCount ?? 10));
+
+    const clampInterior = (p: { x: number; y: number }) => {
+      return {
+        x: Math.max(this.room.roomX + 1, Math.min(p.x, this.room.roomX + this.room.width - 2)),
+        y: Math.max(this.room.roomY + 1, Math.min(p.y, this.room.roomY + this.room.height - 2)),
+      };
+    };
+
+    const entryP = clampInterior(entry);
+    // Give the entry a small pocket
+    this.carveDisk(entryP.x, entryP.y, Math.max(2, minR + 1));
+
+    const nodes: Array<{ x: number; y: number }> = [];
+    const minX = this.room.roomX + 1;
+    const maxX = this.room.roomX + this.room.width - 2;
+    const minY = this.room.roomY + 1;
+    const maxY = this.room.roomY + this.room.height - 2;
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+
+    // Define a "center" box to avoid if perimeter-bias is desired
+    const cxMin = minX + Math.floor(w * 0.25);
+    const cxMax = maxX - Math.floor(w * 0.25);
+    const cyMin = minY + Math.floor(h * 0.25);
+    const cyMax = maxY - Math.floor(h * 0.25);
+
+    const isTooCentral = (x: number, y: number) =>
+      avoidCenter && x >= cxMin && x <= cxMax && y >= cyMin && y <= cyMax;
+
+    // Step 1: node initialization (abstract nodes, no meaning yet)
+    for (let i = 0; i < nodeCount; i++) {
+      let picked: { x: number; y: number } | null = null;
+      for (let tries = 0; tries < 64 && !picked; tries++) {
+        const x = Game.rand(minX, maxX, rand);
+        const y = Game.rand(minY, maxY, rand);
+        if (!this.isInterior(x, y)) continue;
+        if (isTooCentral(x, y) && rand() < 0.85) continue;
+        if (nodes.some((p) => Math.abs(p.x - x) + Math.abs(p.y - y) <= 6)) continue;
+        if (Math.abs(entryP.x - x) + Math.abs(entryP.y - y) <= 6) continue;
+        picked = { x, y };
+      }
+      if (picked) nodes.push(picked);
+    }
+
+    // Step 2: worming / tunnel generation (chain through nodes, with occasional extra branches)
+    const remaining = nodes.slice();
+    const carvedNodes: Array<{ x: number; y: number }> = [];
+    let current = entryP;
+
+    const pickNext = () => {
+      if (remaining.length === 0) return null;
+      // Mix "random" and "farthest" for variety
+      const farthestBias = 0.55;
+      if (rand() < farthestBias) {
+        let bestI = 0;
+        let bestD = -1;
+        for (let i = 0; i < remaining.length; i++) {
+          const d = Math.abs(remaining[i].x - current.x) + Math.abs(remaining[i].y - current.y);
+          if (d > bestD) {
+            bestD = d;
+            bestI = i;
+          }
+        }
+        return remaining.splice(bestI, 1)[0];
+      }
+      const idx = Game.rand(0, remaining.length - 1, rand);
+      return remaining.splice(idx, 1)[0];
+    };
+
+    while (remaining.length > 0) {
+      const next = pickNext();
+      if (!next) break;
+
+      const rStart = Game.rand(minR, maxR, rand);
+      const rEnd = Game.rand(minR, maxR, rand);
+      this.carveOrganicPath(current.x, current.y, next.x, next.y, rand, {
+        baseRadius: (rStart + rEnd) / 2,
+        radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+        minRadius: minR,
+        maxRadius: maxR,
+        radiusStart: rStart,
+        radiusEnd: rEnd,
+        pocketChance: 0.18,
+        pocketRadius: [2, 4],
+      });
+
+      // Carve a small node pocket
+      this.carveDisk(next.x, next.y, Game.rand(Math.max(2, minR + 1), Math.max(3, maxR + 1), rand));
+      carvedNodes.push(next);
+
+      // Optional branching: connect to an additional node early to create detours
+      if (remaining.length > 0 && rand() < branching) {
+        const branch = pickNext();
+        if (branch) {
+          const brS = Game.rand(minR, maxR, rand);
+          const brE = Game.rand(minR, maxR, rand);
+          this.carveOrganicPath(next.x, next.y, branch.x, branch.y, rand, {
+            baseRadius: (brS + brE) / 2,
+            radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+            minRadius: minR,
+            maxRadius: maxR,
+            radiusStart: brS,
+            radiusEnd: brE,
+            pocketChance: 0.15,
+            pocketRadius: [2, 4],
+          });
+          this.carveDisk(branch.x, branch.y, Game.rand(Math.max(2, minR + 1), Math.max(3, maxR + 1), rand));
+          carvedNodes.push(branch);
+        }
+      }
+
+      current = next;
+    }
+
+    // Step 3: loopiness: add some extra connections between already-carved nodes
+    const loopCount = Math.floor(loopiness * Math.min(6, Math.max(2, carvedNodes.length / 2)));
+    for (let i = 0; i < loopCount; i++) {
+      if (carvedNodes.length < 3) break;
+      const a = carvedNodes[Game.rand(0, carvedNodes.length - 1, rand)];
+      let b = carvedNodes[Game.rand(0, carvedNodes.length - 1, rand)];
+      for (let tries = 0; tries < 8 && (b === a || Math.abs(b.x - a.x) + Math.abs(b.y - a.y) < 10); tries++) {
+        b = carvedNodes[Game.rand(0, carvedNodes.length - 1, rand)];
+      }
+      const lrS = Game.rand(minR, maxR, rand);
+      const lrE = Game.rand(minR, maxR, rand);
+      this.carveOrganicPath(a.x, a.y, b.x, b.y, rand, {
+        baseRadius: (lrS + lrE) / 2,
+        radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+        minRadius: minR,
+        maxRadius: maxR,
+        radiusStart: lrS,
+        radiusEnd: lrE,
+        pocketChance: 0.12,
+        pocketRadius: [2, 4],
+      });
+    }
+
+    // Step 4: open area creation in deep solid space (blob chamber) and connect to network
+    if (cfg?.carveChamber !== false) {
+      const chamber = this.findDeepSolidTile();
+      if (chamber) {
+        const targetArea = Math.max(60, Math.floor(cfg?.chamberArea ?? (this.room.width * this.room.height * 0.12)));
+        const center = this.carveBlobChamber(chamber.x, chamber.y, targetArea, rand);
+        // Connect chamber center to nearest carved floor tile
+        const nearest = this.findNearestFloor(center.x, center.y);
+        if (nearest) {
+          const crS = Game.rand(minR, maxR, rand);
+          const crE = Game.rand(minR, maxR, rand);
+          this.carveOrganicPath(center.x, center.y, nearest.x, nearest.y, rand, {
+            baseRadius: (crS + crE) / 2,
+            radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+            minRadius: minR,
+            maxRadius: maxR,
+            radiusStart: crS,
+            radiusEnd: crE,
+            pocketChance: 0.1,
+            pocketRadius: [2, 4],
+          });
+        }
+        carvedNodes.push(center);
+      }
+    }
+
+    // Cleanup: prune single-neighbor wall spurs to reduce noise
+    this.pruneWallsWithSingleNeighbor(true);
+
+    return { entry: entryP, nodes: carvedNodes.length ? carvedNodes : nodes };
+  }
+
   private buildEmptyRoom() {
     // fill in wall and floor
     for (let x = this.room.roomX; x < this.room.roomX + this.room.width; x++) {
@@ -856,6 +1060,12 @@ export class RoomBuilder {
       radiusJitter?: number;
       pocketChance?: number;
       pocketRadius?: [number, number];
+      /** Optional clamp range for per-step radius. */
+      minRadius?: number;
+      maxRadius?: number;
+      /** Optional smooth interpolation for radius along the path. */
+      radiusStart?: number;
+      radiusEnd?: number;
     },
   ) {
     const mode = GameplaySettings.ORGANIC_TUNNELS_PATH_MODE;
@@ -877,12 +1087,20 @@ export class RoomBuilder {
       radiusJitter?: number;
       pocketChance?: number;
       pocketRadius?: [number, number];
+      minRadius?: number;
+      maxRadius?: number;
+      radiusStart?: number;
+      radiusEnd?: number;
     },
   ) {
     const baseRadius = opts?.baseRadius ?? 1.2;
     const radiusJitter = opts?.radiusJitter ?? 1.0;
     const pocketChance = opts?.pocketChance ?? 0.15;
     const pocketRadius = opts?.pocketRadius ?? [2, 3];
+    const minRadius = opts?.minRadius;
+    const maxRadius = opts?.maxRadius;
+    const radiusStart = opts?.radiusStart;
+    const radiusEnd = opts?.radiusEnd;
 
     let dx = bx - ax;
     let dy = by - ay;
@@ -907,8 +1125,19 @@ export class RoomBuilder {
       const cx = ax + dx * (t * len) + px * lateral;
       const cy = ay + dy * (t * len) + py * lateral;
 
-      const r = baseRadius + (rand() - 0.5) * radiusJitter;
-      this.carveDisk(cx, cy, Math.max(1, r));
+      const interpolated =
+        radiusStart !== undefined || radiusEnd !== undefined
+          ? (radiusStart ?? baseRadius) * (1 - t) + (radiusEnd ?? baseRadius) * t
+          : baseRadius;
+      const rRaw = interpolated + (rand() - 0.5) * radiusJitter;
+      const rClamped =
+        minRadius !== undefined || maxRadius !== undefined
+          ? Math.max(
+              minRadius ?? 1,
+              Math.min(maxRadius ?? Infinity, rRaw),
+            )
+          : rRaw;
+      this.carveDisk(cx, cy, Math.max(1, rClamped));
 
       if (rand() < pocketChance) {
         const pr = Game.rand(pocketRadius[0], pocketRadius[1], rand);
@@ -930,12 +1159,20 @@ export class RoomBuilder {
       radiusJitter?: number;
       pocketChance?: number;
       pocketRadius?: [number, number];
+      minRadius?: number;
+      maxRadius?: number;
+      radiusStart?: number;
+      radiusEnd?: number;
     },
   ) {
     const baseRadius = opts?.baseRadius ?? 1.2;
     const radiusJitter = opts?.radiusJitter ?? 1.0;
     const pocketChance = opts?.pocketChance ?? 0.15;
     const pocketRadius = opts?.pocketRadius ?? [2, 3];
+    const minRadius = opts?.minRadius;
+    const maxRadius = opts?.maxRadius;
+    const radiusStart = opts?.radiusStart;
+    const radiusEnd = opts?.radiusEnd;
 
     const dx = bx - ax;
     const dy = by - ay;
@@ -1001,8 +1238,19 @@ export class RoomBuilder {
       const jitter = (rand() - 0.5) * Math.min(arcMagnitude * 0.25, 1.6);
       const cx = point.x + perpX * jitter;
       const cy = point.y + perpY * jitter;
-      const r = baseRadius + (rand() - 0.5) * radiusJitter;
-      this.carveDisk(cx, cy, Math.max(1, r));
+      const interpolated =
+        radiusStart !== undefined || radiusEnd !== undefined
+          ? (radiusStart ?? baseRadius) * (1 - t) + (radiusEnd ?? baseRadius) * t
+          : baseRadius;
+      const rRaw = interpolated + (rand() - 0.5) * radiusJitter;
+      const rClamped =
+        minRadius !== undefined || maxRadius !== undefined
+          ? Math.max(
+              minRadius ?? 1,
+              Math.min(maxRadius ?? Infinity, rRaw),
+            )
+          : rRaw;
+      this.carveDisk(cx, cy, Math.max(1, rClamped));
 
       if (rand() < pocketChance) {
         const pr = Game.rand(pocketRadius[0], pocketRadius[1], rand);
@@ -1131,6 +1379,144 @@ export class RoomBuilder {
       totalRemoved += toRemove.length;
     }
     return totalRemoved;
+  }
+
+  private findNearestFloor(fromX: number, fromY: number): { x: number; y: number } | null {
+    let best: { x: number; y: number } | null = null;
+    let bestD = Infinity;
+    for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+      for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+        const t = this.room.roomArray[x]?.[y];
+        if (!t) continue;
+        if (t instanceof Floor) {
+          const d = Math.abs(x - fromX) + Math.abs(y - fromY);
+          if (d < bestD) {
+            bestD = d;
+            best = { x, y };
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  private findDeepSolidTile(): { x: number; y: number } | null {
+    // Multi-source BFS from all current floors to compute distance into wall mass.
+    const minX = this.room.roomX + 1;
+    const maxX = this.room.roomX + this.room.width - 2;
+    const minY = this.room.roomY + 1;
+    const maxY = this.room.roomY + this.room.height - 2;
+
+    const dist = new Map<string, number>();
+    const q: Array<{ x: number; y: number }> = [];
+    const push = (x: number, y: number, d: number) => {
+      const k = `${x},${y}`;
+      if (dist.has(k)) return;
+      dist.set(k, d);
+      q.push({ x, y });
+    };
+
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        const t = this.room.roomArray[x]?.[y];
+        if (t instanceof Floor) push(x, y, 0);
+      }
+    }
+    if (q.length === 0) return null;
+
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+
+    while (q.length > 0) {
+      const cur = q.shift()!;
+      const d0 = dist.get(`${cur.x},${cur.y}`)!;
+      for (const d of dirs) {
+        const nx = cur.x + d.x;
+        const ny = cur.y + d.y;
+        if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+        push(nx, ny, d0 + 1);
+      }
+    }
+
+    let best: { x: number; y: number } | null = null;
+    let bestScore = -1;
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        const tile = this.room.roomArray[x]?.[y];
+        if (!(tile instanceof Wall)) continue;
+        const dToFloor = dist.get(`${x},${y}`);
+        if (dToFloor === undefined) continue;
+        const dToEdge = Math.min(x - minX, maxX - x, y - minY, maxY - y);
+        const score = Math.min(dToFloor, dToEdge);
+        if (score > bestScore) {
+          bestScore = score;
+          best = { x, y };
+        }
+      }
+    }
+
+    return best;
+  }
+
+  private carveBlobChamber(
+    cx: number,
+    cy: number,
+    targetArea: number,
+    rand: () => number,
+  ): { x: number; y: number } {
+    const minX = this.room.roomX + 1;
+    const maxX = this.room.roomX + this.room.width - 2;
+    const minY = this.room.roomY + 1;
+    const maxY = this.room.roomY + this.room.height - 2;
+
+    const start = { x: Math.max(minX, Math.min(maxX, cx)), y: Math.max(minY, Math.min(maxY, cy)) };
+    // Ensure we start by carving a small pocket
+    this.carveDisk(start.x, start.y, 2);
+
+    // Random-growth flood fill: amoeba-like by expanding from a frontier with biased randomness.
+    const carved = new Set<string>([`${start.x},${start.y}`]);
+    let frontier: Array<{ x: number; y: number }> = [start];
+
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+      { x: 1, y: 1 },
+      { x: 1, y: -1 },
+      { x: -1, y: 1 },
+      { x: -1, y: -1 },
+    ];
+
+    let budget = Math.max(targetArea, 40);
+    while (frontier.length > 0 && carved.size < budget) {
+      const idx = Math.floor(rand() * frontier.length);
+      const p = frontier[idx];
+      // Occasionally pop to keep growth blobular instead of snaking.
+      if (rand() < 0.15) frontier.splice(idx, 1);
+
+      const dir = dirs[Math.floor(rand() * dirs.length)];
+      const nx = p.x + dir.x;
+      const ny = p.y + dir.y;
+      if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+      const k = `${nx},${ny}`;
+      if (carved.has(k)) continue;
+
+      // Prefer expansion through solid space (walls), but allow some spill into existing floor to keep it connected.
+      const t = this.room.roomArray[nx]?.[ny];
+      const wallBias = t instanceof Wall ? 0.9 : 0.25;
+      if (rand() > wallBias) continue;
+
+      this.carveDisk(nx, ny, rand() < 0.65 ? 1 : 2);
+      carved.add(k);
+      frontier.push({ x: nx, y: ny });
+    }
+
+    return start;
   }
 
   // Count only N/E/S/W neighboring walls

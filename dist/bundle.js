@@ -33659,13 +33659,75 @@ const createGameState = (game) => {
         // Save sidepath metadata: count rooms per non-main pathId
         try {
             const byPid = new Map();
+            const inferDimsFromTiles = (rs) => {
+                try {
+                    const tiles = rs.tiles;
+                    if (!tiles)
+                        return {};
+                    const xs = Object.keys(tiles)
+                        .map((k) => Number(k))
+                        .filter((n) => Number.isFinite(n))
+                        .sort((a, b) => a - b);
+                    if (xs.length === 0)
+                        return {};
+                    const minX = xs[0];
+                    const maxX = xs[xs.length - 1];
+                    // Determine y-range across rows (assume all rows share the same y indexing)
+                    let minY = Infinity;
+                    let maxY = -Infinity;
+                    for (const x of xs) {
+                        const row = tiles[x];
+                        if (!row)
+                            continue;
+                        const ys = Object.keys(row)
+                            .map((k) => Number(k))
+                            .filter((n) => Number.isFinite(n));
+                        for (const y of ys) {
+                            if (y < minY)
+                                minY = y;
+                            if (y > maxY)
+                                maxY = y;
+                        }
+                    }
+                    if (!Number.isFinite(minY) || !Number.isFinite(maxY))
+                        return {};
+                    // tiles span is (room.width + 2) and (room.height + 2)
+                    const roomWidth = maxX - minX + 1 - 2;
+                    const roomHeight = maxY - minY + 1 - 2;
+                    // partition size is (room.size - 2)
+                    const mapWidth = roomWidth - 2;
+                    const mapHeight = roomHeight - 2;
+                    return {
+                        mapWidth: mapWidth > 0 ? mapWidth : undefined,
+                        mapHeight: mapHeight > 0 ? mapHeight : undefined,
+                    };
+                }
+                catch {
+                    return {};
+                }
+            };
             for (const rs of gs.rooms) {
                 const pid = rs.pathId || "main";
                 if (pid === "main")
                     continue;
-                byPid.set(pid, (byPid.get(pid) || 0) + 1);
+                const prev = byPid.get(pid);
+                const nextRooms = (prev?.rooms ?? 0) + 1;
+                const envType = prev?.envType ?? rs.envType;
+                const dims = prev?.mapWidth !== undefined && prev?.mapHeight !== undefined ? {} : inferDimsFromTiles(rs);
+                const mapWidth = prev?.mapWidth ?? dims.mapWidth;
+                const mapHeight = prev?.mapHeight ?? dims.mapHeight;
+                const altForestSidepathLayout = prev?.altForestSidepathLayout ??
+                    (envType === environmentTypes_1.EnvType.FOREST && nextRooms === 1 ? true : undefined);
+                byPid.set(pid, { rooms: nextRooms, envType, mapWidth, mapHeight, altForestSidepathLayout });
             }
-            gs.sidepathMeta = Array.from(byPid.entries()).map(([pathId, rooms]) => ({ pathId, rooms }));
+            gs.sidepathMeta = Array.from(byPid.entries()).map(([pathId, meta]) => ({
+                pathId,
+                rooms: meta.rooms,
+                envType: meta.envType,
+                mapWidth: meta.mapWidth,
+                mapHeight: meta.mapHeight,
+                altForestSidepathLayout: meta.altForestSidepathLayout,
+            }));
         }
         catch { }
         return gs;
@@ -33762,11 +33824,18 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
                     if (alreadyExists)
                         continue;
                     const beforeCount = game.rooms.length;
-                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, gameState.level.envType, !newWorld, sp.pid, 
+                    const meta = gameState.sidepathMeta
+                        ? gameState.sidepathMeta.find((m) => m.pathId === sp.pid)
+                        : undefined;
+                    const spEnv = meta?.envType ?? gameState.level.envType;
+                    await game.levelgen.generate(game, gameState.level.depth, true, () => { }, spEnv, !newWorld, sp.pid, 
                     // Use saved sidepath room count if available for determinism
-                    gameState.sidepathMeta
+                    meta
                         ? {
-                            caveRooms: gameState.sidepathMeta.find((m) => m.pathId === sp.pid)?.rooms ?? undefined,
+                            caveRooms: meta.rooms ?? undefined,
+                            mapWidth: meta.mapWidth ?? undefined,
+                            mapHeight: meta.mapHeight ?? undefined,
+                            altForestSidepathLayout: meta.altForestSidepathLayout === true ? true : undefined,
                         }
                         : undefined);
                     const afterCount = game.rooms.length;
@@ -34420,6 +34489,12 @@ GameplaySettings.ORGANIC_TUNNELS_SPOOF_PER_WALL_MAX = 2; // max synthetic entrie
 GameplaySettings.ORGANIC_TUNNELS_SPOOF_EDGE_MARGIN = 2; // keep synthetic entries away from corners
 GameplaySettings.ORGANIC_TUNNELS_PATH_MODE = "linear"; // choose tunnel carving path
 GameplaySettings.ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT = true; // favor perimeter-biased routing by default
+// === SIDE PATH LAYOUT TOGGLES ===
+/**
+ * When enabled, forest sidepaths can use an alternate, single-room node-driven layout.
+ * Default OFF to preserve existing generation behavior.
+ */
+GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT = false;
 // === DEBUG ===
 GameplaySettings.LIGHTING_DEBUG = true; // log visible tile bounds and counts
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
@@ -48525,7 +48600,9 @@ class LevelGenerator {
             // Sidepaths are generated on-demand when the player interacts with a DownLadder.
             // Return the start room or the rope cave room
             callback(isSidePath
-                ? rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
+                ? opts?.altForestSidepathLayout === true
+                    ? rooms[0]
+                    : rooms.find((r) => r.type === room_1.RoomType.ROPECAVE)
                 : rooms.find((r) => r.type === room_1.RoomType.START));
         };
         this.generateFirstNFloors = async (game, numFloors, skipPopulation = false) => {
@@ -49642,6 +49719,14 @@ class PartitionGenerator {
         const mapWidth = opts.mapWidth ?? 50;
         const mapHeight = opts.mapHeight ?? 50;
         const numRooms = opts.caveRooms ?? 8;
+        // Alternate forest sidepath layout: single oversized room partition.
+        // Note: This is gated by SidePathOptions, which is itself gated by a gameplay toggle.
+        if (opts.altForestSidepathLayout === true) {
+            const CAVE_OFFSET = 100;
+            const p = new Partition(CAVE_OFFSET, CAVE_OFFSET, mapWidth, mapHeight, "white");
+            p.type = room_1.RoomType.CAVE;
+            return [p];
+        }
         const hasLinearity = typeof opts.linearity === "number";
         const branching = typeof opts.branching === "number"
             ? opts.branching
@@ -62975,6 +63060,179 @@ class RoomBuilder {
         this.room = room;
         this.buildEmptyRoom();
     }
+    /**
+     * Alternate forest-sidepath layout: carve a single-room, node-driven tunnel network
+     * from an entry point, optionally with a large blob chamber in deep solid space.
+     *
+     * This is intended for toggle-gated sidepath generation only.
+     */
+    generateAltForestSidepathNodeLayout(entry, rand, cfg) {
+        // Step 0: fill interior with walls we can carve from
+        this.fillInteriorWithWalls();
+        const minR = Math.max(1, Math.floor(cfg?.minRadius ?? 1));
+        const maxR = Math.max(minR, Math.floor(cfg?.maxRadius ?? 3));
+        const avoidCenter = cfg?.avoidCenter === true;
+        const loopiness = Math.max(0, Math.min(1, cfg?.loopiness ?? 0.25));
+        const branching = Math.max(0, Math.min(1, cfg?.branching ?? 0.2));
+        const nodeCount = Math.max(4, Math.floor(cfg?.nodeCount ?? 10));
+        const clampInterior = (p) => {
+            return {
+                x: Math.max(this.room.roomX + 1, Math.min(p.x, this.room.roomX + this.room.width - 2)),
+                y: Math.max(this.room.roomY + 1, Math.min(p.y, this.room.roomY + this.room.height - 2)),
+            };
+        };
+        const entryP = clampInterior(entry);
+        // Give the entry a small pocket
+        this.carveDisk(entryP.x, entryP.y, Math.max(2, minR + 1));
+        const nodes = [];
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+        // Define a "center" box to avoid if perimeter-bias is desired
+        const cxMin = minX + Math.floor(w * 0.25);
+        const cxMax = maxX - Math.floor(w * 0.25);
+        const cyMin = minY + Math.floor(h * 0.25);
+        const cyMax = maxY - Math.floor(h * 0.25);
+        const isTooCentral = (x, y) => avoidCenter && x >= cxMin && x <= cxMax && y >= cyMin && y <= cyMax;
+        // Step 1: node initialization (abstract nodes, no meaning yet)
+        for (let i = 0; i < nodeCount; i++) {
+            let picked = null;
+            for (let tries = 0; tries < 64 && !picked; tries++) {
+                const x = game_1.Game.rand(minX, maxX, rand);
+                const y = game_1.Game.rand(minY, maxY, rand);
+                if (!this.isInterior(x, y))
+                    continue;
+                if (isTooCentral(x, y) && rand() < 0.85)
+                    continue;
+                if (nodes.some((p) => Math.abs(p.x - x) + Math.abs(p.y - y) <= 6))
+                    continue;
+                if (Math.abs(entryP.x - x) + Math.abs(entryP.y - y) <= 6)
+                    continue;
+                picked = { x, y };
+            }
+            if (picked)
+                nodes.push(picked);
+        }
+        // Step 2: worming / tunnel generation (chain through nodes, with occasional extra branches)
+        const remaining = nodes.slice();
+        const carvedNodes = [];
+        let current = entryP;
+        const pickNext = () => {
+            if (remaining.length === 0)
+                return null;
+            // Mix "random" and "farthest" for variety
+            const farthestBias = 0.55;
+            if (rand() < farthestBias) {
+                let bestI = 0;
+                let bestD = -1;
+                for (let i = 0; i < remaining.length; i++) {
+                    const d = Math.abs(remaining[i].x - current.x) + Math.abs(remaining[i].y - current.y);
+                    if (d > bestD) {
+                        bestD = d;
+                        bestI = i;
+                    }
+                }
+                return remaining.splice(bestI, 1)[0];
+            }
+            const idx = game_1.Game.rand(0, remaining.length - 1, rand);
+            return remaining.splice(idx, 1)[0];
+        };
+        while (remaining.length > 0) {
+            const next = pickNext();
+            if (!next)
+                break;
+            const rStart = game_1.Game.rand(minR, maxR, rand);
+            const rEnd = game_1.Game.rand(minR, maxR, rand);
+            this.carveOrganicPath(current.x, current.y, next.x, next.y, rand, {
+                baseRadius: (rStart + rEnd) / 2,
+                radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+                minRadius: minR,
+                maxRadius: maxR,
+                radiusStart: rStart,
+                radiusEnd: rEnd,
+                pocketChance: 0.18,
+                pocketRadius: [2, 4],
+            });
+            // Carve a small node pocket
+            this.carveDisk(next.x, next.y, game_1.Game.rand(Math.max(2, minR + 1), Math.max(3, maxR + 1), rand));
+            carvedNodes.push(next);
+            // Optional branching: connect to an additional node early to create detours
+            if (remaining.length > 0 && rand() < branching) {
+                const branch = pickNext();
+                if (branch) {
+                    const brS = game_1.Game.rand(minR, maxR, rand);
+                    const brE = game_1.Game.rand(minR, maxR, rand);
+                    this.carveOrganicPath(next.x, next.y, branch.x, branch.y, rand, {
+                        baseRadius: (brS + brE) / 2,
+                        radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+                        minRadius: minR,
+                        maxRadius: maxR,
+                        radiusStart: brS,
+                        radiusEnd: brE,
+                        pocketChance: 0.15,
+                        pocketRadius: [2, 4],
+                    });
+                    this.carveDisk(branch.x, branch.y, game_1.Game.rand(Math.max(2, minR + 1), Math.max(3, maxR + 1), rand));
+                    carvedNodes.push(branch);
+                }
+            }
+            current = next;
+        }
+        // Step 3: loopiness: add some extra connections between already-carved nodes
+        const loopCount = Math.floor(loopiness * Math.min(6, Math.max(2, carvedNodes.length / 2)));
+        for (let i = 0; i < loopCount; i++) {
+            if (carvedNodes.length < 3)
+                break;
+            const a = carvedNodes[game_1.Game.rand(0, carvedNodes.length - 1, rand)];
+            let b = carvedNodes[game_1.Game.rand(0, carvedNodes.length - 1, rand)];
+            for (let tries = 0; tries < 8 && (b === a || Math.abs(b.x - a.x) + Math.abs(b.y - a.y) < 10); tries++) {
+                b = carvedNodes[game_1.Game.rand(0, carvedNodes.length - 1, rand)];
+            }
+            const lrS = game_1.Game.rand(minR, maxR, rand);
+            const lrE = game_1.Game.rand(minR, maxR, rand);
+            this.carveOrganicPath(a.x, a.y, b.x, b.y, rand, {
+                baseRadius: (lrS + lrE) / 2,
+                radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+                minRadius: minR,
+                maxRadius: maxR,
+                radiusStart: lrS,
+                radiusEnd: lrE,
+                pocketChance: 0.12,
+                pocketRadius: [2, 4],
+            });
+        }
+        // Step 4: open area creation in deep solid space (blob chamber) and connect to network
+        if (cfg?.carveChamber !== false) {
+            const chamber = this.findDeepSolidTile();
+            if (chamber) {
+                const targetArea = Math.max(60, Math.floor(cfg?.chamberArea ?? (this.room.width * this.room.height * 0.12)));
+                const center = this.carveBlobChamber(chamber.x, chamber.y, targetArea, rand);
+                // Connect chamber center to nearest carved floor tile
+                const nearest = this.findNearestFloor(center.x, center.y);
+                if (nearest) {
+                    const crS = game_1.Game.rand(minR, maxR, rand);
+                    const crE = game_1.Game.rand(minR, maxR, rand);
+                    this.carveOrganicPath(center.x, center.y, nearest.x, nearest.y, rand, {
+                        baseRadius: (crS + crE) / 2,
+                        radiusJitter: Math.max(0.2, (maxR - minR) * 0.75),
+                        minRadius: minR,
+                        maxRadius: maxR,
+                        radiusStart: crS,
+                        radiusEnd: crE,
+                        pocketChance: 0.1,
+                        pocketRadius: [2, 4],
+                    });
+                }
+                carvedNodes.push(center);
+            }
+        }
+        // Cleanup: prune single-neighbor wall spurs to reduce noise
+        this.pruneWallsWithSingleNeighbor(true);
+        return { entry: entryP, nodes: carvedNodes.length ? carvedNodes : nodes };
+    }
     buildEmptyRoom() {
         // fill in wall and floor
         for (let x = this.room.roomX; x < this.room.roomX + this.room.width; x++) {
@@ -63574,6 +63832,10 @@ class RoomBuilder {
         const radiusJitter = opts?.radiusJitter ?? 1.0;
         const pocketChance = opts?.pocketChance ?? 0.15;
         const pocketRadius = opts?.pocketRadius ?? [2, 3];
+        const minRadius = opts?.minRadius;
+        const maxRadius = opts?.maxRadius;
+        const radiusStart = opts?.radiusStart;
+        const radiusEnd = opts?.radiusEnd;
         let dx = bx - ax;
         let dy = by - ay;
         const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
@@ -63594,8 +63856,14 @@ class RoomBuilder {
                 lateral = -maxLateral;
             const cx = ax + dx * (t * len) + px * lateral;
             const cy = ay + dy * (t * len) + py * lateral;
-            const r = baseRadius + (rand() - 0.5) * radiusJitter;
-            this.carveDisk(cx, cy, Math.max(1, r));
+            const interpolated = radiusStart !== undefined || radiusEnd !== undefined
+                ? (radiusStart ?? baseRadius) * (1 - t) + (radiusEnd ?? baseRadius) * t
+                : baseRadius;
+            const rRaw = interpolated + (rand() - 0.5) * radiusJitter;
+            const rClamped = minRadius !== undefined || maxRadius !== undefined
+                ? Math.max(minRadius ?? 1, Math.min(maxRadius ?? Infinity, rRaw))
+                : rRaw;
+            this.carveDisk(cx, cy, Math.max(1, rClamped));
             if (rand() < pocketChance) {
                 const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
                 const pocketCx = cx + px * (lateral + (rand() - 0.5) * 2);
@@ -63609,6 +63877,10 @@ class RoomBuilder {
         const radiusJitter = opts?.radiusJitter ?? 1.0;
         const pocketChance = opts?.pocketChance ?? 0.15;
         const pocketRadius = opts?.pocketRadius ?? [2, 3];
+        const minRadius = opts?.minRadius;
+        const maxRadius = opts?.maxRadius;
+        const radiusStart = opts?.radiusStart;
+        const radiusEnd = opts?.radiusEnd;
         const dx = bx - ax;
         const dy = by - ay;
         const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
@@ -63660,8 +63932,14 @@ class RoomBuilder {
             const jitter = (rand() - 0.5) * Math.min(arcMagnitude * 0.25, 1.6);
             const cx = point.x + perpX * jitter;
             const cy = point.y + perpY * jitter;
-            const r = baseRadius + (rand() - 0.5) * radiusJitter;
-            this.carveDisk(cx, cy, Math.max(1, r));
+            const interpolated = radiusStart !== undefined || radiusEnd !== undefined
+                ? (radiusStart ?? baseRadius) * (1 - t) + (radiusEnd ?? baseRadius) * t
+                : baseRadius;
+            const rRaw = interpolated + (rand() - 0.5) * radiusJitter;
+            const rClamped = minRadius !== undefined || maxRadius !== undefined
+                ? Math.max(minRadius ?? 1, Math.min(maxRadius ?? Infinity, rRaw))
+                : rRaw;
+            this.carveDisk(cx, cy, Math.max(1, rClamped));
             if (rand() < pocketChance) {
                 const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
                 const pocketShift = (rand() - 0.5) * 2;
@@ -63758,6 +64036,133 @@ class RoomBuilder {
             totalRemoved += toRemove.length;
         }
         return totalRemoved;
+    }
+    findNearestFloor(fromX, fromY) {
+        let best = null;
+        let bestD = Infinity;
+        for (let x = this.room.roomX + 1; x < this.room.roomX + this.room.width - 1; x++) {
+            for (let y = this.room.roomY + 1; y < this.room.roomY + this.room.height - 1; y++) {
+                const t = this.room.roomArray[x]?.[y];
+                if (!t)
+                    continue;
+                if (t instanceof floor_1.Floor) {
+                    const d = Math.abs(x - fromX) + Math.abs(y - fromY);
+                    if (d < bestD) {
+                        bestD = d;
+                        best = { x, y };
+                    }
+                }
+            }
+        }
+        return best;
+    }
+    findDeepSolidTile() {
+        // Multi-source BFS from all current floors to compute distance into wall mass.
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        const dist = new Map();
+        const q = [];
+        const push = (x, y, d) => {
+            const k = `${x},${y}`;
+            if (dist.has(k))
+                return;
+            dist.set(k, d);
+            q.push({ x, y });
+        };
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                const t = this.room.roomArray[x]?.[y];
+                if (t instanceof floor_1.Floor)
+                    push(x, y, 0);
+            }
+        }
+        if (q.length === 0)
+            return null;
+        const dirs = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+        ];
+        while (q.length > 0) {
+            const cur = q.shift();
+            const d0 = dist.get(`${cur.x},${cur.y}`);
+            for (const d of dirs) {
+                const nx = cur.x + d.x;
+                const ny = cur.y + d.y;
+                if (nx < minX || nx > maxX || ny < minY || ny > maxY)
+                    continue;
+                push(nx, ny, d0 + 1);
+            }
+        }
+        let best = null;
+        let bestScore = -1;
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                const tile = this.room.roomArray[x]?.[y];
+                if (!(tile instanceof wall_1.Wall))
+                    continue;
+                const dToFloor = dist.get(`${x},${y}`);
+                if (dToFloor === undefined)
+                    continue;
+                const dToEdge = Math.min(x - minX, maxX - x, y - minY, maxY - y);
+                const score = Math.min(dToFloor, dToEdge);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = { x, y };
+                }
+            }
+        }
+        return best;
+    }
+    carveBlobChamber(cx, cy, targetArea, rand) {
+        const minX = this.room.roomX + 1;
+        const maxX = this.room.roomX + this.room.width - 2;
+        const minY = this.room.roomY + 1;
+        const maxY = this.room.roomY + this.room.height - 2;
+        const start = { x: Math.max(minX, Math.min(maxX, cx)), y: Math.max(minY, Math.min(maxY, cy)) };
+        // Ensure we start by carving a small pocket
+        this.carveDisk(start.x, start.y, 2);
+        // Random-growth flood fill: amoeba-like by expanding from a frontier with biased randomness.
+        const carved = new Set([`${start.x},${start.y}`]);
+        let frontier = [start];
+        const dirs = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+            { x: 1, y: 1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: -1, y: -1 },
+        ];
+        let budget = Math.max(targetArea, 40);
+        while (frontier.length > 0 && carved.size < budget) {
+            const idx = Math.floor(rand() * frontier.length);
+            const p = frontier[idx];
+            // Occasionally pop to keep growth blobular instead of snaking.
+            if (rand() < 0.15)
+                frontier.splice(idx, 1);
+            const dir = dirs[Math.floor(rand() * dirs.length)];
+            const nx = p.x + dir.x;
+            const ny = p.y + dir.y;
+            if (nx < minX || nx > maxX || ny < minY || ny > maxY)
+                continue;
+            const k = `${nx},${ny}`;
+            if (carved.has(k))
+                continue;
+            // Prefer expansion through solid space (walls), but allow some spill into existing floor to keep it connected.
+            const t = this.room.roomArray[nx]?.[ny];
+            const wallBias = t instanceof wall_1.Wall ? 0.9 : 0.25;
+            if (rand() > wallBias)
+                continue;
+            this.carveDisk(nx, ny, rand() < 0.65 ? 1 : 2);
+            carved.add(k);
+            frontier.push({ x: nx, y: ny });
+        }
+        return start;
     }
     // Count only N/E/S/W neighboring walls
     countOrthogonalWallNeighborsAt(x, y) {
@@ -63868,6 +64273,20 @@ class Populator {
         this.populateRooms = () => {
             if (this.skipPopulation)
                 return;
+            // Alternate forest sidepath layout (toggle-gated): single oversized room with node-driven tunnels,
+            // and ladder/key placement inside the room. When disabled, behavior is unchanged.
+            try {
+                const opts = this.level.generationOptions;
+                const enabled = gameplaySettings_1.GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true &&
+                    opts?.altForestSidepathLayout === true &&
+                    this.level.isMainPath === false &&
+                    this.level.environment.type === environmentTypes_1.EnvType.FOREST;
+                if (enabled) {
+                    this.populateAltForestSidepathSingleRoom(random_1.Random.rand);
+                    return;
+                }
+            }
+            catch { }
             // add environmental features to all rooms
             this.level.rooms.forEach((room) => {
                 this.addEnvironmentalFeatures(room, random_1.Random.rand);
@@ -64102,10 +64521,17 @@ class Populator {
                                     ? environmentTypes_1.EnvType.FOREST
                                     : environmentTypes_1.EnvType.CAVE
                                 : environmentTypes_1.EnvType.CAVE;
+            // Toggle-gated alternate layout for forest sidepaths: mark opts so generation can branch safely.
+            const effectiveOpts = env === environmentTypes_1.EnvType.FOREST && gameplaySettings_1.GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true
+                ? {
+                    ...opts,
+                    altForestSidepathLayout: true,
+                }
+                : opts;
             const lockOverride = opts && typeof opts.locked === "boolean"
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;
-            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, opts, lockOverride);
+            const dl = new downLadder_1.DownLadder(downLadderRoom, this.level.game, position.x, position.y, true, env, lockable_1.LockType.NONE, effectiveOpts, lockOverride);
             let room;
             if (downLadderRoom.depth === 0) {
                 room = downLadderRoom;
@@ -64320,7 +64746,10 @@ class Populator {
             const { x, y } = room.getRoomCenter();
             const environment = room.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
             //console.log("About to create DownLadder in rope hole");
-            let d = new downLadder_1.DownLadder(room, room.game, x, y, true, environment);
+            const effectiveOpts = environment === environmentTypes_1.EnvType.FOREST && gameplaySettings_1.GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true
+                ? { altForestSidepathLayout: true }
+                : undefined;
+            let d = new downLadder_1.DownLadder(room, room.game, x, y, true, environment, lockable_1.LockType.NONE, effectiveOpts);
             //console.log("DownLadder created, about to add to room array");
             // Delay adding to room array to avoid triggering side path generation during level setup
             setTimeout(() => {
@@ -65764,6 +66193,179 @@ class Populator {
             case 10:
                 vendingMachine_1.VendingMachine.add(room, room.game, x, y, new coal_1.Coal(room, x, y));
         }
+    }
+    populateAltForestSidepathSingleRoom(rand) {
+        const room = this.level.rooms[0];
+        if (!room)
+            return;
+        // --- Entry selection (randomized: center vs edge vs random) ---
+        const center = room.getRoomCenter();
+        const pick = rand();
+        const entry = pick < 0.34
+            ? { x: center.x, y: center.y }
+            : pick < 0.67
+                ? {
+                    x: rand() < 0.5 ? room.roomX + 2 : room.roomX + room.width - 3,
+                    y: game_1.Game.rand(room.roomY + 2, room.roomY + room.height - 3, rand),
+                }
+                : {
+                    x: game_1.Game.rand(room.roomX + 2, room.roomX + room.width - 3, rand),
+                    y: game_1.Game.rand(room.roomY + 2, room.roomY + room.height - 3, rand),
+                };
+        // Carve node-driven tunnels (single-room layout)
+        const loopiness = typeof this.level.generationOptions?.loopiness === "number"
+            ? this.level.generationOptions.loopiness
+            : 0.35;
+        const branching = typeof this.level.generationOptions?.branching === "number"
+            ? this.level.generationOptions.branching
+            : 0.25;
+        const nodeCount = Math.max(8, Math.floor((this.level.generationOptions?.caveRooms ?? 10) * 1.25));
+        const { entry: carvedEntry, nodes } = room.builder.generateAltForestSidepathNodeLayout(entry, rand, {
+            avoidCenter: this.level.organicTunnelsAvoidCenter === true,
+            loopiness,
+            branching,
+            nodeCount,
+            // Enforce min/max tunnel widths via radius range (radius ~= half-width)
+            minRadius: 1,
+            maxRadius: 3,
+            carveChamber: true,
+            chamberArea: Math.floor(room.width * room.height * 0.14),
+        });
+        // Helper: collect candidate floor tiles that are not currently occupied by solid entities/items.
+        const isTileFree = (x, y) => {
+            const tile = room.roomArray[x]?.[y];
+            if (!tile || tile.isSolid())
+                return false;
+            // Avoid placing on doors/other passageways if any exist
+            if (tile instanceof Door)
+                return false;
+            if (tile instanceof downLadder_1.DownLadder)
+                return false;
+            if (tile instanceof upLadder_1.UpLadder)
+                return false;
+            // Avoid stacking with items/entities
+            if (room.items.some((it) => it.x === x && it.y === y))
+                return false;
+            if (room.entities.some((e) => e.x === x && e.y === y && e.dead !== true))
+                return false;
+            return true;
+        };
+        const floorCandidates = [];
+        for (let x = room.roomX + 1; x < room.roomX + room.width - 1; x++) {
+            for (let y = room.roomY + 1; y < room.roomY + room.height - 1; y++) {
+                if (isTileFree(x, y))
+                    floorCandidates.push({ x, y });
+            }
+        }
+        if (floorCandidates.length === 0)
+            return;
+        // Ensure entry is on a free tile (fallback to nearest candidate)
+        const entryPos = isTileFree(carvedEntry.x, carvedEntry.y)
+            ? carvedEntry
+            : floorCandidates.reduce((best, p) => {
+                const db = Math.abs(best.x - carvedEntry.x) + Math.abs(best.y - carvedEntry.y);
+                const dp = Math.abs(p.x - carvedEntry.x) + Math.abs(p.y - carvedEntry.y);
+                return dp < db ? p : best;
+            }, floorCandidates[0]);
+        // Choose exit + key positions from "node" set (fall back to random floor candidates)
+        const uniqNodes = nodes.filter((p) => isTileFree(p.x, p.y));
+        const points = uniqNodes.length ? uniqNodes : floorCandidates;
+        // Compute BFS distances from a source across walkable tiles.
+        const bfsDistances = (src) => {
+            const dist = new Map();
+            const q = [src];
+            dist.set(`${src.x},${src.y}`, 0);
+            const dirs = [
+                { x: 1, y: 0 },
+                { x: -1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 0, y: -1 },
+            ];
+            while (q.length > 0) {
+                const cur = q.shift();
+                const d0 = dist.get(`${cur.x},${cur.y}`);
+                for (const d of dirs) {
+                    const nx = cur.x + d.x;
+                    const ny = cur.y + d.y;
+                    if (nx < room.roomX + 1 || nx >= room.roomX + room.width - 1)
+                        continue;
+                    if (ny < room.roomY + 1 || ny >= room.roomY + room.height - 1)
+                        continue;
+                    const tile = room.roomArray[nx]?.[ny];
+                    if (!tile || tile.isSolid())
+                        continue;
+                    const k = `${nx},${ny}`;
+                    if (dist.has(k))
+                        continue;
+                    dist.set(k, d0 + 1);
+                    q.push({ x: nx, y: ny });
+                }
+            }
+            return dist;
+        };
+        const distFromEntry = bfsDistances(entryPos);
+        // Exit: farthest reachable point from entry
+        let exitPos = points[0];
+        let bestExitD = -1;
+        for (const p of points) {
+            const d = distFromEntry.get(`${p.x},${p.y}`);
+            if (d !== undefined && d > bestExitD) {
+                bestExitD = d;
+                exitPos = p;
+            }
+        }
+        const distFromExit = bfsDistances(exitPos);
+        // Key: far from both entry and exit; prefer "spatially nearby but blocked" to exit when possible
+        const minTarget = Math.max(18, Math.floor(Math.min(room.width, room.height) * 0.5));
+        let keyPos = points[0];
+        let bestScore = -1;
+        let bestEuclid = Infinity;
+        for (const p of points) {
+            if (p.x === exitPos.x && p.y === exitPos.y)
+                continue;
+            if (p.x === entryPos.x && p.y === entryPos.y)
+                continue;
+            const de = distFromEntry.get(`${p.x},${p.y}`);
+            const dx = distFromExit.get(`${p.x},${p.y}`);
+            if (de === undefined || dx === undefined)
+                continue;
+            const minD = Math.min(de, dx);
+            if (minD < minTarget)
+                continue;
+            const score = minD;
+            const euclid = Math.hypot(p.x - exitPos.x, p.y - exitPos.y);
+            if (score > bestScore || (score === bestScore && euclid < bestEuclid)) {
+                bestScore = score;
+                bestEuclid = euclid;
+                keyPos = p;
+            }
+        }
+        // Fallback if no strong candidate found
+        if (bestScore < 0) {
+            keyPos = points.find((p) => p.x !== exitPos.x || p.y !== exitPos.y) ?? points[0];
+        }
+        // Place props/enemies using existing forest rules (reuses existing configuration)
+        this.populateByEnvironment(room);
+        // Place entry rope up ladder inside the standard room
+        const up = new upLadder_1.UpLadder(room, room.game, entryPos.x, entryPos.y);
+        up.isRope = true;
+        up.isSidePath = true;
+        room.roomArray[entryPos.x][entryPos.y] = up;
+        // Place the locked exit rope down ladder (to the next sidepath environment) inside the standard room
+        const nextSidepathOpts = {
+            caveRooms: this.numRooms(),
+            locked: true,
+            envType: environmentTypes_1.EnvType.CASTLE,
+            linearity: 0.8,
+        };
+        const dl = new downLadder_1.DownLadder(room, room.game, exitPos.x, exitPos.y, true, environmentTypes_1.EnvType.CASTLE, lockable_1.LockType.LOCKED, nextSidepathOpts, { lockType: lockable_1.LockType.LOCKED });
+        room.roomArray[exitPos.x][exitPos.y] = dl;
+        // Place the key (must be linked to the exit ladder lock)
+        const key = new Key(room, keyPos.x, keyPos.y);
+        dl.lockable.setKey(key);
+        room.items.push(key);
+        // Clean up door obstructions (even though this room typically has none)
+        room.removeDoorObstructions();
     }
     // Many populate methods start with adding torches using the same pattern
     addRandomTorches(room, intensity = "medium") {

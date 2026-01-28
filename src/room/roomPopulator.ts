@@ -148,6 +148,22 @@ export class Populator {
 
   populateRooms = () => {
     if (this.skipPopulation) return;
+
+    // Alternate forest sidepath layout (toggle-gated): single oversized room with node-driven tunnels,
+    // and ladder/key placement inside the room. When disabled, behavior is unchanged.
+    try {
+      const opts = this.level.generationOptions;
+      const enabled =
+        GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true &&
+        opts?.altForestSidepathLayout === true &&
+        this.level.isMainPath === false &&
+        this.level.environment.type === EnvType.FOREST;
+      if (enabled) {
+        this.populateAltForestSidepathSingleRoom(Random.rand);
+        return;
+      }
+    } catch {}
+
     // add environmental features to all rooms
     this.level.rooms.forEach((room) => {
       this.addEnvironmentalFeatures(room, Random.rand);
@@ -446,6 +462,16 @@ export class Populator {
                 ? EnvType.FOREST
                 : EnvType.CAVE
               : EnvType.CAVE;
+
+    // Toggle-gated alternate layout for forest sidepaths: mark opts so generation can branch safely.
+    const effectiveOpts: SidePathOptions =
+      env === EnvType.FOREST && GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true
+        ? {
+            ...opts,
+            altForestSidepathLayout: true,
+          }
+        : opts;
+
     const lockOverride =
       opts && typeof opts.locked === "boolean"
         ? { lockType: opts.locked ? LockType.LOCKED : LockType.NONE }
@@ -459,7 +485,7 @@ export class Populator {
       true,
       env,
       LockType.NONE,
-      opts,
+      effectiveOpts,
       lockOverride,
     );
     let room;
@@ -2402,7 +2428,20 @@ export class Populator {
 
     const environment = room.depth < 1 ? EnvType.FOREST : EnvType.CAVE;
     //console.log("About to create DownLadder in rope hole");
-    let d = new DownLadder(room, room.game, x, y, true, environment);
+    const effectiveOpts: SidePathOptions | undefined =
+      environment === EnvType.FOREST && GameplaySettings.ALT_FOREST_SIDEPATH_LAYOUT === true
+        ? { altForestSidepathLayout: true }
+        : undefined;
+    let d = new DownLadder(
+      room,
+      room.game,
+      x,
+      y,
+      true,
+      environment,
+      LockType.NONE,
+      effectiveOpts,
+    );
     //console.log("DownLadder created, about to add to room array");
 
     // Delay adding to room array to avoid triggering side path generation during level setup
@@ -2411,6 +2450,208 @@ export class Populator {
       //console.log("DownLadder added to room array successfully (delayed)");
     }, 0);
   };
+
+  private populateAltForestSidepathSingleRoom(rand: () => number): void {
+    const room = this.level.rooms[0];
+    if (!room) return;
+
+    // --- Entry selection (randomized: center vs edge vs random) ---
+    const center = room.getRoomCenter();
+    const pick = rand();
+    const entry =
+      pick < 0.34
+        ? { x: center.x, y: center.y }
+        : pick < 0.67
+          ? {
+              x: rand() < 0.5 ? room.roomX + 2 : room.roomX + room.width - 3,
+              y: Game.rand(room.roomY + 2, room.roomY + room.height - 3, rand),
+            }
+          : {
+              x: Game.rand(room.roomX + 2, room.roomX + room.width - 3, rand),
+              y: Game.rand(room.roomY + 2, room.roomY + room.height - 3, rand),
+            };
+
+    // Carve node-driven tunnels (single-room layout)
+    const loopiness =
+      typeof this.level.generationOptions?.loopiness === "number"
+        ? this.level.generationOptions.loopiness
+        : 0.35;
+    const branching =
+      typeof this.level.generationOptions?.branching === "number"
+        ? this.level.generationOptions.branching
+        : 0.25;
+
+    const nodeCount = Math.max(
+      8,
+      Math.floor(
+        (this.level.generationOptions?.caveRooms ?? 10) * 1.25,
+      ),
+    );
+
+    const { entry: carvedEntry, nodes } = room.builder.generateAltForestSidepathNodeLayout(
+      entry,
+      rand,
+      {
+        avoidCenter: this.level.organicTunnelsAvoidCenter === true,
+        loopiness,
+        branching,
+        nodeCount,
+        // Enforce min/max tunnel widths via radius range (radius ~= half-width)
+        minRadius: 1,
+        maxRadius: 3,
+        carveChamber: true,
+        chamberArea: Math.floor(room.width * room.height * 0.14),
+      },
+    );
+
+    // Helper: collect candidate floor tiles that are not currently occupied by solid entities/items.
+    const isTileFree = (x: number, y: number): boolean => {
+      const tile = room.roomArray[x]?.[y];
+      if (!tile || tile.isSolid()) return false;
+      // Avoid placing on doors/other passageways if any exist
+      if (tile instanceof Door) return false;
+      if (tile instanceof DownLadder) return false;
+      if (tile instanceof UpLadder) return false;
+      // Avoid stacking with items/entities
+      if (room.items.some((it) => it.x === x && it.y === y)) return false;
+      if (room.entities.some((e) => e.x === x && e.y === y && (e as any).dead !== true))
+        return false;
+      return true;
+    };
+
+    const floorCandidates: Array<{ x: number; y: number }> = [];
+    for (let x = room.roomX + 1; x < room.roomX + room.width - 1; x++) {
+      for (let y = room.roomY + 1; y < room.roomY + room.height - 1; y++) {
+        if (isTileFree(x, y)) floorCandidates.push({ x, y });
+      }
+    }
+    if (floorCandidates.length === 0) return;
+
+    // Ensure entry is on a free tile (fallback to nearest candidate)
+    const entryPos = isTileFree(carvedEntry.x, carvedEntry.y)
+      ? carvedEntry
+      : floorCandidates.reduce(
+          (best, p) => {
+            const db = Math.abs(best.x - carvedEntry.x) + Math.abs(best.y - carvedEntry.y);
+            const dp = Math.abs(p.x - carvedEntry.x) + Math.abs(p.y - carvedEntry.y);
+            return dp < db ? p : best;
+          },
+          floorCandidates[0],
+        );
+
+    // Choose exit + key positions from "node" set (fall back to random floor candidates)
+    const uniqNodes = nodes.filter((p) => isTileFree(p.x, p.y));
+    const points = uniqNodes.length ? uniqNodes : floorCandidates;
+
+    // Compute BFS distances from a source across walkable tiles.
+    const bfsDistances = (src: { x: number; y: number }): Map<string, number> => {
+      const dist = new Map<string, number>();
+      const q: Array<{ x: number; y: number }> = [src];
+      dist.set(`${src.x},${src.y}`, 0);
+      const dirs = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 0, y: -1 },
+      ];
+      while (q.length > 0) {
+        const cur = q.shift()!;
+        const d0 = dist.get(`${cur.x},${cur.y}`)!;
+        for (const d of dirs) {
+          const nx = cur.x + d.x;
+          const ny = cur.y + d.y;
+          if (nx < room.roomX + 1 || nx >= room.roomX + room.width - 1) continue;
+          if (ny < room.roomY + 1 || ny >= room.roomY + room.height - 1) continue;
+          const tile = room.roomArray[nx]?.[ny];
+          if (!tile || tile.isSolid()) continue;
+          const k = `${nx},${ny}`;
+          if (dist.has(k)) continue;
+          dist.set(k, d0 + 1);
+          q.push({ x: nx, y: ny });
+        }
+      }
+      return dist;
+    };
+
+    const distFromEntry = bfsDistances(entryPos);
+
+    // Exit: farthest reachable point from entry
+    let exitPos = points[0];
+    let bestExitD = -1;
+    for (const p of points) {
+      const d = distFromEntry.get(`${p.x},${p.y}`);
+      if (d !== undefined && d > bestExitD) {
+        bestExitD = d;
+        exitPos = p;
+      }
+    }
+
+    const distFromExit = bfsDistances(exitPos);
+
+    // Key: far from both entry and exit; prefer "spatially nearby but blocked" to exit when possible
+    const minTarget = Math.max(18, Math.floor(Math.min(room.width, room.height) * 0.5));
+    let keyPos = points[0];
+    let bestScore = -1;
+    let bestEuclid = Infinity;
+    for (const p of points) {
+      if (p.x === exitPos.x && p.y === exitPos.y) continue;
+      if (p.x === entryPos.x && p.y === entryPos.y) continue;
+      const de = distFromEntry.get(`${p.x},${p.y}`);
+      const dx = distFromExit.get(`${p.x},${p.y}`);
+      if (de === undefined || dx === undefined) continue;
+      const minD = Math.min(de, dx);
+      if (minD < minTarget) continue;
+      const score = minD;
+      const euclid = Math.hypot(p.x - exitPos.x, p.y - exitPos.y);
+      if (score > bestScore || (score === bestScore && euclid < bestEuclid)) {
+        bestScore = score;
+        bestEuclid = euclid;
+        keyPos = p;
+      }
+    }
+
+    // Fallback if no strong candidate found
+    if (bestScore < 0) {
+      keyPos = points.find((p) => p.x !== exitPos.x || p.y !== exitPos.y) ?? points[0];
+    }
+
+    // Place props/enemies using existing forest rules (reuses existing configuration)
+    this.populateByEnvironment(room);
+
+    // Place entry rope up ladder inside the standard room
+    const up = new UpLadder(room, room.game, entryPos.x, entryPos.y);
+    up.isRope = true;
+    up.isSidePath = true;
+    room.roomArray[entryPos.x][entryPos.y] = up;
+
+    // Place the locked exit rope down ladder (to the next sidepath environment) inside the standard room
+    const nextSidepathOpts: SidePathOptions = {
+      caveRooms: this.numRooms(),
+      locked: true,
+      envType: EnvType.CASTLE,
+      linearity: 0.8,
+    };
+    const dl = new DownLadder(
+      room,
+      room.game,
+      exitPos.x,
+      exitPos.y,
+      true,
+      EnvType.CASTLE,
+      LockType.LOCKED,
+      nextSidepathOpts,
+      { lockType: LockType.LOCKED },
+    );
+    room.roomArray[exitPos.x][exitPos.y] = dl;
+
+    // Place the key (must be linked to the exit ladder lock)
+    const key = new Key(room, keyPos.x, keyPos.y);
+    dl.lockable.setKey(key);
+    room.items.push(key);
+
+    // Clean up door obstructions (even though this room typically has none)
+    room.removeDoorObstructions();
+  }
 
   populateRopeCave = (room: Room, rand: () => number) => {
     let message = "";

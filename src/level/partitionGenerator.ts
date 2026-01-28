@@ -273,6 +273,15 @@ export class PartitionGenerator {
     const mapWidth = opts.mapWidth ?? 50;
     const mapHeight = opts.mapHeight ?? 50;
     const numRooms = opts.caveRooms ?? 8;
+
+    // Alternate forest sidepath layout: single oversized room partition.
+    // Note: This is gated by SidePathOptions, which is itself gated by a gameplay toggle.
+    if (opts.altForestSidepathLayout === true) {
+      const CAVE_OFFSET = 100;
+      const p = new Partition(CAVE_OFFSET, CAVE_OFFSET, mapWidth, mapHeight, "white");
+      p.type = RoomType.CAVE;
+      return [p];
+    }
     const hasLinearity = typeof opts.linearity === "number";
     const branching =
       typeof opts.branching === "number"

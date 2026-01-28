@@ -328,7 +328,9 @@ export class LevelGenerator {
     // Return the start room or the rope cave room
     callback(
       isSidePath
-        ? rooms.find((r) => r.type === RoomType.ROPECAVE)
+        ? opts?.altForestSidepathLayout === true
+          ? rooms[0]
+          : rooms.find((r) => r.type === RoomType.ROPECAVE)
         : rooms.find((r) => r.type === RoomType.START),
     );
   };
