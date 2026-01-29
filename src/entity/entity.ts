@@ -1980,7 +1980,7 @@ export class Entity extends Drawable {
     arrowsOnly: boolean = false,
     directionOverride: null | "diagonal" | "orthogonal" | "forward" = null,
   ) => {
-    if (this.unconscious || (this.isEnemy && !(this as any).seenPlayer)) return;
+    if (this.unconscious || (this.isEnemy && !(this as unknown as Enemy).seenPlayer)) return;
     const player: Player = this.getPlayer();
     const isPlayerOnTile = player.x === hx && player.y === hy;
     const cullFactor = isPlayerOnTile ? 0 : this.hitWarningCullFactor;

@@ -499,7 +499,7 @@ export class SpiderEnemy extends Enemy {
   };
 
   makeHitWarnings = () => {
-    if (this.unconscious) return;
+    if (this.unconscious || !(this.seenPlayer)) return;
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

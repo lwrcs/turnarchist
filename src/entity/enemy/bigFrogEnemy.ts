@@ -388,6 +388,7 @@ export class BigFrogEnemy extends Enemy {
   };
 
   makeHitWarnings = () => {
+    if (this.unconscious || !(this.seenPlayer) || (this.ticks % 2 === 1)) return;
     const cullFactor = 0.25;
     const player: Player = this.getPlayer();
     const orthogonal = this.orthogonalAttack;

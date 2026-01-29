@@ -54,6 +54,9 @@ export class SpikeTrap extends Tile {
       for (const e of this.room.entities) {
         if (e.x === this.x && e.y === this.y) {
           e.hurt(null, 1);
+          for (const h of this.room.hitwarnings) {
+            if (h.parent === e) h.dead = true;
+          }
         }
       }
     }

@@ -11776,6 +11776,8 @@ class BigFrogEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
+            if (this.unconscious || !(this.seenPlayer) || (this.ticks % 2 === 1))
+                return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
             const orthogonal = this.orthogonalAttack;
@@ -16086,7 +16088,7 @@ class FrogEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
-            if (this.unconscious)
+            if (this.unconscious || !(this.seenPlayer))
                 return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
@@ -18910,7 +18912,7 @@ class SpiderEnemy extends enemy_1.Enemy {
             }
         };
         this.makeHitWarnings = () => {
-            if (this.unconscious)
+            if (this.unconscious || !(this.seenPlayer))
                 return;
             const cullFactor = 0.25;
             const player = this.getPlayer();
@@ -68939,6 +68941,10 @@ class SpikeTrap extends tile_1.Tile {
                 for (const e of this.room.entities) {
                     if (e.x === this.x && e.y === this.y) {
                         e.hurt(null, 1);
+                        for (const h of this.room.hitwarnings) {
+                            if (h.parent === e)
+                                h.dead = true;
+                        }
                     }
                 }
             }
