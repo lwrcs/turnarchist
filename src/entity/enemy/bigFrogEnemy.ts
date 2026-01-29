@@ -98,19 +98,16 @@ export class BigFrogEnemy extends Enemy {
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
 
-            for (const e of this.room.entities) {
-              if (e !== this && !e.destroyable) {
-                // Block all tiles occupied by entities (supports multi-tile entities)
-                for (let ex = 0; ex < (e.w || 1); ex++) {
-                  for (let ey = 0; ey < (e.h || 1); ey++) {
-                    disablePositions.push({
-                      x: e.x + ex,
-                      y: e.y + ey,
-                    } as astar.Position);
-                  }
-                }
-              }
-            }
+            let targetPosition = {
+              x: this.targetPlayer.x,
+              y: this.targetPlayer.y,
+            };
+
+            // Build localized disables (avoid scanning the entire room's entities every tick)
+            disablePositions = this.buildEntityDisablePositionsLocalized(
+              targetPosition,
+              (e) => e !== this && !e.destroyable,
+            );
 
             // Account for this enemy's 2x2 footprint when avoiding active spike traps
             for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
@@ -126,11 +123,6 @@ export class BigFrogEnemy extends Enemy {
                 }
               }
             }
-
-            let targetPosition = {
-              x: this.targetPlayer.x,
-              y: this.targetPlayer.y,
-            };
 
             // 2x2-aware jump-over logic
             const px = this.targetPlayer.x;
@@ -153,6 +145,21 @@ export class BigFrogEnemy extends Enemy {
               w: number,
               h: number,
             ): boolean => {
+              // Precompute occupied tiles once for this check.
+              // Only non-destroyable entities should block (matches original behavior).
+              const occupied = new Set<string>();
+              for (const e of this.room.entities) {
+                if (e === this) continue;
+                if (e.destroyable) continue;
+                const ew = e.w || 1;
+                const eh = e.h || 1;
+                for (let dx = 0; dx < ew; dx++) {
+                  for (let dy = 0; dy < eh; dy++) {
+                    occupied.add(`${e.x + dx},${e.y + dy}`);
+                  }
+                }
+              }
+
               for (let xx = 0; xx < w; xx++) {
                 for (let yy = 0; yy < h; yy++) {
                   const ax = tx + xx;
@@ -167,20 +174,7 @@ export class BigFrogEnemy extends Enemy {
                   )
                     return false;
                   // prevent entity overlap
-                  for (const e of this.room.entities) {
-                    if (e !== this && !e.destroyable) {
-                      if (
-                        !(
-                          e.x >= tx + w ||
-                          e.x + (e.w || 1) <= tx ||
-                          e.y >= ty + h ||
-                          e.y + (e.h || 1) <= ty
-                        )
-                      ) {
-                        return false;
-                      }
-                    }
-                  }
+                  if (occupied.has(`${ax},${ay}`)) return false;
                 }
               }
               return true;

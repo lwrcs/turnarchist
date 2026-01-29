@@ -234,11 +234,17 @@ export class Player extends Drawable {
   }
 
   getRoom = (): Room => {
-    const gameWithLookup = this.game as unknown as {
-      getRoomById?: (gid?: string) => Room | undefined;
-    };
-    const byId = gameWithLookup.getRoomById?.(this.roomGID);
-    return byId || this.game.levels[this.depth].rooms[this.levelID];
+    const byId = this.roomGID ? this.game.getRoomById(this.roomGID) : undefined;
+    if (byId) return byId;
+
+    const fromLevels = this.game.levels?.[this.depth]?.rooms?.[this.levelID];
+    if (fromLevels) return fromLevels;
+
+    // Early-init / transitional fallback: prefer the game's current active room if available.
+    if (this.game.room) return this.game.room;
+
+    // If this ever happens, something is fundamentally wrong with initialization.
+    throw new Error("Player.getRoom(): no room available (levels not initialized)");
   };
 
   getEquippedDivingHelmet = (): DivingHelmet | null => {

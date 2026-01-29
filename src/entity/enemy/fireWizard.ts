@@ -60,17 +60,6 @@ export class FireWizardEnemy extends WizardEnemy {
     return withinRange;
   };
 
-  shuffle = (a) => {
-    let j, x, i;
-    for (i = a.length - 1; i > 0; i--) {
-      j = Math.floor(Random.rand() * (i + 1));
-      x = a[i];
-      a[i] = a[j];
-      a[j] = x;
-    }
-    return a;
-  };
-
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -121,21 +110,7 @@ export class FireWizardEnemy extends WizardEnemy {
           case WizardState.teleport:
             let oldX = this.x;
             let oldY = this.y;
-            let min = 100000;
-            let bestPos;
-            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-            emptyTiles = emptyTiles.filter(
-              (tile) =>
-                !this.room.projectiles.some(
-                  (projectile) =>
-                    projectile.x === tile.x && projectile.y === tile.y,
-                ),
-            );
-
-            if (
-              emptyTiles.length === 0 ||
-              Object.keys(this.game.players).length === 0
-            ) {
+            if (Object.keys(this.game.players).length === 0) {
               this.state = WizardState.idle;
               break;
             }
@@ -153,19 +128,14 @@ export class FireWizardEnemy extends WizardEnemy {
               break;
             }
 
-            for (let t of emptyTiles) {
-              let newPos = t;
-              let dist =
-                Math.abs(newPos.x - this.game.players[target_player_id].x) +
-                Math.abs(newPos.y - this.game.players[target_player_id].y);
-              if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
-                min = dist;
-                bestPos = newPos;
-              }
-            }
-
+            const bestPos = this.findTeleportTarget(
+              target_player_id,
+              optimalDist,
+              { avoidProjectiles: true },
+            );
             if (!bestPos) {
-              bestPos = emptyTiles[0];
+              this.state = WizardState.idle;
+              break;
             }
 
             this.tryMove(bestPos.x, bestPos.y);

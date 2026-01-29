@@ -8,9 +8,16 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
+/**
+ * Create a bound version of a function with a specified `this` context
+ *
+ * @param {Function} fn - The function to bind
+ * @param {*} thisArg - The value to be passed as the `this` parameter
+ * @returns {Function} A new function that will call the original function with the specified `this` context
+ */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1263,7 +1270,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   * @returns {void}
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2229,27 +2236,38 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure) {
-      const cookie = [name + '=' + encodeURIComponent(value)];
+    write(name, value, expires, path, domain, secure, sameSite) {
+      if (typeof document === 'undefined') return;
 
-      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+      const cookie = [`${name}=${encodeURIComponent(value)}`];
 
-      utils$1.isString(path) && cookie.push('path=' + path);
-
-      utils$1.isString(domain) && cookie.push('domain=' + domain);
-
-      secure === true && cookie.push('secure');
+      if (utils$1.isNumber(expires)) {
+        cookie.push(`expires=${new Date(expires).toUTCString()}`);
+      }
+      if (utils$1.isString(path)) {
+        cookie.push(`path=${path}`);
+      }
+      if (utils$1.isString(domain)) {
+        cookie.push(`domain=${domain}`);
+      }
+      if (secure === true) {
+        cookie.push('secure');
+      }
+      if (utils$1.isString(sameSite)) {
+        cookie.push(`SameSite=${sameSite}`);
+      }
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
-      return (match ? decodeURIComponent(match[3]) : null);
+      if (typeof document === 'undefined') return null;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000);
+      this.write(name, '', Date.now() - 86400000, '/');
     }
   }
 
@@ -2338,11 +2356,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop , caseless) {
+  function mergeDeepProperties(a, b, prop, caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop , caseless);
+      return getMergedValue(a, b, prop, caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop , caseless);
+      return getMergedValue(undefined, a, prop, caseless);
     }
   }
 
@@ -2400,7 +2418,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3040,7 +3058,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = config ? config.env : {};
+  let env = (config && config.env) || {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3063,6 +3081,15 @@ const getFetch = (config) => {
 
 getFetch();
 
+/**
+ * Known adapters mapping.
+ * Provides environment-specific adapters for Axios:
+ * - `http` for Node.js
+ * - `xhr` for browsers
+ * - `fetch` for fetch API-based requests
+ * 
+ * @type {Object<string, Function|Object>}
+ */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3071,71 +3098,107 @@ const knownAdapters = {
   }
 };
 
+// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', {value});
+      Object.defineProperty(fn, 'name', { value });
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', {value});
+    Object.defineProperty(fn, 'adapterName', { value });
   }
 });
 
+/**
+ * Render a rejection reason string for unknown or unsupported adapters
+ * 
+ * @param {string} reason
+ * @returns {string}
+ */
 const renderReason = (reason) => `- ${reason}`;
 
+/**
+ * Check if the adapter is resolved (function, null, or false)
+ * 
+ * @param {Function|null|false} adapter
+ * @returns {boolean}
+ */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-var adapters = {
-  getAdapter: (adapters, config) => {
-    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+/**
+ * Get the first suitable adapter from the provided list.
+ * Tries each adapter in order until a supported one is found.
+ * Throws an AxiosError if no adapter is suitable.
+ * 
+ * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
+ * @param {Object} config - Axios request configuration
+ * @throws {AxiosError} If no suitable adapter is available
+ * @returns {Function} The resolved adapter function
+ */
+function getAdapter(adapters, config) {
+  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-    const {length} = adapters;
-    let nameOrAdapter;
-    let adapter;
+  const { length } = adapters;
+  let nameOrAdapter;
+  let adapter;
 
-    const rejectedReasons = {};
+  const rejectedReasons = {};
 
-    for (let i = 0; i < length; i++) {
-      nameOrAdapter = adapters[i];
-      let id;
+  for (let i = 0; i < length; i++) {
+    nameOrAdapter = adapters[i];
+    let id;
 
-      adapter = nameOrAdapter;
+    adapter = nameOrAdapter;
 
-      if (!isResolvedHandle(nameOrAdapter)) {
-        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+    if (!isResolvedHandle(nameOrAdapter)) {
+      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
 
-        if (adapter === undefined) {
-          throw new AxiosError(`Unknown adapter '${id}'`);
-        }
+      if (adapter === undefined) {
+        throw new AxiosError(`Unknown adapter '${id}'`);
       }
-
-      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-        break;
-      }
-
-      rejectedReasons[id || '#' + i] = adapter;
     }
 
-    if (!adapter) {
+    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+      break;
+    }
 
-      const reasons = Object.entries(rejectedReasons)
-        .map(([id, state]) => `adapter ${id} ` +
-          (state === false ? 'is not supported by the environment' : 'is not available in the build')
-        );
+    rejectedReasons[id || '#' + i] = adapter;
+  }
 
-      let s = length ?
-        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-        'as no adapter specified';
-
-      throw new AxiosError(
-        `There is no suitable adapter to dispatch the request ` + s,
-        'ERR_NOT_SUPPORT'
+  if (!adapter) {
+    const reasons = Object.entries(rejectedReasons)
+      .map(([id, state]) => `adapter ${id} ` +
+        (state === false ? 'is not supported by the environment' : 'is not available in the build')
       );
-    }
 
-    return adapter;
-  },
+    let s = length ?
+      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+      'as no adapter specified';
+
+    throw new AxiosError(
+      `There is no suitable adapter to dispatch the request ` + s,
+      'ERR_NOT_SUPPORT'
+    );
+  }
+
+  return adapter;
+}
+
+/**
+ * Exports Axios adapters and utility to resolve an adapter
+ */
+var adapters = {
+  /**
+   * Resolve an adapter from a list of adapter names or functions.
+   * @type {Function}
+   */
+  getAdapter,
+
+  /**
+   * Exposes all known adapters
+   * @type {Object<string, Function|Object>}
+   */
   adapters: knownAdapters
 };
 
@@ -3212,7 +3275,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.12.2";
+const VERSION = "1.13.2";
 
 const validators$1 = {};
 
@@ -3771,6 +3834,12 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
+  WebServerIsDown: 521,
+  ConnectionTimedOut: 522,
+  OriginIsUnreachable: 523,
+  TimeoutOccurred: 524,
+  SslHandshakeFailed: 525,
+  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -11433,19 +11502,12 @@ class BigFrogEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this && !e.destroyable) {
-                                    // Block all tiles occupied by entities (supports multi-tile entities)
-                                    for (let ex = 0; ex < (e.w || 1); ex++) {
-                                        for (let ey = 0; ey < (e.h || 1); ey++) {
-                                            disablePositions.push({
-                                                x: e.x + ex,
-                                                y: e.y + ey,
-                                            });
-                                        }
-                                    }
-                                }
-                            }
+                            let targetPosition = {
+                                x: this.targetPlayer.x,
+                                y: this.targetPlayer.y,
+                            };
+                            // Build localized disables (avoid scanning the entire room's entities every tick)
+                            disablePositions = this.buildEntityDisablePositionsLocalized(targetPosition, (e) => e !== this && !e.destroyable);
                             // Account for this enemy's 2x2 footprint when avoiding active spike traps
                             for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
@@ -11458,10 +11520,6 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            let targetPosition = {
-                                x: this.targetPlayer.x,
-                                y: this.targetPlayer.y,
-                            };
                             // 2x2-aware jump-over logic
                             const px = this.targetPlayer.x;
                             const py = this.targetPlayer.y;
@@ -11475,6 +11533,22 @@ class BigFrogEnemy extends enemy_1.Enemy {
                             let triedAdjacentJump = false;
                             let performedJump = false;
                             const isAreaClear = (tx, ty, w, h) => {
+                                // Precompute occupied tiles once for this check.
+                                // Only non-destroyable entities should block (matches original behavior).
+                                const occupied = new Set();
+                                for (const e of this.room.entities) {
+                                    if (e === this)
+                                        continue;
+                                    if (e.destroyable)
+                                        continue;
+                                    const ew = e.w || 1;
+                                    const eh = e.h || 1;
+                                    for (let dx = 0; dx < ew; dx++) {
+                                        for (let dy = 0; dy < eh; dy++) {
+                                            occupied.add(`${e.x + dx},${e.y + dy}`);
+                                        }
+                                    }
+                                }
                                 for (let xx = 0; xx < w; xx++) {
                                     for (let yy = 0; yy < h; yy++) {
                                         const ax = tx + xx;
@@ -11487,16 +11561,8 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                             tile instanceof downLadder_1.DownLadder)
                                             return false;
                                         // prevent entity overlap
-                                        for (const e of this.room.entities) {
-                                            if (e !== this && !e.destroyable) {
-                                                if (!(e.x >= tx + w ||
-                                                    e.x + (e.w || 1) <= tx ||
-                                                    e.y >= ty + h ||
-                                                    e.y + (e.h || 1) <= ty)) {
-                                                    return false;
-                                                }
-                                            }
-                                        }
+                                        if (occupied.has(`${ax},${ay}`))
+                                            return false;
                                     }
                                 }
                                 return true;
@@ -11982,20 +12048,8 @@ class BigKnightEnemy extends enemy_1.Enemy {
                             const oldX = this.x;
                             const oldY = this.y;
                             this.rumbling = true;
-                            // Build disabled positions (entities and active spike traps)
-                            let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    for (let dx = 0; dx < e.w; dx++) {
-                                        for (let dy = 0; dy < e.h; dy++) {
-                                            disablePositions.push({
-                                                x: e.x + dx,
-                                                y: e.y + dy,
-                                            });
-                                        }
-                                    }
-                                }
-                            }
+                            // Build localized disables (avoid scanning the entire room's entities every tick)
+                            let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this);
                             for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
                                     if (this.room.roomArray[xx] &&
@@ -12286,20 +12340,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 return;
                             }
                         }
-                        let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                // For 2x2 enemy, block all tiles the entity occupies
-                                for (let ex = 0; ex < (e.w || 1); ex++) {
-                                    for (let ey = 0; ey < (e.h || 1); ey++) {
-                                        disablePositions.push({
-                                            x: e.x + ex,
-                                            y: e.y + ey,
-                                        });
-                                    }
-                                }
-                            }
-                        }
+                        // Build localized disables (avoid scanning the entire room's entities every tick)
+                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this);
                         // Check for spike traps around the 2x2 area
                         for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
@@ -12581,21 +12623,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                 return;
                             }
                         }
-                        // Create a list of positions to avoid
-                        let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                // For 2x2 entity, block all positions the entity occupies
-                                for (let dx = 0; dx < e.w; dx++) {
-                                    for (let dy = 0; dy < e.h; dy++) {
-                                        disablePositions.push({
-                                            x: e.x + dx,
-                                            y: e.y + dy,
-                                        });
-                                    }
-                                }
-                            }
-                        }
+                        // Build localized disables (avoid scanning the entire room's entities every tick)
+                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this);
                         // Check spike traps in a larger area for 2x2 entity
                         for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
@@ -13038,6 +13067,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BoltcasterEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const arrowParticle_1 = __webpack_require__(/*! ../../particle/arrowParticle */ "./src/particle/arrowParticle.ts");
@@ -13051,6 +13081,28 @@ class BoltcasterEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.isInlineWithPlayerAndClear = (px, py) => {
+            return this.isInlineWithPlayerAndClearUsingOccupied(px, py, this.buildOccupiedSet());
+        };
+        this.buildOccupiedSet = () => {
+            const out = new Set();
+            const z = this.z ?? 0;
+            for (const e of this.room.entities) {
+                if (e === this)
+                    continue;
+                const ez = e.z ?? 0;
+                if (ez !== z)
+                    continue;
+                const w = e.w || 1;
+                const h = e.h || 1;
+                for (let dx = 0; dx < w; dx++) {
+                    for (let dy = 0; dy < h; dy++) {
+                        out.add(`${e.x + dx},${e.y + dy}`);
+                    }
+                }
+            }
+            return out;
+        };
+        this.isInlineWithPlayerAndClearUsingOccupied = (px, py, occupied) => {
             if (this.x !== px && this.y !== py)
                 return false;
             const dx = Math.sign(px - this.x);
@@ -13067,68 +13119,11 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 const tile = this.room.roomArray[cx]?.[cy];
                 if (!tile || tile.isSolid())
                     return false;
-                // Any entity blocks line except the player at the end
-                if (this.room.entities.some((e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0)))
+                if (occupied.has(`${cx},${cy}`))
                     return false;
             }
         };
-        this.findNearestInlineTile = () => {
-            const p = this.getPlayer();
-            if (!p)
-                return null;
-            const px = p.x;
-            const py = p.y;
-            const candidates = [];
-            // Collect candidate tiles along same row and column as player
-            for (let x = this.room.roomX; x < this.room.roomX + this.room.width; x++) {
-                const y = py;
-                const tile = this.room.roomArray[x]?.[y];
-                if (!tile || tile.isSolid())
-                    continue;
-                if (this.room.entities.some((e) => e.x === x && e.y === y))
-                    continue;
-                // LOS from candidate to player must be clear
-                if (this.lineClear(x, y, px, py))
-                    candidates.push({ x, y });
-            }
-            for (let y = this.room.roomY; y < this.room.roomY + this.room.height; y++) {
-                const x = px;
-                const tile = this.room.roomArray[x]?.[y];
-                if (!tile || tile.isSolid())
-                    continue;
-                if (this.room.entities.some((e) => e.x === x && e.y === y))
-                    continue;
-                if (this.lineClear(x, y, px, py))
-                    candidates.push({ x, y });
-            }
-            if (candidates.length === 0)
-                return null;
-            // Choose shortest path candidate using localized A*
-            let best = null;
-            let bestLen = Infinity;
-            const disablePositions = [];
-            for (const e of this.room.entities) {
-                if (e !== this)
-                    disablePositions.push({ x: e.x, y: e.y });
-            }
-            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
-                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
-                    if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
-                        this.room.roomArray[xx][yy].on) {
-                        disablePositions.push({ x: xx, y: yy });
-                    }
-                }
-            }
-            for (const c of candidates) {
-                const moves = this.searchPathLocalized({ x: c.x, y: c.y }, disablePositions);
-                if (moves && moves.length > 0 && moves.length < bestLen) {
-                    best = c;
-                    bestLen = moves.length;
-                }
-            }
-            return best;
-        };
-        this.lineClear = (x0, y0, x1, y1) => {
+        this.lineClearUsingOccupied = (occupied, x0, y0, x1, y1) => {
             if (x0 !== x1 && y0 !== y1)
                 return false;
             const dx = Math.sign(x1 - x0);
@@ -13145,9 +13140,93 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 const tile = this.room.roomArray[cx]?.[cy];
                 if (!tile || tile.isSolid())
                     return false;
-                if (this.room.entities.some((e) => e !== this && e.occupiesTile(cx, cy, this.z ?? 0)))
+                if (occupied.has(`${cx},${cy}`))
                     return false;
             }
+        };
+        this.findNearestInlineTile = () => {
+            const p = this.getPlayer();
+            if (!p)
+                return null;
+            const px = p.x;
+            const py = p.y;
+            const occupied = this.buildOccupiedSet();
+            const candidates = [];
+            // Scan outward from player until blocked; every tile before the first blocker has clear LOS.
+            const scan = (dx, dy) => {
+                let x = px;
+                let y = py;
+                while (true) {
+                    x += dx;
+                    y += dy;
+                    if (!this.room.tileInside(x, y))
+                        break;
+                    const tile = this.room.roomArray[x]?.[y];
+                    if (!tile || tile.isSolid())
+                        break;
+                    if (occupied.has(`${x},${y}`))
+                        break;
+                    candidates.push({ x, y });
+                }
+            };
+            scan(-1, 0);
+            scan(1, 0);
+            scan(0, -1);
+            scan(0, 1);
+            if (candidates.length === 0)
+                return null;
+            // Cheap heuristic: pick a nearby candidate (actual A* is done in behavior).
+            candidates.sort((a, b) => utils_1.Utils.distance(this.x, this.y, a.x, a.y) -
+                utils_1.Utils.distance(this.x, this.y, b.x, b.y));
+            return candidates[0] ?? null;
+        };
+        this.lineClear = (x0, y0, x1, y1) => this.lineClearUsingOccupied(this.buildOccupiedSet(), x0, y0, x1, y1);
+        this.findBestStepTowardInlineTile = (player, disablePositions, occupied) => {
+            const px = player.x;
+            const py = player.y;
+            const candidates = [];
+            const scan = (dx, dy) => {
+                let x = px;
+                let y = py;
+                while (true) {
+                    x += dx;
+                    y += dy;
+                    if (!this.room.tileInside(x, y))
+                        break;
+                    const tile = this.room.roomArray[x]?.[y];
+                    if (!tile || tile.isSolid())
+                        break;
+                    if (occupied.has(`${x},${y}`))
+                        break;
+                    candidates.push({ x, y });
+                }
+            };
+            scan(-1, 0);
+            scan(1, 0);
+            scan(0, -1);
+            scan(0, 1);
+            if (candidates.length === 0)
+                return null;
+            // Prefer nearby candidates first; only run A* on a small top-N set.
+            candidates.sort((a, b) => Math.abs(a.x - this.x) +
+                Math.abs(a.y - this.y) -
+                (Math.abs(b.x - this.x) + Math.abs(b.y - this.y)));
+            let bestStep = null;
+            let bestLen = Infinity;
+            const maxCandidatesToTry = 14;
+            for (let i = 0; i < candidates.length && i < maxCandidatesToTry; i++) {
+                const c = candidates[i];
+                const moves = this.searchPathLocalized({ x: c.x, y: c.y }, disablePositions);
+                if (!moves || moves.length === 0)
+                    continue;
+                if (moves.length < bestLen) {
+                    bestLen = moves.length;
+                    bestStep = { x: moves[0].pos.x, y: moves[0].pos.y };
+                    if (bestLen <= 1)
+                        break;
+                }
+            }
+            return bestStep;
         };
         this.makeLineHitWarnings = (px, py) => {
             const dx = Math.sign(px - this.x);
@@ -13303,6 +13382,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 if (this.room.playerTicked === this.targetPlayer) {
                     this.alertTicks = Math.max(0, this.alertTicks - 1);
                     const player = this.targetPlayer;
+                    const occupied = this.buildOccupiedSet();
                     // If too close to the player, retreat immediately
                     if (player && this.playerDistance(player) <= 1 && !this.isLoading) {
                         this.runAway(true);
@@ -13316,7 +13396,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                         return;
                     }
                     // If inline and clear, start loading sequence
-                    if (this.isInlineWithPlayerAndClear(player.x, player.y)) {
+                    if (this.isInlineWithPlayerAndClearUsingOccupied(player.x, player.y, occupied)) {
                         this.loadDx = Math.sign(player.x - this.x) || 0;
                         this.loadDy = Math.sign(player.y - this.y) || 0;
                         this.loadedPlayerX = player.x;
@@ -13342,28 +13422,25 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                         }
                     }
                     const target = this.findNearestInlineTile();
-                    if (target) {
-                        const moves = this.searchPathLocalized({ x: target.x, y: target.y }, disablePositions);
-                        if (moves && moves.length > 0) {
-                            const moveX = moves[0].pos.x;
-                            const moveY = moves[0].pos.y;
-                            const oldX = this.x;
-                            const oldY = this.y;
-                            this.facePlayer(player);
-                            // Move
-                            this.tryMove(moveX, moveY);
-                            this.setDrawXY(oldX, oldY);
-                            if (this.x > oldX)
-                                this.direction = game_1.Direction.RIGHT;
-                            else if (this.x < oldX)
-                                this.direction = game_1.Direction.LEFT;
-                            else if (this.y > oldY)
-                                this.direction = game_1.Direction.DOWN;
-                            else if (this.y < oldY)
-                                this.direction = game_1.Direction.UP;
-                            // Warn during approach
-                            this.makeHitWarnings();
-                        }
+                    const step = target &&
+                        this.findBestStepTowardInlineTile(player, disablePositions, occupied);
+                    if (step) {
+                        const oldX = this.x;
+                        const oldY = this.y;
+                        this.facePlayer(player);
+                        // Move
+                        this.tryMove(step.x, step.y);
+                        this.setDrawXY(oldX, oldY);
+                        if (this.x > oldX)
+                            this.direction = game_1.Direction.RIGHT;
+                        else if (this.x < oldX)
+                            this.direction = game_1.Direction.LEFT;
+                        else if (this.y > oldY)
+                            this.direction = game_1.Direction.DOWN;
+                        else if (this.y < oldY)
+                            this.direction = game_1.Direction.UP;
+                        // Warn during approach
+                        this.makeHitWarnings();
                     }
                     else {
                         // Default fallback: pursue player normally
@@ -13402,6 +13479,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             let cy = this.y;
             let endX = cx;
             let endY = cy;
+            const occupied = this.buildOccupiedSet();
             // Step forward until blocked by solid tile or entity; cap length generously
             for (let steps = 0; steps < 50; steps++) {
                 cx += dx;
@@ -13412,7 +13490,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                 if (!tile || tile.isSolid())
                     break;
                 // Any entity blocks the pre-fire beam visualization
-                if (this.room.entities.some((e) => e.x === cx && e.y === cy))
+                if (occupied.has(`${cx},${cy}`))
                     break;
                 endX = cx;
                 endY = cy;
@@ -14338,16 +14416,6 @@ class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
             }
             return withinRange;
         };
-        this.shuffle = (a) => {
-            let j, x, i;
-            for (i = a.length - 1; i > 0; i--) {
-                j = Math.floor(random_1.Random.rand() * (i + 1));
-                x = a[i];
-                a[i] = a[j];
-                a[j] = x;
-            }
-            return a;
-        };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -14402,12 +14470,7 @@ class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
                         case WizardState.teleport:
                             let oldX = this.x;
                             let oldY = this.y;
-                            let min = 100000;
-                            let bestPos;
-                            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-                            emptyTiles = emptyTiles.filter((tile) => !this.room.projectiles.some((projectile) => projectile.x === tile.x && projectile.y === tile.y));
-                            if (emptyTiles.length === 0 ||
-                                Object.keys(this.game.players).length === 0) {
+                            if (Object.keys(this.game.players).length === 0) {
                                 this.state = WizardState.idle;
                                 break;
                             }
@@ -14420,17 +14483,10 @@ class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
                                 this.state = WizardState.idle;
                                 break;
                             }
-                            for (let t of emptyTiles) {
-                                let newPos = t;
-                                let dist = Math.abs(newPos.x - this.game.players[target_player_id].x) +
-                                    Math.abs(newPos.y - this.game.players[target_player_id].y);
-                                if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
-                                    min = dist;
-                                    bestPos = newPos;
-                                }
-                            }
+                            const bestPos = this.findTeleportTarget(target_player_id, optimalDist);
                             if (!bestPos) {
-                                bestPos = emptyTiles[0];
+                                this.state = WizardState.idle;
+                                break;
                             }
                             this.tryMove(bestPos.x, bestPos.y);
                             this.drawX = this.x - oldX;
@@ -14885,6 +14941,68 @@ class Enemy extends entity_1.Entity {
                     }
                 }
             }
+        };
+        /**
+         * Compute the same bounds used by `searchPathLocalized()` without building the grid.
+         * Useful for generating a *small* disablePositions list that won't be filtered away later.
+         */
+        this.getSearchPathLocalizedBounds = (target, options) => {
+            const pad = options?.pad ?? 3;
+            const minSide = options?.minSide ?? gameplaySettings_1.GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+            const minX = Math.min(this.x, target.x);
+            const maxX = Math.max(this.x, target.x);
+            const minY = Math.min(this.y, target.y);
+            const maxY = Math.max(this.y, target.y);
+            let left = Math.max(this.room.roomX, minX - pad);
+            let right = Math.min(this.room.roomX + this.room.width - 1, maxX + pad);
+            let top = Math.max(this.room.roomY, minY - pad);
+            let bottom = Math.min(this.room.roomY + this.room.height - 1, maxY + pad);
+            // Enforce minimum rectangle size centered between enemy and target
+            const cx = Math.floor((this.x + target.x) / 2);
+            const cy = Math.floor((this.y + target.y) / 2);
+            const half = Math.floor(minSide / 2);
+            left = Math.min(left, cx - half);
+            right = Math.max(right, cx + half);
+            top = Math.min(top, cy - half);
+            bottom = Math.max(bottom, cy + half);
+            // Clamp to room bounds
+            left = Math.max(this.room.roomX, left);
+            right = Math.min(this.room.roomX + this.room.width - 1, right);
+            top = Math.max(this.room.roomY, top);
+            bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+            return { left, right, top, bottom };
+        };
+        /**
+         * Build a localized list of blocked positions for A* by scanning entities whose footprints
+         * intersect the localized grid bounds. This avoids building an O(entityCount) list for the
+         * whole room and then filtering most of it away.
+         */
+        this.buildEntityDisablePositionsLocalized = (target, shouldBlock) => {
+            const { left, right, top, bottom } = this.getSearchPathLocalizedBounds(target);
+            const out = [];
+            for (const e of this.room.entities) {
+                if (!shouldBlock(e))
+                    continue;
+                const w = e.w || 1;
+                const h = e.h || 1;
+                // quick reject: no bounding-box intersection with the localized region
+                const ex0 = e.x;
+                const ey0 = e.y;
+                const ex1 = e.x + w - 1;
+                const ey1 = e.y + h - 1;
+                if (ex1 < left || ex0 > right || ey1 < top || ey0 > bottom)
+                    continue;
+                for (let dx = 0; dx < w; dx++) {
+                    for (let dy = 0; dy < h; dy++) {
+                        const x = e.x + dx;
+                        const y = e.y + dy;
+                        if (x < left || x > right || y < top || y > bottom)
+                            continue;
+                        out.push({ x, y });
+                    }
+                }
+            }
+            return out;
         };
         this.onHurt = (damage = 1, type = "none") => {
             if (this.health > 0) {
@@ -15657,16 +15775,6 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
             }
             return withinRange;
         };
-        this.shuffle = (a) => {
-            let j, x, i;
-            for (i = a.length - 1; i > 0; i--) {
-                j = Math.floor(random_1.Random.rand() * (i + 1));
-                x = a[i];
-                a[i] = a[j];
-                a[j] = x;
-            }
-            return a;
-        };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -15705,12 +15813,7 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                         case WizardState.teleport:
                             let oldX = this.x;
                             let oldY = this.y;
-                            let min = 100000;
-                            let bestPos;
-                            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-                            emptyTiles = emptyTiles.filter((tile) => !this.room.projectiles.some((projectile) => projectile.x === tile.x && projectile.y === tile.y));
-                            if (emptyTiles.length === 0 ||
-                                Object.keys(this.game.players).length === 0) {
+                            if (Object.keys(this.game.players).length === 0) {
                                 this.state = WizardState.idle;
                                 break;
                             }
@@ -15723,17 +15826,10 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
                                 this.state = WizardState.idle;
                                 break;
                             }
-                            for (let t of emptyTiles) {
-                                let newPos = t;
-                                let dist = Math.abs(newPos.x - this.game.players[target_player_id].x) +
-                                    Math.abs(newPos.y - this.game.players[target_player_id].y);
-                                if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
-                                    min = dist;
-                                    bestPos = newPos;
-                                }
-                            }
+                            const bestPos = this.findTeleportTarget(target_player_id, optimalDist, { avoidProjectiles: true });
                             if (!bestPos) {
-                                bestPos = emptyTiles[0];
+                                this.state = WizardState.idle;
+                                break;
                             }
                             this.tryMove(bestPos.x, bestPos.y);
                             this.drawX = this.x - oldX;
@@ -16177,7 +16273,7 @@ class GlowBugEnemy extends entity_1.Entity {
                 this.wander();
                 this.lightSource.x = this.x + 0.5;
                 this.lightSource.y = this.y + 0.5;
-                this.room.updateLighting({ x: this.x, y: this.y });
+                //this.room.updateLighting({ x: this.x, y: this.y });
             }
         };
         this.draw = (delta) => {
@@ -18062,6 +18158,10 @@ const wall_1 = __webpack_require__(/*! ../../tile/wall */ "./src/tile/wall.ts");
 const kingEnemy_1 = __webpack_require__(/*! ./kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ./boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const earthWizard_1 = __webpack_require__(/*! ./earthWizard */ "./src/entity/enemy/earthWizard.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const spawnfloor_1 = __webpack_require__(/*! ../../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
+const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
 class Spawner extends enemy_1.Enemy {
     constructor(room, game, x, y, enemyTable = [
         1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20, 22, 23,
@@ -18086,6 +18186,51 @@ class Spawner extends enemy_1.Enemy {
         this.bleed = () => { };
         this.poison = () => { };
         //alertNearbyEnemies = () => {};
+        /**
+         * Spawners only need empty tiles adjacent to themselves (3x3).
+         * Using Room.getEmptyTiles() is extremely expensive in large rooms since it scans the whole room
+         * and then filters against every entity.
+         */
+        this.getAdjacentEmptyTiles = () => {
+            const out = [];
+            const room = this.room;
+            // Match Room.getEmptyTiles() interior bounds to avoid edge weirdness.
+            const minX = room.roomX + 1;
+            const minY = room.roomY + 1;
+            const maxX = room.roomX + room.width - 2;
+            const maxY = room.roomY + room.height - 2;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const x = this.x + dx;
+                    const y = this.y + dy;
+                    if (x < minX || x > maxX || y < minY || y > maxY)
+                        continue;
+                    const tile = room.roomArray[x]?.[y];
+                    if (!tile)
+                        continue;
+                    if (tile.isSolid())
+                        continue;
+                    if (tile instanceof spiketrap_1.SpikeTrap ||
+                        tile instanceof spawnfloor_1.SpawnFloor ||
+                        tile instanceof upLadder_1.UpLadder ||
+                        tile instanceof downLadder_1.DownLadder)
+                        continue;
+                    let occupied = false;
+                    for (const e of room.entities) {
+                        if (e === this)
+                            continue;
+                        if (e.pointIn(x, y)) {
+                            occupied = true;
+                            break;
+                        }
+                    }
+                    if (occupied)
+                        continue;
+                    out.push({ x, y });
+                }
+            }
+            return out;
+        };
         this.behavior = () => {
             let shouldSpawn = true;
             this.lastX = this.x;
@@ -18096,9 +18241,7 @@ class Spawner extends enemy_1.Enemy {
                 this.tileX = 6;
                 if ((this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&
                     this.ticks >= this.nextSpawnTick) {
-                    let positions = this.room
-                        .getEmptyTiles()
-                        .filter((t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1);
+                    let positions = this.getAdjacentEmptyTiles();
                     if (this.enemySpawnType === 8) {
                         const offLimits = [
                             { x: this.x, y: this.y },
@@ -19314,14 +19457,95 @@ class WizardEnemy extends enemy_1.Enemy {
             return withinRange;
         };
         this.shuffle = (a) => {
-            let j, x, i;
-            for (i = a.length - 1; i > 0; i--) {
-                j = Math.floor(random_1.Random.rand() * (i + 1));
-                x = a[i];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(random_1.Random.rand() * (i + 1));
+                const x = a[i];
                 a[i] = a[j];
                 a[j] = x;
             }
             return a;
+        };
+        /**
+         * Teleport target selection must be O(1) in room size.
+         * Large rooms make Room.getEmptyTiles() extremely expensive.
+         *
+         * Returns a tile coordinate or null if no suitable position is found.
+         */
+        this.findTeleportTarget = (targetPlayerId, optimalDist, opts) => {
+            const player = this.game.players[targetPlayerId];
+            if (!player)
+                return null;
+            const avoidProjectiles = opts?.avoidProjectiles ?? true;
+            const maxAttempts = opts?.maxAttempts ?? 220;
+            // Precompute blocked projectile tiles once.
+            const projectileBlocked = new Set();
+            if (avoidProjectiles) {
+                for (const p of this.room.projectiles) {
+                    projectileBlocked.add(`${p.x},${p.y}`);
+                }
+            }
+            // Precompute occupied tiles by entities once.
+            const occupied = new Set();
+            for (const e of this.room.entities) {
+                if (e === this)
+                    continue;
+                const w = e.w || 1;
+                const h = e.h || 1;
+                for (let dx = 0; dx < w; dx++) {
+                    for (let dy = 0; dy < h; dy++) {
+                        occupied.add(`${e.x + dx},${e.y + dy}`);
+                    }
+                }
+            }
+            const room = this.room;
+            const minX = room.roomX + 1;
+            const minY = room.roomY + 1;
+            const maxX = room.roomX + room.width - 2;
+            const maxY = room.roomY + room.height - 2;
+            if (minX > maxX || minY > maxY)
+                return null;
+            const isEmpty = (x, y) => {
+                const t = room.roomArray[x]?.[y];
+                if (!t || t.isSolid())
+                    return false;
+                if (avoidProjectiles && projectileBlocked.has(`${x},${y}`))
+                    return false;
+                if (occupied.has(`${x},${y}`))
+                    return false;
+                return true;
+            };
+            // 1) Random sampling across the room (bounded attempts)
+            let best = null;
+            let bestDelta = Infinity;
+            for (let i = 0; i < maxAttempts; i++) {
+                const x = Math.floor(random_1.Random.rand() * (maxX - minX + 1)) + minX;
+                const y = Math.floor(random_1.Random.rand() * (maxY - minY + 1)) + minY;
+                if (!isEmpty(x, y))
+                    continue;
+                const dist = Math.abs(x - player.x) + Math.abs(y - player.y);
+                const delta = Math.abs(dist - optimalDist);
+                if (delta < bestDelta) {
+                    bestDelta = delta;
+                    best = { x, y };
+                    if (bestDelta === 0)
+                        return best;
+                }
+            }
+            // 2) Local fallback: check tiles on the Manhattan ring around the player.
+            const ring = [];
+            for (let dx = -optimalDist; dx <= optimalDist; dx++) {
+                const dy = optimalDist - Math.abs(dx);
+                ring.push({ x: player.x + dx, y: player.y + dy });
+                if (dy !== 0)
+                    ring.push({ x: player.x + dx, y: player.y - dy });
+            }
+            for (const r of ring) {
+                if (r.x < minX || r.x > maxX || r.y < minY || r.y > maxY)
+                    continue;
+                if (isEmpty(r.x, r.y))
+                    return { x: r.x, y: r.y };
+            }
+            return best;
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -19359,37 +19583,31 @@ class WizardEnemy extends enemy_1.Enemy {
                         case WizardState.teleport:
                             let oldX = this.x;
                             let oldY = this.y;
-                            let min = 100000;
-                            let bestPos;
-                            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-                            emptyTiles = emptyTiles.filter((tile) => !this.room.projectiles.some((projectile) => projectile.x === tile.x && projectile.y === tile.y));
                             let optimalDist = game_1.Game.randTable([2, 2, 3, 3, 3, 3, 3], random_1.Random.rand);
                             // pick a random player to target
                             let player_ids = [];
                             for (const i in this.game.players)
                                 player_ids.push(i);
                             let target_player_id = game_1.Game.randTable(player_ids, random_1.Random.rand);
-                            for (let t of emptyTiles) {
-                                let newPos = t;
-                                let dist = Math.abs(newPos.x - this.game.players[target_player_id].x) +
-                                    Math.abs(newPos.y - this.game.players[target_player_id].y);
-                                if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
-                                    min = dist;
-                                    bestPos = newPos;
-                                }
+                            if (!this.game.players[target_player_id]) {
+                                this.state = WizardState.idle;
+                                break;
                             }
-                            if (bestPos) {
-                                this.tryMove(bestPos.x, bestPos.y);
-                                this.drawX = this.x - oldX;
-                                this.drawY = this.y - oldY;
-                                this.frame = 0; // trigger teleport animation
-                                this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
-                                if (this.withinAttackingRangeOfPlayer()) {
-                                    this.state = WizardState.attack;
-                                }
-                                else {
-                                    this.state = WizardState.idle;
-                                }
+                            const bestPos = this.findTeleportTarget(target_player_id, optimalDist, { avoidProjectiles: true });
+                            if (!bestPos) {
+                                this.state = WizardState.idle;
+                                break;
+                            }
+                            this.tryMove(bestPos.x, bestPos.y);
+                            this.drawX = this.x - oldX;
+                            this.drawY = this.y - oldY;
+                            this.frame = 0; // trigger teleport animation
+                            this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
+                            if (this.withinAttackingRangeOfPlayer()) {
+                                this.state = WizardState.attack;
+                            }
+                            else {
+                                this.state = WizardState.idle;
                             }
                             break;
                         case WizardState.idle:
@@ -24655,6 +24873,7 @@ const downLadder_1 = __webpack_require__(/*! ./tile/downLadder */ "./src/tile/do
 const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.ts");
 const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
 const levelImageGenerator_1 = __webpack_require__(/*! ./level/levelImageGenerator */ "./src/level/levelImageGenerator.ts");
+const enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const postProcess_1 = __webpack_require__(/*! ./gui/postProcess */ "./src/gui/postProcess.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
@@ -25119,6 +25338,8 @@ class Game {
         this._drawProfileGame = new Map();
         this._drawProfileHistory = [];
         this._drawProfileHistoryMax = 120;
+        // Tick profiling (turn-time). Enable via chat command `profiletick`.
+        this.tickProfileEnabled = false;
         this.focusTimeout = null;
         this.FOCUS_TIMEOUT_DURATION = 15000; // 5 seconds
         this.wasMuted = false;
@@ -25875,6 +26096,46 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command === "debugroom") {
+                gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS =
+                    !gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
+                // IMPORTANT: per request, do NOT touch generation/levels/rooms/etc.
+                // This toggle only affects spawn-table composition (enemy-type variety).
+                // Refresh cached pools for already-generated levels so the change applies immediately.
+                for (const level of this.levels) {
+                    level.populator.refreshEnemyPool();
+                }
+                this.pushMessage(`debugroom: enemy pools are now ${gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS ? "UNCAPPED" : "CAPPED"}`);
+                return;
+            }
+            if (command === "profiletick") {
+                this.tickProfileEnabled = !this.tickProfileEnabled;
+                this.pushMessage(`Tick profiling is now ${this.tickProfileEnabled ? "ON" : "OFF"}`);
+                return;
+            }
+            if (command === "logtick") {
+                const frame = this.lastTickProfileFrame;
+                if (!frame) {
+                    console.log("[logtick] No tick profile captured yet. Run 'profiletick' and take a turn.");
+                    this.pushMessage("No tick profile captured yet.");
+                    return;
+                }
+                const toRows = (m) => Object.entries(m)
+                    .map(([name, v]) => ({ name, calls: v.calls, totalMs: v.totalMs }))
+                    .sort((a, b) => b.totalMs - a.totalMs);
+                console.groupCollapsed(`[logtick] room=${frame.roomGID} depth=${frame.depth} t=${new Date(frame.capturedAt).toISOString()}`);
+                console.log("[logtick] sections(ms)", frame.ms);
+                console.log("[logtick] counts", frame.counts);
+                console.log("[logtick] enemy ticks (sorted by totalMs)");
+                console.table(toRows(frame.enemyTicksByType).slice(0, 25));
+                console.log("[logtick] non-enemy entity ticks (sorted by totalMs)");
+                console.table(toRows(frame.nonEnemyTicksByType).slice(0, 25));
+                console.log("[logtick] projectile processing (sorted by totalMs)");
+                console.table(toRows(frame.projectileProcessByType).slice(0, 25));
+                console.groupEnd();
+                this.pushMessage("Logged tick profile to console.");
+                return;
+            }
             if (command === "profiledraw") {
                 this._drawProfileEnabled = !this._drawProfileEnabled;
                 this.pushMessage(`Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`);
@@ -26716,6 +26977,46 @@ class Game {
                 default:
                     if (command.startsWith("spawn ")) {
                         this.room.addNewEnemy(command.slice(6));
+                    }
+                    else if (command.startsWith("kill ")) {
+                        const rest = command.slice(5).trim();
+                        const enemyName = rest.split(/\s+/)[0];
+                        if (!enemyName) {
+                            this.pushMessage("Usage: kill <enemyType>");
+                            break;
+                        }
+                        const EnemyCtor = room_1.EnemyTypeMap[enemyName];
+                        if (!EnemyCtor) {
+                            this.pushMessage(`Unknown enemy type "${enemyName}".`);
+                            break;
+                        }
+                        if (!this.room) {
+                            this.pushMessage("No active room.");
+                            break;
+                        }
+                        let killed = 0;
+                        // Iterate over a snapshot so kill-side effects don't disturb traversal.
+                        for (const e of this.room.entities.slice()) {
+                            if (!(e instanceof enemy_1.Enemy))
+                                continue;
+                            if (e instanceof EnemyCtor) {
+                                try {
+                                    // Debug kill: suppress loot to avoid flooding drops and skewing perf tests.
+                                    e.lootDropped = true;
+                                    e.kill();
+                                    killed++;
+                                }
+                                catch (err) {
+                                    console.warn("kill command: failed to kill enemy", err);
+                                }
+                            }
+                        }
+                        // Remove dead enemies immediately so perf impact is visible right away.
+                        try {
+                            this.room.clearDeadStuff?.();
+                        }
+                        catch { }
+                        this.pushMessage(`Killed ${killed} "${enemyName}" enemies.`);
                     }
                     else if (command.startsWith("fill")) {
                         const rest = command.slice(4).trim();
@@ -34422,6 +34723,16 @@ GameplaySettings.ORGANIC_TUNNELS_PATH_MODE = "linear"; // choose tunnel carving 
 GameplaySettings.ORGANIC_TUNNELS_AVOID_CENTER_DEFAULT = true; // favor perimeter-biased routing by default
 // === DEBUG ===
 GameplaySettings.LIGHTING_DEBUG = true; // log visible tile bounds and counts
+/**
+ * Debug override: ignore environment-specific enemy lists and depth gating, and instead allow
+ * **any** enemy type to appear in spawn tables / random spawns.
+ */
+GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS = false;
+/**
+ * Debug override: disable enemy-count caps (including single-room safety caps and density caps).
+ * The only remaining hard limit is available empty tiles.
+ */
+GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS = false;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
@@ -36793,7 +37104,6 @@ exports.Map = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
-const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
 class Map {
     constructor(game, player) {
@@ -37450,12 +37760,21 @@ class Map {
         };
         this.drawRoomOutline = (level) => {
             const s = this.scale;
-            game_1.Game.ctx.fillStyle = "#5A5A5A";
+            // Use ladder presence (not RoomType) so ladder placement can vary without retyping rooms.
+            let outline = "#5A5A5A";
+            try {
+                const hasUp = level?.hasLadder?.("up") === true;
+                const hasDownMain = level?.hasMainDownLadder?.() === true;
+                if (hasUp && hasDownMain)
+                    outline = "#4B1460"; // both ladders
+                else if (hasUp)
+                    outline = "#101460";
+                else if (hasDownMain)
+                    outline = "#601410";
+            }
+            catch { }
+            game_1.Game.ctx.fillStyle = outline;
             game_1.Game.ctx.fillRect(level.roomX * s + 0, level.roomY * s + 0, level.width * s - 0, level.height * s - 0);
-            if (level.type === room_1.RoomType.UPLADDER)
-                game_1.Game.ctx.fillStyle = "#101460";
-            if (level.type === room_1.RoomType.DOWNLADDER)
-                game_1.Game.ctx.fillStyle = "#601410";
             game_1.Game.ctx.fillStyle = "black";
             game_1.Game.ctx.fillRect(level.roomX * s + 1, level.roomY * s + 1, level.width * s - 2, level.height * s - 2);
         };
@@ -47981,6 +48300,7 @@ const environment_1 = __webpack_require__(/*! ./environment */ "./src/level/envi
 const roomPopulator_1 = __webpack_require__(/*! ../room/roomPopulator */ "./src/room/roomPopulator.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
@@ -48083,10 +48403,13 @@ class Level {
         };
         this.getFurthestFromLadder = (ladderType) => {
             let furthestRoom = null;
-            let furthestDistance = 0;
+            // Allow 0-distance rooms (e.g., single-room levels where the ladder is in this room).
+            let furthestDistance = -Infinity;
             for (const room of this.rooms) {
                 const distance = room.getDistanceToNearestLadder(ladderType);
-                if (distance && distance > furthestDistance) {
+                if (distance === null || distance === undefined)
+                    continue;
+                if (distance > furthestDistance) {
                     furthestDistance = distance;
                     furthestRoom = room;
                 }
@@ -48231,7 +48554,11 @@ class Level {
     }
     setExitRoom(mainPath = true) {
         if (mainPath) {
-            this.exitRoom = this.rooms.find((room) => room.type === room_1.RoomType.DOWNLADDER);
+            // Prefer tile presence over RoomType so a room can contain a down ladder without
+            // being classified as a DOWNLADDER room (needed for single-room levels).
+            this.exitRoom =
+                this.rooms.find((room) => room.hasMainDownLadder?.()) ??
+                    this.rooms.find((room) => room.type === room_1.RoomType.DOWNLADDER);
         }
         else {
             this.exitRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "down");
@@ -48239,11 +48566,40 @@ class Level {
     }
     setStartRoom(mainPath = true) {
         if (mainPath) {
-            this.startRoom = this.rooms.find((room) => room.type === room_1.RoomType.START);
+            // Prefer a non-rope UpLadder tile if present; otherwise fall back to START room.
+            let start;
+            for (const room of this.rooms) {
+                for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                        const t = room.roomArray[x]?.[y];
+                        if (t instanceof upLadder_1.UpLadder && !t.isRope) {
+                            start = room;
+                            break;
+                        }
+                    }
+                    if (start)
+                        break;
+                }
+                if (start)
+                    break;
+            }
+            this.startRoom =
+                start ??
+                    this.rooms.find((room) => room.type === room_1.RoomType.START) ??
+                    this.rooms.find((room) => room.type === room_1.RoomType.UPLADDER);
         }
         else {
             this.startRoom = this.getLadderRoom(this.rooms[this.rooms.length - 1], "up");
         }
+    }
+    /**
+     * Recompute start/exit rooms after population has placed ladder tiles.
+     * This is safe for existing generation (RoomType fallbacks) and necessary
+     * for single-room levels where ladders are not encoded via RoomType.
+     */
+    refreshStartExitRooms(mainPath = true) {
+        this.setExitRoom(mainPath);
+        this.setStartRoom(mainPath);
     }
     setRooms(rooms) {
         this.rooms = rooms;
@@ -48437,7 +48793,10 @@ class LevelGenerator {
                 : 0;
             // Generate partitions based on whether it's a side path or main path
             let partitions;
-            const shouldUsePNG = gameConstants_1.GameConstants.USE_PNG_LEVELS && !isSidePath;
+            const singleRoom = this.levelParams?.maxRoomCount <= 1;
+            // Force procedural generation for single-room levels so PNG auto-stair/boss behavior
+            // doesn't fight the intended layout.
+            const shouldUsePNG = gameConstants_1.GameConstants.USE_PNG_LEVELS && !isSidePath && !singleRoom;
             // Deterministic per-level roll that doesn't alter global RNG state
             const rollPNG = this.shouldUsePngForLevel(depth, pid, gameplaySettings_1.GameplaySettings.PNG_LEVEL_PROBABILITY);
             if (shouldUsePNG && rollPNG) {
@@ -48508,6 +48867,9 @@ class LevelGenerator {
             let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid);
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
+            // After ladders/props are placed, refresh start/exit rooms using tile presence.
+            // This preserves existing behavior while enabling single-room ladder layouts.
+            newLevel.refreshStartExitRooms(!isSidePath);
             newLevel.setRoomSkins();
             //newLevel.loadRoomsIntoLevelArray();
             // Only call linkExitToStart for main paths
@@ -49160,6 +49522,15 @@ class LevelValidator {
         const emptyCheck = this.validateNotEmpty(partitions);
         if (!emptyCheck.isValid)
             return emptyCheck;
+        // Single-room dungeon mode: if the chosen room count is 1, we intentionally do not
+        // require boss/stair partitions. The room will contain both ladders via population.
+        if (partitions.length === 1 && params?.maxRoomCount <= 1) {
+            // Still ensure no overlaps (trivial for 1 partition, but keeps intent explicit)
+            const overlapCheck = this.validateNoOverlaps(partitions);
+            if (!overlapCheck.isValid)
+                return overlapCheck;
+            return { isValid: true };
+        }
         // Check minimum room count
         const roomCountCheck = this.validateMinimumRoomCount(partitions, params.minRoomCount);
         if (!roomCountCheck.isValid)
@@ -49615,6 +49986,14 @@ class PartitionGenerator {
         this.visualizer = new generationVisualizer_1.GenerationVisualizer(game);
     }
     async generateDungeonPartitions(game, mapWidth, mapHeight, depth, params, controls) {
+        // Single-room dungeon mode: when the selected room count is 1, generate exactly one
+        // START partition and let population place both ladders inside it.
+        // This intentionally bypasses boss/stair-room logic which assumes multi-room layouts.
+        if (params?.maxRoomCount <= 1) {
+            const p = new Partition(0, 0, mapWidth, mapHeight, "white");
+            p.type = room_1.RoomType.START;
+            return [p];
+        }
         const partialLevel = new PartialLevel();
         let validationResult;
         let attempts = 0;
@@ -49642,6 +50021,15 @@ class PartitionGenerator {
         const mapWidth = opts.mapWidth ?? 50;
         const mapHeight = opts.mapHeight ?? 50;
         const numRooms = opts.caveRooms ?? 8;
+        // Single-room cave/sidepath mode: `caveRooms = 1` should mean exactly one ROPECAVE room.
+        // The default cave algorithm always splits many partitions first, then prunes by connectivity,
+        // which breaks when numRooms<=1 (spawn would have no connections and gets filtered out).
+        if (numRooms <= 1) {
+            const CAVE_OFFSET = 100;
+            const p = new Partition(CAVE_OFFSET, CAVE_OFFSET, mapWidth, mapHeight, "white");
+            p.type = room_1.RoomType.ROPECAVE;
+            return [p];
+        }
         const hasLinearity = typeof opts.linearity === "number";
         const branching = typeof opts.branching === "number"
             ? opts.branching
@@ -53077,9 +53465,17 @@ class Player extends drawable_1.Drawable {
          */
         this.frozenMouseAngleRad = null;
         this.getRoom = () => {
-            const gameWithLookup = this.game;
-            const byId = gameWithLookup.getRoomById?.(this.roomGID);
-            return byId || this.game.levels[this.depth].rooms[this.levelID];
+            const byId = this.roomGID ? this.game.getRoomById(this.roomGID) : undefined;
+            if (byId)
+                return byId;
+            const fromLevels = this.game.levels?.[this.depth]?.rooms?.[this.levelID];
+            if (fromLevels)
+                return fromLevels;
+            // Early-init / transitional fallback: prefer the game's current active room if available.
+            if (this.game.room)
+                return this.game.room;
+            // If this ever happens, something is fundamentally wrong with initialization.
+            throw new Error("Player.getRoom(): no room available (levels not initialized)");
         };
         this.getEquippedDivingHelmet = () => {
             const helmet = this.inventory.items.find((item) => item instanceof divingHelmet_1.DivingHelmet && item.equipped);
@@ -57496,7 +57892,7 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
         this.bloomOffsetY = -0.5;
         this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 1, [0, 50, 150], 1);
         this.room.lightSources.push(this.lightSource);
-        this.room.updateLighting({ x: this.x, y: this.y });
+        //this.room.updateLighting({ x: this.x, y: this.y });
     }
 }
 exports.EnemySpawnAnimation = EnemySpawnAnimation;
@@ -58882,6 +59278,10 @@ class Room {
             //if (this.type === RoomType.ROPEHOLE) return;
             if (!startRoom)
                 startRoom = this.level.startRoom;
+            if (!startRoom)
+                return;
+            if (startRoom === this)
+                return;
             if (this.addDoorWithOffset(startRoom.roomX + Math.floor(startRoom.width / 2) + 1, startRoom.roomY, startRoom, true) &&
                 this.addDoorWithOffset(this.roomX + Math.floor(this.width / 2) - 1, this.roomY, this, true)) {
                 startRoom.tunnelDoor.startRoom = true;
@@ -59119,8 +59519,42 @@ class Room {
             this.clearDeadStuff();
         };
         this.computerTurn = () => {
+            const nowMs = () => typeof performance !== "undefined" && typeof performance.now === "function"
+                ? performance.now()
+                : Date.now();
+            const prof = this.game.tickProfileEnabled
+                ? {
+                    capturedAt: Date.now(),
+                    roomGID: this.globalId,
+                    depth: this.depth,
+                    counts: {},
+                    ms: {},
+                    enemyTicksByType: {},
+                    nonEnemyTicksByType: {},
+                    projectileProcessByType: {},
+                }
+                : null;
+            const addMs = (key, deltaMs) => {
+                if (!prof)
+                    return;
+                prof.ms[key] = (prof.ms[key] ?? 0) + deltaMs;
+            };
+            const addCount = (key, c = 1) => {
+                if (!prof)
+                    return;
+                prof.counts[key] = (prof.counts[key] ?? 0) + c;
+            };
+            const addTypeMs = (table, name, deltaMs) => {
+                if (!prof || !table)
+                    return;
+                const row = table[name] ?? { calls: 0, totalMs: 0 };
+                row.calls += 1;
+                row.totalMs += deltaMs;
+                table[name] = row;
+            };
             const activeZ = this.playerTicked?.z ?? this.getActiveZ();
             // take computer turn
+            const tEntities = nowMs();
             for (const e of this.entities) {
                 if (e.z !== activeZ)
                     continue;
@@ -59128,9 +59562,23 @@ class Room {
                     if (!this.shouldSimulateEnemy(e))
                         continue;
                 }
-                e.tick();
+                if (prof) {
+                    const t0 = nowMs();
+                    e.tick();
+                    const dt = nowMs() - t0;
+                    const name = e.constructor?.name ?? "Entity";
+                    if (e instanceof enemy_1.Enemy)
+                        addTypeMs(prof.enemyTicksByType, name, dt);
+                    else
+                        addTypeMs(prof.nonEnemyTicksByType, name, dt);
+                }
+                else
+                    e.tick();
+                addCount("entityTick");
             }
+            addMs("entities.tick", nowMs() - tEntities);
             this.entities = this.entities.filter((e) => !e.dead);
+            const tWarnings = nowMs();
             for (const e of this.entities) {
                 if (e.z !== activeZ)
                     continue;
@@ -59140,17 +59588,26 @@ class Room {
                     e.makeHitWarnings();
                 }
             }
+            addMs("enemies.makeHitWarnings", nowMs() - tWarnings);
+            const tItems = nowMs();
             for (const i of this.items) {
                 if (i.z !== activeZ)
                     continue;
                 i.tick();
+                addCount("itemTick");
             }
-            for (const p in this.game.players) {
-                for (const i of this.game.players[p].inventory.items) {
-                    if (i)
-                        i.tick();
+            addMs("items.tick", nowMs() - tItems);
+            const tInv = nowMs();
+            for (const pl of Object.values(this.game.players)) {
+                if (!pl)
+                    continue;
+                for (const it of pl.inventory.items) {
+                    if (it)
+                        it.tick();
                 }
             }
+            addMs("inventory.tick", nowMs() - tInv);
+            const tHit = nowMs();
             for (const h of this.hitwarnings) {
                 if (!this.isWithinEnemyInteractionRange(h.x, h.y))
                     continue;
@@ -59161,36 +59618,42 @@ class Room {
                 }
                 h.removeOverlapping();
             }
+            addMs("hitwarnings", nowMs() - tHit);
+            const tProj = nowMs();
             for (const p of this.projectiles) {
                 if (p.z !== activeZ)
                     continue;
-                if (this.roomArray[p.x] &&
-                    this.roomArray[p.x][p.y] &&
-                    this.roomArray[p.x][p.y].isSolid())
+                const t0 = prof ? nowMs() : 0;
+                if (this.roomArray[p.x]?.[p.y]?.isSolid())
                     p.dead = true;
-                for (const i in this.game.players) {
-                    const pl = this.game.players[i];
+                for (const pl of Object.values(this.game.players)) {
+                    if (!pl)
+                        continue;
                     if (pl.z !== activeZ)
                         continue;
-                    if (this.game.players[i].getRoom?.() === this &&
-                        p.x === this.game.players[i].x &&
-                        p.y === this.game.players[i].y) {
-                        p.hitPlayer(this.game.players[i]);
+                    if (pl.getRoom?.() === this && p.x === pl.x && p.y === pl.y) {
+                        p.hitPlayer(pl);
                     }
                 }
                 for (const e of this.entities) {
                     if (e.z !== activeZ)
                         continue;
-                    if (p.x === e.x && p.y === e.y) {
+                    if (p.x === e.x && p.y === e.y)
                         p.hitEnemy(e);
-                    }
+                }
+                if (prof) {
+                    const dt = nowMs() - t0;
+                    addTypeMs(prof.projectileProcessByType, p.constructor?.name ?? "Projectile", dt);
                 }
             }
+            addMs("projectiles", nowMs() - tProj);
+            const tTiles = nowMs();
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
                     this.roomArray[x][y].tickEnd();
                 }
             }
+            addMs("tiles.tickEnd", nowMs() - tTiles);
             this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
             this.clearDeadStuff();
             this.playerTicked.finishTick();
@@ -59203,6 +59666,9 @@ class Room {
                 if ((e.z ?? 0) !== activeZ)
                     continue;
                 e.shouldSeeThrough();
+            }
+            if (prof) {
+                this.game.lastTickProfileFrame = prof;
             }
         };
         this.update = () => {
@@ -59457,7 +59923,19 @@ class Room {
             const roomTiles = this.width * this.height;
             // Count players currently in this room
             const activeZ = this.getActiveZ();
-            const playersInRoom = Object.values(this.game.players || {}).filter((p) => p?.getRoom?.() === this && (p?.z ?? 0) === activeZ).length;
+            const playersInRoom = Object.values(this.game.players || {}).filter((p) => {
+                if (!p)
+                    return false;
+                if ((p.z ?? 0) !== activeZ)
+                    return false;
+                try {
+                    return p.getRoom?.() === this;
+                }
+                catch {
+                    // During early init / transitions, a player may not have a valid room yet.
+                    return false;
+                }
+            }).length;
             // Rays per emitter at the current angular resolution
             const raysPerEmitter = Math.ceil(360 / levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP);
             // Estimate steps per ray by summing radii of lights (capped) and players
@@ -61321,7 +61799,13 @@ class Room {
         };
         this.getBossDoor = () => {
             for (const door of this.doors) {
-                if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
+                const linkedRoom = door?.linkedDoor?.room;
+                // During generation, environmental features are applied BEFORE ladders are placed.
+                // So we must support both:
+                // - pre-population: RoomType.DOWNLADDER partition/room
+                // - post-population: actual main DownLadder tile presence
+                if (linkedRoom?.type === RoomType.DOWNLADDER ||
+                    linkedRoom?.hasMainDownLadder?.() === true)
                     return { x: door.x, y: door.y, doorDir: door.doorDir };
             }
             return null;
@@ -61370,7 +61854,19 @@ class Room {
                     const t = this.roomArray[x][y];
                     if (t instanceof upLadder_1.UpLadder && ladderType === "up")
                         return true;
-                    if (t instanceof downLadder_1.DownLadder && ladderType === "down" && t.isSidePath)
+                    if (t instanceof downLadder_1.DownLadder && ladderType === "down")
+                        return true;
+                }
+            }
+            return false;
+        };
+        this.hasMainDownLadder = () => {
+            for (let x = this.roomX; x < this.roomX + this.width; x++) {
+                if (!this.roomArray[x])
+                    continue;
+                for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                    const t = this.roomArray[x][y];
+                    if (t instanceof downLadder_1.DownLadder && !t.isSidePath)
                         return true;
                 }
             }
@@ -62472,6 +62968,20 @@ class Room {
             for (let y = this.roomY; y < this.roomY + this.height; y++) {
                 const tile = this.roomArray[x]?.[y];
                 if (tile instanceof upLadder_1.UpLadder) {
+                    return { x: tile.x, y: tile.y };
+                }
+            }
+        }
+        return undefined;
+    }
+    findPrimaryDownLadderCoords(opts) {
+        const includeSidePath = opts?.includeSidePath !== false;
+        for (let x = this.roomX; x < this.roomX + this.width; x++) {
+            for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                const tile = this.roomArray[x]?.[y];
+                if (tile instanceof downLadder_1.DownLadder) {
+                    if (!includeSidePath && tile.isSidePath)
+                        continue;
                     return { x: tile.x, y: tile.y };
                 }
             }
@@ -63865,6 +64375,13 @@ class Populator {
         this.props = [];
         this.addedDownladder = false;
         this.skipPopulation = false;
+        /**
+         * Recompute and cache the enemy pool for this populator.
+         * Useful when debug flags change at runtime.
+         */
+        this.refreshEnemyPool = (depth = this.level.depth) => {
+            this.levelEnemyPoolIds = this.generateEnemyPoolIds(depth);
+        };
         this.populateRooms = () => {
             if (this.skipPopulation)
                 return;
@@ -63878,12 +64395,13 @@ class Populator {
             }
             // populate each room by environment (enemies added here)
             this.level.rooms.forEach((room) => {
+                const singleRoomException = this.level.rooms.length === 1;
                 if (
                 //room.type === RoomType.START ||
                 room.type === room_1.RoomType.DOWNLADDER ||
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE ||
-                    room.type === room_1.RoomType.ROPECAVE)
+                    (room.type === room_1.RoomType.ROPECAVE && !singleRoomException))
                     return;
                 this.populateByEnvironment(room);
             });
@@ -64069,13 +64587,17 @@ class Populator {
             let downLadderRoom = this.level.isMainPath
                 ? rooms[Math.floor(random_1.Random.rand() * rooms.length)]
                 : this.level.getFurthestFromLadder("up");
+            // Defensive fallback for single-room (distance 0) or edge cases
+            if (!downLadderRoom) {
+                downLadderRoom = rooms[0] ?? this.level.rooms[0];
+            }
             // On depth 0, always place the downladder in the START room
             if (this.level.depth === 0) {
                 const startRoom = this.level.rooms.find((room) => room.type === room_1.RoomType.START);
                 if (startRoom)
                     downLadderRoom = startRoom;
             }
-            console.log(`Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`);
+            console.log(`Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`);
             // Use the new method to get empty tiles that don't block doors
             const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
             if (validTiles.length === 0) {
@@ -64408,9 +64930,19 @@ class Populator {
             room.name = "";
             switch (room.type) {
                 case room_1.RoomType.START:
+                    // Single-room main-path layout: place BOTH ladders in the START room.
+                    // UpLadder is still skipped at depth 0 (no previous floor).
+                    const singleRoomMainPath = room.level?.isMainPath === true && room.level?.rooms?.length === 1;
                     if (room.depth !== 0) {
-                        this.populateUpLadder(room, rand);
+                        // Avoid double-placement if loaded from save or already populated
+                        if (!room.findPrimaryUpLadderCoords())
+                            this.populateUpLadder(room, rand);
                         this.placeVendingMachineInWall(room);
+                    }
+                    if (singleRoomMainPath) {
+                        // Place the main-path DownLadder inside the same room if not already present.
+                        if (!room.hasMainDownLadder?.())
+                            this.populateDownLadder(room, rand);
                     }
                     this.populateEmpty(room, rand);
                     room.name = "FLOOR " + -room.depth;
@@ -64460,7 +64992,16 @@ class Populator {
                     this.populateRopeHole(room, rand);
                     break;
                 case room_1.RoomType.ROPECAVE:
-                    this.populateRopeCave(room, rand);
+                    // Giant-central-room layout without side rooms: if generation requested a giant center
+                    // but the cave was generated as a single room, treat the entry room as the "giant room"
+                    // and run environment population on it (similar to how the central BIGCAVE would be populated).
+                    if (room.level?.generationOptions?.giantCentralRoom === true &&
+                        room.level?.rooms?.length === 1) {
+                        this.populateGiantSingleRoomRopeCave(room, rand);
+                    }
+                    else {
+                        this.populateRopeCave(room, rand);
+                    }
                     break;
                 case room_1.RoomType.SHOP:
                     this.populateShop(room, rand);
@@ -64474,6 +65015,7 @@ class Populator {
         this.level = level;
         this.props = [];
         this.medianDensity = gameplaySettings_1.GameplaySettings.MEDIAN_ROOM_DENSITY;
+        this.skipPopulation = skipPopulation;
         // Calculate enemy pool once for this level
         this.levelEnemyPoolIds = this.generateEnemyPoolIds(this.level.depth);
     }
@@ -64831,6 +65373,15 @@ class Populator {
         });
         const percentFull = Math.round((numProps / numEmptyTiles) * 100);
         //console.log("percentFull", `${percentFull}%`);
+        // Single-room levels can have very large empty-tile counts; without a cap this can
+        // request thousands of props and effectively hang/crash during clustered placement.
+        const isSingleRoom = room.level?.rooms?.length === 1;
+        if (isSingleRoom) {
+            // Scale cap with room size but keep it bounded.
+            const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
+            const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
+            return Math.min(numProps, cap);
+        }
         return numProps;
     }
     populateDefaultEnvironment(room) {
@@ -65156,23 +65707,45 @@ class Populator {
      * Core method: Get available enemies filtered by environment and progression
      */
     getAvailableEnemiesForRoom(room, envType) {
-        const environment = envType || room.level.environment.type;
-        const envData = environment_1.environmentData[environment];
         // Use pre-calculated enemy pool instead of generating it for each room
         const allowedEnemyIds = this.levelEnemyPoolIds;
-        // Filter environment enemies by allowed pool and add IDs
-        const availableEnemies = envData.enemies
+        const environment = envType || room.level.environment.type;
+        const envData = environment_1.environmentData[environment];
+        const isNumber = (v) => typeof v === "number";
+        // Build candidate enemy list. In debug mode, do NOT restrict by environment list.
+        const candidateEnemies = gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true
+            ? Object.values(environment_1.environmentData).flatMap((d) => d.enemies)
+            : envData.enemies;
+        // Filter enemies by allowed pool and add IDs
+        const availableEnemies = candidateEnemies
             .map((enemy) => ({
             ...enemy,
             id: environment_1.enemyClassToId.get(enemy.class), // Add ID dynamically
         }))
-            .filter((enemy) => enemy.id &&
-            allowedEnemyIds.includes(enemy.id) &&
-            (enemy.minDepth ?? 0) <= room.depth);
+            .filter((enemy) => {
+            if (!isNumber(enemy.id))
+                return false;
+            if (!allowedEnemyIds.includes(enemy.id))
+                return false;
+            if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS !== true &&
+                (enemy.minDepth ?? 0) > room.depth) {
+                return false;
+            }
+            return true;
+        });
+        // De-dupe by id (same class may appear in multiple environment tables)
+        const seen = new Set();
+        const deduped = [];
+        for (const e of availableEnemies) {
+            if (seen.has(e.id))
+                continue;
+            seen.add(e.id);
+            deduped.push(e);
+        }
         console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
             .map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`)
             .join(", ")}]`);
-        return availableEnemies;
+        return deduped;
     }
     /**
      * Spawn enemies from the filtered pool using existing logic
@@ -65259,11 +65832,13 @@ class Populator {
     addSpecialEnemies(room) {
         // Spawner logic - now based on room area and probability
         if (!room.underwater) {
-            if (room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
+            if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+                room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
                 this.addSpawners(room, random_1.Random.rand);
             }
             // Occultist logic - now based on room area and probability
-            if (room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
+            if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+                room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
                 this.addOccultists(room, random_1.Random.rand);
             }
         }
@@ -65273,6 +65848,16 @@ class Populator {
      * Generate enemy pool IDs based on depth and progression rules
      */
     generateEnemyPoolIds(depth) {
+        const isNumber = (v) => typeof v === "number";
+        // Debug override: allow any enemy id (ignore environment + minDepth gating).
+        if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true) {
+            // Use the global enemy registry, not per-environment tables, so it's truly "any enemy".
+            const allEnemyIds = Array.from(environment_1.enemyClassToId.values()).filter(isNumber);
+            const unique = Array.from(new Set(allEnemyIds));
+            // Make sure progression-based systems (spawners, etc.) can see every type.
+            this.level.game.encounteredEnemies = unique.slice();
+            return unique;
+        }
         // Derive pool from the CURRENT environment's enemies using their minDepth
         const env = this.level.environment.type;
         const envEnemies = environment_1.environmentData[env].enemies;
@@ -65281,12 +65866,13 @@ class Populator {
             id: environment_1.enemyClassToId.get(enemy.class),
             minDepth: enemy.minDepth ?? 0,
         }))
-            .filter((e) => typeof e.id === "number" && e.minDepth <= depth)
+            .filter((e) => isNumber(e.id) && e.minDepth <= depth)
             .map((e) => e.id);
         // Get new enemies not yet encountered
         const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
         // Add 1-2 new enemies per level (if limiting is enabled)
-        const newEnemiesToAddCount = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+        const limitEnemyTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES && !gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
+        const newEnemiesToAddCount = limitEnemyTypes
             ? Math.min(newEnemies.length, gameplaySettings_1.GameplaySettings.NEW_ENEMIES_PER_LEVEL)
             : newEnemies.length;
         const newEnemiesToAdd = this.getRandomElements(newEnemies, newEnemiesToAddCount);
@@ -65294,7 +65880,7 @@ class Populator {
         // Get current enemy pool
         const enemyPoolIds = this.level.game.encounteredEnemies.slice();
         // Limit variety if setting is enabled
-        const numberOfTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES
+        const numberOfTypes = limitEnemyTypes
             ? this.getNumberOfEnemyTypes(depth)
             : enemyPoolIds.length;
         const selectedEnemyIds = this.getRandomElements(enemyPoolIds, numberOfTypes);
@@ -65383,12 +65969,21 @@ class Populator {
         const meanValue = (room.roomArea + numEmptyTiles) / 2;
         const startRoom = room.path().find((r) => r.hasUpladder());
         const indexAdd = addByIndex ? startRoom?.path().indexOf(room) : 1;
-        const factor = Math.min((room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
-            gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER, gameplaySettings_1.GameplaySettings.MAX_ENEMY_DENSITY);
+        const rawFactor = (room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
+            gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER;
+        const factor = gameplaySettings_1.GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS === true
+            ? rawFactor
+            : Math.min(rawFactor, gameplaySettings_1.GameplaySettings.MAX_ENEMY_DENSITY);
         const baseEnemyCount = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, meanValue * factor), meanValue * factor));
         // Cap at the number of empty tiles (hard limit)
         const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
-        const numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+        let numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+        // Single-room levels can be huge; cap enemy count to avoid pathological slowdowns.
+        if (gameplaySettings_1.GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS !== true &&
+            room.level?.rooms?.length === 1) {
+            const cap = Math.min(120, Math.max(10, Math.floor(Math.sqrt(numEmptyTiles) * 1.2)));
+            numEnemiesToAdd = Math.min(numEnemiesToAdd, cap);
+        }
         this.addEnemiesUnified(room, numEnemiesToAdd, room.envType);
     }
     addSpawners(room, rand, numSpawners) {
@@ -65815,7 +66410,9 @@ class Populator {
                 break;
             case room_1.RoomType.BOSS:
                 const bossDoor = room.getBossDoor();
-                this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+                if (bossDoor) {
+                    this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+                }
                 this.addTorchesByArea(room);
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
                 break;
@@ -66052,6 +66649,25 @@ class Populator {
                 }
             }
             catch { }
+        }
+    }
+    /**
+     * Single-room variant of a "giant central room" sidepath: the entry ROPECAVE is also
+     * the only room, so we apply normal environment population to it after placing the
+     * rope up ladder + vending machine.
+     */
+    populateGiantSingleRoomRopeCave(room, rand) {
+        // First, place the rope-up ladder and entry-room props.
+        this.populateRopeCave(room, rand);
+        // Then, populate like a normal room for this environment (enemies/resources/props).
+        // Note: populateRooms() normally skips ROPECAVE in the environment-population pass,
+        // because typical rope caves are safe entry rooms. For the giant-single-room layout,
+        // we want it to behave more like the giant central room would.
+        try {
+            this.populateByEnvironment(room);
+        }
+        catch (e) {
+            console.warn("populateGiantSingleRoomRopeCave: populateByEnvironment failed", e);
         }
     }
     /**

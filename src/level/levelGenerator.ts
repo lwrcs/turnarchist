@@ -195,7 +195,11 @@ export class LevelGenerator {
     // Generate partitions based on whether it's a side path or main path
     let partitions: Partition[];
 
-    const shouldUsePNG = GameConstants.USE_PNG_LEVELS && !isSidePath;
+    const singleRoom = this.levelParams?.maxRoomCount <= 1;
+    // Force procedural generation for single-room levels so PNG auto-stair/boss behavior
+    // doesn't fight the intended layout.
+    const shouldUsePNG =
+      GameConstants.USE_PNG_LEVELS && !isSidePath && !singleRoom;
     // Deterministic per-level roll that doesn't alter global RNG state
     const rollPNG = this.shouldUsePngForLevel(
       depth,
@@ -305,6 +309,9 @@ export class LevelGenerator {
 
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();
+    // After ladders/props are placed, refresh start/exit rooms using tile presence.
+    // This preserves existing behavior while enabling single-room ladder layouts.
+    newLevel.refreshStartExitRooms(!isSidePath);
 
     newLevel.setRoomSkins();
     //newLevel.loadRoomsIntoLevelArray();

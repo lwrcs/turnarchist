@@ -46,6 +46,16 @@ export class GameplaySettings {
 
   // === DEBUG ===
   static LIGHTING_DEBUG = true; // log visible tile bounds and counts
+  /**
+   * Debug override: ignore environment-specific enemy lists and depth gating, and instead allow
+   * **any** enemy type to appear in spawn tables / random spawns.
+   */
+  static DEBUG_UNLOCK_ENEMY_POOLS: boolean = false;
+  /**
+   * Debug override: disable enemy-count caps (including single-room safety caps and density caps).
+   * The only remaining hard limit is available empty tiles.
+   */
+  static DEBUG_DISABLE_ENEMY_CAPS: boolean = false;
 
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;

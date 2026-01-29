@@ -762,15 +762,22 @@ export class Map {
 
   drawRoomOutline = (level) => {
     const s = this.scale;
-    Game.ctx.fillStyle = "#5A5A5A";
+    // Use ladder presence (not RoomType) so ladder placement can vary without retyping rooms.
+    let outline = "#5A5A5A";
+    try {
+      const hasUp = level?.hasLadder?.("up") === true;
+      const hasDownMain = level?.hasMainDownLadder?.() === true;
+      if (hasUp && hasDownMain) outline = "#4B1460"; // both ladders
+      else if (hasUp) outline = "#101460";
+      else if (hasDownMain) outline = "#601410";
+    } catch {}
+    Game.ctx.fillStyle = outline;
     Game.ctx.fillRect(
       level.roomX * s + 0,
       level.roomY * s + 0,
       level.width * s - 0,
       level.height * s - 0,
     );
-    if (level.type === RoomType.UPLADDER) Game.ctx.fillStyle = "#101460";
-    if (level.type === RoomType.DOWNLADDER) Game.ctx.fillStyle = "#601410";
     Game.ctx.fillStyle = "black";
     Game.ctx.fillRect(
       level.roomX * s + 1,

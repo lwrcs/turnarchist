@@ -161,20 +161,11 @@ export class BigSkullEnemy extends Enemy {
             }
           }
 
-          let disablePositions = Array<astar.Position>();
-          for (const e of this.room.entities) {
-            if (e !== this) {
-              // For 2x2 enemy, block all tiles the entity occupies
-              for (let ex = 0; ex < (e.w || 1); ex++) {
-                for (let ey = 0; ey < (e.h || 1); ey++) {
-                  disablePositions.push({
-                    x: e.x + ex,
-                    y: e.y + ey,
-                  } as astar.Position);
-                }
-              }
-            }
-          }
+          // Build localized disables (avoid scanning the entire room's entities every tick)
+          let disablePositions = this.buildEntityDisablePositionsLocalized(
+            this.targetPlayer,
+            (e) => e !== this,
+          );
 
           // Check for spike traps around the 2x2 area
           for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {

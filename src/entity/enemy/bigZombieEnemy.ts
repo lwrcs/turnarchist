@@ -111,21 +111,11 @@ export class BigZombieEnemy extends Enemy {
             }
           }
 
-          // Create a list of positions to avoid
-          let disablePositions = Array<astar.Position>();
-          for (const e of this.room.entities) {
-            if (e !== this) {
-              // For 2x2 entity, block all positions the entity occupies
-              for (let dx = 0; dx < e.w; dx++) {
-                for (let dy = 0; dy < e.h; dy++) {
-                  disablePositions.push({
-                    x: e.x + dx,
-                    y: e.y + dy,
-                  } as astar.Position);
-                }
-              }
-            }
-          }
+          // Build localized disables (avoid scanning the entire room's entities every tick)
+          let disablePositions = this.buildEntityDisablePositionsLocalized(
+            this.targetPlayer,
+            (e) => e !== this,
+          );
 
           // Check spike traps in a larger area for 2x2 entity
           for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {

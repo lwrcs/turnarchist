@@ -141,10 +141,19 @@ export class Populator {
     this.level = level;
     this.props = [];
     this.medianDensity = GameplaySettings.MEDIAN_ROOM_DENSITY;
+    this.skipPopulation = skipPopulation;
 
     // Calculate enemy pool once for this level
     this.levelEnemyPoolIds = this.generateEnemyPoolIds(this.level.depth);
   }
+
+  /**
+   * Recompute and cache the enemy pool for this populator.
+   * Useful when debug flags change at runtime.
+   */
+  refreshEnemyPool = (depth: number = this.level.depth): void => {
+    this.levelEnemyPoolIds = this.generateEnemyPoolIds(depth);
+  };
 
   populateRooms = () => {
     if (this.skipPopulation) return;
@@ -160,12 +169,13 @@ export class Populator {
 
     // populate each room by environment (enemies added here)
     this.level.rooms.forEach((room) => {
+      const singleRoomException = this.level.rooms.length === 1;
       if (
         //room.type === RoomType.START ||
         room.type === RoomType.DOWNLADDER ||
         room.type === RoomType.UPLADDER ||
         room.type === RoomType.ROPEHOLE ||
-        room.type === RoomType.ROPECAVE
+        (room.type === RoomType.ROPECAVE && !singleRoomException)
       )
         return;
 
@@ -396,6 +406,10 @@ export class Populator {
     let downLadderRoom = this.level.isMainPath
       ? rooms[Math.floor(Random.rand() * rooms.length)]
       : this.level.getFurthestFromLadder("up");
+    // Defensive fallback for single-room (distance 0) or edge cases
+    if (!downLadderRoom) {
+      downLadderRoom = rooms[0] ?? this.level.rooms[0];
+    }
 
     // On depth 0, always place the downladder in the START room
     if (this.level.depth === 0) {
@@ -406,7 +420,7 @@ export class Populator {
     }
 
     console.log(
-      `Selected room for downladder: Type=${downLadderRoom.type}, Doors=${downLadderRoom.doors.length}`,
+      `Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`,
     );
 
     // Use the new method to get empty tiles that don't block doors
@@ -950,6 +964,15 @@ export class Populator {
     });
     const percentFull = Math.round((numProps / numEmptyTiles) * 100);
     //console.log("percentFull", `${percentFull}%`);
+    // Single-room levels can have very large empty-tile counts; without a cap this can
+    // request thousands of props and effectively hang/crash during clustered placement.
+    const isSingleRoom = room.level?.rooms?.length === 1;
+    if (isSingleRoom) {
+      // Scale cap with room size but keep it bounded.
+      const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
+      const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
+      return Math.min(numProps, cap);
+    }
     return numProps;
   }
 
@@ -1382,24 +1405,46 @@ export class Populator {
     room: Room,
     envType?: EnvType,
   ): EnemyInfo[] {
-    const environment = envType || room.level.environment.type;
-    const envData = environmentData[environment];
-
     // Use pre-calculated enemy pool instead of generating it for each room
     const allowedEnemyIds = this.levelEnemyPoolIds;
 
-    // Filter environment enemies by allowed pool and add IDs
-    const availableEnemies = envData.enemies
+    const environment = envType || room.level.environment.type;
+    const envData = environmentData[environment];
+
+    const isNumber = (v: unknown): v is number => typeof v === "number";
+
+    // Build candidate enemy list. In debug mode, do NOT restrict by environment list.
+    const candidateEnemies: EnemyInfo[] =
+      GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true
+        ? Object.values(environmentData).flatMap((d) => d.enemies)
+        : envData.enemies;
+
+    // Filter enemies by allowed pool and add IDs
+    const availableEnemies = candidateEnemies
       .map((enemy) => ({
         ...enemy,
         id: enemyClassToId.get(enemy.class), // Add ID dynamically
       }))
-      .filter(
-        (enemy) =>
-          enemy.id &&
-          allowedEnemyIds.includes(enemy.id) &&
-          (enemy.minDepth ?? 0) <= room.depth,
-      );
+      .filter((enemy) => {
+        if (!isNumber(enemy.id)) return false;
+        if (!allowedEnemyIds.includes(enemy.id)) return false;
+        if (
+          GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS !== true &&
+          (enemy.minDepth ?? 0) > room.depth
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+    // De-dupe by id (same class may appear in multiple environment tables)
+    const seen = new Set<number>();
+    const deduped: Array<EnemyInfo & { id: number }> = [];
+    for (const e of availableEnemies) {
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+      deduped.push(e as EnemyInfo & { id: number });
+    }
 
     console.log(
       `Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
@@ -1407,7 +1452,7 @@ export class Populator {
         .join(", ")}]`,
     );
 
-    return availableEnemies;
+    return deduped;
   }
 
   /**
@@ -1520,12 +1565,18 @@ export class Populator {
   private addSpecialEnemies(room: Room) {
     // Spawner logic - now based on room area and probability
     if (!room.underwater) {
-      if (room.depth > GameplaySettings.SPAWNER_MIN_DEPTH) {
+      if (
+        GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+        room.depth > GameplaySettings.SPAWNER_MIN_DEPTH
+      ) {
         this.addSpawners(room, Random.rand);
       }
 
       // Occultist logic - now based on room area and probability
-      if (room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH) {
+      if (
+        GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+        room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH
+      ) {
         this.addOccultists(room, Random.rand);
       }
     }
@@ -1537,6 +1588,18 @@ export class Populator {
    * Generate enemy pool IDs based on depth and progression rules
    */
   private generateEnemyPoolIds(depth: number): number[] {
+    const isNumber = (v: unknown): v is number => typeof v === "number";
+
+    // Debug override: allow any enemy id (ignore environment + minDepth gating).
+    if (GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true) {
+      // Use the global enemy registry, not per-environment tables, so it's truly "any enemy".
+      const allEnemyIds = Array.from(enemyClassToId.values()).filter(isNumber);
+      const unique = Array.from(new Set(allEnemyIds));
+      // Make sure progression-based systems (spawners, etc.) can see every type.
+      this.level.game.encounteredEnemies = unique.slice();
+      return unique;
+    }
+
     // Derive pool from the CURRENT environment's enemies using their minDepth
     const env = this.level.environment.type;
     const envEnemies = environmentData[env].enemies;
@@ -1546,8 +1609,8 @@ export class Populator {
         id: enemyClassToId.get(enemy.class),
         minDepth: enemy.minDepth ?? 0,
       }))
-      .filter((e) => typeof e.id === "number" && e.minDepth <= depth)
-      .map((e) => e.id as number);
+      .filter((e) => isNumber(e.id) && e.minDepth <= depth)
+      .map((e) => e.id);
 
     // Get new enemies not yet encountered
     const newEnemies = availableEnemies.filter(
@@ -1555,7 +1618,9 @@ export class Populator {
     );
 
     // Add 1-2 new enemies per level (if limiting is enabled)
-    const newEnemiesToAddCount = GameplaySettings.LIMIT_ENEMY_TYPES
+    const limitEnemyTypes =
+      GameplaySettings.LIMIT_ENEMY_TYPES && !GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
+    const newEnemiesToAddCount = limitEnemyTypes
       ? Math.min(newEnemies.length, GameplaySettings.NEW_ENEMIES_PER_LEVEL)
       : newEnemies.length;
 
@@ -1569,7 +1634,7 @@ export class Populator {
     const enemyPoolIds = this.level.game.encounteredEnemies.slice();
 
     // Limit variety if setting is enabled
-    const numberOfTypes = GameplaySettings.LIMIT_ENEMY_TYPES
+    const numberOfTypes = limitEnemyTypes
       ? this.getNumberOfEnemyTypes(depth)
       : enemyPoolIds.length;
 
@@ -1698,11 +1763,13 @@ export class Populator {
     const startRoom = room.path().find((r) => r.hasUpladder());
     const indexAdd = addByIndex ? startRoom?.path().indexOf(room) : 1;
 
-    const factor = Math.min(
+    const rawFactor =
       (room.depth + GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
-        GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER,
-      GameplaySettings.MAX_ENEMY_DENSITY,
-    );
+      GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER;
+    const factor =
+      GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS === true
+        ? rawFactor
+        : Math.min(rawFactor, GameplaySettings.MAX_ENEMY_DENSITY);
 
     const baseEnemyCount = Math.ceil(
       Math.max(
@@ -1713,7 +1780,15 @@ export class Populator {
 
     // Cap at the number of empty tiles (hard limit)
     const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
-    const numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+    let numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+    // Single-room levels can be huge; cap enemy count to avoid pathological slowdowns.
+    if (
+      GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS !== true &&
+      room.level?.rooms?.length === 1
+    ) {
+      const cap = Math.min(120, Math.max(10, Math.floor(Math.sqrt(numEmptyTiles) * 1.2)));
+      numEnemiesToAdd = Math.min(numEnemiesToAdd, cap);
+    }
 
     this.addEnemiesUnified(room, numEnemiesToAdd, room.envType);
   }
@@ -2566,7 +2641,9 @@ export class Populator {
 
       case RoomType.BOSS:
         const bossDoor = room.getBossDoor();
-        this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+        if (bossDoor) {
+          this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+        }
         this.addTorchesByArea(room);
         this.addSpikeTraps(
           room,
@@ -2859,9 +2936,19 @@ export class Populator {
     room.name = "";
     switch (room.type) {
       case RoomType.START:
+        // Single-room main-path layout: place BOTH ladders in the START room.
+        // UpLadder is still skipped at depth 0 (no previous floor).
+        const singleRoomMainPath =
+          room.level?.isMainPath === true && room.level?.rooms?.length === 1;
+
         if (room.depth !== 0) {
-          this.populateUpLadder(room, rand);
+          // Avoid double-placement if loaded from save or already populated
+          if (!room.findPrimaryUpLadderCoords()) this.populateUpLadder(room, rand);
           this.placeVendingMachineInWall(room);
+        }
+        if (singleRoomMainPath) {
+          // Place the main-path DownLadder inside the same room if not already present.
+          if (!(room as any).hasMainDownLadder?.()) this.populateDownLadder(room, rand);
         }
 
         this.populateEmpty(room, rand);
@@ -2917,7 +3004,17 @@ export class Populator {
         this.populateRopeHole(room, rand);
         break;
       case RoomType.ROPECAVE:
-        this.populateRopeCave(room, rand);
+        // Giant-central-room layout without side rooms: if generation requested a giant center
+        // but the cave was generated as a single room, treat the entry room as the "giant room"
+        // and run environment population on it (similar to how the central BIGCAVE would be populated).
+        if (
+          room.level?.generationOptions?.giantCentralRoom === true &&
+          room.level?.rooms?.length === 1
+        ) {
+          this.populateGiantSingleRoomRopeCave(room, rand);
+        } else {
+          this.populateRopeCave(room, rand);
+        }
         break;
       case RoomType.SHOP:
         this.populateShop(room, rand);
@@ -2928,6 +3025,26 @@ export class Populator {
     }
     room.message = room.name;
   };
+
+  /**
+   * Single-room variant of a "giant central room" sidepath: the entry ROPECAVE is also
+   * the only room, so we apply normal environment population to it after placing the
+   * rope up ladder + vending machine.
+   */
+  private populateGiantSingleRoomRopeCave(room: Room, rand: () => number) {
+    // First, place the rope-up ladder and entry-room props.
+    this.populateRopeCave(room, rand);
+
+    // Then, populate like a normal room for this environment (enemies/resources/props).
+    // Note: populateRooms() normally skips ROPECAVE in the environment-population pass,
+    // because typical rope caves are safe entry rooms. For the giant-single-room layout,
+    // we want it to behave more like the giant central room would.
+    try {
+      this.populateByEnvironment(room);
+    } catch (e) {
+      console.warn("populateGiantSingleRoomRopeCave: populateByEnvironment failed", e);
+    }
+  }
 
   /**
    * Places a VendingMachine in an empty wall.

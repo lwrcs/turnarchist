@@ -618,6 +618,83 @@ export abstract class Enemy extends Entity {
     return moves;
   }
 
+  /**
+   * Compute the same bounds used by `searchPathLocalized()` without building the grid.
+   * Useful for generating a *small* disablePositions list that won't be filtered away later.
+   */
+  protected getSearchPathLocalizedBounds = (
+    target: { x: number; y: number },
+    options?: { pad?: number; minSide?: number },
+  ): { left: number; right: number; top: number; bottom: number } => {
+    const pad = options?.pad ?? 3;
+    const minSide =
+      options?.minSide ?? GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+
+    const minX = Math.min(this.x, target.x);
+    const maxX = Math.max(this.x, target.x);
+    const minY = Math.min(this.y, target.y);
+    const maxY = Math.max(this.y, target.y);
+
+    let left = Math.max(this.room.roomX, minX - pad);
+    let right = Math.min(this.room.roomX + this.room.width - 1, maxX + pad);
+    let top = Math.max(this.room.roomY, minY - pad);
+    let bottom = Math.min(this.room.roomY + this.room.height - 1, maxY + pad);
+
+    // Enforce minimum rectangle size centered between enemy and target
+    const cx = Math.floor((this.x + target.x) / 2);
+    const cy = Math.floor((this.y + target.y) / 2);
+    const half = Math.floor(minSide / 2);
+    left = Math.min(left, cx - half);
+    right = Math.max(right, cx + half);
+    top = Math.min(top, cy - half);
+    bottom = Math.max(bottom, cy + half);
+
+    // Clamp to room bounds
+    left = Math.max(this.room.roomX, left);
+    right = Math.min(this.room.roomX + this.room.width - 1, right);
+    top = Math.max(this.room.roomY, top);
+    bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+
+    return { left, right, top, bottom };
+  };
+
+  /**
+   * Build a localized list of blocked positions for A* by scanning entities whose footprints
+   * intersect the localized grid bounds. This avoids building an O(entityCount) list for the
+   * whole room and then filtering most of it away.
+   */
+  protected buildEntityDisablePositionsLocalized = (
+    target: { x: number; y: number },
+    shouldBlock: (e: Entity) => boolean,
+  ): Array<astar.Position> => {
+    const { left, right, top, bottom } = this.getSearchPathLocalizedBounds(target);
+    const out: Array<astar.Position> = [];
+
+    for (const e of this.room.entities) {
+      if (!shouldBlock(e)) continue;
+      const w = e.w || 1;
+      const h = e.h || 1;
+
+      // quick reject: no bounding-box intersection with the localized region
+      const ex0 = e.x;
+      const ey0 = e.y;
+      const ex1 = e.x + w - 1;
+      const ey1 = e.y + h - 1;
+      if (ex1 < left || ex0 > right || ey1 < top || ey0 > bottom) continue;
+
+      for (let dx = 0; dx < w; dx++) {
+        for (let dy = 0; dy < h; dy++) {
+          const x = e.x + dx;
+          const y = e.y + dy;
+          if (x < left || x > right || y < top || y > bottom) continue;
+          out.push({ x, y } as astar.Position);
+        }
+      }
+    }
+
+    return out;
+  };
+
   onHurt = (
     damage: number = 1,
     type: "none" | "poison" | "blood" | "heal" = "none",

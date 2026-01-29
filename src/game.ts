@@ -1,5 +1,5 @@
 import { GameConstants } from "./game/gameConstants";
-import { EnemyType, Room, RoomType } from "./room/room";
+import { EnemyType, EnemyTypeMap, Room, RoomType } from "./room/room";
 import { Player } from "./player/player";
 import { Entity } from "./entity/entity";
 import { Item } from "./item/item";
@@ -491,6 +491,18 @@ type DrawProfileFrame = {
   roomSections: DrawProfileRoomSectionRow[];
 };
 
+type TickProfileCounter = { calls: number; totalMs: number };
+type TickProfileFrame = {
+  capturedAt: number;
+  roomGID: string;
+  depth: number;
+  ms: Record<string, number>;
+  counts: Record<string, number>;
+  enemyTicksByType: Record<string, TickProfileCounter>;
+  nonEnemyTicksByType: Record<string, TickProfileCounter>;
+  projectileProcessByType: Record<string, TickProfileCounter>;
+};
+
 export class Game {
   /**
    * Shared animation frame used for door icon "floating" sine motion.
@@ -719,6 +731,10 @@ export class Game {
   private _lastDrawProfileFrame?: DrawProfileFrame;
   private _drawProfileHistory: DrawProfileFrame[] = [];
   private _drawProfileHistoryMax: number = 120;
+
+  // Tick profiling (turn-time). Enable via chat command `profiletick`.
+  public tickProfileEnabled: boolean = false;
+  public lastTickProfileFrame?: TickProfileFrame;
   static readonly letters =
     "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
   static readonly letter_widths = [
@@ -2086,6 +2102,60 @@ export class Game {
     command = command.toLowerCase();
     let enabled = "";
 
+    if (command === "debugroom") {
+      GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS =
+        !GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
+      // IMPORTANT: per request, do NOT touch generation/levels/rooms/etc.
+      // This toggle only affects spawn-table composition (enemy-type variety).
+      // Refresh cached pools for already-generated levels so the change applies immediately.
+      for (const level of this.levels) {
+        level.populator.refreshEnemyPool();
+      }
+      this.pushMessage(
+        `debugroom: enemy pools are now ${
+          GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS ? "UNCAPPED" : "CAPPED"
+        }`,
+      );
+      return;
+    }
+
+    if (command === "profiletick") {
+      this.tickProfileEnabled = !this.tickProfileEnabled;
+      this.pushMessage(`Tick profiling is now ${this.tickProfileEnabled ? "ON" : "OFF"}`);
+      return;
+    }
+
+    if (command === "logtick") {
+      const frame = this.lastTickProfileFrame;
+      if (!frame) {
+        console.log(
+          "[logtick] No tick profile captured yet. Run 'profiletick' and take a turn.",
+        );
+        this.pushMessage("No tick profile captured yet.");
+        return;
+      }
+      const toRows = (m: Record<string, TickProfileCounter>) =>
+        Object.entries(m)
+          .map(([name, v]) => ({ name, calls: v.calls, totalMs: v.totalMs }))
+          .sort((a, b) => b.totalMs - a.totalMs);
+      console.groupCollapsed(
+        `[logtick] room=${frame.roomGID} depth=${frame.depth} t=${new Date(
+          frame.capturedAt,
+        ).toISOString()}`,
+      );
+      console.log("[logtick] sections(ms)", frame.ms);
+      console.log("[logtick] counts", frame.counts);
+      console.log("[logtick] enemy ticks (sorted by totalMs)");
+      console.table(toRows(frame.enemyTicksByType).slice(0, 25));
+      console.log("[logtick] non-enemy entity ticks (sorted by totalMs)");
+      console.table(toRows(frame.nonEnemyTicksByType).slice(0, 25));
+      console.log("[logtick] projectile processing (sorted by totalMs)");
+      console.table(toRows(frame.projectileProcessByType).slice(0, 25));
+      console.groupEnd();
+      this.pushMessage("Logged tick profile to console.");
+      return;
+    }
+
     if (command === "profiledraw") {
       this._drawProfileEnabled = !this._drawProfileEnabled;
       this.pushMessage(
@@ -3067,6 +3137,42 @@ export class Game {
       default:
         if (command.startsWith("spawn ")) {
           this.room.addNewEnemy(command.slice(6) as EnemyType);
+        } else if (command.startsWith("kill ")) {
+          const rest = command.slice(5).trim();
+          const enemyName = rest.split(/\s+/)[0];
+          if (!enemyName) {
+            this.pushMessage("Usage: kill <enemyType>");
+            break;
+          }
+          const EnemyCtor = (EnemyTypeMap as any)[enemyName as EnemyType] as any;
+          if (!EnemyCtor) {
+            this.pushMessage(`Unknown enemy type "${enemyName}".`);
+            break;
+          }
+          if (!this.room) {
+            this.pushMessage("No active room.");
+            break;
+          }
+          let killed = 0;
+          // Iterate over a snapshot so kill-side effects don't disturb traversal.
+          for (const e of this.room.entities.slice()) {
+            if (!(e instanceof Enemy)) continue;
+            if (e instanceof EnemyCtor) {
+              try {
+                // Debug kill: suppress loot to avoid flooding drops and skewing perf tests.
+                (e as any).lootDropped = true;
+                e.kill();
+                killed++;
+              } catch (err) {
+                console.warn("kill command: failed to kill enemy", err);
+              }
+            }
+          }
+          // Remove dead enemies immediately so perf impact is visible right away.
+          try {
+            this.room.clearDeadStuff?.();
+          } catch {}
+          this.pushMessage(`Killed ${killed} "${enemyName}" enemies.`);
         } else if (command.startsWith("fill")) {
           const rest = command.slice(4).trim();
           const enemyName = rest.split(/\s+/)[0];

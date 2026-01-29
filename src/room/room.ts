@@ -1331,6 +1331,8 @@ export class Room {
   linkExitToStart = (startRoom?: Room) => {
     //if (this.type === RoomType.ROPEHOLE) return;
     if (!startRoom) startRoom = this.level.startRoom;
+    if (!startRoom) return;
+    if (startRoom === this) return;
     if (
       this.addDoorWithOffset(
         startRoom.roomX + Math.floor(startRoom.width / 2) + 1,
@@ -1570,6 +1572,22 @@ export class Room {
     return undefined;
   }
 
+  findPrimaryDownLadderCoords(
+    opts?: { includeSidePath?: boolean },
+  ): { x: number; y: number } | undefined {
+    const includeSidePath = opts?.includeSidePath !== false;
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const tile = this.roomArray[x]?.[y];
+        if (tile instanceof DownLadder) {
+          if (!includeSidePath && (tile as any).isSidePath) continue;
+          return { x: tile.x, y: tile.y };
+        }
+      }
+    }
+    return undefined;
+  }
+
   alertEnemiesOnEntry = () => {
     for (const e of this.entities) {
       if (e instanceof Enemy) e.lookForPlayer(false);
@@ -1628,18 +1646,69 @@ export class Room {
   };
 
   computerTurn = () => {
-    const activeZ = (this.playerTicked as any)?.z ?? this.getActiveZ();
+    const nowMs = (): number =>
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+
+    const prof = this.game.tickProfileEnabled
+      ? {
+          capturedAt: Date.now(),
+          roomGID: this.globalId,
+          depth: this.depth,
+          counts: {} as Record<string, number>,
+          ms: {} as Record<string, number>,
+          enemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
+          nonEnemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
+          projectileProcessByType: {} as Record<string, { calls: number; totalMs: number }>,
+        }
+      : null;
+
+    const addMs = (key: string, deltaMs: number) => {
+      if (!prof) return;
+      prof.ms[key] = (prof.ms[key] ?? 0) + deltaMs;
+    };
+    const addCount = (key: string, c: number = 1) => {
+      if (!prof) return;
+      prof.counts[key] = (prof.counts[key] ?? 0) + c;
+    };
+    const addTypeMs = (
+      table:
+        | Record<string, { calls: number; totalMs: number }>
+        | undefined,
+      name: string,
+      deltaMs: number,
+    ) => {
+      if (!prof || !table) return;
+      const row = table[name] ?? { calls: 0, totalMs: 0 };
+      row.calls += 1;
+      row.totalMs += deltaMs;
+      table[name] = row;
+    };
+
+    const activeZ = this.playerTicked?.z ?? this.getActiveZ();
     // take computer turn
+    const tEntities = nowMs();
     for (const e of this.entities) {
       if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
         if (!this.shouldSimulateEnemy(e)) continue;
       }
-      e.tick();
+      if (prof) {
+        const t0 = nowMs();
+        e.tick();
+        const dt = nowMs() - t0;
+        const name = e.constructor?.name ?? "Entity";
+        if (e instanceof Enemy) addTypeMs(prof.enemyTicksByType, name, dt);
+        else addTypeMs(prof.nonEnemyTicksByType, name, dt);
+      } else e.tick();
+      addCount("entityTick");
     }
+    addMs("entities.tick", nowMs() - tEntities);
 
     this.entities = this.entities.filter((e) => !e.dead);
 
+    const tWarnings = nowMs();
     for (const e of this.entities) {
       if (e.z !== activeZ) continue;
       if (e instanceof Enemy) {
@@ -1647,18 +1716,26 @@ export class Room {
         e.makeHitWarnings();
       }
     }
+    addMs("enemies.makeHitWarnings", nowMs() - tWarnings);
 
+    const tItems = nowMs();
     for (const i of this.items) {
       if (i.z !== activeZ) continue;
       i.tick();
+      addCount("itemTick");
     }
+    addMs("items.tick", nowMs() - tItems);
 
-    for (const p in this.game.players) {
-      for (const i of this.game.players[p].inventory.items) {
-        if (i) i.tick();
+    const tInv = nowMs();
+    for (const pl of Object.values(this.game.players)) {
+      if (!pl) continue;
+      for (const it of pl.inventory.items) {
+        if (it) it.tick();
       }
     }
+    addMs("inventory.tick", nowMs() - tInv);
 
+    const tHit = nowMs();
     for (const h of this.hitwarnings) {
       if (!this.isWithinEnemyInteractionRange(h.x, h.y)) continue;
       if (
@@ -1670,39 +1747,38 @@ export class Room {
       }
       h.removeOverlapping();
     }
+    addMs("hitwarnings", nowMs() - tHit);
 
+    const tProj = nowMs();
     for (const p of this.projectiles) {
       if (p.z !== activeZ) continue;
-      if (
-        this.roomArray[p.x] &&
-        this.roomArray[p.x][p.y] &&
-        this.roomArray[p.x][p.y].isSolid()
-      )
-        p.dead = true;
-      for (const i in this.game.players) {
-        const pl = this.game.players[i];
+      const t0 = prof ? nowMs() : 0;
+      if (this.roomArray[p.x]?.[p.y]?.isSolid()) p.dead = true;
+      for (const pl of Object.values(this.game.players)) {
+        if (!pl) continue;
         if (pl.z !== activeZ) continue;
-        if (
-          (this.game.players[i] as any).getRoom?.() === this &&
-          p.x === this.game.players[i].x &&
-          p.y === this.game.players[i].y
-        ) {
-          p.hitPlayer(this.game.players[i]);
+        if (pl.getRoom?.() === this && p.x === pl.x && p.y === pl.y) {
+          p.hitPlayer(pl);
         }
       }
       for (const e of this.entities) {
         if (e.z !== activeZ) continue;
-        if (p.x === e.x && p.y === e.y) {
-          p.hitEnemy(e);
-        }
+        if (p.x === e.x && p.y === e.y) p.hitEnemy(e);
+      }
+      if (prof) {
+        const dt = nowMs() - t0;
+        addTypeMs(prof.projectileProcessByType, p.constructor?.name ?? "Projectile", dt);
       }
     }
+    addMs("projectiles", nowMs() - tProj);
 
+    const tTiles = nowMs();
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         this.roomArray[x][y].tickEnd();
       }
     }
+    addMs("tiles.tickEnd", nowMs() - tTiles);
     this.entities = this.entities.filter((e) => !e.dead); // enemies may be killed by spiketrap
 
     this.clearDeadStuff();
@@ -1717,8 +1793,12 @@ export class Room {
     this.turn = TurnState.playerTurn;
     this.updateLighting();
     for (const e of this.entities) {
-      if (((e as any).z ?? 0) !== activeZ) continue;
+      if ((e.z ?? 0) !== activeZ) continue;
       e.shouldSeeThrough();
+    }
+
+    if (prof) {
+      this.game.lastTickProfileFrame = prof;
     }
   };
 
@@ -2038,9 +2118,16 @@ export class Room {
 
     // Count players currently in this room
     const activeZ = this.getActiveZ();
-    const playersInRoom = Object.values(this.game.players || {}).filter(
-      (p) => p?.getRoom?.() === this && (p?.z ?? 0) === activeZ,
-    ).length;
+    const playersInRoom = Object.values(this.game.players || {}).filter((p) => {
+      if (!p) return false;
+      if ((p.z ?? 0) !== activeZ) return false;
+      try {
+        return p.getRoom?.() === this;
+      } catch {
+        // During early init / transitions, a player may not have a valid room yet.
+        return false;
+      }
+    }).length;
 
     // Rays per emitter at the current angular resolution
     const raysPerEmitter = Math.ceil(360 / LevelConstants.LIGHTING_ANGLE_STEP);
@@ -4539,7 +4626,15 @@ export class Room {
 
   getBossDoor = () => {
     for (const door of this.doors) {
-      if (door.linkedDoor.room.type === RoomType.DOWNLADDER)
+      const linkedRoom = (door as any)?.linkedDoor?.room as any;
+      // During generation, environmental features are applied BEFORE ladders are placed.
+      // So we must support both:
+      // - pre-population: RoomType.DOWNLADDER partition/room
+      // - post-population: actual main DownLadder tile presence
+      if (
+        linkedRoom?.type === RoomType.DOWNLADDER ||
+        linkedRoom?.hasMainDownLadder?.() === true
+      )
         return { x: door.x, y: door.y, doorDir: door.doorDir };
     }
     return null;
@@ -4588,8 +4683,18 @@ export class Room {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
         const t = this.roomArray[x][y];
         if (t instanceof UpLadder && ladderType === "up") return true;
-        if (t instanceof DownLadder && ladderType === "down" && t.isSidePath)
-          return true;
+        if (t instanceof DownLadder && ladderType === "down") return true;
+      }
+    }
+    return false;
+  };
+
+  hasMainDownLadder = (): boolean => {
+    for (let x = this.roomX; x < this.roomX + this.width; x++) {
+      if (!this.roomArray[x]) continue;
+      for (let y = this.roomY; y < this.roomY + this.height; y++) {
+        const t = this.roomArray[x][y];
+        if (t instanceof DownLadder && !(t as any).isSidePath) return true;
       }
     }
     return false;

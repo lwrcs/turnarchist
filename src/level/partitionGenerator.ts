@@ -216,6 +216,15 @@ export class PartitionGenerator {
     params: LevelParameters,
     controls?: { branching?: number; loopiness?: number },
   ): Promise<Partition[]> {
+    // Single-room dungeon mode: when the selected room count is 1, generate exactly one
+    // START partition and let population place both ladders inside it.
+    // This intentionally bypasses boss/stair-room logic which assumes multi-room layouts.
+    if (params?.maxRoomCount <= 1) {
+      const p = new Partition(0, 0, mapWidth, mapHeight, "white");
+      p.type = RoomType.START;
+      return [p];
+    }
+
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
     let attempts = 0;
@@ -273,6 +282,16 @@ export class PartitionGenerator {
     const mapWidth = opts.mapWidth ?? 50;
     const mapHeight = opts.mapHeight ?? 50;
     const numRooms = opts.caveRooms ?? 8;
+
+    // Single-room cave/sidepath mode: `caveRooms = 1` should mean exactly one ROPECAVE room.
+    // The default cave algorithm always splits many partitions first, then prunes by connectivity,
+    // which breaks when numRooms<=1 (spawn would have no connections and gets filtered out).
+    if (numRooms <= 1) {
+      const CAVE_OFFSET = 100;
+      const p = new Partition(CAVE_OFFSET, CAVE_OFFSET, mapWidth, mapHeight, "white");
+      p.type = RoomType.ROPECAVE;
+      return [p];
+    }
     const hasLinearity = typeof opts.linearity === "number";
     const branching =
       typeof opts.branching === "number"

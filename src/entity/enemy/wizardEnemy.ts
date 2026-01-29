@@ -85,15 +85,98 @@ export abstract class WizardEnemy extends Enemy {
     return withinRange;
   };
 
-  shuffle = (a) => {
-    let j, x, i;
-    for (i = a.length - 1; i > 0; i--) {
-      j = Math.floor(Random.rand() * (i + 1));
-      x = a[i];
+  protected shuffle = <T>(a: T[]): T[] => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Random.rand() * (i + 1));
+      const x = a[i];
       a[i] = a[j];
       a[j] = x;
     }
     return a;
+  };
+
+  /**
+   * Teleport target selection must be O(1) in room size.
+   * Large rooms make Room.getEmptyTiles() extremely expensive.
+   *
+   * Returns a tile coordinate or null if no suitable position is found.
+   */
+  protected findTeleportTarget = (
+    targetPlayerId: string,
+    optimalDist: number,
+    opts?: { avoidProjectiles?: boolean; maxAttempts?: number },
+  ): { x: number; y: number } | null => {
+    const player = this.game.players[targetPlayerId];
+    if (!player) return null;
+
+    const avoidProjectiles = opts?.avoidProjectiles ?? true;
+    const maxAttempts = opts?.maxAttempts ?? 220;
+
+    // Precompute blocked projectile tiles once.
+    const projectileBlocked = new Set<string>();
+    if (avoidProjectiles) {
+      for (const p of this.room.projectiles) {
+        projectileBlocked.add(`${p.x},${p.y}`);
+      }
+    }
+
+    // Precompute occupied tiles by entities once.
+    const occupied = new Set<string>();
+    for (const e of this.room.entities) {
+      if (e === this) continue;
+      const w = e.w || 1;
+      const h = e.h || 1;
+      for (let dx = 0; dx < w; dx++) {
+        for (let dy = 0; dy < h; dy++) {
+          occupied.add(`${e.x + dx},${e.y + dy}`);
+        }
+      }
+    }
+
+    const room = this.room;
+    const minX = room.roomX + 1;
+    const minY = room.roomY + 1;
+    const maxX = room.roomX + room.width - 2;
+    const maxY = room.roomY + room.height - 2;
+    if (minX > maxX || minY > maxY) return null;
+
+    const isEmpty = (x: number, y: number): boolean => {
+      const t = room.roomArray[x]?.[y];
+      if (!t || t.isSolid()) return false;
+      if (avoidProjectiles && projectileBlocked.has(`${x},${y}`)) return false;
+      if (occupied.has(`${x},${y}`)) return false;
+      return true;
+    };
+
+    // 1) Random sampling across the room (bounded attempts)
+    let best: { x: number; y: number } | null = null;
+    let bestDelta = Infinity;
+    for (let i = 0; i < maxAttempts; i++) {
+      const x = Math.floor(Random.rand() * (maxX - minX + 1)) + minX;
+      const y = Math.floor(Random.rand() * (maxY - minY + 1)) + minY;
+      if (!isEmpty(x, y)) continue;
+      const dist = Math.abs(x - player.x) + Math.abs(y - player.y);
+      const delta = Math.abs(dist - optimalDist);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        best = { x, y };
+        if (bestDelta === 0) return best;
+      }
+    }
+
+    // 2) Local fallback: check tiles on the Manhattan ring around the player.
+    const ring: Array<{ x: number; y: number }> = [];
+    for (let dx = -optimalDist; dx <= optimalDist; dx++) {
+      const dy = optimalDist - Math.abs(dx);
+      ring.push({ x: player.x + dx, y: player.y + dy });
+      if (dy !== 0) ring.push({ x: player.x + dx, y: player.y - dy });
+    }
+    for (const r of ring) {
+      if (r.x < minX || r.x > maxX || r.y < minY || r.y > maxY) continue;
+      if (isEmpty(r.x, r.y)) return { x: r.x, y: r.y };
+    }
+
+    return best;
   };
 
   behavior = () => {
@@ -140,17 +223,6 @@ export abstract class WizardEnemy extends Enemy {
           case WizardState.teleport:
             let oldX = this.x;
             let oldY = this.y;
-            let min = 100000;
-            let bestPos;
-            let emptyTiles = this.shuffle(this.room.getEmptyTiles());
-            emptyTiles = emptyTiles.filter(
-              (tile) =>
-                !this.room.projectiles.some(
-                  (projectile) =>
-                    projectile.x === tile.x && projectile.y === tile.y,
-                ),
-            );
-
             let optimalDist = Game.randTable(
               [2, 2, 3, 3, 3, 3, 3],
               Random.rand,
@@ -159,27 +231,29 @@ export abstract class WizardEnemy extends Enemy {
             let player_ids = [];
             for (const i in this.game.players) player_ids.push(i);
             let target_player_id = Game.randTable(player_ids, Random.rand);
-            for (let t of emptyTiles) {
-              let newPos = t;
-              let dist =
-                Math.abs(newPos.x - this.game.players[target_player_id].x) +
-                Math.abs(newPos.y - this.game.players[target_player_id].y);
-              if (Math.abs(dist - optimalDist) < Math.abs(min - optimalDist)) {
-                min = dist;
-                bestPos = newPos;
-              }
+            if (!this.game.players[target_player_id]) {
+              this.state = WizardState.idle;
+              break;
             }
-            if (bestPos) {
-              this.tryMove(bestPos.x, bestPos.y);
-              this.drawX = this.x - oldX;
-              this.drawY = this.y - oldY;
-              this.frame = 0; // trigger teleport animation
-              this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
-              if (this.withinAttackingRangeOfPlayer()) {
-                this.state = WizardState.attack;
-              } else {
-                this.state = WizardState.idle;
-              }
+            const bestPos = this.findTeleportTarget(
+              target_player_id,
+              optimalDist,
+              { avoidProjectiles: true },
+            );
+            if (!bestPos) {
+              this.state = WizardState.idle;
+              break;
+            }
+
+            this.tryMove(bestPos.x, bestPos.y);
+            this.drawX = this.x - oldX;
+            this.drawY = this.y - oldY;
+            this.frame = 0; // trigger teleport animation
+            this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
+            if (this.withinAttackingRangeOfPlayer()) {
+              this.state = WizardState.attack;
+            } else {
+              this.state = WizardState.idle;
             }
             break;
           case WizardState.idle:

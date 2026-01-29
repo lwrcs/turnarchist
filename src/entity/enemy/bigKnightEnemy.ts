@@ -114,20 +114,11 @@ export class BigKnightEnemy extends Enemy {
             const oldY = this.y;
             this.rumbling = true;
 
-            // Build disabled positions (entities and active spike traps)
-            let disablePositions = Array<astar.Position>();
-            for (const e of this.room.entities) {
-              if (e !== this) {
-                for (let dx = 0; dx < e.w; dx++) {
-                  for (let dy = 0; dy < e.h; dy++) {
-                    disablePositions.push({
-                      x: e.x + dx,
-                      y: e.y + dy,
-                    } as astar.Position);
-                  }
-                }
-              }
-            }
+            // Build localized disables (avoid scanning the entire room's entities every tick)
+            let disablePositions = this.buildEntityDisablePositionsLocalized(
+              this.targetPlayer,
+              (e) => e !== this,
+            );
             for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
               for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
                 if (

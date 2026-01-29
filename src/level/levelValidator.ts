@@ -40,6 +40,15 @@ export class LevelValidator {
     const emptyCheck = this.validateNotEmpty(partitions);
     if (!emptyCheck.isValid) return emptyCheck;
 
+    // Single-room dungeon mode: if the chosen room count is 1, we intentionally do not
+    // require boss/stair partitions. The room will contain both ladders via population.
+    if (partitions.length === 1 && params?.maxRoomCount <= 1) {
+      // Still ensure no overlaps (trivial for 1 partition, but keeps intent explicit)
+      const overlapCheck = this.validateNoOverlaps(partitions);
+      if (!overlapCheck.isValid) return overlapCheck;
+      return { isValid: true };
+    }
+
     // Check minimum room count
     const roomCountCheck = this.validateMinimumRoomCount(
       partitions,

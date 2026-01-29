@@ -31,6 +31,10 @@ import { Wall } from "../../tile/wall";
 import { KingEnemy } from "./kingEnemy";
 import { BoltcasterEnemy } from "./boltcasterEnemy";
 import { EarthWizardEnemy } from "./earthWizard";
+import { SpikeTrap } from "../../tile/spiketrap";
+import { SpawnFloor } from "../../tile/spawnfloor";
+import { UpLadder } from "../../tile/upLadder";
+import { DownLadder } from "../../tile/downLadder";
 
 export class Spawner extends Enemy {
   ticks: number;
@@ -149,6 +153,52 @@ export class Spawner extends Enemy {
   poison = () => {};
   //alertNearbyEnemies = () => {};
 
+  /**
+   * Spawners only need empty tiles adjacent to themselves (3x3).
+   * Using Room.getEmptyTiles() is extremely expensive in large rooms since it scans the whole room
+   * and then filters against every entity.
+   */
+  private getAdjacentEmptyTiles = (): Array<{ x: number; y: number }> => {
+    const out: Array<{ x: number; y: number }> = [];
+    const room = this.room;
+    // Match Room.getEmptyTiles() interior bounds to avoid edge weirdness.
+    const minX = room.roomX + 1;
+    const minY = room.roomY + 1;
+    const maxX = room.roomX + room.width - 2;
+    const maxY = room.roomY + room.height - 2;
+
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const x = this.x + dx;
+        const y = this.y + dy;
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        const tile = room.roomArray[x]?.[y];
+        if (!tile) continue;
+        if (tile.isSolid()) continue;
+        if (
+          tile instanceof SpikeTrap ||
+          tile instanceof SpawnFloor ||
+          tile instanceof UpLadder ||
+          tile instanceof DownLadder
+        )
+          continue;
+
+        let occupied = false;
+        for (const e of room.entities) {
+          if (e === this) continue;
+          if (e.pointIn(x, y)) {
+            occupied = true;
+            break;
+          }
+        }
+        if (occupied) continue;
+
+        out.push({ x, y });
+      }
+    }
+    return out;
+  };
+
   behavior = () => {
     let shouldSpawn = true;
     this.lastX = this.x;
@@ -160,11 +210,7 @@ export class Spawner extends Enemy {
         (this.ticks + this.spawnOffset) % this.spawnFrequency === 0 &&
         this.ticks >= this.nextSpawnTick
       ) {
-        let positions = this.room
-          .getEmptyTiles()
-          .filter(
-            (t) => Math.abs(t.x - this.x) <= 1 && Math.abs(t.y - this.y) <= 1,
-          );
+        let positions = this.getAdjacentEmptyTiles();
         if (this.enemySpawnType === 8) {
           const offLimits = [
             { x: this.x, y: this.y },

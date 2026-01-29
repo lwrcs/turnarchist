@@ -11,6 +11,7 @@ import { EnvType } from "../constants/environmentTypes";
 import { Populator } from "../room/roomPopulator";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { DownLadder } from "../tile/downLadder";
+import { UpLadder } from "../tile/upLadder";
 import { Key } from "../item/key";
 import { Lockable } from "../tile/lockable";
 import { Random } from "../utility/random";
@@ -241,9 +242,11 @@ export class Level {
 
   setExitRoom(mainPath = true) {
     if (mainPath) {
-      this.exitRoom = this.rooms.find(
-        (room) => room.type === RoomType.DOWNLADDER,
-      );
+      // Prefer tile presence over RoomType so a room can contain a down ladder without
+      // being classified as a DOWNLADDER room (needed for single-room levels).
+      this.exitRoom =
+        this.rooms.find((room) => (room as any).hasMainDownLadder?.()) ??
+        this.rooms.find((room) => room.type === RoomType.DOWNLADDER);
     } else {
       this.exitRoom = this.getLadderRoom(
         this.rooms[this.rooms.length - 1],
@@ -254,13 +257,41 @@ export class Level {
 
   setStartRoom(mainPath = true) {
     if (mainPath) {
-      this.startRoom = this.rooms.find((room) => room.type === RoomType.START);
+      // Prefer a non-rope UpLadder tile if present; otherwise fall back to START room.
+      let start: Room | undefined;
+      for (const room of this.rooms) {
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+          for (let y = room.roomY; y < room.roomY + room.height; y++) {
+            const t = room.roomArray[x]?.[y];
+            if (t instanceof UpLadder && !(t as any).isRope) {
+              start = room;
+              break;
+            }
+          }
+          if (start) break;
+        }
+        if (start) break;
+      }
+      this.startRoom =
+        start ??
+        this.rooms.find((room) => room.type === RoomType.START) ??
+        this.rooms.find((room) => room.type === RoomType.UPLADDER);
     } else {
       this.startRoom = this.getLadderRoom(
         this.rooms[this.rooms.length - 1],
         "up",
       );
     }
+  }
+
+  /**
+   * Recompute start/exit rooms after population has placed ladder tiles.
+   * This is safe for existing generation (RoomType fallbacks) and necessary
+   * for single-room levels where ladders are not encoded via RoomType.
+   */
+  refreshStartExitRooms(mainPath = true) {
+    this.setExitRoom(mainPath);
+    this.setStartRoom(mainPath);
   }
 
   getLadderRoom = (room: Room, ladderType: "up" | "down"): Room | null => {
@@ -306,11 +337,13 @@ export class Level {
 
   getFurthestFromLadder = (ladderType: "up" | "down"): Room | null => {
     let furthestRoom: Room | null = null;
-    let furthestDistance = 0;
+    // Allow 0-distance rooms (e.g., single-room levels where the ladder is in this room).
+    let furthestDistance = -Infinity;
 
     for (const room of this.rooms) {
       const distance = room.getDistanceToNearestLadder(ladderType);
-      if (distance && distance > furthestDistance) {
+      if (distance === null || distance === undefined) continue;
+      if (distance > furthestDistance) {
         furthestDistance = distance;
         furthestRoom = room;
       }
