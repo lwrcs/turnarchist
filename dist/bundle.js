@@ -31891,7 +31891,7 @@ GameConstants.MOVEMENT_COOLDOWN = 50; // milliseconds
 GameConstants.MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
 GameConstants.MOVE_WITH_MOUSE = true;
 // When pushing entities, block movement inputs until pushed objects have visually progressed this far (0..1).
-GameConstants.PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0.9;
+GameConstants.PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0;
 /**
  * Draw smoothing factors (exponential decay bases).
  * Higher values => slower animation (takes longer for drawX/drawY to decay to 0).

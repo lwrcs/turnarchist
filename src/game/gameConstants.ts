@@ -131,7 +131,7 @@ export class GameConstants {
   static MOVEMENT_QUEUE_COOLDOWN = 25; // milliseconds
   static readonly MOVE_WITH_MOUSE = true;
   // When pushing entities, block movement inputs until pushed objects have visually progressed this far (0..1).
-  static readonly PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0.9;
+  static readonly PUSH_VISUAL_INPUT_UNLOCK_PROGRESS = 0;
 
   /**
    * Draw smoothing factors (exponential decay bases).
