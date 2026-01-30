@@ -456,12 +456,54 @@ export class PlayerInputHandler {
       });
     } else {
       if (GameConstants.DEVELOPER_MODE) {
+        const GAMMA_STEP = 0.25;
+        const GAMMA_MIN = 0.25;
+        const GAMMA_MAX = 8;
+
+        const updateGamma = (
+          current: number,
+          deltaSteps: number,
+        ): number => {
+          const stepCountMax = Math.round(GAMMA_MAX / GAMMA_STEP);
+          const stepCountMin = Math.round(GAMMA_MIN / GAMMA_STEP);
+          const safeCurrent = Number.isFinite(current) ? current : 1;
+          const currentSteps = Math.round(safeCurrent / GAMMA_STEP);
+          let nextSteps = currentSteps + deltaSteps;
+          if (nextSteps > stepCountMax) nextSteps = stepCountMin;
+          if (nextSteps < stepCountMin) nextSteps = stepCountMax;
+          return nextSteps * GAMMA_STEP;
+        };
+
         switch (num) {
           case 6:
-            GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(true);
+            GameConstants.SHADE_GAMMA = updateGamma(GameConstants.SHADE_GAMMA, -1);
+            this.player.game.pushMessage(
+              `Tile shade gamma set to ${GameConstants.SHADE_GAMMA.toFixed(2)} (key 6)`,
+            );
             break;
           case 7:
-            GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
+            GameConstants.SHADE_GAMMA = updateGamma(GameConstants.SHADE_GAMMA, 1);
+            this.player.game.pushMessage(
+              `Tile shade gamma set to ${GameConstants.SHADE_GAMMA.toFixed(2)} (key 7)`,
+            );
+            break;
+          case 8:
+            GameConstants.SHADE_GAMMA_SPRITES = updateGamma(
+              GameConstants.SHADE_GAMMA_SPRITES,
+              -1,
+            );
+            this.player.game.pushMessage(
+              `Sprite shade gamma set to ${GameConstants.SHADE_GAMMA_SPRITES.toFixed(2)} (key 8)`,
+            );
+            break;
+          case 9:
+            GameConstants.SHADE_GAMMA_SPRITES = updateGamma(
+              GameConstants.SHADE_GAMMA_SPRITES,
+              1,
+            );
+            this.player.game.pushMessage(
+              `Sprite shade gamma set to ${GameConstants.SHADE_GAMMA_SPRITES.toFixed(2)} (key 9)`,
+            );
             break;
         }
       }

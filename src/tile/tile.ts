@@ -72,7 +72,8 @@ export abstract class Tile extends Drawable {
     disable: boolean = true,
   ) => {
     if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
-    return this.room.softVis[this.x + offsetX][this.y + offsetY];
+    const v = this.room.softVis[this.x + offsetX][this.y + offsetY];
+    return GameConstants.applyShadeForTiles(v);
   };
 
   isSolid = (): boolean => {

@@ -20662,8 +20662,8 @@ class Entity extends drawable_1.Drawable {
                 return 0;
             let softVis = this.room.softVis[this.x][this.y] * 1;
             if (this.shadeMultiplier > 1)
-                return Math.min(1, softVis);
-            return softVis;
+                return gameConstants_1.GameConstants.applyShadeForSprites(Math.min(1, softVis));
+            return gameConstants_1.GameConstants.applyShadeForSprites(softVis);
         };
         this.updateShadeColor = (delta) => {
             if (this.shadeMultiplier > 1)
@@ -26098,6 +26098,21 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command === "shadegamma") {
+                this.pushMessage(`shadegamma: ${gameConstants_1.GameConstants.SHADE_GAMMA}`);
+                return;
+            }
+            if (command.startsWith("shadegamma ")) {
+                const raw = command.slice("shadegamma ".length).trim();
+                const value = Number(raw);
+                if (!Number.isFinite(value) || value <= 0) {
+                    this.pushMessage("Usage: shadegamma <positive number>");
+                    return;
+                }
+                gameConstants_1.GameConstants.SHADE_GAMMA = value;
+                this.pushMessage(`shadegamma set to ${gameConstants_1.GameConstants.SHADE_GAMMA}`);
+                return;
+            }
             if (command === "debugroom") {
                 gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS =
                     !gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
@@ -31825,6 +31840,35 @@ class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
     }
+    /**
+     * Apply shade curve to a shade alpha in [0,1], clamped to [0,1].
+     */
+    static applyShadeCurve(alpha01, gammaRaw, mulRaw) {
+        const a = Number.isFinite(alpha01) ? alpha01 : 0;
+        const clamped = Math.max(0, Math.min(1, a));
+        const gamma = Number.isFinite(gammaRaw) && gammaRaw > 0
+            ? gammaRaw
+            : 1;
+        const mul = Number.isFinite(mulRaw)
+            ? mulRaw
+            : 1;
+        return Math.max(0, Math.min(1, Math.pow(clamped, gamma) * mul));
+    }
+    /** Shade curve used by `Tile.shadeAmount()` (and thus `Wall`). */
+    static applyShadeForTiles(alpha01) {
+        return GameConstants.applyShadeCurve(alpha01, GameConstants.SHADE_GAMMA, GameConstants.SHADE_ALPHA_MULTIPLIER);
+    }
+    /** Shade curve used by sprite-level `shadeAmount()` (entities/items/particles/etc.). */
+    static applyShadeForSprites(alpha01) {
+        return GameConstants.applyShadeCurve(alpha01, GameConstants.SHADE_GAMMA_SPRITES, GameConstants.SHADE_ALPHA_MULTIPLIER_SPRITES);
+    }
+    /**
+     * Backwards-compat alias (previously used by sprite-level shade).
+     * Prefer `applyShadeForTiles` / `applyShadeForSprites`.
+     */
+    static applyShadeGamma(alpha01) {
+        return GameConstants.applyShadeForSprites(alpha01);
+    }
 }
 exports.GameConstants = GameConstants;
 GameConstants.VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -31980,6 +32024,19 @@ GameConstants.UNDERWATER_LIGHTING_FOV_DEGREES = 120;
 GameConstants.CUSTOM_SHADER_COLOR_ENABLED = false;
 GameConstants.COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
+/**
+ * Shade curve gamma. 1 = linear. >1 makes shade "heavier" (darker sooner). <1 makes it lighter.
+ * Applied in `Room.drawShadeLayer()` and the inline shade slicing builder.
+ */
+GameConstants.SHADE_GAMMA = 1.25;
+/** Final multiplier applied after gamma. Useful for tuning overall shade intensity. */
+GameConstants.SHADE_ALPHA_MULTIPLIER = 1;
+/**
+ * Shade curve for non-tile sprites (entities/items/particles/etc.).
+ * Defaults to match the main shade layer until tuned.
+ */
+GameConstants.SHADE_GAMMA_SPRITES = 1.5;
+GameConstants.SHADE_ALPHA_MULTIPLIER_SPRITES = 1;
 // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
 GameConstants.SHADE_INLINE_IN_ENTITY_LAYER = true;
 /**
@@ -42762,7 +42819,8 @@ class Item extends drawable_1.Drawable {
                 console.warn("tried to get shade for tile that does not exist", this.x, this.y);
                 return 0;
             }
-            return this.level.softVis[this.x]?.[this.y];
+            const v = this.level.softVis[this.x]?.[this.y] ?? 0;
+            return gameConstants_1.GameConstants.applyShadeForSprites(v);
         };
         this.drawStatus = (x, y) => { };
         this.drawBrokenSymbol = (x, y) => {
@@ -52519,7 +52577,7 @@ class Particle extends drawable_1.Drawable {
             if (!this.room.softVis[x])
                 return 0.9;
             const shade = this.room.softVis[x][y];
-            return shade ?? 0.9;
+            return gameConstants_1.GameConstants.applyShadeForSprites(shade ?? 0.9);
         };
         this.shadeColor = () => {
             return this.room.shadeColor;
@@ -54874,12 +54932,37 @@ class PlayerInputHandler {
             }
             else {
                 if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                    const GAMMA_STEP = 0.25;
+                    const GAMMA_MIN = 0.25;
+                    const GAMMA_MAX = 8;
+                    const updateGamma = (current, deltaSteps) => {
+                        const stepCountMax = Math.round(GAMMA_MAX / GAMMA_STEP);
+                        const stepCountMin = Math.round(GAMMA_MIN / GAMMA_STEP);
+                        const safeCurrent = Number.isFinite(current) ? current : 1;
+                        const currentSteps = Math.round(safeCurrent / GAMMA_STEP);
+                        let nextSteps = currentSteps + deltaSteps;
+                        if (nextSteps > stepCountMax)
+                            nextSteps = stepCountMin;
+                        if (nextSteps < stepCountMin)
+                            nextSteps = stepCountMax;
+                        return nextSteps * GAMMA_STEP;
+                    };
                     switch (num) {
                         case 6:
-                            gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(true);
+                            gameConstants_1.GameConstants.SHADE_GAMMA = updateGamma(gameConstants_1.GameConstants.SHADE_GAMMA, -1);
+                            this.player.game.pushMessage(`Tile shade gamma set to ${gameConstants_1.GameConstants.SHADE_GAMMA.toFixed(2)} (key 6)`);
                             break;
                         case 7:
-                            gameConstants_1.GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION(false);
+                            gameConstants_1.GameConstants.SHADE_GAMMA = updateGamma(gameConstants_1.GameConstants.SHADE_GAMMA, 1);
+                            this.player.game.pushMessage(`Tile shade gamma set to ${gameConstants_1.GameConstants.SHADE_GAMMA.toFixed(2)} (key 7)`);
+                            break;
+                        case 8:
+                            gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES = updateGamma(gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES, -1);
+                            this.player.game.pushMessage(`Sprite shade gamma set to ${gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES.toFixed(2)} (key 8)`);
+                            break;
+                        case 9:
+                            gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES = updateGamma(gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES, 1);
+                            this.player.game.pushMessage(`Sprite shade gamma set to ${gameConstants_1.GameConstants.SHADE_GAMMA_SPRITES.toFixed(2)} (key 9)`);
                             break;
                     }
                 }
@@ -60373,6 +60456,18 @@ class Room {
         this.clamp = (value, min = 0, max = 1) => {
             return Math.min(Math.max(value, min), max);
         };
+        this.applyShadeGammaAndMultiplier = (alpha01) => {
+            // Defensive: keep within [0,1] and avoid NaN/negative gamma.
+            const a = this.clamp(alpha01, 0, 1);
+            const gamma = typeof gameConstants_1.GameConstants.SHADE_GAMMA === "number" && gameConstants_1.GameConstants.SHADE_GAMMA > 0
+                ? gameConstants_1.GameConstants.SHADE_GAMMA
+                : 1;
+            const mul = typeof gameConstants_1.GameConstants.SHADE_ALPHA_MULTIPLIER === "number"
+                ? gameConstants_1.GameConstants.SHADE_ALPHA_MULTIPLIER
+                : 1;
+            const curved = Math.pow(a, gamma);
+            return this.clamp(curved * mul, 0, 1);
+        };
         /**
          * Blends an array of RGB colors into a single color without excessive darkness or clipping to white.
          *
@@ -60589,6 +60684,7 @@ class Room {
                         let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 2;
                         let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
                         let computedAlpha = alpha ** factor * smoothFactor;
+                        computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
                         let fillX = x;
                         let fillY = y;
                         let fillWidth = 1;
@@ -60736,6 +60832,7 @@ class Room {
                     let factor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 2 : 1;
                     let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
                     let computedAlpha = alpha ** factor * smoothFactor;
+                    computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
                     let fillX = x;
                     let fillY = y;
                     let fillWidth = 1;
@@ -67890,10 +67987,8 @@ class Door extends passageway_1.Passageway {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
             const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
-            if (this.opened)
-                return vis / 2;
-            else
-                return vis;
+            const base = this.opened ? vis / 2 : vis;
+            return gameConstants_1.GameConstants.applyShadeForSprites(base);
         };
         this.examineText = () => {
             // Tunnel doors
@@ -69048,7 +69143,8 @@ class Tile extends drawable_1.Drawable {
         this.shadeAmount = (offsetX = 0, offsetY = 0, disable = true) => {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
-            return this.room.softVis[this.x + offsetX][this.y + offsetY];
+            const v = this.room.softVis[this.x + offsetX][this.y + offsetY];
+            return gameConstants_1.GameConstants.applyShadeForTiles(v);
         };
         this.isSolid = () => {
             return false;

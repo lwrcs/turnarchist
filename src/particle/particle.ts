@@ -27,7 +27,7 @@ export class Particle extends Drawable {
     if (!this.room.softVis[x]) return 0.9;
 
     const shade = this.room.softVis[x][y];
-    return shade ?? 0.9;
+    return GameConstants.applyShadeForSprites(shade ?? 0.9);
   };
   shadeColor = () => {
     return this.room.shadeColor;

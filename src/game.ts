@@ -2102,6 +2102,23 @@ export class Game {
     command = command.toLowerCase();
     let enabled = "";
 
+    if (command === "shadegamma") {
+      this.pushMessage(`shadegamma: ${GameConstants.SHADE_GAMMA}`);
+      return;
+    }
+
+    if (command.startsWith("shadegamma ")) {
+      const raw = command.slice("shadegamma ".length).trim();
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value <= 0) {
+        this.pushMessage("Usage: shadegamma <positive number>");
+        return;
+      }
+      GameConstants.SHADE_GAMMA = value;
+      this.pushMessage(`shadegamma set to ${GameConstants.SHADE_GAMMA}`);
+      return;
+    }
+
     if (command === "debugroom") {
       GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS =
         !GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;

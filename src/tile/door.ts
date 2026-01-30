@@ -120,8 +120,8 @@ export class Door extends Passageway {
   ) => {
     if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
     const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
-    if (this.opened) return vis / 2;
-    else return vis;
+    const base = this.opened ? vis / 2 : vis;
+    return GameConstants.applyShadeForSprites(base);
   };
 
   examineText = (): string => {

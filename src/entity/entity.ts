@@ -1303,8 +1303,9 @@ export class Entity extends Drawable {
       return 0;
     if (!this.room.softVis[this.x]) return 0;
     let softVis = this.room.softVis[this.x][this.y] * 1;
-    if (this.shadeMultiplier > 1) return Math.min(1, softVis);
-    return softVis;
+    if (this.shadeMultiplier > 1)
+      return GameConstants.applyShadeForSprites(Math.min(1, softVis));
+    return GameConstants.applyShadeForSprites(softVis);
   };
 
   updateShadeColor = (delta: number) => {

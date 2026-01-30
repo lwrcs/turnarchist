@@ -235,6 +235,58 @@ export class GameConstants {
   }
   static COLOR_LAYER_COMPOSITE_OPERATION = "soft-light"; //"soft-light";
   static SHADE_LAYER_COMPOSITE_OPERATION = "source-over"; //"soft-light";
+  /**
+   * Shade curve gamma. 1 = linear. >1 makes shade "heavier" (darker sooner). <1 makes it lighter.
+   * Applied in `Room.drawShadeLayer()` and the inline shade slicing builder.
+   */
+  static SHADE_GAMMA = 1.25;
+  /** Final multiplier applied after gamma. Useful for tuning overall shade intensity. */
+  static SHADE_ALPHA_MULTIPLIER = 1;
+  /**
+   * Shade curve for non-tile sprites (entities/items/particles/etc.).
+   * Defaults to match the main shade layer until tuned.
+   */
+  static SHADE_GAMMA_SPRITES = 1.5;
+  static SHADE_ALPHA_MULTIPLIER_SPRITES = 1;
+  /**
+   * Apply shade curve to a shade alpha in [0,1], clamped to [0,1].
+   */
+  private static applyShadeCurve(alpha01: number, gammaRaw: number, mulRaw: number): number {
+    const a = Number.isFinite(alpha01) ? alpha01 : 0;
+    const clamped = Math.max(0, Math.min(1, a));
+    const gamma =
+      Number.isFinite(gammaRaw) && gammaRaw > 0
+        ? gammaRaw
+        : 1;
+    const mul =
+      Number.isFinite(mulRaw)
+        ? mulRaw
+        : 1;
+    return Math.max(0, Math.min(1, Math.pow(clamped, gamma) * mul));
+  }
+  /** Shade curve used by `Tile.shadeAmount()` (and thus `Wall`). */
+  static applyShadeForTiles(alpha01: number): number {
+    return GameConstants.applyShadeCurve(
+      alpha01,
+      GameConstants.SHADE_GAMMA,
+      GameConstants.SHADE_ALPHA_MULTIPLIER,
+    );
+  }
+  /** Shade curve used by sprite-level `shadeAmount()` (entities/items/particles/etc.). */
+  static applyShadeForSprites(alpha01: number): number {
+    return GameConstants.applyShadeCurve(
+      alpha01,
+      GameConstants.SHADE_GAMMA_SPRITES,
+      GameConstants.SHADE_ALPHA_MULTIPLIER_SPRITES,
+    );
+  }
+  /**
+   * Backwards-compat alias (previously used by sprite-level shade).
+   * Prefer `applyShadeForTiles` / `applyShadeForSprites`.
+   */
+  static applyShadeGamma(alpha01: number): number {
+    return GameConstants.applyShadeForSprites(alpha01);
+  }
   // When true, draw shade as sliced tiles inline within drawEntities instead of a single layer
   static SHADE_INLINE_IN_ENTITY_LAYER = true;
   /**

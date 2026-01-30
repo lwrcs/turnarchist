@@ -2763,6 +2763,21 @@ export class Room {
     return Math.min(Math.max(value, min), max);
   };
 
+  private applyShadeGammaAndMultiplier = (alpha01: number): number => {
+    // Defensive: keep within [0,1] and avoid NaN/negative gamma.
+    const a = this.clamp(alpha01, 0, 1);
+    const gamma =
+      typeof GameConstants.SHADE_GAMMA === "number" && GameConstants.SHADE_GAMMA > 0
+        ? GameConstants.SHADE_GAMMA
+        : 1;
+    const mul =
+      typeof GameConstants.SHADE_ALPHA_MULTIPLIER === "number"
+        ? GameConstants.SHADE_ALPHA_MULTIPLIER
+        : 1;
+    const curved = Math.pow(a, gamma);
+    return this.clamp(curved * mul, 0, 1);
+  };
+
   /**
    * Blends an array of RGB colors into a single color without excessive darkness or clipping to white.
    *
@@ -3061,6 +3076,7 @@ export class Room {
           let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 2;
           let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
           let computedAlpha = alpha ** factor * smoothFactor;
+          computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
 
           let fillX = x;
           let fillY = y;
@@ -3138,7 +3154,7 @@ export class Room {
                 break;
             }
           }
-          const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
+        const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
 
           const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
 
@@ -3253,6 +3269,7 @@ export class Room {
         let factor = !GameConstants.SMOOTH_LIGHTING ? 2 : 1;
         let smoothFactor = !GameConstants.SMOOTH_LIGHTING ? 0 : 1;
         let computedAlpha = alpha ** factor * smoothFactor;
+        computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
 
         let fillX = x;
         let fillY = y;

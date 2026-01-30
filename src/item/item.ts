@@ -259,7 +259,8 @@ export class Item extends Drawable {
       );
       return 0;
     }
-    return this.level.softVis[this.x]?.[this.y];
+    const v = this.level.softVis[this.x]?.[this.y] ?? 0;
+    return GameConstants.applyShadeForSprites(v);
   };
 
   drawStatus = (x: number, y: number) => {};
