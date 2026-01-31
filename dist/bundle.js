@@ -9690,7 +9690,7 @@ module.exports = __webpack_require__.p + "assets/objset.65527068090ac8940c69.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/tileset.ed82dd24ab8797956df3.png";
+module.exports = __webpack_require__.p + "assets/tileset.0d7689e5a17ec0033346.png";
 
 /***/ }),
 
