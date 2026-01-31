@@ -7,6 +7,7 @@ import { Game } from "../game";
 import { GameplaySettings } from "../game/gameplaySettings";
 import {
   environmentData,
+  type BossInfo,
   enemyClassToId,
   //enemyMinimumDepth,
   EnemyInfo,
@@ -1110,13 +1111,16 @@ export class Populator {
     //console.log("percentFull", `${percentFull}%`);
     // Single-room levels can have very large empty-tile counts; without a cap this can
     // request thousands of props and effectively hang/crash during clustered placement.
+        /*
+        // disabled for now
     const isSingleRoom = room.level?.rooms?.length === 1;
     if (isSingleRoom) {
       // Scale cap with room size but keep it bounded.
       const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
       const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
-      return numProps
+      return Math.min(numProps, cap);
     }
+      */
     return numProps;
   }
 
@@ -2045,109 +2049,54 @@ export class Populator {
     }
     let chosenBoss = null;
 
+    const pickWeightedBoss = (
+      pool: BossInfo[],
+      rand: () => number,
+    ): BossInfo | null => {
+      if (pool.length === 0) return null;
+      let total = 0;
+      for (const b of pool) total += Math.max(0, b.weight ?? 1);
+      if (total <= 0) return null;
+      let r = rand() * total;
+      for (const b of pool) {
+        r -= Math.max(0, b.weight ?? 1);
+        if (r <= 0) return b;
+      }
+      return pool[pool.length - 1] ?? null;
+    };
+
+    const getEligibleBosses = (): BossInfo[] => {
+      const envBosses: BossInfo[] =
+        environmentData[room.envType]?.bosses ??
+        environmentData[room.level.environment.type]?.bosses ??
+        [];
+      return envBosses.filter((b) => {
+        if (depth < b.depth) return false;
+        if (b.maxDepth !== undefined && depth > b.maxDepth) return false;
+        return true;
+      });
+    };
+
     if (!GameplaySettings.PRESET_BOSSES) {
-      let bosses = [
-        "reaper",
-        "queen",
-        "bigskullenemy",
-        "bigzombieenemy",
-        "bigfrogenemy",
-        "exalter",
-      ];
+      const boss = pickWeightedBoss(getEligibleBosses(), Random.rand);
+      if (!boss) return;
 
-      if (depth > 0) {
-        bosses.push("occultist");
-        bosses = bosses.filter((b) => b !== "queen");
-      }
-      if (room.envType === EnvType.FOREST) {
-        bosses.push("bigfrogenemy");
-      }
-      if (depth > 4) {
-        bosses.push("warden");
-        bosses = bosses.filter(
-          (b) =>
-            b !== "bigskullenemy" &&
-            b !== "bigzombieenemy" &&
-            b !== "occultist",
-        );
-      }
-
-      const boss = Game.randTable(bosses, Random.rand);
-      console.log("bosses", bosses, "boss", boss);
-
-      const position =
-        boss.startsWith("big") || boss === "warden"
-          ? room.getBigRandomEmptyPosition(tiles)
-          : room.getRandomEmptyPosition(tiles);
+      const position = boss.big
+        ? room.getBigRandomEmptyPosition(tiles)
+        : room.getRandomEmptyPosition(tiles);
       if (position === null) return;
       const { x, y } = position;
 
-      switch (boss) {
-        case "reaper":
-          const spawner = this.addSpawners(room, Random.rand, 1);
-          chosenBoss = spawner;
-          spawner.dropTable = ["weapon", "equipment"];
-          spawner.dropChance = 1;
-          break;
-        case "queen":
-          const queen = QueenEnemy.add(room, room.game, x, y);
-          queen.dropTable = ["weapon", "equipment"];
-          queen.dropChance = 1;
-          chosenBoss = queen;
-          break;
-        case "bigskullenemy":
-          const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
-          bigSkull.dropTable = [
-            "weapon",
-            "equipment",
-            "consumable",
-            "gem",
-            "tool",
-          ];
-          chosenBoss = bigSkull;
-          break;
-        case "occultist":
-          const occultist = this.addOccultists(room, Random.rand, 1);
-          occultist.dropTable = ["weapon", "equipment"];
-          occultist.dropChance = 1;
-          chosenBoss = occultist;
-          break;
-        case "bigzombieenemy":
-          const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
-          bigZombie.dropTable = [
-            "weapon",
-            "equipment",
-            "consumable",
-            "gem",
-            "tool",
-          ];
-          bigZombie.dropChance = 1;
-          chosenBoss = bigZombie;
-          break;
-        case "warden":
-          const warden = WardenEnemy.add(room, room.game, x, y);
-          warden.dropTable = ["weapon", "equipment"];
-          warden.dropChance = 1;
-          chosenBoss = warden;
-          break;
-        case "bigfrogenemy":
-          const bigFrog = BigFrogEnemy.add(room, room.game, x, y);
-          bigFrog.dropTable = [
-            "weapon",
-            "equipment",
-            "consumable",
-            "gem",
-            "tool",
-          ];
-          chosenBoss = bigFrog;
-          break;
-        case "exalter":
-          const exalter = ExalterEnemy.add(room, room.game, x, y);
-          exalter.dropTable = ["weapon", "equipment"];
-          exalter.dropChance = 1;
-          chosenBoss = exalter;
-          break;
-      }
+      // If the selected boss is a Spawner and no custom table is provided, use the
+      // current depth's enemy pool (mirrors prior logic from addBossesAt()).
+      const extraArgs =
+        boss.class === Spawner && !(boss.additionalParams?.length)
+          ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+          : (boss.additionalParams ?? []);
+
+      chosenBoss = boss.class?.add
+        ? boss.class.add(room, room.game, x, y, ...extraArgs)
+        : null;
     } else {
       const position = room.getBigRandomEmptyPosition(tiles);
       if (position === null) return;
@@ -2451,12 +2400,9 @@ export class Populator {
       numEmptyTiles * Game.randTable([0.25, 0.3, 0.35], rand),
     );
     //this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
-    if (room.level.environment.type === EnvType.CAVE)
-      this.addResources(
-        room,
-        (numEmptyTiles - numEnemies) * Game.randTable([0.1, 0.2, 0.3], rand),
-        rand,
-      );
+    // Important: cave props (including ores) are now environment-driven via `environmentData[EnvType.CAVE].props`.
+    // The legacy `addResources` logic is depth-biased (e.g. depth 2 produces mostly gold) and will swamp
+    // the env prop weighting, so it is intentionally disabled here.
     room.removeDoorObstructions();
   };
 
@@ -3481,65 +3427,39 @@ export class Populator {
     if (GameplaySettings.NO_ENEMIES === true || room.envType === EnvType.TUTORIAL)
       return;
 
-    // Mirror `addBosses` selection logic, but with an explicit position.
-    let bosses = [
-      "reaper",
-      "queen",
-      "bigskullenemy",
-      "bigzombieenemy",
-      "bigfrogenemy",
-      "exalter",
-    ];
+    const pickWeightedBoss = (
+      pool: BossInfo[],
+      rand: () => number,
+    ): BossInfo | null => {
+      if (pool.length === 0) return null;
+      let total = 0;
+      for (const b of pool) total += Math.max(0, b.weight ?? 1);
+      if (total <= 0) return null;
+      let r = rand() * total;
+      for (const b of pool) {
+        r -= Math.max(0, b.weight ?? 1);
+        if (r <= 0) return b;
+      }
+      return pool[pool.length - 1] ?? null;
+    };
 
-    if (depth > 0) {
-      bosses.push("occultist");
-      bosses = bosses.filter((b) => b !== "queen");
-    }
-    if (room.envType === EnvType.FOREST) {
-      bosses.push("bigfrogenemy");
-    }
-    if (depth > 4) {
-      bosses.push("warden");
-      bosses = bosses.filter(
-        (b) =>
-          b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist",
-      );
-    }
-
-    const boss = Game.randTable(bosses, Random.rand);
+    const envBosses: BossInfo[] =
+      environmentData[room.envType]?.bosses ??
+      environmentData[room.level.environment.type]?.bosses ??
+      [];
+    const eligible = envBosses.filter((b) => {
+      if (depth < b.depth) return false;
+      if (b.maxDepth !== undefined && depth > b.maxDepth) return false;
+      return true;
+    });
+    const boss = pickWeightedBoss(eligible, Random.rand);
     if (!boss) return;
 
-    switch (boss) {
-      case "reaper": {
-        const spawnTable = this.getEnemyPoolForDepth(Math.max(0, depth)).filter(
-          (t) => t !== 7,
-        );
-        Spawner.add(room, room.game, x, y, spawnTable);
-        break;
-      }
-      case "queen":
-        QueenEnemy.add(room, room.game, x, y);
-        break;
-      case "bigskullenemy":
-        BigSkullEnemy.add(room, room.game, x, y);
-        break;
-      case "occultist": {
-        OccultistEnemy.add(room, room.game, x, y);
-        break;
-      }
-      case "bigzombieenemy":
-        BigZombieEnemy.add(room, room.game, x, y);
-        break;
-      case "warden":
-        WardenEnemy.add(room, room.game, x, y);
-        break;
-      case "bigfrogenemy":
-        BigFrogEnemy.add(room, room.game, x, y);
-        break;
-      case "exalter":
-        ExalterEnemy.add(room, room.game, x, y);
-        break;
-    }
+    const extraArgs =
+      boss.class === Spawner && !(boss.additionalParams?.length)
+        ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+        : (boss.additionalParams ?? []);
+    if (boss.class?.add) boss.class.add(room, room.game, x, y, ...extraArgs);
   }
 
   /**

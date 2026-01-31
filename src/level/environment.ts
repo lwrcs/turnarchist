@@ -63,6 +63,14 @@ import { DarkPot } from "../entity/object/darkPot";
 import { DarkVase } from "../entity/object/darkVase";
 import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { Enemy } from "../entity/enemy/enemy";
+import { Spawner } from "../entity/enemy/spawner";
+import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
+import { WardenEnemy } from "../entity/enemy/wardenEnemy";
+import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
+import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { Room } from "../room/room";
+import { Game } from "../game";
+import { Entity } from "../entity/entity";
 import { CaveRock } from "../entity/resource/caveRockResource";
 import { CaveBlock } from "../entity/object/caveBlock";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
@@ -150,6 +158,31 @@ interface EnemyInfo {
 interface EnvironmentData {
   props: PropInfo[];
   enemies: EnemyInfo[];
+  bosses?: BossInfo[];
+}
+
+export interface BossInfo {
+  class: BossEnemyClass;
+  /** Minimum depth at which this boss can appear (inclusive). Mirrors EnemyInfo.minDepth style. */
+  depth: number;
+  weight?: number;
+  /** Optional maximum depth (inclusive). Useful for "early-game only" bosses. */
+  maxDepth?: number;
+  /** If true, pick a big-enemy-friendly position. */
+  big?: boolean;
+  /** Extra constructor args for `Entity.add(...)`. */
+  additionalParams?: unknown[];
+}
+
+export interface BossEnemyClass {
+  new (room: Room, game: Game, x: number, y: number, ...rest: unknown[]): Enemy;
+  add(
+    room: Room,
+    game: Game,
+    x: number,
+    y: number,
+    ...rest: unknown[]
+  ): Entity | null;
 }
 
 // A do-nothing prop used to control spawn density without placing anything
@@ -223,6 +256,17 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
     ],
+    bosses: [
+      // "Reaper" boss is the Spawner enemy.
+      { class: Spawner, depth: 0, weight: 0.9 },
+      { class: QueenEnemy, depth: 0, weight: 0.6, maxDepth: 0 },
+      { class: BigSkullEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
+      { class: BigZombieEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
+      { class: BigFrogEnemy, depth: 0, weight: 0.35, big: true },
+      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
+      { class: WardenEnemy, depth: 5, weight: 0.5, big: true },
+    ],
   },
   [EnvType.CAVE]: {
     props: [
@@ -244,7 +288,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
       { class: EmeraldResource, weight: 0.001 },
       { class: AmberResource, weight: 0.001 },
-      { class: CaveRock, weight: 0.2 },
+      { class: CaveRock, weight: 0.5 },
       { class: Mushrooms, weight: 0.02 },
       { class: Pot, weight: 0.01 },
       { class: Chest, weight: 0.01 },
@@ -272,6 +316,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
       { class: ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
       //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
+    ],
+    bosses: [
+      { class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+      { class: BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+      { class: Spawner, depth: 0, weight: 0.35 },
+      { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
     ],
   },
   [EnvType.FOREST]: {
@@ -385,6 +436,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         },
       },
     ],
+    bosses: [
+      { class: BigFrogEnemy, depth: 0, weight: 1.0, big: true },
+      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: Spawner, depth: 0, weight: 0.25 },
+      { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
+    ],
   },
   [EnvType.DESERT]: {
     props: [
@@ -493,6 +551,12 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
       { class: ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
     ],
+    bosses: [
+      { class: ExalterEnemy, depth: 0, weight: 1.0 },
+      { class: Spawner, depth: 0, weight: 0.25 },
+      { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: WardenEnemy, depth: 5, weight: 0.45, big: true },
+    ],
   },
   [EnvType.DARK_CASTLE]: {
     props: [
@@ -530,6 +594,11 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
       { class: ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+    ],
+    bosses: [
+      { class: ExalterEnemy, depth: 0, weight: 0.8 },
+      { class: OccultistEnemy, depth: 0, weight: 0.35, maxDepth: 4 },
+      { class: WardenEnemy, depth: 4, weight: 0.6, big: true },
     ],
   },
   [EnvType.PLACEHOLDER]: {
@@ -581,6 +650,11 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: MummyEnemy, weight: 0.5, minDepth: 2 },
       { class: QueenEnemy, weight: 0.25, minDepth: 2 },
       { class: SpiderEnemy, weight: 0.5, minDepth: 2 },
+    ],
+    bosses: [
+      { class: Spawner, depth: 0, weight: 0.35 },
+      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: WardenEnemy, depth: 3, weight: 0.85, big: true },
     ],
   },
   [EnvType.DARK_DUNGEON]: {
@@ -645,6 +719,12 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
     ],
+    bosses: [
+      { class: Spawner, depth: 0, weight: 0.5 },
+      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: OccultistEnemy, depth: 0, weight: 0.4, maxDepth: 4 },
+      { class: WardenEnemy, depth: 4, weight: 0.6, big: true },
+    ],
   },
   [EnvType.TUTORIAL]: {
     props: [
@@ -683,6 +763,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     enemies: [
       //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
       //{ class: FrogEnemy, weight: 1.0, minDepth: 0 },
+    ],
+
+    bosses: [
+      { class: Spawner, depth: 0},
     ],
   },
 };

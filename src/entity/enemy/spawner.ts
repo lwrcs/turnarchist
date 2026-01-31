@@ -171,6 +171,8 @@ export class Spawner extends Enemy {
       for (let dy = -1; dy <= 1; dy++) {
         const x = this.x + dx;
         const y = this.y + dy;
+        // Never allow spawning onto the spawner's own footprint.
+        if (x === this.x && y === this.y) continue;
         if (x < minX || x > maxX || y < minY || y > maxY) continue;
         const tile = room.roomArray[x]?.[y];
         if (!tile) continue;

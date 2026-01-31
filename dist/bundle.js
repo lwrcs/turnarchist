@@ -18205,6 +18205,9 @@ class Spawner extends enemy_1.Enemy {
                 for (let dy = -1; dy <= 1; dy++) {
                     const x = this.x + dx;
                     const y = this.y + dy;
+                    // Never allow spawning onto the spawner's own footprint.
+                    if (x === this.x && y === this.y)
+                        continue;
                     if (x < minX || x > maxX || y < minY || y > maxY)
                         continue;
                     const tile = room.roomArray[x]?.[y];
@@ -47541,6 +47544,11 @@ const darkCrate_1 = __webpack_require__(/*! ../entity/object/darkCrate */ "./src
 const darkPot_1 = __webpack_require__(/*! ../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
 const darkVase_1 = __webpack_require__(/*! ../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
+const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
+const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
@@ -47652,6 +47660,17 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
         ],
+        bosses: [
+            // "Reaper" boss is the Spawner enemy.
+            { class: spawner_1.Spawner, depth: 0, weight: 0.9 },
+            { class: queenEnemy_1.QueenEnemy, depth: 0, weight: 0.6, maxDepth: 0 },
+            { class: bigSkullEnemy_1.BigSkullEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
+            { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
+            { class: bigFrogEnemy_1.BigFrogEnemy, depth: 0, weight: 0.35, big: true },
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.5, big: true },
+        ],
     },
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
@@ -47673,7 +47692,7 @@ const environmentData = {
             },
             { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
             { class: amberResource_1.AmberResource, weight: 0.001 },
-            { class: caveRockResource_1.CaveRock, weight: 0.2 },
+            { class: caveRockResource_1.CaveRock, weight: 0.5 },
             { class: mushrooms_1.Mushrooms, weight: 0.02 },
             { class: pot_1.Pot, weight: 0.01 },
             { class: chest_1.Chest, weight: 0.01 },
@@ -47699,6 +47718,13 @@ const environmentData = {
             },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
             //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
+        ],
+        bosses: [
+            { class: bigSkullEnemy_1.BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+            { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+            { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
     [environmentTypes_1.EnvType.FOREST]: {
@@ -47810,6 +47836,13 @@ const environmentData = {
                 },
             },
         ],
+        bosses: [
+            { class: bigFrogEnemy_1.BigFrogEnemy, depth: 0, weight: 1.0, big: true },
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
+        ],
     },
     [environmentTypes_1.EnvType.DESERT]: {
         props: [
@@ -47912,6 +47945,12 @@ const environmentData = {
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
         ],
+        bosses: [
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 1.0 },
+            { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.45, big: true },
+        ],
     },
     [environmentTypes_1.EnvType.DARK_CASTLE]: {
         props: [
@@ -47947,6 +47986,11 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+        ],
+        bosses: [
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.8 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 0, weight: 0.35, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 4, weight: 0.6, big: true },
         ],
     },
     [environmentTypes_1.EnvType.PLACEHOLDER]: {
@@ -47997,6 +48041,11 @@ const environmentData = {
             { class: mummyEnemy_1.MummyEnemy, weight: 0.5, minDepth: 2 },
             { class: queenEnemy_1.QueenEnemy, weight: 0.25, minDepth: 2 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 0.5, minDepth: 2 },
+        ],
+        bosses: [
+            { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 3, weight: 0.85, big: true },
         ],
     },
     [environmentTypes_1.EnvType.DARK_DUNGEON]: {
@@ -48059,6 +48108,12 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
         ],
+        bosses: [
+            { class: spawner_1.Spawner, depth: 0, weight: 0.5 },
+            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: occultistEnemy_1.OccultistEnemy, depth: 0, weight: 0.4, maxDepth: 4 },
+            { class: wardenEnemy_1.WardenEnemy, depth: 4, weight: 0.6, big: true },
+        ],
     },
     [environmentTypes_1.EnvType.TUTORIAL]: {
         props: [
@@ -48097,6 +48152,9 @@ const environmentData = {
         enemies: [
         //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
         //{ class: FrogEnemy, weight: 1.0, minDepth: 0 },
+        ],
+        bosses: [
+            { class: spawner_1.Spawner, depth: 0 },
         ],
     },
 };
@@ -65066,8 +65124,6 @@ const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
-const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
-const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
@@ -65416,8 +65472,9 @@ class Populator {
             let numEmptyTiles = room.getEmptyTiles().length;
             let numEnemies = Math.ceil(numEmptyTiles * game_1.Game.randTable([0.25, 0.3, 0.35], rand));
             //this.addEnemiesUnified(room, numEnemies, room.envType); // Use unified system directly
-            if (room.level.environment.type === environmentTypes_1.EnvType.CAVE)
-                this.addResources(room, (numEmptyTiles - numEnemies) * game_1.Game.randTable([0.1, 0.2, 0.3], rand), rand);
+            // Important: cave props (including ores) are now environment-driven via `environmentData[EnvType.CAVE].props`.
+            // The legacy `addResources` logic is depth-biased (e.g. depth 2 produces mostly gold) and will swamp
+            // the env prop weighting, so it is intentionally disabled here.
             room.removeDoorObstructions();
         };
         this.populateUpLadder = (room, rand) => {
@@ -66222,13 +66279,16 @@ class Populator {
         //console.log("percentFull", `${percentFull}%`);
         // Single-room levels can have very large empty-tile counts; without a cap this can
         // request thousands of props and effectively hang/crash during clustered placement.
-        const isSingleRoom = room.level?.rooms?.length === 1;
-        if (isSingleRoom) {
-            // Scale cap with room size but keep it bounded.
-            const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
-            const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
-            return numProps;
-        }
+        /*
+        // disabled for now
+    const isSingleRoom = room.level?.rooms?.length === 1;
+    if (isSingleRoom) {
+      // Scale cap with room size but keep it bounded.
+      const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
+      const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
+      return Math.min(numProps, cap);
+    }
+      */
         return numProps;
     }
     populateDefaultEnvironment(room) {
@@ -66914,102 +66974,52 @@ class Populator {
             return;
         }
         let chosenBoss = null;
+        const pickWeightedBoss = (pool, rand) => {
+            if (pool.length === 0)
+                return null;
+            let total = 0;
+            for (const b of pool)
+                total += Math.max(0, b.weight ?? 1);
+            if (total <= 0)
+                return null;
+            let r = rand() * total;
+            for (const b of pool) {
+                r -= Math.max(0, b.weight ?? 1);
+                if (r <= 0)
+                    return b;
+            }
+            return pool[pool.length - 1] ?? null;
+        };
+        const getEligibleBosses = () => {
+            const envBosses = environment_1.environmentData[room.envType]?.bosses ??
+                environment_1.environmentData[room.level.environment.type]?.bosses ??
+                [];
+            return envBosses.filter((b) => {
+                if (depth < b.depth)
+                    return false;
+                if (b.maxDepth !== undefined && depth > b.maxDepth)
+                    return false;
+                return true;
+            });
+        };
         if (!gameplaySettings_1.GameplaySettings.PRESET_BOSSES) {
-            let bosses = [
-                "reaper",
-                "queen",
-                "bigskullenemy",
-                "bigzombieenemy",
-                "bigfrogenemy",
-                "exalter",
-            ];
-            if (depth > 0) {
-                bosses.push("occultist");
-                bosses = bosses.filter((b) => b !== "queen");
-            }
-            if (room.envType === environmentTypes_1.EnvType.FOREST) {
-                bosses.push("bigfrogenemy");
-            }
-            if (depth > 4) {
-                bosses.push("warden");
-                bosses = bosses.filter((b) => b !== "bigskullenemy" &&
-                    b !== "bigzombieenemy" &&
-                    b !== "occultist");
-            }
-            const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
-            console.log("bosses", bosses, "boss", boss);
-            const position = boss.startsWith("big") || boss === "warden"
+            const boss = pickWeightedBoss(getEligibleBosses(), random_1.Random.rand);
+            if (!boss)
+                return;
+            const position = boss.big
                 ? room.getBigRandomEmptyPosition(tiles)
                 : room.getRandomEmptyPosition(tiles);
             if (position === null)
                 return;
             const { x, y } = position;
-            switch (boss) {
-                case "reaper":
-                    const spawner = this.addSpawners(room, random_1.Random.rand, 1);
-                    chosenBoss = spawner;
-                    spawner.dropTable = ["weapon", "equipment"];
-                    spawner.dropChance = 1;
-                    break;
-                case "queen":
-                    const queen = queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
-                    queen.dropTable = ["weapon", "equipment"];
-                    queen.dropChance = 1;
-                    chosenBoss = queen;
-                    break;
-                case "bigskullenemy":
-                    const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
-                    bigSkull.dropTable = [
-                        "weapon",
-                        "equipment",
-                        "consumable",
-                        "gem",
-                        "tool",
-                    ];
-                    chosenBoss = bigSkull;
-                    break;
-                case "occultist":
-                    const occultist = this.addOccultists(room, random_1.Random.rand, 1);
-                    occultist.dropTable = ["weapon", "equipment"];
-                    occultist.dropChance = 1;
-                    chosenBoss = occultist;
-                    break;
-                case "bigzombieenemy":
-                    const bigZombie = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
-                    bigZombie.dropTable = [
-                        "weapon",
-                        "equipment",
-                        "consumable",
-                        "gem",
-                        "tool",
-                    ];
-                    bigZombie.dropChance = 1;
-                    chosenBoss = bigZombie;
-                    break;
-                case "warden":
-                    const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
-                    warden.dropTable = ["weapon", "equipment"];
-                    warden.dropChance = 1;
-                    chosenBoss = warden;
-                    break;
-                case "bigfrogenemy":
-                    const bigFrog = bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, x, y);
-                    bigFrog.dropTable = [
-                        "weapon",
-                        "equipment",
-                        "consumable",
-                        "gem",
-                        "tool",
-                    ];
-                    chosenBoss = bigFrog;
-                    break;
-                case "exalter":
-                    const exalter = exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
-                    exalter.dropTable = ["weapon", "equipment"];
-                    exalter.dropChance = 1;
-                    chosenBoss = exalter;
-                    break;
-            }
+            // If the selected boss is a Spawner and no custom table is provided, use the
+            // current depth's enemy pool (mirrors prior logic from addBossesAt()).
+            const extraArgs = boss.class === spawner_1.Spawner && !(boss.additionalParams?.length)
+                ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+                : (boss.additionalParams ?? []);
+            chosenBoss = boss.class?.add
+                ? boss.class.add(room, room.game, x, y, ...extraArgs)
+                : null;
         }
         else {
             const position = room.getBigRandomEmptyPosition(tiles);
@@ -67738,58 +67748,40 @@ class Populator {
     addBossesAt(room, depth, x, y) {
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true || room.envType === environmentTypes_1.EnvType.TUTORIAL)
             return;
-        // Mirror `addBosses` selection logic, but with an explicit position.
-        let bosses = [
-            "reaper",
-            "queen",
-            "bigskullenemy",
-            "bigzombieenemy",
-            "bigfrogenemy",
-            "exalter",
-        ];
-        if (depth > 0) {
-            bosses.push("occultist");
-            bosses = bosses.filter((b) => b !== "queen");
-        }
-        if (room.envType === environmentTypes_1.EnvType.FOREST) {
-            bosses.push("bigfrogenemy");
-        }
-        if (depth > 4) {
-            bosses.push("warden");
-            bosses = bosses.filter((b) => b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist");
-        }
-        const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
+        const pickWeightedBoss = (pool, rand) => {
+            if (pool.length === 0)
+                return null;
+            let total = 0;
+            for (const b of pool)
+                total += Math.max(0, b.weight ?? 1);
+            if (total <= 0)
+                return null;
+            let r = rand() * total;
+            for (const b of pool) {
+                r -= Math.max(0, b.weight ?? 1);
+                if (r <= 0)
+                    return b;
+            }
+            return pool[pool.length - 1] ?? null;
+        };
+        const envBosses = environment_1.environmentData[room.envType]?.bosses ??
+            environment_1.environmentData[room.level.environment.type]?.bosses ??
+            [];
+        const eligible = envBosses.filter((b) => {
+            if (depth < b.depth)
+                return false;
+            if (b.maxDepth !== undefined && depth > b.maxDepth)
+                return false;
+            return true;
+        });
+        const boss = pickWeightedBoss(eligible, random_1.Random.rand);
         if (!boss)
             return;
-        switch (boss) {
-            case "reaper": {
-                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7);
-                spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
-                break;
-            }
-            case "queen":
-                queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
-                break;
-            case "bigskullenemy":
-                bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
-                break;
-            case "occultist": {
-                occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
-                break;
-            }
-            case "bigzombieenemy":
-                bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
-                break;
-            case "warden":
-                wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
-                break;
-            case "bigfrogenemy":
-                bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, x, y);
-                break;
-            case "exalter":
-                exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
-                break;
-        }
+        const extraArgs = boss.class === spawner_1.Spawner && !(boss.additionalParams?.length)
+            ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+            : (boss.additionalParams ?? []);
+        if (boss.class?.add)
+            boss.class.add(room, room.game, x, y, ...extraArgs);
     }
     /**
      * Places a VendingMachine in an empty wall.
