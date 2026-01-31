@@ -73,8 +73,10 @@ export function applyPushChain(
     if (f === tailToCrush) continue;
     f.x += dx;
     f.y += dy;
-    f.drawX = dx;
-    f.drawY = dy;
+    // Accumulate draw offsets so repeated pushes before the entity visually settles
+    // remain smooth (mirrors `Entity.setDrawXY` behavior used by normal movement).
+    f.drawX += dx;
+    f.drawY += dy;
     f.skipNextTurns = 1; // ensure the pushed ones skip next turn, like player push
     f.markPushedMove();
   }
@@ -88,8 +90,9 @@ export function applyPushChain(
   start.lastY = start.y;
   start.x += dx;
   start.y += dy;
-  start.drawX = dx;
-  start.drawY = dy;
+  // Same accumulation rule as the chain.
+  start.drawX += dx;
+  start.drawY += dy;
   // Mark the head as pushed too so its animation speed matches the chain.
   start.skipNextTurns = 1;
   start.markPushedMove();

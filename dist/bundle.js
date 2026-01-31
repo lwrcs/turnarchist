@@ -54322,8 +54322,9 @@ class Player extends drawable_1.Drawable {
                                     continue;
                                 f.x += dx;
                                 f.y += dy;
-                                f.drawX = dx;
-                                f.drawY = dy;
+                                // Accumulate draw offsets so repeated pushes before visual settle remain smooth.
+                                f.drawX += dx;
+                                f.drawY += dy;
                                 f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
                                 f.markPushedMove();
                             }
@@ -54336,8 +54337,8 @@ class Player extends drawable_1.Drawable {
                             }
                             e.x += dx;
                             e.y += dy;
-                            e.drawX = dx;
-                            e.drawY = dy;
+                            e.drawX += dx;
+                            e.drawY += dy;
                             // Ensure the pushed head object animates as "being pushed" just like the rest of the chain.
                             e.skipNextTurns = 1;
                             e.markPushedMove();
@@ -71391,8 +71392,10 @@ function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
             continue;
         f.x += dx;
         f.y += dy;
-        f.drawX = dx;
-        f.drawY = dy;
+        // Accumulate draw offsets so repeated pushes before the entity visually settles
+        // remain smooth (mirrors `Entity.setDrawXY` behavior used by normal movement).
+        f.drawX += dx;
+        f.drawY += dy;
         f.skipNextTurns = 1; // ensure the pushed ones skip next turn, like player push
         f.markPushedMove();
     }
@@ -71404,8 +71407,9 @@ function applyPushChain(room, start, chain, dx, dy, nextX, nextY, enemyEnd) {
     start.lastY = start.y;
     start.x += dx;
     start.y += dy;
-    start.drawX = dx;
-    start.drawY = dy;
+    // Same accumulation rule as the chain.
+    start.drawX += dx;
+    start.drawY += dy;
     // Mark the head as pushed too so its animation speed matches the chain.
     start.skipNextTurns = 1;
     start.markPushedMove();

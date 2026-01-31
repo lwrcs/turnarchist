@@ -1048,8 +1048,9 @@ export class Player extends Drawable {
               if (f === tailToCrush) continue;
               f.x += dx;
               f.y += dy;
-              f.drawX = dx;
-              f.drawY = dy;
+              // Accumulate draw offsets so repeated pushes before visual settle remain smooth.
+              f.drawX += dx;
+              f.drawY += dy;
               f.skipNextTurns = 1; // skip next turn, so they don't move while we're pushing them
               f.markPushedMove();
             }
@@ -1061,8 +1062,8 @@ export class Player extends Drawable {
 
             e.x += dx;
             e.y += dy;
-            e.drawX = dx;
-            e.drawY = dy;
+            e.drawX += dx;
+            e.drawY += dy;
             // Ensure the pushed head object animates as "being pushed" just like the rest of the chain.
             e.skipNextTurns = 1;
             e.markPushedMove();
