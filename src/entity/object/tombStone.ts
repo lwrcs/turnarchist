@@ -14,6 +14,7 @@ import { Spellbook } from "../../item/weapon/spellbook";
 import { Sound } from "../../sound/sound";
 import { ImageParticle } from "../../particle/imageParticle";
 import { LightSource } from "../../lighting/lightSource";
+import { SpellbookPage } from "../../item/usable/spellbookPage";
 
 export class TombStone extends Entity {
   static examineText = "A tombstone. Someone didn't make it back.";
@@ -41,8 +42,11 @@ export class TombStone extends Entity {
     this.chainPushable = false;
     this.name = "tombstone";
     let dropProb = Random.rand();
-    if (dropProb < 0.1)
+    if (dropProb < 0.125)
       this.drops.push(new Spellbook(this.room, this.x, this.y));
+    else  if (dropProb < 0.3) this.drops.push(new SpellbookPage(this.room, this.x, this.y));
+    if (this.drops[0] instanceof Spellbook) this.drops[0].durability = Math.floor(Random.rand() * 5) + 5;
+    else if (this.drops[0] instanceof SpellbookPage) this.drops[0].stackCount = Math.floor(Random.rand() * 3) + 1;
     this.hasBloom = true;
     this.bloomColor = "#05FF05";
     this.bloomAlpha = 1;

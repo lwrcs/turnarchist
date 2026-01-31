@@ -23588,6 +23588,7 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 class TombStone extends entity_1.Entity {
     constructor(room, game, x, y, skinType = 0, drop) {
         super(room, game, x, y);
@@ -23646,8 +23647,14 @@ class TombStone extends entity_1.Entity {
         this.chainPushable = false;
         this.name = "tombstone";
         let dropProb = random_1.Random.rand();
-        if (dropProb < 0.1)
+        if (dropProb < 0.125)
             this.drops.push(new spellbook_1.Spellbook(this.room, this.x, this.y));
+        else if (dropProb < 0.3)
+            this.drops.push(new spellbookPage_1.SpellbookPage(this.room, this.x, this.y));
+        if (this.drops[0] instanceof spellbook_1.Spellbook)
+            this.drops[0].durability = Math.floor(random_1.Random.rand() * 5) + 5;
+        else if (this.drops[0] instanceof spellbookPage_1.SpellbookPage)
+            this.drops[0].stackCount = Math.floor(random_1.Random.rand() * 3) + 1;
         this.hasBloom = true;
         this.bloomColor = "#05FF05";
         this.bloomAlpha = 1;
@@ -45024,7 +45031,7 @@ class SpellbookPage extends usable_1.Usable {
     }
 }
 exports.SpellbookPage = SpellbookPage;
-SpellbookPage.itemName = "weapon fragments";
+SpellbookPage.itemName = "spellbook pages";
 
 
 /***/ }),

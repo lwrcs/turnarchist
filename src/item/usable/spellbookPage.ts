@@ -7,7 +7,7 @@ import { Equippable } from "../equippable";
 import { Random } from "../../utility/random";
 
 export class SpellbookPage extends Usable {
-  static itemName = "weapon fragments";
+  static itemName = "spellbook pages";
   constructor(level: Room, x: number, y: number, stackCount?: number) {
     super(level, x, y);
     this.tileX = 25;
