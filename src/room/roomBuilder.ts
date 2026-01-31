@@ -7,6 +7,9 @@ import { Room, WallDirection } from "./room";
 
 export class RoomBuilder {
   room: Room;
+  // Optional override used by specialized generation (e.g., single-room sidepath mazes)
+  // to constrain carving away from outer walls. When null, default `isInterior` is used.
+  private carveAllowedOverride: ((x: number, y: number) => boolean) | null = null;
   constructor(room: Room) {
     this.room = room;
     this.buildEmptyRoom();
@@ -336,9 +339,14 @@ export class RoomBuilder {
     const maxX = Math.ceil(cx + radius);
     const minY = Math.floor(cy - radius);
     const maxY = Math.ceil(cy + radius);
+    const allowed = this.carveAllowedOverride;
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
-        if (!this.isInterior(x, y)) continue;
+        if (allowed) {
+          if (!allowed(x, y)) continue;
+        } else if (!this.isInterior(x, y)) {
+          continue;
+        }
         const dx = x - cx;
         const dy = y - cy;
         if (dx * dx + dy * dy <= r2) {
@@ -351,6 +359,634 @@ export class RoomBuilder {
           );
         }
       }
+    }
+  }
+
+  // --- single-room sidepath maze helpers ---
+  private keyOf(x: number, y: number): string {
+    return `${x},${y}`;
+  }
+
+  private isCarvedFloor(x: number, y: number): boolean {
+    return this.room.roomArray[x]?.[y] instanceof Floor;
+  }
+
+  private computeReachableCarvedFrom(
+    start: { x: number; y: number },
+  ): Set<string> {
+    const reachable = new Set<string>();
+    if (!this.isInterior(start.x, start.y)) return reachable;
+    if (!this.isCarvedFloor(start.x, start.y)) return reachable;
+
+    const q: Array<{ x: number; y: number }> = [{ x: start.x, y: start.y }];
+    reachable.add(this.keyOf(start.x, start.y));
+
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ] as const;
+
+    while (q.length > 0) {
+      const cur = q.shift();
+      if (!cur) break;
+      for (const d of dirs) {
+        const nx = cur.x + d.x;
+        const ny = cur.y + d.y;
+        if (!this.isInterior(nx, ny)) continue;
+        if (!this.isCarvedFloor(nx, ny)) continue;
+        const k = this.keyOf(nx, ny);
+        if (reachable.has(k)) continue;
+        reachable.add(k);
+        q.push({ x: nx, y: ny });
+      }
+    }
+    return reachable;
+  }
+
+  private computeDistanceField(
+    target: { x: number; y: number },
+    isPassable: (x: number, y: number) => boolean,
+  ): number[][] {
+    // Local grid indexed by [localX][localY] with local = world - room origin.
+    const w = this.room.width;
+    const h = this.room.height;
+    const dist: number[][] = Array.from({ length: w }, () =>
+      Array.from({ length: h }, () => -1),
+    );
+
+    const toLocal = (x: number, y: number): { lx: number; ly: number } => ({
+      lx: x - this.room.roomX,
+      ly: y - this.room.roomY,
+    });
+
+    const inBoundsLocal = (lx: number, ly: number): boolean =>
+      lx >= 0 && lx < w && ly >= 0 && ly < h;
+
+    const { lx: tx, ly: ty } = toLocal(target.x, target.y);
+    if (!inBoundsLocal(tx, ty)) return dist;
+    if (!this.isInterior(target.x, target.y)) return dist;
+    if (!isPassable(target.x, target.y)) return dist;
+
+    const q: Array<{ x: number; y: number }> = [{ x: target.x, y: target.y }];
+    dist[tx][ty] = 0;
+
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ] as const;
+
+    while (q.length > 0) {
+      const cur = q.shift();
+      if (!cur) break;
+      const { lx: clx, ly: cly } = toLocal(cur.x, cur.y);
+      const curD = inBoundsLocal(clx, cly) ? dist[clx][cly] : -1;
+      if (curD < 0) continue;
+      for (const d of dirs) {
+        const nx = cur.x + d.x;
+        const ny = cur.y + d.y;
+        if (!this.isInterior(nx, ny)) continue;
+        if (!isPassable(nx, ny)) continue;
+        const { lx, ly } = toLocal(nx, ny);
+        if (!inBoundsLocal(lx, ly)) continue;
+        if (dist[lx][ly] !== -1) continue;
+        dist[lx][ly] = curD + 1;
+        q.push({ x: nx, y: ny });
+      }
+    }
+
+    return dist;
+  }
+
+  private buildWormyPath(
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    rand: () => number,
+    isPassable: (x: number, y: number) => boolean,
+  ): Array<{ x: number; y: number }> | null {
+    const dist = this.computeDistanceField(to, isPassable);
+    const w = this.room.width;
+    const h = this.room.height;
+    const toLocal = (x: number, y: number): { lx: number; ly: number } => ({
+      lx: x - this.room.roomX,
+      ly: y - this.room.roomY,
+    });
+    const inBoundsLocal = (lx: number, ly: number): boolean =>
+      lx >= 0 && lx < w && ly >= 0 && ly < h;
+
+    const getDist = (x: number, y: number): number => {
+      const { lx, ly } = toLocal(x, y);
+      if (!inBoundsLocal(lx, ly)) return -1;
+      return dist[lx][ly] ?? -1;
+    };
+
+    const startD = getDist(from.x, from.y);
+    if (startD < 0) return null;
+
+    const path: Array<{ x: number; y: number }> = [{ x: from.x, y: from.y }];
+    let cur = { x: from.x, y: from.y };
+    let prev: { x: number; y: number } | null = null;
+    let lastAxis: "x" | "y" | null = null;
+
+    const dirs = [
+      { x: 1, y: 0, axis: "x" as const },
+      { x: -1, y: 0, axis: "x" as const },
+      { x: 0, y: 1, axis: "y" as const },
+      { x: 0, y: -1, axis: "y" as const },
+    ] as const;
+
+    // Give ourselves room to meander. Still bounded to avoid infinite loops.
+    const maxSteps = Math.max(60, startD * 8);
+    for (let steps = 0; steps < maxSteps; steps++) {
+      if (cur.x === to.x && cur.y === to.y) return path;
+
+      const curD = getDist(cur.x, cur.y);
+      if (curD < 0) return null;
+
+      // Collect candidate neighbors with a "wormy but guided" weight.
+      const candidates: Array<{ x: number; y: number; axis: "x" | "y"; w: number }> =
+        [];
+      for (const d of dirs) {
+        const nx = cur.x + d.x;
+        const ny = cur.y + d.y;
+        if (!this.isInterior(nx, ny)) continue;
+        if (!isPassable(nx, ny)) continue;
+        const nd = getDist(nx, ny);
+        if (nd < 0) continue;
+
+        const delta = curD - nd; // positive means progress toward target
+        let w = 1;
+        if (delta > 0) w += 9 + delta * 2;
+        else if (delta === 0) w += 3.5;
+        else w += 0.35; // allow occasional "wrong" steps for meander
+
+        // Prefer alternating axis to create the back-and-forth worm feel.
+        if (lastAxis && d.axis !== lastAxis) w *= 1.35;
+
+        // Discourage immediate backtracking unless forced.
+        if (prev && nx === prev.x && ny === prev.y) w *= 0.12;
+
+        // Small random jitter to avoid determinism ties.
+        w *= 0.9 + rand() * 0.35;
+
+        candidates.push({ x: nx, y: ny, axis: d.axis, w });
+      }
+
+      if (candidates.length === 0) return null;
+
+      // Weighted random pick.
+      let total = 0;
+      for (const c of candidates) total += c.w;
+      let r = rand() * total;
+      let pick = candidates[candidates.length - 1];
+      for (const c of candidates) {
+        r -= c.w;
+        if (r <= 0) {
+          pick = c;
+          break;
+        }
+      }
+
+      prev = cur;
+      cur = { x: pick.x, y: pick.y };
+      lastAxis = pick.axis;
+      path.push(cur);
+    }
+
+    // If we ran out of steps, fail so caller can fall back.
+    return null;
+  }
+
+  private carveWormyTunnelAlong(
+    path: Array<{ x: number; y: number }>,
+    rand: () => number,
+    opts?: {
+      baseRadius?: number;
+      radiusJitter?: number;
+      pocketChance?: number;
+      pocketRadius?: [number, number];
+    },
+  ): void {
+    // Use a smooth pseudo-random radius curve (sum of sines) so tunnel width
+    // varies continuously along its length instead of frame-to-frame jitter.
+    const minRadius = 1.0;
+    const maxRadius = 7;
+
+    // Frequency multipliers (cycles across the whole path) and phases.
+    // Keep these low so the radius changes slowly over distance.
+    const f1 = 0.25 + rand() * 0.35; // 0.25..0.6
+    const f2 = 0.55 + rand() * 0.55; // 0.55..1.1
+    const f3 = 1.15 + rand() * 0.75; // 1.15..1.9
+    const p1 = rand() * Math.PI * 2;
+    const p2 = rand() * Math.PI * 2;
+    const p3 = rand() * Math.PI * 2;
+    const w1 = 0.55;
+    const w2 = 0.30;
+    const w3 = 0.15;
+    const wSum = w1 + w2 + w3;
+    const noise01 = (t01: number): number => {
+      // Weighted sum in [-wSum, +wSum], normalized to [0,1].
+      const s =
+        w1 * Math.sin(Math.PI * 2 * f1 * t01 + p1) +
+        w2 * Math.sin(Math.PI * 2 * f2 * t01 + p2) +
+        w3 * Math.sin(Math.PI * 2 * f3 * t01 + p3);
+      const n = 0.5 + 0.5 * (s / wSum);
+      return Math.max(0, Math.min(1, n));
+    };
+
+    const pocketChance = opts?.pocketChance ?? 0.1;
+    const pocketRadius = opts?.pocketRadius ?? [2, 3];
+
+    // Additional smoothing: cap how fast the radius can change per step, so adjacent
+    // disks blend more continuously even on short paths.
+    const maxDeltaPerStep = 1;
+    let prevR: number | null = null;
+
+    for (let i = 0; i < path.length; i++) {
+      const p = path[i];
+      const t01 = path.length <= 1 ? 0 : i / (path.length - 1);
+      // Skew toward smaller radii (non-linear). Exponent > 1 biases toward 0.
+      const u = noise01(t01);
+      // Exponential falloff (truncated to [0,1]) so minRadius is most likely and
+      // probability drops rapidly as we approach maxRadius.
+      // Inverse CDF of truncated exp on [0,1]:
+      //   y = -ln(1 - u*(1 - e^{-λ})) / λ
+      // where PDF ∝ e^{-λ y}. Larger λ => stronger bias toward 0.
+      const lambda = 5.0;
+      const oneMinusExp = 1 - Math.exp(-lambda);
+      const uExp = -Math.log(1 - u * oneMinusExp) / lambda;
+      const y = Math.max(0, Math.min(1, uExp));
+      const targetR = minRadius + (maxRadius - minRadius) * y;
+      let r = targetR;
+      if (prevR !== null) {
+        const delta = targetR - prevR;
+        if (delta > maxDeltaPerStep) r = prevR + maxDeltaPerStep;
+        else if (delta < -maxDeltaPerStep) r = prevR - maxDeltaPerStep;
+      }
+      prevR = r;
+      this.carveDisk(p.x, p.y, r);
+
+      if (rand() < pocketChance) {
+        const pr = Game.rand(pocketRadius[0], pocketRadius[1], rand);
+        // Offset pocket perpendicular-ish to local direction if available.
+        const prev = path[i - 1] ?? p;
+        const next = path[i + 1] ?? p;
+        const dx = next.x - prev.x;
+        const dy = next.y - prev.y;
+        // Choose a perpendicular direction; if degenerate, just random cardinal.
+        const ox =
+          dx === 0 && dy === 0 ? Game.randTable([-1, 0, 1], rand) : -Math.sign(dy);
+        const oy =
+          dx === 0 && dy === 0 ? Game.randTable([-1, 0, 1], rand) : Math.sign(dx);
+        const pocketCx = p.x + ox * (1 + Game.rand(0, 2, rand));
+        const pocketCy = p.y + oy * (1 + Game.rand(0, 2, rand));
+        this.carveDisk(pocketCx, pocketCy, pr);
+      }
+    }
+  }
+
+  /**
+   * Generates and carves a single-room sidepath maze as a meandering network of connected "nodes".
+   * Returns the subset of node positions that were actually connected (and thus carved through).
+   *
+   * Design intent:
+   * - Build a wormy, back-and-forth set of tunnels with low redundancy.
+   * - Avoid cutting through existing tunnels when possible, but allow it as fallback.
+   * - Do NOT decide which node is entrance/key/exit here; caller can assign those afterward.
+   */
+  addSingleRoomSidepathMazeNetwork(
+    rand: () => number,
+    config: {
+      softMargin: number;
+      nodeCount: number;
+      requiredConnectedNodes: number;
+    },
+  ): {
+    allNodes: Array<{ x: number; y: number }>;
+    connectedNodes: Array<{ x: number; y: number }>;
+  } {
+    const soft = Math.max(1, Math.floor(config.softMargin));
+    const minX = this.room.roomX + 1 + soft;
+    const maxX = this.room.roomX + this.room.width - 2 - soft;
+    const minY = this.room.roomY + 1 + soft;
+    const maxY = this.room.roomY + this.room.height - 2 - soft;
+
+    // Allow tunnel edges to spill into the margin a bit (soft, not hard fence).
+    const maxCarveRadius = 4;
+    const carveMinX = minX - maxCarveRadius;
+    const carveMaxX = maxX + maxCarveRadius;
+    const carveMinY = minY - maxCarveRadius;
+    const carveMaxY = maxY + maxCarveRadius;
+    const allowed = (x: number, y: number): boolean => {
+      if (!this.isInterior(x, y)) return false;
+      return (
+        x >= carveMinX &&
+        x <= carveMaxX &&
+        y >= carveMinY &&
+        y <= carveMaxY
+      );
+    };
+
+    const nodeAllowed = (x: number, y: number): boolean =>
+      this.isInterior(x, y) && x >= minX && x <= maxX && y >= minY && y <= maxY;
+
+    this.fillInteriorWithWalls();
+    this.carveAllowedOverride = allowed;
+    try {
+      const allNodes: Array<{ x: number; y: number }> = [];
+      const connected = new Set<string>();
+
+      const keyOf = (p: { x: number; y: number }): string => `${p.x},${p.y}`;
+
+      const addNode = (): void => {
+        const minSeparation = 8;
+        for (let tries = 0; tries < 160; tries++) {
+          const x = Game.rand(minX, maxX, rand);
+          const y = Game.rand(minY, maxY, rand);
+          if (!nodeAllowed(x, y)) continue;
+          let ok = true;
+          for (const n of allNodes) {
+            const d = Math.abs(x - n.x) + Math.abs(y - n.y);
+            if (d < minSeparation) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          allNodes.push({ x, y });
+          return;
+        }
+      };
+
+      const nodeCount = Math.max(3, Math.floor(config.nodeCount));
+      for (let i = 0; i < nodeCount; i++) addNode();
+      if (allNodes.length === 0) return { allNodes: [], connectedNodes: [] };
+
+      // Start from a random node, carve a chamber there.
+      let current = allNodes[Math.floor(rand() * allNodes.length)];
+      this.carveDisk(current.x, current.y, 3.0);
+      connected.add(keyOf(current));
+
+      const required = Math.max(
+        3,
+        Math.min(allNodes.length, Math.floor(config.requiredConnectedNodes)),
+      );
+
+      const pickTarget = (): { x: number; y: number } => {
+        // Bias toward unconnected nodes until we hit `required`, but allow loops.
+        const needMore = connected.size < required;
+        if (needMore && rand() < 0.7) {
+          const unconnected = allNodes.filter((n) => !connected.has(keyOf(n)));
+          if (unconnected.length > 0) {
+            return unconnected[Math.floor(rand() * unconnected.length)];
+          }
+        }
+        return allNodes[Math.floor(rand() * allNodes.length)];
+      };
+
+      const passableNoCross = (
+        a: { x: number; y: number },
+        b: { x: number; y: number },
+      ) => (x: number, y: number) => {
+        if (!nodeAllowed(x, y)) return false;
+        if ((x === a.x && y === a.y) || (x === b.x && y === b.y)) return true;
+        return !this.isCarvedFloor(x, y);
+      };
+
+      const passableAllowCross = (_a: { x: number; y: number }, _b: { x: number; y: number }) => (
+        x: number,
+        y: number,
+      ) => nodeAllowed(x, y);
+
+      const maxLinks = Math.max(40, required * 18);
+      for (let link = 0; link < maxLinks; link++) {
+        if (connected.size >= required) break;
+        const target = pickTarget();
+        if (target.x === current.x && target.y === current.y) continue;
+
+        const noCross = this.buildWormyPath(
+          { x: current.x, y: current.y },
+          { x: target.x, y: target.y },
+          rand,
+          passableNoCross(current, target),
+        );
+        const path =
+          noCross ??
+          this.buildWormyPath(
+            { x: current.x, y: current.y },
+            { x: target.x, y: target.y },
+            rand,
+            passableAllowCross(current, target),
+          );
+        if (!path) continue;
+
+        this.carveWormyTunnelAlong(path, rand, {
+          baseRadius: 1.1,
+          radiusJitter: 1.1,
+          pocketChance: 0.12,
+          pocketRadius: [2, 4],
+        });
+
+        // Only carve target chamber if this is the first time we connect it.
+        const k = keyOf(target);
+        if (!connected.has(k)) {
+          this.carveDisk(target.x, target.y, 2.25);
+          connected.add(k);
+        }
+        current = target;
+      }
+
+      const connectedNodes: Array<{ x: number; y: number }> = allNodes.filter((n) =>
+        connected.has(keyOf(n)),
+      );
+      return { allNodes, connectedNodes };
+    } finally {
+      this.carveAllowedOverride = null;
+    }
+  }
+
+  /**
+   * Single-room sidepath maze generator:
+   * - Fills interior with walls, then carves an organic tunnel network that connects:
+   *   entrance → key endpoint, entrance → exit endpoint, plus optional loops.
+   * - Uses a "soft margin" to keep endpoints/waypoints away from the outer boundary.
+   *   Carving is allowed to *spill into* the margin (tunnel edges), so the margin is "soft"
+   *   rather than a hard no-carve fence.
+   *
+   * This is intentionally only used for `caveRooms <= 1` sidepaths right now.
+   */
+  addSingleRoomSidepathMaze(
+    rand: () => number,
+    config: {
+      entrance: { x: number; y: number };
+      key: { x: number; y: number };
+      exit: { x: number; y: number };
+      softMargin: number;
+    },
+  ) {
+    const soft = Math.max(1, Math.floor(config.softMargin));
+    const minX = this.room.roomX + 1 + soft;
+    const maxX = this.room.roomX + this.room.width - 2 - soft;
+    const minY = this.room.roomY + 1 + soft;
+    const maxY = this.room.roomY + this.room.height - 2 - soft;
+
+    // Waypoint/endpoint centers stay within [min,max]. But tunnels have width: disk carving
+    // radii can extend beyond center points. Allow carving to "spill" into the margin by
+    // a conservative upper bound on carve radius so the margin remains soft.
+    const maxCarveRadius = 4; // pockets can be up to 4, chambers are 3.25
+    const carveMinX = minX - maxCarveRadius;
+    const carveMaxX = maxX + maxCarveRadius;
+    const carveMinY = minY - maxCarveRadius;
+    const carveMaxY = maxY + maxCarveRadius;
+
+    const allowed = (x: number, y: number): boolean => {
+      // Always clamp to true room interior so we never carve the outer wall boundary.
+      if (!this.isInterior(x, y)) return false;
+      return (
+        x >= carveMinX &&
+        x <= carveMaxX &&
+        y >= carveMinY &&
+        y <= carveMaxY
+      );
+    };
+
+    // Step 1: fill interior with walls we can carve from.
+    this.fillInteriorWithWalls();
+
+    // Step 2: constrain carving to a soft interior region.
+    this.carveAllowedOverride = allowed;
+    try {
+      // Carve chambers
+      this.carveDisk(config.entrance.x, config.entrance.y, 3.25);
+      this.carveDisk(config.key.x, config.key.y, 3.25);
+      this.carveDisk(config.exit.x, config.exit.y, 3.25);
+
+      // Create additional "nodes" to meander through (small chambers).
+      // Key+exit only need to be reachable from entrance; we intentionally avoid
+      // making a dense redundant network.
+      type MazeNode = {
+        x: number;
+        y: number;
+        kind: "entrance" | "key" | "exit" | "node";
+      };
+      const nodes: MazeNode[] = [
+        { x: config.entrance.x, y: config.entrance.y, kind: "entrance" },
+        { x: config.key.x, y: config.key.y, kind: "key" },
+        { x: config.exit.x, y: config.exit.y, kind: "exit" },
+      ];
+
+      const extraNodes = Game.randTable([7, 8, 9, 10, 12], rand);
+      const minSeparation = 8;
+      const tryAddNode = (): void => {
+        for (let tries = 0; tries < 120; tries++) {
+          const x = Game.rand(minX, maxX, rand);
+          const y = Game.rand(minY, maxY, rand);
+          if (!this.isInterior(x, y)) continue;
+          // Keep nodes reasonably spread out.
+          let ok = true;
+          for (const n of nodes) {
+            const d = Math.abs(x - n.x) + Math.abs(y - n.y);
+            if (d < minSeparation) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          nodes.push({ x, y, kind: "node" });
+          // NOTE: do NOT carve node chambers up-front. Nodes that never get connected
+          // should remain fully walled-in / uncarved.
+          return;
+        }
+      };
+      for (let i = 0; i < extraNodes; i++) tryAddNode();
+
+      const entrance = nodes.find((n) => n.kind === "entrance");
+      const keyNode = nodes.find((n) => n.kind === "key");
+      const exitNode = nodes.find((n) => n.kind === "exit");
+      if (!entrance || !keyNode || !exitNode) return;
+
+      const isEndpoint = (x: number, y: number, a: MazeNode, b: MazeNode) =>
+        (x === a.x && y === a.y) || (x === b.x && y === b.y);
+
+      const passableNoCross = (a: MazeNode, b: MazeNode) => (x: number, y: number) => {
+        // Stay within the node-center region for the *path centerline*.
+        if (x < minX || x > maxX || y < minY || y > maxY) return false;
+        if (!this.isInterior(x, y)) return false;
+        if (isEndpoint(x, y, a, b)) return true;
+        // Avoid cutting through existing carved space.
+        return !this.isCarvedFloor(x, y);
+      };
+
+      const passableAllowCross = (a: MazeNode, b: MazeNode) => (x: number, y: number) => {
+        if (x < minX || x > maxX || y < minY || y > maxY) return false;
+        if (!this.isInterior(x, y)) return false;
+        return true;
+      };
+
+      // Sequential meandering connection process:
+      // Start at entrance, repeatedly pick a random node, and carve a wormy tunnel from
+      // current → target. Prefer avoiding crossings; only allow crossings when we cannot
+      // find a non-crossing route.
+      let current: MazeNode = entrance;
+      let reachable = this.computeReachableCarvedFrom(current);
+      const isReachable = (n: MazeNode): boolean =>
+        reachable.has(this.keyOf(n.x, n.y));
+
+      const pickNextTarget = (): MazeNode => {
+        const needs: MazeNode[] = [];
+        if (!isReachable(keyNode)) needs.push(keyNode);
+        if (!isReachable(exitNode)) needs.push(exitNode);
+        // Bias toward connecting missing endpoints, but still wander.
+        if (needs.length > 0 && rand() < 0.55) {
+          return needs[Math.floor(rand() * needs.length)];
+        }
+        return nodes[Math.floor(rand() * nodes.length)];
+      };
+
+      const maxLinks = 120;
+      for (let link = 0; link < maxLinks; link++) {
+        reachable = this.computeReachableCarvedFrom(entrance);
+        if (isReachable(keyNode) && isReachable(exitNode)) break;
+
+        const target = pickNextTarget();
+        if (target.x === current.x && target.y === current.y) continue;
+
+        // Try a no-cross path first (go around existing tunnels), fall back to allow-cross.
+        const noCross = this.buildWormyPath(
+          { x: current.x, y: current.y },
+          { x: target.x, y: target.y },
+          rand,
+          passableNoCross(current, target),
+        );
+        const path =
+          noCross ??
+          this.buildWormyPath(
+            { x: current.x, y: current.y },
+            { x: target.x, y: target.y },
+            rand,
+            passableAllowCross(current, target),
+          );
+        if (!path) continue;
+
+        this.carveWormyTunnelAlong(path, rand, {
+          baseRadius: 1.1,
+          radiusJitter: 1.1,
+          pocketChance: 0.12,
+          pocketRadius: [2, 4],
+        });
+
+        // Only carve a node "chamber" once it has actually been connected-to.
+        if (target.kind === "node") {
+          this.carveDisk(target.x, target.y, 2.25);
+        }
+
+        current = target;
+      }
+    } finally {
+      this.carveAllowedOverride = null;
     }
   }
 

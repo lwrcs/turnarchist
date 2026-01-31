@@ -24,6 +24,7 @@ export class DownLadder extends Passageway {
   opts?: SidePathOptions;
   entryUpLadderPos?: { x: number; y: number };
   private sidePathManager: SidePathManager;
+  private _generationInFlight: Promise<void> | null = null;
 
   constructor(
     room: Room,
@@ -75,11 +76,16 @@ export class DownLadder extends Passageway {
     return locked ? "A staircase down. It's locked." : "A staircase down.";
   };
 
-  generate = async () => {
-    if (!this.linkedRoom) {
+  generate = async (): Promise<void> => {
+    if (this.linkedRoom) return;
+    if (this._generationInFlight) return await this._generationInFlight;
+    this._generationInFlight = (async () => {
       await this.sidePathManager.generateFor(this);
-    } else {
-      console.log("LinkedRoom already exists:", this.linkedRoom);
+    })();
+    try {
+      await this._generationInFlight;
+    } finally {
+      this._generationInFlight = null;
     }
   };
 

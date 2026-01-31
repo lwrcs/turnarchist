@@ -221,7 +221,38 @@ export class Level {
       );
     }
 
-    if (emptyTiles.length === 0) {
+    // Prefer placing keys away from room edges (soft margin), but relax if it would
+    // eliminate all candidate tiles.
+    const desiredPadding = Math.floor(
+      downLadder.opts?.softMargin ?? this.generationOptions?.softMargin ?? 8,
+    );
+    const maxPad = Math.max(
+      0,
+      Math.floor(Math.min(roomToDistributeKey.width, roomToDistributeKey.height) / 2) -
+        2,
+    );
+    const startPad = Math.max(0, Math.min(maxPad, desiredPadding));
+    const filterByPad = (pad: number): Tile[] => {
+      const minX = roomToDistributeKey.roomX + 1 + pad;
+      const maxX = roomToDistributeKey.roomX + roomToDistributeKey.width - 2 - pad;
+      const minY = roomToDistributeKey.roomY + 1 + pad;
+      const maxY = roomToDistributeKey.roomY + roomToDistributeKey.height - 2 - pad;
+      if (maxX < minX || maxY < minY) return emptyTiles;
+      return emptyTiles.filter(
+        (t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY,
+      );
+    };
+
+    let candidates = emptyTiles;
+    for (let pad = startPad; pad >= 0; pad--) {
+      const padded = filterByPad(pad);
+      if (padded.length > 0) {
+        candidates = padded;
+        break;
+      }
+    }
+
+    if (candidates.length === 0) {
       console.error(
         `No empty tiles found in room ${roomToDistributeKey.id} for key placement, unlocking downladder ${downLadder.room.id}`,
         downLadder.lockable.removeLock(),
@@ -229,8 +260,8 @@ export class Level {
       return;
     }
 
-    const randomIndex = Math.floor(Random.rand() * emptyTiles.length);
-    const randomTile = emptyTiles[randomIndex];
+    const randomIndex = Math.floor(Random.rand() * candidates.length);
+    const randomTile = candidates[randomIndex];
 
     const key = new Key(roomToDistributeKey, randomTile.x, randomTile.y);
     downLadder.lockable.setKey(key);
@@ -317,7 +348,11 @@ export class Level {
       this.paths.get(pid)!.push(room);
       this.pathsById.get(pid)!.set(room.globalId, room);
     });
-    this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+    // Only main-path levels should mutate global game room registries.
+    // Sidepaths carry their own isolated room sets and should not clobber `game.roomsById`.
+    if (this.isMainPath) {
+      this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+    }
   }
 
   getRoomById(id: string): Room | undefined {

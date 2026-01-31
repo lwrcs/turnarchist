@@ -106,6 +106,7 @@ export class LevelGenerator {
     mapGroup: number,
     envType: EnvType,
     pathId: string,
+    level: Level,
   ): Array<Room> => {
     let rooms: Array<Room> = [];
 
@@ -121,7 +122,7 @@ export class LevelGenerator {
         partition.type,
         depth,
         mapGroup,
-        this.game.levels[depth],
+        level,
         Random.rand,
         envType,
       );
@@ -305,7 +306,7 @@ export class LevelGenerator {
       this.game.registerLevel(newLevel);
     }
 
-    let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid);
+    let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid, newLevel);
 
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();
@@ -324,10 +325,13 @@ export class LevelGenerator {
     // Update the current floor first level ID if it's not a cave
     if (!isSidePath) this.currentFloorFirstLevelID = this.game.rooms.length;
 
-    // Add the new levels to the game rooms
-    this.game.registerRooms(rooms);
-    // Keep game.level in sync for convenience lookups
-    this.game.level = this.game.levels[depth] || this.game.level;
+    // Sidepaths should not overwrite the active world's room registry while generating,
+    // otherwise the current level can be drawn/ticked against the wrong room list.
+    if (!isSidePath) {
+      this.game.registerRooms(rooms);
+      // Keep game.level in sync for convenience lookups
+      this.game.level = this.game.levels[depth] || this.game.level;
+    }
 
     // Do NOT auto-generate sidepath caves here.
     // Sidepaths are generated on-demand when the player interacts with a DownLadder.

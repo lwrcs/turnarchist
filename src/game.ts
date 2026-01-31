@@ -556,6 +556,12 @@ export class Game {
   static shade_canvas_order: string[] = [];
   // Debug: a transparent canvas used to intentionally poison cached shaded sprites.
   private static _debugTransparent1x1: HTMLCanvasElement | null = null;
+  // Debug: show the "void" / unrendered background as full red to make boundaries obvious.
+  private debugBackgroundRed: boolean = false;
+
+  private getBackgroundFillStyle(): string {
+    return this.debugBackgroundRed ? "red" : "black";
+  }
   prevLevel: Room; // for transitions
   room: Room;
   rooms: Array<Room>;
@@ -1593,7 +1599,12 @@ export class Game {
     ladder: UpLadder | DownLadder,
   ) => {
     player.map.saveOldMap();
-    if (ladder instanceof DownLadder && !ladder.linkedRoom) ladder.generate();
+    // DownLadder sidepaths are generated in `DownLadder.onCollide()` before calling this method.
+    // Do not trigger generation here: it can race and cause the sidepath to be generated/populated twice.
+    if (ladder instanceof DownLadder && !ladder.linkedRoom) {
+      console.warn("changeLevelThroughLadder: DownLadder has no linkedRoom yet");
+      return;
+    }
 
     const newRoom = ladder.linkedRoom;
     // If downladder provided an entry up-ladder position, pass it through transition
@@ -2101,6 +2112,44 @@ export class Game {
   commandHandler = (command: string): void => {
     command = command.toLowerCase();
     let enabled = "";
+
+    if (command === "bgred") {
+      this.debugBackgroundRed = !this.debugBackgroundRed;
+      this.pushMessage(
+        `Background debug color is now ${this.debugBackgroundRed ? "RED" : "BLACK"}.`,
+      );
+      return;
+    }
+
+    if (command === "bg") {
+      this.pushMessage(
+        `bg: currently ${this.debugBackgroundRed ? "RED" : "BLACK"} (try: bg red | bg black | bg toggle)`,
+      );
+      return;
+    }
+
+    if (command.startsWith("bg ")) {
+      const arg = command.slice("bg ".length).trim();
+      if (arg === "red") {
+        this.debugBackgroundRed = true;
+        this.pushMessage("Background debug color set to RED.");
+        return;
+      }
+      if (arg === "black") {
+        this.debugBackgroundRed = false;
+        this.pushMessage("Background debug color set to BLACK.");
+        return;
+      }
+      if (arg === "toggle") {
+        this.debugBackgroundRed = !this.debugBackgroundRed;
+        this.pushMessage(
+          `Background debug color is now ${this.debugBackgroundRed ? "RED" : "BLACK"}.`,
+        );
+        return;
+      }
+      this.pushMessage("Usage: bg red | bg black | bg toggle");
+      return;
+    }
 
     if (command === "shadegamma") {
       this.pushMessage(`shadegamma: ${GameConstants.SHADE_GAMMA}`);
@@ -2813,33 +2862,51 @@ export class Game {
         this.pushMessage(`Level: ${this.level.globalId}`);
         break;
       case "down":
-        let downladder: DownLadder;
-        for (const room of this.room.path()) {
-          if (room.type !== RoomType.DOWNLADDER) {
-            for (let x = room.roomX; x < room.roomX + room.width; x++) {
-              for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                if (room.roomArray[x][y] instanceof DownLadder) {
-                  downladder = room.roomArray[x][y] as DownLadder;
-                  break;
-                }
-              }
+        // Debug nav: locate a SIDE PATH rope-down ladder and move the player to it.
+        // Must not assume doors exist (single-room sidepaths can be doorless).
+        let found:
+          | { ladder: DownLadder; room: Room }
+          | undefined = undefined;
+        for (const r of this.room.path()) {
+          for (let x = r.roomX; x < r.roomX + r.width; x++) {
+            for (let y = r.roomY; y < r.roomY + r.height; y++) {
+              const t = r.roomArray[x]?.[y];
+              if (!(t instanceof DownLadder)) continue;
+              const dl = t as DownLadder;
+              if (!dl.isSidePath) continue;
+              found = { ladder: dl, room: r };
+              break;
             }
+            if (found) break;
           }
+          if (found) break;
         }
-        if (downladder) {
-          downladder.room.entered = true;
-          downladder.room.calculateWallInfo();
-          this.changeLevelThroughDoor(
-            this.players[this.localPlayerID],
-            downladder.room.doors[0],
-            1,
-          );
-          downladder.lockable.removeLock();
-          this.players[this.localPlayerID].x = downladder.x;
-          this.players[this.localPlayerID].y = downladder.y;
-          downladder.room.updateLighting();
-          this.pushMessage("Downladder located");
+
+        if (!found) {
+          this.pushMessage("No sidepath downladder found.");
+          break;
         }
+
+        const player = this.players[this.localPlayerID];
+        const targetRoom = found.room;
+        const dl = found.ladder;
+
+        // Move to the target room without using doors (doorless sidepaths).
+        if (this.room !== targetRoom) {
+          this.prevLevel = this.room;
+          this.prevLevel.exitLevel();
+          this.room = targetRoom;
+          this.updateLevel(targetRoom);
+          this.updateDepth(targetRoom.depth);
+          player.depth = targetRoom.depth;
+          player.roomGID = targetRoom.globalId;
+          const idx = this.level.rooms.indexOf(targetRoom);
+          if (idx >= 0) player.levelID = idx;
+        }
+
+        // Snap player to ladder tile and refresh room state.
+        targetRoom.enterLevel(player, { x: dl.x, y: dl.y });
+        this.pushMessage("Sidepath downladder located");
         break;
       case "lightup":
         LevelConstants.LIGHTING_ANGLE_STEP += 1;
@@ -3866,7 +3933,7 @@ export class Game {
       }
     }
 
-    Game.ctx.fillStyle = "black";
+    Game.ctx.fillStyle = this.getBackgroundFillStyle();
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
 
@@ -3895,7 +3962,7 @@ export class Game {
   drawTipScreen = (delta: number) => {
     let tip = this.tip;
 
-    Game.ctx.fillStyle = "black";
+    Game.ctx.fillStyle = this.getBackgroundFillStyle();
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
     Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
 
@@ -3928,7 +3995,7 @@ export class Game {
 
       Game.ctx.globalAlpha = 1;
       Game.ctx.globalCompositeOperation = "source-over";
-      Game.ctx.fillStyle = "black";
+      Game.ctx.fillStyle = this.getBackgroundFillStyle();
       Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
 
       //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;

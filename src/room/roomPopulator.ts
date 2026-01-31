@@ -40,6 +40,7 @@ import { Spear } from "../item/weapon/spear";
 import { Torch } from "../item/light/torch";
 import { Item } from "../item/item";
 import { GoldenKey } from "../item/goldenKey";
+import { Key } from "../item/key";
 import { FountainTile } from "../tile/fountainTile";
 import { InsideLevelDoor } from "../tile/insideLevelDoor";
 import { Button } from "../tile/button";
@@ -147,6 +148,164 @@ export class Populator {
     this.levelEnemyPoolIds = this.generateEnemyPoolIds(this.level.depth);
   }
 
+  private getPaddedTilesFrom(
+    room: Room,
+    tiles: Tile[],
+    padding: number,
+  ): Tile[] {
+    // Clamp padding so it can't invert the valid interior rect.
+    const maxPad = Math.max(
+      0,
+      Math.floor(Math.min(room.width, room.height) / 2) - 2,
+    );
+    const pad = Math.max(0, Math.min(maxPad, Math.floor(padding)));
+    const minX = room.roomX + 1 + pad;
+    const maxX = room.roomX + room.width - 2 - pad;
+    const minY = room.roomY + 1 + pad;
+    const maxY = room.roomY + room.height - 2 - pad;
+    if (maxX < minX || maxY < minY) return tiles;
+    return tiles.filter(
+      (t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY,
+    );
+  }
+
+  /**
+   * Mapping for "sidepath of a sidepath" (i.e., the rope-down exit inside a sidepath)
+   * and for environment-driven sidepath ladders.
+   *
+   * Keep this centralized so single-room and multi-room sidepaths stay consistent.
+   */
+  private getNextSidePathEnvType(current: EnvType): EnvType | null {
+    switch (current) {
+      case EnvType.CAVE:
+        return EnvType.FLOODED_CAVE;
+      case EnvType.FOREST:
+        return EnvType.CASTLE;
+      case EnvType.DARK_DUNGEON:
+        return EnvType.DARK_CASTLE;
+      case EnvType.DARK_CASTLE:
+        return EnvType.MAGMA_CAVE;
+      // No further sidepath routing from these (by design / not yet implemented).
+      case EnvType.CASTLE:
+      case EnvType.MAGMA_CAVE:
+      case EnvType.FLOODED_CAVE:
+      case EnvType.TUTORIAL:
+      case EnvType.DUNGEON:
+      default:
+        return null;
+    }
+  }
+
+  private getEnvDrivenSidePathOptions(): SidePathOptions | null {
+    const env = this.level.environment.type;
+    if (env === EnvType.CASTLE) return null;
+
+    if (env === EnvType.CAVE) {
+      return {
+        caveRooms: 1,//this.numRooms() * 3,
+        locked: true,
+        envType: EnvType.FLOODED_CAVE,
+        linearity: 0.75,
+        mapWidth: 100,
+        mapHeight: 30,
+        giantRoomScale: 0.25,
+        giantCentralRoom: false,
+        loopiness: 1,
+        branching: 0.5,
+        softMargin: 8,
+        entranceInMainRoom: true,
+        exitInMainRoom: true,
+        keyInMainRoom: true,
+      };
+    }
+
+    if (env === EnvType.DARK_DUNGEON) {
+      return {
+        caveRooms: this.numRooms() * 2,
+        locked: true,
+        envType: EnvType.DARK_CASTLE,
+        linearity: 0.8,
+      };
+    }
+
+    if (env === EnvType.DARK_CASTLE) {
+      return {
+        caveRooms: this.numRooms() * 2,
+        locked: true,
+        envType: EnvType.MAGMA_CAVE,
+        linearity: 1,
+        giantCentralRoom: true,
+        mapWidth: 75,
+        mapHeight: 75,
+        giantRoomScale: 0.8,
+      };
+    }
+
+    if (env === EnvType.FOREST) {
+      return {
+        caveRooms: this.numRooms(),
+        locked: true,
+        envType: EnvType.CASTLE,
+        linearity: 0.8,
+        entranceInMainRoom: false,
+        keyInMainRoom: false,
+        exitInMainRoom: false,
+        organicTunnelsAvoidCenter: false,
+        mapWidth: 90,
+        mapHeight: 90,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Prefer tiles within the padded interior, but gracefully relax padding if it would
+   * eliminate all candidates. This prevents a "hard fallback" to edge tiles when
+   * the requested margin is too strict for the available candidates.
+   */
+  private getTilesWithRelaxedPadding(
+    room: Room,
+    tiles: Tile[],
+    desiredPadding: number,
+  ): Tile[] {
+    // Match clamping behavior used by getPaddedTilesFrom
+    const maxPad = Math.max(
+      0,
+      Math.floor(Math.min(room.width, room.height) / 2) - 2,
+    );
+    const startPad = Math.max(
+      0,
+      Math.min(maxPad, Math.floor(desiredPadding)),
+    );
+    for (let pad = startPad; pad >= 0; pad--) {
+      const padded = this.getPaddedTilesFrom(room, tiles, pad);
+      if (padded.length > 0) return padded;
+    }
+    return tiles;
+  }
+
+  private pickTileClosestTo(
+    tiles: Tile[],
+    target: { x: number; y: number },
+    rand: () => number = Random.rand,
+  ): Tile | null {
+    if (tiles.length === 0) return null;
+    let bestDist = Infinity;
+    const best: Tile[] = [];
+    for (const t of tiles) {
+      const d = Math.abs(t.x - target.x) + Math.abs(t.y - target.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best.length = 0;
+        best.push(t);
+      } else if (d === bestDist) {
+        best.push(t);
+      }
+    }
+    return best[Math.floor(rand() * best.length)] ?? null;
+  }
+
   /**
    * Recompute and cache the enemy pool for this populator.
    * Useful when debug flags change at runtime.
@@ -157,6 +316,11 @@ export class Populator {
 
   populateRooms = () => {
     if (this.skipPopulation) return;
+    const isSingleRoomSidepathMaze =
+      this.level.isMainPath !== true &&
+      this.level.rooms.length === 1 &&
+      this.level.rooms[0]?.type === RoomType.ROPECAVE &&
+      (this.level.generationOptions?.caveRooms ?? 0) <= 1;
     // add environmental features to all rooms
     this.level.rooms.forEach((room) => {
       this.addEnvironmentalFeatures(room, Random.rand);
@@ -196,7 +360,7 @@ export class Populator {
         drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
         break;
     }
-    if (furthestFromUpLadder && !this.level.isMainPath) {
+    if (furthestFromUpLadder && !this.level.isMainPath && !isSingleRoomSidepathMaze) {
       this.addBosses(furthestFromUpLadder, this.level.depth, drops);
 
       let tiles = furthestFromUpLadder.getEmptyTiles();
@@ -216,10 +380,7 @@ export class Populator {
     //if (this.level.depth === 0) return;
 
     console.log(`Adding downladder with ${this.numRooms()} rooms`);
-    if (
-      this.level.environment.type === EnvType.DUNGEON &&
-      this.level.depth !== 0
-    ) {
+    if (this.level.environment.type === EnvType.DUNGEON && this.level.depth !== 0) {
       let sidePathOptions: SidePathOptions = {
         caveRooms: 5, //this.numRooms(),
         locked: true,
@@ -231,11 +392,17 @@ export class Populator {
       };
       switch (this.level.depth) {
         case 1:
-          sidePathOptions.caveRooms = this.numRooms();
+          sidePathOptions.caveRooms = 1//this.numRooms();
           sidePathOptions.mapWidth = 50;
           sidePathOptions.mapHeight = 50;
           sidePathOptions.giantRoomScale = 0.6;
           sidePathOptions.linearity = 0.5;
+          sidePathOptions.entranceInMainRoom = true;
+          sidePathOptions.keyInMainRoom = true;
+          sidePathOptions.exitInMainRoom = true;
+          sidePathOptions.organicTunnelsAvoidCenter = true;
+          sidePathOptions.softMargin = 5;
+          
           break;
         case 2:
           sidePathOptions.caveRooms = this.numRooms();
@@ -260,61 +427,11 @@ export class Populator {
       });
     }
 
-    if (this.level.environment.type === EnvType.CAVE) {
-      this.addDownladder({
-        caveRooms: this.numRooms() * 3,
-        locked: true,
-        envType: EnvType.FLOODED_CAVE,
-        linearity: 0.75,
-        mapWidth: 100,
-        mapHeight: 30,
-        giantRoomScale: 0.25,
-        giantCentralRoom: false,
-        loopiness: 1,
-        branching: 0.5,
-      });
-    }
-
-    if (this.level.environment.type === EnvType.DARK_DUNGEON) {
-      this.addDownladder({
-        caveRooms: this.numRooms() * 2,
-        locked: true,
-        envType: EnvType.DARK_CASTLE,
-        linearity: 0.8,
-      });
-    }
-
-    if (this.level.environment.type === EnvType.DARK_CASTLE) {
-      this.addDownladder({
-        caveRooms: this.numRooms() * 2,
-        locked: true,
-        envType: EnvType.MAGMA_CAVE,
-        linearity: 1,
-
-        giantCentralRoom: true,
-        mapWidth: 75,
-        mapHeight: 75,
-        giantRoomScale: 0.8,
-      });
-    }
-
-    if (this.level.environment.type === EnvType.FOREST) {
-      this.addDownladder({
-        caveRooms: this.numRooms(),
-        locked: true,
-        envType: EnvType.CASTLE,
-        linearity: 0.8,
-      });
-    }
-
-    if (this.level.environment.type === EnvType.CASTLE) {
-      return;
-      this.addDownladder({
-        caveRooms: this.numRooms(),
-        locked: true,
-        envType: EnvType.DARK_CASTLE,
-        linearity: 0.8,
-      });
+    // For single-room sidepath mazes, the exit rope-down ladder is placed by
+    // `populateSingleRoomSidepathMaze`. Do NOT add another environment-driven downladder here.
+    if (!isSingleRoomSidepathMaze) {
+      const envDriven = this.getEnvDrivenSidePathOptions();
+      if (envDriven) this.addDownladder(envDriven);
     }
 
     this.linkExitToStart();
@@ -362,7 +479,12 @@ export class Populator {
     if (this.level.depth !== 0) return;
     const room = this.level.rooms.find((room) => room.type === RoomType.START);
     if (!room) return;
-    const validTiles = room.getEmptyTilesNotBlockingDoors();
+    const baseTiles = room.getEmptyTilesNotBlockingDoors();
+    const validTiles = this.getTilesWithRelaxedPadding(
+      room,
+      baseTiles,
+      opts?.softMargin ?? this.level.generationOptions?.softMargin ?? 8,
+    );
     if (validTiles.length === 0) {
       console.warn(
         "No valid positions for training downladder that don't block doors",
@@ -393,6 +515,21 @@ export class Populator {
   };
 
   addDownladder = (opts: SidePathOptions) => {
+    // Idempotency: prevent placing multiple sidepath down ladders if population runs twice.
+    if (this.addedDownladder) return;
+    // Also scan the level for an existing sidepath DownLadder (covers reload/edge cases).
+    for (const r of this.level.rooms) {
+      for (let x = r.roomX; x < r.roomX + r.width; x++) {
+        for (let y = r.roomY; y < r.roomY + r.height; y++) {
+          const t = r.roomArray[x]?.[y];
+          if (t instanceof DownLadder && (t as DownLadder).isSidePath) {
+            this.addedDownladder = true;
+            return;
+          }
+        }
+      }
+    }
+
     const rooms = this.level.rooms.filter(
       (room) =>
         (room.type !== RoomType.START &&
@@ -423,8 +560,14 @@ export class Populator {
       `Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`,
     );
 
-    // Use the new method to get empty tiles that don't block doors
-    const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+    // Use the new method to get empty tiles that don't block doors.
+    // Prefer positions away from room edges to avoid revealing flat outer walls.
+    const baseTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+    const validTiles = this.getTilesWithRelaxedPadding(
+      downLadderRoom,
+      baseTiles,
+      opts?.softMargin ?? this.level.generationOptions?.softMargin ?? 8,
+    );
 
     if (validTiles.length === 0) {
       console.warn("No valid positions for downladder that don't block doors");
@@ -486,6 +629,7 @@ export class Populator {
       console.log("adding key to downladder");
       this.level.distributeKey(dl, room);
     }
+    this.addedDownladder = true;
   };
 
   populateByType = (room: Room) => {};
@@ -905,7 +1049,7 @@ export class Populator {
   }
 
   private populateForestEnvironment(room: Room) {
-    const numProps = this.getNumProps(room, 0.75);
+    const numProps = this.getNumProps(room, 1);
     //this.addProps(room, numProps, room.envType);
     this.addPropsWithClustering(room, numProps, room.envType, {
       falloffExponent: 2,
@@ -971,7 +1115,7 @@ export class Populator {
       // Scale cap with room size but keep it bounded.
       const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
       const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
-      return Math.min(numProps, cap);
+      return numProps
     }
     return numProps;
   }
@@ -2319,19 +2463,33 @@ export class Populator {
   populateUpLadder = (room: Room, rand: () => number) => {
     // Removed: this.addRandomTorches(room, "medium");
 
-    const { x, y } = room.getRoomCenter();
-    room.roomArray[x - 1][y - 1] = new UpLadder(room, room.game, x - 1, y - 1);
+    const desiredPad = room.level?.generationOptions?.softMargin ?? 8;
+    const baseTiles = room.getEmptyTilesNotBlockingDoors();
+    const tiles = this.getTilesWithRelaxedPadding(room, baseTiles, desiredPad);
+    const center = room.getRoomCenter();
+    const t = this.pickTileClosestTo(tiles, center, rand);
+    if (!t) return;
+    room.roomArray[t.x][t.y] = new UpLadder(room, room.game, t.x, t.y);
   };
 
   populateDownLadder = (room: Room, rand: () => number) => {
     // Removed: this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
 
-    const { x, y } = room.getRoomCenter();
-    room.roomArray[x + 1][y - 1] = new DownLadder(
+    const desiredPad = room.level?.generationOptions?.softMargin ?? 8;
+    const baseTiles = room.getEmptyTilesNotBlockingDoors();
+    const ladderTiles = this.getTilesWithRelaxedPadding(
+      room,
+      baseTiles,
+      desiredPad,
+    );
+    const center = room.getRoomCenter();
+    const ladderPos = this.pickTileClosestTo(ladderTiles, center, rand);
+    if (!ladderPos) return;
+    room.roomArray[ladderPos.x][ladderPos.y] = new DownLadder(
       room,
       room.game,
-      x + 1,
-      y - 1,
+      ladderPos.x,
+      ladderPos.y,
     );
 
     const numChests = Math.ceil(Random.rand() * 5);
@@ -2346,7 +2504,10 @@ export class Populator {
         ),
     );
 
-    tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
+    // Avoid placing chests on top of the down ladder.
+    tiles = tiles.filter(
+      (tile) => tile.x !== ladderPos.x || tile.y !== ladderPos.y,
+    );
     let weaponDropped = false;
     let toolDropped = false;
     let lightDropped = false;
@@ -3004,10 +3165,12 @@ export class Populator {
         this.populateRopeHole(room, rand);
         break;
       case RoomType.ROPECAVE:
-        // Giant-central-room layout without side rooms: if generation requested a giant center
-        // but the cave was generated as a single room, treat the entry room as the "giant room"
-        // and run environment population on it (similar to how the central BIGCAVE would be populated).
         if (
+          room.level?.rooms?.length === 1 &&
+          (room.level?.generationOptions?.caveRooms ?? 0) <= 1
+        ) {
+          this.populateSingleRoomSidepathMaze(room, rand);
+        } else if (
           room.level?.generationOptions?.giantCentralRoom === true &&
           room.level?.rooms?.length === 1
         ) {
@@ -3043,6 +3206,339 @@ export class Populator {
       this.populateByEnvironment(room);
     } catch (e) {
       console.warn("populateGiantSingleRoomRopeCave: populateByEnvironment failed", e);
+    }
+  }
+
+  private populateSingleRoomSidepathMaze(room: Room, rand: () => number) {
+    // Name this room by its environment (so UI doesn't show a generic "Sidepath").
+    // This is the entry room for single-room sidepaths.
+    if (!room.name) {
+      switch (room.envType) {
+        case EnvType.CAVE:
+          room.name = "Cave";
+          break;
+        case EnvType.MAGMA_CAVE:
+          room.name = "Magma Cave";
+          break;
+        case EnvType.FOREST:
+          room.name = "Forest";
+          break;
+        case EnvType.CASTLE:
+          room.name = "Castle";
+          break;
+        case EnvType.TUTORIAL:
+          room.name = "Tutorial";
+          break;
+        default:
+          room.name = "Sidepath";
+          break;
+      }
+    }
+
+    // Normalize: if something invoked this twice (or other systems placed extras),
+    // enforce exactly one rope-up ladder, one sidepath down ladder, and one matching key.
+    const ropeUps: Array<{ x: number; y: number; t: UpLadder }> = [];
+    const sideDowns: Array<{ x: number; y: number; t: DownLadder }> = [];
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const t = room.roomArray[x]?.[y];
+        if (t instanceof UpLadder && (t as UpLadder).isRope) {
+          ropeUps.push({ x, y, t: t as UpLadder });
+        }
+        if (t instanceof DownLadder && (t as DownLadder).isSidePath) {
+          sideDowns.push({ x, y, t: t as DownLadder });
+        }
+      }
+    }
+
+    const keepRopeUp = ropeUps[0] ?? null;
+    const keepSideDown =
+      sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ?? sideDowns[0] ?? null;
+
+    // Remove extra rope-ups
+    for (let i = 1; i < ropeUps.length; i++) {
+      const { x, y } = ropeUps[i];
+      room.roomArray[x][y] = new Floor(room, x, y);
+    }
+    // Remove extra side down ladders
+    for (const d of sideDowns) {
+      if (keepSideDown && d.x === keepSideDown.x && d.y === keepSideDown.y) continue;
+      room.roomArray[d.x][d.y] = new Floor(room, d.x, d.y);
+    }
+
+    if (keepRopeUp && keepSideDown) {
+      const opts = room.level?.generationOptions;
+      // The exit rope-down ladder in a sidepath should use the *current environment's*
+      // env-driven sidepath options (e.g., FOREST -> CASTLE). Do NOT reuse this room's
+      // own generationOptions.envType, which describes how this room was generated.
+      const exitOpts = this.getEnvDrivenSidePathOptions();
+      const desiredExitEnv = exitOpts?.envType ?? null;
+      if (desiredExitEnv === null) {
+        // No configured sidepath for this environment: ensure no exit ladder exists.
+        for (const d of sideDowns) {
+          room.roomArray[d.x][d.y] = new Floor(room, d.x, d.y);
+        }
+        room.items = room.items.filter((it) => !(it instanceof Key));
+        return;
+      }
+      const maxPad = Math.max(
+        0,
+        Math.floor(Math.min(room.width, room.height) / 2) - 2,
+      );
+      const softMargin = Math.max(0, Math.min(maxPad, opts?.softMargin ?? 8));
+      const minX = room.roomX + 1 + softMargin;
+      const maxX = room.roomX + room.width - 2 - softMargin;
+      const minY = room.roomY + 1 + softMargin;
+      const maxY = room.roomY + room.height - 2 - softMargin;
+      const inPadded = (x: number, y: number): boolean =>
+        x >= minX && x <= maxX && y >= minY && y <= maxY;
+
+      // If the kept rope-up or side down ladder are outside the padded region, relocate them inward.
+      const relocateTile = (
+        fromX: number,
+        fromY: number,
+        place: () => void,
+      ) => {
+        room.roomArray[fromX][fromY] = new Floor(room, fromX, fromY);
+        place();
+      };
+
+      // Relocate rope-up if needed
+      if (!inPadded(keepRopeUp.x, keepRopeUp.y)) {
+        const base = room.getEmptyTiles();
+        const padded = this.getPaddedTilesFrom(room, base, softMargin);
+        const tiles = padded.length > 0 ? padded : base;
+        const pos = room.getRandomEmptyPosition(tiles);
+        if (pos) {
+          relocateTile(keepRopeUp.x, keepRopeUp.y, () => {
+            const up = new UpLadder(room, room.game, pos.x, pos.y);
+            up.isRope = true;
+            up.isSidePath = true;
+            room.roomArray[pos.x][pos.y] = up;
+          });
+          // Update kept rope-up coords locally so the rest of this block is consistent
+          keepRopeUp.x = pos.x;
+          keepRopeUp.y = pos.y;
+        }
+      }
+
+      // Relocate side down ladder if needed
+      if (!inPadded(keepSideDown.x, keepSideDown.y)) {
+        const base = room.getEmptyTiles();
+        const padded = this.getPaddedTilesFrom(room, base, softMargin);
+        const tiles = padded.length > 0 ? padded : base;
+        const pos = room.getRandomEmptyPosition(tiles);
+        if (pos) {
+          const existingKeyId = keepSideDown.t.lockable?.keyID;
+          const existingLockType = keepSideDown.t.lockable?.isLocked?.()
+            ? LockType.LOCKED
+            : LockType.NONE;
+          relocateTile(keepSideDown.x, keepSideDown.y, () => {
+            const dl = new DownLadder(
+              room,
+              room.game,
+              pos.x,
+              pos.y,
+              true,
+              desiredExitEnv,
+              existingLockType,
+              exitOpts ?? opts,
+              existingKeyId !== undefined
+                ? { lockType: existingLockType, keyID: existingKeyId }
+                : { lockType: existingLockType },
+            );
+            room.roomArray[pos.x][pos.y] = dl;
+          });
+          keepSideDown.x = pos.x;
+          keepSideDown.y = pos.y;
+        }
+      }
+
+      const keyId = keepSideDown.t.lockable?.keyID;
+      if (keyId !== undefined) {
+        // Keep exactly one matching key
+        let kept = false;
+        room.items = room.items.filter((it) => {
+          if (!(it instanceof Key)) return true;
+          const match = (it as Key).doorID === keyId;
+          if (match && !kept) {
+            kept = true;
+            return true;
+          }
+          // Remove non-matching keys and extra matching keys
+          return false;
+        });
+        if (!kept) {
+          const base = room.getEmptyTiles();
+          const padded = this.getPaddedTilesFrom(
+            room,
+            base,
+            softMargin,
+          );
+          const tiles = padded.length > 0 ? padded : base;
+          const pos = room.getRandomEmptyPosition(tiles);
+          if (pos) {
+            const key = new Key(room, pos.x, pos.y);
+            (key as Key).doorID = keyId;
+            room.items.push(key);
+          }
+        }
+      }
+      // Already normalized: do not re-run carving/placement.
+      return;
+    }
+
+    const opts = room.level?.generationOptions;
+    // NOTE: In single-room sidepaths, everything is *necessarily* in the same room.
+    // The key/entrance/exit "in main room" options are forward-looking for multi-room
+    // sidepaths; they should NOT collapse the maze endpoints in this mode.
+
+    // Soft margin to reduce carving and endpoint placement along the outer boundary
+    // (avoid flat wall reveals).
+    // Clamp margin so it never inverts the usable interior.
+    const maxPad = Math.max(
+      0,
+      Math.floor(Math.min(room.width, room.height) / 2) - 2,
+    );
+    const softMargin = Math.max(0, Math.min(maxPad, opts?.softMargin ?? 8));
+    // Carve a meandering node network first, then randomly assign entrance/key/exit.
+    // Connect a random number of distinct nodes in [3..7], median biased toward 5.
+    const requiredConnected = Game.randTable(
+      [3, 4, 4, 5, 5, 5, 6, 6, 7],
+      rand,
+    );
+    const nodeCount = Game.randTable([12, 14, 16, 18, 20], rand);
+    const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
+      softMargin,
+      nodeCount,
+      requiredConnectedNodes: requiredConnected,
+    });
+
+    const connected =
+      network.connectedNodes.length >= 3 ? network.connectedNodes : network.allNodes;
+    if (connected.length === 0) return;
+
+    const shuffled = connected.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Game.rand(0, i, rand);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const entrance = shuffled[0] ?? null;
+    const keyEndpoint = shuffled[1] ?? null;
+    const exitEndpoint = shuffled[2] ?? null;
+    if (!entrance) return;
+
+    // Place rope-up ladder at entrance.
+    const up = new UpLadder(room, room.game, entrance.x, entrance.y);
+    up.isRope = true;
+    up.isSidePath = true;
+    room.roomArray[entrance.x][entrance.y] = up;
+
+    // Place the exit downladder (locked) at exit endpoint.
+    const exitOpts = this.getEnvDrivenSidePathOptions();
+    const exitEnv = exitOpts?.envType ?? null;
+    if (exitEnv !== null && exitEndpoint && keyEndpoint) {
+      const dl = new DownLadder(
+        room,
+        room.game,
+        exitEndpoint.x,
+        exitEndpoint.y,
+        true, // sidepath down ladder (rope down)
+        exitEnv,
+        LockType.LOCKED,
+        exitOpts ?? opts,
+      );
+      room.roomArray[exitEndpoint.x][exitEndpoint.y] = dl;
+
+      // Place a key to unlock the exit downladder.
+      const key = new Key(room, keyEndpoint.x, keyEndpoint.y);
+      dl.lockable.setKey(key);
+      room.items.push(key);
+    }
+
+    // Place bosses guarding key + exit (localized near their endpoints).
+    const trySpawnBossNear = (target: { x: number; y: number }) => {
+      const tiles = room
+        .getEmptyTiles()
+        .filter((t) => Math.abs(t.x - target.x) + Math.abs(t.y - target.y) <= 6);
+      if (tiles.length === 0) return;
+      const pos = room.getRandomEmptyPosition(tiles);
+      if (!pos) return;
+      // Reuse boss selection logic by temporarily placing a BOSS in this room.
+      // We don't change RoomType; we just spawn a boss entity.
+      this.addBossesAt(room, room.depth, pos.x, pos.y);
+    };
+
+    if (keyEndpoint) trySpawnBossNear(keyEndpoint);
+    if (exitEnv !== null && exitEndpoint) trySpawnBossNear(exitEndpoint);
+
+    // Single-room sidepath maze: intentionally do NOT place vending machines.
+
+    room.removeDoorObstructions();
+  }
+
+  private addBossesAt(room: Room, depth: number, x: number, y: number) {
+    if (GameplaySettings.NO_ENEMIES === true || room.envType === EnvType.TUTORIAL)
+      return;
+
+    // Mirror `addBosses` selection logic, but with an explicit position.
+    let bosses = [
+      "reaper",
+      "queen",
+      "bigskullenemy",
+      "bigzombieenemy",
+      "bigfrogenemy",
+      "exalter",
+    ];
+
+    if (depth > 0) {
+      bosses.push("occultist");
+      bosses = bosses.filter((b) => b !== "queen");
+    }
+    if (room.envType === EnvType.FOREST) {
+      bosses.push("bigfrogenemy");
+    }
+    if (depth > 4) {
+      bosses.push("warden");
+      bosses = bosses.filter(
+        (b) =>
+          b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist",
+      );
+    }
+
+    const boss = Game.randTable(bosses, Random.rand);
+    if (!boss) return;
+
+    switch (boss) {
+      case "reaper": {
+        const spawnTable = this.getEnemyPoolForDepth(Math.max(0, depth)).filter(
+          (t) => t !== 7,
+        );
+        Spawner.add(room, room.game, x, y, spawnTable);
+        break;
+      }
+      case "queen":
+        QueenEnemy.add(room, room.game, x, y);
+        break;
+      case "bigskullenemy":
+        BigSkullEnemy.add(room, room.game, x, y);
+        break;
+      case "occultist": {
+        OccultistEnemy.add(room, room.game, x, y);
+        break;
+      }
+      case "bigzombieenemy":
+        BigZombieEnemy.add(room, room.game, x, y);
+        break;
+      case "warden":
+        WardenEnemy.add(room, room.game, x, y);
+        break;
+      case "bigfrogenemy":
+        BigFrogEnemy.add(room, room.game, x, y);
+        break;
+      case "exalter":
+        ExalterEnemy.add(room, room.game, x, y);
+        break;
     }
   }
 

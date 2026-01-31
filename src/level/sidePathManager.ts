@@ -17,6 +17,17 @@ export interface SidePathOptions {
   giantCentralRoom?: boolean; // enable giant central room layout
   giantRoomScale?: number; // 0..1 fraction of width/height for central room size (default ~0.65)
   organicTunnelsAvoidCenter?: boolean; // favor perimeter-biased tunnel routing
+  /**
+   * Soft margin (in tiles) used by single-room sidepath maze carving and endpoint placement.
+   * Higher values keep tunnels/targets farther from the outer walls (reduces flat wall reveals).
+   */
+  softMargin?: number;
+  /** If true, place the key inside the main room (not in a dedicated satellite room). */
+  keyInMainRoom?: boolean;
+  /** If true, place the rope entrance (UpLadder) inside the main room. */
+  entranceInMainRoom?: boolean;
+  /** If true, place the exit (DownLadder) inside the main room (not in a dedicated satellite room). */
+  exitInMainRoom?: boolean;
 }
 
 /**
@@ -90,27 +101,17 @@ export class SidePathManager {
   }
 
   private handleLinkedRoom(downLadder: DownLadder, linkedRoom: Room): void {
-    if (downLadder.isSidePath) {
-      this.handleSidePathRooms(linkedRoom);
-    }
-
     downLadder.linkedRoom = linkedRoom;
     this.linkUpLadders(downLadder);
   }
 
   /**
-   * Merge rooms belonging to the newly created sidepath's mapGroup into the generated level.
+   * Legacy: previously sidepath generation relied on `game.rooms` as a global container and then
+   * merged into a level. Sidepaths now carry their own `Level.rooms` list directly, so no merge is
+   * needed (and merging would duplicate rooms).
    */
   private handleSidePathRooms(linkedRoom: Room): void {
-    const level = linkedRoom.level;
-    const sidePathRooms = this.game.rooms.filter(
-      (room) => room.mapGroup === linkedRoom.mapGroup,
-    );
-    const startingId = level.rooms.length;
-    sidePathRooms.forEach((room, index) => {
-      room.id = startingId + index;
-      level.rooms.push(room);
-    });
+    return;
   }
 
   /**

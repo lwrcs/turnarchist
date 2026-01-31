@@ -4633,6 +4633,11 @@ export class Room {
     for (const e of this.entities) {
       returnVal = returnVal.filter((t) => !e.pointIn(t.x, t.y));
     }
+    // Treat item-occupied tiles as non-empty so enemies/props/resources don't spawn on items.
+    // This prevents cases like keys being hidden under entities.
+    for (const it of this.items) {
+      returnVal = returnVal.filter((t) => t.x !== it.x || t.y !== it.y);
+    }
     return returnVal;
   };
 

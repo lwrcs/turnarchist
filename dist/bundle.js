@@ -25209,6 +25209,9 @@ class Game {
             Game._replayManager = new replayManager_1.ReplayManager();
         return Game._replayManager;
     }
+    getBackgroundFillStyle() {
+        return this.debugBackgroundRed ? "red" : "black";
+    }
     constructor() {
         /**
          * Shared animation frame used for door icon "floating" sine motion.
@@ -25244,6 +25247,8 @@ class Game {
                     r.overShadeAlpha = 1;
             }
         };
+        // Debug: show the "void" / unrendered background as full red to make boundaries obvious.
+        this.debugBackgroundRed = false;
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
         this.localPlayerID = "localplayer";
@@ -25695,8 +25700,12 @@ class Game {
         };
         this.changeLevelThroughLadder = (player, ladder) => {
             player.map.saveOldMap();
-            if (ladder instanceof downLadder_1.DownLadder && !ladder.linkedRoom)
-                ladder.generate();
+            // DownLadder sidepaths are generated in `DownLadder.onCollide()` before calling this method.
+            // Do not trigger generation here: it can race and cause the sidepath to be generated/populated twice.
+            if (ladder instanceof downLadder_1.DownLadder && !ladder.linkedRoom) {
+                console.warn("changeLevelThroughLadder: DownLadder has no linkedRoom yet");
+                return;
+            }
             const newRoom = ladder.linkedRoom;
             // If downladder provided an entry up-ladder position, pass it through transition
             let entryPosition = undefined;
@@ -26098,6 +26107,35 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command === "bgred") {
+                this.debugBackgroundRed = !this.debugBackgroundRed;
+                this.pushMessage(`Background debug color is now ${this.debugBackgroundRed ? "RED" : "BLACK"}.`);
+                return;
+            }
+            if (command === "bg") {
+                this.pushMessage(`bg: currently ${this.debugBackgroundRed ? "RED" : "BLACK"} (try: bg red | bg black | bg toggle)`);
+                return;
+            }
+            if (command.startsWith("bg ")) {
+                const arg = command.slice("bg ".length).trim();
+                if (arg === "red") {
+                    this.debugBackgroundRed = true;
+                    this.pushMessage("Background debug color set to RED.");
+                    return;
+                }
+                if (arg === "black") {
+                    this.debugBackgroundRed = false;
+                    this.pushMessage("Background debug color set to BLACK.");
+                    return;
+                }
+                if (arg === "toggle") {
+                    this.debugBackgroundRed = !this.debugBackgroundRed;
+                    this.pushMessage(`Background debug color is now ${this.debugBackgroundRed ? "RED" : "BLACK"}.`);
+                    return;
+                }
+                this.pushMessage("Usage: bg red | bg black | bg toggle");
+                return;
+            }
             if (command === "shadegamma") {
                 this.pushMessage(`shadegamma: ${gameConstants_1.GameConstants.SHADE_GAMMA}`);
                 return;
@@ -26681,29 +26719,50 @@ class Game {
                     this.pushMessage(`Level: ${this.level.globalId}`);
                     break;
                 case "down":
-                    let downladder;
-                    for (const room of this.room.path()) {
-                        if (room.type !== room_1.RoomType.DOWNLADDER) {
-                            for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                                for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                                    if (room.roomArray[x][y] instanceof downLadder_1.DownLadder) {
-                                        downladder = room.roomArray[x][y];
-                                        break;
-                                    }
-                                }
+                    // Debug nav: locate a SIDE PATH rope-down ladder and move the player to it.
+                    // Must not assume doors exist (single-room sidepaths can be doorless).
+                    let found = undefined;
+                    for (const r of this.room.path()) {
+                        for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                            for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                                const t = r.roomArray[x]?.[y];
+                                if (!(t instanceof downLadder_1.DownLadder))
+                                    continue;
+                                const dl = t;
+                                if (!dl.isSidePath)
+                                    continue;
+                                found = { ladder: dl, room: r };
+                                break;
                             }
+                            if (found)
+                                break;
                         }
+                        if (found)
+                            break;
                     }
-                    if (downladder) {
-                        downladder.room.entered = true;
-                        downladder.room.calculateWallInfo();
-                        this.changeLevelThroughDoor(this.players[this.localPlayerID], downladder.room.doors[0], 1);
-                        downladder.lockable.removeLock();
-                        this.players[this.localPlayerID].x = downladder.x;
-                        this.players[this.localPlayerID].y = downladder.y;
-                        downladder.room.updateLighting();
-                        this.pushMessage("Downladder located");
+                    if (!found) {
+                        this.pushMessage("No sidepath downladder found.");
+                        break;
                     }
+                    const player = this.players[this.localPlayerID];
+                    const targetRoom = found.room;
+                    const dl = found.ladder;
+                    // Move to the target room without using doors (doorless sidepaths).
+                    if (this.room !== targetRoom) {
+                        this.prevLevel = this.room;
+                        this.prevLevel.exitLevel();
+                        this.room = targetRoom;
+                        this.updateLevel(targetRoom);
+                        this.updateDepth(targetRoom.depth);
+                        player.depth = targetRoom.depth;
+                        player.roomGID = targetRoom.globalId;
+                        const idx = this.level.rooms.indexOf(targetRoom);
+                        if (idx >= 0)
+                            player.levelID = idx;
+                    }
+                    // Snap player to ladder tile and refresh room state.
+                    targetRoom.enterLevel(player, { x: dl.x, y: dl.y });
+                    this.pushMessage("Sidepath downladder located");
                     break;
                 case "lightup":
                     levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP += 1;
@@ -27445,7 +27504,7 @@ class Game {
                     sound_1.Sound.playAmbient();
                 }
             }
-            Game.ctx.fillStyle = "black";
+            Game.ctx.fillStyle = this.getBackgroundFillStyle();
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             // Draw CTA or menu buttons depending on startMenuActive
@@ -27464,7 +27523,7 @@ class Game {
         };
         this.drawTipScreen = (delta) => {
             let tip = this.tip;
-            Game.ctx.fillStyle = "black";
+            Game.ctx.fillStyle = this.getBackgroundFillStyle();
             Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
             Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
             Game.fillText(tip, gameConstants_1.GameConstants.WIDTH / 2 - Game.measureText(tip).width / 2, gameConstants_1.GameConstants.HEIGHT / 2 - Game.letter_height + 2);
@@ -27488,7 +27547,7 @@ class Game {
                 Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
                 Game.ctx.globalAlpha = 1;
                 Game.ctx.globalCompositeOperation = "source-over";
-                Game.ctx.fillStyle = "black";
+                Game.ctx.fillStyle = this.getBackgroundFillStyle();
                 Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
                 //if (this.room) Game.ctx.fillStyle = this.room.shadeColor;
                 //else Game.ctx.fillStyle = "black";
@@ -48600,12 +48659,35 @@ class Level {
         if (disableCoords.disableRoom === roomToDistributeKey) {
             emptyTiles = emptyTiles.filter((t) => t.x !== disableCoords.disableX && t.y !== disableCoords.disableY);
         }
-        if (emptyTiles.length === 0) {
+        // Prefer placing keys away from room edges (soft margin), but relax if it would
+        // eliminate all candidate tiles.
+        const desiredPadding = Math.floor(downLadder.opts?.softMargin ?? this.generationOptions?.softMargin ?? 8);
+        const maxPad = Math.max(0, Math.floor(Math.min(roomToDistributeKey.width, roomToDistributeKey.height) / 2) -
+            2);
+        const startPad = Math.max(0, Math.min(maxPad, desiredPadding));
+        const filterByPad = (pad) => {
+            const minX = roomToDistributeKey.roomX + 1 + pad;
+            const maxX = roomToDistributeKey.roomX + roomToDistributeKey.width - 2 - pad;
+            const minY = roomToDistributeKey.roomY + 1 + pad;
+            const maxY = roomToDistributeKey.roomY + roomToDistributeKey.height - 2 - pad;
+            if (maxX < minX || maxY < minY)
+                return emptyTiles;
+            return emptyTiles.filter((t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY);
+        };
+        let candidates = emptyTiles;
+        for (let pad = startPad; pad >= 0; pad--) {
+            const padded = filterByPad(pad);
+            if (padded.length > 0) {
+                candidates = padded;
+                break;
+            }
+        }
+        if (candidates.length === 0) {
             console.error(`No empty tiles found in room ${roomToDistributeKey.id} for key placement, unlocking downladder ${downLadder.room.id}`, downLadder.lockable.removeLock());
             return;
         }
-        const randomIndex = Math.floor(random_1.Random.rand() * emptyTiles.length);
-        const randomTile = emptyTiles[randomIndex];
+        const randomIndex = Math.floor(random_1.Random.rand() * candidates.length);
+        const randomTile = candidates[randomIndex];
         const key = new key_1.Key(roomToDistributeKey, randomTile.x, randomTile.y);
         downLadder.lockable.setKey(key);
         roomToDistributeKey.items.push(key);
@@ -48679,7 +48761,11 @@ class Level {
             this.paths.get(pid).push(room);
             this.pathsById.get(pid).set(room.globalId, room);
         });
-        this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+        // Only main-path levels should mutate global game room registries.
+        // Sidepaths carry their own isolated room sets and should not clobber `game.roomsById`.
+        if (this.isMainPath) {
+            this.game.roomsById = new Map(rooms.map((r) => [r.globalId, r]));
+        }
     }
     getRoomById(id) {
         return this.roomsById.get(id);
@@ -48800,11 +48886,11 @@ class LevelGenerator {
             let newLevel = new level_1.Level(this.game, depth, 100, 100, isMainPath, mapGroup, envType, skipPopulation, opts);
             return newLevel;
         };
-        this.getRooms = (partitions, depth, mapGroup, envType, pathId) => {
+        this.getRooms = (partitions, depth, mapGroup, envType, pathId, level) => {
             let rooms = [];
             for (let i = 0; i < partitions.length; i++) {
                 let partition = partitions[i];
-                let room = new room_1.Room(this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, this.game.levels[depth], random_1.Random.rand, envType);
+                let room = new room_1.Room(this.game, partition.x - 1, partition.y - 1, partition.w + 2, partition.h + 2, partition.type, depth, mapGroup, level, random_1.Random.rand, envType);
                 room.pathId = pathId || "main";
                 rooms.push(room);
             }
@@ -48924,7 +49010,7 @@ class LevelGenerator {
                 this.game.levels.push(newLevel);
                 this.game.registerLevel(newLevel);
             }
-            let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid);
+            let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid, newLevel);
             newLevel.setRooms(rooms);
             newLevel.populator.populateRooms();
             // After ladders/props are placed, refresh start/exit rooms using tile presence.
@@ -48939,10 +49025,13 @@ class LevelGenerator {
             // Update the current floor first level ID if it's not a cave
             if (!isSidePath)
                 this.currentFloorFirstLevelID = this.game.rooms.length;
-            // Add the new levels to the game rooms
-            this.game.registerRooms(rooms);
-            // Keep game.level in sync for convenience lookups
-            this.game.level = this.game.levels[depth] || this.game.level;
+            // Sidepaths should not overwrite the active world's room registry while generating,
+            // otherwise the current level can be drawn/ticked against the wrong room list.
+            if (!isSidePath) {
+                this.game.registerRooms(rooms);
+                // Keep game.level in sync for convenience lookups
+                this.game.level = this.game.levels[depth] || this.game.level;
+            }
             // Do NOT auto-generate sidepath caves here.
             // Sidepaths are generated on-demand when the player interacts with a DownLadder.
             // Return the start room or the rope cave room
@@ -51557,23 +51646,16 @@ class SidePathManager {
         return coordPid || legacyGid || "main";
     }
     handleLinkedRoom(downLadder, linkedRoom) {
-        if (downLadder.isSidePath) {
-            this.handleSidePathRooms(linkedRoom);
-        }
         downLadder.linkedRoom = linkedRoom;
         this.linkUpLadders(downLadder);
     }
     /**
-     * Merge rooms belonging to the newly created sidepath's mapGroup into the generated level.
+     * Legacy: previously sidepath generation relied on `game.rooms` as a global container and then
+     * merged into a level. Sidepaths now carry their own `Level.rooms` list directly, so no merge is
+     * needed (and merging would duplicate rooms).
      */
     handleSidePathRooms(linkedRoom) {
-        const level = linkedRoom.level;
-        const sidePathRooms = this.game.rooms.filter((room) => room.mapGroup === linkedRoom.mapGroup);
-        const startingId = level.rooms.length;
-        sidePathRooms.forEach((room, index) => {
-            room.id = startingId + index;
-            level.rooms.push(room);
-        });
+        return;
     }
     /**
      * For sidepaths, ensure ALL up ladders in this sidepath mapGroup link back to the correct parent room.
@@ -61888,6 +61970,11 @@ class Room {
             for (const e of this.entities) {
                 returnVal = returnVal.filter((t) => !e.pointIn(t.x, t.y));
             }
+            // Treat item-occupied tiles as non-empty so enemies/props/resources don't spawn on items.
+            // This prevents cases like keys being hidden under entities.
+            for (const it of this.items) {
+                returnVal = returnVal.filter((t) => t.x !== it.x || t.y !== it.y);
+            }
             return returnVal;
         };
         this.getTile = (x, y) => {
@@ -63558,6 +63645,9 @@ const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 class RoomBuilder {
     constructor(room) {
+        // Optional override used by specialized generation (e.g., single-room sidepath mazes)
+        // to constrain carving away from outer walls. When null, default `isInterior` is used.
+        this.carveAllowedOverride = null;
         this.getWallType = (pointX, pointY, rectX, rectY, width, height) => {
             let directions = [];
             if (pointY === rectY && pointX >= rectX && pointX <= rectX + width)
@@ -63792,10 +63882,16 @@ class RoomBuilder {
         const maxX = Math.ceil(cx + radius);
         const minY = Math.floor(cy - radius);
         const maxY = Math.ceil(cy + radius);
+        const allowed = this.carveAllowedOverride;
         for (let x = minX; x <= maxX; x++) {
             for (let y = minY; y <= maxY; y++) {
-                if (!this.isInterior(x, y))
+                if (allowed) {
+                    if (!allowed(x, y))
+                        continue;
+                }
+                else if (!this.isInterior(x, y)) {
                     continue;
+                }
                 const dx = x - cx;
                 const dy = y - cy;
                 if (dx * dx + dy * dy <= r2) {
@@ -63806,6 +63902,526 @@ class RoomBuilder {
                     this.room.innerWalls = this.room.innerWalls.filter((w) => w.x !== x || w.y !== y);
                 }
             }
+        }
+    }
+    // --- single-room sidepath maze helpers ---
+    keyOf(x, y) {
+        return `${x},${y}`;
+    }
+    isCarvedFloor(x, y) {
+        return this.room.roomArray[x]?.[y] instanceof floor_1.Floor;
+    }
+    computeReachableCarvedFrom(start) {
+        const reachable = new Set();
+        if (!this.isInterior(start.x, start.y))
+            return reachable;
+        if (!this.isCarvedFloor(start.x, start.y))
+            return reachable;
+        const q = [{ x: start.x, y: start.y }];
+        reachable.add(this.keyOf(start.x, start.y));
+        const dirs = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+        ];
+        while (q.length > 0) {
+            const cur = q.shift();
+            if (!cur)
+                break;
+            for (const d of dirs) {
+                const nx = cur.x + d.x;
+                const ny = cur.y + d.y;
+                if (!this.isInterior(nx, ny))
+                    continue;
+                if (!this.isCarvedFloor(nx, ny))
+                    continue;
+                const k = this.keyOf(nx, ny);
+                if (reachable.has(k))
+                    continue;
+                reachable.add(k);
+                q.push({ x: nx, y: ny });
+            }
+        }
+        return reachable;
+    }
+    computeDistanceField(target, isPassable) {
+        // Local grid indexed by [localX][localY] with local = world - room origin.
+        const w = this.room.width;
+        const h = this.room.height;
+        const dist = Array.from({ length: w }, () => Array.from({ length: h }, () => -1));
+        const toLocal = (x, y) => ({
+            lx: x - this.room.roomX,
+            ly: y - this.room.roomY,
+        });
+        const inBoundsLocal = (lx, ly) => lx >= 0 && lx < w && ly >= 0 && ly < h;
+        const { lx: tx, ly: ty } = toLocal(target.x, target.y);
+        if (!inBoundsLocal(tx, ty))
+            return dist;
+        if (!this.isInterior(target.x, target.y))
+            return dist;
+        if (!isPassable(target.x, target.y))
+            return dist;
+        const q = [{ x: target.x, y: target.y }];
+        dist[tx][ty] = 0;
+        const dirs = [
+            { x: 1, y: 0 },
+            { x: -1, y: 0 },
+            { x: 0, y: 1 },
+            { x: 0, y: -1 },
+        ];
+        while (q.length > 0) {
+            const cur = q.shift();
+            if (!cur)
+                break;
+            const { lx: clx, ly: cly } = toLocal(cur.x, cur.y);
+            const curD = inBoundsLocal(clx, cly) ? dist[clx][cly] : -1;
+            if (curD < 0)
+                continue;
+            for (const d of dirs) {
+                const nx = cur.x + d.x;
+                const ny = cur.y + d.y;
+                if (!this.isInterior(nx, ny))
+                    continue;
+                if (!isPassable(nx, ny))
+                    continue;
+                const { lx, ly } = toLocal(nx, ny);
+                if (!inBoundsLocal(lx, ly))
+                    continue;
+                if (dist[lx][ly] !== -1)
+                    continue;
+                dist[lx][ly] = curD + 1;
+                q.push({ x: nx, y: ny });
+            }
+        }
+        return dist;
+    }
+    buildWormyPath(from, to, rand, isPassable) {
+        const dist = this.computeDistanceField(to, isPassable);
+        const w = this.room.width;
+        const h = this.room.height;
+        const toLocal = (x, y) => ({
+            lx: x - this.room.roomX,
+            ly: y - this.room.roomY,
+        });
+        const inBoundsLocal = (lx, ly) => lx >= 0 && lx < w && ly >= 0 && ly < h;
+        const getDist = (x, y) => {
+            const { lx, ly } = toLocal(x, y);
+            if (!inBoundsLocal(lx, ly))
+                return -1;
+            return dist[lx][ly] ?? -1;
+        };
+        const startD = getDist(from.x, from.y);
+        if (startD < 0)
+            return null;
+        const path = [{ x: from.x, y: from.y }];
+        let cur = { x: from.x, y: from.y };
+        let prev = null;
+        let lastAxis = null;
+        const dirs = [
+            { x: 1, y: 0, axis: "x" },
+            { x: -1, y: 0, axis: "x" },
+            { x: 0, y: 1, axis: "y" },
+            { x: 0, y: -1, axis: "y" },
+        ];
+        // Give ourselves room to meander. Still bounded to avoid infinite loops.
+        const maxSteps = Math.max(60, startD * 8);
+        for (let steps = 0; steps < maxSteps; steps++) {
+            if (cur.x === to.x && cur.y === to.y)
+                return path;
+            const curD = getDist(cur.x, cur.y);
+            if (curD < 0)
+                return null;
+            // Collect candidate neighbors with a "wormy but guided" weight.
+            const candidates = [];
+            for (const d of dirs) {
+                const nx = cur.x + d.x;
+                const ny = cur.y + d.y;
+                if (!this.isInterior(nx, ny))
+                    continue;
+                if (!isPassable(nx, ny))
+                    continue;
+                const nd = getDist(nx, ny);
+                if (nd < 0)
+                    continue;
+                const delta = curD - nd; // positive means progress toward target
+                let w = 1;
+                if (delta > 0)
+                    w += 9 + delta * 2;
+                else if (delta === 0)
+                    w += 3.5;
+                else
+                    w += 0.35; // allow occasional "wrong" steps for meander
+                // Prefer alternating axis to create the back-and-forth worm feel.
+                if (lastAxis && d.axis !== lastAxis)
+                    w *= 1.35;
+                // Discourage immediate backtracking unless forced.
+                if (prev && nx === prev.x && ny === prev.y)
+                    w *= 0.12;
+                // Small random jitter to avoid determinism ties.
+                w *= 0.9 + rand() * 0.35;
+                candidates.push({ x: nx, y: ny, axis: d.axis, w });
+            }
+            if (candidates.length === 0)
+                return null;
+            // Weighted random pick.
+            let total = 0;
+            for (const c of candidates)
+                total += c.w;
+            let r = rand() * total;
+            let pick = candidates[candidates.length - 1];
+            for (const c of candidates) {
+                r -= c.w;
+                if (r <= 0) {
+                    pick = c;
+                    break;
+                }
+            }
+            prev = cur;
+            cur = { x: pick.x, y: pick.y };
+            lastAxis = pick.axis;
+            path.push(cur);
+        }
+        // If we ran out of steps, fail so caller can fall back.
+        return null;
+    }
+    carveWormyTunnelAlong(path, rand, opts) {
+        // Use a smooth pseudo-random radius curve (sum of sines) so tunnel width
+        // varies continuously along its length instead of frame-to-frame jitter.
+        const minRadius = 1.0;
+        const maxRadius = 7;
+        // Frequency multipliers (cycles across the whole path) and phases.
+        // Keep these low so the radius changes slowly over distance.
+        const f1 = 0.25 + rand() * 0.35; // 0.25..0.6
+        const f2 = 0.55 + rand() * 0.55; // 0.55..1.1
+        const f3 = 1.15 + rand() * 0.75; // 1.15..1.9
+        const p1 = rand() * Math.PI * 2;
+        const p2 = rand() * Math.PI * 2;
+        const p3 = rand() * Math.PI * 2;
+        const w1 = 0.55;
+        const w2 = 0.30;
+        const w3 = 0.15;
+        const wSum = w1 + w2 + w3;
+        const noise01 = (t01) => {
+            // Weighted sum in [-wSum, +wSum], normalized to [0,1].
+            const s = w1 * Math.sin(Math.PI * 2 * f1 * t01 + p1) +
+                w2 * Math.sin(Math.PI * 2 * f2 * t01 + p2) +
+                w3 * Math.sin(Math.PI * 2 * f3 * t01 + p3);
+            const n = 0.5 + 0.5 * (s / wSum);
+            return Math.max(0, Math.min(1, n));
+        };
+        const pocketChance = opts?.pocketChance ?? 0.1;
+        const pocketRadius = opts?.pocketRadius ?? [2, 3];
+        // Additional smoothing: cap how fast the radius can change per step, so adjacent
+        // disks blend more continuously even on short paths.
+        const maxDeltaPerStep = 1;
+        let prevR = null;
+        for (let i = 0; i < path.length; i++) {
+            const p = path[i];
+            const t01 = path.length <= 1 ? 0 : i / (path.length - 1);
+            // Skew toward smaller radii (non-linear). Exponent > 1 biases toward 0.
+            const u = noise01(t01);
+            // Exponential falloff (truncated to [0,1]) so minRadius is most likely and
+            // probability drops rapidly as we approach maxRadius.
+            // Inverse CDF of truncated exp on [0,1]:
+            //   y = -ln(1 - u*(1 - e^{-λ})) / λ
+            // where PDF ∝ e^{-λ y}. Larger λ => stronger bias toward 0.
+            const lambda = 5.0;
+            const oneMinusExp = 1 - Math.exp(-lambda);
+            const uExp = -Math.log(1 - u * oneMinusExp) / lambda;
+            const y = Math.max(0, Math.min(1, uExp));
+            const targetR = minRadius + (maxRadius - minRadius) * y;
+            let r = targetR;
+            if (prevR !== null) {
+                const delta = targetR - prevR;
+                if (delta > maxDeltaPerStep)
+                    r = prevR + maxDeltaPerStep;
+                else if (delta < -maxDeltaPerStep)
+                    r = prevR - maxDeltaPerStep;
+            }
+            prevR = r;
+            this.carveDisk(p.x, p.y, r);
+            if (rand() < pocketChance) {
+                const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
+                // Offset pocket perpendicular-ish to local direction if available.
+                const prev = path[i - 1] ?? p;
+                const next = path[i + 1] ?? p;
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                // Choose a perpendicular direction; if degenerate, just random cardinal.
+                const ox = dx === 0 && dy === 0 ? game_1.Game.randTable([-1, 0, 1], rand) : -Math.sign(dy);
+                const oy = dx === 0 && dy === 0 ? game_1.Game.randTable([-1, 0, 1], rand) : Math.sign(dx);
+                const pocketCx = p.x + ox * (1 + game_1.Game.rand(0, 2, rand));
+                const pocketCy = p.y + oy * (1 + game_1.Game.rand(0, 2, rand));
+                this.carveDisk(pocketCx, pocketCy, pr);
+            }
+        }
+    }
+    /**
+     * Generates and carves a single-room sidepath maze as a meandering network of connected "nodes".
+     * Returns the subset of node positions that were actually connected (and thus carved through).
+     *
+     * Design intent:
+     * - Build a wormy, back-and-forth set of tunnels with low redundancy.
+     * - Avoid cutting through existing tunnels when possible, but allow it as fallback.
+     * - Do NOT decide which node is entrance/key/exit here; caller can assign those afterward.
+     */
+    addSingleRoomSidepathMazeNetwork(rand, config) {
+        const soft = Math.max(1, Math.floor(config.softMargin));
+        const minX = this.room.roomX + 1 + soft;
+        const maxX = this.room.roomX + this.room.width - 2 - soft;
+        const minY = this.room.roomY + 1 + soft;
+        const maxY = this.room.roomY + this.room.height - 2 - soft;
+        // Allow tunnel edges to spill into the margin a bit (soft, not hard fence).
+        const maxCarveRadius = 4;
+        const carveMinX = minX - maxCarveRadius;
+        const carveMaxX = maxX + maxCarveRadius;
+        const carveMinY = minY - maxCarveRadius;
+        const carveMaxY = maxY + maxCarveRadius;
+        const allowed = (x, y) => {
+            if (!this.isInterior(x, y))
+                return false;
+            return (x >= carveMinX &&
+                x <= carveMaxX &&
+                y >= carveMinY &&
+                y <= carveMaxY);
+        };
+        const nodeAllowed = (x, y) => this.isInterior(x, y) && x >= minX && x <= maxX && y >= minY && y <= maxY;
+        this.fillInteriorWithWalls();
+        this.carveAllowedOverride = allowed;
+        try {
+            const allNodes = [];
+            const connected = new Set();
+            const keyOf = (p) => `${p.x},${p.y}`;
+            const addNode = () => {
+                const minSeparation = 8;
+                for (let tries = 0; tries < 160; tries++) {
+                    const x = game_1.Game.rand(minX, maxX, rand);
+                    const y = game_1.Game.rand(minY, maxY, rand);
+                    if (!nodeAllowed(x, y))
+                        continue;
+                    let ok = true;
+                    for (const n of allNodes) {
+                        const d = Math.abs(x - n.x) + Math.abs(y - n.y);
+                        if (d < minSeparation) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok)
+                        continue;
+                    allNodes.push({ x, y });
+                    return;
+                }
+            };
+            const nodeCount = Math.max(3, Math.floor(config.nodeCount));
+            for (let i = 0; i < nodeCount; i++)
+                addNode();
+            if (allNodes.length === 0)
+                return { allNodes: [], connectedNodes: [] };
+            // Start from a random node, carve a chamber there.
+            let current = allNodes[Math.floor(rand() * allNodes.length)];
+            this.carveDisk(current.x, current.y, 3.0);
+            connected.add(keyOf(current));
+            const required = Math.max(3, Math.min(allNodes.length, Math.floor(config.requiredConnectedNodes)));
+            const pickTarget = () => {
+                // Bias toward unconnected nodes until we hit `required`, but allow loops.
+                const needMore = connected.size < required;
+                if (needMore && rand() < 0.7) {
+                    const unconnected = allNodes.filter((n) => !connected.has(keyOf(n)));
+                    if (unconnected.length > 0) {
+                        return unconnected[Math.floor(rand() * unconnected.length)];
+                    }
+                }
+                return allNodes[Math.floor(rand() * allNodes.length)];
+            };
+            const passableNoCross = (a, b) => (x, y) => {
+                if (!nodeAllowed(x, y))
+                    return false;
+                if ((x === a.x && y === a.y) || (x === b.x && y === b.y))
+                    return true;
+                return !this.isCarvedFloor(x, y);
+            };
+            const passableAllowCross = (_a, _b) => (x, y) => nodeAllowed(x, y);
+            const maxLinks = Math.max(40, required * 18);
+            for (let link = 0; link < maxLinks; link++) {
+                if (connected.size >= required)
+                    break;
+                const target = pickTarget();
+                if (target.x === current.x && target.y === current.y)
+                    continue;
+                const noCross = this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableNoCross(current, target));
+                const path = noCross ??
+                    this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableAllowCross(current, target));
+                if (!path)
+                    continue;
+                this.carveWormyTunnelAlong(path, rand, {
+                    baseRadius: 1.1,
+                    radiusJitter: 1.1,
+                    pocketChance: 0.12,
+                    pocketRadius: [2, 4],
+                });
+                // Only carve target chamber if this is the first time we connect it.
+                const k = keyOf(target);
+                if (!connected.has(k)) {
+                    this.carveDisk(target.x, target.y, 2.25);
+                    connected.add(k);
+                }
+                current = target;
+            }
+            const connectedNodes = allNodes.filter((n) => connected.has(keyOf(n)));
+            return { allNodes, connectedNodes };
+        }
+        finally {
+            this.carveAllowedOverride = null;
+        }
+    }
+    /**
+     * Single-room sidepath maze generator:
+     * - Fills interior with walls, then carves an organic tunnel network that connects:
+     *   entrance → key endpoint, entrance → exit endpoint, plus optional loops.
+     * - Uses a "soft margin" to keep endpoints/waypoints away from the outer boundary.
+     *   Carving is allowed to *spill into* the margin (tunnel edges), so the margin is "soft"
+     *   rather than a hard no-carve fence.
+     *
+     * This is intentionally only used for `caveRooms <= 1` sidepaths right now.
+     */
+    addSingleRoomSidepathMaze(rand, config) {
+        const soft = Math.max(1, Math.floor(config.softMargin));
+        const minX = this.room.roomX + 1 + soft;
+        const maxX = this.room.roomX + this.room.width - 2 - soft;
+        const minY = this.room.roomY + 1 + soft;
+        const maxY = this.room.roomY + this.room.height - 2 - soft;
+        // Waypoint/endpoint centers stay within [min,max]. But tunnels have width: disk carving
+        // radii can extend beyond center points. Allow carving to "spill" into the margin by
+        // a conservative upper bound on carve radius so the margin remains soft.
+        const maxCarveRadius = 4; // pockets can be up to 4, chambers are 3.25
+        const carveMinX = minX - maxCarveRadius;
+        const carveMaxX = maxX + maxCarveRadius;
+        const carveMinY = minY - maxCarveRadius;
+        const carveMaxY = maxY + maxCarveRadius;
+        const allowed = (x, y) => {
+            // Always clamp to true room interior so we never carve the outer wall boundary.
+            if (!this.isInterior(x, y))
+                return false;
+            return (x >= carveMinX &&
+                x <= carveMaxX &&
+                y >= carveMinY &&
+                y <= carveMaxY);
+        };
+        // Step 1: fill interior with walls we can carve from.
+        this.fillInteriorWithWalls();
+        // Step 2: constrain carving to a soft interior region.
+        this.carveAllowedOverride = allowed;
+        try {
+            // Carve chambers
+            this.carveDisk(config.entrance.x, config.entrance.y, 3.25);
+            this.carveDisk(config.key.x, config.key.y, 3.25);
+            this.carveDisk(config.exit.x, config.exit.y, 3.25);
+            const nodes = [
+                { x: config.entrance.x, y: config.entrance.y, kind: "entrance" },
+                { x: config.key.x, y: config.key.y, kind: "key" },
+                { x: config.exit.x, y: config.exit.y, kind: "exit" },
+            ];
+            const extraNodes = game_1.Game.randTable([7, 8, 9, 10, 12], rand);
+            const minSeparation = 8;
+            const tryAddNode = () => {
+                for (let tries = 0; tries < 120; tries++) {
+                    const x = game_1.Game.rand(minX, maxX, rand);
+                    const y = game_1.Game.rand(minY, maxY, rand);
+                    if (!this.isInterior(x, y))
+                        continue;
+                    // Keep nodes reasonably spread out.
+                    let ok = true;
+                    for (const n of nodes) {
+                        const d = Math.abs(x - n.x) + Math.abs(y - n.y);
+                        if (d < minSeparation) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok)
+                        continue;
+                    nodes.push({ x, y, kind: "node" });
+                    // NOTE: do NOT carve node chambers up-front. Nodes that never get connected
+                    // should remain fully walled-in / uncarved.
+                    return;
+                }
+            };
+            for (let i = 0; i < extraNodes; i++)
+                tryAddNode();
+            const entrance = nodes.find((n) => n.kind === "entrance");
+            const keyNode = nodes.find((n) => n.kind === "key");
+            const exitNode = nodes.find((n) => n.kind === "exit");
+            if (!entrance || !keyNode || !exitNode)
+                return;
+            const isEndpoint = (x, y, a, b) => (x === a.x && y === a.y) || (x === b.x && y === b.y);
+            const passableNoCross = (a, b) => (x, y) => {
+                // Stay within the node-center region for the *path centerline*.
+                if (x < minX || x > maxX || y < minY || y > maxY)
+                    return false;
+                if (!this.isInterior(x, y))
+                    return false;
+                if (isEndpoint(x, y, a, b))
+                    return true;
+                // Avoid cutting through existing carved space.
+                return !this.isCarvedFloor(x, y);
+            };
+            const passableAllowCross = (a, b) => (x, y) => {
+                if (x < minX || x > maxX || y < minY || y > maxY)
+                    return false;
+                if (!this.isInterior(x, y))
+                    return false;
+                return true;
+            };
+            // Sequential meandering connection process:
+            // Start at entrance, repeatedly pick a random node, and carve a wormy tunnel from
+            // current → target. Prefer avoiding crossings; only allow crossings when we cannot
+            // find a non-crossing route.
+            let current = entrance;
+            let reachable = this.computeReachableCarvedFrom(current);
+            const isReachable = (n) => reachable.has(this.keyOf(n.x, n.y));
+            const pickNextTarget = () => {
+                const needs = [];
+                if (!isReachable(keyNode))
+                    needs.push(keyNode);
+                if (!isReachable(exitNode))
+                    needs.push(exitNode);
+                // Bias toward connecting missing endpoints, but still wander.
+                if (needs.length > 0 && rand() < 0.55) {
+                    return needs[Math.floor(rand() * needs.length)];
+                }
+                return nodes[Math.floor(rand() * nodes.length)];
+            };
+            const maxLinks = 120;
+            for (let link = 0; link < maxLinks; link++) {
+                reachable = this.computeReachableCarvedFrom(entrance);
+                if (isReachable(keyNode) && isReachable(exitNode))
+                    break;
+                const target = pickNextTarget();
+                if (target.x === current.x && target.y === current.y)
+                    continue;
+                // Try a no-cross path first (go around existing tunnels), fall back to allow-cross.
+                const noCross = this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableNoCross(current, target));
+                const path = noCross ??
+                    this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableAllowCross(current, target));
+                if (!path)
+                    continue;
+                this.carveWormyTunnelAlong(path, rand, {
+                    baseRadius: 1.1,
+                    radiusJitter: 1.1,
+                    pocketChance: 0.12,
+                    pocketRadius: [2, 4],
+                });
+                // Only carve a node "chamber" once it has actually been connected-to.
+                if (target.kind === "node") {
+                    this.carveDisk(target.x, target.y, 2.25);
+                }
+                current = target;
+            }
+        }
+        finally {
+            this.carveAllowedOverride = null;
         }
     }
     getDoorEntryPoints(rand) {
@@ -64424,6 +65040,7 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
@@ -64484,6 +65101,10 @@ class Populator {
         this.populateRooms = () => {
             if (this.skipPopulation)
                 return;
+            const isSingleRoomSidepathMaze = this.level.isMainPath !== true &&
+                this.level.rooms.length === 1 &&
+                this.level.rooms[0]?.type === room_1.RoomType.ROPECAVE &&
+                (this.level.generationOptions?.caveRooms ?? 0) <= 1;
             // add environmental features to all rooms
             this.level.rooms.forEach((room) => {
                 this.addEnvironmentalFeatures(room, random_1.Random.rand);
@@ -64518,7 +65139,7 @@ class Populator {
                     drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
                     break;
             }
-            if (furthestFromUpLadder && !this.level.isMainPath) {
+            if (furthestFromUpLadder && !this.level.isMainPath && !isSingleRoomSidepathMaze) {
                 this.addBosses(furthestFromUpLadder, this.level.depth, drops);
                 let tiles = furthestFromUpLadder.getEmptyTiles();
                 const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
@@ -64531,8 +65152,7 @@ class Populator {
             }
             //if (this.level.depth === 0) return;
             console.log(`Adding downladder with ${this.numRooms()} rooms`);
-            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
-                this.level.depth !== 0) {
+            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON && this.level.depth !== 0) {
                 let sidePathOptions = {
                     caveRooms: 5,
                     locked: true,
@@ -64544,11 +65164,16 @@ class Populator {
                 };
                 switch (this.level.depth) {
                     case 1:
-                        sidePathOptions.caveRooms = this.numRooms();
+                        sidePathOptions.caveRooms = 1; //this.numRooms();
                         sidePathOptions.mapWidth = 50;
                         sidePathOptions.mapHeight = 50;
                         sidePathOptions.giantRoomScale = 0.6;
                         sidePathOptions.linearity = 0.5;
+                        sidePathOptions.entranceInMainRoom = true;
+                        sidePathOptions.keyInMainRoom = true;
+                        sidePathOptions.exitInMainRoom = true;
+                        sidePathOptions.organicTunnelsAvoidCenter = true;
+                        sidePathOptions.softMargin = 5;
                         break;
                     case 2:
                         sidePathOptions.caveRooms = this.numRooms();
@@ -64571,52 +65196,12 @@ class Populator {
                     mapHeight: 10,
                 });
             }
-            if (this.level.environment.type === environmentTypes_1.EnvType.CAVE) {
-                this.addDownladder({
-                    caveRooms: this.numRooms() * 3,
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.FLOODED_CAVE,
-                    linearity: 0.75,
-                    mapWidth: 100,
-                    mapHeight: 30,
-                    giantRoomScale: 0.25,
-                    giantCentralRoom: false,
-                    loopiness: 1,
-                    branching: 0.5,
-                });
-            }
-            if (this.level.environment.type === environmentTypes_1.EnvType.DARK_DUNGEON) {
-                this.addDownladder({
-                    caveRooms: this.numRooms() * 2,
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.DARK_CASTLE,
-                    linearity: 0.8,
-                });
-            }
-            if (this.level.environment.type === environmentTypes_1.EnvType.DARK_CASTLE) {
-                this.addDownladder({
-                    caveRooms: this.numRooms() * 2,
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.MAGMA_CAVE,
-                    linearity: 1,
-                    giantCentralRoom: true,
-                    mapWidth: 75,
-                    mapHeight: 75,
-                    giantRoomScale: 0.8,
-                });
-            }
-            if (this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                this.addDownladder({
-                    caveRooms: this.numRooms(),
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.CASTLE,
-                    linearity: 0.8,
-                });
-            }
-            if (this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
-                return;
-                // removed by dead control flow
-
+            // For single-room sidepath mazes, the exit rope-down ladder is placed by
+            // `populateSingleRoomSidepathMaze`. Do NOT add another environment-driven downladder here.
+            if (!isSingleRoomSidepathMaze) {
+                const envDriven = this.getEnvDrivenSidePathOptions();
+                if (envDriven)
+                    this.addDownladder(envDriven);
             }
             this.linkExitToStart();
             //this.level.distributeKeys();
@@ -64663,7 +65248,8 @@ class Populator {
             const room = this.level.rooms.find((room) => room.type === room_1.RoomType.START);
             if (!room)
                 return;
-            const validTiles = room.getEmptyTilesNotBlockingDoors();
+            const baseTiles = room.getEmptyTilesNotBlockingDoors();
+            const validTiles = this.getTilesWithRelaxedPadding(room, baseTiles, opts?.softMargin ?? this.level.generationOptions?.softMargin ?? 8);
             if (validTiles.length === 0) {
                 console.warn("No valid positions for training downladder that don't block doors");
                 return;
@@ -64677,6 +65263,21 @@ class Populator {
             room.roomArray[position.x][position.y] = dl;
         };
         this.addDownladder = (opts) => {
+            // Idempotency: prevent placing multiple sidepath down ladders if population runs twice.
+            if (this.addedDownladder)
+                return;
+            // Also scan the level for an existing sidepath DownLadder (covers reload/edge cases).
+            for (const r of this.level.rooms) {
+                for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                    for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                        const t = r.roomArray[x]?.[y];
+                        if (t instanceof downLadder_1.DownLadder && t.isSidePath) {
+                            this.addedDownladder = true;
+                            return;
+                        }
+                    }
+                }
+            }
             const rooms = this.level.rooms.filter((room) => (room.type !== room_1.RoomType.START &&
                 room.type !== room_1.RoomType.DOWNLADDER &&
                 room.type !== room_1.RoomType.UPLADDER &&
@@ -64697,8 +65298,10 @@ class Populator {
                     downLadderRoom = startRoom;
             }
             console.log(`Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`);
-            // Use the new method to get empty tiles that don't block doors
-            const validTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+            // Use the new method to get empty tiles that don't block doors.
+            // Prefer positions away from room edges to avoid revealing flat outer walls.
+            const baseTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
+            const validTiles = this.getTilesWithRelaxedPadding(downLadderRoom, baseTiles, opts?.softMargin ?? this.level.generationOptions?.softMargin ?? 8);
             if (validTiles.length === 0) {
                 console.warn("No valid positions for downladder that don't block doors");
                 return;
@@ -64736,6 +65339,7 @@ class Populator {
                 console.log("adding key to downladder");
                 this.level.distributeKey(dl, room);
             }
+            this.addedDownladder = true;
         };
         this.populateByType = (room) => { };
         this.numRooms = () => {
@@ -64818,19 +65422,32 @@ class Populator {
         };
         this.populateUpLadder = (room, rand) => {
             // Removed: this.addRandomTorches(room, "medium");
-            const { x, y } = room.getRoomCenter();
-            room.roomArray[x - 1][y - 1] = new upLadder_1.UpLadder(room, room.game, x - 1, y - 1);
+            const desiredPad = room.level?.generationOptions?.softMargin ?? 8;
+            const baseTiles = room.getEmptyTilesNotBlockingDoors();
+            const tiles = this.getTilesWithRelaxedPadding(room, baseTiles, desiredPad);
+            const center = room.getRoomCenter();
+            const t = this.pickTileClosestTo(tiles, center, rand);
+            if (!t)
+                return;
+            room.roomArray[t.x][t.y] = new upLadder_1.UpLadder(room, room.game, t.x, t.y);
         };
         this.populateDownLadder = (room, rand) => {
             // Removed: this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
-            const { x, y } = room.getRoomCenter();
-            room.roomArray[x + 1][y - 1] = new downLadder_1.DownLadder(room, room.game, x + 1, y - 1);
+            const desiredPad = room.level?.generationOptions?.softMargin ?? 8;
+            const baseTiles = room.getEmptyTilesNotBlockingDoors();
+            const ladderTiles = this.getTilesWithRelaxedPadding(room, baseTiles, desiredPad);
+            const center = room.getRoomCenter();
+            const ladderPos = this.pickTileClosestTo(ladderTiles, center, rand);
+            if (!ladderPos)
+                return;
+            room.roomArray[ladderPos.x][ladderPos.y] = new downLadder_1.DownLadder(room, room.game, ladderPos.x, ladderPos.y);
             const numChests = Math.ceil(random_1.Random.rand() * 5);
             let tiles = room.getEmptyTiles();
             let positions = [];
             //if (room.depth === 0) positions = this.populateWeaponGroup(room, tiles);
             tiles = tiles.filter((tile) => !positions.some((position) => position.x === tile.x && position.y === tile.y));
-            tiles = tiles.filter((tile) => tile.x !== x || tile.y !== y);
+            // Avoid placing chests on top of the down ladder.
+            tiles = tiles.filter((tile) => tile.x !== ladderPos.x || tile.y !== ladderPos.y);
             let weaponDropped = false;
             let toolDropped = false;
             let lightDropped = false;
@@ -65091,10 +65708,11 @@ class Populator {
                     this.populateRopeHole(room, rand);
                     break;
                 case room_1.RoomType.ROPECAVE:
-                    // Giant-central-room layout without side rooms: if generation requested a giant center
-                    // but the cave was generated as a single room, treat the entry room as the "giant room"
-                    // and run environment population on it (similar to how the central BIGCAVE would be populated).
-                    if (room.level?.generationOptions?.giantCentralRoom === true &&
+                    if (room.level?.rooms?.length === 1 &&
+                        (room.level?.generationOptions?.caveRooms ?? 0) <= 1) {
+                        this.populateSingleRoomSidepathMaze(room, rand);
+                    }
+                    else if (room.level?.generationOptions?.giantCentralRoom === true &&
                         room.level?.rooms?.length === 1) {
                         this.populateGiantSingleRoomRopeCave(room, rand);
                     }
@@ -65117,6 +65735,136 @@ class Populator {
         this.skipPopulation = skipPopulation;
         // Calculate enemy pool once for this level
         this.levelEnemyPoolIds = this.generateEnemyPoolIds(this.level.depth);
+    }
+    getPaddedTilesFrom(room, tiles, padding) {
+        // Clamp padding so it can't invert the valid interior rect.
+        const maxPad = Math.max(0, Math.floor(Math.min(room.width, room.height) / 2) - 2);
+        const pad = Math.max(0, Math.min(maxPad, Math.floor(padding)));
+        const minX = room.roomX + 1 + pad;
+        const maxX = room.roomX + room.width - 2 - pad;
+        const minY = room.roomY + 1 + pad;
+        const maxY = room.roomY + room.height - 2 - pad;
+        if (maxX < minX || maxY < minY)
+            return tiles;
+        return tiles.filter((t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY);
+    }
+    /**
+     * Mapping for "sidepath of a sidepath" (i.e., the rope-down exit inside a sidepath)
+     * and for environment-driven sidepath ladders.
+     *
+     * Keep this centralized so single-room and multi-room sidepaths stay consistent.
+     */
+    getNextSidePathEnvType(current) {
+        switch (current) {
+            case environmentTypes_1.EnvType.CAVE:
+                return environmentTypes_1.EnvType.FLOODED_CAVE;
+            case environmentTypes_1.EnvType.FOREST:
+                return environmentTypes_1.EnvType.CASTLE;
+            case environmentTypes_1.EnvType.DARK_DUNGEON:
+                return environmentTypes_1.EnvType.DARK_CASTLE;
+            case environmentTypes_1.EnvType.DARK_CASTLE:
+                return environmentTypes_1.EnvType.MAGMA_CAVE;
+            // No further sidepath routing from these (by design / not yet implemented).
+            case environmentTypes_1.EnvType.CASTLE:
+            case environmentTypes_1.EnvType.MAGMA_CAVE:
+            case environmentTypes_1.EnvType.FLOODED_CAVE:
+            case environmentTypes_1.EnvType.TUTORIAL:
+            case environmentTypes_1.EnvType.DUNGEON:
+            default:
+                return null;
+        }
+    }
+    getEnvDrivenSidePathOptions() {
+        const env = this.level.environment.type;
+        if (env === environmentTypes_1.EnvType.CASTLE)
+            return null;
+        if (env === environmentTypes_1.EnvType.CAVE) {
+            return {
+                caveRooms: 1,
+                locked: true,
+                envType: environmentTypes_1.EnvType.FLOODED_CAVE,
+                linearity: 0.75,
+                mapWidth: 100,
+                mapHeight: 30,
+                giantRoomScale: 0.25,
+                giantCentralRoom: false,
+                loopiness: 1,
+                branching: 0.5,
+                softMargin: 8,
+                entranceInMainRoom: true,
+                exitInMainRoom: true,
+                keyInMainRoom: true,
+            };
+        }
+        if (env === environmentTypes_1.EnvType.DARK_DUNGEON) {
+            return {
+                caveRooms: this.numRooms() * 2,
+                locked: true,
+                envType: environmentTypes_1.EnvType.DARK_CASTLE,
+                linearity: 0.8,
+            };
+        }
+        if (env === environmentTypes_1.EnvType.DARK_CASTLE) {
+            return {
+                caveRooms: this.numRooms() * 2,
+                locked: true,
+                envType: environmentTypes_1.EnvType.MAGMA_CAVE,
+                linearity: 1,
+                giantCentralRoom: true,
+                mapWidth: 75,
+                mapHeight: 75,
+                giantRoomScale: 0.8,
+            };
+        }
+        if (env === environmentTypes_1.EnvType.FOREST) {
+            return {
+                caveRooms: this.numRooms(),
+                locked: true,
+                envType: environmentTypes_1.EnvType.CASTLE,
+                linearity: 0.8,
+                entranceInMainRoom: false,
+                keyInMainRoom: false,
+                exitInMainRoom: false,
+                organicTunnelsAvoidCenter: false,
+                mapWidth: 90,
+                mapHeight: 90,
+            };
+        }
+        return null;
+    }
+    /**
+     * Prefer tiles within the padded interior, but gracefully relax padding if it would
+     * eliminate all candidates. This prevents a "hard fallback" to edge tiles when
+     * the requested margin is too strict for the available candidates.
+     */
+    getTilesWithRelaxedPadding(room, tiles, desiredPadding) {
+        // Match clamping behavior used by getPaddedTilesFrom
+        const maxPad = Math.max(0, Math.floor(Math.min(room.width, room.height) / 2) - 2);
+        const startPad = Math.max(0, Math.min(maxPad, Math.floor(desiredPadding)));
+        for (let pad = startPad; pad >= 0; pad--) {
+            const padded = this.getPaddedTilesFrom(room, tiles, pad);
+            if (padded.length > 0)
+                return padded;
+        }
+        return tiles;
+    }
+    pickTileClosestTo(tiles, target, rand = random_1.Random.rand) {
+        if (tiles.length === 0)
+            return null;
+        let bestDist = Infinity;
+        const best = [];
+        for (const t of tiles) {
+            const d = Math.abs(t.x - target.x) + Math.abs(t.y - target.y);
+            if (d < bestDist) {
+                bestDist = d;
+                best.length = 0;
+                best.push(t);
+            }
+            else if (d === bestDist) {
+                best.push(t);
+            }
+        }
+        return best[Math.floor(rand() * best.length)] ?? null;
     }
     addProps(room, numProps, envType) {
         const envData = envType
@@ -65422,7 +66170,7 @@ class Populator {
         this.addRandomEnemies(room);
     }
     populateForestEnvironment(room) {
-        const numProps = this.getNumProps(room, 0.75);
+        const numProps = this.getNumProps(room, 1);
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
             falloffExponent: 2,
@@ -65479,7 +66227,7 @@ class Populator {
             // Scale cap with room size but keep it bounded.
             const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
             const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
-            return Math.min(numProps, cap);
+            return numProps;
         }
         return numProps;
     }
@@ -66767,6 +67515,280 @@ class Populator {
         }
         catch (e) {
             console.warn("populateGiantSingleRoomRopeCave: populateByEnvironment failed", e);
+        }
+    }
+    populateSingleRoomSidepathMaze(room, rand) {
+        // Name this room by its environment (so UI doesn't show a generic "Sidepath").
+        // This is the entry room for single-room sidepaths.
+        if (!room.name) {
+            switch (room.envType) {
+                case environmentTypes_1.EnvType.CAVE:
+                    room.name = "Cave";
+                    break;
+                case environmentTypes_1.EnvType.MAGMA_CAVE:
+                    room.name = "Magma Cave";
+                    break;
+                case environmentTypes_1.EnvType.FOREST:
+                    room.name = "Forest";
+                    break;
+                case environmentTypes_1.EnvType.CASTLE:
+                    room.name = "Castle";
+                    break;
+                case environmentTypes_1.EnvType.TUTORIAL:
+                    room.name = "Tutorial";
+                    break;
+                default:
+                    room.name = "Sidepath";
+                    break;
+            }
+        }
+        // Normalize: if something invoked this twice (or other systems placed extras),
+        // enforce exactly one rope-up ladder, one sidepath down ladder, and one matching key.
+        const ropeUps = [];
+        const sideDowns = [];
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+            for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                const t = room.roomArray[x]?.[y];
+                if (t instanceof upLadder_1.UpLadder && t.isRope) {
+                    ropeUps.push({ x, y, t: t });
+                }
+                if (t instanceof downLadder_1.DownLadder && t.isSidePath) {
+                    sideDowns.push({ x, y, t: t });
+                }
+            }
+        }
+        const keepRopeUp = ropeUps[0] ?? null;
+        const keepSideDown = sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ?? sideDowns[0] ?? null;
+        // Remove extra rope-ups
+        for (let i = 1; i < ropeUps.length; i++) {
+            const { x, y } = ropeUps[i];
+            room.roomArray[x][y] = new floor_1.Floor(room, x, y);
+        }
+        // Remove extra side down ladders
+        for (const d of sideDowns) {
+            if (keepSideDown && d.x === keepSideDown.x && d.y === keepSideDown.y)
+                continue;
+            room.roomArray[d.x][d.y] = new floor_1.Floor(room, d.x, d.y);
+        }
+        if (keepRopeUp && keepSideDown) {
+            const opts = room.level?.generationOptions;
+            // The exit rope-down ladder in a sidepath should use the *current environment's*
+            // env-driven sidepath options (e.g., FOREST -> CASTLE). Do NOT reuse this room's
+            // own generationOptions.envType, which describes how this room was generated.
+            const exitOpts = this.getEnvDrivenSidePathOptions();
+            const desiredExitEnv = exitOpts?.envType ?? null;
+            if (desiredExitEnv === null) {
+                // No configured sidepath for this environment: ensure no exit ladder exists.
+                for (const d of sideDowns) {
+                    room.roomArray[d.x][d.y] = new floor_1.Floor(room, d.x, d.y);
+                }
+                room.items = room.items.filter((it) => !(it instanceof key_1.Key));
+                return;
+            }
+            const maxPad = Math.max(0, Math.floor(Math.min(room.width, room.height) / 2) - 2);
+            const softMargin = Math.max(0, Math.min(maxPad, opts?.softMargin ?? 8));
+            const minX = room.roomX + 1 + softMargin;
+            const maxX = room.roomX + room.width - 2 - softMargin;
+            const minY = room.roomY + 1 + softMargin;
+            const maxY = room.roomY + room.height - 2 - softMargin;
+            const inPadded = (x, y) => x >= minX && x <= maxX && y >= minY && y <= maxY;
+            // If the kept rope-up or side down ladder are outside the padded region, relocate them inward.
+            const relocateTile = (fromX, fromY, place) => {
+                room.roomArray[fromX][fromY] = new floor_1.Floor(room, fromX, fromY);
+                place();
+            };
+            // Relocate rope-up if needed
+            if (!inPadded(keepRopeUp.x, keepRopeUp.y)) {
+                const base = room.getEmptyTiles();
+                const padded = this.getPaddedTilesFrom(room, base, softMargin);
+                const tiles = padded.length > 0 ? padded : base;
+                const pos = room.getRandomEmptyPosition(tiles);
+                if (pos) {
+                    relocateTile(keepRopeUp.x, keepRopeUp.y, () => {
+                        const up = new upLadder_1.UpLadder(room, room.game, pos.x, pos.y);
+                        up.isRope = true;
+                        up.isSidePath = true;
+                        room.roomArray[pos.x][pos.y] = up;
+                    });
+                    // Update kept rope-up coords locally so the rest of this block is consistent
+                    keepRopeUp.x = pos.x;
+                    keepRopeUp.y = pos.y;
+                }
+            }
+            // Relocate side down ladder if needed
+            if (!inPadded(keepSideDown.x, keepSideDown.y)) {
+                const base = room.getEmptyTiles();
+                const padded = this.getPaddedTilesFrom(room, base, softMargin);
+                const tiles = padded.length > 0 ? padded : base;
+                const pos = room.getRandomEmptyPosition(tiles);
+                if (pos) {
+                    const existingKeyId = keepSideDown.t.lockable?.keyID;
+                    const existingLockType = keepSideDown.t.lockable?.isLocked?.()
+                        ? lockable_1.LockType.LOCKED
+                        : lockable_1.LockType.NONE;
+                    relocateTile(keepSideDown.x, keepSideDown.y, () => {
+                        const dl = new downLadder_1.DownLadder(room, room.game, pos.x, pos.y, true, desiredExitEnv, existingLockType, exitOpts ?? opts, existingKeyId !== undefined
+                            ? { lockType: existingLockType, keyID: existingKeyId }
+                            : { lockType: existingLockType });
+                        room.roomArray[pos.x][pos.y] = dl;
+                    });
+                    keepSideDown.x = pos.x;
+                    keepSideDown.y = pos.y;
+                }
+            }
+            const keyId = keepSideDown.t.lockable?.keyID;
+            if (keyId !== undefined) {
+                // Keep exactly one matching key
+                let kept = false;
+                room.items = room.items.filter((it) => {
+                    if (!(it instanceof key_1.Key))
+                        return true;
+                    const match = it.doorID === keyId;
+                    if (match && !kept) {
+                        kept = true;
+                        return true;
+                    }
+                    // Remove non-matching keys and extra matching keys
+                    return false;
+                });
+                if (!kept) {
+                    const base = room.getEmptyTiles();
+                    const padded = this.getPaddedTilesFrom(room, base, softMargin);
+                    const tiles = padded.length > 0 ? padded : base;
+                    const pos = room.getRandomEmptyPosition(tiles);
+                    if (pos) {
+                        const key = new key_1.Key(room, pos.x, pos.y);
+                        key.doorID = keyId;
+                        room.items.push(key);
+                    }
+                }
+            }
+            // Already normalized: do not re-run carving/placement.
+            return;
+        }
+        const opts = room.level?.generationOptions;
+        // NOTE: In single-room sidepaths, everything is *necessarily* in the same room.
+        // The key/entrance/exit "in main room" options are forward-looking for multi-room
+        // sidepaths; they should NOT collapse the maze endpoints in this mode.
+        // Soft margin to reduce carving and endpoint placement along the outer boundary
+        // (avoid flat wall reveals).
+        // Clamp margin so it never inverts the usable interior.
+        const maxPad = Math.max(0, Math.floor(Math.min(room.width, room.height) / 2) - 2);
+        const softMargin = Math.max(0, Math.min(maxPad, opts?.softMargin ?? 8));
+        // Carve a meandering node network first, then randomly assign entrance/key/exit.
+        // Connect a random number of distinct nodes in [3..7], median biased toward 5.
+        const requiredConnected = game_1.Game.randTable([3, 4, 4, 5, 5, 5, 6, 6, 7], rand);
+        const nodeCount = game_1.Game.randTable([12, 14, 16, 18, 20], rand);
+        const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
+            softMargin,
+            nodeCount,
+            requiredConnectedNodes: requiredConnected,
+        });
+        const connected = network.connectedNodes.length >= 3 ? network.connectedNodes : network.allNodes;
+        if (connected.length === 0)
+            return;
+        const shuffled = connected.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = game_1.Game.rand(0, i, rand);
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const entrance = shuffled[0] ?? null;
+        const keyEndpoint = shuffled[1] ?? null;
+        const exitEndpoint = shuffled[2] ?? null;
+        if (!entrance)
+            return;
+        // Place rope-up ladder at entrance.
+        const up = new upLadder_1.UpLadder(room, room.game, entrance.x, entrance.y);
+        up.isRope = true;
+        up.isSidePath = true;
+        room.roomArray[entrance.x][entrance.y] = up;
+        // Place the exit downladder (locked) at exit endpoint.
+        const exitOpts = this.getEnvDrivenSidePathOptions();
+        const exitEnv = exitOpts?.envType ?? null;
+        if (exitEnv !== null && exitEndpoint && keyEndpoint) {
+            const dl = new downLadder_1.DownLadder(room, room.game, exitEndpoint.x, exitEndpoint.y, true, // sidepath down ladder (rope down)
+            exitEnv, lockable_1.LockType.LOCKED, exitOpts ?? opts);
+            room.roomArray[exitEndpoint.x][exitEndpoint.y] = dl;
+            // Place a key to unlock the exit downladder.
+            const key = new key_1.Key(room, keyEndpoint.x, keyEndpoint.y);
+            dl.lockable.setKey(key);
+            room.items.push(key);
+        }
+        // Place bosses guarding key + exit (localized near their endpoints).
+        const trySpawnBossNear = (target) => {
+            const tiles = room
+                .getEmptyTiles()
+                .filter((t) => Math.abs(t.x - target.x) + Math.abs(t.y - target.y) <= 6);
+            if (tiles.length === 0)
+                return;
+            const pos = room.getRandomEmptyPosition(tiles);
+            if (!pos)
+                return;
+            // Reuse boss selection logic by temporarily placing a BOSS in this room.
+            // We don't change RoomType; we just spawn a boss entity.
+            this.addBossesAt(room, room.depth, pos.x, pos.y);
+        };
+        if (keyEndpoint)
+            trySpawnBossNear(keyEndpoint);
+        if (exitEnv !== null && exitEndpoint)
+            trySpawnBossNear(exitEndpoint);
+        // Single-room sidepath maze: intentionally do NOT place vending machines.
+        room.removeDoorObstructions();
+    }
+    addBossesAt(room, depth, x, y) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true || room.envType === environmentTypes_1.EnvType.TUTORIAL)
+            return;
+        // Mirror `addBosses` selection logic, but with an explicit position.
+        let bosses = [
+            "reaper",
+            "queen",
+            "bigskullenemy",
+            "bigzombieenemy",
+            "bigfrogenemy",
+            "exalter",
+        ];
+        if (depth > 0) {
+            bosses.push("occultist");
+            bosses = bosses.filter((b) => b !== "queen");
+        }
+        if (room.envType === environmentTypes_1.EnvType.FOREST) {
+            bosses.push("bigfrogenemy");
+        }
+        if (depth > 4) {
+            bosses.push("warden");
+            bosses = bosses.filter((b) => b !== "bigskullenemy" && b !== "bigzombieenemy" && b !== "occultist");
+        }
+        const boss = game_1.Game.randTable(bosses, random_1.Random.rand);
+        if (!boss)
+            return;
+        switch (boss) {
+            case "reaper": {
+                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7);
+                spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
+                break;
+            }
+            case "queen":
+                queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
+                break;
+            case "bigskullenemy":
+                bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
+                break;
+            case "occultist": {
+                occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
+                break;
+            }
+            case "bigzombieenemy":
+                bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
+                break;
+            case "warden":
+                wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
+                break;
+            case "bigfrogenemy":
+                bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, x, y);
+                break;
+            case "exalter":
+                exalterEnemy_1.ExalterEnemy.add(room, room.game, x, y);
+                break;
         }
     }
     /**
@@ -68335,6 +69357,7 @@ class DownLadder extends passageway_1.Passageway {
     constructor(room, game, x, y, isSidePath = false, environment = environmentTypes_1.EnvType.DUNGEON, lockType = lockable_1.LockType.NONE, opts, lockStateOverride) {
         super(room, game, x, y);
         this.isSidePath = false;
+        this._generationInFlight = null;
         this.getName = () => {
             return this.isSidePath ? "rope down" : "staircase down";
         };
@@ -68348,11 +69371,18 @@ class DownLadder extends passageway_1.Passageway {
             return locked ? "A staircase down. It's locked." : "A staircase down.";
         };
         this.generate = async () => {
-            if (!this.linkedRoom) {
+            if (this.linkedRoom)
+                return;
+            if (this._generationInFlight)
+                return await this._generationInFlight;
+            this._generationInFlight = (async () => {
                 await this.sidePathManager.generateFor(this);
+            })();
+            try {
+                await this._generationInFlight;
             }
-            else {
-                console.log("LinkedRoom already exists:", this.linkedRoom);
+            finally {
+                this._generationInFlight = null;
             }
         };
         // Linking logic is handled by SidePathManager
