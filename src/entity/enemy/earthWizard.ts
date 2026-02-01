@@ -39,7 +39,6 @@ export class EarthWizardEnemy extends WizardEnemy {
     this.projectileColor = [0, 200, 0];
     if (drop) this.drop = drop;
     this.jumpHeight = 0.5;
-    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
   hit = (): number => {

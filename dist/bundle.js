@@ -14557,7 +14557,6 @@ class EarthWizardEnemy extends wizardEnemy_1.WizardEnemy {
         if (drop)
             this.drop = drop;
         this.jumpHeight = 0.5;
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.EarthWizardEnemy = EarthWizardEnemy;
@@ -15418,7 +15417,6 @@ class EnergyWizardEnemy extends wizardEnemy_1.WizardEnemy {
         this.projectileColor = [0, 50, 150];
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.EnergyWizardEnemy = EnergyWizardEnemy;
@@ -15900,7 +15898,6 @@ class FireWizardEnemy extends wizardEnemy_1.WizardEnemy {
         if (drop)
             this.drop = drop;
         this.jumpHeight = 0.5;
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
 }
 exports.FireWizardEnemy = FireWizardEnemy;
@@ -19666,7 +19663,8 @@ class WizardEnemy extends enemy_1.Enemy {
         this.name = "wizard bomber";
         if (drop)
             this.drop = drop;
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+        // Include "wizard" category so wizard-specific drops can be added without affecting other enemies.
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin", "wizard"]);
     }
 }
 exports.WizardEnemy = WizardEnemy;
@@ -31880,7 +31878,6 @@ const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
-const bombItem_1 = __webpack_require__(/*! ../item/bombItem */ "./src/item/bombItem.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
@@ -31905,6 +31902,7 @@ const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./sr
 const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/chestPlate.ts");
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 const weaponCurse_1 = __webpack_require__(/*! ../item/usable/weaponCurse */ "./src/item/usable/weaponCurse.ts");
+const bluePotion_1 = __webpack_require__(/*! ../item/usable/bluePotion */ "./src/item/usable/bluePotion.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -32353,25 +32351,28 @@ GameConstants.STARTING_DEV_INVENTORY = [
     sword_1.Sword,
     dualdagger_1.DualDagger,
     weaponCurse_1.WeaponCurse,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    coal_1.Coal,
-    bombItem_1.BombItem,
-    ironOre_1.IronOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
-    goldOre_1.GoldOre,
+    bluePotion_1.BluePotion,
+    /*
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    Coal,
+    BombItem,
+    IronOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    GoldOre,
+    */
 ];
 
 
@@ -42178,6 +42179,7 @@ const backplate_1 = __webpack_require__(/*! ./backplate */ "./src/item/backplate
 const gauntlets_1 = __webpack_require__(/*! ./gauntlets */ "./src/item/gauntlets.ts");
 const shoulderPlates_1 = __webpack_require__(/*! ./shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ./chestPlate */ "./src/item/chestPlate.ts");
+const bluePotion_1 = __webpack_require__(/*! ./usable/bluePotion */ "./src/item/usable/bluePotion.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -42205,6 +42207,7 @@ exports.ItemTypeMap = {
     pickaxe: pickaxe_1.Pickaxe,
     hammer: hammer_1.Hammer,
     heart: heart_1.Heart,
+    bluePotion: bluePotion_1.BluePotion,
     weaponpoison: weaponPoison_1.WeaponPoison,
     weaponblood: weaponBlood_1.WeaponBlood,
     coin: coin_1.Coin,
@@ -42364,6 +42367,8 @@ DropTable.drops = [
     { itemType: "hourglass", dropRate: 10, category: ["reaper"], unique: true },
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
+    // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
+    { itemType: "bluePotion", dropRate: 60, category: ["wizard", "consumable", "magic"], minDepth: 1 },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
     // Common items
@@ -44717,25 +44722,50 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BluePotion = void 0;
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 class BluePotion extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => {
-            player.health = Math.min(player.maxHealth, player.health + 1);
+            const spellbooks = [];
+            for (const it of player.inventory.items) {
+                if (it instanceof spellbook_1.Spellbook)
+                    spellbooks.push(it);
+            }
+            // Defensive: equipped weapon should already be in items, but don't assume.
+            const equipped = player.inventory.weapon;
+            if (equipped instanceof spellbook_1.Spellbook && !spellbooks.includes(equipped)) {
+                spellbooks.push(equipped);
+            }
+            if (spellbooks.length === 0) {
+                player.game.pushMessage("You don't have a spellbook.");
+                return;
+            }
+            const hasCooldown = spellbooks.some((b) => b.cooldown > 0);
+            if (!hasCooldown) {
+                player.game.pushMessage("No spellbook is on cooldown.");
+                return;
+            }
+            for (const b of spellbooks) {
+                if (b.cooldown > 0)
+                    b.cooldown = 0;
+            }
             if (this.level.game.rooms[player.levelID] === this.level.game.room)
-                sound_1.Sound.heal();
+                sound_1.Sound.playMagic();
             player.inventory.removeItem(this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         this.getDescription = () => {
-            return "HEALTH POTION\nRestores 1 heart";
+            return "MANA POTION\nResets spellbook cooldowns";
         };
         this.tileX = 9;
         this.tileY = 0;
         this.offsetY = -0.3;
+        this.name = BluePotion.itemName;
     }
 }
 exports.BluePotion = BluePotion;
+BluePotion.itemName = "mana potion";
 
 
 /***/ }),

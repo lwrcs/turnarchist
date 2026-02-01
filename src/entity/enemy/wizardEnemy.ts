@@ -42,7 +42,8 @@ export abstract class WizardEnemy extends Enemy {
     this.alertTicks = 0;
     this.name = "wizard bomber";
     if (drop) this.drop = drop;
-    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    // Include "wizard" category so wizard-specific drops can be added without affecting other enemies.
+    this.getDrop(["weapon", "equipment", "consumable", "tool", "coin", "wizard"]);
   }
 
   // (no additional helpers required here)

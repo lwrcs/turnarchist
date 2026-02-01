@@ -46,6 +46,7 @@ import { Backplate } from "./backplate";
 import { Gauntlets } from "./gauntlets";
 import { ShoulderPlates } from "./shoulderPlates";
 import { ChestPlate } from "./chestPlate";
+import { BluePotion } from "./usable/bluePotion";
 
 interface Drop {
   itemType: string;
@@ -86,6 +87,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   hammer: Hammer,
 
   heart: Heart,
+  bluePotion: BluePotion,
   weaponpoison: WeaponPoison,
   weaponblood: WeaponBlood,
 
@@ -255,6 +257,8 @@ export class DropTable {
 
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
+    // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
+    { itemType: "bluePotion", dropRate: 60, category: ["wizard", "consumable", "magic"], minDepth: 1 },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
 

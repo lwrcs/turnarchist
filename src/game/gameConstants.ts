@@ -57,6 +57,7 @@ import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 import { IronBar } from "../item/resource/ironBar";
 import { WeaponCurse } from "../item/usable/weaponCurse";
+import { BluePotion } from "../item/usable/bluePotion";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
@@ -580,7 +581,8 @@ export class GameConstants {
     Sword,
     DualDagger,
     WeaponCurse,
-
+    BluePotion,
+    /*
     Coal,
     Coal,
     Coal,
@@ -600,5 +602,6 @@ export class GameConstants {
     GoldOre,
     GoldOre,
     GoldOre,
+    */
   ];
 }
