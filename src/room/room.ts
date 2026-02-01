@@ -1726,14 +1726,8 @@ export class Room {
     }
     addMs("items.tick", nowMs() - tItems);
 
-    const tInv = nowMs();
-    for (const pl of Object.values(this.game.players)) {
-      if (!pl) continue;
-      for (const it of pl.inventory.items) {
-        if (it) it.tick();
-      }
-    }
-    addMs("inventory.tick", nowMs() - tInv);
+    // NOTE: Inventory items tick via `player.finishTick()` -> `inventory.tick()` each turn.
+    // Do NOT also tick them here; that would double-advance per-turn item state (e.g. weapon cooldowns).
 
     const tHit = nowMs();
     for (const h of this.hitwarnings) {

@@ -9889,13 +9889,14 @@ exports.Drawable = Drawable;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthBar = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 class HealthBar {
     constructor() {
         this.hurt = () => {
             this.hurtTimer = Date.now();
         };
-        this.draw = (delta, hearts, maxHearts, x, y, flashing) => {
+        this.draw = (delta, hearts, maxHearts, x, y, flashing, opts) => {
             let t = Math.min(levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME, Math.max(Date.now() - this.hurtTimer, 0));
             if (t <= levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME) {
                 let fullHearts = Math.floor(hearts);
@@ -9936,7 +9937,69 @@ class HealthBar {
                         xx += 9.0 / 16.0;
                     }
                 }
+                // Optional mana orb (player-only): draw above the heart bar.
+                const mana = opts?.mana;
+                if (mana &&
+                    typeof mana.current === "number" &&
+                    typeof mana.max === "number" &&
+                    Number.isFinite(mana.current) &&
+                    Number.isFinite(mana.max) &&
+                    mana.max > 0) {
+                    const pct = Math.max(0, Math.min(1, mana.current / mana.max));
+                    this.drawManaOrb({
+                        centerTileX: x + 0.5,
+                        centerTileY: y - 1 - drawHeight / 2 - 0.75,
+                        percent01: pct,
+                        manaValue: Math.max(0, Math.floor(mana.current)),
+                    });
+                }
             }
+        };
+        this.drawManaOrb = (args) => {
+            const color = "#2aa8ff";
+            const sizePx = 12; // pixel-art orb size
+            const r = Math.floor(sizePx / 2); // radius in px
+            const cx = Math.round(args.centerTileX * gameConstants_1.GameConstants.TILESIZE);
+            const cy = Math.round(args.centerTileY * gameConstants_1.GameConstants.TILESIZE);
+            const x0 = cx - r;
+            const y0 = cy - r;
+            const prevSmoothing = game_1.Game.ctx.imageSmoothingEnabled;
+            game_1.Game.ctx.imageSmoothingEnabled = false;
+            game_1.Game.ctx.save();
+            // Fill rows from bottom to top, row-by-row.
+            const innerR = Math.max(0, r - 1);
+            const filledRows = Math.floor(sizePx * Math.max(0, Math.min(1, args.percent01)));
+            const fillStartY = y0 + (sizePx - filledRows);
+            for (let py = 0; py < sizePx; py++) {
+                for (let px = 0; px < sizePx; px++) {
+                    const gx = x0 + px;
+                    const gy = y0 + py;
+                    const dx = px - (r - 0.5);
+                    const dy = py - (r - 0.5);
+                    const d2 = dx * dx + dy * dy;
+                    const inOuter = d2 <= r * r;
+                    if (!inOuter)
+                        continue;
+                    const inInner = d2 <= innerR * innerR;
+                    const isOutline = !inInner;
+                    if (isOutline) {
+                        game_1.Game.ctx.fillStyle = color;
+                        game_1.Game.ctx.fillRect(gx, gy, 1, 1);
+                        continue;
+                    }
+                    // Inner pixel: only draw if this row is "filled".
+                    if (gy >= fillStartY) {
+                        game_1.Game.ctx.fillStyle = color;
+                        game_1.Game.ctx.fillRect(gx, gy, 1, 1);
+                    }
+                }
+            }
+            // Mana number (overlapping bottom-right, like the coin counter style).
+            const text = `${args.manaValue}`;
+            game_1.Game.fillTextOutline(text, x0 + sizePx - 1, // slightly overlapping orb
+            y0 + sizePx + 2, gameConstants_1.GameConstants.OUTLINE, color);
+            game_1.Game.ctx.restore();
+            game_1.Game.ctx.imageSmoothingEnabled = prevSmoothing;
         };
         this.hurtTimer = 0;
     }
@@ -33887,6 +33950,8 @@ class PlayerState {
         this.direction = player.direction;
         this.health = player.health;
         this.maxHealth = player.maxHealth;
+        this.mana = player.mana;
+        this.maxMana = player.maxMana;
         this.lastTickHealth = player.lastTickHealth;
         this.inventory = new InventoryState(player.inventory, game);
         this.hasOpenVendingMachine = false;
@@ -33950,6 +34015,17 @@ let loadPlayer = (id, p, game) => {
         player.depth = game.level.depth;
     }
     player.direction = p.direction;
+    if (typeof p.maxMana === "number" && Number.isFinite(p.maxMana) && p.maxMana > 0) {
+        player.maxMana = p.maxMana;
+    }
+    if (typeof p.mana === "number" && Number.isFinite(p.mana)) {
+        // Clamp to [0..maxMana] once maxMana is resolved.
+        player.mana = Math.max(0, Math.min(player.maxMana, p.mana));
+    }
+    else {
+        // Back-compat: older saves didn't have mana.
+        player.mana = player.maxMana;
+    }
     player.health = p.health;
     player.maxHealth = p.maxHealth;
     player.lastTickHealth = p.lastTickHealth;
@@ -44727,12 +44803,12 @@ class BluePotion extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => {
+            // Mana is derived from spellbook cooldown. This potion reduces that cooldown.
             const spellbooks = [];
             for (const it of player.inventory.items) {
                 if (it instanceof spellbook_1.Spellbook)
                     spellbooks.push(it);
             }
-            // Defensive: equipped weapon should already be in items, but don't assume.
             const equipped = player.inventory.weapon;
             if (equipped instanceof spellbook_1.Spellbook && !spellbooks.includes(equipped)) {
                 spellbooks.push(equipped);
@@ -44741,22 +44817,24 @@ class BluePotion extends usable_1.Usable {
                 player.game.pushMessage("You don't have a spellbook.");
                 return;
             }
-            const hasCooldown = spellbooks.some((b) => b.cooldown > 0);
-            if (!hasCooldown) {
-                player.game.pushMessage("No spellbook is on cooldown.");
+            const maxCooldown = Math.max(0, ...spellbooks.map((b) => b.cooldown || 0));
+            if (maxCooldown <= 0) {
+                player.game.pushMessage("Mana is already full.");
                 return;
             }
+            const restore = 5;
             for (const b of spellbooks) {
                 if (b.cooldown > 0)
-                    b.cooldown = 0;
+                    b.cooldown = Math.max(0, b.cooldown - restore);
             }
+            player.syncManaFromSpellbookCooldowns();
             if (this.level.game.rooms[player.levelID] === this.level.game.room)
                 sound_1.Sound.playMagic();
             player.inventory.removeItem(this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         this.getDescription = () => {
-            return "MANA POTION\nResets spellbook cooldowns";
+            return "MANA POTION\nRestores mana";
         };
         this.tileX = 9;
         this.tileY = 0;
@@ -46639,6 +46717,11 @@ class Spellbook extends weapon_1.Weapon {
         };
         this.weaponMove = (newX, newY) => {
             //if (!this.checkForCollidables(newX, newY)) return true;
+            // If we're on cooldown, treat as "out of mana" (mana bar is synced to cooldown).
+            if (this.cooldown > 0) {
+                this.level.game.pushMessage("Not enough mana.");
+                return true;
+            }
             this.getTargets();
             let direction = this.wielder.direction;
             let flag = false;
@@ -46683,19 +46766,21 @@ class Spellbook extends weapon_1.Weapon {
             if (flag) {
                 this.hitSound();
                 this.wielder.setHitXY(newX, newY);
-                const room = this.wielder?.getRoom
-                    ? this.wielder.getRoom()
-                    : this.game.rooms[this.wielder.levelID];
+                const room = this.wielder.getRoom();
                 room.tick(this.wielder);
                 this.shakeScreen(newX, newY);
                 sound_1.Sound.playMagic();
                 this.degrade();
-                this.cooldown = this.cooldownMax;
+                // Put spellbooks on cooldown; player mana UI reflects this.
+                // Important: set to cooldownMax+1 so the end-of-turn cooldown tick doesn't immediately
+                // "recharge" mana on the same turn as casting.
+                this.cooldown = this.cooldownMax + 1;
                 for (let item of this.wielder.inventory.items) {
                     if (item instanceof Spellbook) {
-                        item.cooldown = item.cooldownMax;
+                        item.cooldown = item.cooldownMax + 1;
                     }
                 }
+                this.wielder.syncManaFromSpellbookCooldowns();
                 setTimeout(() => {
                     this.isTargeting = false;
                 }, 100);
@@ -46741,7 +46826,9 @@ class Spellbook extends weapon_1.Weapon {
         this.durabilityMax = 10;
         this.description = "Hits multiple enemies within a range of 4 tiles.";
         this.degradeable = true;
-        this.cooldownMax = 25;
+        // Spellbook uses cooldown; player "mana" UI is derived from this cooldown.
+        this.manaCost = 0;
+        this.cooldownMax = 10;
     }
 }
 exports.Spellbook = Spellbook;
@@ -46943,6 +47030,7 @@ const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts
 class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
+        this._cooldownLastTurnProcessed = null;
         this.toggleEquip = () => {
             // Respect base Equippable gating (broken/cooldown) but add skill requirements for weapons.
             const reqSkill = this.requiredSkill;
@@ -47177,6 +47265,23 @@ class Weapon extends equippable_1.Equippable {
         this.tick = () => {
             this.updateCooldown();
         };
+        // Weapons must tick while inside the inventory so cooldown-based logic works.
+        // (Inventory calls `tickInInventory()` each turn.)
+        this.tickInInventory = () => {
+            // Defensive: some code paths may call inventory tick more than once per turn.
+            // Only decrement cooldown once per player turnCount to avoid double-ticking.
+            const turn = this.wielder?.turnCount;
+            if (typeof turn === "number" && Number.isFinite(turn)) {
+                if (this._cooldownLastTurnProcessed === turn)
+                    return;
+                this._cooldownLastTurnProcessed = turn;
+            }
+            else {
+                // If we have no reliable turn counter (no wielder, etc), allow ticking.
+                this._cooldownLastTurnProcessed = null;
+            }
+            this.tick();
+        };
         this.updateCooldown = () => {
             if (this.cooldown > 0) {
                 this.cooldown--;
@@ -47237,6 +47342,7 @@ class Weapon extends equippable_1.Equippable {
         this.name = this.constructor.prototype.itemName;
         this.cooldown = 0;
         this.cooldownMax = 0;
+        this.manaCost = 0;
         this.twoHanded = false;
         this.knockbackDistance = 0;
         this._swingHitIds = null;
@@ -47400,7 +47506,28 @@ class Weapon extends equippable_1.Equippable {
         return true;
     }
     executeAttack(targetX, targetY, animated = true, damage = this.damage + this.wielder.damageBonus, shakeScreen = true, sound = true, mainAttack = true, shouldTick = true) {
-        const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
+        // Avoid mana gating on normal movement attempts:
+        // `Player.tryMove()` calls `weaponMove()` even when walking into empty tiles, so only
+        // charge mana if we'd actually hit something.
+        const targets = this.getEntitiesAt(targetX, targetY).filter((e) => !e.pushable);
+        if (targets.length === 0) {
+            this.applyHitDelay(false);
+            return false;
+        }
+        if (this.manaCost > 0) {
+            const wielder = this.wielder;
+            if (!wielder || !wielder.canSpendMana(this.manaCost)) {
+                this.level.game.pushMessage("Not enough mana.");
+                this.applyHitDelay(false);
+                return false;
+            }
+            wielder.spendMana(this.manaCost);
+        }
+        let hitSomething = false;
+        for (const t of targets) {
+            this.attack(t, damage);
+            hitSomething = true;
+        }
         this.applyHitDelay(hitSomething);
         if (hitSomething) {
             if (sound)
@@ -53645,6 +53772,7 @@ const drawable_1 = __webpack_require__(/*! ../drawable/drawable */ "./src/drawab
 const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const blockSwipeAnimation_1 = __webpack_require__(/*! ../particle/blockSwipeAnimation */ "./src/particle/blockSwipeAnimation.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
@@ -53701,6 +53829,24 @@ class Player extends drawable_1.Drawable {
          * Stored in radians (matches `PlayerInputHandler.mouseAngle()`).
          */
         this.frozenMouseAngleRad = null;
+        this.restoreMana = (amount) => {
+            if (!Number.isFinite(amount) || amount <= 0)
+                return;
+            this.mana = Math.min(this.maxMana, this.mana + amount);
+        };
+        this.canSpendMana = (cost) => {
+            if (!Number.isFinite(cost) || cost <= 0)
+                return true;
+            return this.mana >= cost;
+        };
+        this.spendMana = (cost) => {
+            if (!Number.isFinite(cost) || cost <= 0)
+                return true;
+            if (this.mana < cost)
+                return false;
+            this.mana -= cost;
+            return true;
+        };
         this.getRoom = () => {
             const byId = this.roomGID ? this.game.getRoomById(this.roomGID) : undefined;
             if (byId)
@@ -54760,6 +54906,7 @@ class Player extends drawable_1.Drawable {
         this.finishTick = () => {
             this.turnCount += 1;
             this.inventory.tick();
+            this.syncManaFromSpellbookCooldowns();
             this.oxygenLine.update();
             this.handleUnderwater();
             this.renderer.disableFlash();
@@ -54773,6 +54920,34 @@ class Player extends drawable_1.Drawable {
             this.moveDistance = 0;
             //this.actionTab.actionState = ActionState.READY;
             //Sets the action tab state to Wait (during enemy turn)
+        };
+        /**
+         * "Mana" is a UI view of spellbook cooldown state:
+         * - Spellbooks go on cooldown when cast.
+         * - Mana shows how "charged" your spellcasting is (full when cooldowns are 0).
+         */
+        this.syncManaFromSpellbookCooldowns = () => {
+            const spellbooks = [];
+            for (const it of this.inventory.items) {
+                if (it instanceof spellbook_1.Spellbook)
+                    spellbooks.push(it);
+            }
+            // Defensive: equipped weapon should already be in items, but don't assume.
+            const equipped = this.inventory.weapon;
+            if (equipped instanceof spellbook_1.Spellbook && !spellbooks.includes(equipped)) {
+                spellbooks.push(equipped);
+            }
+            if (spellbooks.length === 0) {
+                // No spellbook: keep mana full so the UI doesn't look "stuck empty".
+                this.mana = this.maxMana;
+                return;
+            }
+            // Align maxMana with the configured spellbook cooldownMax (assume consistent across books).
+            const max = Math.max(1, ...spellbooks.map((b) => b.cooldownMax || 0));
+            this.maxMana = max;
+            // Represent the shared "charge" as the worst (highest) cooldown among spellbooks.
+            const cd = Math.max(0, ...spellbooks.map((b) => b.cooldown || 0));
+            this.mana = Math.max(0, Math.min(this.maxMana, this.maxMana - cd));
         };
         this.handleUnderwater = () => {
             const room = this.getRoom();
@@ -54927,6 +55102,9 @@ class Player extends drawable_1.Drawable {
         this.mapToggled = true;
         this.health = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
         this.maxHealth = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
+        // Mana is used by magic weapons (e.g. Spellbook). Defaults can be tuned later.
+        this.maxMana = 10;
+        this.mana = this.maxMana;
         this.healthBar = new healthbar_1.HealthBar();
         this.dead = false;
         this.lastTickHealth = this.health;
@@ -57006,7 +57184,7 @@ class PlayerRenderer {
         };
         this.drawTopLayer = (delta) => {
             game_1.Game.ctx.save(); // Save the current canvas state
-            this.player.healthBar.draw(delta, this.player.health, this.player.maxHealth, this.player.x - this.drawX, this.player.y - this.drawY - this.drawZ, !this.flashing || Math.floor(this.flashingFrame) % 2 === 0);
+            this.player.healthBar.draw(delta, this.player.health, this.player.maxHealth, this.player.x - this.drawX, this.player.y - this.drawY - this.drawZ, !this.flashing || Math.floor(this.flashingFrame) % 2 === 0, { mana: { current: this.player.mana, max: this.player.maxMana } });
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
         this.pushingMove = false;
@@ -57117,6 +57295,7 @@ class PlayerRenderer {
                     if (heartStartX < minHeartStartX)
                         heartStartX = minHeartStartX;
                 }
+                const offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
                 for (let i = 0; i < this.player.maxHealth; i++) {
                     let shake = 0;
                     let shakeY = 0;
@@ -57132,7 +57311,6 @@ class PlayerRenderer {
                                 gameConstants_1.GameConstants.TILESIZE;
                     }
                     let frame = this.guiHeartFrame > 0 ? 1 : 0;
-                    let offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
                     if (i >= Math.floor(this.player.health)) {
                         if (i == Math.floor(this.player.health) &&
                             (this.player.health * 2) % 2 == 1) {
@@ -57156,6 +57334,8 @@ class PlayerRenderer {
                             offsetY, 0.75, 0.75);
                     }
                 }
+                // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
+                //this.drawManaOrbGUI(heartStartX, offsetY);
                 //this.drawCooldownBar();
                 this.drawBreathStatus(quickbarStartX);
                 if (armor)
@@ -57446,6 +57626,63 @@ class PlayerRenderer {
             else {
                 this.lowHealthFrame = 0;
             }
+            game_1.Game.ctx.restore();
+        };
+        this.drawManaOrbGUI = (heartStartX, offsetY) => {
+            const maxMana = this.player.maxMana;
+            if (!Number.isFinite(maxMana) || maxMana <= 0)
+                return;
+            const mana = Math.max(0, Math.min(maxMana, this.player.mana));
+            const pct = maxMana > 0 ? mana / maxMana : 0;
+            const heartsYTile = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1 + offsetY;
+            // Center the orb above the heart row.
+            const heartSpan = this.player.maxHealth > 1 ? (this.player.maxHealth - 1) / 1.5 : 0;
+            const centerXTile = heartStartX + 0.5 * heartSpan;
+            const sizePx = 12;
+            const x0 = Math.round(centerXTile * gameConstants_1.GameConstants.TILESIZE - 0.5 * sizePx);
+            const y0 = Math.round(heartsYTile * gameConstants_1.GameConstants.TILESIZE - 14);
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.imageSmoothingEnabled = false;
+            game_1.Game.ctx.imageSmoothingQuality = "low";
+            const blue = "#2e7bff";
+            const radius = (sizePx - 1) / 2;
+            const cx = x0 + radius;
+            const cy = y0 + radius;
+            // Outline
+            game_1.Game.ctx.fillStyle = blue;
+            for (let py = 0; py < sizePx; py++) {
+                for (let px = 0; px < sizePx; px++) {
+                    const dx = px - radius;
+                    const dy = py - radius;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d >= radius - 0.6 && d <= radius + 0.35) {
+                        game_1.Game.ctx.fillRect(x0 + px, y0 + py, 1, 1);
+                    }
+                }
+            }
+            // Fill (row-by-row, bottom-up)
+            const innerBottom = y0 + sizePx - 2;
+            const innerTop = y0 + 1;
+            const innerH = Math.max(0, innerBottom - innerTop + 1);
+            const filledRows = Math.round(pct * innerH);
+            const yFillTop = innerBottom - filledRows + 1;
+            for (let py = innerTop; py <= innerBottom; py++) {
+                if (py < yFillTop)
+                    continue;
+                for (let px = 1; px < sizePx - 1; px++) {
+                    const dx = x0 + px - cx;
+                    const dy = py - cy;
+                    const d = Math.sqrt(dx * dx + dy * dy);
+                    if (d <= radius - 1.2) {
+                        game_1.Game.ctx.fillRect(x0 + px, py, 1, 1);
+                    }
+                }
+            }
+            // Mana number overlapping bottom-right of the orb (coin-style outline).
+            //Game.ctx.font = "10px Tahoma";
+            //Game.ctx.textAlign = "right";
+            //Game.ctx.textBaseline = "alphabetic";
+            game_1.Game.fillTextOutline(String(mana), x0 + sizePx + 2, y0 + sizePx - 2, "black", "white");
             game_1.Game.ctx.restore();
         };
         this.heartbeat = () => {
@@ -59860,16 +60097,8 @@ class Room {
                 addCount("itemTick");
             }
             addMs("items.tick", nowMs() - tItems);
-            const tInv = nowMs();
-            for (const pl of Object.values(this.game.players)) {
-                if (!pl)
-                    continue;
-                for (const it of pl.inventory.items) {
-                    if (it)
-                        it.tick();
-                }
-            }
-            addMs("inventory.tick", nowMs() - tInv);
+            // NOTE: Inventory items tick via `player.finishTick()` -> `inventory.tick()` each turn.
+            // Do NOT also tick them here; that would double-advance per-turn item state (e.g. weapon cooldowns).
             const tHit = nowMs();
             for (const h of this.hitwarnings) {
                 if (!this.isWithinEnemyInteractionRange(h.x, h.y))

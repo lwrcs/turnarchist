@@ -33,9 +33,11 @@ export abstract class Weapon extends Equippable {
   hitDelay: number;
   cooldown: number;
   cooldownMax: number;
+  manaCost: number;
   twoHanded: boolean;
   knockbackDistance: number;
   private _swingHitIds: Set<string> | null;
+  private _cooldownLastTurnProcessed: number | null = null;
 
   /**
    * Skill used for kill attribution when this weapon lands the finishing blow.
@@ -71,6 +73,7 @@ export abstract class Weapon extends Equippable {
     this.name = this.constructor.prototype.itemName;
     this.cooldown = 0;
     this.cooldownMax = 0;
+    this.manaCost = 0;
     this.twoHanded = false;
     this.knockbackDistance = 0;
     this._swingHitIds = null;
@@ -376,6 +379,22 @@ export abstract class Weapon extends Equippable {
     this.updateCooldown();
   };
 
+  // Weapons must tick while inside the inventory so cooldown-based logic works.
+  // (Inventory calls `tickInInventory()` each turn.)
+  tickInInventory = () => {
+    // Defensive: some code paths may call inventory tick more than once per turn.
+    // Only decrement cooldown once per player turnCount to avoid double-ticking.
+    const turn = this.wielder?.turnCount;
+    if (typeof turn === "number" && Number.isFinite(turn)) {
+      if (this._cooldownLastTurnProcessed === turn) return;
+      this._cooldownLastTurnProcessed = turn;
+    } else {
+      // If we have no reliable turn counter (no wielder, etc), allow ticking.
+      this._cooldownLastTurnProcessed = null;
+    }
+    this.tick();
+  };
+
   updateCooldown = () => {
     if (this.cooldown > 0) {
       this.cooldown--;
@@ -593,7 +612,30 @@ export abstract class Weapon extends Equippable {
     mainAttack: boolean = true,
     shouldTick: boolean = true,
   ): boolean {
-    const hitSomething = this.hitEntitiesAt(targetX, targetY, damage);
+    // Avoid mana gating on normal movement attempts:
+    // `Player.tryMove()` calls `weaponMove()` even when walking into empty tiles, so only
+    // charge mana if we'd actually hit something.
+    const targets = this.getEntitiesAt(targetX, targetY).filter((e) => !e.pushable);
+    if (targets.length === 0) {
+      this.applyHitDelay(false);
+      return false;
+    }
+
+    if (this.manaCost > 0) {
+      const wielder = this.wielder;
+      if (!wielder || !wielder.canSpendMana(this.manaCost)) {
+        this.level.game.pushMessage("Not enough mana.");
+        this.applyHitDelay(false);
+        return false;
+      }
+      wielder.spendMana(this.manaCost);
+    }
+
+    let hitSomething = false;
+    for (const t of targets) {
+      this.attack(t, damage);
+      hitSomething = true;
+    }
 
     this.applyHitDelay(hitSomething);
 

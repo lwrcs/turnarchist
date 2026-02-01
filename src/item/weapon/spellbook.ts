@@ -24,7 +24,9 @@ export class Spellbook extends Weapon {
     this.durabilityMax = 10;
     this.description = "Hits multiple enemies within a range of 4 tiles.";
     this.degradeable = true;
-    this.cooldownMax = 25;
+    // Spellbook uses cooldown; player "mana" UI is derived from this cooldown.
+    this.manaCost = 0;
+    this.cooldownMax = 10;
   }
 
   getTargets = () => {
@@ -76,6 +78,11 @@ export class Spellbook extends Weapon {
 
   weaponMove = (newX: number, newY: number): boolean => {
     //if (!this.checkForCollidables(newX, newY)) return true;
+    // If we're on cooldown, treat as "out of mana" (mana bar is synced to cooldown).
+    if (this.cooldown > 0) {
+      this.level.game.pushMessage("Not enough mana.");
+      return true;
+    }
 
     this.getTargets();
     let direction = this.wielder.direction;
@@ -128,19 +135,21 @@ export class Spellbook extends Weapon {
       this.hitSound();
       this.wielder.setHitXY(newX, newY);
 
-      const room = (this.wielder as any)?.getRoom
-        ? (this.wielder as any).getRoom()
-        : this.game.rooms[this.wielder.levelID];
+      const room = this.wielder.getRoom();
       room.tick(this.wielder);
       this.shakeScreen(newX, newY);
       Sound.playMagic();
       this.degrade();
-      this.cooldown = this.cooldownMax;
+      // Put spellbooks on cooldown; player mana UI reflects this.
+      // Important: set to cooldownMax+1 so the end-of-turn cooldown tick doesn't immediately
+      // "recharge" mana on the same turn as casting.
+      this.cooldown = this.cooldownMax + 1;
       for (let item of this.wielder.inventory.items) {
         if (item instanceof Spellbook) {
-          item.cooldown = item.cooldownMax;
+          item.cooldown = item.cooldownMax + 1;
         }
       }
+      this.wielder.syncManaFromSpellbookCooldowns();
 
       setTimeout(() => {
         this.isTargeting = false;

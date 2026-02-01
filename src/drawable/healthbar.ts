@@ -21,6 +21,9 @@ export class HealthBar {
     x: number,
     y: number,
     flashing: boolean,
+    opts?: {
+      mana?: { current: number; max: number };
+    },
   ) => {
     let t = Math.min(
       LevelConstants.HEALTH_BAR_TOTALTIME,
@@ -93,7 +96,91 @@ export class HealthBar {
           xx += 9.0 / 16.0;
         }
       }
+
+      // Optional mana orb (player-only): draw above the heart bar.
+      const mana = opts?.mana;
+      if (
+        mana &&
+        typeof mana.current === "number" &&
+        typeof mana.max === "number" &&
+        Number.isFinite(mana.current) &&
+        Number.isFinite(mana.max) &&
+        mana.max > 0
+      ) {
+        const pct = Math.max(0, Math.min(1, mana.current / mana.max));
+        this.drawManaOrb({
+          centerTileX: x + 0.5,
+          centerTileY: y - 1 - drawHeight / 2 - 0.75,
+          percent01: pct,
+          manaValue: Math.max(0, Math.floor(mana.current)),
+        });
+      }
     }
+  };
+
+  private drawManaOrb = (args: {
+    centerTileX: number;
+    centerTileY: number;
+    percent01: number;
+    manaValue: number;
+  }): void => {
+    const color = "#2aa8ff";
+    const sizePx = 12; // pixel-art orb size
+    const r = Math.floor(sizePx / 2); // radius in px
+    const cx = Math.round(args.centerTileX * GameConstants.TILESIZE);
+    const cy = Math.round(args.centerTileY * GameConstants.TILESIZE);
+    const x0 = cx - r;
+    const y0 = cy - r;
+
+    const prevSmoothing = Game.ctx.imageSmoothingEnabled;
+    Game.ctx.imageSmoothingEnabled = false;
+    Game.ctx.save();
+
+    // Fill rows from bottom to top, row-by-row.
+    const innerR = Math.max(0, r - 1);
+    const filledRows = Math.floor(sizePx * Math.max(0, Math.min(1, args.percent01)));
+    const fillStartY = y0 + (sizePx - filledRows);
+
+    for (let py = 0; py < sizePx; py++) {
+      for (let px = 0; px < sizePx; px++) {
+        const gx = x0 + px;
+        const gy = y0 + py;
+        const dx = px - (r - 0.5);
+        const dy = py - (r - 0.5);
+        const d2 = dx * dx + dy * dy;
+
+        const inOuter = d2 <= r * r;
+        if (!inOuter) continue;
+
+        const inInner = d2 <= innerR * innerR;
+        const isOutline = !inInner;
+
+        if (isOutline) {
+          Game.ctx.fillStyle = color;
+          Game.ctx.fillRect(gx, gy, 1, 1);
+          continue;
+        }
+
+        // Inner pixel: only draw if this row is "filled".
+        if (gy >= fillStartY) {
+          Game.ctx.fillStyle = color;
+          Game.ctx.fillRect(gx, gy, 1, 1);
+        }
+      }
+    }
+
+    // Mana number (overlapping bottom-right, like the coin counter style).
+    const text = `${args.manaValue}`;
+    Game.fillTextOutline(
+      text,
+      x0 + sizePx - 1, // slightly overlapping orb
+      y0 + sizePx + 2,
+      GameConstants.OUTLINE,
+      color,
+    );
+
+    Game.ctx.restore();
+    Game.ctx.imageSmoothingEnabled = prevSmoothing;
   };
 
   /**

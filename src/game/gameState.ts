@@ -1505,6 +1505,8 @@ export class PlayerState {
   direction: Direction;
   health: number;
   maxHealth: number;
+  mana?: number;
+  maxMana?: number;
   lastTickHealth: number;
   inventory: InventoryState;
   hasOpenVendingMachine: boolean;
@@ -1539,6 +1541,8 @@ export class PlayerState {
     this.direction = player.direction;
     this.health = player.health;
     this.maxHealth = player.maxHealth;
+    this.mana = player.mana;
+    this.maxMana = player.maxMana;
     this.lastTickHealth = player.lastTickHealth;
     this.inventory = new InventoryState(player.inventory, game);
     this.hasOpenVendingMachine = false;
@@ -1607,6 +1611,16 @@ let loadPlayer = (id: string, p: PlayerState, game: Game): Player => {
     player.depth = game.level.depth;
   }
   player.direction = p.direction;
+  if (typeof p.maxMana === "number" && Number.isFinite(p.maxMana) && p.maxMana > 0) {
+    player.maxMana = p.maxMana;
+  }
+  if (typeof p.mana === "number" && Number.isFinite(p.mana)) {
+    // Clamp to [0..maxMana] once maxMana is resolved.
+    player.mana = Math.max(0, Math.min(player.maxMana, p.mana));
+  } else {
+    // Back-compat: older saves didn't have mana.
+    player.mana = player.maxMana;
+  }
   player.health = p.health;
   player.maxHealth = p.maxHealth;
   player.lastTickHealth = p.lastTickHealth;

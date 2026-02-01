@@ -18,6 +18,7 @@ import { Gauntlets } from "../item/gauntlets";
 import { BlockSwipeAnimation } from "../particle/blockSwipeAnimation";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
+import { Spellbook } from "../item/weapon/spellbook";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -74,6 +75,8 @@ export class Player extends Drawable {
   roomGID?: string;
   health: number;
   maxHealth: number;
+  mana: number;
+  maxMana: number;
   healthBar: HealthBar;
   dead: boolean;
   lastTickHealth: number;
@@ -190,6 +193,9 @@ export class Player extends Drawable {
     this.mapToggled = true;
     this.health = GameplaySettings.STARTING_HEALTH;
     this.maxHealth = GameplaySettings.STARTING_HEALTH;
+    // Mana is used by magic weapons (e.g. Spellbook). Defaults can be tuned later.
+    this.maxMana = 10;
+    this.mana = this.maxMana;
     this.healthBar = new HealthBar();
     this.dead = false;
     this.lastTickHealth = this.health;
@@ -232,6 +238,23 @@ export class Player extends Drawable {
     this.deathScreenPageCount = 1;
     this.hasBloom = true;
   }
+
+  restoreMana = (amount: number): void => {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    this.mana = Math.min(this.maxMana, this.mana + amount);
+  };
+
+  canSpendMana = (cost: number): boolean => {
+    if (!Number.isFinite(cost) || cost <= 0) return true;
+    return this.mana >= cost;
+  };
+
+  spendMana = (cost: number): boolean => {
+    if (!Number.isFinite(cost) || cost <= 0) return true;
+    if (this.mana < cost) return false;
+    this.mana -= cost;
+    return true;
+  };
 
   getRoom = (): Room => {
     const byId = this.roomGID ? this.game.getRoomById(this.roomGID) : undefined;
@@ -1483,6 +1506,7 @@ export class Player extends Drawable {
   finishTick = () => {
     this.turnCount += 1;
     this.inventory.tick();
+    this.syncManaFromSpellbookCooldowns();
     this.oxygenLine.update();
     this.handleUnderwater();
 
@@ -1500,6 +1524,37 @@ export class Player extends Drawable {
 
     //this.actionTab.actionState = ActionState.READY;
     //Sets the action tab state to Wait (during enemy turn)
+  };
+
+  /**
+   * "Mana" is a UI view of spellbook cooldown state:
+   * - Spellbooks go on cooldown when cast.
+   * - Mana shows how "charged" your spellcasting is (full when cooldowns are 0).
+   */
+  syncManaFromSpellbookCooldowns = (): void => {
+    const spellbooks: Spellbook[] = [];
+    for (const it of this.inventory.items) {
+      if (it instanceof Spellbook) spellbooks.push(it);
+    }
+    // Defensive: equipped weapon should already be in items, but don't assume.
+    const equipped = this.inventory.weapon;
+    if (equipped instanceof Spellbook && !spellbooks.includes(equipped)) {
+      spellbooks.push(equipped);
+    }
+
+    if (spellbooks.length === 0) {
+      // No spellbook: keep mana full so the UI doesn't look "stuck empty".
+      this.mana = this.maxMana;
+      return;
+    }
+
+    // Align maxMana with the configured spellbook cooldownMax (assume consistent across books).
+    const max = Math.max(1, ...spellbooks.map((b) => b.cooldownMax || 0));
+    this.maxMana = max;
+
+    // Represent the shared "charge" as the worst (highest) cooldown among spellbooks.
+    const cd = Math.max(0, ...spellbooks.map((b) => b.cooldown || 0));
+    this.mana = Math.max(0, Math.min(this.maxMana, this.maxMana - cd));
   };
 
   private handleUnderwater = () => {

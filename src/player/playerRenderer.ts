@@ -594,6 +594,7 @@ export class PlayerRenderer {
       this.player.x - this.drawX,
       this.player.y - this.drawY - this.drawZ,
       !this.flashing || Math.floor(this.flashingFrame) % 2 === 0,
+      { mana: { current: this.player.mana, max: this.player.maxMana } },
     );
 
     Game.ctx.restore(); // Restore the canvas state
@@ -727,6 +728,7 @@ export class PlayerRenderer {
         if (heartStartX < minHeartStartX) heartStartX = minHeartStartX;
       }
 
+      const offsetY = GameConstants.WIDTH > 175 ? 0 : -1.25;
       for (let i = 0; i < this.player.maxHealth; i++) {
         let shake = 0;
         let shakeY = 0;
@@ -744,7 +746,6 @@ export class PlayerRenderer {
             GameConstants.TILESIZE;
         }
         let frame = this.guiHeartFrame > 0 ? 1 : 0;
-        let offsetY = GameConstants.WIDTH > 175 ? 0 : -1.25;
 
         if (i >= Math.floor(this.player.health)) {
           if (
@@ -796,6 +797,10 @@ export class PlayerRenderer {
           );
         }
       }
+
+      // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
+      //this.drawManaOrbGUI(heartStartX, offsetY);
+
       //this.drawCooldownBar();
       this.drawBreathStatus(quickbarStartX);
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
@@ -1209,6 +1214,81 @@ export class PlayerRenderer {
     } else {
       this.lowHealthFrame = 0;
     }
+    Game.ctx.restore();
+  };
+
+  private drawManaOrbGUI = (heartStartX: number, offsetY: number): void => {
+    const maxMana = this.player.maxMana;
+    if (!Number.isFinite(maxMana) || maxMana <= 0) return;
+
+    const mana = Math.max(0, Math.min(maxMana, this.player.mana));
+    const pct = maxMana > 0 ? mana / maxMana : 0;
+
+    const heartsYTile =
+      GameConstants.HEIGHT / GameConstants.TILESIZE - 1 + offsetY;
+
+    // Center the orb above the heart row.
+    const heartSpan =
+      this.player.maxHealth > 1 ? (this.player.maxHealth - 1) / 1.5 : 0;
+    const centerXTile = heartStartX + 0.5 * heartSpan;
+
+    const sizePx = 12;
+    const x0 = Math.round(centerXTile * GameConstants.TILESIZE - 0.5 * sizePx);
+    const y0 = Math.round(heartsYTile * GameConstants.TILESIZE - 14);
+
+    Game.ctx.save();
+    Game.ctx.imageSmoothingEnabled = false;
+    Game.ctx.imageSmoothingQuality = "low";
+
+    const blue = "#2e7bff";
+    const radius = (sizePx - 1) / 2;
+    const cx = x0 + radius;
+    const cy = y0 + radius;
+
+    // Outline
+    Game.ctx.fillStyle = blue;
+    for (let py = 0; py < sizePx; py++) {
+      for (let px = 0; px < sizePx; px++) {
+        const dx = px - radius;
+        const dy = py - radius;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= radius - 0.6 && d <= radius + 0.35) {
+          Game.ctx.fillRect(x0 + px, y0 + py, 1, 1);
+        }
+      }
+    }
+
+    // Fill (row-by-row, bottom-up)
+    const innerBottom = y0 + sizePx - 2;
+    const innerTop = y0 + 1;
+    const innerH = Math.max(0, innerBottom - innerTop + 1);
+    const filledRows = Math.round(pct * innerH);
+    const yFillTop = innerBottom - filledRows + 1;
+
+    for (let py = innerTop; py <= innerBottom; py++) {
+      if (py < yFillTop) continue;
+      for (let px = 1; px < sizePx - 1; px++) {
+        const dx = x0 + px - cx;
+        const dy = py - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d <= radius - 1.2) {
+          Game.ctx.fillRect(x0 + px, py, 1, 1);
+        }
+      }
+    }
+
+    // Mana number overlapping bottom-right of the orb (coin-style outline).
+    //Game.ctx.font = "10px Tahoma";
+    //Game.ctx.textAlign = "right";
+    //Game.ctx.textBaseline = "alphabetic";
+    Game.fillTextOutline(
+      String(mana),
+      x0 + sizePx + 2,
+      y0 + sizePx - 2,
+      "black",
+      "white",
+    );
+
     Game.ctx.restore();
   };
 
