@@ -1232,7 +1232,7 @@ export class PlayerRenderer {
       this.player.maxHealth > 1 ? (this.player.maxHealth - 1) / 1.5 : 0;
     const centerXTile = heartStartX + 0.5 * heartSpan;
 
-    const sizePx = 12;
+    const sizePx = 10;
     const x0 = Math.round(centerXTile * GameConstants.TILESIZE - 0.5 * sizePx);
     const y0 = Math.round(heartsYTile * GameConstants.TILESIZE - 14);
 
@@ -1283,8 +1283,8 @@ export class PlayerRenderer {
     //Game.ctx.textBaseline = "alphabetic";
     Game.fillTextOutline(
       String(mana),
-      x0 + sizePx + 2,
-      y0 + sizePx - 2,
+      x0 + sizePx - 6,
+      y0 + sizePx - 4,
       "black",
       "white",
     );
