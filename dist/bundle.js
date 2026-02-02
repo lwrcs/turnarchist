@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -9679,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.7bd845a04c7b6369f1f0.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.65527068090ac8940c69.png";
+module.exports = __webpack_require__.p + "assets/objset.e7b4711bbcdec26369ac.png";
 
 /***/ }),
 
@@ -20722,9 +20653,27 @@ class Entity extends drawable_1.Drawable {
                 !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) ||
                 gameConstants_1.GameConstants.SHADING_DISABLED)
                 return 0;
-            if (!this.room.softVis[this.x])
+            const w = this.w ?? 1;
+            const h = this.h ?? 1;
+            // Average shade over the full footprint so large entities (2x2+) blend correctly
+            // when part of their sprite is in light and part is in shadow.
+            let sum = 0;
+            let count = 0;
+            for (let dx = 0; dx < w; dx++) {
+                const col = this.room.softVis[this.x + dx];
+                if (!col)
+                    continue;
+                for (let dy = 0; dy < h; dy++) {
+                    const v = col[this.y + dy];
+                    if (typeof v !== "number")
+                        continue;
+                    sum += v;
+                    count++;
+                }
+            }
+            if (count === 0)
                 return 0;
-            let softVis = this.room.softVis[this.x][this.y] * 1;
+            const softVis = sum / count;
             if (this.shadeMultiplier > 1)
                 return gameConstants_1.GameConstants.applyShadeForSprites(Math.min(1, softVis));
             return gameConstants_1.GameConstants.applyShadeForSprites(softVis);
@@ -21629,6 +21578,101 @@ class Barrel extends entity_1.Entity {
 }
 exports.Barrel = Barrel;
 Barrel.examineText = "A barrel. Rolls poorly, blocks well.";
+
+
+/***/ }),
+
+/***/ "./src/entity/object/bigTree.ts":
+/*!**************************************!*\
+  !*** ./src/entity/object/bigTree.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BigTree = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
+const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
+const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+class BigTree extends entity_1.Entity {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.seeThroughAlpha = 1;
+        this.softSeeThroughAlpha = 1;
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            sound_1.Sound.playWood();
+            // Award woodcutting XP if a player chopped it down (attributed via Entity.hurt -> hitBy).
+            const p = this.hitBy;
+            if (p) {
+                const xp = (0, skillBalance_1.computeWoodcuttingXp)({ depth: this.room.depth });
+                stats_1.statsTracker.awardSkillXp("woodcutting", xp);
+                if (gameConstants_1.GameConstants.XP_POPUP_ENABLED) {
+                    this.room.particles.push(new xpPopup_1.XPPopup(this.room, this.x, this.y, xp));
+                }
+            }
+        };
+        this.draw = (delta) => {
+            const player = this.room.getPlayer();
+            const entity = this.room.hasEnemy(this.x, this.y - 1);
+            this.tileX = this.health === 2 ? 13 : 15;
+            if (this.cloned === true)
+                this.tileX = 15;
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.updateDrawXY(delta);
+                game_1.Game.ctx.save();
+                this.updateSeeThroughAlpha(delta);
+                if (!this.cloned)
+                    game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.5, 2, 3, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.ctx.restore();
+                game_1.Game.drawObj(this.tileX, 18, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.5, 2, 3, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.room = room;
+        this.health = 2;
+        this.maxHealth = 2;
+        this.tileX = 13;
+        this.tileY = 15;
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.name = "big tree";
+        this.imageParticleX = 0;
+        this.imageParticleY = 28;
+        this.opaque = true;
+        this.w = 2;
+        this.h = 2;
+        this.hitSound = sound_1.Sound.playBush;
+        if (random_1.Random.rand() < 0.5)
+            this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
+        //this.drawableY = 0.1;
+        //this.drops.push(new Shrooms(this.room, this.x, this.y));
+    }
+    get type() {
+        return entity_2.EntityType.PROP;
+    }
+}
+exports.BigTree = BigTree;
+BigTree.examineText = "A big tree. Blocks sight and takes hits.";
 
 
 /***/ }),
@@ -22932,6 +22976,34 @@ class Glowshrooms extends entity_1.Entity {
 }
 exports.Glowshrooms = Glowshrooms;
 Glowshrooms.itemName = "glowshrooms";
+
+
+/***/ }),
+
+/***/ "./src/entity/object/lilyPlant.ts":
+/*!****************************************!*\
+  !*** ./src/entity/object/lilyPlant.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LilyPlant = void 0;
+const pottedPlant_1 = __webpack_require__(/*! ./pottedPlant */ "./src/entity/object/pottedPlant.ts");
+/**
+ * Decorative lily plant.
+ * Same behavior/properties as `PottedPlant`, but uses the Glowshrooms tileset row
+ * with tileX shifted by +1 (Glowshrooms: 1,7 -> this: 2,7).
+ */
+class LilyPlant extends pottedPlant_1.PottedPlant {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y, drop);
+        this.tileX = 2;
+        this.tileY = 7;
+    }
+}
+exports.LilyPlant = LilyPlant;
 
 
 /***/ }),
@@ -47655,6 +47727,7 @@ const crate_1 = __webpack_require__(/*! ../entity/object/crate */ "./src/entity/
 const mushrooms_1 = __webpack_require__(/*! ../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
 const pot_1 = __webpack_require__(/*! ../entity/object/pot */ "./src/entity/object/pot.ts");
 const pottedPlant_1 = __webpack_require__(/*! ../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+const lilyPlant_1 = __webpack_require__(/*! ../entity/object/lilyPlant */ "./src/entity/object/lilyPlant.ts");
 const pumpkin_1 = __webpack_require__(/*! ../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 const sprout_1 = __webpack_require__(/*! ../entity/object/sprout */ "./src/entity/object/sprout.ts");
 const tombStone_1 = __webpack_require__(/*! ../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
@@ -47719,6 +47792,7 @@ const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./
 const ironResource_1 = __webpack_require__(/*! ../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
 const rubble_1 = __webpack_require__(/*! ../entity/object/rubble */ "./src/entity/object/rubble.ts");
 const glowshrooms_1 = __webpack_require__(/*! ../entity/object/glowshrooms */ "./src/entity/object/glowshrooms.ts");
+const bigTree_1 = __webpack_require__(/*! ../entity/object/bigTree */ "./src/entity/object/bigTree.ts");
 // Enemy ID mapping for integration with level progression system
 exports.enemyClassToId = new Map([
     [crabEnemy_1.CrabEnemy, 1],
@@ -47914,6 +47988,8 @@ const environmentData = {
             { class: zirconResource_1.ZirconResource, weight: 0.001 },
             { class: sprout_1.Sprout, weight: 0.05 },
             { class: mushrooms_1.Mushrooms, weight: 0.05 },
+            { class: lilyPlant_1.LilyPlant, weight: 0.05 },
+            { class: bigTree_1.BigTree, weight: 0.1, size: { w: 2, h: 2 } },
             { class: rockResource_1.Rock, weight: 0.1 },
             { class: chest_1.Chest, weight: 0.01 },
             { class: glowBugEnemy_1.GlowBugEnemy, weight: 0.05 },
@@ -57335,7 +57411,7 @@ class PlayerRenderer {
                     }
                 }
                 // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
-                //this.drawManaOrbGUI(heartStartX, offsetY);
+                this.drawManaOrbGUI(heartStartX, offsetY);
                 //this.drawCooldownBar();
                 this.drawBreathStatus(quickbarStartX);
                 if (armor)

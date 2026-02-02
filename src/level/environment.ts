@@ -6,6 +6,7 @@ import { Crate } from "../entity/object/crate";
 import { Mushrooms } from "../entity/object/mushrooms";
 import { Pot } from "../entity/object/pot";
 import { PottedPlant } from "../entity/object/pottedPlant";
+import { LilyPlant } from "../entity/object/lilyPlant";
 import { Pumpkin } from "../entity/object/pumpkin";
 import { Sprout } from "../entity/object/sprout";
 import { TombStone } from "../entity/object/tombStone";
@@ -77,6 +78,7 @@ import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
 import { IronResource } from "../entity/resource/ironResource";
 import { Rubble } from "../entity/object/rubble";
 import { Glowshrooms } from "../entity/object/glowshrooms";
+import { BigTree } from "../entity/object/bigTree";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -348,6 +350,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ZirconResource, weight: 0.001 },
       { class: Sprout, weight: 0.05 },
       { class: Mushrooms, weight: 0.05 },
+      { class: LilyPlant, weight: 0.05 },
+      { class: BigTree, weight: 0.1, size: { w: 2, h: 2 } },
       { class: Rock, weight: 0.1 },
       { class: Chest, weight: 0.01 },
       { class: GlowBugEnemy, weight: 0.05 },

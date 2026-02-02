@@ -1298,11 +1298,29 @@ export class Entity extends Drawable {
     if (
       (GameConstants.SMOOTH_LIGHTING &&
         !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER) ||
-      GameConstants.SHADING_DISABLED
+      GameConstants.SHADING_DISABLED  
     )
       return 0;
-    if (!this.room.softVis[this.x]) return 0;
-    let softVis = this.room.softVis[this.x][this.y] * 1;
+    const w = this.w ?? 1;
+    const h = this.h ?? 1;
+
+    // Average shade over the full footprint so large entities (2x2+) blend correctly
+    // when part of their sprite is in light and part is in shadow.
+    let sum = 0;
+    let count = 0;
+    for (let dx = 0; dx < w; dx++) {
+      const col = this.room.softVis[this.x + dx];
+      if (!col) continue;
+      for (let dy = 0; dy < h; dy++) {
+        const v = col[this.y + dy];
+        if (typeof v !== "number") continue;
+        sum += v;
+        count++;
+      }
+    }
+
+    if (count === 0) return 0;
+    const softVis = sum / count;
     if (this.shadeMultiplier > 1)
       return GameConstants.applyShadeForSprites(Math.min(1, softVis));
     return GameConstants.applyShadeForSprites(softVis);

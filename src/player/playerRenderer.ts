@@ -799,7 +799,7 @@ export class PlayerRenderer {
       }
 
       // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
-      //this.drawManaOrbGUI(heartStartX, offsetY);
+      this.drawManaOrbGUI(heartStartX, offsetY);
 
       //this.drawCooldownBar();
       this.drawBreathStatus(quickbarStartX);
