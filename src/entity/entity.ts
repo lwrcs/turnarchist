@@ -238,6 +238,10 @@ export class Entity extends Drawable {
     this.game = game;
     this.drawX = 0;
     this.drawY = 0;
+    // `Room.drawEntities` sorts drawables using `drawableY`. Many entity subclasses don't
+    // override/initialize it, and offscreen rooms may not run the drawTopLayer pass that
+    // recomputes it. Initialize it here so newly spawned/loaded entities sort correctly.
+    this.drawableY = this.y;
     this.health = 1;
     this.maxHealth = 1;
     this.defaultMaxHealth = 1;

@@ -640,6 +640,12 @@ export class Game {
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
   paused: boolean;
+  /**
+   * True while a save is being loaded and the Game instance is temporarily in an inconsistent state
+   * (players/rooms cleared, regeneration in progress). The run loop will render a safe loading screen
+   * and skip updates to avoid crashing mid-load.
+   */
+  loadingSaveV2: boolean = false;
   private startScreenAlpha = 1;
   static delta: number;
   currentDepth: number;
@@ -1731,6 +1737,26 @@ export class Game {
       delta = deltaMin;
     } else if (delta > deltaMax) {
       delta = deltaMax;
+    }
+
+    // If we're mid save-load, keep the render loop alive but avoid touching world state.
+    // loadSaveV2() clears players/rooms early and rebuilds them asynchronously.
+    if (this.loadingSaveV2) {
+      try {
+        Game.ctx.save();
+        Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+        this.drawTextScreen("loading save");
+      } catch {
+        // If UI rendering fails for any reason, don't crash the loop.
+      } finally {
+        try {
+          Game.ctx.restore();
+        } catch {}
+      }
+      window.requestAnimationFrame(this.run);
+      this.previousFrameTimestamp = timestamp;
+      return;
     }
 
     // Shared per-frame animations
@@ -3814,6 +3840,9 @@ export class Game {
   };
 
   static measureText = (text: string): { width: number; height: number } => {
+    if (typeof text !== "string") {
+      return { width: 0, height: Game.letter_height };
+    }
     let w = 0;
     for (const letter of text.toLowerCase()) {
       if (letter === " ") w += 4;
@@ -3828,6 +3857,7 @@ export class Game {
   };
 
   static fillText = (text: string, x: number, y: number, maxWidth?: number) => {
+    if (typeof text !== "string" || text.length === 0) return;
     x = Math.round(x);
     y = Math.round(y);
 
@@ -4957,7 +4987,17 @@ export class Game {
   };
 
   applyCamera = (delta: number) => {
-    let player = this.players[this.localPlayerID];
+    const player = this.players[this.localPlayerID];
+    if (!player) {
+      // Can happen transiently during failed save-load attempts. Don't crash the render loop.
+      this.updateCameraAnimation(delta);
+      this.updateCamera(delta);
+      const roundedCameraX = Math.round(this.cameraX - this.screenShakeX);
+      const roundedCameraY = Math.round(this.cameraY - this.screenShakeY);
+      this.currentCameraOriginX = roundedCameraX;
+      this.currentCameraOriginY = roundedCameraY;
+      return { cameraX: roundedCameraX, cameraY: roundedCameraY };
+    }
 
     this.targetCamera(
       player.x - player.drawX,

@@ -336,7 +336,7 @@ export class Room {
   depth: number;
   mapGroup: number;
   name: string = "";
-  message: string;
+  message: string = "";
   turn: TurnState;
   playerTurnTime: number;
   playerTicked: Player;
@@ -5563,8 +5563,15 @@ export class Room {
           break;
       }
 
-      // Shuffle the offset options to randomize placement
-      const shuffledOffsets = offsetOptions.sort(() => Random.rand() - 0.5);
+      // IMPORTANT: do not use Array.sort with a random comparator.
+      // JS engines may call the comparator an implementation-dependent number of times,
+      // which makes generation nondeterministic even with a deterministic RNG.
+      const shuffledOffsets =
+        offsetOptions.length <= 1
+          ? offsetOptions
+          : Random.rand() < 0.5
+            ? offsetOptions
+            : [offsetOptions[1], offsetOptions[0]];
 
       // Check if original position has vending machine
       if (hasVendingMachineAt(x, y)) {

@@ -47,6 +47,11 @@ export class Lockable {
     this.initializeLockState();
   }
 
+  /** Expose current lock type for save/load without leaking private state. */
+  getLockType(): LockType {
+    return this.lockType;
+  }
+
   private initializeLockState() {
     switch (this.lockType) {
       case LockType.LOCKED:

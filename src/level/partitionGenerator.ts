@@ -186,8 +186,12 @@ export class Partition {
           (c) => Math.abs(c.x - p.x) + Math.abs(c.y - p.y) <= 1,
         ),
     );
-    points.sort(() => 0.5 - Random.rand());
-    return points[0];
+    // IMPORTANT: do not use Array.sort with a random comparator.
+    // JS engines may call the comparator an implementation-dependent number of times,
+    // which makes generation nondeterministic even with a deterministic RNG.
+    if (points.length === 0) return { x: this.x, y: this.y };
+    const idx = Math.floor(Random.rand() * points.length);
+    return points[idx];
   };
 }
 
@@ -423,18 +427,23 @@ export class PartitionGenerator {
       }
     }
 
+    // IMPORTANT: don't use `forEach(async ...)` here.
+    // It won't await, which makes generation nondeterministic and racy.
     for (let i = 0; i < 100; i++) {
-      partialLevel.partitions.forEach(async (partition) => {
-        let roomArea = Random.rand() > 0.95 ? softMaxRoomArea : maxRoomArea;
+      let changed = false;
+      const next: Partition[] = [];
+      for (const partition of partialLevel.partitions) {
+        const roomArea = Random.rand() > 0.95 ? softMaxRoomArea : maxRoomArea;
         if (partition.area() > roomArea) {
-          partialLevel.partitions = partialLevel.partitions.filter(
-            (p) => p !== partition,
-          );
-          partialLevel.partitions = partialLevel.partitions.concat(
-            await this.splitPartition(partition, 0.5),
-          );
+          changed = true;
+          const split = await this.splitPartition(partition, 0.5);
+          next.push(...split);
+        } else {
+          next.push(partition);
         }
-      });
+      }
+      partialLevel.partitions = next;
+      if (!changed) break;
     }
 
     this.visualizer.updateProgress("Removing wall rooms", 0.4);

@@ -57,6 +57,14 @@ export class GameplaySettings {
    */
   static DEBUG_DISABLE_ENEMY_CAPS: boolean = false;
 
+  /**
+   * SaveV2 debugging: when enabled, saving/loading will fail loudly if it encounters a runtime
+   * object `kind` without a registered codec (instead of silently skipping it).
+   *
+   * Keep this false for players; set true during development to close coverage gaps.
+   */
+  static SAVE_V2_STRICT_KINDS: boolean = false;
+
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;
 

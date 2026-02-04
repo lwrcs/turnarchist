@@ -72,7 +72,7 @@ export class GameConstants {
   static isIOS = false;
   static MOBILE_KEYBOARD_SUPPORT = false;
   static CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
-  static SAVING_ENABLED = false;
+  static SAVING_ENABLED = true;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;

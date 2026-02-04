@@ -162,6 +162,7 @@ export class LevelGenerator {
     skipPopulation = false, // Add this parameter
     pathId?: string,
     opts?: SidePathOptions,
+    genOverride?: { forcePngUrl?: string; forceProcedural?: boolean },
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -200,18 +201,29 @@ export class LevelGenerator {
     // Force procedural generation for single-room levels so PNG auto-stair/boss behavior
     // doesn't fight the intended layout.
     const shouldUsePNG =
-      GameConstants.USE_PNG_LEVELS && !isSidePath && !singleRoom;
+      GameConstants.USE_PNG_LEVELS &&
+      !isSidePath &&
+      !singleRoom &&
+      genOverride?.forceProcedural !== true;
     // Deterministic per-level roll that doesn't alter global RNG state
-    const rollPNG = this.shouldUsePngForLevel(
-      depth,
-      pid,
-      GameplaySettings.PNG_LEVEL_PROBABILITY,
-    );
+    const rollPNG =
+      genOverride?.forcePngUrl !== undefined
+        ? true
+        : this.shouldUsePngForLevel(
+            depth,
+            pid,
+            GameplaySettings.PNG_LEVEL_PROBABILITY,
+          );
+    let selectedPngUrl: string | undefined = undefined;
     if (shouldUsePNG && rollPNG) {
       // Use PNG-based level generation for MAIN PATHS ONLY
-      const pngUrl = await this.selectRandomLevelForDepth(depth);
+      const pngUrl =
+        genOverride?.forcePngUrl !== undefined
+          ? genOverride.forcePngUrl
+          : await this.selectRandomLevelForDepth(depth);
 
       if (pngUrl) {
+        selectedPngUrl = pngUrl;
         console.log(`Using PNG level generation from: ${pngUrl}`);
         partitions = await this.pngPartitionGenerator.generatePartitionsFromPng(
           pngUrl,
@@ -223,6 +235,11 @@ export class LevelGenerator {
 
       // Fallback to procedural generation if PNG generation fails or no PNG found
       if (!pngUrl || partitions.length === 0) {
+        if (genOverride?.forcePngUrl !== undefined) {
+          throw new Error(
+            `Forced PNG generation failed for depth=${depth} pngUrl=${genOverride.forcePngUrl}`,
+          );
+        }
         if (!pngUrl) {
           console.warn(
             `No PNG levels found for depth ${depth}, falling back to procedural generation`,
@@ -297,6 +314,14 @@ export class LevelGenerator {
       skipPopulation,
       opts,
     );
+    // Record how generation happened for save/load determinism.
+    if (!isSidePath) {
+      const usedPng = selectedPngUrl !== undefined && partitions.length > 0;
+      newLevel.genSource = usedPng ? "png" : "procedural";
+      if (usedPng) {
+        newLevel.pngUrl = selectedPngUrl;
+      }
+    }
 
     if (isSidePath) {
       // create Level object ONLY to prepare rooms, but

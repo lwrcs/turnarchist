@@ -88,6 +88,10 @@ export class Level {
   skipPopulation: boolean = false;
   generationOptions?: SidePathOptions;
   organicTunnelsAvoidCenter: boolean;
+  /** Records how this level was generated so save/load can reproduce it exactly. */
+  genSource?: "png" | "procedural";
+  /** When genSource==="png", the exact png path used. */
+  pngUrl?: string;
 
   constructor(
     game: Game,

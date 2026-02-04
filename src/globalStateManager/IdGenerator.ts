@@ -55,4 +55,15 @@ export class IdGenerator {
     this._next = BigInt(1);
     this._registry.clear();
   }
+
+  /**
+   * Clear only the in-memory registry, without touching the monotonic counter.
+   *
+   * This is useful when we intentionally discard an entire world (e.g. loading a save)
+   * and need to re-reserve IDs from the save without colliding with IDs that were
+   * reserved by the previously-running world in this same session.
+   */
+  public static clearRegistryForLoad(): void {
+    this._registry.clear();
+  }
 }

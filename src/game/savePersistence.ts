@@ -1,5 +1,6 @@
 import { Game } from "../game";
-import { createGameState, loadGameState } from "./gameState";
+import { createGameState, loadGameState, GameState } from "./gameState";
+import { createSaveV2, loadSaveV2, parseSaveV2Json } from "./save";
 import {
   getCookieChunks,
   setCookieChunks,
@@ -9,12 +10,32 @@ import {
 
 const SAVE_PREFIX = "wr_save";
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+const isLegacyGameState = (v: unknown): v is GameState => {
+  if (!isRecord(v)) return false;
+  if (!isNumber(v.seed)) return false;
+  if (!isNumber(v.randomState)) return false;
+  if (!("players" in v)) return false;
+  if (!("offlinePlayers" in v)) return false;
+  if (!("level" in v)) return false;
+  if (!("rooms" in v)) return false;
+  return true;
+};
+
 export const saveToCookies = (game: Game) => {
-  const state = createGameState(game);
-  const json = JSON.stringify(state);
+  const v2 = createSaveV2(game);
+  if (v2.ok === false) {
+    console.error("V2 save failed", v2.error);
+    game.pushMessage?.("Save failed.");
+    return;
+  }
+  const json = JSON.stringify(v2.value);
   // For now, skip compression to avoid adding deps; chunk directly
   setCookieChunks(SAVE_PREFIX, json, 30);
-  game.pushMessage?.("Saved to cookies.");
+  game.pushMessage?.("Saved to cookies (V2).");
 };
 
 export const loadFromCookies = async (game: Game): Promise<boolean> => {
@@ -24,15 +45,41 @@ export const loadFromCookies = async (game: Game): Promise<boolean> => {
     return false;
   }
   try {
-    const state = JSON.parse(json);
-    // Ensure local player is considered active so loadGameState selects and sets current room
-    const activeUsernames = [game.localPlayerID];
-    await loadGameState(game, activeUsernames, state, false);
-    game.pushMessage?.("Loaded from cookies.");
-    return true;
+    // Prefer V2.
+    const parsedV2 = parseSaveV2Json(json);
+    if (parsedV2.ok) {
+      const lr = await loadSaveV2(game, parsedV2.value);
+      if (lr.ok === false) {
+        console.error("V2 cookie load failed", lr.error);
+        game.pushMessage?.("Cookie load failed.");
+        // Ensure we don't keep running with a partially cleared world.
+        try {
+          game.newGame();
+        } catch {}
+        return false;
+      }
+      game.pushMessage?.("Loaded cookie save (V2).");
+      return true;
+    } else {
+      // Legacy fallback (pre-V2 saves).
+      const state: unknown = JSON.parse(json);
+      if (!isLegacyGameState(state)) {
+        console.error("Legacy cookie save failed basic shape check");
+        game.pushMessage?.("Cookie load failed.");
+        return false;
+      }
+      const activeUsernames = [game.localPlayerID];
+      await loadGameState(game, activeUsernames, state, false);
+      game.pushMessage?.("Loaded cookie save (legacy).");
+      return true;
+    }
   } catch (e) {
     console.error("Cookie load failed", e);
     game.pushMessage?.("Cookie load failed.");
+    // Ensure we don't keep running with a partially cleared world.
+    try {
+      game.newGame();
+    } catch {}
     return false;
   }
 };

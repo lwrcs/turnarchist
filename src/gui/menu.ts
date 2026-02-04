@@ -380,24 +380,55 @@ export class Menu {
         () => {
           try {
             const { loadFromCookies } = require("../game/savePersistence");
+            // Hide the menu while loading so it doesn't feel "stuck".
+            this.close();
+            (this.game as any).startMenuActive = false;
             loadFromCookies(this.game).then((ok: boolean) => {
               if (ok) {
                 this.game.pushMessage("Loaded save.");
-                this.close();
                 (this.game as any).startedFadeOut = true;
                 (this.game as any).startMenuActive = false;
               } else {
                 this.game.pushMessage("Load failed.");
+                // Re-open the menu so the user can retry / start a new game.
+                (this.game as any).startMenuActive = true;
+                this.buildStartMenu();
+                this.openMenu();
               }
             });
           } catch (e) {
             this.game.pushMessage("Load failed.");
+            (this.game as any).startMenuActive = true;
+            this.buildStartMenu();
+            this.openMenu();
           }
         },
         false,
         this,
       );
       this.addButton(continueBtn);
+
+      const clearBtn = new guiButton(
+        0,
+        0,
+        0,
+        0,
+        "Clear Save",
+        () => {
+          try {
+            const { clearCookieSave } = require("../game/savePersistence");
+            clearCookieSave();
+            this.buildStartMenu();
+            this.openMenu();
+          } catch {
+            this.buildStartMenu();
+            this.openMenu();
+          }
+        },
+        false,
+        this,
+      );
+      this.addButton(clearBtn);
     }
     const newBtn = new guiButton(
       0,
