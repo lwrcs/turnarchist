@@ -104,3 +104,21 @@ export const clearCookieSave = () => {
   } catch {}
   deleteCookie(`${SAVE_PREFIX}_meta`);
 };
+
+/**
+ * Synchronous check used by UI: do we have a loadable save present?
+ * - prefers V2 validation
+ * - falls back to legacy shape check
+ */
+export const hasCookieSave = (): boolean => {
+  const json = getCookieChunks(SAVE_PREFIX);
+  if (!json) return false;
+  const v2 = parseSaveV2Json(json);
+  if (v2.ok) return true;
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return isLegacyGameState(parsed);
+  } catch {
+    return false;
+  }
+};

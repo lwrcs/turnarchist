@@ -581,6 +581,7 @@ export class Game {
   currentPathId: string = "main";
   private autosaveIntervalId: number | null = null;
   private lastAutosaveAtMs: number = 0;
+  private lastAnyPlayerDead: boolean = false;
   levelgen: LevelGenerator;
   readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -1037,8 +1038,8 @@ export class Game {
           this.hasInitializedTutorialPointers = false;
           // If a save exists, build a start-screen menu to choose Continue/New
           try {
-            const { getCookie } = require("./utility/cookies");
-            const hasSave = !!getCookie("wr_save_meta");
+            const { hasCookieSave } = require("./game/savePersistence");
+            const hasSave = hasCookieSave();
             if (hasSave) {
               const { Menu } = require("./gui/menu");
               this.startMenu = new Menu({ game: this, showCloseButton: false });
@@ -1939,6 +1940,17 @@ export class Game {
         }
       }
     }
+
+    // If we just transitioned into "any player dead", clear the run save so Continue isn't offered.
+    // (Roguelike flow: losing a run should not be resumable via autosave.)
+    const anyDead = Object.values(this.players).some((p) => p && p.dead);
+    if (anyDead && !this.lastAnyPlayerDead) {
+      try {
+        const { clearCookieSave } = require("./game/savePersistence");
+        clearCookieSave();
+      } catch {}
+    }
+    this.lastAnyPlayerDead = anyDead;
   };
 
   private applyWaterOverlayGapCompensation = () => {
@@ -3388,6 +3400,9 @@ export class Game {
         try {
           const { saveToCookies } = require("./game/savePersistence");
           // Avoid heavy work in beforeunload; keep it minimal
+          const lp = this.players?.[this.localPlayerID];
+          // On game over, do NOT persist a "dead run" save.
+          if (lp && lp.dead) return;
           saveToCookies(this, { silent: true });
         } catch (e) {
           console.error("Auto-save on exit failed", e);
@@ -3421,6 +3436,8 @@ export class Game {
           if (this.loadingSaveV2) return;
           if (this.levelState !== LevelState.IN_LEVEL) return;
           if (document.visibilityState !== "visible") return;
+          const lp = this.players?.[this.localPlayerID];
+          if (lp && lp.dead) return;
 
           const now = Date.now();
           if (now - this.lastAutosaveAtMs < GameConstants.AUTOSAVE_INTERVAL_MS) return;

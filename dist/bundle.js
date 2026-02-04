@@ -25479,6 +25479,7 @@ class Game {
         this.currentPathId = "main";
         this.autosaveIntervalId = null;
         this.lastAutosaveAtMs = 0;
+        this.lastAnyPlayerDead = false;
         this.localPlayerID = "localplayer";
         this.waterOverlayOffsetX = 0;
         this.waterOverlayOffsetY = 0;
@@ -26205,6 +26206,17 @@ class Game {
                     }
                 }
             }
+            // If we just transitioned into "any player dead", clear the run save so Continue isn't offered.
+            // (Roguelike flow: losing a run should not be resumable via autosave.)
+            const anyDead = Object.values(this.players).some((p) => p && p.dead);
+            if (anyDead && !this.lastAnyPlayerDead) {
+                try {
+                    const { clearCookieSave } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                    clearCookieSave();
+                }
+                catch { }
+            }
+            this.lastAnyPlayerDead = anyDead;
         };
         this.applyWaterOverlayGapCompensation = () => {
             if (this.transitionX) {
@@ -28978,8 +28990,8 @@ class Game {
                     this.hasInitializedTutorialPointers = false;
                     // If a save exists, build a start-screen menu to choose Continue/New
                     try {
-                        const { getCookie } = __webpack_require__(/*! ./utility/cookies */ "./src/utility/cookies.ts");
-                        const hasSave = !!getCookie("wr_save_meta");
+                        const { hasCookieSave } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
+                        const hasSave = hasCookieSave();
                         if (hasSave) {
                             const { Menu } = __webpack_require__(/*! ./gui/menu */ "./src/gui/menu.ts");
                             this.startMenu = new Menu({ game: this, showCloseButton: false });
@@ -29150,6 +29162,10 @@ class Game {
                 try {
                     const { saveToCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
                     // Avoid heavy work in beforeunload; keep it minimal
+                    const lp = this.players?.[this.localPlayerID];
+                    // On game over, do NOT persist a "dead run" save.
+                    if (lp && lp.dead)
+                        return;
                     saveToCookies(this, { silent: true });
                 }
                 catch (e) {
@@ -29188,6 +29204,9 @@ class Game {
                     if (this.levelState !== LevelState.IN_LEVEL)
                         return;
                     if (document.visibilityState !== "visible")
+                        return;
+                    const lp = this.players?.[this.localPlayerID];
+                    if (lp && lp.dead)
                         return;
                     const now = Date.now();
                     if (now - this.lastAutosaveAtMs < gameConstants_1.GameConstants.AUTOSAVE_INTERVAL_MS)
@@ -42099,7 +42118,7 @@ const collectPersistedEnemies = (game, room, nowMs) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.clearCookieSave = exports.loadFromCookies = exports.saveToCookies = void 0;
+exports.hasCookieSave = exports.clearCookieSave = exports.loadFromCookies = exports.saveToCookies = void 0;
 const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/game/gameState.ts");
 const save_1 = __webpack_require__(/*! ./save */ "./src/game/save/index.ts");
 const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
@@ -42215,6 +42234,27 @@ const clearCookieSave = () => {
     (0, cookies_1.deleteCookie)(`${SAVE_PREFIX}_meta`);
 };
 exports.clearCookieSave = clearCookieSave;
+/**
+ * Synchronous check used by UI: do we have a loadable save present?
+ * - prefers V2 validation
+ * - falls back to legacy shape check
+ */
+const hasCookieSave = () => {
+    const json = (0, cookies_1.getCookieChunks)(SAVE_PREFIX);
+    if (!json)
+        return false;
+    const v2 = (0, save_1.parseSaveV2Json)(json);
+    if (v2.ok)
+        return true;
+    try {
+        const parsed = JSON.parse(json);
+        return isLegacyGameState(parsed);
+    }
+    catch {
+        return false;
+    }
+};
+exports.hasCookieSave = hasCookieSave;
 
 
 /***/ }),
@@ -44652,11 +44692,17 @@ class Menu {
     }
     buildStartMenu() {
         this.buttons = [];
+        let canContinue = false;
+        try {
+            const { hasCookieSave } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");
+            canContinue = hasCookieSave();
+        }
+        catch { }
         const header = new guiButton_1.guiButton(0, 0, 0, 0, "Welcome to Turnarchist", () => { }, false, this);
         header.noFill = true;
         header.textColor = "rgb(255, 255, 0)"; // yellow text
         this.addButton(header);
-        if (gameConstants_1.GameConstants.SAVING_ENABLED) {
+        if (gameConstants_1.GameConstants.SAVING_ENABLED && canContinue) {
             const continueBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Continue", () => {
                 try {
                     const { loadFromCookies } = __webpack_require__(/*! ../game/savePersistence */ "./src/game/savePersistence.ts");

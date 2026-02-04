@@ -357,6 +357,11 @@ export class Menu {
 
   buildStartMenu() {
     this.buttons = [];
+    let canContinue = false;
+    try {
+      const { hasCookieSave } = require("../game/savePersistence");
+      canContinue = hasCookieSave();
+    } catch {}
     const header = new guiButton(
       0,
       0,
@@ -370,7 +375,7 @@ export class Menu {
     header.noFill = true;
     header.textColor = "rgb(255, 255, 0)"; // yellow text
     this.addButton(header);
-    if (GameConstants.SAVING_ENABLED) {
+    if (GameConstants.SAVING_ENABLED && canContinue) {
       const continueBtn = new guiButton(
         0,
         0,
