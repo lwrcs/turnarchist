@@ -103,11 +103,18 @@ export class DownLadder extends Passageway {
       }
     }
     if (allPlayersHere) {
-      globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
-      this.generate().then(() => {
+      // Begin fading immediately before starting potentially heavy generation work.
+      this.game.beginPreLevelGenFade(async () => {
+        globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
+        await this.generate();
         globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
+
         // Switch active path to this ladder's sidepath before transitioning
         this.sidePathManager.switchToPathBeforeTransition(this);
+
+        // We can now allow the normal ladder loading screen to render.
+        this.game.endPreLevelGenBlackout();
+
         for (const i in this.game.players) {
           const pl = this.game.players[i];
           pl.anchorOxygenLineToTile(this.room, this.x, this.y, {

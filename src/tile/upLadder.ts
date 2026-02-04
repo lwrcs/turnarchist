@@ -63,37 +63,44 @@ export class UpLadder extends Passageway {
       return;
     }
 
-    try {
-      if (!this.linkedRoom) {
-        this.linkRoom();
+    // Fade-to-black before transitioning (large levels can hitch before the normal ladder loading screen draws).
+    this.game.beginPreLevelGenFade(async () => {
+      try {
+        if (!this.linkedRoom) {
+          this.linkRoom();
+        }
+        // If we have an exact parent down-ladder coordinate recorded, stash it on the target room
+        const exitPos = (this as any).exitDownLadderPos as
+          | { x: number; y: number }
+          | undefined;
+        // If this is a rope (sidepath) exit, switch active path back to the linked room's path
+        if (this.isRope && this.linkedRoom) {
+          (this.game as any).currentPathId = this.linkedRoom.pathId || "main";
+        }
+        player.anchorOxygenLineToTile(this.room, this.x, this.y, {
+          kind: "upLadder",
+          angle: Math.PI / 2,
+        });
+        player.getOxygenLine()?.update(true);
+
+        // Allow the normal ladder loading screen to render from this point onward.
+        this.game.endPreLevelGenBlackout();
+
+        this.game.changeLevelThroughLadder(player, this);
+        if (exitPos && this.linkedRoom) {
+          (this.linkedRoom as any).__entryPositionFromLadder = exitPos;
+          try {
+            console.log(
+              `UpLadder.onCollide: wrote __entryPositionFromLadder (${exitPos.x}, ${exitPos.y}) onto parent room gid=${(this.linkedRoom as any)?.globalId}`,
+            );
+          } catch {}
+        }
+        Sound.forestMusic.pause();
+        Sound.caveMusic.pause();
+      } catch (error) {
+        console.error("Error during changeLevelThroughLadder:", error);
       }
-      // If we have an exact parent down-ladder coordinate recorded, stash it on the target room
-      const exitPos = (this as any).exitDownLadderPos as
-        | { x: number; y: number }
-        | undefined;
-      // If this is a rope (sidepath) exit, switch active path back to the linked room's path
-      if (this.isRope && this.linkedRoom) {
-        (this.game as any).currentPathId = this.linkedRoom.pathId || "main";
-      }
-      player.anchorOxygenLineToTile(this.room, this.x, this.y, {
-        kind: "upLadder",
-        angle: Math.PI / 2,
-      });
-      player.getOxygenLine()?.update(true);
-      this.game.changeLevelThroughLadder(player, this);
-      if (exitPos && this.linkedRoom) {
-        (this.linkedRoom as any).__entryPositionFromLadder = exitPos;
-        try {
-          console.log(
-            `UpLadder.onCollide: wrote __entryPositionFromLadder (${exitPos.x}, ${exitPos.y}) onto parent room gid=${(this.linkedRoom as any)?.globalId}`,
-          );
-        } catch {}
-      }
-      Sound.forestMusic.pause();
-      Sound.caveMusic.pause();
-    } catch (error) {
-      console.error("Error during changeLevelThroughLadder:", error);
-    }
+    });
   };
 
   getName = () => {

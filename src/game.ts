@@ -583,6 +583,12 @@ export class Game {
   private autosaveIntervalId: number | null = null;
   private lastAutosaveAtMs: number = 0;
   private lastAnyPlayerDead: boolean = false;
+  private preLevelGenFadeActive: boolean = false;
+  private preLevelGenHoldBlack: boolean = false;
+  private preLevelGenFadeAlpha: number = 0;
+  private preLevelGenFadeDurationDelta: number = 0;
+  private preLevelGenActionStarted: boolean = false;
+  private preLevelGenAction: (() => Promise<void>) | null = null;
   levelgen: LevelGenerator;
   readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -1510,6 +1516,34 @@ export class Game {
     this.player = this.players[this.localPlayerID];
   };
 
+  /**
+   * Begin an immediate fade-to-black before starting heavy level generation work (e.g. down ladder).
+   * This improves perceived responsiveness on large generation steps (especially on mobile).
+   *
+   * Behavior:
+   * - starts fading immediately
+   * - once fully black, holds a black frame and then runs `action`
+   * - caller may call `endPreLevelGenBlackout()` when it is safe to show the normal loading screen
+   */
+  public beginPreLevelGenFade(action: () => Promise<void>, durationMs: number = LevelConstants.LEVEL_TRANSITION_TIME): void {
+    if (this.preLevelGenFadeActive || this.preLevelGenHoldBlack || this.preLevelGenActionStarted) return;
+    this.preLevelGenFadeActive = true;
+    this.preLevelGenHoldBlack = false;
+    this.preLevelGenFadeAlpha = 0;
+    // Convert milliseconds to the game's normalized "delta" units (60fps => delta=1).
+    this.preLevelGenFadeDurationDelta = Math.max(
+      1 / 1000,
+      (Math.max(1, Math.floor(durationMs)) * 60) / 1000,
+    );
+    this.preLevelGenActionStarted = false;
+    this.preLevelGenAction = action;
+  }
+
+  /** End the temporary "blackout" phase so the normal loading screen can be drawn. */
+  public endPreLevelGenBlackout(): void {
+    this.preLevelGenHoldBlack = false;
+  }
+
   newGame = (seed?: number) => {
     // Clear all input listeners to prevent duplicates from previous game instances
     Input.mouseDownListeners.length = 0;
@@ -1770,6 +1804,8 @@ export class Game {
     if (this.loadingSaveV2) {
       try {
         Game.ctx.save();
+        // Ensure full-screen fill regardless of any prior camera/level transforms.
+        Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
         Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
         Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
         this.drawTextScreen("loading save");
@@ -1780,6 +1816,77 @@ export class Game {
           Game.ctx.restore();
         } catch {}
       }
+      window.requestAnimationFrame(this.run);
+      this.previousFrameTimestamp = timestamp;
+      return;
+    }
+
+    // Pre-level generation fade-to-black (used for heavy DownLadder.generate work).
+    if (this.preLevelGenHoldBlack || this.preLevelGenFadeActive) {
+      try {
+        Game.ctx.save();
+        // Ensure full-screen fill regardless of any prior camera/level transforms.
+        Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const w = GameConstants.WIDTH;
+        const h = GameConstants.HEIGHT;
+        if (this.preLevelGenHoldBlack) {
+          Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+          Game.ctx.fillRect(0, 0, w, h);
+        } else {
+          // Advance fade using game delta (normalized to 60fps), not wall-clock time.
+          this.preLevelGenFadeAlpha = Math.max(
+            0,
+            Math.min(
+              1,
+              this.preLevelGenFadeAlpha +
+                delta / Math.max(1 / 1000, this.preLevelGenFadeDurationDelta),
+            ),
+          );
+          const t = this.preLevelGenFadeAlpha;
+          Game.ctx.fillStyle = "black";
+          Game.ctx.globalAlpha = t;
+          Game.ctx.fillRect(0, 0, w, h);
+          Game.ctx.globalAlpha = 1;
+
+          if (t >= 1) {
+            // Fully black: hold until action decides we're ready to show normal loading screen.
+            this.preLevelGenFadeActive = false;
+            this.preLevelGenHoldBlack = true;
+
+            if (!this.preLevelGenActionStarted && this.preLevelGenAction) {
+              this.preLevelGenActionStarted = true;
+              const action = this.preLevelGenAction;
+
+              // Ensure at least one fully-black frame is painted before starting heavy work.
+              window.requestAnimationFrame(() => {
+                window.setTimeout(() => {
+                  // Keep holding black by default while action runs.
+                  action()
+                    .catch((e) => {
+                      console.error("preLevelGen action failed", e);
+                    })
+                    .finally(() => {
+                      // Reset; caller may have ended blackout earlier.
+                      this.preLevelGenFadeActive = false;
+                      this.preLevelGenHoldBlack = false;
+                      this.preLevelGenAction = null;
+                      this.preLevelGenActionStarted = false;
+                      this.preLevelGenFadeAlpha = 0;
+                      this.preLevelGenFadeDurationDelta = 0;
+                    });
+                }, 0);
+              });
+            }
+          }
+        }
+      } catch {
+        // Never crash the loop due to fade UI.
+      } finally {
+        try {
+          Game.ctx.restore();
+        } catch {}
+      }
+
       window.requestAnimationFrame(this.run);
       this.previousFrameTimestamp = timestamp;
       return;
