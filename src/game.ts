@@ -37,6 +37,14 @@ import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
 import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
+import { Wall } from "./tile/wall";
+import { Floor } from "./tile/floor";
+import { registerBuiltinEnemyCodecsV2 } from "./game/save/registry/enemiesBuiltins";
+import { registerBuiltinItemCodecsV2 } from "./game/save/registry/itemsBuiltins";
+import { enemyRegistryV2 } from "./game/save/registry/enemies";
+import { itemRegistryV2 } from "./game/save/registry/items";
+import { ITEM_KIND_VALUES_V2 } from "./game/save/schema";
+import type { EnemyKind, EnemySaveV2, ItemKind, ItemSaveV2 } from "./game/save/schema";
 import { SKILL_DISPLAY_NAME } from "./game/skills";
 import type { Skill } from "./game/skills";
 import { FloatingTextPopup } from "./particle/floatingTextPopup";
@@ -2984,6 +2992,9 @@ export class Game {
         this.pushMessage(ul.isRope ? "Rope up ladder located" : "Up ladder located");
         break;
       }
+      case "testlevel":
+        this.startTestLevel();
+        break;
       case "lightup":
         LevelConstants.LIGHTING_ANGLE_STEP += 1;
         this.pushMessage(
@@ -3376,7 +3387,9 @@ export class Game {
           const { saveToCookies } = require("./game/savePersistence");
           // Avoid heavy work in beforeunload; keep it minimal
           saveToCookies(this);
-        } catch {}
+        } catch (e) {
+          console.error("Auto-save on exit failed", e);
+        }
       };
       window.addEventListener("beforeunload", saveOnExit);
       document.addEventListener("visibilitychange", () => {
@@ -3393,6 +3406,297 @@ export class Game {
       window.addEventListener("popstate", saveOnExit);
       window.addEventListener("hashchange", saveOnExit);
     } catch {}
+  }
+
+  /**
+   * Chat command: `/testlevel`
+   *
+   * Creates a single giant-room level and populates it with:
+   * - one of every registered V2 enemy/entity codec (room.entities)
+   * - one of every V2 item kind in the local player's inventory
+   *
+   * Intended for rapid manual testing (rendering, AI, and save/load coverage).
+   */
+  private startTestLevel(): void {
+    // Ensure registries are populated before we enumerate kinds.
+    registerBuiltinItemCodecsV2();
+    registerBuiltinEnemyCodecsV2();
+
+    // Create a minimal levelgen so V2 save can work in this sandbox world.
+    this.levelgen = new LevelGenerator();
+    this.levelgen.setSeed(123456789);
+    this.levelgen.setMainPathEnvOverride(EnvType.DUNGEON);
+
+    // ---- Determine how many entities we need to place.
+    const enemyKinds: EnemyKind[] = enemyRegistryV2.kinds();
+    const nEntities = enemyKinds.length;
+
+    const columns = Math.max(8, Math.ceil(Math.sqrt(Math.max(1, nEntities))) + 2);
+    const cell = 8; // conservative spacing for large entities
+    const rows = Math.ceil(Math.max(1, nEntities) / columns) + 2;
+    const roomW = Math.max(30, columns * cell + 2);
+    const roomH = Math.max(30, rows * cell + 2);
+
+    // ---- Build minimal world state (single room, single level).
+    const depth = 0;
+    const mapGroup = 1;
+    const level = new Level(this, depth, roomW, roomH, true, mapGroup, EnvType.DUNGEON, true);
+    level.genSource = "procedural";
+
+    const room = new Room(
+      this,
+      0,
+      0,
+      roomW,
+      roomH,
+      RoomType.START,
+      depth,
+      mapGroup,
+      level,
+      Random.rand,
+      EnvType.DUNGEON,
+    );
+    room.id = 1;
+    room.pathId = "main";
+    room.entered = true;
+    room.active = true;
+    room.onScreen = true;
+
+    // Fill tiles: perimeter walls + interior floors.
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const isBorder =
+          x === room.roomX ||
+          y === room.roomY ||
+          x === room.roomX + room.width - 1 ||
+          y === room.roomY + room.height - 1;
+        room.roomArray[x][y] = isBorder ? new Wall(room, x, y) : new Floor(room, x, y);
+      }
+    }
+
+    level.rooms = [room];
+    level.roomsById.set(room.globalId, room);
+
+    this.levels = [];
+    this.levelsById = new Map();
+    this.levels[depth] = level;
+    this.levelsById.set(level.globalId, level);
+    this.level = level;
+
+    this.registerRooms([room]);
+    this.room = room;
+    this.currentDepth = depth;
+    this.currentPathId = "main";
+
+    // ---- Create local player.
+    const local = new Player(this, room.roomX + 2, room.roomY + 2, true);
+    local.dead = false;
+    local.depth = depth;
+    local.roomGID = room.globalId;
+    local.levelID = 0;
+    this.players = { [this.localPlayerID]: local };
+    this.offlinePlayers = {};
+    this.setPlayer();
+
+    // ---- Fill inventory with every item kind.
+    const inv = local.inventory;
+    const itemCols = Math.max(10, inv.cols);
+    const itemCount = ITEM_KIND_VALUES_V2.length;
+    const itemRows = Math.max(1, Math.ceil(itemCount / itemCols));
+    inv.cols = itemCols;
+    inv.rows = itemRows;
+    inv.expansion = 0;
+    inv.isOpen = true;
+    inv.selX = 0;
+    inv.selY = 0;
+
+    const totalSlots = (inv.rows + inv.expansion) * inv.cols;
+    inv.items = new Array(totalSlots).fill(null);
+    inv.equipAnimAmount = new Array(totalSlots).fill(0);
+
+    const makeItemSave = (kind: ItemKind, gid: string): ItemSaveV2 => {
+      const base = {
+        gid,
+        x: 0,
+        y: 0,
+        roomGid: room.globalId,
+        stackCount: 1,
+        pickedUp: true,
+      } as const;
+
+      switch (kind) {
+        case "key":
+          return { ...base, kind: "key", doorId: 1, depth: null, showPath: false };
+        case "torch":
+        case "lantern":
+        case "candle":
+        case "glow_stick":
+        case "glow_bugs":
+        case "glowshrooms":
+          return { ...base, kind, fuel: 100, equipped: false };
+        case "diving_helmet":
+          return { ...base, kind: "diving_helmet", equipped: false, currentAir: 100 };
+        case "hourglass":
+          return { ...base, kind: "hourglass", durability: 100, durabilityMax: 100, broken: false };
+        case "dagger":
+        case "sword":
+        case "spear":
+        case "dual_daggers":
+        case "greataxe":
+        case "warhammer":
+        case "quarterstaff":
+        case "scythe":
+        case "shotgun":
+        case "slingshot":
+        case "spellbook":
+        case "pickaxe": {
+          const status = { poison: false, blood: false, curse: false } as const;
+          return {
+            ...base,
+            kind,
+            durability: 100,
+            durabilityMax: 100,
+            broken: false,
+            cooldown: 0,
+            cooldownMax: 10,
+            status,
+            equipped: false,
+          };
+        }
+        case "crossbow": {
+          const status = { poison: false, blood: false, curse: false } as const;
+          return {
+            ...base,
+            kind: "crossbow",
+            durability: 100,
+            durabilityMax: 100,
+            broken: false,
+            cooldown: 0,
+            cooldownMax: 10,
+            status,
+            equipped: false,
+            crossbowState: 0,
+          };
+        }
+        case "occult_shield":
+        case "wooden_shield":
+          return { ...base, kind, equipped: false, health: 100, rechargeTurnCounter: 0 };
+        default:
+          return { ...base, kind };
+      }
+    };
+
+    const missingItems: ItemKind[] = [];
+    for (const kind of ITEM_KIND_VALUES_V2) {
+      if (!itemRegistryV2.has(kind)) missingItems.push(kind);
+    }
+    if (missingItems.length > 0) console.warn("testlevel: missing item codecs", missingItems);
+
+    for (let i = 0; i < ITEM_KIND_VALUES_V2.length && i < totalSlots; i++) {
+      const kind = ITEM_KIND_VALUES_V2[i];
+      const codec = itemRegistryV2.get(kind);
+      if (!codec) continue;
+      const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, { game: this });
+      it.pickedUp = true;
+      inv.items[i] = it;
+    }
+
+    // ---- Spawn one of each registered enemy/entity codec.
+    const makeEnemySave = (kind: EnemyKind, gid: string, x: number, y: number): EnemySaveV2 => {
+      const base = {
+        kind,
+        gid,
+        roomGid: room.globalId,
+        x,
+        y,
+        direction: "down" as const,
+        health: 10,
+        maxHealth: 10,
+        dead: false,
+      } as const;
+
+      if (kind === "wizard") {
+        return {
+          ...base,
+          kind: "wizard",
+          wizardType: "energy",
+          wizardState: 1,
+          seenPlayer: true,
+          ticks: 10,
+          alertTicks: 0,
+          skipNextTurns: 0,
+        };
+      }
+      if (kind === "spawner") return { ...base, kind: "spawner", enemySpawnType: 0, ticks: 0, seenPlayer: false };
+      if (kind === "chest")
+        return { ...base, kind: "chest", opened: false, destroyable: true, spawnedItemGids: undefined };
+      if (kind === "vending_machine") {
+        const cost = makeItemSave("coin", "I-vm-cost");
+        const item = makeItemSave("apple", "I-vm-item");
+        return {
+          ...base,
+          kind: "vending_machine",
+          open: false,
+          quantity: 1,
+          isInfinite: false,
+          costItems: [cost],
+          item,
+        };
+      }
+
+      return {
+        ...base,
+        kind,
+        seenPlayer: true,
+        heardPlayer: false,
+        aggro: false,
+        ticks: 1,
+        alertTicks: 0,
+        unconscious: false,
+        skipNextTurns: 0,
+      };
+    };
+
+    room.entities = [];
+    let cx = room.roomX + 2;
+    let cy = room.roomY + 5;
+    let rowH = 1;
+
+    for (let i = 0; i < enemyKinds.length; i++) {
+      const kind = enemyKinds[i];
+      const codec = enemyRegistryV2.get(kind);
+      if (!codec) continue;
+      const ent = codec.spawn(makeEnemySave(kind, `E-test-${i}`, cx, cy), room, { game: this });
+      ent.dead = false;
+      room.entities.push(ent);
+
+      const w = Math.max(1, Number.isFinite(ent.w) ? Math.floor(ent.w) : 1);
+      const h = Math.max(1, Number.isFinite(ent.h) ? Math.floor(ent.h) : 1);
+      rowH = Math.max(rowH, h);
+      cx += w + 2;
+      if (cx >= room.roomX + room.width - 3) {
+        cx = room.roomX + 2;
+        cy += rowH + 2;
+        rowH = 1;
+      }
+    }
+
+    // ---- Finalize state for immediate play.
+    try {
+      room.calculateWallInfo();
+    } catch {}
+    try {
+      room.roomOnScreen(local);
+      room.updateLighting({ x: local.x, y: local.y });
+    } catch {}
+
+    this.levelState = LevelState.IN_LEVEL;
+    this.started = true;
+    this.startedFadeOut = true;
+    this.startMenuActive = false;
+    this.pushMessage(
+      `Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${ITEM_KIND_VALUES_V2.length}`,
+    );
   }
 
   private generateAndShowRoomLayout(): void {

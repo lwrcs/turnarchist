@@ -380,7 +380,6 @@ export class Populator {
 
     //if (this.level.depth === 0) return;
 
-    console.log(`Adding downladder with ${this.numRooms()} rooms`);
     if (this.level.environment.type === EnvType.DUNGEON && this.level.depth !== 0) {
       let sidePathOptions: SidePathOptions = {
         caveRooms: 5, //this.numRooms(),
@@ -466,7 +465,6 @@ export class Populator {
   };
 
   linkExitToStart = () => {
-    console.log("linkExitToStart", this.level.isMainPath);
     if (this.level.isMainPath) return;
     this.level.setExitRoom(false);
     this.level.setStartRoom(false);
@@ -557,10 +555,6 @@ export class Populator {
       if (startRoom) downLadderRoom = startRoom;
     }
 
-    console.log(
-      `Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`,
-    );
-
     // Use the new method to get empty tiles that don't block doors.
     // Prefer positions away from room edges to avoid revealing flat outer walls.
     const baseTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -585,10 +579,6 @@ export class Populator {
       position.y === undefined
     )
       return;
-
-    console.log(
-      `Placing downladder at position (${position.x}, ${position.y})`,
-    );
 
     // Place a DownLadder tile directly; avoid entity side-effects post-load
     const env = opts?.envType
@@ -627,7 +617,6 @@ export class Populator {
 
     downLadderRoom.roomArray[position.x][position.y] = dl;
     if (dl.lockable.isLocked()) {
-      console.log("adding key to downladder");
       this.level.distributeKey(dl, room);
     }
     this.addedDownladder = true;
@@ -699,48 +688,7 @@ export class Populator {
       clusteringOptions?.blobOptions,
     );
     const propBlobFieldCache = new Map<string, BlobField | null>();
-    if (clusteringOptions?.debugEnabled) {
-      const report = clusterer.getLastDebugReport();
-      if (report) {
-        console.log("[PropClusterer] config:", {
-          clusterTowardsWalls: report.config.clusterTowardsWalls,
-          wallWeight: report.config.wallWeight,
-          wallMaxDistance: report.config.wallMaxDistance,
-          wallDeadzone: report.config.wallDeadzone,
-          onlyInnerWalls: report.config.onlyInnerWalls,
-          wallDistanceMetric: report.config.wallDistanceMetric,
-        });
-        console.log(
-          "[PropClusterer] walls:",
-          report.wallsFound,
-          "grid:",
-          report.wallGridStats,
-        );
-        console.log(
-          "[PropClusterer] iterations:",
-          report.iterations.length,
-          "seed:",
-          report.seedUsed,
-        );
-        if (report.iterations[0]?.top && report.iterations[0].top.length) {
-          console.log(
-            "[PropClusterer] first-iter top:",
-            report.iterations[0].top,
-          );
-        }
-        // Effectiveness summary after placements
-        const effectiveness = clusterer.analyzeEffectiveness(positions, {
-          wallScoreThresholdNormalized: 0.7,
-          neighborMaxDistance: 2,
-          neighborWeight: 1,
-          combineMode: "max",
-        });
-        console.log(
-          "[PropClusterer] effectiveness summary:",
-          effectiveness.summary,
-        );
-      }
-    }
+    // Note: clusterer debug data is accessible via `clusterer.getLastDebugReport()`.
 
     // Convert clustered single-tile seeds into valid placements for larger footprints
     let tiles = room.getEmptyTiles();
@@ -1383,8 +1331,6 @@ export class Populator {
     }
     if (!clear) {
       console.warn("no space for " + TileClass.name);
-    } else {
-      console.log("space for " + TileClass.name);
     }
     if (!clear) return;
     for (let xx = x - 1; xx < x + w + 1; xx++) {
@@ -1533,9 +1479,6 @@ export class Populator {
     const availableEnemies = this.getAvailableEnemiesForRoom(room, envType);
 
     if (availableEnemies.length === 0) {
-      console.log(
-        `No enemies available for environment ${envType || room.level.environment.type} at depth ${room.depth}`,
-      );
       return;
     }
 
@@ -1593,12 +1536,6 @@ export class Populator {
       seen.add(e.id);
       deduped.push(e as EnemyInfo & { id: number });
     }
-
-    console.log(
-      `Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
-        .map((e) => enemyIdToName[e.id!] || `Unknown(${e.id})`)
-        .join(", ")}]`,
-    );
 
     return deduped;
   }
@@ -1702,9 +1639,6 @@ export class Populator {
         tiles = tiles.filter((t) => !(t.x === x && t.y === y));
       }
     }
-    console.log(
-      `Spawned ${numEnemies} enemies from pool for total empty tiles ${tiles.length}`,
-    );
   }
 
   /**
@@ -1850,7 +1784,6 @@ export class Populator {
       for (let yy = 0; yy < enemy.h; yy++) {
         const tile = room.roomArray[x + xx]?.[y + yy];
         if ((tile.x === x + xx || tile.y === y + yy) && tile.isSolid()) {
-          console.log("wall found");
           return false;
         }
       }
@@ -2732,8 +2665,6 @@ export class Populator {
       room.type !== RoomType.UPLADDER &&
       room.type !== RoomType.ROPEHOLE
     ) {
-      if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-        console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
       room.builder.addWallBlocksOrganicTunnels(rand);
     }
 
@@ -2765,11 +2696,6 @@ export class Populator {
         }
 
         if (GameplaySettings.ORGANIC_TUNNELS_FORCE) {
-          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-            console.log(
-              "[OrganicTunnels] FORCED in DUNGEON room",
-              room.globalId,
-            );
           room.builder.addWallBlocksOrganicTunnels(rand);
         } else if (GameplaySettings.ORGANIC_TUNNELS_ENABLED) {
           if (
@@ -2777,12 +2703,6 @@ export class Populator {
             this.level.environment.type === EnvType.MAGMA_CAVE ||
             this.level.environment.type === EnvType.FOREST
           ) {
-            if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-              console.log(
-                "[OrganicTunnels] enabled in env",
-                this.level.environment.type,
-                room.globalId,
-              );
             if (room.height > 15 || room.width > 15) {
               room.builder.addWallBlocksOrganicTunnels(rand);
             } else if (factor < 15) {
@@ -2827,12 +2747,6 @@ export class Populator {
           this.level.environment.type === EnvType.MAGMA_CAVE ||
           this.level.environment.type === EnvType.FOREST
         ) {
-          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-            console.log(
-              "[OrganicTunnels] enabled in env",
-              this.level.environment.type,
-              room.globalId,
-            );
           if (room.height > 15 || room.width > 15) {
             room.builder.addWallBlocksOrganicTunnels(rand);
           } else if (factor < 15) {
@@ -2862,12 +2776,6 @@ export class Populator {
           this.level.environment.type === EnvType.MAGMA_CAVE ||
           this.level.environment.type === EnvType.FOREST
         ) {
-          if (GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-            console.log(
-              "[OrganicTunnels] enabled in env",
-              this.level.environment.type,
-              room.globalId,
-            );
           if (room.height > 15 || room.width > 15) {
             room.builder.addWallBlocksOrganicTunnels(rand);
           } else if (factor < 15) {

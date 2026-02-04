@@ -19,6 +19,11 @@ export class Registry<K extends string, V> {
   has(kind: K): boolean {
     return this.map.has(kind);
   }
+
+  /** Returns all registered kinds in insertion order. */
+  kinds(): K[] {
+    return Array.from(this.map.keys());
+  }
 }
 
 

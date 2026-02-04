@@ -460,14 +460,6 @@ export class PropClusterer {
           nonZeroCount: count,
         };
       }
-      if (this.options.debugLogToConsole) {
-        console.log(
-          "[PropClusterer] walls:",
-          walls.length,
-          "gridStats:",
-          this.debugReport.wallGridStats,
-        );
-      }
     }
 
     return grid;
@@ -655,20 +647,6 @@ export class PropClusterer {
       },
     };
 
-    if (this.options.debugLogToConsole) {
-      console.log("[PropClusterer] effectiveness:", {
-        total: report.total,
-        params: report.params,
-        summary: {
-          avgWall: Number(avgWall.toFixed(3)),
-          avgNeighbor: Number(avgNeighbor.toFixed(3)),
-          avgCombined: Number(avgCombined.toFixed(3)),
-          pctNearWall: Number((pctNearWall * 100).toFixed(1)) + "%",
-          pctCombinedHigh: Number((pctCombinedHigh * 100).toFixed(1)) + "%",
-        },
-      });
-    }
-
     return report;
   }
 
@@ -712,29 +690,6 @@ export class PropClusterer {
     }
 
     this.debugReport.iterations.push(entry);
-    if (this.options.debugLogToConsole) {
-      const top0 = entry.top && entry.top[0];
-      console.log(
-        "[PropClusterer] iter",
-        iteration,
-        "avail=",
-        entry.availableTiles,
-        "placed=",
-        entry.placedSoFar,
-        "totalScore=",
-        totalScore.toFixed(3),
-        usedFallback ? "(fallback)" : "",
-        top0
-          ? {
-              topPos: top0.position,
-              base: Number(top0.base.toFixed(3)),
-              entities: Number(top0.entities.toFixed(3)),
-              wall: Number(top0.wall.toFixed(3)),
-              total: Number(top0.total.toFixed(3)),
-            }
-          : undefined,
-      );
-    }
   }
 
   private breakdownTileScore(tile: { x: number; y: number }): {

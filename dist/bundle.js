@@ -25082,6 +25082,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.gs = exports.game = exports.Game = exports.ChatMessage = exports.Direction = exports.LevelState = void 0;
 const gameConstants_1 = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
 const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
+const player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
 const door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
 const sound_1 = __webpack_require__(/*! ./sound/sound */ "./src/sound/sound.ts");
 const levelConstants_1 = __webpack_require__(/*! ./level/levelConstants */ "./src/level/levelConstants.ts");
@@ -25096,6 +25097,7 @@ const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mo
 const postProcess_1 = __webpack_require__(/*! ./gui/postProcess */ "./src/gui/postProcess.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
+const level_1 = __webpack_require__(/*! ./level/level */ "./src/level/level.ts");
 const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
 const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.ts");
 const upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
@@ -25106,6 +25108,13 @@ const random_1 = __webpack_require__(/*! ./utility/random */ "./src/utility/rand
 const IdGenerator_1 = __webpack_require__(/*! ./globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/game/replayManager.ts");
 const environmentTypes_1 = __webpack_require__(/*! ./constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
+const floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
+const enemiesBuiltins_1 = __webpack_require__(/*! ./game/save/registry/enemiesBuiltins */ "./src/game/save/registry/enemiesBuiltins.ts");
+const itemsBuiltins_1 = __webpack_require__(/*! ./game/save/registry/itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
+const enemies_1 = __webpack_require__(/*! ./game/save/registry/enemies */ "./src/game/save/registry/enemies.ts");
+const items_1 = __webpack_require__(/*! ./game/save/registry/items */ "./src/game/save/registry/items.ts");
+const schema_1 = __webpack_require__(/*! ./game/save/schema */ "./src/game/save/schema.ts");
 const skills_1 = __webpack_require__(/*! ./game/skills */ "./src/game/skills.ts");
 const floatingTextPopup_1 = __webpack_require__(/*! ./particle/floatingTextPopup */ "./src/particle/floatingTextPopup.ts");
 const tilesetUrl = __webpack_require__(/*! ../res/tileset.png */ "./res/tileset.png");
@@ -27059,6 +27068,9 @@ class Game {
                     this.pushMessage(ul.isRope ? "Rope up ladder located" : "Up ladder located");
                     break;
                 }
+                case "testlevel":
+                    this.startTestLevel();
+                    break;
                 case "lightup":
                     levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP += 1;
                     this.pushMessage(`Lighting angle step is now ${levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP}`);
@@ -29138,7 +29150,9 @@ class Game {
                     // Avoid heavy work in beforeunload; keep it minimal
                     saveToCookies(this);
                 }
-                catch { }
+                catch (e) {
+                    console.error("Auto-save on exit failed", e);
+                }
             };
             window.addEventListener("beforeunload", saveOnExit);
             document.addEventListener("visibilitychange", () => {
@@ -29158,6 +29172,264 @@ class Game {
             window.addEventListener("hashchange", saveOnExit);
         }
         catch { }
+    }
+    /**
+     * Chat command: `/testlevel`
+     *
+     * Creates a single giant-room level and populates it with:
+     * - one of every registered V2 enemy/entity codec (room.entities)
+     * - one of every V2 item kind in the local player's inventory
+     *
+     * Intended for rapid manual testing (rendering, AI, and save/load coverage).
+     */
+    startTestLevel() {
+        // Ensure registries are populated before we enumerate kinds.
+        (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
+        (0, enemiesBuiltins_1.registerBuiltinEnemyCodecsV2)();
+        // Create a minimal levelgen so V2 save can work in this sandbox world.
+        this.levelgen = new levelGenerator_1.LevelGenerator();
+        this.levelgen.setSeed(123456789);
+        this.levelgen.setMainPathEnvOverride(environmentTypes_1.EnvType.DUNGEON);
+        // ---- Determine how many entities we need to place.
+        const enemyKinds = enemies_1.enemyRegistryV2.kinds();
+        const nEntities = enemyKinds.length;
+        const columns = Math.max(8, Math.ceil(Math.sqrt(Math.max(1, nEntities))) + 2);
+        const cell = 8; // conservative spacing for large entities
+        const rows = Math.ceil(Math.max(1, nEntities) / columns) + 2;
+        const roomW = Math.max(30, columns * cell + 2);
+        const roomH = Math.max(30, rows * cell + 2);
+        // ---- Build minimal world state (single room, single level).
+        const depth = 0;
+        const mapGroup = 1;
+        const level = new level_1.Level(this, depth, roomW, roomH, true, mapGroup, environmentTypes_1.EnvType.DUNGEON, true);
+        level.genSource = "procedural";
+        const room = new room_1.Room(this, 0, 0, roomW, roomH, room_1.RoomType.START, depth, mapGroup, level, random_1.Random.rand, environmentTypes_1.EnvType.DUNGEON);
+        room.id = 1;
+        room.pathId = "main";
+        room.entered = true;
+        room.active = true;
+        room.onScreen = true;
+        // Fill tiles: perimeter walls + interior floors.
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+            for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                const isBorder = x === room.roomX ||
+                    y === room.roomY ||
+                    x === room.roomX + room.width - 1 ||
+                    y === room.roomY + room.height - 1;
+                room.roomArray[x][y] = isBorder ? new wall_1.Wall(room, x, y) : new floor_1.Floor(room, x, y);
+            }
+        }
+        level.rooms = [room];
+        level.roomsById.set(room.globalId, room);
+        this.levels = [];
+        this.levelsById = new Map();
+        this.levels[depth] = level;
+        this.levelsById.set(level.globalId, level);
+        this.level = level;
+        this.registerRooms([room]);
+        this.room = room;
+        this.currentDepth = depth;
+        this.currentPathId = "main";
+        // ---- Create local player.
+        const local = new player_1.Player(this, room.roomX + 2, room.roomY + 2, true);
+        local.dead = false;
+        local.depth = depth;
+        local.roomGID = room.globalId;
+        local.levelID = 0;
+        this.players = { [this.localPlayerID]: local };
+        this.offlinePlayers = {};
+        this.setPlayer();
+        // ---- Fill inventory with every item kind.
+        const inv = local.inventory;
+        const itemCols = Math.max(10, inv.cols);
+        const itemCount = schema_1.ITEM_KIND_VALUES_V2.length;
+        const itemRows = Math.max(1, Math.ceil(itemCount / itemCols));
+        inv.cols = itemCols;
+        inv.rows = itemRows;
+        inv.expansion = 0;
+        inv.isOpen = true;
+        inv.selX = 0;
+        inv.selY = 0;
+        const totalSlots = (inv.rows + inv.expansion) * inv.cols;
+        inv.items = new Array(totalSlots).fill(null);
+        inv.equipAnimAmount = new Array(totalSlots).fill(0);
+        const makeItemSave = (kind, gid) => {
+            const base = {
+                gid,
+                x: 0,
+                y: 0,
+                roomGid: room.globalId,
+                stackCount: 1,
+                pickedUp: true,
+            };
+            switch (kind) {
+                case "key":
+                    return { ...base, kind: "key", doorId: 1, depth: null, showPath: false };
+                case "torch":
+                case "lantern":
+                case "candle":
+                case "glow_stick":
+                case "glow_bugs":
+                case "glowshrooms":
+                    return { ...base, kind, fuel: 100, equipped: false };
+                case "diving_helmet":
+                    return { ...base, kind: "diving_helmet", equipped: false, currentAir: 100 };
+                case "hourglass":
+                    return { ...base, kind: "hourglass", durability: 100, durabilityMax: 100, broken: false };
+                case "dagger":
+                case "sword":
+                case "spear":
+                case "dual_daggers":
+                case "greataxe":
+                case "warhammer":
+                case "quarterstaff":
+                case "scythe":
+                case "shotgun":
+                case "slingshot":
+                case "spellbook":
+                case "pickaxe": {
+                    const status = { poison: false, blood: false, curse: false };
+                    return {
+                        ...base,
+                        kind,
+                        durability: 100,
+                        durabilityMax: 100,
+                        broken: false,
+                        cooldown: 0,
+                        cooldownMax: 10,
+                        status,
+                        equipped: false,
+                    };
+                }
+                case "crossbow": {
+                    const status = { poison: false, blood: false, curse: false };
+                    return {
+                        ...base,
+                        kind: "crossbow",
+                        durability: 100,
+                        durabilityMax: 100,
+                        broken: false,
+                        cooldown: 0,
+                        cooldownMax: 10,
+                        status,
+                        equipped: false,
+                        crossbowState: 0,
+                    };
+                }
+                case "occult_shield":
+                case "wooden_shield":
+                    return { ...base, kind, equipped: false, health: 100, rechargeTurnCounter: 0 };
+                default:
+                    return { ...base, kind };
+            }
+        };
+        const missingItems = [];
+        for (const kind of schema_1.ITEM_KIND_VALUES_V2) {
+            if (!items_1.itemRegistryV2.has(kind))
+                missingItems.push(kind);
+        }
+        if (missingItems.length > 0)
+            console.warn("testlevel: missing item codecs", missingItems);
+        for (let i = 0; i < schema_1.ITEM_KIND_VALUES_V2.length && i < totalSlots; i++) {
+            const kind = schema_1.ITEM_KIND_VALUES_V2[i];
+            const codec = items_1.itemRegistryV2.get(kind);
+            if (!codec)
+                continue;
+            const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, { game: this });
+            it.pickedUp = true;
+            inv.items[i] = it;
+        }
+        // ---- Spawn one of each registered enemy/entity codec.
+        const makeEnemySave = (kind, gid, x, y) => {
+            const base = {
+                kind,
+                gid,
+                roomGid: room.globalId,
+                x,
+                y,
+                direction: "down",
+                health: 10,
+                maxHealth: 10,
+                dead: false,
+            };
+            if (kind === "wizard") {
+                return {
+                    ...base,
+                    kind: "wizard",
+                    wizardType: "energy",
+                    wizardState: 1,
+                    seenPlayer: true,
+                    ticks: 10,
+                    alertTicks: 0,
+                    skipNextTurns: 0,
+                };
+            }
+            if (kind === "spawner")
+                return { ...base, kind: "spawner", enemySpawnType: 0, ticks: 0, seenPlayer: false };
+            if (kind === "chest")
+                return { ...base, kind: "chest", opened: false, destroyable: true, spawnedItemGids: undefined };
+            if (kind === "vending_machine") {
+                const cost = makeItemSave("coin", "I-vm-cost");
+                const item = makeItemSave("apple", "I-vm-item");
+                return {
+                    ...base,
+                    kind: "vending_machine",
+                    open: false,
+                    quantity: 1,
+                    isInfinite: false,
+                    costItems: [cost],
+                    item,
+                };
+            }
+            return {
+                ...base,
+                kind,
+                seenPlayer: true,
+                heardPlayer: false,
+                aggro: false,
+                ticks: 1,
+                alertTicks: 0,
+                unconscious: false,
+                skipNextTurns: 0,
+            };
+        };
+        room.entities = [];
+        let cx = room.roomX + 2;
+        let cy = room.roomY + 5;
+        let rowH = 1;
+        for (let i = 0; i < enemyKinds.length; i++) {
+            const kind = enemyKinds[i];
+            const codec = enemies_1.enemyRegistryV2.get(kind);
+            if (!codec)
+                continue;
+            const ent = codec.spawn(makeEnemySave(kind, `E-test-${i}`, cx, cy), room, { game: this });
+            ent.dead = false;
+            room.entities.push(ent);
+            const w = Math.max(1, Number.isFinite(ent.w) ? Math.floor(ent.w) : 1);
+            const h = Math.max(1, Number.isFinite(ent.h) ? Math.floor(ent.h) : 1);
+            rowH = Math.max(rowH, h);
+            cx += w + 2;
+            if (cx >= room.roomX + room.width - 3) {
+                cx = room.roomX + 2;
+                cy += rowH + 2;
+                rowH = 1;
+            }
+        }
+        // ---- Finalize state for immediate play.
+        try {
+            room.calculateWallInfo();
+        }
+        catch { }
+        try {
+            room.roomOnScreen(local);
+            room.updateLighting({ x: local.x, y: local.y });
+        }
+        catch { }
+        this.levelState = LevelState.IN_LEVEL;
+        this.started = true;
+        this.startedFadeOut = true;
+        this.startMenuActive = false;
+        this.pushMessage(`Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${schema_1.ITEM_KIND_VALUES_V2.length}`);
     }
     generateAndShowRoomLayout() {
         // Generate different patterns
@@ -36509,6 +36781,7 @@ const loadSaveV2 = async (game, save) => {
         if (save.meta?.developerMode !== undefined) {
             gameConstants_1.GameConstants.DEVELOPER_MODE = save.meta.developerMode;
         }
+        const strictKinds = gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS;
         // Ensure builtin codecs are registered.
         (0, tilesBuiltins_1.registerBuiltinTileCodecsV2)();
         (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
@@ -36527,6 +36800,8 @@ const loadSaveV2 = async (game, save) => {
         const assignedByGid = new Map();
         const assignedGidByObj = new Map();
         const enemyAiStateByGid = new Map();
+        const skippedItemKinds = new Map();
+        const skippedEnemyKinds = new Map();
         // Reset high-level game collections (similar to legacy loadGameState).
         game.rooms = [];
         game.roomsById = new Map();
@@ -37007,9 +37282,10 @@ const loadSaveV2 = async (game, save) => {
             for (const is of rd.items) {
                 const codec = items_1.itemRegistryV2.get(is.kind);
                 if (!codec) {
-                    if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+                    if (strictKinds) {
                         return (0, errors_1.err)({ kind: "InvalidState", message: `Missing Item codec for kind=${is.kind}` });
                     }
+                    skippedItemKinds.set(is.kind, (skippedItemKinds.get(is.kind) ?? 0) + 1);
                     continue; // unsupported kind not yet persisted
                 }
                 const spawned = codec.spawn(is, room, { game });
@@ -37028,9 +37304,10 @@ const loadSaveV2 = async (game, save) => {
             for (const es of rd.enemies) {
                 const codec = enemies_1.enemyRegistryV2.get(es.kind);
                 if (!codec) {
-                    if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+                    if (strictKinds) {
                         return (0, errors_1.err)({ kind: "InvalidState", message: `Missing Enemy codec for kind=${es.kind}` });
                     }
+                    skippedEnemyKinds.set(es.kind, (skippedEnemyKinds.get(es.kind) ?? 0) + 1);
                     continue;
                 }
                 const spawned = codec.spawn(es, room, { game });
@@ -37382,6 +37659,23 @@ const loadSaveV2 = async (game, save) => {
             }
             catch {
                 // Same as above: don't fail the load on lighting warm-up.
+            }
+        }
+        // Console-only diagnostics: when strict kind checking is disabled, surface what we skipped.
+        if (!strictKinds) {
+            if (skippedItemKinds.size > 0) {
+                const summary = Array.from(skippedItemKinds.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([k, n]) => `${k}×${n}`)
+                    .join(", ");
+                console.warn(`V2 load: skipped items with no codec: ${summary}`);
+            }
+            if (skippedEnemyKinds.size > 0) {
+                const summary = Array.from(skippedEnemyKinds.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([k, n]) => `${k}×${n}`)
+                    .join(", ");
+                console.warn(`V2 load: skipped enemies with no codec: ${summary}`);
             }
         }
         return (0, errors_1.ok)(undefined);
@@ -39174,6 +39468,10 @@ class Registry {
     }
     has(kind) {
         return this.map.has(kind);
+    }
+    /** Returns all registered kinds in insertion order. */
+    kinds() {
+        return Array.from(this.map.keys());
     }
 }
 exports.Registry = Registry;
@@ -41695,9 +41993,10 @@ const collectPersistedTiles = (game, room, nowMs) => {
     return out;
 };
 const tryEncodeItem = (game, item, nowMs) => {
+    const strictKinds = gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS;
     const kind = (0, itemsBuiltins_1.getItemKindV2)(item);
     if (!kind) {
-        if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
             const name = item?.constructor?.name ?? "UnknownItem";
             throw new Error(`Missing Item kind mapping for ${name}`);
         }
@@ -41705,7 +42004,7 @@ const tryEncodeItem = (game, item, nowMs) => {
     }
     const codec = items_1.itemRegistryV2.get(kind);
     if (!codec) {
-        if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
             throw new Error(`Missing Item codec for kind=${kind}`);
         }
         return null;
@@ -41727,9 +42026,10 @@ const collectPersistedItems = (game, room, nowMs) => {
     return out;
 };
 const tryEncodeEnemy = (game, e, nowMs) => {
+    const strictKinds = gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS;
     const kind = (0, enemiesBuiltins_1.getEnemyKindV2)(e);
     if (!kind) {
-        if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
             const name = e?.constructor?.name ?? "UnknownEntity";
             throw new Error(`Missing Enemy kind mapping for ${name}`);
         }
@@ -41737,7 +42037,7 @@ const tryEncodeEnemy = (game, e, nowMs) => {
     }
     const codec = enemies_1.enemyRegistryV2.get(kind);
     if (!codec) {
-        if (gameplaySettings_1.GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
             throw new Error(`Missing Enemy codec for kind=${kind}`);
         }
         return null;
@@ -41793,7 +42093,15 @@ const isLegacyGameState = (v) => {
     return true;
 };
 const saveToCookies = (game) => {
-    const v2 = (0, save_1.createSaveV2)(game);
+    let v2;
+    try {
+        v2 = (0, save_1.createSaveV2)(game);
+    }
+    catch (e) {
+        console.error("V2 save threw", e);
+        game.pushMessage?.("Save failed.");
+        return;
+    }
     if (v2.ok === false) {
         console.error("V2 save failed", v2.error);
         game.pushMessage?.("Save failed.");
@@ -64994,9 +65302,6 @@ class PropClusterer {
                     nonZeroCount: count,
                 };
             }
-            if (this.options.debugLogToConsole) {
-                console.log("[PropClusterer] walls:", walls.length, "gridStats:", this.debugReport.wallGridStats);
-            }
         }
         return grid;
     }
@@ -65147,19 +65452,6 @@ class PropClusterer {
                 pctCombinedHigh,
             },
         };
-        if (this.options.debugLogToConsole) {
-            console.log("[PropClusterer] effectiveness:", {
-                total: report.total,
-                params: report.params,
-                summary: {
-                    avgWall: Number(avgWall.toFixed(3)),
-                    avgNeighbor: Number(avgNeighbor.toFixed(3)),
-                    avgCombined: Number(avgCombined.toFixed(3)),
-                    pctNearWall: Number((pctNearWall * 100).toFixed(1)) + "%",
-                    pctCombinedHigh: Number((pctCombinedHigh * 100).toFixed(1)) + "%",
-                },
-            });
-        }
         return report;
     }
     captureDebugIteration(iteration, totalScore, usedFallback, selected, scoredTiles) {
@@ -65194,18 +65486,6 @@ class PropClusterer {
             }
         }
         this.debugReport.iterations.push(entry);
-        if (this.options.debugLogToConsole) {
-            const top0 = entry.top && entry.top[0];
-            console.log("[PropClusterer] iter", iteration, "avail=", entry.availableTiles, "placed=", entry.placedSoFar, "totalScore=", totalScore.toFixed(3), usedFallback ? "(fallback)" : "", top0
-                ? {
-                    topPos: top0.position,
-                    base: Number(top0.base.toFixed(3)),
-                    entities: Number(top0.entities.toFixed(3)),
-                    wall: Number(top0.wall.toFixed(3)),
-                    total: Number(top0.total.toFixed(3)),
-                }
-                : undefined);
-        }
     }
     breakdownTileScore(tile) {
         const base = this.options.baseScore;
@@ -71440,7 +71720,6 @@ class Populator {
                 //furthestFromUpLadder.entities.push(chest);
             }
             //if (this.level.depth === 0) return;
-            console.log(`Adding downladder with ${this.numRooms()} rooms`);
             if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON && this.level.depth !== 0) {
                 let sidePathOptions = {
                     caveRooms: 5,
@@ -71520,7 +71799,6 @@ class Populator {
             }
         };
         this.linkExitToStart = () => {
-            console.log("linkExitToStart", this.level.isMainPath);
             if (this.level.isMainPath)
                 return;
             this.level.setExitRoom(false);
@@ -71586,7 +71864,6 @@ class Populator {
                 if (startRoom)
                     downLadderRoom = startRoom;
             }
-            console.log(`Selected room for downladder: Type=${downLadderRoom?.type}, Doors=${downLadderRoom?.doors?.length}`);
             // Use the new method to get empty tiles that don't block doors.
             // Prefer positions away from room edges to avoid revealing flat outer walls.
             const baseTiles = downLadderRoom.getEmptyTilesNotBlockingDoors();
@@ -71600,7 +71877,6 @@ class Populator {
                 position.x === undefined ||
                 position.y === undefined)
                 return;
-            console.log(`Placing downladder at position (${position.x}, ${position.y})`);
             // Place a DownLadder tile directly; avoid entity side-effects post-load
             const env = opts?.envType
                 ? opts.envType
@@ -71625,7 +71901,6 @@ class Populator {
             }
             downLadderRoom.roomArray[position.x][position.y] = dl;
             if (dl.lockable.isLocked()) {
-                console.log("adding key to downladder");
                 this.level.distributeKey(dl, room);
             }
             this.addedDownladder = true;
@@ -72206,32 +72481,7 @@ class Populator {
         const positions = clusterer.generateClusteredPositions(numProps);
         const blobField = this.generateBlobField(room, clusteringOptions?.blobOptions);
         const propBlobFieldCache = new Map();
-        if (clusteringOptions?.debugEnabled) {
-            const report = clusterer.getLastDebugReport();
-            if (report) {
-                console.log("[PropClusterer] config:", {
-                    clusterTowardsWalls: report.config.clusterTowardsWalls,
-                    wallWeight: report.config.wallWeight,
-                    wallMaxDistance: report.config.wallMaxDistance,
-                    wallDeadzone: report.config.wallDeadzone,
-                    onlyInnerWalls: report.config.onlyInnerWalls,
-                    wallDistanceMetric: report.config.wallDistanceMetric,
-                });
-                console.log("[PropClusterer] walls:", report.wallsFound, "grid:", report.wallGridStats);
-                console.log("[PropClusterer] iterations:", report.iterations.length, "seed:", report.seedUsed);
-                if (report.iterations[0]?.top && report.iterations[0].top.length) {
-                    console.log("[PropClusterer] first-iter top:", report.iterations[0].top);
-                }
-                // Effectiveness summary after placements
-                const effectiveness = clusterer.analyzeEffectiveness(positions, {
-                    wallScoreThresholdNormalized: 0.7,
-                    neighborMaxDistance: 2,
-                    neighborWeight: 1,
-                    combineMode: "max",
-                });
-                console.log("[PropClusterer] effectiveness summary:", effectiveness.summary);
-            }
-        }
+        // Note: clusterer debug data is accessible via `clusterer.getLastDebugReport()`.
         // Convert clustered single-tile seeds into valid placements for larger footprints
         let tiles = room.getEmptyTiles();
         for (const seed of positions) {
@@ -72715,9 +72965,6 @@ class Populator {
         if (!clear) {
             console.warn("no space for " + TileClass.name);
         }
-        else {
-            console.log("space for " + TileClass.name);
-        }
         if (!clear)
             return;
         for (let xx = x - 1; xx < x + w + 1; xx++) {
@@ -72835,7 +73082,6 @@ class Populator {
         // Get filtered enemies using our centralized logic
         const availableEnemies = this.getAvailableEnemiesForRoom(room, envType);
         if (availableEnemies.length === 0) {
-            console.log(`No enemies available for environment ${envType || room.level.environment.type} at depth ${room.depth}`);
             return;
         }
         // Use existing spawning logic with filtered enemies
@@ -72882,9 +73128,6 @@ class Populator {
             seen.add(e.id);
             deduped.push(e);
         }
-        console.log(`Depth ${room.depth}, Env ${environment}: Pool [${allowedEnemyIds.map((id) => enemyIdToName[id] || `Unknown(${id})`).join(", ")} ] -> Available [${availableEnemies
-            .map((e) => enemyIdToName[e.id] || `Unknown(${e.id})`)
-            .join(", ")}]`);
         return deduped;
     }
     /**
@@ -72964,7 +73207,6 @@ class Populator {
                 tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
-        console.log(`Spawned ${numEnemies} enemies from pool for total empty tiles ${tiles.length}`);
     }
     /**
      * Add special enemies (spawners, occultists) - extracted for clarity
@@ -73072,7 +73314,6 @@ class Populator {
             for (let yy = 0; yy < enemy.h; yy++) {
                 const tile = room.roomArray[x + xx]?.[y + yy];
                 if ((tile.x === x + xx || tile.y === y + yy) && tile.isSolid()) {
-                    console.log("wall found");
                     return false;
                 }
             }
@@ -73485,8 +73726,6 @@ class Populator {
             room.type !== room_1.RoomType.DOWNLADDER &&
             room.type !== room_1.RoomType.UPLADDER &&
             room.type !== room_1.RoomType.ROPEHOLE) {
-            if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-                console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
             room.builder.addWallBlocksOrganicTunnels(rand);
         }
         switch (room.type) {
@@ -73511,16 +73750,12 @@ class Populator {
                     return;
                 }
                 if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_FORCE) {
-                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-                        console.log("[OrganicTunnels] FORCED in DUNGEON room", room.globalId);
                     room.builder.addWallBlocksOrganicTunnels(rand);
                 }
                 else if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_ENABLED) {
                     if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
                         this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
                         this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                        if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-                            console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
                         if (room.height > 15 || room.width > 15) {
                             room.builder.addWallBlocksOrganicTunnels(rand);
                         }
@@ -73559,8 +73794,6 @@ class Populator {
                 if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-                        console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
                     if (room.height > 15 || room.width > 15) {
                         room.builder.addWallBlocksOrganicTunnels(rand);
                     }
@@ -73588,8 +73821,6 @@ class Populator {
                 if (this.level.environment.type === environmentTypes_1.EnvType.CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.MAGMA_CAVE ||
                     this.level.environment.type === environmentTypes_1.EnvType.FOREST) {
-                    if (gameplaySettings_1.GameplaySettings.ORGANIC_TUNNELS_DEBUG)
-                        console.log("[OrganicTunnels] enabled in env", this.level.environment.type, room.globalId);
                     if (room.height > 15 || room.width > 15) {
                         room.builder.addWallBlocksOrganicTunnels(rand);
                     }

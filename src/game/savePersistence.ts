@@ -26,7 +26,14 @@ const isLegacyGameState = (v: unknown): v is GameState => {
 };
 
 export const saveToCookies = (game: Game) => {
-  const v2 = createSaveV2(game);
+  let v2;
+  try {
+    v2 = createSaveV2(game);
+  } catch (e) {
+    console.error("V2 save threw", e);
+    game.pushMessage?.("Save failed.");
+    return;
+  }
   if (v2.ok === false) {
     console.error("V2 save failed", v2.error);
     game.pushMessage?.("Save failed.");

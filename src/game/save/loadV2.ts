@@ -220,6 +220,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   if (save.meta?.developerMode !== undefined) {
     GameConstants.DEVELOPER_MODE = save.meta.developerMode;
   }
+  const strictKinds = GameplaySettings.SAVE_V2_STRICT_KINDS;
 
   // Ensure builtin codecs are registered.
   registerBuiltinTileCodecsV2();
@@ -243,6 +244,8 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     string,
     { seenPlayer?: boolean; heardPlayer?: boolean; aggro?: boolean }
   >();
+  const skippedItemKinds = new Map<string, number>();
+  const skippedEnemyKinds = new Map<string, number>();
 
   // Reset high-level game collections (similar to legacy loadGameState).
   game.rooms = [];
@@ -814,9 +817,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     for (const is of rd.items) {
       const codec = itemRegistryV2.get(is.kind);
       if (!codec) {
-        if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
           return err({ kind: "InvalidState", message: `Missing Item codec for kind=${is.kind}` });
         }
+        skippedItemKinds.set(is.kind, (skippedItemKinds.get(is.kind) ?? 0) + 1);
         continue; // unsupported kind not yet persisted
       }
       const spawned = codec.spawn(is, room, { game });
@@ -840,9 +844,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     for (const es of rd.enemies) {
       const codec = enemyRegistryV2.get(es.kind);
       if (!codec) {
-        if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+        if (strictKinds) {
           return err({ kind: "InvalidState", message: `Missing Enemy codec for kind=${es.kind}` });
         }
+        skippedEnemyKinds.set(es.kind, (skippedEnemyKinds.get(es.kind) ?? 0) + 1);
         continue;
       }
       const spawned = codec.spawn(es, room, { game });
@@ -1209,6 +1214,24 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       game.room.updateLighting({ x: lp.x, y: lp.y });
     } catch {
       // Same as above: don't fail the load on lighting warm-up.
+    }
+  }
+
+  // Console-only diagnostics: when strict kind checking is disabled, surface what we skipped.
+  if (!strictKinds) {
+    if (skippedItemKinds.size > 0) {
+      const summary = Array.from(skippedItemKinds.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, n]) => `${k}×${n}`)
+        .join(", ");
+      console.warn(`V2 load: skipped items with no codec: ${summary}`);
+    }
+    if (skippedEnemyKinds.size > 0) {
+      const summary = Array.from(skippedEnemyKinds.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, n]) => `${k}×${n}`)
+        .join(", ");
+      console.warn(`V2 load: skipped enemies with no codec: ${summary}`);
     }
   }
 

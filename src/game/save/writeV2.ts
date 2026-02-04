@@ -351,9 +351,10 @@ const collectPersistedTiles = (game: Game, room: Room, nowMs: number): TileSaveV
 };
 
 const tryEncodeItem = (game: Game, item: Item, nowMs: number): ItemSaveV2 | null => {
+  const strictKinds = GameplaySettings.SAVE_V2_STRICT_KINDS;
   const kind = getItemKindV2(item);
   if (!kind) {
-    if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+    if (strictKinds) {
       const name = item?.constructor?.name ?? "UnknownItem";
       throw new Error(`Missing Item kind mapping for ${name}`);
     }
@@ -361,7 +362,7 @@ const tryEncodeItem = (game: Game, item: Item, nowMs: number): ItemSaveV2 | null
   }
   const codec = itemRegistryV2.get(kind);
   if (!codec) {
-    if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+    if (strictKinds) {
       throw new Error(`Missing Item codec for kind=${kind}`);
     }
     return null;
@@ -384,9 +385,10 @@ const collectPersistedItems = (game: Game, room: Room, nowMs: number): ItemSaveV
 };
 
 const tryEncodeEnemy = (game: Game, e: Entity, nowMs: number): EnemySaveV2 | null => {
+  const strictKinds = GameplaySettings.SAVE_V2_STRICT_KINDS;
   const kind = getEnemyKindV2(e);
   if (!kind) {
-    if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+    if (strictKinds) {
       const name = e?.constructor?.name ?? "UnknownEntity";
       throw new Error(`Missing Enemy kind mapping for ${name}`);
     }
@@ -394,7 +396,7 @@ const tryEncodeEnemy = (game: Game, e: Entity, nowMs: number): EnemySaveV2 | nul
   }
   const codec = enemyRegistryV2.get(kind);
   if (!codec) {
-    if (GameplaySettings.SAVE_V2_STRICT_KINDS) {
+    if (strictKinds) {
       throw new Error(`Missing Enemy codec for kind=${kind}`);
     }
     return null;
