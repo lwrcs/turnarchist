@@ -48,6 +48,7 @@ import type { EnemyKind, EnemySaveV2, ItemKind, ItemSaveV2 } from "./game/save/s
 import { SKILL_DISPLAY_NAME } from "./game/skills";
 import type { Skill } from "./game/skills";
 import { FloatingTextPopup } from "./particle/floatingTextPopup";
+import { BootLoadingRenderer } from "./boot/bootLoadingRenderer";
 import tilesetUrl = require("../res/tileset.png");
 import objsetUrl = require("../res/objset.png");
 import mobsetUrl = require("../res/mobset.png");
@@ -867,34 +868,46 @@ export class Game {
       let resourcesLoaded = 0;
       const NUM_RESOURCES = 6;
 
+      // Boot loading renderer: uses the game's pixel font once available, but is independent of Game.
+      const bootLoading = new BootLoadingRenderer(canvas as HTMLCanvasElement, Game.ctx);
+      bootLoading.setLabel("loading");
+      bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
+      bootLoading.start();
+
       Game.tileset = new Image();
       Game.tileset.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.tileset.src = tilesetUrl;
       Game.objset = new Image();
       Game.objset.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.objset.src = objsetUrl;
       Game.mobset = new Image();
       Game.mobset.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.mobset.src = mobsetUrl;
       Game.itemset = new Image();
       Game.itemset.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.itemset.src = itemsetUrl;
       Game.fxset = new Image();
       Game.fxset.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.fxset.src = fxsetUrl;
       Game.fontsheet = new Image();
       Game.fontsheet.onload = () => {
         resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.fontsheet.src = fontUrl;
 
@@ -910,6 +923,8 @@ export class Game {
         if (resourcesLoaded < NUM_RESOURCES) {
           window.setTimeout(checkResourcesLoaded, 500);
         } else {
+          // Stop the boot loading renderer before the real game loop begins.
+          bootLoading.dispose();
           // proceed with constructor
 
           Game.scale = GameConstants.SCALE;
