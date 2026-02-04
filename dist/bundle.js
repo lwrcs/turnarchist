@@ -25477,6 +25477,8 @@ class Game {
         this.debugBackgroundRed = false;
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
+        this.autosaveIntervalId = null;
+        this.lastAutosaveAtMs = 0;
         this.localPlayerID = "localplayer";
         this.waterOverlayOffsetX = 0;
         this.waterOverlayOffsetY = 0;
@@ -29148,7 +29150,7 @@ class Game {
                 try {
                     const { saveToCookies } = __webpack_require__(/*! ./game/savePersistence */ "./src/game/savePersistence.ts");
                     // Avoid heavy work in beforeunload; keep it minimal
-                    saveToCookies(this);
+                    saveToCookies(this, { silent: true });
                 }
                 catch (e) {
                     console.error("Auto-save on exit failed", e);
@@ -29160,6 +29162,10 @@ class Game {
                     saveOnExit();
             });
             window.addEventListener("pagehide", saveOnExit);
+            // Page Lifecycle API (supported on some browsers): attempt save before the page is frozen.
+            document.addEventListener("freeze", saveOnExit);
+            // Additional mobile-friendly signals.
+            window.addEventListener("blur", saveOnExit);
             window.addEventListener("unload", () => {
                 try {
                     const { Sound } = __webpack_require__(/*! ./sound/sound */ "./src/sound/sound.ts");
@@ -29170,6 +29176,26 @@ class Game {
             // Save on back/forward navigation
             window.addEventListener("popstate", saveOnExit);
             window.addEventListener("hashchange", saveOnExit);
+            // Periodic autosave fallback: iOS may not reliably fire unload-style events when the app is killed.
+            // This improves chances the last ~N seconds of progress are persisted.
+            if (this.autosaveIntervalId === null) {
+                this.autosaveIntervalId = window.setInterval(() => {
+                    // Don't autosave in menus or mid-load. Also avoid writing while hidden (some browsers throttle aggressively).
+                    if (!this.started)
+                        return;
+                    if (this.loadingSaveV2)
+                        return;
+                    if (this.levelState !== LevelState.IN_LEVEL)
+                        return;
+                    if (document.visibilityState !== "visible")
+                        return;
+                    const now = Date.now();
+                    if (now - this.lastAutosaveAtMs < gameConstants_1.GameConstants.AUTOSAVE_INTERVAL_MS)
+                        return;
+                    this.lastAutosaveAtMs = now;
+                    saveOnExit();
+                }, gameConstants_1.GameConstants.AUTOSAVE_INTERVAL_MS);
+            }
         }
         catch { }
     }
@@ -32514,6 +32540,11 @@ class GameConstants {
 exports.GameConstants = GameConstants;
 GameConstants.VERSION = "Alpha v0.3.1"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
+/**
+ * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)
+ * where close/kill flows may not reliably fire unload-style events.
+ */
+GameConstants.AUTOSAVE_INTERVAL_MS = 15000;
 /**
  * Debug mode for stacked z-layer testing. When enabled, the room populator
  * will generate simple "upper floors" (z=1) over inner walls and place
@@ -42092,25 +42123,28 @@ const isLegacyGameState = (v) => {
         return false;
     return true;
 };
-const saveToCookies = (game) => {
+const saveToCookies = (game, opts) => {
     let v2;
     try {
         v2 = (0, save_1.createSaveV2)(game);
     }
     catch (e) {
         console.error("V2 save threw", e);
-        game.pushMessage?.("Save failed.");
+        if (opts?.silent !== true)
+            game.pushMessage?.("Save failed.");
         return;
     }
     if (v2.ok === false) {
         console.error("V2 save failed", v2.error);
-        game.pushMessage?.("Save failed.");
+        if (opts?.silent !== true)
+            game.pushMessage?.("Save failed.");
         return;
     }
     const json = JSON.stringify(v2.value);
     // For now, skip compression to avoid adding deps; chunk directly
     (0, cookies_1.setCookieChunks)(SAVE_PREFIX, json, 30);
-    game.pushMessage?.("Saved to cookies (V2).");
+    if (opts?.silent !== true)
+        game.pushMessage?.("Saved to cookies (V2).");
 };
 exports.saveToCookies = saveToCookies;
 const loadFromCookies = async (game) => {

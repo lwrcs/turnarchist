@@ -25,24 +25,24 @@ const isLegacyGameState = (v: unknown): v is GameState => {
   return true;
 };
 
-export const saveToCookies = (game: Game) => {
+export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
   let v2;
   try {
     v2 = createSaveV2(game);
   } catch (e) {
     console.error("V2 save threw", e);
-    game.pushMessage?.("Save failed.");
+    if (opts?.silent !== true) game.pushMessage?.("Save failed.");
     return;
   }
   if (v2.ok === false) {
     console.error("V2 save failed", v2.error);
-    game.pushMessage?.("Save failed.");
+    if (opts?.silent !== true) game.pushMessage?.("Save failed.");
     return;
   }
   const json = JSON.stringify(v2.value);
   // For now, skip compression to avoid adding deps; chunk directly
   setCookieChunks(SAVE_PREFIX, json, 30);
-  game.pushMessage?.("Saved to cookies (V2).");
+  if (opts?.silent !== true) game.pushMessage?.("Saved to cookies (V2).");
 };
 
 export const loadFromCookies = async (game: Game): Promise<boolean> => {

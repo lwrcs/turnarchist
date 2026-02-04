@@ -579,6 +579,8 @@ export class Game {
   levelsById: Map<string, Level>;
   // Active path identifier for filtering draw/update
   currentPathId: string = "main";
+  private autosaveIntervalId: number | null = null;
+  private lastAutosaveAtMs: number = 0;
   levelgen: LevelGenerator;
   readonly localPlayerID = "localplayer";
   players: Record<string, Player>;
@@ -3386,7 +3388,7 @@ export class Game {
         try {
           const { saveToCookies } = require("./game/savePersistence");
           // Avoid heavy work in beforeunload; keep it minimal
-          saveToCookies(this);
+          saveToCookies(this, { silent: true });
         } catch (e) {
           console.error("Auto-save on exit failed", e);
         }
@@ -3396,6 +3398,10 @@ export class Game {
         if (document.visibilityState === "hidden") saveOnExit();
       });
       window.addEventListener("pagehide", saveOnExit);
+      // Page Lifecycle API (supported on some browsers): attempt save before the page is frozen.
+      document.addEventListener("freeze", saveOnExit);
+      // Additional mobile-friendly signals.
+      window.addEventListener("blur", saveOnExit);
       window.addEventListener("unload", () => {
         try {
           const { Sound } = require("./sound/sound");
@@ -3405,6 +3411,23 @@ export class Game {
       // Save on back/forward navigation
       window.addEventListener("popstate", saveOnExit);
       window.addEventListener("hashchange", saveOnExit);
+
+      // Periodic autosave fallback: iOS may not reliably fire unload-style events when the app is killed.
+      // This improves chances the last ~N seconds of progress are persisted.
+      if (this.autosaveIntervalId === null) {
+        this.autosaveIntervalId = window.setInterval(() => {
+          // Don't autosave in menus or mid-load. Also avoid writing while hidden (some browsers throttle aggressively).
+          if (!this.started) return;
+          if (this.loadingSaveV2) return;
+          if (this.levelState !== LevelState.IN_LEVEL) return;
+          if (document.visibilityState !== "visible") return;
+
+          const now = Date.now();
+          if (now - this.lastAutosaveAtMs < GameConstants.AUTOSAVE_INTERVAL_MS) return;
+          this.lastAutosaveAtMs = now;
+          saveOnExit();
+        }, GameConstants.AUTOSAVE_INTERVAL_MS);
+      }
     } catch {}
   }
 

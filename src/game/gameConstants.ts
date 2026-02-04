@@ -63,6 +63,11 @@ export class GameConstants {
   static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   /**
+   * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)
+   * where close/kill flows may not reliably fire unload-style events.
+   */
+  static AUTOSAVE_INTERVAL_MS = 15000;
+  /**
    * Debug mode for stacked z-layer testing. When enabled, the room populator
    * will generate simple "upper floors" (z=1) over inner walls and place
    * z-only stairs to traverse between z=0 and z=1.
