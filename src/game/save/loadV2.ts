@@ -13,22 +13,29 @@ import { err, ok } from "./errors";
 import type { DoorTileSaveV2, RoomDeltaV2, SaveV2 } from "./schema";
 import { envKindToEnvType, directionKindToDirection } from "./mappers";
 import type { Room } from "../../room/room";
+import type { SidePathOptions } from "../../level/sidePathManager";
+import { EnvType } from "../../constants/environmentTypes";
 import { Door } from "../../tile/door";
 import { InsideLevelDoor } from "../../tile/insideLevelDoor";
 import { Button } from "../../tile/button";
 import { DownLadder } from "../../tile/downLadder";
 import { UpLadder } from "../../tile/upLadder";
 import { LockType } from "../../tile/lockable";
+import { Floor } from "../../tile/floor";
 import type { Tile } from "../../tile/tile";
 import type { Entity } from "../../entity/entity";
+import type { Item } from "../../item/item";
 import { Player } from "../../player/player";
 import { Weapon } from "../../item/weapon/weapon";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
+import { Enemy } from "../../entity/enemy/enemy";
+import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { Equippable } from "../../item/equippable";
 import { GameplaySettings } from "../gameplaySettings";
+import { GameConstants } from "../gameConstants";
 
 type GidCarrier = { globalId: string };
 
@@ -208,6 +215,12 @@ const findGeneratedRoomCandidatesForDelta = (rooms: Room[], d: RoomDeltaV2): Roo
 export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>> => {
   game.loadingSaveV2 = true;
   try {
+  // Restore developer mode early so subsequent load/debug behavior matches the saved session.
+  // Back-compat: old saves omit this field.
+  if (save.meta?.developerMode !== undefined) {
+    GameConstants.DEVELOPER_MODE = save.meta.developerMode;
+  }
+
   // Ensure builtin codecs are registered.
   registerBuiltinTileCodecsV2();
   registerBuiltinItemCodecsV2();
@@ -226,6 +239,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   }
   const assignedByGid = new Map<string, GidCarrier>();
   const assignedGidByObj = new Map<GidCarrier, string>();
+  const enemyAiStateByGid = new Map<
+    string,
+    { seenPlayer?: boolean; heardPlayer?: boolean; aggro?: boolean }
+  >();
 
   // Reset high-level game collections (similar to legacy loadGameState).
   game.rooms = [];
@@ -262,10 +279,11 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       envKindToEnvType(save.worldSpec.env),
       false,
       undefined,
-      {
-        branching: GameplaySettings.MAIN_PATH_BRANCHING,
-        loopiness: GameplaySettings.MAIN_PATH_LOOPINESS,
-      },
+      // IMPORTANT: pass no controls here to match runtime generation.
+      // Main-path generation in live gameplay is triggered via `DownLadder`/`SidePathManager`,
+      // which calls `levelgen.generate(..., pathId="main", opts=undefined)`. If we pass explicit
+      // branching/loopiness overrides here, the layout can diverge and room reassociation fails.
+      undefined,
       genOverride,
     );
   }
@@ -276,11 +294,96 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     return err({ kind: "InvalidState", message: "Active level not generated" });
   }
 
+  // Build per-sidepath generation overrides (env + opts) from the saved rope-down ladders.
+  // When saving while inside a sidepath, this data is critical to reproduce the sidepath layout and skins.
+  const roomDeltaByGid = new Map<string, RoomDeltaV2>();
+  for (const rd of save.delta.rooms) roomDeltaByGid.set(rd.roomGid, rd);
+  const sidepathGenOverrides = new Map<
+    string,
+    { env: ReturnType<typeof envKindToEnvType>; opts?: SidePathOptions }
+  >();
+
+  const inferSidepathOptsFallback = (
+    env: EnvType,
+    depth: number,
+    roomsHint?: number,
+  ): SidePathOptions | undefined => {
+    // Best-effort backward compat when loading older saves that didn't persist DownLadder.opts.
+    // Keep this narrow and deterministic; prefer exact saved opts when available.
+    // Forest sidepaths at depth=1 are intended to be single-room mazes with a soft margin.
+    if (env === EnvType.FOREST && depth === 1) {
+      return {
+        caveRooms: roomsHint ?? 1,
+        locked: true,
+        linearity: 0.5,
+        mapWidth: 50,
+        mapHeight: 50,
+        giantCentralRoom: true,
+        giantRoomScale: 0.6,
+        entranceInMainRoom: true,
+        keyInMainRoom: true,
+        exitInMainRoom: true,
+        organicTunnelsAvoidCenter: true,
+        softMargin: 5,
+      };
+    }
+    // If we at least know the intended room count, preserve that.
+    if (roomsHint !== undefined) return { caveRooms: roomsHint };
+    return undefined;
+  };
+
+  for (const rd of save.delta.rooms) {
+    for (const ts of rd.tiles) {
+      if (ts.kind !== "down_ladder") continue;
+      if (ts.isSidePath !== true) continue;
+      if (!ts.linkedRoomGid) continue;
+      const linkedDelta = roomDeltaByGid.get(ts.linkedRoomGid);
+      if (!linkedDelta) continue;
+      const pid = linkedDelta.pathId;
+      if (!pid || pid === "main") continue;
+
+      const optsSave = ts.opts;
+      const optsRuntime: SidePathOptions | undefined =
+        optsSave === undefined
+          ? inferSidepathOptsFallback(envKindToEnvType(ts.environment), save.worldSpec.depth, undefined)
+          : {
+              caveRooms: optsSave.caveRooms,
+              mapWidth: optsSave.mapWidth,
+              mapHeight: optsSave.mapHeight,
+              locked: optsSave.locked,
+              envType: optsSave.envType ? envKindToEnvType(optsSave.envType) : undefined,
+              linearity: optsSave.linearity,
+              branching: optsSave.branching,
+              loopiness: optsSave.loopiness,
+              giantCentralRoom: optsSave.giantCentralRoom,
+              giantRoomScale: optsSave.giantRoomScale,
+              organicTunnelsAvoidCenter: optsSave.organicTunnelsAvoidCenter,
+              softMargin: optsSave.softMargin,
+              keyInMainRoom: optsSave.keyInMainRoom,
+              entranceInMainRoom: optsSave.entranceInMainRoom,
+              exitInMainRoom: optsSave.exitInMainRoom,
+            };
+
+      // First write wins (stable); multiple ladders could point to the same sidepath.
+      if (!sidepathGenOverrides.has(pid)) {
+        sidepathGenOverrides.set(pid, {
+          env: envKindToEnvType(ts.environment),
+          opts: optsRuntime,
+        });
+      }
+    }
+  }
+
   // Ensure sidepaths exist (deterministic by pathId + room count where available).
   for (const sp of save.worldSpec.sidepaths) {
     // Sidepath generation no longer overwrites `game.rooms`; capture the linkedRoom and merge
     // its level's rooms into the active level.
     let linkedRoom: Room | undefined = undefined;
+    const override = sidepathGenOverrides.get(sp.pathId);
+    const env = override?.env ?? envKindToEnvType(save.worldSpec.env);
+    const opts: SidePathOptions | undefined =
+      override?.opts ??
+      inferSidepathOptsFallback(env, save.worldSpec.depth, sp.rooms);
     await game.levelgen.generate(
       game,
       save.worldSpec.depth,
@@ -288,10 +391,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       (r) => {
         linkedRoom = r ?? undefined;
       },
-      envKindToEnvType(save.worldSpec.env),
+      env,
       false,
       sp.pathId,
-      sp.rooms !== undefined ? { caveRooms: sp.rooms } : undefined,
+      opts,
     );
 
     const generatedSideRooms =
@@ -342,6 +445,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
 
   const entitiesByGid = new Map<string, Entity>();
   const tilesByGid = new Map<string, Tile>();
+  const itemsByGid = new Map<string, Item>();
 
   // Apply per-room deltas: flags, tiles, items, entities.
   for (const rd of save.delta.rooms) {
@@ -380,6 +484,29 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       let effectiveTs: typeof ts = ts;
       let applyRoom: Room = room;
       let t = applyRoom.roomArray[ts.x]?.[ts.y];
+
+      const findNearestDownLadder = (
+        wantSidePath: boolean,
+        wantKeyId?: number,
+      ): { room: Room; tile: DownLadder } | null => {
+        let best: { room: Room; tile: DownLadder; dist: number } | null = null;
+        for (const r of game.rooms) {
+          for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+            for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+              const tt = r.roomArray[x]?.[y];
+              if (!(tt instanceof DownLadder)) continue;
+              if (tt.isSidePath !== wantSidePath) continue;
+              if (wantKeyId !== undefined) {
+                const kid = tt.lockable?.keyID;
+                if (kid !== wantKeyId) continue;
+              }
+              const dist = Math.abs(tt.x - effectiveTs.x) + Math.abs(tt.y - effectiveTs.y);
+              if (!best || dist < best.dist) best = { room: r, tile: tt, dist };
+            }
+          }
+        }
+        return best ? { room: best.room, tile: best.tile } : null;
+      };
 
       const findTileAtCoordInAnyRoom = <T extends Tile>(
         x: number,
@@ -428,6 +555,13 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         if (t instanceof DownLadder) {
           // ok
         } else {
+        // Prefer matching an existing ladder (by sidepath flag + keyId when present) anywhere in the loaded world.
+        const nearest = findNearestDownLadder(ts.isSidePath, ts.lock?.keyId);
+        if (nearest) {
+          applyRoom = nearest.room;
+          t = nearest.tile;
+          effectiveTs = { ...ts, x: nearest.tile.x, y: nearest.tile.y };
+        } else {
         const found = findFirstDownLadder();
         if (found) {
           t = found;
@@ -474,6 +608,29 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
                   keyID: ts.lock.keyId,
                 };
 
+          const opts =
+            ts.opts === undefined
+              ? undefined
+              : {
+                  caveRooms: ts.opts.caveRooms,
+                  mapWidth: ts.opts.mapWidth,
+                  mapHeight: ts.opts.mapHeight,
+                  locked: ts.opts.locked,
+                  envType: ts.opts.envType
+                    ? envKindToEnvType(ts.opts.envType)
+                    : undefined,
+                  linearity: ts.opts.linearity,
+                  branching: ts.opts.branching,
+                  loopiness: ts.opts.loopiness,
+                  giantCentralRoom: ts.opts.giantCentralRoom,
+                  giantRoomScale: ts.opts.giantRoomScale,
+                  organicTunnelsAvoidCenter: ts.opts.organicTunnelsAvoidCenter,
+                  softMargin: ts.opts.softMargin,
+                  keyInMainRoom: ts.opts.keyInMainRoom,
+                  entranceInMainRoom: ts.opts.entranceInMainRoom,
+                  exitInMainRoom: ts.opts.exitInMainRoom,
+                };
+
           const dl = new DownLadder(
             room,
             game,
@@ -482,13 +639,14 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
             ts.isSidePath,
             envKindToEnvType(ts.environment),
             LockType.NONE,
-            undefined,
+            opts,
             lockStateOverride,
           );
           room.roomArray[place.x][place.y] = dl;
           applyRoom = room;
           t = dl;
           effectiveTs = { ...ts, x: place.x, y: place.y };
+        }
         }
         }
       }
@@ -671,11 +829,14 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         assignedGidByObj,
       );
       if (!gidRes.ok) return gidRes;
+      itemsByGid.set(is.gid, spawned);
       spawned.level = room;
       if (!spawned.pickedUp) room.items.push(spawned);
     }
 
     room.entities = [];
+    // Reset per-room counters derived from the entities list.
+    room.currentSpawnerCount = 0;
     for (const es of rd.enemies) {
       const codec = enemyRegistryV2.get(es.kind);
       if (!codec) {
@@ -696,6 +857,29 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       spawned.room = room;
       room.entities.push(spawned);
       entitiesByGid.set(es.gid, spawned);
+
+      // Track AI wake/aggro state; must be applied after players are restored (targetPlayer linking).
+      if ("seenPlayer" in es || "heardPlayer" in es || "aggro" in es) {
+        const seenPlayer = "seenPlayer" in es ? es.seenPlayer : undefined;
+        const heardPlayer = "heardPlayer" in es ? es.heardPlayer : undefined;
+        const aggro = "aggro" in es ? es.aggro : undefined;
+        if (seenPlayer !== undefined || heardPlayer !== undefined || aggro !== undefined) {
+          enemyAiStateByGid.set(es.gid, { seenPlayer, heardPlayer, aggro });
+        }
+      }
+
+      // Restore chest drop references so opened chests don't incorrectly self-empty on load.
+      if (es.kind === "chest" && spawned instanceof Chest) {
+        const dropGids = es.spawnedItemGids;
+        if (Array.isArray(dropGids) && dropGids.length > 0) {
+          const drops: Item[] = [];
+          for (const gid of dropGids) {
+            const it = itemsByGid.get(gid);
+            if (it) drops.push(it);
+          }
+          spawned.drops = drops;
+        }
+      }
     }
 
     room.projectiles = [];
@@ -755,6 +939,32 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       const hw = new HitWarning(game, hws.x, hws.y, hws.x, hws.y);
       hw.dead = hws.dead;
       room.hitwarnings.push(hw);
+    }
+  }
+
+  // De-duplicate sidepath rope-down ladders: regen + ladder remapping should produce exactly one,
+  // but if we ever end up with multiple, keep the one that corresponds to a saved gid.
+  const savedSideDownLadderGids = new Set<string>();
+  for (const rd of save.delta.rooms) {
+    for (const ts of rd.tiles) {
+      if (ts.kind === "down_ladder" && ts.isSidePath && typeof ts.gid === "string") {
+        savedSideDownLadderGids.add(ts.gid);
+      }
+    }
+  }
+  if (savedSideDownLadderGids.size > 0) {
+    for (const r of game.rooms) {
+      for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+        for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+          const tt = r.roomArray[x]?.[y];
+          if (!(tt instanceof DownLadder)) continue;
+          if (!tt.isSidePath) continue;
+          // If this ladder's gid isn't in the save, it's an extra. Replace with floor.
+          if (!savedSideDownLadderGids.has(tt.globalId)) {
+            r.roomArray[x][y] = new Floor(r, x, y);
+          }
+        }
+      }
     }
   }
 
@@ -921,6 +1131,45 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   if (local) {
     const room = game.rooms[local.levelID];
     if (room) game.room = room;
+  }
+
+  // Restore enemy AI "awake/aggro" state now that players exist.
+  // Many enemies require a valid `targetPlayer` when `seenPlayer` is true.
+  if (enemyAiStateByGid.size > 0) {
+    const localPlayer = game.players[game.localPlayerID];
+    const activePlayers = Object.values(game.players);
+    for (const [gid, st] of enemyAiStateByGid.entries()) {
+      const ent = entitiesByGid.get(gid);
+      if (!(ent instanceof Enemy)) continue;
+
+      const wantsSeen = st.seenPlayer === true;
+      const wantsAggro = st.aggro === true;
+      const needsTarget = wantsSeen || wantsAggro;
+
+      const target = localPlayer ?? activePlayers[0];
+      if (needsTarget) {
+        if (!target) {
+          // No players available; keep enemy asleep to avoid null target crashes.
+          ent.seenPlayer = false;
+          ent.aggro = false;
+        } else {
+          ent.targetPlayer = target;
+          if (st.seenPlayer !== undefined) ent.seenPlayer = st.seenPlayer;
+          if (st.aggro !== undefined) ent.aggro = st.aggro;
+        }
+      } else {
+        if (st.seenPlayer !== undefined) ent.seenPlayer = st.seenPlayer;
+        if (st.aggro !== undefined) ent.aggro = st.aggro;
+      }
+
+      if (st.heardPlayer !== undefined) ent.heardPlayer = st.heardPlayer;
+    }
+  }
+  // Restore active path context (main vs sidepath). Game update/draw loops heavily filter by `currentPathId`.
+  if (game.room && typeof game.room.pathId === "string" && game.room.pathId.length > 0) {
+    game.currentPathId = game.room.pathId;
+  } else {
+    game.currentPathId = "main";
   }
 
   // Restore gameplay RNG state AFTER regeneration and object reconstruction.

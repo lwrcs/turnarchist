@@ -1,16 +1,37 @@
 import type { Entity } from "../../../entity/entity";
 import { Barrel } from "../../../entity/object/barrel";
+import { Bomb } from "../../../entity/object/bomb";
+import { Block } from "../../../entity/object/block";
+import { Bush } from "../../../entity/object/bush";
 import { Chest } from "../../../entity/object/chest";
 import { Crate } from "../../../entity/object/crate";
 import { DarkCrate } from "../../../entity/object/darkCrate";
+import { DecoBlock } from "../../../entity/object/decoBlock";
+import { CaveBlock } from "../../../entity/object/caveBlock";
+import { ObsidianBlock } from "../../../entity/object/obsidianBlock";
+import { Rubble } from "../../../entity/object/rubble";
 import { Pot } from "../../../entity/object/pot";
 import { DarkPot } from "../../../entity/object/darkPot";
+import { DarkVase } from "../../../entity/object/darkVase";
+import { Candelabra } from "../../../entity/object/candelabra";
 import { Pumpkin } from "../../../entity/object/pumpkin";
 import { TombStone } from "../../../entity/object/tombStone";
 import { Furnace } from "../../../entity/object/furnace";
 import { FishingSpot } from "../../../entity/object/fishingSpot";
 import { Mushrooms } from "../../../entity/object/mushrooms";
+import { Glowshrooms } from "../../../entity/object/glowshrooms";
 import { PottedPlant } from "../../../entity/object/pottedPlant";
+import { Sprout } from "../../../entity/object/sprout";
+import { LilyPlant } from "../../../entity/object/lilyPlant";
+import { Tree } from "../../../entity/object/tree";
+import { BigTree } from "../../../entity/object/bigTree";
+import { TallSucculent } from "../../../entity/object/tallSucculent";
+import { Succulent } from "../../../entity/object/succulent";
+import { SmallBush } from "../../../entity/object/smallBush";
+import { PawnStatue } from "../../../entity/object/pawnStatue";
+import { RookStatue } from "../../../entity/object/rookStatue";
+import { BishopStatue } from "../../../entity/object/bishopStatue";
+import { FallenPillar } from "../../../entity/object/fallenPillar";
 import { VendingMachine } from "../../../entity/object/vendingMachine";
 import { CoalResource } from "../../../entity/resource/coalResource";
 import { GoldResource } from "../../../entity/resource/goldResource";
@@ -54,6 +75,7 @@ import { EnergyWizardEnemy } from "../../../entity/enemy/energyWizard";
 import { ZombieEnemy } from "../../../entity/enemy/zombieEnemy";
 import { OccultistEnemy } from "../../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../../entity/enemy/exalterEnemy";
+import { Enemy } from "../../../entity/enemy/enemy";
 import type { LoadContext, SaveContext } from "../context";
 import type { BasicEnemySaveV2, EnemyKind, EnemySaveV2, ItemSaveV2 } from "../schema";
 import { directionToDirectionKind, directionKindToDirection } from "../mappers";
@@ -82,6 +104,26 @@ const asWizardEnemyState = (n: number): WizardEnemyState => {
 
 const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof Barrel) return "barrel";
+  if (e instanceof Bomb) return "bomb";
+  if (e instanceof Block) return "block";
+  if (e instanceof DecoBlock) return "deco_block";
+  if (e instanceof CaveBlock) return "cave_block";
+  if (e instanceof ObsidianBlock) return "obsidian_block";
+  if (e instanceof Rubble) return "rubble";
+  if (e instanceof Bush) return "bush";
+  if (e instanceof SmallBush) return "small_bush";
+  if (e instanceof Sprout) return "sprout";
+  if (e instanceof LilyPlant) return "lily_plant";
+  if (e instanceof Tree) return "tree";
+  if (e instanceof BigTree) return "big_tree";
+  if (e instanceof TallSucculent) return "tall_succulent";
+  if (e instanceof Succulent) return "succulent";
+  if (e instanceof DarkVase) return "dark_vase";
+  if (e instanceof Candelabra) return "candelabra";
+  if (e instanceof PawnStatue) return "pawn_statue";
+  if (e instanceof RookStatue) return "rook_statue";
+  if (e instanceof BishopStatue) return "bishop_statue";
+  if (e instanceof FallenPillar) return "fallen_pillar";
   if (e instanceof Chest) return "chest";
   if (e instanceof VendingMachine) return "vending_machine";
   if (e instanceof Spawner) return "spawner";
@@ -121,6 +163,7 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof Furnace) return "furnace";
   if (e instanceof FishingSpot) return "fishing_spot";
   if (e instanceof Mushrooms) return "mushrooms_prop";
+  if (e instanceof Glowshrooms) return "glowshrooms_prop";
   if (e instanceof PottedPlant) return "potted_plant";
   if (e instanceof CoalResource) return "coal_resource";
   if (e instanceof GoldResource) return "gold_resource";
@@ -148,6 +191,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   type BasicEnemyKind = Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard">;
 
   const saveBasic = (kind: BasicEnemyKind, value: Entity): BasicEnemySaveV2 => {
+    const isEnemy = value instanceof Enemy;
     return {
       kind,
       gid: value.globalId,
@@ -158,6 +202,10 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       health: value.health,
       maxHealth: value.maxHealth,
       dead: value.dead,
+      seenPlayer: isEnemy && value.seenPlayer === true ? true : undefined,
+      heardPlayer: isEnemy && value.heardPlayer === true ? true : undefined,
+      aggro: isEnemy && value.aggro === true ? true : undefined,
+      ticks: isEnemy && typeof value.ticks === "number" ? value.ticks : undefined,
       alertTicks: typeof value.alertTicks === "number" ? value.alertTicks : undefined,
       unconscious: value.unconscious === true ? true : undefined,
       skipNextTurns: typeof value.skipNextTurns === "number" ? value.skipNextTurns : undefined,
@@ -173,6 +221,9 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
     e.health = value.health;
     e.maxHealth = value.maxHealth;
     e.direction = directionKindToDirection(value.direction);
+    // NOTE: do NOT set seenPlayer/aggro here, because many enemies require targetPlayer to be valid
+    // when seenPlayer is true. We restore those safely in a post-pass in loadV2 after players exist.
+    if (e instanceof Enemy && "ticks" in value && typeof value.ticks === "number") e.ticks = value.ticks;
     if ("alertTicks" in value && typeof value.alertTicks === "number") e.alertTicks = value.alertTicks;
     if ("unconscious" in value && typeof value.unconscious === "boolean") e.unconscious = value.unconscious;
     if ("skipNextTurns" in value && typeof value.skipNextTurns === "number") e.skipNextTurns = value.skipNextTurns;
@@ -202,12 +253,38 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
 
   // Barrel (basic envelope)
   registerBasic("barrel", Barrel);
+  registerBasic("bomb", Bomb);
+  registerBasic("block", Block);
+  registerBasic("deco_block", DecoBlock);
+  registerBasic("cave_block", CaveBlock);
+  registerBasic("obsidian_block", ObsidianBlock);
+  registerBasic("rubble", Rubble);
+  registerBasic("bush", Bush);
+  registerBasic("small_bush", SmallBush);
+  registerBasic("sprout", Sprout);
+  registerBasic("lily_plant", LilyPlant);
+  registerBasic("tree", Tree);
+  registerBasic("big_tree", BigTree);
+  registerBasic("tall_succulent", TallSucculent);
+  registerBasic("succulent", Succulent);
+  registerBasic("dark_vase", DarkVase);
+  registerBasic("candelabra", Candelabra);
+  registerBasic("pawn_statue", PawnStatue);
+  registerBasic("rook_statue", RookStatue);
+  registerBasic("bishop_statue", BishopStatue);
+  registerBasic("fallen_pillar", FallenPillar);
 
   // Chest
   register("chest", {
     save: (value) => {
       if (!(value instanceof Chest)) throw new Error("chest codec received non-Chest");
       const opened = value.health <= 2;
+      const spawnedItemGids =
+        opened && Array.isArray(value.drops)
+          ? value.drops
+              .filter((d) => d && d.pickedUp !== true && value.room.items.includes(d))
+              .map((d) => d.globalId)
+          : undefined;
       return {
         kind: "chest",
         gid: value.globalId,
@@ -220,7 +297,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         dead: value.dead,
         opened,
         destroyable: value.destroyable,
-        spawnedItemGids: undefined,
+        spawnedItemGids,
       };
     },
     spawn: (value, room, ctx) => {
@@ -314,6 +391,11 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         maxHealth: value.maxHealth,
         dead: value.dead,
         enemySpawnType: value.enemySpawnType,
+        ticks: value.ticks,
+        spawnFrequency: value.spawnFrequency,
+        spawnOffset: value.spawnOffset,
+        nextSpawnTick: value.nextSpawnTick,
+        seenPlayer: value.seenPlayer,
       };
     },
     spawn: (value, room, ctx) => {
@@ -324,6 +406,11 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       s.maxHealth = value.maxHealth;
       s.direction = directionKindToDirection(value.direction);
       s.enemySpawnType = value.enemySpawnType;
+      if (typeof value.ticks === "number") s.ticks = value.ticks;
+      if (typeof value.spawnFrequency === "number") s.spawnFrequency = value.spawnFrequency;
+      if (typeof value.spawnOffset === "number") s.spawnOffset = value.spawnOffset;
+      if (typeof value.nextSpawnTick === "number") s.nextSpawnTick = value.nextSpawnTick;
+      if (typeof value.seenPlayer === "boolean") s.seenPlayer = value.seenPlayer;
       s.globalId = value.gid;
       return s;
     },
@@ -400,6 +487,10 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         health: value.health,
         maxHealth: value.maxHealth,
         dead: value.dead,
+        seenPlayer: value.seenPlayer,
+        heardPlayer: value.heardPlayer,
+        aggro: value.aggro,
+        ticks: value.ticks,
         alertTicks: value.alertTicks,
         unconscious: value.unconscious,
         skipNextTurns: value.skipNextTurns,
@@ -414,6 +505,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       z.health = value.health;
       z.maxHealth = value.maxHealth;
       z.direction = directionKindToDirection(value.direction);
+      if ("ticks" in value && typeof value.ticks === "number") z.ticks = value.ticks;
       if (value.alertTicks !== undefined) z.alertTicks = value.alertTicks;
       if (value.unconscious !== undefined) z.unconscious = value.unconscious;
       if (value.skipNextTurns !== undefined) z.skipNextTurns = value.skipNextTurns;

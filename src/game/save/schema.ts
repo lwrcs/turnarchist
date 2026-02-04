@@ -29,6 +29,8 @@ export type SaveMeta = {
   build?: string;
   /** Optional timestamp (ms since epoch). */
   savedAtMs?: number;
+  /** Whether developer mode was enabled when the save was created. */
+  developerMode?: boolean;
 };
 
 /**
@@ -69,6 +71,28 @@ export type SidepathSpecV2 = {
   pathId: string;
   /** Optional fixed room count for determinism. */
   rooms?: number;
+};
+
+/**
+ * Sidepath generation options (serialized form).
+ * Mirrors `SidePathOptions` but uses `EnvKind` instead of runtime `EnvType`.
+ */
+export type SidepathOptionsSaveV2 = {
+  caveRooms?: number;
+  mapWidth?: number;
+  mapHeight?: number;
+  locked?: boolean;
+  envType?: EnvKind;
+  linearity?: number;
+  branching?: number;
+  loopiness?: number;
+  giantCentralRoom?: boolean;
+  giantRoomScale?: number;
+  organicTunnelsAvoidCenter?: boolean;
+  softMargin?: number;
+  keyInMainRoom?: boolean;
+  entranceInMainRoom?: boolean;
+  exitInMainRoom?: boolean;
 };
 
 /**
@@ -209,6 +233,8 @@ export type DownLadderTileSaveV2 = BaseTileSaveV2 & {
   gid?: Gid;
   isSidePath: boolean;
   environment: EnvKind;
+  /** Sidepath generation options used by this ladder (if any). */
+  opts?: SidepathOptionsSaveV2;
   lock?: { lockType: LockKind; keyId: number };
   linkedRoomGid?: Gid;
 };
@@ -274,6 +300,15 @@ export type EnemySaveEnvelopeV2 = {
 
 export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   kind: Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard">;
+  /**
+   * "Awake" state: many enemies render sleep Zs and skip their active behavior until `seenPlayer` becomes true.
+   * Optional for backward-compat with early V2 saves.
+   */
+  seenPlayer?: boolean;
+  heardPlayer?: boolean;
+  aggro?: boolean;
+  /** Enemy internal tick counter (AI cadence). Optional for backward-compat. */
+  ticks?: number;
   alertTicks?: number;
   unconscious?: boolean;
   skipNextTurns?: number;
@@ -316,6 +351,12 @@ export type VendingMachineEnemySaveV2 = EnemySaveEnvelopeV2 & {
 export type SpawnerEnemySaveV2 = EnemySaveEnvelopeV2 & {
   kind: "spawner";
   enemySpawnType: number;
+  /** Internal counters to preserve spawner cadence across saves. Optional for backward-compat. */
+  ticks?: number;
+  spawnFrequency?: number;
+  spawnOffset?: number;
+  nextSpawnTick?: number;
+  seenPlayer?: boolean;
 };
 
 export type ItemSaveV2 =
@@ -577,16 +618,37 @@ export type EnemyKind =
   | "spider"
   | "warden"
   // Props / objects (room.entities)
+  | "bomb"
   | "crate"
   | "dark_crate"
+  | "block"
+  | "deco_block"
+  | "cave_block"
+  | "obsidian_block"
+  | "rubble"
   | "pot"
   | "dark_pot"
+  | "dark_vase"
+  | "candelabra"
   | "pumpkin"
   | "tomb_stone"
+  | "sprout"
+  | "bush"
+  | "small_bush"
+  | "lily_plant"
+  | "tree"
+  | "big_tree"
+  | "tall_succulent"
+  | "succulent"
   | "furnace"
   | "fishing_spot"
   | "mushrooms_prop"
+  | "glowshrooms_prop"
   | "potted_plant"
+  | "pawn_statue"
+  | "rook_statue"
+  | "bishop_statue"
+  | "fallen_pillar"
   // Resources (room.entities)
   | "coal_resource"
   | "gold_resource"

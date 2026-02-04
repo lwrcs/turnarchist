@@ -279,13 +279,14 @@ export class PartitionGenerator {
     return partialLevel.partitions;
   }
 
-  async generateCavePartitions(opts: SidePathOptions): Promise<Partition[]> {
+  async generateCavePartitions(opts?: SidePathOptions): Promise<Partition[]> {
+    const effectiveOpts: SidePathOptions = opts ?? {};
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
     let attempts = 0;
-    const mapWidth = opts.mapWidth ?? 50;
-    const mapHeight = opts.mapHeight ?? 50;
-    const numRooms = opts.caveRooms ?? 8;
+    const mapWidth = effectiveOpts.mapWidth ?? 50;
+    const mapHeight = effectiveOpts.mapHeight ?? 50;
+    const numRooms = effectiveOpts.caveRooms ?? 8;
 
     // Single-room cave/sidepath mode: `caveRooms = 1` should mean exactly one ROPECAVE room.
     // The default cave algorithm always splits many partitions first, then prunes by connectivity,
@@ -296,18 +297,18 @@ export class PartitionGenerator {
       p.type = RoomType.ROPECAVE;
       return [p];
     }
-    const hasLinearity = typeof opts.linearity === "number";
+    const hasLinearity = typeof effectiveOpts.linearity === "number";
     const branching =
-      typeof opts.branching === "number"
-        ? opts.branching
+      typeof effectiveOpts.branching === "number"
+        ? effectiveOpts.branching
         : hasLinearity
-          ? Math.max(0, Math.min(1, 1 - (opts.linearity as number)))
+          ? Math.max(0, Math.min(1, 1 - (effectiveOpts.linearity as number)))
           : 0.5; // default: 50% chance of second door
     const loopiness =
-      typeof opts.loopiness === "number"
-        ? opts.loopiness
+      typeof effectiveOpts.loopiness === "number"
+        ? effectiveOpts.loopiness
         : hasLinearity
-          ? Math.max(0, Math.min(1, 1 - (opts.linearity as number)))
+          ? Math.max(0, Math.min(1, 1 - (effectiveOpts.linearity as number)))
           : 0.5; // default: moderate loops
 
     this.visualizer.updateProgress("Starting cave generation", 0);
@@ -319,7 +320,7 @@ export class PartitionGenerator {
         attempts * 0.1,
       );
 
-      if (opts.giantCentralRoom) {
+      if (effectiveOpts.giantCentralRoom) {
         await this.generateCaveCandidateWithGiantCenter(
           partialLevel,
           mapWidth,
@@ -327,7 +328,7 @@ export class PartitionGenerator {
           numRooms,
           branching,
           loopiness,
-          opts.giantRoomScale ?? 0.65,
+          effectiveOpts.giantRoomScale ?? 0.65,
         );
       } else {
         await this.generateCaveCandidate(

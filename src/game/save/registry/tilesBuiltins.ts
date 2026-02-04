@@ -8,7 +8,7 @@ import type { Tile } from "../../../tile/tile";
 import { Lockable } from "../../../tile/lockable";
 import type { LoadContext, SaveContext } from "../context";
 import type { DoorKind, LockKind, TileSaveV2 } from "../schema";
-import { directionToDirectionKind, envTypeToEnvKind } from "../mappers";
+import { directionToDirectionKind, envKindToEnvType, envTypeToEnvKind } from "../mappers";
 import { tileRegistryV2 } from "./tiles";
 
 const doorTypeToDoorKind = (t: DoorType): DoorKind => {
@@ -134,6 +134,32 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           lockKind === "none"
             ? undefined
             : { lockType: lockKind, keyId: tile.lockable.keyID };
+        const opts = tile.opts;
+        const optsSave =
+          opts === undefined
+            ? undefined
+            : {
+                caveRooms: typeof opts.caveRooms === "number" ? opts.caveRooms : undefined,
+                mapWidth: typeof opts.mapWidth === "number" ? opts.mapWidth : undefined,
+                mapHeight: typeof opts.mapHeight === "number" ? opts.mapHeight : undefined,
+                locked: typeof opts.locked === "boolean" ? opts.locked : undefined,
+                envType: opts.envType ? envTypeToEnvKind(opts.envType) : undefined,
+                linearity: typeof opts.linearity === "number" ? opts.linearity : undefined,
+                branching: typeof opts.branching === "number" ? opts.branching : undefined,
+                loopiness: typeof opts.loopiness === "number" ? opts.loopiness : undefined,
+                giantCentralRoom:
+                  typeof opts.giantCentralRoom === "boolean" ? opts.giantCentralRoom : undefined,
+                giantRoomScale: typeof opts.giantRoomScale === "number" ? opts.giantRoomScale : undefined,
+                organicTunnelsAvoidCenter:
+                  typeof opts.organicTunnelsAvoidCenter === "boolean"
+                    ? opts.organicTunnelsAvoidCenter
+                    : undefined,
+                softMargin: typeof opts.softMargin === "number" ? opts.softMargin : undefined,
+                keyInMainRoom: typeof opts.keyInMainRoom === "boolean" ? opts.keyInMainRoom : undefined,
+                entranceInMainRoom:
+                  typeof opts.entranceInMainRoom === "boolean" ? opts.entranceInMainRoom : undefined,
+                exitInMainRoom: typeof opts.exitInMainRoom === "boolean" ? opts.exitInMainRoom : undefined,
+              };
         return {
           kind: "down_ladder",
           gid: tile.globalId,
@@ -141,6 +167,7 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           y: tile.y,
           isSidePath: tile.isSidePath,
           environment: envTypeToEnvKind(tile.environment),
+          opts: optsSave,
           lock,
           linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
         };
@@ -152,18 +179,39 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           throw new Error("down_ladder codec apply: target tile is not DownLadder");
         }
         t.isSidePath = value.isSidePath;
-        if (value.lock) {
-          // Rebuild lockable from saved state.
-          const lockType: LockType =
-            value.lock.lockType === "none"
+        if (value.opts) {
+          t.opts = {
+            caveRooms: value.opts.caveRooms,
+            mapWidth: value.opts.mapWidth,
+            mapHeight: value.opts.mapHeight,
+            locked: value.opts.locked,
+            envType: value.opts.envType ? envKindToEnvType(value.opts.envType) : undefined,
+            linearity: value.opts.linearity,
+            branching: value.opts.branching,
+            loopiness: value.opts.loopiness,
+            giantCentralRoom: value.opts.giantCentralRoom,
+            giantRoomScale: value.opts.giantRoomScale,
+            organicTunnelsAvoidCenter: value.opts.organicTunnelsAvoidCenter,
+            softMargin: value.opts.softMargin,
+            keyInMainRoom: value.opts.keyInMainRoom,
+            entranceInMainRoom: value.opts.entranceInMainRoom,
+            exitInMainRoom: value.opts.exitInMainRoom,
+          };
+        }
+        // Always rebuild lockable from saved state (including the unlocked/no-lock case),
+        // otherwise a generated locked ladder can incorrectly remain locked after load.
+        const lockType: LockType =
+          value.lock === undefined
+            ? LockType.NONE
+            : value.lock.lockType === "none"
               ? LockType.NONE
               : value.lock.lockType === "locked"
                 ? LockType.LOCKED
                 : value.lock.lockType === "guarded"
                   ? LockType.GUARDED
                   : LockType.TUNNEL;
-          t.lockable = new Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: false });
-        }
+        const keyID = value.lock?.keyId;
+        t.lockable = new Lockable(ctx.game, { lockType, keyID, isTopDoor: false });
         // linkedRoom linking happens in post-pass by gid
       },
     });
@@ -191,6 +239,8 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           throw new Error("up_ladder codec apply: target tile is not UpLadder");
         }
         t.isRope = value.isRope;
+        // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
+        t.isSidePath = value.isRope === true;
         // linkedRoom linking happens in post-pass by gid
       },
     });

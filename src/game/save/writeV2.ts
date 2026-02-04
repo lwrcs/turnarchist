@@ -34,8 +34,68 @@ import type { Entity } from "../../entity/entity";
 import { WizardFireball } from "../../projectile/wizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { GameplaySettings } from "../gameplaySettings";
+import { GameConstants } from "../gameConstants";
 
 const GEN_VERSION = "levelgen-v1";
+
+const stableRoomSort = (a: Room, b: Room): number => {
+  const ap = a.pathId || "main";
+  const bp = b.pathId || "main";
+  if (ap !== bp) return ap < bp ? -1 : 1;
+  if (a.mapGroup !== b.mapGroup) return a.mapGroup - b.mapGroup;
+  if (a.roomX !== b.roomX) return a.roomX - b.roomX;
+  if (a.roomY !== b.roomY) return a.roomY - b.roomY;
+  return a.globalId < b.globalId ? -1 : a.globalId > b.globalId ? 1 : 0;
+};
+
+/**
+ * Collect all rooms we should persist for the current depth even when the player is in a sidepath.
+ * This is important because sidepath generation parameters live on the *main-path room's* rope-down ladder tiles.
+ */
+const collectRoomsForSaveAtCurrentDepth = (game: Game): Room[] => {
+  const depth = game.level.depth;
+  const mainLevel = game.levels?.[depth];
+  const seedRooms: Room[] = [];
+  if (mainLevel?.rooms?.length) seedRooms.push(...mainLevel.rooms);
+  if (Array.isArray(game.rooms)) seedRooms.push(...game.rooms);
+
+  const byGid = new Map<string, Room>();
+  for (const r of seedRooms) {
+    if (!r) continue;
+    if (r.depth !== depth) continue;
+    byGid.set(r.globalId, r);
+  }
+
+  // BFS: follow rope-down ladders to include generated sidepath room sets.
+  const queue: Room[] = Array.from(byGid.values());
+  const visited = new Set<string>(queue.map((r) => r.globalId));
+
+  while (queue.length > 0) {
+    const r = queue.shift();
+    if (!r) continue;
+    for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+      for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+        const t = r.roomArray[x]?.[y];
+        if (!(t instanceof DownLadder)) continue;
+        if (t.isSidePath !== true) continue;
+        const linked = t.linkedRoom;
+        const lvlRooms = linked?.level?.rooms;
+        if (!linked || !lvlRooms) continue;
+        for (const rr of lvlRooms) {
+          if (!rr) continue;
+          if (rr.depth !== depth) continue;
+          byGid.set(rr.globalId, rr);
+          if (!visited.has(rr.globalId)) {
+            visited.add(rr.globalId);
+            queue.push(rr);
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(byGid.values()).sort(stableRoomSort);
+};
 
 export const createSaveV2 = (game: Game, nowMs: number = Date.now()): Result<SaveV2> => {
   // Ensure builtin codecs are registered before we attempt to encode tiles.
@@ -53,7 +113,15 @@ export const createSaveV2 = (game: Game, nowMs: number = Date.now()): Result<Sav
     return err({ kind: "InvalidState", message: "Cannot save: game.rooms is not initialized" });
   }
 
-  const envType = game.level.environment.type;
+  const roomsToSave = collectRoomsForSaveAtCurrentDepth(game);
+  if (roomsToSave.length === 0) {
+    return err({ kind: "InvalidState", message: "Cannot save: no rooms collected for current depth" });
+  }
+
+  // IMPORTANT: worldSpec env drives main-path regeneration. If we're currently inside a sidepath,
+  // `game.level.environment.type` may reflect the sidepath environment, not the main path floor.
+  const mainLevelEnvType = game.levels?.[game.level.depth]?.environment?.type;
+  const envType = mainLevelEnvType ?? game.level.environment.type;
 
   const mainPathPlan: MainPathGenPlanV2[] = game.levels
     .filter((l) => l && typeof l.depth === "number" && l.depth <= game.level.depth)
@@ -76,18 +144,18 @@ export const createSaveV2 = (game: Game, nowMs: number = Date.now()): Result<Sav
     depth: game.level.depth,
     env: envTypeToEnvKind(envType),
     mainPathPlan,
-    sidepaths: collectSidepaths(game.rooms),
+    sidepaths: collectSidepaths(roomsToSave),
   };
 
   const delta: WorldDeltaV2 = {
     players: mapPlayers(game, game.players, nowMs),
     offlinePlayers: mapPlayers(game, game.offlinePlayers, nowMs),
-    rooms: mapRooms(game, game.rooms, nowMs),
+    rooms: mapRooms(game, roomsToSave, nowMs),
   };
 
   const out: SaveV2 = {
     saveVersion: 2,
-    meta: { savedAtMs: nowMs },
+    meta: { savedAtMs: nowMs, developerMode: GameConstants.DEVELOPER_MODE },
     worldSpec,
     delta,
   };

@@ -135,16 +135,37 @@ const ENEMY_KINDS = [
   "big_zombie",
   "spider",
   "warden",
+  "bomb",
   "crate",
   "dark_crate",
+  "block",
+  "deco_block",
+  "cave_block",
+  "obsidian_block",
+  "rubble",
   "pot",
   "dark_pot",
+  "dark_vase",
+  "candelabra",
   "pumpkin",
   "tomb_stone",
+  "sprout",
+  "bush",
+  "small_bush",
+  "lily_plant",
+  "tree",
+  "big_tree",
+  "tall_succulent",
+  "succulent",
   "furnace",
   "fishing_spot",
   "mushrooms_prop",
+  "glowshrooms_prop",
   "potted_plant",
+  "pawn_statue",
+  "rook_statue",
+  "bishop_statue",
+  "fallen_pillar",
   "coal_resource",
   "gold_resource",
   "iron_resource",
@@ -324,7 +345,20 @@ export const validateSaveV2 = (v: unknown): Result<SaveV2> => {
       savedAtMs = savedAtMsU;
     }
 
-    meta = { build, savedAtMs };
+    const developerModeU = get(metaU, "developerMode");
+    let developerMode: boolean | undefined = undefined;
+    if (developerModeU !== undefined) {
+      if (!isBoolean(developerModeU)) {
+        return err({
+          kind: "InvalidSchema",
+          message: "meta.developerMode must be a boolean if present",
+          path: "$.meta.developerMode",
+        });
+      }
+      developerMode = developerModeU;
+    }
+
+    meta = { build, savedAtMs, developerMode };
   }
 
   return ok({
@@ -1221,6 +1255,115 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         return err({ kind: "InvalidSchema", message: "isSidePath must be boolean", path: `${path}.isSidePath` });
       const envR = asEnvKind(get(v, "environment"), `${path}.environment`);
       if (isErr(envR)) return err(envR.error);
+      const optsU = get(v, "opts");
+      let opts:
+        | {
+            caveRooms?: number;
+            mapWidth?: number;
+            mapHeight?: number;
+            locked?: boolean;
+            envType?: EnvKind;
+            linearity?: number;
+            branching?: number;
+            loopiness?: number;
+            giantCentralRoom?: boolean;
+            giantRoomScale?: number;
+            organicTunnelsAvoidCenter?: boolean;
+            softMargin?: number;
+            keyInMainRoom?: boolean;
+            entranceInMainRoom?: boolean;
+            exitInMainRoom?: boolean;
+          }
+        | undefined = undefined;
+      if (optsU !== undefined) {
+        if (!isRecord(optsU)) {
+          return err({ kind: "InvalidSchema", message: "opts must be object", path: `${path}.opts` });
+        }
+        const caveRoomsU = get(optsU, "caveRooms");
+        const mapWidthU = get(optsU, "mapWidth");
+        const mapHeightU = get(optsU, "mapHeight");
+        const lockedU = get(optsU, "locked");
+        const envTypeU = get(optsU, "envType");
+        const linearityU = get(optsU, "linearity");
+        const branchingU = get(optsU, "branching");
+        const loopinessU = get(optsU, "loopiness");
+        const giantCentralRoomU = get(optsU, "giantCentralRoom");
+        const giantRoomScaleU = get(optsU, "giantRoomScale");
+        const organicTunnelsAvoidCenterU = get(optsU, "organicTunnelsAvoidCenter");
+        const softMarginU = get(optsU, "softMargin");
+        const keyInMainRoomU = get(optsU, "keyInMainRoom");
+        const entranceInMainRoomU = get(optsU, "entranceInMainRoom");
+        const exitInMainRoomU = get(optsU, "exitInMainRoom");
+
+        const asOptNum = (u: unknown, p: string): Result<number | undefined> => {
+          if (u === undefined) return ok(undefined);
+          if (!isNumber(u)) return err({ kind: "InvalidSchema", message: "must be number if present", path: p });
+          return ok(u);
+        };
+        const asOptBool = (u: unknown, p: string): Result<boolean | undefined> => {
+          if (u === undefined) return ok(undefined);
+          if (!isBoolean(u)) return err({ kind: "InvalidSchema", message: "must be boolean if present", path: p });
+          return ok(u);
+        };
+
+        const caveRoomsR = asOptNum(caveRoomsU, `${path}.opts.caveRooms`);
+        if (isErr(caveRoomsR)) return err(caveRoomsR.error);
+        const mapWidthR = asOptNum(mapWidthU, `${path}.opts.mapWidth`);
+        if (isErr(mapWidthR)) return err(mapWidthR.error);
+        const mapHeightR = asOptNum(mapHeightU, `${path}.opts.mapHeight`);
+        if (isErr(mapHeightR)) return err(mapHeightR.error);
+        const linearityR = asOptNum(linearityU, `${path}.opts.linearity`);
+        if (isErr(linearityR)) return err(linearityR.error);
+        const branchingR = asOptNum(branchingU, `${path}.opts.branching`);
+        if (isErr(branchingR)) return err(branchingR.error);
+        const loopinessR = asOptNum(loopinessU, `${path}.opts.loopiness`);
+        if (isErr(loopinessR)) return err(loopinessR.error);
+        const giantRoomScaleR = asOptNum(giantRoomScaleU, `${path}.opts.giantRoomScale`);
+        if (isErr(giantRoomScaleR)) return err(giantRoomScaleR.error);
+        const softMarginR = asOptNum(softMarginU, `${path}.opts.softMargin`);
+        if (isErr(softMarginR)) return err(softMarginR.error);
+
+        const lockedR = asOptBool(lockedU, `${path}.opts.locked`);
+        if (isErr(lockedR)) return err(lockedR.error);
+        const giantCentralRoomR = asOptBool(giantCentralRoomU, `${path}.opts.giantCentralRoom`);
+        if (isErr(giantCentralRoomR)) return err(giantCentralRoomR.error);
+        const organicTunnelsAvoidCenterR = asOptBool(
+          organicTunnelsAvoidCenterU,
+          `${path}.opts.organicTunnelsAvoidCenter`,
+        );
+        if (isErr(organicTunnelsAvoidCenterR)) return err(organicTunnelsAvoidCenterR.error);
+        const keyInMainRoomR = asOptBool(keyInMainRoomU, `${path}.opts.keyInMainRoom`);
+        if (isErr(keyInMainRoomR)) return err(keyInMainRoomR.error);
+        const entranceInMainRoomR = asOptBool(entranceInMainRoomU, `${path}.opts.entranceInMainRoom`);
+        if (isErr(entranceInMainRoomR)) return err(entranceInMainRoomR.error);
+        const exitInMainRoomR = asOptBool(exitInMainRoomU, `${path}.opts.exitInMainRoom`);
+        if (isErr(exitInMainRoomR)) return err(exitInMainRoomR.error);
+
+        let envType: EnvKind | undefined = undefined;
+        if (envTypeU !== undefined) {
+          const er = asEnvKind(envTypeU, `${path}.opts.envType`);
+          if (isErr(er)) return err(er.error);
+          envType = er.value;
+        }
+
+        opts = {
+          caveRooms: caveRoomsR.value,
+          mapWidth: mapWidthR.value,
+          mapHeight: mapHeightR.value,
+          locked: lockedR.value,
+          envType,
+          linearity: linearityR.value,
+          branching: branchingR.value,
+          loopiness: loopinessR.value,
+          giantCentralRoom: giantCentralRoomR.value,
+          giantRoomScale: giantRoomScaleR.value,
+          organicTunnelsAvoidCenter: organicTunnelsAvoidCenterR.value,
+          softMargin: softMarginR.value,
+          keyInMainRoom: keyInMainRoomR.value,
+          entranceInMainRoom: entranceInMainRoomR.value,
+          exitInMainRoom: exitInMainRoomR.value,
+        };
+      }
       const lockU = get(v, "lock");
       let lock: { lockType: LockKind; keyId: number } | undefined = undefined;
       if (lockU !== undefined) {
@@ -1249,6 +1392,7 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         y,
         isSidePath,
         environment: envR.value,
+        opts,
         lock,
         linkedRoomGid,
       });
@@ -1402,6 +1546,60 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
         path: `${path}.enemySpawnType`,
       });
     }
+
+    const ticksU = get(v, "ticks");
+    const spawnFrequencyU = get(v, "spawnFrequency");
+    const spawnOffsetU = get(v, "spawnOffset");
+    const nextSpawnTickU = get(v, "nextSpawnTick");
+    const seenPlayerU = get(v, "seenPlayer");
+
+    let ticks: number | undefined = undefined;
+    if (ticksU !== undefined) {
+      if (!isNumber(ticksU))
+        return err({ kind: "InvalidSchema", message: "ticks must be number if present", path: `${path}.ticks` });
+      ticks = ticksU;
+    }
+    let spawnFrequency: number | undefined = undefined;
+    if (spawnFrequencyU !== undefined) {
+      if (!isNumber(spawnFrequencyU))
+        return err({
+          kind: "InvalidSchema",
+          message: "spawnFrequency must be number if present",
+          path: `${path}.spawnFrequency`,
+        });
+      spawnFrequency = spawnFrequencyU;
+    }
+    let spawnOffset: number | undefined = undefined;
+    if (spawnOffsetU !== undefined) {
+      if (!isNumber(spawnOffsetU))
+        return err({
+          kind: "InvalidSchema",
+          message: "spawnOffset must be number if present",
+          path: `${path}.spawnOffset`,
+        });
+      spawnOffset = spawnOffsetU;
+    }
+    let nextSpawnTick: number | undefined = undefined;
+    if (nextSpawnTickU !== undefined) {
+      if (!isNumber(nextSpawnTickU))
+        return err({
+          kind: "InvalidSchema",
+          message: "nextSpawnTick must be number if present",
+          path: `${path}.nextSpawnTick`,
+        });
+      nextSpawnTick = nextSpawnTickU;
+    }
+    let seenPlayer: boolean | undefined = undefined;
+    if (seenPlayerU !== undefined) {
+      if (!isBoolean(seenPlayerU))
+        return err({
+          kind: "InvalidSchema",
+          message: "seenPlayer must be boolean if present",
+          path: `${path}.seenPlayer`,
+        });
+      seenPlayer = seenPlayerU;
+    }
+
     return ok({
       kind,
       gid: gidR.value,
@@ -1413,6 +1611,11 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
       maxHealth,
       dead,
       enemySpawnType: enemySpawnTypeU,
+      ticks,
+      spawnFrequency,
+      spawnOffset,
+      nextSpawnTick,
+      seenPlayer,
     });
   }
 
@@ -1497,6 +1700,115 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
   }
 
   // Basic enemy kinds
+  const seenPlayerU = get(v, "seenPlayer");
+  const heardPlayerU = get(v, "heardPlayer");
+  const aggroU = get(v, "aggro");
+  const ticksU = get(v, "ticks");
+  const alertTicksU = get(v, "alertTicks");
+  const unconsciousU = get(v, "unconscious");
+  const skipNextTurnsU = get(v, "skipNextTurns");
+  const shieldU = get(v, "shield");
+  const buffedU = get(v, "buffed");
+  const buffedBeforeU = get(v, "buffedBefore");
+
+  let seenPlayer: boolean | undefined = undefined;
+  if (seenPlayerU !== undefined) {
+    if (!isBoolean(seenPlayerU))
+      return err({
+        kind: "InvalidSchema",
+        message: "seenPlayer must be boolean if present",
+        path: `${path}.seenPlayer`,
+      });
+    seenPlayer = seenPlayerU;
+  }
+  let heardPlayer: boolean | undefined = undefined;
+  if (heardPlayerU !== undefined) {
+    if (!isBoolean(heardPlayerU))
+      return err({
+        kind: "InvalidSchema",
+        message: "heardPlayer must be boolean if present",
+        path: `${path}.heardPlayer`,
+      });
+    heardPlayer = heardPlayerU;
+  }
+  let aggro: boolean | undefined = undefined;
+  if (aggroU !== undefined) {
+    if (!isBoolean(aggroU))
+      return err({ kind: "InvalidSchema", message: "aggro must be boolean if present", path: `${path}.aggro` });
+    aggro = aggroU;
+  }
+  let ticks: number | undefined = undefined;
+  if (ticksU !== undefined) {
+    if (!isNumber(ticksU))
+      return err({ kind: "InvalidSchema", message: "ticks must be number if present", path: `${path}.ticks` });
+    ticks = ticksU;
+  }
+
+  let alertTicks: number | undefined = undefined;
+  if (alertTicksU !== undefined) {
+    if (!isNumber(alertTicksU))
+      return err({
+        kind: "InvalidSchema",
+        message: "alertTicks must be number if present",
+        path: `${path}.alertTicks`,
+      });
+    alertTicks = alertTicksU;
+  }
+
+  let unconscious: boolean | undefined = undefined;
+  if (unconsciousU !== undefined) {
+    if (!isBoolean(unconsciousU))
+      return err({
+        kind: "InvalidSchema",
+        message: "unconscious must be boolean if present",
+        path: `${path}.unconscious`,
+      });
+    unconscious = unconsciousU;
+  }
+
+  let skipNextTurns: number | undefined = undefined;
+  if (skipNextTurnsU !== undefined) {
+    if (!isNumber(skipNextTurnsU))
+      return err({
+        kind: "InvalidSchema",
+        message: "skipNextTurns must be number if present",
+        path: `${path}.skipNextTurns`,
+      });
+    skipNextTurns = skipNextTurnsU;
+  }
+
+  let shield: { health: number } | undefined = undefined;
+  if (shieldU !== undefined) {
+    if (!isRecord(shieldU))
+      return err({ kind: "InvalidSchema", message: "shield must be object if present", path: `${path}.shield` });
+    const healthU = get(shieldU, "health");
+    if (!isNumber(healthU))
+      return err({
+        kind: "InvalidSchema",
+        message: "shield.health must be number",
+        path: `${path}.shield.health`,
+      });
+    shield = { health: healthU };
+  }
+
+  let buffed: boolean | undefined = undefined;
+  if (buffedU !== undefined) {
+    if (!isBoolean(buffedU))
+      return err({ kind: "InvalidSchema", message: "buffed must be boolean if present", path: `${path}.buffed` });
+    buffed = buffedU;
+  }
+
+  let buffedBefore: boolean | undefined = undefined;
+  if (buffedBeforeU !== undefined) {
+    if (!isBoolean(buffedBeforeU))
+      return err({
+        kind: "InvalidSchema",
+        message: "buffedBefore must be boolean if present",
+        path: `${path}.buffedBefore`,
+      });
+    buffedBefore = buffedBeforeU;
+  }
+
   return ok({
     kind,
     gid: gidR.value,
@@ -1507,12 +1819,16 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     health,
     maxHealth,
     dead,
-    alertTicks: undefined,
-    unconscious: undefined,
-    skipNextTurns: undefined,
-    shield: undefined,
-    buffed: undefined,
-    buffedBefore: undefined,
+    seenPlayer,
+    heardPlayer,
+    aggro,
+    ticks,
+    alertTicks,
+    unconscious,
+    skipNextTurns,
+    shield,
+    buffed,
+    buffedBefore,
   });
 };
 

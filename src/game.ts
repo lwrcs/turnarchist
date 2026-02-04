@@ -2934,6 +2934,56 @@ export class Game {
         targetRoom.enterLevel(player, { x: dl.x, y: dl.y });
         this.pushMessage("Sidepath downladder located");
         break;
+      case "up": {
+        // Debug nav: locate a rope-up ladder (preferred) or any up ladder and move the player to it.
+        let foundRope: { ladder: UpLadder; room: Room } | undefined = undefined;
+        let foundAny: { ladder: UpLadder; room: Room } | undefined = undefined;
+
+        for (const r of this.room.path()) {
+          for (let x = r.roomX; x < r.roomX + r.width; x++) {
+            for (let y = r.roomY; y < r.roomY + r.height; y++) {
+              const t = r.roomArray[x]?.[y];
+              if (!(t instanceof UpLadder)) continue;
+              const ul = t as UpLadder;
+              const entry = { ladder: ul, room: r };
+              if (ul.isRope === true) {
+                foundRope = entry;
+                break;
+              }
+              if (!foundAny) foundAny = entry;
+            }
+            if (foundRope) break;
+          }
+          if (foundRope) break;
+        }
+
+        const found = foundRope ?? foundAny;
+        if (!found) {
+          this.pushMessage("No upladder found.");
+          break;
+        }
+
+        const player = this.players[this.localPlayerID];
+        const targetRoom = found.room;
+        const ul = found.ladder;
+
+        // Move to the target room without using doors (doorless sidepaths).
+        if (this.room !== targetRoom) {
+          this.prevLevel = this.room;
+          this.prevLevel.exitLevel();
+          this.room = targetRoom;
+          this.updateLevel(targetRoom);
+          this.updateDepth(targetRoom.depth);
+          player.depth = targetRoom.depth;
+          player.roomGID = targetRoom.globalId;
+          const idx = this.level.rooms.indexOf(targetRoom);
+          if (idx >= 0) player.levelID = idx;
+        }
+
+        targetRoom.enterLevel(player, { x: ul.x, y: ul.y });
+        this.pushMessage(ul.isRope ? "Rope up ladder located" : "Up ladder located");
+        break;
+      }
       case "lightup":
         LevelConstants.LIGHTING_ANGLE_STEP += 1;
         this.pushMessage(

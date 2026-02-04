@@ -25098,6 +25098,7 @@ const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/even
 const reverb_1 = __webpack_require__(/*! ./sound/reverb */ "./src/sound/reverb.ts");
 const stats_1 = __webpack_require__(/*! ./game/stats */ "./src/game/stats.ts");
 const events_1 = __webpack_require__(/*! ./event/events */ "./src/event/events.ts");
+const upLadder_1 = __webpack_require__(/*! ./tile/upLadder */ "./src/tile/upLadder.ts");
 const cameraAnimation_1 = __webpack_require__(/*! ./game/cameraAnimation */ "./src/game/cameraAnimation.ts");
 const tips_1 = __webpack_require__(/*! ./tips */ "./src/tips.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./game/gameplaySettings */ "./src/game/gameplaySettings.ts");
@@ -27008,6 +27009,56 @@ class Game {
                     targetRoom.enterLevel(player, { x: dl.x, y: dl.y });
                     this.pushMessage("Sidepath downladder located");
                     break;
+                case "up": {
+                    // Debug nav: locate a rope-up ladder (preferred) or any up ladder and move the player to it.
+                    let foundRope = undefined;
+                    let foundAny = undefined;
+                    for (const r of this.room.path()) {
+                        for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                            for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                                const t = r.roomArray[x]?.[y];
+                                if (!(t instanceof upLadder_1.UpLadder))
+                                    continue;
+                                const ul = t;
+                                const entry = { ladder: ul, room: r };
+                                if (ul.isRope === true) {
+                                    foundRope = entry;
+                                    break;
+                                }
+                                if (!foundAny)
+                                    foundAny = entry;
+                            }
+                            if (foundRope)
+                                break;
+                        }
+                        if (foundRope)
+                            break;
+                    }
+                    const found = foundRope ?? foundAny;
+                    if (!found) {
+                        this.pushMessage("No upladder found.");
+                        break;
+                    }
+                    const player = this.players[this.localPlayerID];
+                    const targetRoom = found.room;
+                    const ul = found.ladder;
+                    // Move to the target room without using doors (doorless sidepaths).
+                    if (this.room !== targetRoom) {
+                        this.prevLevel = this.room;
+                        this.prevLevel.exitLevel();
+                        this.room = targetRoom;
+                        this.updateLevel(targetRoom);
+                        this.updateDepth(targetRoom.depth);
+                        player.depth = targetRoom.depth;
+                        player.roomGID = targetRoom.globalId;
+                        const idx = this.level.rooms.indexOf(targetRoom);
+                        if (idx >= 0)
+                            player.levelID = idx;
+                    }
+                    targetRoom.enterLevel(player, { x: ul.x, y: ul.y });
+                    this.pushMessage(ul.isRope ? "Rope up ladder located" : "Up ladder located");
+                    break;
+                }
                 case "lightup":
                     levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP += 1;
                     this.pushMessage(`Lighting angle step is now ${levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP}`);
@@ -36270,20 +36321,25 @@ const items_1 = __webpack_require__(/*! ./registry/items */ "./src/game/save/reg
 const enemies_1 = __webpack_require__(/*! ./registry/enemies */ "./src/game/save/registry/enemies.ts");
 const errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 const mappers_1 = __webpack_require__(/*! ./mappers */ "./src/game/save/mappers.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const button_1 = __webpack_require__(/*! ../../tile/button */ "./src/tile/button.ts");
 const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
 const lockable_1 = __webpack_require__(/*! ../../tile/lockable */ "./src/tile/lockable.ts");
+const floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/player.ts");
 const weapon_1 = __webpack_require__(/*! ../../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 const equippable_1 = __webpack_require__(/*! ../../item/equippable */ "./src/item/equippable.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
+const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
 const collectSaveGids = (save) => {
     const out = new Set();
     for (const rd of save.delta.rooms) {
@@ -36448,6 +36504,11 @@ const findGeneratedRoomCandidatesForDelta = (rooms, d) => {
 const loadSaveV2 = async (game, save) => {
     game.loadingSaveV2 = true;
     try {
+        // Restore developer mode early so subsequent load/debug behavior matches the saved session.
+        // Back-compat: old saves omit this field.
+        if (save.meta?.developerMode !== undefined) {
+            gameConstants_1.GameConstants.DEVELOPER_MODE = save.meta.developerMode;
+        }
         // Ensure builtin codecs are registered.
         (0, tilesBuiltins_1.registerBuiltinTileCodecsV2)();
         (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
@@ -36465,6 +36526,7 @@ const loadSaveV2 = async (game, save) => {
         }
         const assignedByGid = new Map();
         const assignedGidByObj = new Map();
+        const enemyAiStateByGid = new Map();
         // Reset high-level game collections (similar to legacy loadGameState).
         game.rooms = [];
         game.roomsById = new Map();
@@ -36488,24 +36550,104 @@ const loadSaveV2 = async (game, save) => {
                 : planEntry?.kind === "procedural"
                     ? { forceProcedural: true }
                     : undefined;
-            await game.levelgen.generate(game, depth, false, () => { }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, undefined, {
-                branching: gameplaySettings_1.GameplaySettings.MAIN_PATH_BRANCHING,
-                loopiness: gameplaySettings_1.GameplaySettings.MAIN_PATH_LOOPINESS,
-            }, genOverride);
+            await game.levelgen.generate(game, depth, false, () => { }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, undefined, 
+            // IMPORTANT: pass no controls here to match runtime generation.
+            // Main-path generation in live gameplay is triggered via `DownLadder`/`SidePathManager`,
+            // which calls `levelgen.generate(..., pathId="main", opts=undefined)`. If we pass explicit
+            // branching/loopiness overrides here, the layout can diverge and room reassociation fails.
+            undefined, genOverride);
         }
         // Switch to the active depth.
         const activeLevel = game.levels[save.worldSpec.depth];
         if (!activeLevel) {
             return (0, errors_1.err)({ kind: "InvalidState", message: "Active level not generated" });
         }
+        // Build per-sidepath generation overrides (env + opts) from the saved rope-down ladders.
+        // When saving while inside a sidepath, this data is critical to reproduce the sidepath layout and skins.
+        const roomDeltaByGid = new Map();
+        for (const rd of save.delta.rooms)
+            roomDeltaByGid.set(rd.roomGid, rd);
+        const sidepathGenOverrides = new Map();
+        const inferSidepathOptsFallback = (env, depth, roomsHint) => {
+            // Best-effort backward compat when loading older saves that didn't persist DownLadder.opts.
+            // Keep this narrow and deterministic; prefer exact saved opts when available.
+            // Forest sidepaths at depth=1 are intended to be single-room mazes with a soft margin.
+            if (env === environmentTypes_1.EnvType.FOREST && depth === 1) {
+                return {
+                    caveRooms: roomsHint ?? 1,
+                    locked: true,
+                    linearity: 0.5,
+                    mapWidth: 50,
+                    mapHeight: 50,
+                    giantCentralRoom: true,
+                    giantRoomScale: 0.6,
+                    entranceInMainRoom: true,
+                    keyInMainRoom: true,
+                    exitInMainRoom: true,
+                    organicTunnelsAvoidCenter: true,
+                    softMargin: 5,
+                };
+            }
+            // If we at least know the intended room count, preserve that.
+            if (roomsHint !== undefined)
+                return { caveRooms: roomsHint };
+            return undefined;
+        };
+        for (const rd of save.delta.rooms) {
+            for (const ts of rd.tiles) {
+                if (ts.kind !== "down_ladder")
+                    continue;
+                if (ts.isSidePath !== true)
+                    continue;
+                if (!ts.linkedRoomGid)
+                    continue;
+                const linkedDelta = roomDeltaByGid.get(ts.linkedRoomGid);
+                if (!linkedDelta)
+                    continue;
+                const pid = linkedDelta.pathId;
+                if (!pid || pid === "main")
+                    continue;
+                const optsSave = ts.opts;
+                const optsRuntime = optsSave === undefined
+                    ? inferSidepathOptsFallback((0, mappers_1.envKindToEnvType)(ts.environment), save.worldSpec.depth, undefined)
+                    : {
+                        caveRooms: optsSave.caveRooms,
+                        mapWidth: optsSave.mapWidth,
+                        mapHeight: optsSave.mapHeight,
+                        locked: optsSave.locked,
+                        envType: optsSave.envType ? (0, mappers_1.envKindToEnvType)(optsSave.envType) : undefined,
+                        linearity: optsSave.linearity,
+                        branching: optsSave.branching,
+                        loopiness: optsSave.loopiness,
+                        giantCentralRoom: optsSave.giantCentralRoom,
+                        giantRoomScale: optsSave.giantRoomScale,
+                        organicTunnelsAvoidCenter: optsSave.organicTunnelsAvoidCenter,
+                        softMargin: optsSave.softMargin,
+                        keyInMainRoom: optsSave.keyInMainRoom,
+                        entranceInMainRoom: optsSave.entranceInMainRoom,
+                        exitInMainRoom: optsSave.exitInMainRoom,
+                    };
+                // First write wins (stable); multiple ladders could point to the same sidepath.
+                if (!sidepathGenOverrides.has(pid)) {
+                    sidepathGenOverrides.set(pid, {
+                        env: (0, mappers_1.envKindToEnvType)(ts.environment),
+                        opts: optsRuntime,
+                    });
+                }
+            }
+        }
         // Ensure sidepaths exist (deterministic by pathId + room count where available).
         for (const sp of save.worldSpec.sidepaths) {
             // Sidepath generation no longer overwrites `game.rooms`; capture the linkedRoom and merge
             // its level's rooms into the active level.
             let linkedRoom = undefined;
+            const override = sidepathGenOverrides.get(sp.pathId);
+            const env = override?.env ?? (0, mappers_1.envKindToEnvType)(save.worldSpec.env);
+            const opts = override?.opts ??
+                inferSidepathOptsFallback(env, save.worldSpec.depth, sp.rooms);
             await game.levelgen.generate(game, save.worldSpec.depth, true, (r) => {
                 linkedRoom = r ?? undefined;
-            }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, sp.pathId, sp.rooms !== undefined ? { caveRooms: sp.rooms } : undefined);
+            }, env, false, sp.pathId, opts);
             const generatedSideRooms = linkedRoom?.level?.rooms?.filter((r) => r.pathId === sp.pathId) ?? [];
             const existing = new Set(activeLevel.rooms.map((r) => r.globalId));
             for (const r of generatedSideRooms) {
@@ -36542,6 +36684,7 @@ const loadSaveV2 = async (game, save) => {
         game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
         const entitiesByGid = new Map();
         const tilesByGid = new Map();
+        const itemsByGid = new Map();
         // Apply per-room deltas: flags, tiles, items, entities.
         for (const rd of save.delta.rooms) {
             const room = game.roomsById.get(rd.roomGid);
@@ -36577,6 +36720,29 @@ const loadSaveV2 = async (game, save) => {
                 let effectiveTs = ts;
                 let applyRoom = room;
                 let t = applyRoom.roomArray[ts.x]?.[ts.y];
+                const findNearestDownLadder = (wantSidePath, wantKeyId) => {
+                    let best = null;
+                    for (const r of game.rooms) {
+                        for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+                            for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+                                const tt = r.roomArray[x]?.[y];
+                                if (!(tt instanceof downLadder_1.DownLadder))
+                                    continue;
+                                if (tt.isSidePath !== wantSidePath)
+                                    continue;
+                                if (wantKeyId !== undefined) {
+                                    const kid = tt.lockable?.keyID;
+                                    if (kid !== wantKeyId)
+                                        continue;
+                                }
+                                const dist = Math.abs(tt.x - effectiveTs.x) + Math.abs(tt.y - effectiveTs.y);
+                                if (!best || dist < best.dist)
+                                    best = { room: r, tile: tt, dist };
+                            }
+                        }
+                    }
+                    return best ? { room: best.room, tile: best.tile } : null;
+                };
                 const findTileAtCoordInAnyRoom = (x, y, predicate) => {
                     for (const r of game.rooms) {
                         const tt = r.roomArray[x]?.[y];
@@ -36621,56 +36787,86 @@ const loadSaveV2 = async (game, save) => {
                         // ok
                     }
                     else {
-                        const found = findFirstDownLadder();
-                        if (found) {
-                            t = found;
-                            effectiveTs = { ...ts, x: found.x, y: found.y };
+                        // Prefer matching an existing ladder (by sidepath flag + keyId when present) anywhere in the loaded world.
+                        const nearest = findNearestDownLadder(ts.isSidePath, ts.lock?.keyId);
+                        if (nearest) {
+                            applyRoom = nearest.room;
+                            t = nearest.tile;
+                            effectiveTs = { ...ts, x: nearest.tile.x, y: nearest.tile.y };
                         }
                         else {
-                            // As a last resort, recreate the ladder in this room.
-                            const place = (() => {
-                                if (room.isPositionInRoom(ts.x, ts.y)) {
-                                    const existing = room.roomArray[ts.x]?.[ts.y];
-                                    if (existing && existing.isSolid() === false)
-                                        return { x: ts.x, y: ts.y };
-                                }
-                                const center = room.getRoomCenter();
-                                const centerTile = room.roomArray[center.x]?.[center.y];
-                                if (centerTile && centerTile.isSolid() === false)
-                                    return center;
-                                for (let x = room.roomX; x < room.roomX + room.width; x++) {
-                                    for (let y = room.roomY; y < room.roomY + room.height; y++) {
-                                        const tt = room.roomArray[x]?.[y];
-                                        if (tt && tt.isSolid() === false)
-                                            return { x, y };
-                                    }
-                                }
-                                return null;
-                            })();
-                            if (!place) {
-                                return (0, errors_1.err)({
-                                    kind: "MissingReference",
-                                    message: `DownLadder not found and no valid placement in room gid=${room.globalId}`,
-                                });
+                            const found = findFirstDownLadder();
+                            if (found) {
+                                t = found;
+                                effectiveTs = { ...ts, x: found.x, y: found.y };
                             }
-                            // Build lock override if present.
-                            const lockStateOverride = ts.lock === undefined
-                                ? undefined
-                                : {
-                                    lockType: ts.lock.lockType === "none"
-                                        ? lockable_1.LockType.NONE
-                                        : ts.lock.lockType === "locked"
-                                            ? lockable_1.LockType.LOCKED
-                                            : ts.lock.lockType === "guarded"
-                                                ? lockable_1.LockType.GUARDED
-                                                : lockable_1.LockType.TUNNEL,
-                                    keyID: ts.lock.keyId,
-                                };
-                            const dl = new downLadder_1.DownLadder(room, game, place.x, place.y, ts.isSidePath, (0, mappers_1.envKindToEnvType)(ts.environment), lockable_1.LockType.NONE, undefined, lockStateOverride);
-                            room.roomArray[place.x][place.y] = dl;
-                            applyRoom = room;
-                            t = dl;
-                            effectiveTs = { ...ts, x: place.x, y: place.y };
+                            else {
+                                // As a last resort, recreate the ladder in this room.
+                                const place = (() => {
+                                    if (room.isPositionInRoom(ts.x, ts.y)) {
+                                        const existing = room.roomArray[ts.x]?.[ts.y];
+                                        if (existing && existing.isSolid() === false)
+                                            return { x: ts.x, y: ts.y };
+                                    }
+                                    const center = room.getRoomCenter();
+                                    const centerTile = room.roomArray[center.x]?.[center.y];
+                                    if (centerTile && centerTile.isSolid() === false)
+                                        return center;
+                                    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                                        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                                            const tt = room.roomArray[x]?.[y];
+                                            if (tt && tt.isSolid() === false)
+                                                return { x, y };
+                                        }
+                                    }
+                                    return null;
+                                })();
+                                if (!place) {
+                                    return (0, errors_1.err)({
+                                        kind: "MissingReference",
+                                        message: `DownLadder not found and no valid placement in room gid=${room.globalId}`,
+                                    });
+                                }
+                                // Build lock override if present.
+                                const lockStateOverride = ts.lock === undefined
+                                    ? undefined
+                                    : {
+                                        lockType: ts.lock.lockType === "none"
+                                            ? lockable_1.LockType.NONE
+                                            : ts.lock.lockType === "locked"
+                                                ? lockable_1.LockType.LOCKED
+                                                : ts.lock.lockType === "guarded"
+                                                    ? lockable_1.LockType.GUARDED
+                                                    : lockable_1.LockType.TUNNEL,
+                                        keyID: ts.lock.keyId,
+                                    };
+                                const opts = ts.opts === undefined
+                                    ? undefined
+                                    : {
+                                        caveRooms: ts.opts.caveRooms,
+                                        mapWidth: ts.opts.mapWidth,
+                                        mapHeight: ts.opts.mapHeight,
+                                        locked: ts.opts.locked,
+                                        envType: ts.opts.envType
+                                            ? (0, mappers_1.envKindToEnvType)(ts.opts.envType)
+                                            : undefined,
+                                        linearity: ts.opts.linearity,
+                                        branching: ts.opts.branching,
+                                        loopiness: ts.opts.loopiness,
+                                        giantCentralRoom: ts.opts.giantCentralRoom,
+                                        giantRoomScale: ts.opts.giantRoomScale,
+                                        organicTunnelsAvoidCenter: ts.opts.organicTunnelsAvoidCenter,
+                                        softMargin: ts.opts.softMargin,
+                                        keyInMainRoom: ts.opts.keyInMainRoom,
+                                        entranceInMainRoom: ts.opts.entranceInMainRoom,
+                                        exitInMainRoom: ts.opts.exitInMainRoom,
+                                    };
+                                const dl = new downLadder_1.DownLadder(room, game, place.x, place.y, ts.isSidePath, (0, mappers_1.envKindToEnvType)(ts.environment), lockable_1.LockType.NONE, opts, lockStateOverride);
+                                room.roomArray[place.x][place.y] = dl;
+                                applyRoom = room;
+                                t = dl;
+                                effectiveTs = { ...ts, x: place.x, y: place.y };
+                            }
                         }
                     }
                 }
@@ -36821,11 +37017,14 @@ const loadSaveV2 = async (game, save) => {
                 const gidRes = reserveAndAssignGid(spawned, is.gid, preReservedGids, assignedByGid, assignedGidByObj);
                 if (!gidRes.ok)
                     return gidRes;
+                itemsByGid.set(is.gid, spawned);
                 spawned.level = room;
                 if (!spawned.pickedUp)
                     room.items.push(spawned);
             }
             room.entities = [];
+            // Reset per-room counters derived from the entities list.
+            room.currentSpawnerCount = 0;
             for (const es of rd.enemies) {
                 const codec = enemies_1.enemyRegistryV2.get(es.kind);
                 if (!codec) {
@@ -36841,6 +37040,28 @@ const loadSaveV2 = async (game, save) => {
                 spawned.room = room;
                 room.entities.push(spawned);
                 entitiesByGid.set(es.gid, spawned);
+                // Track AI wake/aggro state; must be applied after players are restored (targetPlayer linking).
+                if ("seenPlayer" in es || "heardPlayer" in es || "aggro" in es) {
+                    const seenPlayer = "seenPlayer" in es ? es.seenPlayer : undefined;
+                    const heardPlayer = "heardPlayer" in es ? es.heardPlayer : undefined;
+                    const aggro = "aggro" in es ? es.aggro : undefined;
+                    if (seenPlayer !== undefined || heardPlayer !== undefined || aggro !== undefined) {
+                        enemyAiStateByGid.set(es.gid, { seenPlayer, heardPlayer, aggro });
+                    }
+                }
+                // Restore chest drop references so opened chests don't incorrectly self-empty on load.
+                if (es.kind === "chest" && spawned instanceof chest_1.Chest) {
+                    const dropGids = es.spawnedItemGids;
+                    if (Array.isArray(dropGids) && dropGids.length > 0) {
+                        const drops = [];
+                        for (const gid of dropGids) {
+                            const it = itemsByGid.get(gid);
+                            if (it)
+                                drops.push(it);
+                        }
+                        spawned.drops = drops;
+                    }
+                }
             }
             room.projectiles = [];
             for (const ps of rd.projectiles) {
@@ -36884,6 +37105,33 @@ const loadSaveV2 = async (game, save) => {
                 const hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.x, hws.y);
                 hw.dead = hws.dead;
                 room.hitwarnings.push(hw);
+            }
+        }
+        // De-duplicate sidepath rope-down ladders: regen + ladder remapping should produce exactly one,
+        // but if we ever end up with multiple, keep the one that corresponds to a saved gid.
+        const savedSideDownLadderGids = new Set();
+        for (const rd of save.delta.rooms) {
+            for (const ts of rd.tiles) {
+                if (ts.kind === "down_ladder" && ts.isSidePath && typeof ts.gid === "string") {
+                    savedSideDownLadderGids.add(ts.gid);
+                }
+            }
+        }
+        if (savedSideDownLadderGids.size > 0) {
+            for (const r of game.rooms) {
+                for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+                    for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+                        const tt = r.roomArray[x]?.[y];
+                        if (!(tt instanceof downLadder_1.DownLadder))
+                            continue;
+                        if (!tt.isSidePath)
+                            continue;
+                        // If this ladder's gid isn't in the save, it's an extra. Replace with floor.
+                        if (!savedSideDownLadderGids.has(tt.globalId)) {
+                            r.roomArray[x][y] = new floor_1.Floor(r, x, y);
+                        }
+                    }
+                }
             }
         }
         // Post-pass linking across rooms by saved gids.
@@ -37052,6 +37300,50 @@ const loadSaveV2 = async (game, save) => {
             const room = game.rooms[local.levelID];
             if (room)
                 game.room = room;
+        }
+        // Restore enemy AI "awake/aggro" state now that players exist.
+        // Many enemies require a valid `targetPlayer` when `seenPlayer` is true.
+        if (enemyAiStateByGid.size > 0) {
+            const localPlayer = game.players[game.localPlayerID];
+            const activePlayers = Object.values(game.players);
+            for (const [gid, st] of enemyAiStateByGid.entries()) {
+                const ent = entitiesByGid.get(gid);
+                if (!(ent instanceof enemy_1.Enemy))
+                    continue;
+                const wantsSeen = st.seenPlayer === true;
+                const wantsAggro = st.aggro === true;
+                const needsTarget = wantsSeen || wantsAggro;
+                const target = localPlayer ?? activePlayers[0];
+                if (needsTarget) {
+                    if (!target) {
+                        // No players available; keep enemy asleep to avoid null target crashes.
+                        ent.seenPlayer = false;
+                        ent.aggro = false;
+                    }
+                    else {
+                        ent.targetPlayer = target;
+                        if (st.seenPlayer !== undefined)
+                            ent.seenPlayer = st.seenPlayer;
+                        if (st.aggro !== undefined)
+                            ent.aggro = st.aggro;
+                    }
+                }
+                else {
+                    if (st.seenPlayer !== undefined)
+                        ent.seenPlayer = st.seenPlayer;
+                    if (st.aggro !== undefined)
+                        ent.aggro = st.aggro;
+                }
+                if (st.heardPlayer !== undefined)
+                    ent.heardPlayer = st.heardPlayer;
+            }
+        }
+        // Restore active path context (main vs sidepath). Game update/draw loops heavily filter by `currentPathId`.
+        if (game.room && typeof game.room.pathId === "string" && game.room.pathId.length > 0) {
+            game.currentPathId = game.room.pathId;
+        }
+        else {
+            game.currentPathId = "main";
         }
         // Restore gameplay RNG state AFTER regeneration and object reconstruction.
         // Generation itself reseeds per depth/path; we only want to continue the run deterministically.
@@ -37250,17 +37542,38 @@ exports.enemyRegistryV2 = new registry_1.Registry();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getEnemyKindV2 = exports.registerBuiltinEnemyCodecsV2 = void 0;
 const barrel_1 = __webpack_require__(/*! ../../../entity/object/barrel */ "./src/entity/object/barrel.ts");
+const bomb_1 = __webpack_require__(/*! ../../../entity/object/bomb */ "./src/entity/object/bomb.ts");
+const block_1 = __webpack_require__(/*! ../../../entity/object/block */ "./src/entity/object/block.ts");
+const bush_1 = __webpack_require__(/*! ../../../entity/object/bush */ "./src/entity/object/bush.ts");
 const chest_1 = __webpack_require__(/*! ../../../entity/object/chest */ "./src/entity/object/chest.ts");
 const crate_1 = __webpack_require__(/*! ../../../entity/object/crate */ "./src/entity/object/crate.ts");
 const darkCrate_1 = __webpack_require__(/*! ../../../entity/object/darkCrate */ "./src/entity/object/darkCrate.ts");
+const decoBlock_1 = __webpack_require__(/*! ../../../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
+const caveBlock_1 = __webpack_require__(/*! ../../../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
+const obsidianBlock_1 = __webpack_require__(/*! ../../../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
+const rubble_1 = __webpack_require__(/*! ../../../entity/object/rubble */ "./src/entity/object/rubble.ts");
 const pot_1 = __webpack_require__(/*! ../../../entity/object/pot */ "./src/entity/object/pot.ts");
 const darkPot_1 = __webpack_require__(/*! ../../../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
+const darkVase_1 = __webpack_require__(/*! ../../../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
+const candelabra_1 = __webpack_require__(/*! ../../../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
 const pumpkin_1 = __webpack_require__(/*! ../../../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
 const tombStone_1 = __webpack_require__(/*! ../../../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
 const furnace_1 = __webpack_require__(/*! ../../../entity/object/furnace */ "./src/entity/object/furnace.ts");
 const fishingSpot_1 = __webpack_require__(/*! ../../../entity/object/fishingSpot */ "./src/entity/object/fishingSpot.ts");
 const mushrooms_1 = __webpack_require__(/*! ../../../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
+const glowshrooms_1 = __webpack_require__(/*! ../../../entity/object/glowshrooms */ "./src/entity/object/glowshrooms.ts");
 const pottedPlant_1 = __webpack_require__(/*! ../../../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+const sprout_1 = __webpack_require__(/*! ../../../entity/object/sprout */ "./src/entity/object/sprout.ts");
+const lilyPlant_1 = __webpack_require__(/*! ../../../entity/object/lilyPlant */ "./src/entity/object/lilyPlant.ts");
+const tree_1 = __webpack_require__(/*! ../../../entity/object/tree */ "./src/entity/object/tree.ts");
+const bigTree_1 = __webpack_require__(/*! ../../../entity/object/bigTree */ "./src/entity/object/bigTree.ts");
+const tallSucculent_1 = __webpack_require__(/*! ../../../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
+const succulent_1 = __webpack_require__(/*! ../../../entity/object/succulent */ "./src/entity/object/succulent.ts");
+const smallBush_1 = __webpack_require__(/*! ../../../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
+const pawnStatue_1 = __webpack_require__(/*! ../../../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
+const rookStatue_1 = __webpack_require__(/*! ../../../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
+const bishopStatue_1 = __webpack_require__(/*! ../../../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
+const fallenPillar_1 = __webpack_require__(/*! ../../../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const coalResource_1 = __webpack_require__(/*! ../../../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../../../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
@@ -37304,6 +37617,7 @@ const energyWizard_1 = __webpack_require__(/*! ../../../entity/enemy/energyWizar
 const zombieEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const enemy_1 = __webpack_require__(/*! ../../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mappers_1 = __webpack_require__(/*! ../mappers */ "./src/game/save/mappers.ts");
 const enemies_1 = __webpack_require__(/*! ./enemies */ "./src/game/save/registry/enemies.ts");
 const itemsBuiltins_1 = __webpack_require__(/*! ./itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
@@ -37328,6 +37642,46 @@ const asWizardEnemyState = (n) => {
 const entityToKind = (e) => {
     if (e instanceof barrel_1.Barrel)
         return "barrel";
+    if (e instanceof bomb_1.Bomb)
+        return "bomb";
+    if (e instanceof block_1.Block)
+        return "block";
+    if (e instanceof decoBlock_1.DecoBlock)
+        return "deco_block";
+    if (e instanceof caveBlock_1.CaveBlock)
+        return "cave_block";
+    if (e instanceof obsidianBlock_1.ObsidianBlock)
+        return "obsidian_block";
+    if (e instanceof rubble_1.Rubble)
+        return "rubble";
+    if (e instanceof bush_1.Bush)
+        return "bush";
+    if (e instanceof smallBush_1.SmallBush)
+        return "small_bush";
+    if (e instanceof sprout_1.Sprout)
+        return "sprout";
+    if (e instanceof lilyPlant_1.LilyPlant)
+        return "lily_plant";
+    if (e instanceof tree_1.Tree)
+        return "tree";
+    if (e instanceof bigTree_1.BigTree)
+        return "big_tree";
+    if (e instanceof tallSucculent_1.TallSucculent)
+        return "tall_succulent";
+    if (e instanceof succulent_1.Succulent)
+        return "succulent";
+    if (e instanceof darkVase_1.DarkVase)
+        return "dark_vase";
+    if (e instanceof candelabra_1.Candelabra)
+        return "candelabra";
+    if (e instanceof pawnStatue_1.PawnStatue)
+        return "pawn_statue";
+    if (e instanceof rookStatue_1.RookStatue)
+        return "rook_statue";
+    if (e instanceof bishopStatue_1.BishopStatue)
+        return "bishop_statue";
+    if (e instanceof fallenPillar_1.FallenPillar)
+        return "fallen_pillar";
     if (e instanceof chest_1.Chest)
         return "chest";
     if (e instanceof vendingMachine_1.VendingMachine)
@@ -37406,6 +37760,8 @@ const entityToKind = (e) => {
         return "fishing_spot";
     if (e instanceof mushrooms_1.Mushrooms)
         return "mushrooms_prop";
+    if (e instanceof glowshrooms_1.Glowshrooms)
+        return "glowshrooms_prop";
     if (e instanceof pottedPlant_1.PottedPlant)
         return "potted_plant";
     if (e instanceof coalResource_1.CoalResource)
@@ -37438,6 +37794,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     // Ensure item codecs exist before vending_machine tries to encode its items.
     (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
     const saveBasic = (kind, value) => {
+        const isEnemy = value instanceof enemy_1.Enemy;
         return {
             kind,
             gid: value.globalId,
@@ -37448,6 +37805,10 @@ const registerBuiltinEnemyCodecsV2 = () => {
             health: value.health,
             maxHealth: value.maxHealth,
             dead: value.dead,
+            seenPlayer: isEnemy && value.seenPlayer === true ? true : undefined,
+            heardPlayer: isEnemy && value.heardPlayer === true ? true : undefined,
+            aggro: isEnemy && value.aggro === true ? true : undefined,
+            ticks: isEnemy && typeof value.ticks === "number" ? value.ticks : undefined,
             alertTicks: typeof value.alertTicks === "number" ? value.alertTicks : undefined,
             unconscious: value.unconscious === true ? true : undefined,
             skipNextTurns: typeof value.skipNextTurns === "number" ? value.skipNextTurns : undefined,
@@ -37462,6 +37823,10 @@ const registerBuiltinEnemyCodecsV2 = () => {
         e.health = value.health;
         e.maxHealth = value.maxHealth;
         e.direction = (0, mappers_1.directionKindToDirection)(value.direction);
+        // NOTE: do NOT set seenPlayer/aggro here, because many enemies require targetPlayer to be valid
+        // when seenPlayer is true. We restore those safely in a post-pass in loadV2 after players exist.
+        if (e instanceof enemy_1.Enemy && "ticks" in value && typeof value.ticks === "number")
+            e.ticks = value.ticks;
         if ("alertTicks" in value && typeof value.alertTicks === "number")
             e.alertTicks = value.alertTicks;
         if ("unconscious" in value && typeof value.unconscious === "boolean")
@@ -37497,12 +37862,37 @@ const registerBuiltinEnemyCodecsV2 = () => {
     };
     // Barrel (basic envelope)
     registerBasic("barrel", barrel_1.Barrel);
+    registerBasic("bomb", bomb_1.Bomb);
+    registerBasic("block", block_1.Block);
+    registerBasic("deco_block", decoBlock_1.DecoBlock);
+    registerBasic("cave_block", caveBlock_1.CaveBlock);
+    registerBasic("obsidian_block", obsidianBlock_1.ObsidianBlock);
+    registerBasic("rubble", rubble_1.Rubble);
+    registerBasic("bush", bush_1.Bush);
+    registerBasic("small_bush", smallBush_1.SmallBush);
+    registerBasic("sprout", sprout_1.Sprout);
+    registerBasic("lily_plant", lilyPlant_1.LilyPlant);
+    registerBasic("tree", tree_1.Tree);
+    registerBasic("big_tree", bigTree_1.BigTree);
+    registerBasic("tall_succulent", tallSucculent_1.TallSucculent);
+    registerBasic("succulent", succulent_1.Succulent);
+    registerBasic("dark_vase", darkVase_1.DarkVase);
+    registerBasic("candelabra", candelabra_1.Candelabra);
+    registerBasic("pawn_statue", pawnStatue_1.PawnStatue);
+    registerBasic("rook_statue", rookStatue_1.RookStatue);
+    registerBasic("bishop_statue", bishopStatue_1.BishopStatue);
+    registerBasic("fallen_pillar", fallenPillar_1.FallenPillar);
     // Chest
     register("chest", {
         save: (value) => {
             if (!(value instanceof chest_1.Chest))
                 throw new Error("chest codec received non-Chest");
             const opened = value.health <= 2;
+            const spawnedItemGids = opened && Array.isArray(value.drops)
+                ? value.drops
+                    .filter((d) => d && d.pickedUp !== true && value.room.items.includes(d))
+                    .map((d) => d.globalId)
+                : undefined;
             return {
                 kind: "chest",
                 gid: value.globalId,
@@ -37515,7 +37905,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
                 dead: value.dead,
                 opened,
                 destroyable: value.destroyable,
-                spawnedItemGids: undefined,
+                spawnedItemGids,
             };
         },
         spawn: (value, room, ctx) => {
@@ -37616,6 +38006,11 @@ const registerBuiltinEnemyCodecsV2 = () => {
                 maxHealth: value.maxHealth,
                 dead: value.dead,
                 enemySpawnType: value.enemySpawnType,
+                ticks: value.ticks,
+                spawnFrequency: value.spawnFrequency,
+                spawnOffset: value.spawnOffset,
+                nextSpawnTick: value.nextSpawnTick,
+                seenPlayer: value.seenPlayer,
             };
         },
         spawn: (value, room, ctx) => {
@@ -37627,6 +38022,16 @@ const registerBuiltinEnemyCodecsV2 = () => {
             s.maxHealth = value.maxHealth;
             s.direction = (0, mappers_1.directionKindToDirection)(value.direction);
             s.enemySpawnType = value.enemySpawnType;
+            if (typeof value.ticks === "number")
+                s.ticks = value.ticks;
+            if (typeof value.spawnFrequency === "number")
+                s.spawnFrequency = value.spawnFrequency;
+            if (typeof value.spawnOffset === "number")
+                s.spawnOffset = value.spawnOffset;
+            if (typeof value.nextSpawnTick === "number")
+                s.nextSpawnTick = value.nextSpawnTick;
+            if (typeof value.seenPlayer === "boolean")
+                s.seenPlayer = value.seenPlayer;
             s.globalId = value.gid;
             return s;
         },
@@ -37703,6 +38108,10 @@ const registerBuiltinEnemyCodecsV2 = () => {
                 health: value.health,
                 maxHealth: value.maxHealth,
                 dead: value.dead,
+                seenPlayer: value.seenPlayer,
+                heardPlayer: value.heardPlayer,
+                aggro: value.aggro,
+                ticks: value.ticks,
                 alertTicks: value.alertTicks,
                 unconscious: value.unconscious,
                 skipNextTurns: value.skipNextTurns,
@@ -37718,6 +38127,8 @@ const registerBuiltinEnemyCodecsV2 = () => {
             z.health = value.health;
             z.maxHealth = value.maxHealth;
             z.direction = (0, mappers_1.directionKindToDirection)(value.direction);
+            if ("ticks" in value && typeof value.ticks === "number")
+                z.ticks = value.ticks;
             if (value.alertTicks !== undefined)
                 z.alertTicks = value.alertTicks;
             if (value.unconscious !== undefined)
@@ -38924,6 +39335,28 @@ const registerBuiltinTileCodecsV2 = () => {
                 const lock = lockKind === "none"
                     ? undefined
                     : { lockType: lockKind, keyId: tile.lockable.keyID };
+                const opts = tile.opts;
+                const optsSave = opts === undefined
+                    ? undefined
+                    : {
+                        caveRooms: typeof opts.caveRooms === "number" ? opts.caveRooms : undefined,
+                        mapWidth: typeof opts.mapWidth === "number" ? opts.mapWidth : undefined,
+                        mapHeight: typeof opts.mapHeight === "number" ? opts.mapHeight : undefined,
+                        locked: typeof opts.locked === "boolean" ? opts.locked : undefined,
+                        envType: opts.envType ? (0, mappers_1.envTypeToEnvKind)(opts.envType) : undefined,
+                        linearity: typeof opts.linearity === "number" ? opts.linearity : undefined,
+                        branching: typeof opts.branching === "number" ? opts.branching : undefined,
+                        loopiness: typeof opts.loopiness === "number" ? opts.loopiness : undefined,
+                        giantCentralRoom: typeof opts.giantCentralRoom === "boolean" ? opts.giantCentralRoom : undefined,
+                        giantRoomScale: typeof opts.giantRoomScale === "number" ? opts.giantRoomScale : undefined,
+                        organicTunnelsAvoidCenter: typeof opts.organicTunnelsAvoidCenter === "boolean"
+                            ? opts.organicTunnelsAvoidCenter
+                            : undefined,
+                        softMargin: typeof opts.softMargin === "number" ? opts.softMargin : undefined,
+                        keyInMainRoom: typeof opts.keyInMainRoom === "boolean" ? opts.keyInMainRoom : undefined,
+                        entranceInMainRoom: typeof opts.entranceInMainRoom === "boolean" ? opts.entranceInMainRoom : undefined,
+                        exitInMainRoom: typeof opts.exitInMainRoom === "boolean" ? opts.exitInMainRoom : undefined,
+                    };
                 return {
                     kind: "down_ladder",
                     gid: tile.globalId,
@@ -38931,6 +39364,7 @@ const registerBuiltinTileCodecsV2 = () => {
                     y: tile.y,
                     isSidePath: tile.isSidePath,
                     environment: (0, mappers_1.envTypeToEnvKind)(tile.environment),
+                    opts: optsSave,
                     lock,
                     linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
                 };
@@ -38943,17 +39377,38 @@ const registerBuiltinTileCodecsV2 = () => {
                     throw new Error("down_ladder codec apply: target tile is not DownLadder");
                 }
                 t.isSidePath = value.isSidePath;
-                if (value.lock) {
-                    // Rebuild lockable from saved state.
-                    const lockType = value.lock.lockType === "none"
+                if (value.opts) {
+                    t.opts = {
+                        caveRooms: value.opts.caveRooms,
+                        mapWidth: value.opts.mapWidth,
+                        mapHeight: value.opts.mapHeight,
+                        locked: value.opts.locked,
+                        envType: value.opts.envType ? (0, mappers_1.envKindToEnvType)(value.opts.envType) : undefined,
+                        linearity: value.opts.linearity,
+                        branching: value.opts.branching,
+                        loopiness: value.opts.loopiness,
+                        giantCentralRoom: value.opts.giantCentralRoom,
+                        giantRoomScale: value.opts.giantRoomScale,
+                        organicTunnelsAvoidCenter: value.opts.organicTunnelsAvoidCenter,
+                        softMargin: value.opts.softMargin,
+                        keyInMainRoom: value.opts.keyInMainRoom,
+                        entranceInMainRoom: value.opts.entranceInMainRoom,
+                        exitInMainRoom: value.opts.exitInMainRoom,
+                    };
+                }
+                // Always rebuild lockable from saved state (including the unlocked/no-lock case),
+                // otherwise a generated locked ladder can incorrectly remain locked after load.
+                const lockType = value.lock === undefined
+                    ? lockable_1.LockType.NONE
+                    : value.lock.lockType === "none"
                         ? lockable_1.LockType.NONE
                         : value.lock.lockType === "locked"
                             ? lockable_1.LockType.LOCKED
                             : value.lock.lockType === "guarded"
                                 ? lockable_1.LockType.GUARDED
                                 : lockable_1.LockType.TUNNEL;
-                    t.lockable = new lockable_2.Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: false });
-                }
+                const keyID = value.lock?.keyId;
+                t.lockable = new lockable_2.Lockable(ctx.game, { lockType, keyID, isTopDoor: false });
                 // linkedRoom linking happens in post-pass by gid
             },
         });
@@ -38981,6 +39436,8 @@ const registerBuiltinTileCodecsV2 = () => {
                     throw new Error("up_ladder codec apply: target tile is not UpLadder");
                 }
                 t.isRope = value.isRope;
+                // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
+                t.isSidePath = value.isRope === true;
                 // linkedRoom linking happens in post-pass by gid
             },
         });
@@ -39186,16 +39643,37 @@ const ENEMY_KINDS = [
     "big_zombie",
     "spider",
     "warden",
+    "bomb",
     "crate",
     "dark_crate",
+    "block",
+    "deco_block",
+    "cave_block",
+    "obsidian_block",
+    "rubble",
     "pot",
     "dark_pot",
+    "dark_vase",
+    "candelabra",
     "pumpkin",
     "tomb_stone",
+    "sprout",
+    "bush",
+    "small_bush",
+    "lily_plant",
+    "tree",
+    "big_tree",
+    "tall_succulent",
+    "succulent",
     "furnace",
     "fishing_spot",
     "mushrooms_prop",
+    "glowshrooms_prop",
     "potted_plant",
+    "pawn_statue",
+    "rook_statue",
+    "bishop_statue",
+    "fallen_pillar",
     "coal_resource",
     "gold_resource",
     "iron_resource",
@@ -39349,7 +39827,19 @@ const validateSaveV2 = (v) => {
             }
             savedAtMs = savedAtMsU;
         }
-        meta = { build, savedAtMs };
+        const developerModeU = get(metaU, "developerMode");
+        let developerMode = undefined;
+        if (developerModeU !== undefined) {
+            if (!isBoolean(developerModeU)) {
+                return (0, errors_1.err)({
+                    kind: "InvalidSchema",
+                    message: "meta.developerMode must be a boolean if present",
+                    path: "$.meta.developerMode",
+                });
+            }
+            developerMode = developerModeU;
+        }
+        meta = { build, savedAtMs, developerMode };
     }
     return (0, errors_1.ok)({
         saveVersion: SAVE_VERSION,
@@ -40216,6 +40706,108 @@ const validateTileSaveV2 = (v, path) => {
             const envR = asEnvKind(get(v, "environment"), `${path}.environment`);
             if (isErr(envR))
                 return (0, errors_1.err)(envR.error);
+            const optsU = get(v, "opts");
+            let opts = undefined;
+            if (optsU !== undefined) {
+                if (!isRecord(optsU)) {
+                    return (0, errors_1.err)({ kind: "InvalidSchema", message: "opts must be object", path: `${path}.opts` });
+                }
+                const caveRoomsU = get(optsU, "caveRooms");
+                const mapWidthU = get(optsU, "mapWidth");
+                const mapHeightU = get(optsU, "mapHeight");
+                const lockedU = get(optsU, "locked");
+                const envTypeU = get(optsU, "envType");
+                const linearityU = get(optsU, "linearity");
+                const branchingU = get(optsU, "branching");
+                const loopinessU = get(optsU, "loopiness");
+                const giantCentralRoomU = get(optsU, "giantCentralRoom");
+                const giantRoomScaleU = get(optsU, "giantRoomScale");
+                const organicTunnelsAvoidCenterU = get(optsU, "organicTunnelsAvoidCenter");
+                const softMarginU = get(optsU, "softMargin");
+                const keyInMainRoomU = get(optsU, "keyInMainRoom");
+                const entranceInMainRoomU = get(optsU, "entranceInMainRoom");
+                const exitInMainRoomU = get(optsU, "exitInMainRoom");
+                const asOptNum = (u, p) => {
+                    if (u === undefined)
+                        return (0, errors_1.ok)(undefined);
+                    if (!isNumber(u))
+                        return (0, errors_1.err)({ kind: "InvalidSchema", message: "must be number if present", path: p });
+                    return (0, errors_1.ok)(u);
+                };
+                const asOptBool = (u, p) => {
+                    if (u === undefined)
+                        return (0, errors_1.ok)(undefined);
+                    if (!isBoolean(u))
+                        return (0, errors_1.err)({ kind: "InvalidSchema", message: "must be boolean if present", path: p });
+                    return (0, errors_1.ok)(u);
+                };
+                const caveRoomsR = asOptNum(caveRoomsU, `${path}.opts.caveRooms`);
+                if (isErr(caveRoomsR))
+                    return (0, errors_1.err)(caveRoomsR.error);
+                const mapWidthR = asOptNum(mapWidthU, `${path}.opts.mapWidth`);
+                if (isErr(mapWidthR))
+                    return (0, errors_1.err)(mapWidthR.error);
+                const mapHeightR = asOptNum(mapHeightU, `${path}.opts.mapHeight`);
+                if (isErr(mapHeightR))
+                    return (0, errors_1.err)(mapHeightR.error);
+                const linearityR = asOptNum(linearityU, `${path}.opts.linearity`);
+                if (isErr(linearityR))
+                    return (0, errors_1.err)(linearityR.error);
+                const branchingR = asOptNum(branchingU, `${path}.opts.branching`);
+                if (isErr(branchingR))
+                    return (0, errors_1.err)(branchingR.error);
+                const loopinessR = asOptNum(loopinessU, `${path}.opts.loopiness`);
+                if (isErr(loopinessR))
+                    return (0, errors_1.err)(loopinessR.error);
+                const giantRoomScaleR = asOptNum(giantRoomScaleU, `${path}.opts.giantRoomScale`);
+                if (isErr(giantRoomScaleR))
+                    return (0, errors_1.err)(giantRoomScaleR.error);
+                const softMarginR = asOptNum(softMarginU, `${path}.opts.softMargin`);
+                if (isErr(softMarginR))
+                    return (0, errors_1.err)(softMarginR.error);
+                const lockedR = asOptBool(lockedU, `${path}.opts.locked`);
+                if (isErr(lockedR))
+                    return (0, errors_1.err)(lockedR.error);
+                const giantCentralRoomR = asOptBool(giantCentralRoomU, `${path}.opts.giantCentralRoom`);
+                if (isErr(giantCentralRoomR))
+                    return (0, errors_1.err)(giantCentralRoomR.error);
+                const organicTunnelsAvoidCenterR = asOptBool(organicTunnelsAvoidCenterU, `${path}.opts.organicTunnelsAvoidCenter`);
+                if (isErr(organicTunnelsAvoidCenterR))
+                    return (0, errors_1.err)(organicTunnelsAvoidCenterR.error);
+                const keyInMainRoomR = asOptBool(keyInMainRoomU, `${path}.opts.keyInMainRoom`);
+                if (isErr(keyInMainRoomR))
+                    return (0, errors_1.err)(keyInMainRoomR.error);
+                const entranceInMainRoomR = asOptBool(entranceInMainRoomU, `${path}.opts.entranceInMainRoom`);
+                if (isErr(entranceInMainRoomR))
+                    return (0, errors_1.err)(entranceInMainRoomR.error);
+                const exitInMainRoomR = asOptBool(exitInMainRoomU, `${path}.opts.exitInMainRoom`);
+                if (isErr(exitInMainRoomR))
+                    return (0, errors_1.err)(exitInMainRoomR.error);
+                let envType = undefined;
+                if (envTypeU !== undefined) {
+                    const er = asEnvKind(envTypeU, `${path}.opts.envType`);
+                    if (isErr(er))
+                        return (0, errors_1.err)(er.error);
+                    envType = er.value;
+                }
+                opts = {
+                    caveRooms: caveRoomsR.value,
+                    mapWidth: mapWidthR.value,
+                    mapHeight: mapHeightR.value,
+                    locked: lockedR.value,
+                    envType,
+                    linearity: linearityR.value,
+                    branching: branchingR.value,
+                    loopiness: loopinessR.value,
+                    giantCentralRoom: giantCentralRoomR.value,
+                    giantRoomScale: giantRoomScaleR.value,
+                    organicTunnelsAvoidCenter: organicTunnelsAvoidCenterR.value,
+                    softMargin: softMarginR.value,
+                    keyInMainRoom: keyInMainRoomR.value,
+                    entranceInMainRoom: entranceInMainRoomR.value,
+                    exitInMainRoom: exitInMainRoomR.value,
+                };
+            }
             const lockU = get(v, "lock");
             let lock = undefined;
             if (lockU !== undefined) {
@@ -40246,6 +40838,7 @@ const validateTileSaveV2 = (v, path) => {
                 y,
                 isSidePath,
                 environment: envR.value,
+                opts,
                 lock,
                 linkedRoomGid,
             });
@@ -40409,6 +41002,57 @@ const validateEnemySaveV2 = (v, path) => {
                 path: `${path}.enemySpawnType`,
             });
         }
+        const ticksU = get(v, "ticks");
+        const spawnFrequencyU = get(v, "spawnFrequency");
+        const spawnOffsetU = get(v, "spawnOffset");
+        const nextSpawnTickU = get(v, "nextSpawnTick");
+        const seenPlayerU = get(v, "seenPlayer");
+        let ticks = undefined;
+        if (ticksU !== undefined) {
+            if (!isNumber(ticksU))
+                return (0, errors_1.err)({ kind: "InvalidSchema", message: "ticks must be number if present", path: `${path}.ticks` });
+            ticks = ticksU;
+        }
+        let spawnFrequency = undefined;
+        if (spawnFrequencyU !== undefined) {
+            if (!isNumber(spawnFrequencyU))
+                return (0, errors_1.err)({
+                    kind: "InvalidSchema",
+                    message: "spawnFrequency must be number if present",
+                    path: `${path}.spawnFrequency`,
+                });
+            spawnFrequency = spawnFrequencyU;
+        }
+        let spawnOffset = undefined;
+        if (spawnOffsetU !== undefined) {
+            if (!isNumber(spawnOffsetU))
+                return (0, errors_1.err)({
+                    kind: "InvalidSchema",
+                    message: "spawnOffset must be number if present",
+                    path: `${path}.spawnOffset`,
+                });
+            spawnOffset = spawnOffsetU;
+        }
+        let nextSpawnTick = undefined;
+        if (nextSpawnTickU !== undefined) {
+            if (!isNumber(nextSpawnTickU))
+                return (0, errors_1.err)({
+                    kind: "InvalidSchema",
+                    message: "nextSpawnTick must be number if present",
+                    path: `${path}.nextSpawnTick`,
+                });
+            nextSpawnTick = nextSpawnTickU;
+        }
+        let seenPlayer = undefined;
+        if (seenPlayerU !== undefined) {
+            if (!isBoolean(seenPlayerU))
+                return (0, errors_1.err)({
+                    kind: "InvalidSchema",
+                    message: "seenPlayer must be boolean if present",
+                    path: `${path}.seenPlayer`,
+                });
+            seenPlayer = seenPlayerU;
+        }
         return (0, errors_1.ok)({
             kind,
             gid: gidR.value,
@@ -40420,6 +41064,11 @@ const validateEnemySaveV2 = (v, path) => {
             maxHealth,
             dead,
             enemySpawnType: enemySpawnTypeU,
+            ticks,
+            spawnFrequency,
+            spawnOffset,
+            nextSpawnTick,
+            seenPlayer,
         });
     }
     if (kind === "wizard") {
@@ -40496,6 +41145,107 @@ const validateEnemySaveV2 = (v, path) => {
         });
     }
     // Basic enemy kinds
+    const seenPlayerU = get(v, "seenPlayer");
+    const heardPlayerU = get(v, "heardPlayer");
+    const aggroU = get(v, "aggro");
+    const ticksU = get(v, "ticks");
+    const alertTicksU = get(v, "alertTicks");
+    const unconsciousU = get(v, "unconscious");
+    const skipNextTurnsU = get(v, "skipNextTurns");
+    const shieldU = get(v, "shield");
+    const buffedU = get(v, "buffed");
+    const buffedBeforeU = get(v, "buffedBefore");
+    let seenPlayer = undefined;
+    if (seenPlayerU !== undefined) {
+        if (!isBoolean(seenPlayerU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "seenPlayer must be boolean if present",
+                path: `${path}.seenPlayer`,
+            });
+        seenPlayer = seenPlayerU;
+    }
+    let heardPlayer = undefined;
+    if (heardPlayerU !== undefined) {
+        if (!isBoolean(heardPlayerU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "heardPlayer must be boolean if present",
+                path: `${path}.heardPlayer`,
+            });
+        heardPlayer = heardPlayerU;
+    }
+    let aggro = undefined;
+    if (aggroU !== undefined) {
+        if (!isBoolean(aggroU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "aggro must be boolean if present", path: `${path}.aggro` });
+        aggro = aggroU;
+    }
+    let ticks = undefined;
+    if (ticksU !== undefined) {
+        if (!isNumber(ticksU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "ticks must be number if present", path: `${path}.ticks` });
+        ticks = ticksU;
+    }
+    let alertTicks = undefined;
+    if (alertTicksU !== undefined) {
+        if (!isNumber(alertTicksU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "alertTicks must be number if present",
+                path: `${path}.alertTicks`,
+            });
+        alertTicks = alertTicksU;
+    }
+    let unconscious = undefined;
+    if (unconsciousU !== undefined) {
+        if (!isBoolean(unconsciousU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "unconscious must be boolean if present",
+                path: `${path}.unconscious`,
+            });
+        unconscious = unconsciousU;
+    }
+    let skipNextTurns = undefined;
+    if (skipNextTurnsU !== undefined) {
+        if (!isNumber(skipNextTurnsU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "skipNextTurns must be number if present",
+                path: `${path}.skipNextTurns`,
+            });
+        skipNextTurns = skipNextTurnsU;
+    }
+    let shield = undefined;
+    if (shieldU !== undefined) {
+        if (!isRecord(shieldU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "shield must be object if present", path: `${path}.shield` });
+        const healthU = get(shieldU, "health");
+        if (!isNumber(healthU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "shield.health must be number",
+                path: `${path}.shield.health`,
+            });
+        shield = { health: healthU };
+    }
+    let buffed = undefined;
+    if (buffedU !== undefined) {
+        if (!isBoolean(buffedU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "buffed must be boolean if present", path: `${path}.buffed` });
+        buffed = buffedU;
+    }
+    let buffedBefore = undefined;
+    if (buffedBeforeU !== undefined) {
+        if (!isBoolean(buffedBeforeU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "buffedBefore must be boolean if present",
+                path: `${path}.buffedBefore`,
+            });
+        buffedBefore = buffedBeforeU;
+    }
     return (0, errors_1.ok)({
         kind,
         gid: gidR.value,
@@ -40506,12 +41256,16 @@ const validateEnemySaveV2 = (v, path) => {
         health,
         maxHealth,
         dead,
-        alertTicks: undefined,
-        unconscious: undefined,
-        skipNextTurns: undefined,
-        shield: undefined,
-        buffed: undefined,
-        buffedBefore: undefined,
+        seenPlayer,
+        heardPlayer,
+        aggro,
+        ticks,
+        alertTicks,
+        unconscious,
+        skipNextTurns,
+        shield,
+        buffed,
+        buffedBefore,
     });
 };
 const validateProjectileSaveV2 = (v, path) => {
@@ -40626,7 +41380,75 @@ const enemies_1 = __webpack_require__(/*! ./registry/enemies */ "./src/game/save
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
+const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
 const GEN_VERSION = "levelgen-v1";
+const stableRoomSort = (a, b) => {
+    const ap = a.pathId || "main";
+    const bp = b.pathId || "main";
+    if (ap !== bp)
+        return ap < bp ? -1 : 1;
+    if (a.mapGroup !== b.mapGroup)
+        return a.mapGroup - b.mapGroup;
+    if (a.roomX !== b.roomX)
+        return a.roomX - b.roomX;
+    if (a.roomY !== b.roomY)
+        return a.roomY - b.roomY;
+    return a.globalId < b.globalId ? -1 : a.globalId > b.globalId ? 1 : 0;
+};
+/**
+ * Collect all rooms we should persist for the current depth even when the player is in a sidepath.
+ * This is important because sidepath generation parameters live on the *main-path room's* rope-down ladder tiles.
+ */
+const collectRoomsForSaveAtCurrentDepth = (game) => {
+    const depth = game.level.depth;
+    const mainLevel = game.levels?.[depth];
+    const seedRooms = [];
+    if (mainLevel?.rooms?.length)
+        seedRooms.push(...mainLevel.rooms);
+    if (Array.isArray(game.rooms))
+        seedRooms.push(...game.rooms);
+    const byGid = new Map();
+    for (const r of seedRooms) {
+        if (!r)
+            continue;
+        if (r.depth !== depth)
+            continue;
+        byGid.set(r.globalId, r);
+    }
+    // BFS: follow rope-down ladders to include generated sidepath room sets.
+    const queue = Array.from(byGid.values());
+    const visited = new Set(queue.map((r) => r.globalId));
+    while (queue.length > 0) {
+        const r = queue.shift();
+        if (!r)
+            continue;
+        for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
+            for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
+                const t = r.roomArray[x]?.[y];
+                if (!(t instanceof downLadder_1.DownLadder))
+                    continue;
+                if (t.isSidePath !== true)
+                    continue;
+                const linked = t.linkedRoom;
+                const lvlRooms = linked?.level?.rooms;
+                if (!linked || !lvlRooms)
+                    continue;
+                for (const rr of lvlRooms) {
+                    if (!rr)
+                        continue;
+                    if (rr.depth !== depth)
+                        continue;
+                    byGid.set(rr.globalId, rr);
+                    if (!visited.has(rr.globalId)) {
+                        visited.add(rr.globalId);
+                        queue.push(rr);
+                    }
+                }
+            }
+        }
+    }
+    return Array.from(byGid.values()).sort(stableRoomSort);
+};
 const createSaveV2 = (game, nowMs = Date.now()) => {
     // Ensure builtin codecs are registered before we attempt to encode tiles.
     (0, tilesBuiltins_1.registerBuiltinTileCodecsV2)();
@@ -40641,7 +41463,14 @@ const createSaveV2 = (game, nowMs = Date.now()) => {
     if (!Array.isArray(game.rooms)) {
         return (0, errors_1.err)({ kind: "InvalidState", message: "Cannot save: game.rooms is not initialized" });
     }
-    const envType = game.level.environment.type;
+    const roomsToSave = collectRoomsForSaveAtCurrentDepth(game);
+    if (roomsToSave.length === 0) {
+        return (0, errors_1.err)({ kind: "InvalidState", message: "Cannot save: no rooms collected for current depth" });
+    }
+    // IMPORTANT: worldSpec env drives main-path regeneration. If we're currently inside a sidepath,
+    // `game.level.environment.type` may reflect the sidepath environment, not the main path floor.
+    const mainLevelEnvType = game.levels?.[game.level.depth]?.environment?.type;
+    const envType = mainLevelEnvType ?? game.level.environment.type;
     const mainPathPlan = game.levels
         .filter((l) => l && typeof l.depth === "number" && l.depth <= game.level.depth)
         .map((l) => {
@@ -40660,16 +41489,16 @@ const createSaveV2 = (game, nowMs = Date.now()) => {
         depth: game.level.depth,
         env: (0, mappers_1.envTypeToEnvKind)(envType),
         mainPathPlan,
-        sidepaths: collectSidepaths(game.rooms),
+        sidepaths: collectSidepaths(roomsToSave),
     };
     const delta = {
         players: mapPlayers(game, game.players, nowMs),
         offlinePlayers: mapPlayers(game, game.offlinePlayers, nowMs),
-        rooms: mapRooms(game, game.rooms, nowMs),
+        rooms: mapRooms(game, roomsToSave, nowMs),
     };
     const out = {
         saveVersion: 2,
-        meta: { savedAtMs: nowMs },
+        meta: { savedAtMs: nowMs, developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE },
         worldSpec,
         delta,
     };
@@ -55497,12 +56326,13 @@ class PartitionGenerator {
         return partialLevel.partitions;
     }
     async generateCavePartitions(opts) {
+        const effectiveOpts = opts ?? {};
         const partialLevel = new PartialLevel();
         let validationResult;
         let attempts = 0;
-        const mapWidth = opts.mapWidth ?? 50;
-        const mapHeight = opts.mapHeight ?? 50;
-        const numRooms = opts.caveRooms ?? 8;
+        const mapWidth = effectiveOpts.mapWidth ?? 50;
+        const mapHeight = effectiveOpts.mapHeight ?? 50;
+        const numRooms = effectiveOpts.caveRooms ?? 8;
         // Single-room cave/sidepath mode: `caveRooms = 1` should mean exactly one ROPECAVE room.
         // The default cave algorithm always splits many partitions first, then prunes by connectivity,
         // which breaks when numRooms<=1 (spawn would have no connections and gets filtered out).
@@ -55512,23 +56342,23 @@ class PartitionGenerator {
             p.type = room_1.RoomType.ROPECAVE;
             return [p];
         }
-        const hasLinearity = typeof opts.linearity === "number";
-        const branching = typeof opts.branching === "number"
-            ? opts.branching
+        const hasLinearity = typeof effectiveOpts.linearity === "number";
+        const branching = typeof effectiveOpts.branching === "number"
+            ? effectiveOpts.branching
             : hasLinearity
-                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                ? Math.max(0, Math.min(1, 1 - effectiveOpts.linearity))
                 : 0.5; // default: 50% chance of second door
-        const loopiness = typeof opts.loopiness === "number"
-            ? opts.loopiness
+        const loopiness = typeof effectiveOpts.loopiness === "number"
+            ? effectiveOpts.loopiness
             : hasLinearity
-                ? Math.max(0, Math.min(1, 1 - opts.linearity))
+                ? Math.max(0, Math.min(1, 1 - effectiveOpts.linearity))
                 : 0.5; // default: moderate loops
         this.visualizer.updateProgress("Starting cave generation", 0);
         do {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
-            if (opts.giantCentralRoom) {
-                await this.generateCaveCandidateWithGiantCenter(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, opts.giantRoomScale ?? 0.65);
+            if (effectiveOpts.giantCentralRoom) {
+                await this.generateCaveCandidateWithGiantCenter(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, effectiveOpts.giantRoomScale ?? 0.65);
             }
             else {
                 await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
