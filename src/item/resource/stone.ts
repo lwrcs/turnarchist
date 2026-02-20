@@ -12,6 +12,7 @@ export class Stone extends Item {
 
     this.tileX = 15;
     this.tileY = 0;
+    this.name = Stone.itemName;
 
     this.stackable = true;
   }

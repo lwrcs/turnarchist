@@ -14,6 +14,7 @@ export class Apple extends Usable {
 
     this.tileX = 6;
     this.tileY = 2;
+    this.name = Apple.itemName;
 
     this.stackable = true;
   }

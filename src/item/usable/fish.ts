@@ -14,6 +14,7 @@ export class Fish extends Usable {
 
     this.tileX = 5;
     this.tileY = 2;
+    this.name = Fish.itemName;
 
     this.stackable = true;
     //this.animateToInventory = true;

@@ -51335,6 +51335,7 @@ class Stone extends item_1.Item {
         };
         this.tileX = 15;
         this.tileY = 0;
+        this.name = Stone.itemName;
         this.stackable = true;
     }
 }
@@ -51566,6 +51567,7 @@ class Apple extends usable_1.Usable {
         };
         this.tileX = 6;
         this.tileY = 2;
+        this.name = Apple.itemName;
         this.stackable = true;
     }
 }
@@ -51669,6 +51671,7 @@ class Fish extends usable_1.Usable {
         };
         this.tileX = 5;
         this.tileY = 2;
+        this.name = Fish.itemName;
         this.stackable = true;
         //this.animateToInventory = true;
     }
