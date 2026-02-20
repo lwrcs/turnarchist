@@ -1544,6 +1544,34 @@ export class Game {
     this.preLevelGenHoldBlack = false;
   }
 
+  /** Draw UI that should remain visible even during temporary blackout/fade (cursor, fps, version). */
+  private drawCursorFpsVersionOverlay(delta: number): void {
+    try {
+      // game version
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+      Game.fillText(
+        GameConstants.VERSION,
+        GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
+        1,
+      );
+      Game.ctx.globalAlpha = 1;
+
+      // fps
+      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+      Game.fillText(fps + "fps", 1, 1);
+      Game.ctx.globalAlpha = 1;
+    } catch {
+      // Never crash overlays.
+    }
+    try {
+      MouseCursor.getInstance().draw(delta, this.isMobile);
+    } catch {
+      // Never crash overlays.
+    }
+  }
+
   newGame = (seed?: number) => {
     // Clear all input listeners to prevent duplicates from previous game instances
     Input.mouseDownListeners.length = 0;
@@ -1809,6 +1837,7 @@ export class Game {
         Game.ctx.fillStyle = "rgba(0, 0, 0, 1)";
         Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
         this.drawTextScreen("loading save");
+        this.drawCursorFpsVersionOverlay(delta);
       } catch {
         // If UI rendering fails for any reason, don't crash the loop.
       } finally {
@@ -1879,6 +1908,9 @@ export class Game {
             }
           }
         }
+
+        // Draw cursor/debug overlay on top of fade/blackout.
+        this.drawCursorFpsVersionOverlay(delta);
       } catch {
         // Never crash the loop due to fade UI.
       } finally {
