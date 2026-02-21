@@ -17743,6 +17743,34 @@ class PawnEnemy extends enemy_1.Enemy {
         this.hit = () => {
             return this.damage;
         };
+        // Pawns can't move diagonally, so their hurt-retreat must be orthogonal-only.
+        this.retreatOrthogonal = (oldX, oldY) => {
+            const dxRaw = this.x - this.targetPlayer.x;
+            const dyRaw = this.y - this.targetPlayer.y;
+            const sx = Math.sign(dxRaw);
+            const sy = Math.sign(dyRaw);
+            const candidates = [];
+            const preferX = Math.abs(dxRaw) >= Math.abs(dyRaw);
+            if (preferX) {
+                if (sx !== 0)
+                    candidates.push({ x: this.x + sx, y: this.y });
+                if (sy !== 0)
+                    candidates.push({ x: this.x, y: this.y + sy });
+            }
+            else {
+                if (sy !== 0)
+                    candidates.push({ x: this.x, y: this.y + sy });
+                if (sx !== 0)
+                    candidates.push({ x: this.x + sx, y: this.y });
+            }
+            for (const { x, y } of candidates) {
+                if (!this.room.isTileEmpty(x, y))
+                    continue;
+                this.tryMove(x, y);
+                this.setDrawXY(oldX, oldY);
+                return;
+            }
+        };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
                 return;
@@ -17773,6 +17801,9 @@ class PawnEnemy extends enemy_1.Enemy {
                     return;
                 this.ticks++;
                 if (!this.seenPlayer) {
+                    // Don't carry a hurt-retreat across "sleeping" ticks.
+                    // (Matches the queen/king pattern: retreat is an immediate reaction.)
+                    this.justHurt = false;
                     let p = this.nearestPlayer();
                     if (p !== false) {
                         let [distance, player] = p;
@@ -17806,27 +17837,30 @@ class PawnEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        // Diagonal-only attack: if player is diagonally adjacent, attack without moving
-                        const dxToPlayer = this.targetPlayer.x - this.x;
-                        const dyToPlayer = this.targetPlayer.y - this.y;
-                        if (Math.abs(dxToPlayer) === 1 &&
-                            Math.abs(dyToPlayer) === 1 &&
-                            !this.unconscious) {
-                            this.targetPlayer.hurt(this.hit(), this.name, {
-                                source: { x: this.x, y: this.y },
-                            });
-                            this.drawX = 0.5 * (this.x - this.targetPlayer.x);
-                            this.drawY = 0.5 * (this.y - this.targetPlayer.y);
-                            if (this.targetPlayer === this.game.players[this.game.localPlayerID])
-                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                            this.conditionalHitWarnings();
-                            return;
-                        }
                         if (this.justHurt) {
-                            // Match bishop/queen behavior: retreat immediately after being hurt.
-                            this.retreat(oldX, oldY);
+                            // Retreat immediately after being hurt (before any attack logic).
+                            // This is what makes the pawn "jump back" on hit.
+                            if (this.targetPlayer) {
+                                this.retreatOrthogonal(oldX, oldY);
+                            }
+                            // If we don't have a target player (e.g. non-player damage), just consume the flag.
+                            this.justHurt = false;
                         }
                         else if (!this.unconscious) {
+                            // Diagonal-only attack: if player is diagonally adjacent, attack without moving
+                            const dxToPlayer = this.targetPlayer.x - this.x;
+                            const dyToPlayer = this.targetPlayer.y - this.y;
+                            if (Math.abs(dxToPlayer) === 1 && Math.abs(dyToPlayer) === 1) {
+                                this.targetPlayer.hurt(this.hit(), this.name, {
+                                    source: { x: this.x, y: this.y },
+                                });
+                                this.drawX = 0.5 * (this.x - this.targetPlayer.x);
+                                this.drawY = 0.5 * (this.y - this.targetPlayer.y);
+                                if (this.targetPlayer === this.game.players[this.game.localPlayerID])
+                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                this.conditionalHitWarnings();
+                                return;
+                            }
                             // Build grid like rookEnemy and use A* with orthogonal-only movement
                             const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
@@ -17842,8 +17876,9 @@ class PawnEnemy extends enemy_1.Enemy {
                                     this.setDrawXY(oldX, oldY);
                                 }
                             }
-                            this.conditionalHitWarnings();
                         }
+                        if (this.targetPlayer)
+                            this.conditionalHitWarnings();
                     }
                     let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
                         -1;
