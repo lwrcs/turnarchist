@@ -30,6 +30,43 @@ export class Key extends Usable {
     this.animateFrame = 0;
   }
 
+  private setPathGuideEnabled = (
+    player: Player,
+    enabled: boolean,
+    opts?: { syncNow?: boolean },
+  ) => {
+    // A key can only show a path on the floor it belongs to
+    if (this.depth === null) this.depth = player.depth;
+    if (this.depth !== player.depth) {
+      this.showPath = false;
+      this.tileX = 1;
+      this.tileY = 0;
+      return;
+    }
+
+    // Only one key may be active; disable all other keys across all players.
+    for (const p of Object.values(this.room.game.players)) {
+      for (const it of p.inventory.items) {
+        if (it instanceof Key && it !== this) {
+          it.showPath = false;
+          it.tileX = 1;
+          it.tileY = 0;
+        }
+      }
+    }
+
+    this.showPath = enabled;
+    this.tileX = this.showPath ? 2 : 1;
+    this.tileY = 0;
+
+    if (opts?.syncNow === true) {
+      const playerRoom = player.getRoom?.();
+      if (playerRoom) {
+        playerRoom.syncKeyPathParticles(this, player);
+      }
+    }
+  };
+
   getDescription = (): string => {
     //const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
     const depth = this.depth !== null ? "Depth: " + this.depth.toString() : "";
@@ -41,11 +78,14 @@ export class Key extends Usable {
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
         this.level.game.pushMessage("You found a key!");
-        this.level.game.pushMessage("Click key to toggle path guide");
+        this.level.game.pushMessage("Path guide enabled. Click key to toggle.");
 
         Sound.keyPickup();
         if (this.depth === null) this.depth = player.depth;
         console.log(this.depth);
+
+        // Automatically enable the path guide on pickup.
+        this.setPathGuideEnabled(player, true, { syncNow: true });
       }
     }
   };
@@ -60,20 +100,7 @@ export class Key extends Usable {
 
     // Toggle this key, and ensure all other keys are turned off
     const togglingOn = !this.showPath;
-
-    for (const p of Object.values(this.room.game.players)) {
-      for (const it of p.inventory.items) {
-        if (it instanceof Key && it !== this) {
-          it.showPath = false;
-          (it as Key).tileX = 1;
-          (it as Key).tileY = 0;
-        }
-      }
-    }
-
-    this.showPath = togglingOn;
-    this.tileX = this.showPath ? 2 : 1;
-    this.tileY = 0;
+    this.setPathGuideEnabled(player, togglingOn, { syncNow: true });
 
     const message = this.showPath ? "Showing path" : "Path hidden";
     // Pass this key and the player context so only this key's path is considered

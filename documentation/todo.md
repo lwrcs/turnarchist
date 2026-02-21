@@ -41,15 +41,15 @@
 - [ ] Bonfire
 - [ ] Traveller
 - [ ] Lore books
-- [ ] Bushes trees
+- [x] Bushes trees
 - [ ] Tall grass
 
-- [ ] Restructure caves
+- [x] Restructure caves
 - [ ] Make side paths mandatory
-- [ ] Disable saving for now
+- [x] Disable saving for now
 - [ ] increase xp rate of harder mobs
 - [ ] Add effects for emerald and amber rings
-- [ ] Make pawns jump back when hurt
+- [x] Make pawns jump back when hurt
 - [ ] Fix bug with boltcaster aiming at resources
 - [ ] Design castle premade levels
 - [ ] Make castle doors entrance
