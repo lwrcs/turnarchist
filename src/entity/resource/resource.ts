@@ -34,8 +34,14 @@ export class Resource extends Entity {
     return EntityType.RESOURCE;
   }
 
-  hurt = (playerHitBy: Player, damage: number) => {
-    if (!playerHitBy.inventory?.getWeapon().canMine) return;
+  hurt = (playerHitBy: Player | null, damage: number) => {
+    // Only players with a mining-capable weapon can mine resources.
+    // Non-player damage (enemies, projectiles, etc.) should not crash or award mining XP.
+    if (playerHitBy !== null && !(playerHitBy instanceof Player)) return;
+    if (playerHitBy instanceof Player) {
+      const weapon = playerHitBy.inventory?.getWeapon?.() ?? null;
+      if (weapon?.canMine !== true) return;
+    }
     this.healthBar.hurt();
     this.health -= damage;
     Sound.mine();
@@ -52,7 +58,7 @@ export class Resource extends Entity {
     Sound.delayPlay(Sound.breakRock, 50);
   };
 
-  kill = (player?: Player) => {
+  kill = (player?: Player | null) => {
     this.dead = true;
     if (this.cloned) return;
 
@@ -61,9 +67,11 @@ export class Resource extends Entity {
     this.room.deadEntities.push(deadEntity);
     this.removeLightSource(this.lightSource);
 
-    if ((player !== null && player.inventory?.canMine()) || player === null) {
+    const minedByPlayer =
+      player instanceof Player && player.inventory?.canMine?.() === true;
+    if (player === null || minedByPlayer) {
       this.dropLoot();
-      if (player) {
+      if (player instanceof Player) {
         const xp = computeMiningXp({
           nodeName: this.name,
           depth: this.room.depth,

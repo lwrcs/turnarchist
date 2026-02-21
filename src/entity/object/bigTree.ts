@@ -34,7 +34,7 @@ export class BigTree extends Entity {
     this.imageParticleY = 28;
     this.opaque = true;
     this.w = 2;
-    this.h = 2;
+    this.h = 1;
     this.hitSound = Sound.playBush;
     if (Random.rand() < 0.5)
       this.drops.push(new Apple(this.room, this.x, this.y));
@@ -65,7 +65,7 @@ export class BigTree extends Entity {
     const entity = this.room.hasEnemy(this.x, this.y - 1);
 
     this.tileX = this.health === 2 ? 13 : 15;
-    if (this.cloned === true) this.tileX = 15 ;
+    if (this.cloned === true) this.tileX = 15;
     if (this.dead) return;
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
@@ -83,7 +83,7 @@ export class BigTree extends Entity {
         2,
         3,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - 0.5,
+        this.y - this.drawYOffset - this.drawY - 0.75,
         2,
         3,
         this.room.shadeColor,
@@ -102,7 +102,7 @@ export class BigTree extends Entity {
         3,
         this.room.shadeColor,
         this.shadeAmount(),
-      );    
+      );
     }
     Game.ctx.restore();
   };

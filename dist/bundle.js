@@ -22139,7 +22139,7 @@ class BigTree extends entity_1.Entity {
                 this.updateSeeThroughAlpha(delta);
                 if (!this.cloned)
                     game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
-                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.5, 2, 3, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.75, 2, 3, this.room.shadeColor, this.shadeAmount());
                 game_1.Game.ctx.restore();
                 game_1.Game.drawObj(this.tileX, 18, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.5, 2, 3, this.room.shadeColor, this.shadeAmount());
             }
@@ -22160,7 +22160,7 @@ class BigTree extends entity_1.Entity {
         this.imageParticleY = 28;
         this.opaque = true;
         this.w = 2;
-        this.h = 2;
+        this.h = 1;
         this.hitSound = sound_1.Sound.playBush;
         if (random_1.Random.rand() < 0.5)
             this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
@@ -25081,6 +25081,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Resource = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/player.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
@@ -25091,8 +25092,15 @@ class Resource extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.hurt = (playerHitBy, damage) => {
-            if (!playerHitBy.inventory?.getWeapon().canMine)
+            // Only players with a mining-capable weapon can mine resources.
+            // Non-player damage (enemies, projectiles, etc.) should not crash or award mining XP.
+            if (playerHitBy !== null && !(playerHitBy instanceof player_1.Player))
                 return;
+            if (playerHitBy instanceof player_1.Player) {
+                const weapon = playerHitBy.inventory?.getWeapon?.() ?? null;
+                if (weapon?.canMine !== true)
+                    return;
+            }
             this.healthBar.hurt();
             this.health -= damage;
             sound_1.Sound.mine();
@@ -25115,9 +25123,10 @@ class Resource extends entity_1.Entity {
             const deadEntity = this.clone();
             this.room.deadEntities.push(deadEntity);
             this.removeLightSource(this.lightSource);
-            if ((player !== null && player.inventory?.canMine()) || player === null) {
+            const minedByPlayer = player instanceof player_1.Player && player.inventory?.canMine?.() === true;
+            if (player === null || minedByPlayer) {
                 this.dropLoot();
-                if (player) {
+                if (player instanceof player_1.Player) {
                     const xp = (0, skillBalance_1.computeMiningXp)({
                         nodeName: this.name,
                         depth: this.room.depth,
