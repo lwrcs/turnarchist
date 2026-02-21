@@ -37,6 +37,7 @@ export class KingEnemy extends Enemy {
     this.imageParticleX = 6;
     this.imageParticleY = 25; //includes crown particle
     this.baseDamage = 2;
+    this.enemyKillXpMultiplier = 2;
     if (drop) this.drop = drop;
     this.armored = true;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);

@@ -150,6 +150,16 @@ export class Entity extends Drawable {
   imageParticleY: number = 26;
   dropChance: number = 1;
   isEnemy: boolean;
+  /**
+   * Marks a spawned "boss" instance (as opposed to normal spawns of the same class).
+   * Used for combat XP tuning and any boss-specific behaviors.
+   */
+  isBossEnemy: boolean;
+  /**
+   * Additional per-enemy multiplier applied to combat XP gained from killing this enemy.
+   * Intended for manual tuning of enemies that are disproportionately dangerous for their HP.
+   */
+  enemyKillXpMultiplier: number;
   shielded: boolean;
   buffed: boolean;
   buffedBefore: boolean;
@@ -285,6 +295,8 @@ export class Entity extends Drawable {
     this.unconscious = false;
     this.dropChance = 0.02;
     this.isEnemy = false;
+    this.isBossEnemy = false;
+    this.enemyKillXpMultiplier = 1;
     this.shielded = false;
     this.shield = null;
     this.frame = 0;
@@ -1444,12 +1456,18 @@ export class Entity extends Drawable {
     const baseXp = computeEnemyKillBaseXp({
       maxHealth: this.defaultMaxHealth,
       depth: this.room.depth,
+      isBoss: this.isBossEnemy,
     });
     const skill = this.lastHitCombatSkill ?? "melee";
-    const xpMultiplier =
+    const weaponXpMultiplier =
       this.lastHitKillXpMultiplier && this.lastHitKillXpMultiplier > 0
         ? this.lastHitKillXpMultiplier
         : 1;
+    const enemyXpMultiplier =
+      this.enemyKillXpMultiplier && this.enemyKillXpMultiplier > 0
+        ? this.enemyKillXpMultiplier
+        : 1;
+    const xpMultiplier = weaponXpMultiplier * enemyXpMultiplier;
     const xp = Math.ceil(baseXp * xpMultiplier);
     globalEventBus.emit(EVENTS.ENEMY_KILLED, {
       enemyId: this.name,
@@ -1457,6 +1475,9 @@ export class Entity extends Drawable {
       skill,
       baseXp,
       xpMultiplier,
+      weaponXpMultiplier,
+      enemyXpMultiplier,
+      isBossEnemy: this.isBossEnemy,
     });
     const player = this.getPlayer();
     if (!player) return;

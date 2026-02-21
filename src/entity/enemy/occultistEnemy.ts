@@ -61,6 +61,7 @@ export class OccultistEnemy extends Enemy {
     this.pushable = false;
     this.chainPushable = false;
     this.destroyableByOthers = false;
+    this.enemyKillXpMultiplier = 2;
   }
 
   hit = (): number => {
@@ -202,14 +203,16 @@ export class OccultistEnemy extends Enemy {
 
   enemyShieldCandidates = (): Enemy[] => {
     const myZ = this.z ?? 0;
-    const uncappedCandidates = this.room.entities.filter((entity): entity is Enemy => {
-      if (!(entity instanceof Enemy)) return false;
-      if (entity === this) return false;
-      if (entity.dead) return false;
-      if (entity.shielded || entity.shieldedBefore) return false;
-      if ((entity.z ?? 0) !== myZ) return false;
-      return Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range;
-    });
+    const uncappedCandidates = this.room.entities.filter(
+      (entity): entity is Enemy => {
+        if (!(entity instanceof Enemy)) return false;
+        if (entity === this) return false;
+        if (entity.dead) return false;
+        if (entity.shielded || entity.shieldedBefore) return false;
+        if ((entity.z ?? 0) !== myZ) return false;
+        return Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range;
+      },
+    );
     return uncappedCandidates.slice(0, GameplaySettings.MAX_OCCULTIST_SHIELDS);
   };
 

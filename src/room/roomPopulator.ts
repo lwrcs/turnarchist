@@ -2166,6 +2166,7 @@ export class Populator {
       chosenBoss = boss.class?.add
         ? boss.class.add(room, room.game, x, y, ...extraArgs)
         : null;
+      if (chosenBoss) chosenBoss.isBossEnemy = true;
     } else {
       const position = room.getBigRandomEmptyPosition(tiles);
       if (position === null) return;
@@ -2173,6 +2174,7 @@ export class Populator {
       switch (depth) {
         case 0:
           const bigZombie = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie.isBossEnemy = true;
           bigZombie.dropTable = [
             "weapon",
             "equipment",
@@ -2183,12 +2185,14 @@ export class Populator {
           bigZombie.dropChance = 1;
           chosenBoss = bigZombie;
           const queen = QueenEnemy.add(room, room.game, x, y);
+          queen.isBossEnemy = true;
           queen.dropTable = ["weapon", "equipment"];
           queen.dropChance = 1;
           chosenBoss = queen;
           break;
         case 1:
           const bigSkull = BigSkullEnemy.add(room, room.game, x, y);
+          bigSkull.isBossEnemy = true;
           bigSkull.dropTable = [
             "weapon",
             "equipment",
@@ -2198,22 +2202,26 @@ export class Populator {
           ];
           chosenBoss = bigSkull;
           const spawner = this.addSpawners(room, Random.rand, 1);
+          spawner.isBossEnemy = true;
           //spawner.dropTable = ["weapon", "equipment"];
           spawner.dropChance = 1;
           chosenBoss = spawner;
           break;
         case 2:
           const spawner2 = this.addSpawners(room, Random.rand, 1);
+          spawner2.isBossEnemy = true;
           //spawner.dropTable = ["weapon", "equipment"];
           spawner2.dropChance = 1;
           chosenBoss = spawner2;
           const occultist = this.addOccultists(room, Random.rand, 1);
+          occultist.isBossEnemy = true;
           //occultist.dropTable = ["weapon", "equipment"];
           occultist.dropChance = 1;
           chosenBoss = occultist;
           break;
         case 3:
           const bigZombie2 = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie2.isBossEnemy = true;
           bigZombie2.dropTable = [
             "weapon",
             "equipment",
@@ -2224,6 +2232,7 @@ export class Populator {
           bigZombie2.dropChance = 1;
           chosenBoss = bigZombie2;
           const bigZombie3 = BigZombieEnemy.add(room, room.game, x, y);
+          bigZombie3.isBossEnemy = true;
           bigZombie3.dropTable = [
             "weapon",
             "equipment",
@@ -2234,12 +2243,14 @@ export class Populator {
           bigZombie3.dropChance = 1;
           chosenBoss = bigZombie3;
           const occultist2 = this.addOccultists(room, Random.rand, 1);
+          occultist2.isBossEnemy = true;
           //occultist.dropTable = ["weapon", "equipment"];
           occultist2.dropChance = 1;
           chosenBoss = occultist2;
           break;
         case 4:
           const warden = WardenEnemy.add(room, room.game, x, y);
+          warden.isBossEnemy = true;
           warden.dropTable = ["weapon", "equipment"];
           warden.dropChance = 1;
           chosenBoss = warden;
@@ -2248,7 +2259,7 @@ export class Populator {
           break;
       }
     }
-    chosenBoss.drops.push(...drops);
+    if (chosenBoss) chosenBoss.drops.push(...drops);
   }
 
   private addChests(room: Room, numChests: number, rand: () => number) {
@@ -3497,7 +3508,8 @@ export class Populator {
       const spawnTable = this.getEnemyPoolForDepth(
         Math.max(0, room.depth),
       ).filter((t) => t !== 7);
-      Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
+      const boss = Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
+      if (boss) boss.isBossEnemy = true;
     };
     const trySpawnBossNear = (target: { x: number; y: number }) => {
       const tiles = room
@@ -3561,7 +3573,10 @@ export class Populator {
       boss.class === Spawner && !boss.additionalParams?.length
         ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
         : (boss.additionalParams ?? []);
-    if (boss.class?.add) boss.class.add(room, room.game, x, y, ...extraArgs);
+    if (boss.class?.add) {
+      const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);
+      if (spawned) spawned.isBossEnemy = true;
+    }
   }
 
   /**

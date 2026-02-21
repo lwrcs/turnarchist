@@ -38,6 +38,7 @@ export class QueenEnemy extends Enemy {
     this.jumpHeight = 1;
     this.imageParticleX = 6;
     this.imageParticleY = 28; //includes crown particle
+    this.enemyKillXpMultiplier = 2;
     if (drop) this.drop = drop;
     this.armored = true;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);

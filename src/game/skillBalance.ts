@@ -2,6 +2,8 @@ import type { Skill } from "./skills";
 
 export const ENEMY_XP = {
   enemyHpMultiplier: 5,
+  // Bosses should be meaningfully better XP than regular mobs with similar HP.
+  bossMultiplier: 1.5,
   // Combat skill XP scales with depth so deeper floors are meaningfully better for training,
   // but keep the curve tame enough that weapon multipliers remain the primary "tier" lever.
   depthMultiplierBase: 1.3,
@@ -10,10 +12,12 @@ export const ENEMY_XP = {
 export function computeEnemyKillBaseXp(args: {
   maxHealth: number;
   depth: number;
+  isBoss: boolean;
 }): number {
   const depthMultiplier = Math.pow(ENEMY_XP.depthMultiplierBase, args.depth);
+  const bossMultiplier = args.isBoss ? ENEMY_XP.bossMultiplier : 1;
   return Math.ceil(
-    args.maxHealth * ENEMY_XP.enemyHpMultiplier * depthMultiplier,
+    args.maxHealth * ENEMY_XP.enemyHpMultiplier * depthMultiplier * bossMultiplier,
   );
 }
 

@@ -16257,6 +16257,7 @@ class ExalterEnemy extends enemy_1.Enemy {
         this.buffedBefore = false;
         this.buffedEnemies = [];
         this.shadeColor = "#000000";
+        this.enemyKillXpMultiplier = 2;
         this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [10, 15, 50], 3.5, 20);
         this.addLightSource(this.lightSource);
         this.room.updateLighting();
@@ -17068,6 +17069,7 @@ class KingEnemy extends enemy_1.Enemy {
         this.imageParticleX = 6;
         this.imageParticleY = 25; //includes crown particle
         this.baseDamage = 2;
+        this.enemyKillXpMultiplier = 2;
         if (drop)
             this.drop = drop;
         this.armored = true;
@@ -17839,6 +17841,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.pushable = false;
         this.chainPushable = false;
         this.destroyableByOthers = false;
+        this.enemyKillXpMultiplier = 2;
     }
 }
 exports.OccultistEnemy = OccultistEnemy;
@@ -18266,6 +18269,7 @@ class QueenEnemy extends enemy_1.Enemy {
         this.jumpHeight = 1;
         this.imageParticleX = 6;
         this.imageParticleY = 28; //includes crown particle
+        this.enemyKillXpMultiplier = 2;
         if (drop)
             this.drop = drop;
         this.armored = true;
@@ -21387,11 +21391,16 @@ class Entity extends drawable_1.Drawable {
             const baseXp = (0, skillBalance_1.computeEnemyKillBaseXp)({
                 maxHealth: this.defaultMaxHealth,
                 depth: this.room.depth,
+                isBoss: this.isBossEnemy,
             });
             const skill = this.lastHitCombatSkill ?? "melee";
-            const xpMultiplier = this.lastHitKillXpMultiplier && this.lastHitKillXpMultiplier > 0
+            const weaponXpMultiplier = this.lastHitKillXpMultiplier && this.lastHitKillXpMultiplier > 0
                 ? this.lastHitKillXpMultiplier
                 : 1;
+            const enemyXpMultiplier = this.enemyKillXpMultiplier && this.enemyKillXpMultiplier > 0
+                ? this.enemyKillXpMultiplier
+                : 1;
+            const xpMultiplier = weaponXpMultiplier * enemyXpMultiplier;
             const xp = Math.ceil(baseXp * xpMultiplier);
             eventBus_1.globalEventBus.emit(events_1.EVENTS.ENEMY_KILLED, {
                 enemyId: this.name,
@@ -21399,6 +21408,9 @@ class Entity extends drawable_1.Drawable {
                 skill,
                 baseXp,
                 xpMultiplier,
+                weaponXpMultiplier,
+                enemyXpMultiplier,
+                isBossEnemy: this.isBossEnemy,
             });
             const player = this.getPlayer();
             if (!player)
@@ -22016,6 +22028,8 @@ class Entity extends drawable_1.Drawable {
         this.unconscious = false;
         this.dropChance = 0.02;
         this.isEnemy = false;
+        this.isBossEnemy = false;
+        this.enemyKillXpMultiplier = 1;
         this.shielded = false;
         this.shield = null;
         this.frame = 0;
@@ -43077,13 +43091,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
 exports.ENEMY_XP = {
     enemyHpMultiplier: 5,
+    // Bosses should be meaningfully better XP than regular mobs with similar HP.
+    bossMultiplier: 1.5,
     // Combat skill XP scales with depth so deeper floors are meaningfully better for training,
     // but keep the curve tame enough that weapon multipliers remain the primary "tier" lever.
     depthMultiplierBase: 1.3,
 };
 function computeEnemyKillBaseXp(args) {
     const depthMultiplier = Math.pow(exports.ENEMY_XP.depthMultiplierBase, args.depth);
-    return Math.ceil(args.maxHealth * exports.ENEMY_XP.enemyHpMultiplier * depthMultiplier);
+    const bossMultiplier = args.isBoss ? exports.ENEMY_XP.bossMultiplier : 1;
+    return Math.ceil(args.maxHealth * exports.ENEMY_XP.enemyHpMultiplier * depthMultiplier * bossMultiplier);
 }
 exports.computeEnemyKillBaseXp = computeEnemyKillBaseXp;
 exports.GATHERING_XP = {
@@ -74477,6 +74494,8 @@ class Populator {
             chosenBoss = boss.class?.add
                 ? boss.class.add(room, room.game, x, y, ...extraArgs)
                 : null;
+            if (chosenBoss)
+                chosenBoss.isBossEnemy = true;
         }
         else {
             const position = room.getBigRandomEmptyPosition(tiles);
@@ -74486,6 +74505,7 @@ class Populator {
             switch (depth) {
                 case 0:
                     const bigZombie = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
+                    bigZombie.isBossEnemy = true;
                     bigZombie.dropTable = [
                         "weapon",
                         "equipment",
@@ -74496,12 +74516,14 @@ class Populator {
                     bigZombie.dropChance = 1;
                     chosenBoss = bigZombie;
                     const queen = queenEnemy_1.QueenEnemy.add(room, room.game, x, y);
+                    queen.isBossEnemy = true;
                     queen.dropTable = ["weapon", "equipment"];
                     queen.dropChance = 1;
                     chosenBoss = queen;
                     break;
                 case 1:
                     const bigSkull = bigSkullEnemy_1.BigSkullEnemy.add(room, room.game, x, y);
+                    bigSkull.isBossEnemy = true;
                     bigSkull.dropTable = [
                         "weapon",
                         "equipment",
@@ -74511,22 +74533,26 @@ class Populator {
                     ];
                     chosenBoss = bigSkull;
                     const spawner = this.addSpawners(room, random_1.Random.rand, 1);
+                    spawner.isBossEnemy = true;
                     //spawner.dropTable = ["weapon", "equipment"];
                     spawner.dropChance = 1;
                     chosenBoss = spawner;
                     break;
                 case 2:
                     const spawner2 = this.addSpawners(room, random_1.Random.rand, 1);
+                    spawner2.isBossEnemy = true;
                     //spawner.dropTable = ["weapon", "equipment"];
                     spawner2.dropChance = 1;
                     chosenBoss = spawner2;
                     const occultist = this.addOccultists(room, random_1.Random.rand, 1);
+                    occultist.isBossEnemy = true;
                     //occultist.dropTable = ["weapon", "equipment"];
                     occultist.dropChance = 1;
                     chosenBoss = occultist;
                     break;
                 case 3:
                     const bigZombie2 = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
+                    bigZombie2.isBossEnemy = true;
                     bigZombie2.dropTable = [
                         "weapon",
                         "equipment",
@@ -74537,6 +74563,7 @@ class Populator {
                     bigZombie2.dropChance = 1;
                     chosenBoss = bigZombie2;
                     const bigZombie3 = bigZombieEnemy_1.BigZombieEnemy.add(room, room.game, x, y);
+                    bigZombie3.isBossEnemy = true;
                     bigZombie3.dropTable = [
                         "weapon",
                         "equipment",
@@ -74547,12 +74574,14 @@ class Populator {
                     bigZombie3.dropChance = 1;
                     chosenBoss = bigZombie3;
                     const occultist2 = this.addOccultists(room, random_1.Random.rand, 1);
+                    occultist2.isBossEnemy = true;
                     //occultist.dropTable = ["weapon", "equipment"];
                     occultist2.dropChance = 1;
                     chosenBoss = occultist2;
                     break;
                 case 4:
                     const warden = wardenEnemy_1.WardenEnemy.add(room, room.game, x, y);
+                    warden.isBossEnemy = true;
                     warden.dropTable = ["weapon", "equipment"];
                     warden.dropChance = 1;
                     chosenBoss = warden;
@@ -74561,7 +74590,8 @@ class Populator {
                     break;
             }
         }
-        chosenBoss.drops.push(...drops);
+        if (chosenBoss)
+            chosenBoss.drops.push(...drops);
     }
     addChests(room, numChests, rand) {
         // add chests
@@ -75213,7 +75243,9 @@ class Populator {
             if (!pos)
                 return;
             const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
-            spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
+            const boss = spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
+            if (boss)
+                boss.isBossEnemy = true;
         };
         const trySpawnBossNear = (target) => {
             const tiles = room
@@ -75272,8 +75304,11 @@ class Populator {
         const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
             ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
             : (boss.additionalParams ?? []);
-        if (boss.class?.add)
-            boss.class.add(room, room.game, x, y, ...extraArgs);
+        if (boss.class?.add) {
+            const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);
+            if (spawned)
+                spawned.isBossEnemy = true;
+        }
     }
     /**
      * Places a VendingMachine in an empty wall.

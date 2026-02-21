@@ -44,6 +44,7 @@ export class ExalterEnemy extends Enemy {
     this.buffedBefore = false;
     this.buffedEnemies = [];
     this.shadeColor = "#000000";
+    this.enemyKillXpMultiplier = 2;
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,

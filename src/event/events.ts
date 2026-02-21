@@ -65,6 +65,9 @@ export interface EnemyKilledEvent {
   skill: Skill;
   baseXp?: number;
   xpMultiplier?: number;
+  weaponXpMultiplier?: number;
+  enemyXpMultiplier?: number;
+  isBossEnemy?: boolean;
 }
 
 export interface SkillLevelUpEvent {
