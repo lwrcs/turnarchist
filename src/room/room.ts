@@ -524,7 +524,11 @@ export class Room {
     }
   }
 
-  getDrawProfileEntries(): Array<{ name: string; calls: number; totalMs: number }> {
+  getDrawProfileEntries(): Array<{
+    name: string;
+    calls: number;
+    totalMs: number;
+  }> {
     const out: Array<{ name: string; calls: number; totalMs: number }> = [];
     for (const [name, c] of this._drawProfile) {
       out.push({ name, calls: c.calls, totalMs: c.totalMs });
@@ -919,6 +923,7 @@ export class Room {
   private addEnemies(numEnemies: number, rand: () => number) {
     if (GameplaySettings.NO_ENEMIES === true) return;
     if (this.envType === EnvType.FOREST) numEnemies /= 2;
+    if (this.envType === EnvType.CAVE) numEnemies /= 2;
     // Get all empty tiles in the room
     let tiles = this.getEmptyTiles();
     if (tiles === null) return;
@@ -1572,9 +1577,9 @@ export class Room {
     return undefined;
   }
 
-  findPrimaryDownLadderCoords(
-    opts?: { includeSidePath?: boolean },
-  ): { x: number; y: number } | undefined {
+  findPrimaryDownLadderCoords(opts?: {
+    includeSidePath?: boolean;
+  }): { x: number; y: number } | undefined {
     const includeSidePath = opts?.includeSidePath !== false;
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
@@ -1647,7 +1652,8 @@ export class Room {
 
   computerTurn = () => {
     const nowMs = (): number =>
-      typeof performance !== "undefined" && typeof performance.now === "function"
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
         ? performance.now()
         : Date.now();
 
@@ -1658,9 +1664,18 @@ export class Room {
           depth: this.depth,
           counts: {} as Record<string, number>,
           ms: {} as Record<string, number>,
-          enemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
-          nonEnemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
-          projectileProcessByType: {} as Record<string, { calls: number; totalMs: number }>,
+          enemyTicksByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
+          nonEnemyTicksByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
+          projectileProcessByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
         }
       : null;
 
@@ -1673,9 +1688,7 @@ export class Room {
       prof.counts[key] = (prof.counts[key] ?? 0) + c;
     };
     const addTypeMs = (
-      table:
-        | Record<string, { calls: number; totalMs: number }>
-        | undefined,
+      table: Record<string, { calls: number; totalMs: number }> | undefined,
       name: string,
       deltaMs: number,
     ) => {
@@ -1761,7 +1774,11 @@ export class Room {
       }
       if (prof) {
         const dt = nowMs() - t0;
-        addTypeMs(prof.projectileProcessByType, p.constructor?.name ?? "Projectile", dt);
+        addTypeMs(
+          prof.projectileProcessByType,
+          p.constructor?.name ?? "Projectile",
+          dt,
+        );
       }
     }
     addMs("projectiles", nowMs() - tProj);
@@ -2761,7 +2778,8 @@ export class Room {
     // Defensive: keep within [0,1] and avoid NaN/negative gamma.
     const a = this.clamp(alpha01, 0, 1);
     const gamma =
-      typeof GameConstants.SHADE_GAMMA === "number" && GameConstants.SHADE_GAMMA > 0
+      typeof GameConstants.SHADE_GAMMA === "number" &&
+      GameConstants.SHADE_GAMMA > 0
         ? GameConstants.SHADE_GAMMA
         : 1;
     const mul =
@@ -2851,7 +2869,8 @@ export class Room {
         // Fade-tile cache depends on the blurred shade source (derived from softVis),
         // so invalidate it whenever softVis smoothing advances too.
         if (this._inlineFadeSliceCache) this._inlineFadeSliceCache.clear();
-        if (this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder.length = 0;
+        if (this._inlineFadeSliceCacheOrder)
+          this._inlineFadeSliceCacheOrder.length = 0;
         this._inlineFadeSliceCacheLightingVersion = -1;
         this._inlineFadeSliceCacheSoftVisVersion = -1;
 
@@ -2869,7 +2888,9 @@ export class Room {
     Game.ctx.save();
     try {
       // Clear the offscreen color canvas
-      const tClear = this.drawProfileStart("Room.drawColorLayer.clearOffscreen");
+      const tClear = this.drawProfileStart(
+        "Room.drawColorLayer.clearOffscreen",
+      );
       this.colorOffscreenCtx.clearRect(
         0,
         0,
@@ -2909,7 +2930,9 @@ export class Room {
       }
       this.drawProfileEnd("Room.drawColorLayer.fillTiles", tFill);
 
-      const tBlur = this.drawProfileStart("Room.drawColorLayer.blurAndComposite");
+      const tBlur = this.drawProfileStart(
+        "Room.drawColorLayer.blurAndComposite",
+      );
       // Choose blur method based on setting
       if (GameConstants.USE_WEBGL_BLUR) {
         // Use WebGL blur with caching
@@ -3036,12 +3059,13 @@ export class Room {
 
     Game.ctx.save();
     try {
-
       Game.ctx.globalCompositeOperation =
         GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
 
       // Clear the offscreen shade canvas
-      const tClear = this.drawProfileStart("Room.drawShadeLayer.clearOffscreen");
+      const tClear = this.drawProfileStart(
+        "Room.drawShadeLayer.clearOffscreen",
+      );
       this.shadeOffscreenCtx.clearRect(
         0,
         0,
@@ -3148,7 +3172,7 @@ export class Room {
                 break;
             }
           }
-        const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
+          const alphaMultiplier = !GameConstants.SMOOTH_LIGHTING ? 0.5 : 1.25;
 
           const fillStyle = `rgba(0, 0, 0, ${computedAlpha * alphaMultiplier})`;
 
@@ -3167,7 +3191,9 @@ export class Room {
       }
       this.drawProfileEnd("Room.drawShadeLayer.fillTiles", tFill);
 
-      const tBlur = this.drawProfileStart("Room.drawShadeLayer.blurAndComposite");
+      const tBlur = this.drawProfileStart(
+        "Room.drawShadeLayer.blurAndComposite",
+      );
       // Choose blur method based on setting
       if (GameConstants.USE_WEBGL_BLUR) {
         // Use WebGL blur with caching
@@ -3542,7 +3568,9 @@ export class Room {
     Game.ctx.save();
     try {
       // Clear the offscreen bloom canvas
-      const tClear = this.drawProfileStart("Room.drawBloomLayer.clearOffscreen");
+      const tClear = this.drawProfileStart(
+        "Room.drawBloomLayer.clearOffscreen",
+      );
       this.bloomOffscreenCtx.clearRect(
         0,
         0,
@@ -3584,8 +3612,9 @@ export class Room {
         if (player.getRoom() !== this) continue;
         if ((player?.z ?? 0) !== zLayer) continue;
 
-        const [r, g, b] =
-          this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
+        const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [
+          255, 255, 255,
+        ];
         player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
         player.bloomAlpha = 0.5;
         player.updateBloom(delta);
@@ -3647,7 +3676,9 @@ export class Room {
       }
       this.drawProfileEnd("Room.drawBloomLayer.drawSources", tSrc);
 
-      const tBlur = this.drawProfileStart("Room.drawBloomLayer.blurAndComposite");
+      const tBlur = this.drawProfileStart(
+        "Room.drawBloomLayer.blurAndComposite",
+      );
       // Choose blur method based on setting
       if (GameConstants.USE_WEBGL_BLUR) {
         // Use WebGL blur with caching
@@ -3729,7 +3760,9 @@ export class Room {
     const tTotal = this.drawProfileStart("Room.drawEntities.total");
 
     try {
-      const tCleanup = this.drawProfileStart("Room.drawEntities.particleCleanup");
+      const tCleanup = this.drawProfileStart(
+        "Room.drawEntities.particleCleanup",
+      );
       // Render-time particle cleanup (in-place, avoids allocations).
       // Note: turn-time cleanup exists in `clearDeadStuff()`, but that may not run
       // while the game is idling; bubbles are spawned from `Player.draw()`.
@@ -3760,7 +3793,8 @@ export class Room {
           "Room.drawEntities.inlineShadePrep",
         );
         let useInlineShade =
-          GameConstants.SHADE_ENABLED && GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+          GameConstants.SHADE_ENABLED &&
+          GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
         let shadeSrc: HTMLCanvasElement | null = null;
         if (useInlineShade && !GameConstants.SHADING_DISABLED) {
           // Cache the blurred shade source across frames when soft visibility is unchanged.
@@ -3799,7 +3833,8 @@ export class Room {
         let tiles = [];
         // Iterate only within the currently visible tile bounds (with a small buffer)
         const tileBuffer = 3;
-        const { minX, maxX, minY, maxY } = this.getVisibleTileBounds(tileBuffer);
+        const { minX, maxX, minY, maxY } =
+          this.getVisibleTileBounds(tileBuffer);
         for (let x = minX; x <= maxX; x++) {
           for (let y = minY; y <= maxY; y++) {
             const tile = this.roomArray[x][y];
@@ -3826,7 +3861,9 @@ export class Room {
         }
         this.drawProfileEnd("Room.drawEntities.collectTiles", tTiles);
 
-        const tAssemble = this.drawProfileStart("Room.drawEntities.assembleDrawables");
+        const tAssemble = this.drawProfileStart(
+          "Room.drawEntities.assembleDrawables",
+        );
         let drawables: Drawable[] = [];
         const activeZ =
           this.game?.players?.[this.game.localPlayerID]?.z ?? zLayer ?? 0;
@@ -3866,7 +3903,8 @@ export class Room {
           const bufferTiles = 3;
           for (let ox = 0; ox < dw; ox++) {
             for (let oy = 0; oy < dh; oy++) {
-              if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles)) return true;
+              if (this.isTileOnScreen(dx + ox, dy + oy, bufferTiles))
+                return true;
             }
           }
           return false;
@@ -3891,41 +3929,41 @@ export class Room {
 
         const tSort = this.drawProfileStart("Room.drawEntities.sort");
         drawables.sort((a, b) => {
-      if (a instanceof Floor || a instanceof SpawnFloor) {
-        return -1;
-      } else if (b instanceof Floor || b instanceof SpawnFloor) {
-        return 1;
-      } else if (a instanceof Decoration) {
-        return -1;
-      } else if (b instanceof Decoration) {
-        return 1;
-      }
-      if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
-        const aAbove = (a as any).shouldDrawAbovePlayer === true;
-        const bAbove = (b as any).shouldDrawAbovePlayer === true;
-        // Special-case: when tied in Y, draw flagged objects above players
-        if (a instanceof Player && bAbove) {
-          return -1; // player before flagged -> flagged drawn later
-        } else if (b instanceof Player && aAbove) {
-          return 1; // flagged after player
-        }
-        // Default near-equal behavior
-        if (a instanceof Player) {
-          return 1;
-        } else if (b instanceof Player) {
-          return -1;
-        } else if (a instanceof Entity) {
-          return 1;
-        } else if (b instanceof Entity) {
-          return -1;
-        } else if (a instanceof Particle) {
-          return 1;
-        } else if (b instanceof Particle) {
-          return -1;
-        } else return 0;
-      } else {
-        return a.drawableY - b.drawableY;
-      }
+          if (a instanceof Floor || a instanceof SpawnFloor) {
+            return -1;
+          } else if (b instanceof Floor || b instanceof SpawnFloor) {
+            return 1;
+          } else if (a instanceof Decoration) {
+            return -1;
+          } else if (b instanceof Decoration) {
+            return 1;
+          }
+          if (Math.abs(a.drawableY - b.drawableY) < 0.1) {
+            const aAbove = (a as any).shouldDrawAbovePlayer === true;
+            const bAbove = (b as any).shouldDrawAbovePlayer === true;
+            // Special-case: when tied in Y, draw flagged objects above players
+            if (a instanceof Player && bAbove) {
+              return -1; // player before flagged -> flagged drawn later
+            } else if (b instanceof Player && aAbove) {
+              return 1; // flagged after player
+            }
+            // Default near-equal behavior
+            if (a instanceof Player) {
+              return 1;
+            } else if (b instanceof Player) {
+              return -1;
+            } else if (a instanceof Entity) {
+              return 1;
+            } else if (b instanceof Entity) {
+              return -1;
+            } else if (a instanceof Particle) {
+              return 1;
+            } else if (b instanceof Particle) {
+              return -1;
+            } else return 0;
+          } else {
+            return a.drawableY - b.drawableY;
+          }
         });
         this.drawProfileEnd("Room.drawEntities.sort", tSort);
 
@@ -3937,7 +3975,9 @@ export class Room {
             const tx = (d as Tile).x;
             const ty = (d as Tile).y;
             const sv =
-              this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+              this.softVis[tx] && this.softVis[tx][ty]
+                ? this.softVis[tx][ty]
+                : 0;
             if (sv > 0) {
               const prevOp = Game.ctx
                 .globalCompositeOperation as GlobalCompositeOperation;
@@ -3985,22 +4025,27 @@ export class Room {
                   ? "Room.drawEntities.inlineShadeTileFade"
                   : "Room.drawEntities.inlineShadeTile",
               );
-              if (
-                fade &&
-                GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true
-              ) {
+              if (fade && GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true) {
                 // Cache is valid only while lighting version is unchanged.
                 if (
-                  this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate ||
-                  this._inlineFadeSliceCacheSoftVisVersion !== this._softVisVersion
+                  this._inlineFadeSliceCacheLightingVersion !==
+                    this.lastLightingUpdate ||
+                  this._inlineFadeSliceCacheSoftVisVersion !==
+                    this._softVisVersion
                 ) {
-                  this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
-                  this._inlineFadeSliceCacheSoftVisVersion = this._softVisVersion;
-                  if (this._inlineFadeSliceCache) this._inlineFadeSliceCache.clear();
-                  if (this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder.length = 0;
+                  this._inlineFadeSliceCacheLightingVersion =
+                    this.lastLightingUpdate;
+                  this._inlineFadeSliceCacheSoftVisVersion =
+                    this._softVisVersion;
+                  if (this._inlineFadeSliceCache)
+                    this._inlineFadeSliceCache.clear();
+                  if (this._inlineFadeSliceCacheOrder)
+                    this._inlineFadeSliceCacheOrder.length = 0;
                 }
-                if (!this._inlineFadeSliceCache) this._inlineFadeSliceCache = new Map();
-                if (!this._inlineFadeSliceCacheOrder) this._inlineFadeSliceCacheOrder = [];
+                if (!this._inlineFadeSliceCache)
+                  this._inlineFadeSliceCache = new Map();
+                if (!this._inlineFadeSliceCacheOrder)
+                  this._inlineFadeSliceCacheOrder = [];
 
                 const key = `${zLayer}|${tx}|${ty}|${fade}`;
                 const cached = this._inlineFadeSliceCache.get(key);
@@ -4008,7 +4053,11 @@ export class Room {
                   const tHit = this.drawProfileStart(
                     "Room.drawEntities.inlineShadeTileFadeCacheHit",
                   );
-                  Game.ctx.drawImage(cached, tx * GameConstants.TILESIZE, ty * GameConstants.TILESIZE);
+                  Game.ctx.drawImage(
+                    cached,
+                    tx * GameConstants.TILESIZE,
+                    ty * GameConstants.TILESIZE,
+                  );
                   this.drawProfileEnd(
                     "Room.drawEntities.inlineShadeTileFadeCacheHit",
                     tHit,
@@ -4030,9 +4079,9 @@ export class Room {
                       const c = document.createElement("canvas");
                       c.width = ts;
                       c.height = ts;
-                      const mctx = c.getContext("2d") as
-                        | CanvasRenderingContext2D
-                        | null;
+                      const mctx = c.getContext(
+                        "2d",
+                      ) as CanvasRenderingContext2D | null;
                       if (!mctx) return c;
                       let grad: CanvasGradient;
                       if (dir === "right") {
@@ -4069,7 +4118,9 @@ export class Room {
                   const c = document.createElement("canvas");
                   c.width = ts;
                   c.height = ts;
-                  const cctx = c.getContext("2d") as CanvasRenderingContext2D | null;
+                  const cctx = c.getContext(
+                    "2d",
+                  ) as CanvasRenderingContext2D | null;
                   if (cctx) {
                     cctx.globalCompositeOperation = "copy";
                     cctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
@@ -4116,7 +4167,9 @@ export class Room {
         }
         this.drawProfileEnd("Room.drawEntities.drawablesDraw", tDraw);
 
-        const tZDebug = this.drawProfileStart("Room.drawEntities.zDebugMarkers");
+        const tZDebug = this.drawProfileStart(
+          "Room.drawEntities.zDebugMarkers",
+        );
         // Z-debug: draw stairs markers last so they're visible even if embedded in walls.
         if (GameConstants.Z_DEBUG_MODE) {
           if (zLayer === 0 && this.zDebugUpStairs) {

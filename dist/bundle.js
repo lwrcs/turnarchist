@@ -66908,7 +66908,8 @@ class Room {
             this.clearDeadStuff();
         };
         this.computerTurn = () => {
-            const nowMs = () => typeof performance !== "undefined" && typeof performance.now === "function"
+            const nowMs = () => typeof performance !== "undefined" &&
+                typeof performance.now === "function"
                 ? performance.now()
                 : Date.now();
             const prof = this.game.tickProfileEnabled
@@ -67755,7 +67756,8 @@ class Room {
         this.applyShadeGammaAndMultiplier = (alpha01) => {
             // Defensive: keep within [0,1] and avoid NaN/negative gamma.
             const a = this.clamp(alpha01, 0, 1);
-            const gamma = typeof gameConstants_1.GameConstants.SHADE_GAMMA === "number" && gameConstants_1.GameConstants.SHADE_GAMMA > 0
+            const gamma = typeof gameConstants_1.GameConstants.SHADE_GAMMA === "number" &&
+                gameConstants_1.GameConstants.SHADE_GAMMA > 0
                 ? gameConstants_1.GameConstants.SHADE_GAMMA
                 : 1;
             const mul = typeof gameConstants_1.GameConstants.SHADE_ALPHA_MULTIPLIER === "number"
@@ -68410,7 +68412,9 @@ class Room {
                         continue;
                     if ((player?.z ?? 0) !== zLayer)
                         continue;
-                    const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [255, 255, 255];
+                    const [r, g, b] = this.softCol?.[player.x]?.[player.y] ?? [
+                        255, 255, 255,
+                    ];
                     player.bloomColor = `rgba(${r}, ${g}, ${b}, 1)`;
                     player.bloomAlpha = 0.5;
                     player.updateBloom(delta);
@@ -68530,7 +68534,8 @@ class Room {
                 try {
                     // If using inline sliced shade, prepare the blurred shade source once
                     const tInlineShadePrep = this.drawProfileStart("Room.drawEntities.inlineShadePrep");
-                    let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED && gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
+                    let useInlineShade = gameConstants_1.GameConstants.SHADE_ENABLED &&
+                        gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER;
                     let shadeSrc = null;
                     if (useInlineShade && !gameConstants_1.GameConstants.SHADING_DISABLED) {
                         // Cache the blurred shade source across frames when soft visibility is unchanged.
@@ -68679,7 +68684,9 @@ class Room {
                         if (useInlineShade && shadeSrc && d instanceof tile_1.Tile) {
                             const tx = d.x;
                             const ty = d.y;
-                            const sv = this.softVis[tx] && this.softVis[tx][ty] ? this.softVis[tx][ty] : 0;
+                            const sv = this.softVis[tx] && this.softVis[tx][ty]
+                                ? this.softVis[tx][ty]
+                                : 0;
                             if (sv > 0) {
                                 const prevOp = game_1.Game.ctx
                                     .globalCompositeOperation;
@@ -68723,13 +68730,16 @@ class Room {
                                 const tShadeTile = this.drawProfileStart(fade
                                     ? "Room.drawEntities.inlineShadeTileFade"
                                     : "Room.drawEntities.inlineShadeTile");
-                                if (fade &&
-                                    gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true) {
+                                if (fade && gameConstants_1.GameConstants.INLINE_SHADE_FADE_TILE_CACHE === true) {
                                     // Cache is valid only while lighting version is unchanged.
-                                    if (this._inlineFadeSliceCacheLightingVersion !== this.lastLightingUpdate ||
-                                        this._inlineFadeSliceCacheSoftVisVersion !== this._softVisVersion) {
-                                        this._inlineFadeSliceCacheLightingVersion = this.lastLightingUpdate;
-                                        this._inlineFadeSliceCacheSoftVisVersion = this._softVisVersion;
+                                    if (this._inlineFadeSliceCacheLightingVersion !==
+                                        this.lastLightingUpdate ||
+                                        this._inlineFadeSliceCacheSoftVisVersion !==
+                                            this._softVisVersion) {
+                                        this._inlineFadeSliceCacheLightingVersion =
+                                            this.lastLightingUpdate;
+                                        this._inlineFadeSliceCacheSoftVisVersion =
+                                            this._softVisVersion;
                                         if (this._inlineFadeSliceCache)
                                             this._inlineFadeSliceCache.clear();
                                         if (this._inlineFadeSliceCacheOrder)
@@ -70053,6 +70063,8 @@ class Room {
         if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
             return;
         if (this.envType === environmentTypes_1.EnvType.FOREST)
+            numEnemies /= 2;
+        if (this.envType === environmentTypes_1.EnvType.CAVE)
             numEnemies /= 2;
         // Get all empty tiles in the room
         let tiles = this.getEmptyTiles();
@@ -72280,6 +72292,7 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy 
 const coalResource_1 = __webpack_require__(/*! ../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const emeraldResource_1 = __webpack_require__(/*! ../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+const ironResource_1 = __webpack_require__(/*! ../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
 const pool_1 = __webpack_require__(/*! ../tile/pool */ "./src/tile/pool.ts");
 const magmaPool_1 = __webpack_require__(/*! ../tile/magmaPool */ "./src/tile/magmaPool.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
@@ -72304,6 +72317,8 @@ const DEFAULT_BLOB_OPTIONS = {
     diameter: 6,
     chance: 1,
 };
+// Generation-time metadata for special sidepath rooms (do not serialize).
+const caveOrePocketsByRoom = new WeakMap();
 class Populator {
     constructor(level, skipPopulation = false) {
         this.props = [];
@@ -72357,7 +72372,9 @@ class Populator {
                     drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
                     break;
             }
-            if (furthestFromUpLadder && !this.level.isMainPath && !isSingleRoomSidepathMaze) {
+            if (furthestFromUpLadder &&
+                !this.level.isMainPath &&
+                !isSingleRoomSidepathMaze) {
                 this.addBosses(furthestFromUpLadder, this.level.depth, drops);
                 let tiles = furthestFromUpLadder.getEmptyTiles();
                 const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
@@ -72369,7 +72386,8 @@ class Populator {
                 //furthestFromUpLadder.entities.push(chest);
             }
             //if (this.level.depth === 0) return;
-            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON && this.level.depth !== 0) {
+            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
+                this.level.depth !== 0) {
                 let sidePathOptions = {
                     caveRooms: 5,
                     locked: true,
@@ -72393,10 +72411,15 @@ class Populator {
                         sidePathOptions.softMargin = 5;
                         break;
                     case 2:
-                        sidePathOptions.caveRooms = this.numRooms();
-                        sidePathOptions.mapWidth = 75;
-                        sidePathOptions.mapHeight = 75;
-                        sidePathOptions.giantRoomScale = 0.8;
+                        // Depth-2 sidepath is a cave: use the single-room tunneling maze layout
+                        // (same pattern as the forest), but at a significantly larger base size.
+                        // The "room size" in this mode is effectively mapWidth/mapHeight.
+                        sidePathOptions.caveRooms = 1;
+                        // ~+75% vs the 50x50 base used for the depth-1 single-room maze.
+                        sidePathOptions.mapWidth = 88;
+                        sidePathOptions.mapHeight = 88;
+                        sidePathOptions.linearity = 0.5;
+                        sidePathOptions.softMargin = 6;
                         break;
                 }
                 this.addDownladder(sidePathOptions);
@@ -73122,10 +73145,11 @@ class Populator {
      * @param envType - Environment type for prop selection
      * @param clusteringOptions - Optional clustering configuration
      */
-    addPropsWithClustering(room, numProps, envType, clusteringOptions) {
+    addPropsWithClustering(room, numProps, envType, clusteringOptions, propsOverride) {
         const envData = envType
             ? environment_1.environmentData[envType]
             : environment_1.environmentData[room.level.environment.type];
+        const props = propsOverride ?? envData.props;
         const clusterer = new propClusterer_1.PropClusterer(room, clusteringOptions);
         const positions = clusterer.generateClusteredPositions(numProps);
         const blobField = this.generateBlobField(room, clusteringOptions?.blobOptions);
@@ -73136,7 +73160,7 @@ class Populator {
         for (const seed of positions) {
             if (tiles.length === 0)
                 break;
-            const selectedProp = utils_1.Utils.randTableWeighted(envData.props);
+            const selectedProp = utils_1.Utils.randTableWeighted(props);
             if (!selectedProp)
                 continue;
             const size = selectedProp.size || { w: 1, h: 1 };
@@ -73177,6 +73201,64 @@ class Populator {
                 }
             }
         }
+    }
+    getCavePropsWithReducedResourceWeights() {
+        const props = environment_1.environmentData[environmentTypes_1.EnvType.CAVE].props;
+        const reduceFactor = 0.25;
+        const isResourceProp = (p) => p.class === coalResource_1.CoalResource ||
+            p.class === goldResource_1.GoldResource ||
+            p.class === ironResource_1.IronResource ||
+            p.class === emeraldResource_1.EmeraldResource ||
+            p.class === amberResource_1.AmberResource;
+        return props.map((p) => {
+            if (!isResourceProp(p))
+                return p;
+            const nextWeight = Math.max(0, (p.weight ?? 1) * reduceFactor);
+            const nextBlob = p.blob && typeof p.blob === "object"
+                ? {
+                    ...p.blob,
+                    weight: Math.max(0, Math.min(1, (p.blob.weight ?? 0) * reduceFactor)),
+                }
+                : p.blob;
+            return { ...p, weight: nextWeight, blob: nextBlob };
+        });
+    }
+    addCaveOrePocket(room, center, scale = 1) {
+        // Prefer placing resources near the pocket node. Avoid walls and existing entities.
+        let tiles = room
+            .getEmptyTiles()
+            .filter((t) => Math.abs(t.x - center.x) + Math.abs(t.y - center.y) <= 6);
+        if (tiles.length === 0)
+            return;
+        const takeTile = () => {
+            if (tiles.length === 0)
+                return null;
+            const pos = room.getRandomEmptyPosition(tiles);
+            if (!pos)
+                return null;
+            tiles = tiles.filter((t) => !(t.x === pos.x && t.y === pos.y));
+            return pos;
+        };
+        const place = (cls) => {
+            const pos = takeTile();
+            if (!pos)
+                return;
+            cls.add(room, room.game, pos.x, pos.y);
+        };
+        // Always include gems in the pocket.
+        place(emeraldResource_1.EmeraldResource);
+        place(amberResource_1.AmberResource);
+        // Then add a small ore "vein" mix.
+        const clampedScale = Math.max(0, Math.min(1, scale));
+        const coalCount = Math.max(2, Math.floor((6 + game_1.Game.rand(0, 4, random_1.Random.rand)) * clampedScale));
+        const ironCount = Math.max(1, Math.floor((3 + game_1.Game.rand(0, 2, random_1.Random.rand)) * clampedScale));
+        const goldCount = Math.max(0, Math.floor((1 + (random_1.Random.rand() < 0.35 ? 1 : 0)) * clampedScale));
+        for (let i = 0; i < coalCount; i++)
+            place(coalResource_1.CoalResource);
+        for (let i = 0; i < ironCount; i++)
+            place(ironResource_1.IronResource);
+        for (let i = 0; i < goldCount; i++)
+            place(goldResource_1.GoldResource);
     }
     generateBlobField(room, options) {
         if (!options || options.enabled === false)
@@ -73337,6 +73419,18 @@ class Populator {
     }
     populateCaveEnvironment(room) {
         const numProps = this.getNumProps(room);
+        // Single-room cave sidepath mazes are intentionally large; concentrate ore+gems in a dedicated
+        // pocket and reduce their frequency elsewhere in the cave.
+        const isSingleRoomSidepathMaze = room.envType === environmentTypes_1.EnvType.CAVE &&
+            room.type === room_1.RoomType.ROPECAVE &&
+            room.level?.rooms?.length === 1 &&
+            (room.level?.generationOptions?.caveRooms ?? 0) <= 1;
+        const orePockets = isSingleRoomSidepathMaze
+            ? (caveOrePocketsByRoom.get(room) ?? [])
+            : [];
+        const propsOverride = orePockets.length > 0
+            ? this.getCavePropsWithReducedResourceWeights()
+            : undefined;
         //this.addProps(room, numProps, room.envType);
         this.addPropsWithClustering(room, numProps, room.envType, {
             clusterTowardsWalls: true,
@@ -73354,7 +73448,14 @@ class Populator {
             debugCollectDetails: true,
             debugLogToConsole: true,
             debugTopN: 5,
-        });
+        }, propsOverride);
+        if (orePockets.length > 0) {
+            // If we have multiple pockets, scale each down so the total stays sane.
+            const perPocketScale = orePockets.length >= 2 ? 0.6 : 1;
+            for (const p of orePockets) {
+                this.addCaveOrePocket(room, p, perPocketScale);
+            }
+        }
         // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
     }
@@ -73412,15 +73513,15 @@ class Populator {
         // Single-room levels can have very large empty-tile counts; without a cap this can
         // request thousands of props and effectively hang/crash during clustered placement.
         /*
-        // disabled for now
-    const isSingleRoom = room.level?.rooms?.length === 1;
-    if (isSingleRoom) {
-      // Scale cap with room size but keep it bounded.
-      const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
-      const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
-      return Math.min(numProps, cap);
-    }
-      */
+            // disabled for now
+        const isSingleRoom = room.level?.rooms?.length === 1;
+        if (isSingleRoom) {
+          // Scale cap with room size but keep it bounded.
+          const scaledCap = Math.max(50, Math.floor(Math.sqrt(numEmptyTiles) * 6));
+          const cap = Math.min(numEmptyTiles, Math.min(800, scaledCap));
+          return Math.min(numProps, cap);
+        }
+          */
         return numProps;
     }
     populateDefaultEnvironment(room) {
@@ -73863,9 +73964,13 @@ class Populator {
     addSpecialEnemies(room) {
         // Spawner logic - now based on room area and probability
         if (!room.underwater) {
-            if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
-                room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
-                this.addSpawners(room, random_1.Random.rand);
+            // Disable area-scaled spawners for caves: single-room cave sidepaths are large,
+            // and the area-based loop can easily produce many spawners.
+            if (room.envType !== environmentTypes_1.EnvType.CAVE) {
+                if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+                    room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
+                    this.addSpawners(room, random_1.Random.rand);
+                }
             }
             // Occultist logic - now based on room area and probability
             if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
@@ -73902,7 +74007,8 @@ class Populator {
         // Get new enemies not yet encountered
         const newEnemies = availableEnemies.filter((id) => !this.level.game.encounteredEnemies.includes(id));
         // Add 1-2 new enemies per level (if limiting is enabled)
-        const limitEnemyTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES && !gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
+        const limitEnemyTypes = gameplaySettings_1.GameplaySettings.LIMIT_ENEMY_TYPES &&
+            !gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS;
         const newEnemiesToAddCount = limitEnemyTypes
             ? Math.min(newEnemies.length, gameplaySettings_1.GameplaySettings.NEW_ENEMIES_PER_LEVEL)
             : newEnemies.length;
@@ -74137,8 +74243,10 @@ class Populator {
             const { x, y } = position;
             // If the selected boss is a Spawner and no custom table is provided, use the
             // current depth's enemy pool (mirrors prior logic from addBossesAt()).
-            const extraArgs = boss.class === spawner_1.Spawner && !(boss.additionalParams?.length)
-                ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+            const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
+                ? [
+                    this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7),
+                ]
                 : (boss.additionalParams ?? []);
             chosenBoss = boss.class?.add
                 ? boss.class.add(room, room.game, x, y, ...extraArgs)
@@ -74681,7 +74789,9 @@ class Populator {
             }
         }
         const keepRopeUp = ropeUps[0] ?? null;
-        const keepSideDown = sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ?? sideDowns[0] ?? null;
+        const keepSideDown = sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ??
+            sideDowns[0] ??
+            null;
         // Remove extra rope-ups
         for (let i = 1; i < ropeUps.length; i++) {
             const { x, y } = ropeUps[i];
@@ -74800,14 +74910,21 @@ class Populator {
         const softMargin = Math.max(0, Math.min(maxPad, opts?.softMargin ?? 8));
         // Carve a meandering node network first, then randomly assign entrance/key/exit.
         // Connect a random number of distinct nodes in [3..7], median biased toward 5.
-        const requiredConnected = game_1.Game.randTable([3, 4, 4, 5, 5, 5, 6, 6, 7], rand);
+        const requiredConnectedBase = game_1.Game.randTable([3, 4, 4, 5, 5, 5, 6, 6, 7], rand);
+        // Caves get extra "ore pocket" endpoints (2), so ensure we carve/connect enough nodes.
+        const requiredConnected = room.envType === environmentTypes_1.EnvType.CAVE
+            ? Math.max(5, requiredConnectedBase)
+            : requiredConnectedBase;
         const nodeCount = game_1.Game.randTable([12, 14, 16, 18, 20], rand);
         const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
             softMargin,
             nodeCount,
             requiredConnectedNodes: requiredConnected,
         });
-        const connected = network.connectedNodes.length >= 3 ? network.connectedNodes : network.allNodes;
+        const minConnectedNodes = room.envType === environmentTypes_1.EnvType.CAVE ? 5 : 3;
+        const connected = network.connectedNodes.length >= minConnectedNodes
+            ? network.connectedNodes
+            : network.allNodes;
         if (connected.length === 0)
             return;
         const shuffled = connected.slice();
@@ -74818,6 +74935,12 @@ class Populator {
         const entrance = shuffled[0] ?? null;
         const keyEndpoint = shuffled[1] ?? null;
         const exitEndpoint = shuffled[2] ?? null;
+        const oreEndpointA = room.envType === environmentTypes_1.EnvType.CAVE && network.connectedNodes.length >= 5
+            ? (shuffled[3] ?? null)
+            : null;
+        const oreEndpointB = room.envType === environmentTypes_1.EnvType.CAVE && network.connectedNodes.length >= 5
+            ? (shuffled[4] ?? null)
+            : null;
         if (!entrance)
             return;
         // Place rope-up ladder at entrance.
@@ -74828,7 +74951,8 @@ class Populator {
         // Place the exit downladder (locked) at exit endpoint.
         const exitOpts = this.getEnvDrivenSidePathOptions();
         const exitEnv = exitOpts?.envType ?? null;
-        if (exitEnv !== null && exitEndpoint && keyEndpoint) {
+        const placedKeyAndExit = exitEnv !== null && !!exitEndpoint && !!keyEndpoint;
+        if (placedKeyAndExit) {
             const dl = new downLadder_1.DownLadder(room, room.game, exitEndpoint.x, exitEndpoint.y, true, // sidepath down ladder (rope down)
             exitEnv, lockable_1.LockType.LOCKED, exitOpts ?? opts);
             room.roomArray[exitEndpoint.x][exitEndpoint.y] = dl;
@@ -74837,7 +74961,34 @@ class Populator {
             dl.lockable.setKey(key);
             room.items.push(key);
         }
+        // Record dedicated ore+gem pocket nodes for cave single-room mazes.
+        // Cave population will use this to concentrate resources and reduce them elsewhere.
+        if ((oreEndpointA || oreEndpointB) && room.envType === environmentTypes_1.EnvType.CAVE) {
+            const pockets = [];
+            if (oreEndpointA)
+                pockets.push({ x: oreEndpointA.x, y: oreEndpointA.y });
+            if (oreEndpointB &&
+                (!oreEndpointA ||
+                    oreEndpointB.x !== oreEndpointA.x ||
+                    oreEndpointB.y !== oreEndpointA.y)) {
+                pockets.push({ x: oreEndpointB.x, y: oreEndpointB.y });
+            }
+            if (pockets.length > 0)
+                caveOrePocketsByRoom.set(room, pockets);
+        }
         // Place bosses guarding key + exit (localized near their endpoints).
+        const spawnSpawnerBossNear = (target) => {
+            const tiles = room
+                .getEmptyTiles()
+                .filter((t) => Math.abs(t.x - target.x) + Math.abs(t.y - target.y) <= 6);
+            if (tiles.length === 0)
+                return;
+            const pos = room.getRandomEmptyPosition(tiles);
+            if (!pos)
+                return;
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
+            spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
+        };
         const trySpawnBossNear = (target) => {
             const tiles = room
                 .getEmptyTiles()
@@ -74851,15 +75002,17 @@ class Populator {
             // We don't change RoomType; we just spawn a boss entity.
             this.addBossesAt(room, room.depth, pos.x, pos.y);
         };
-        if (keyEndpoint)
-            trySpawnBossNear(keyEndpoint);
-        if (exitEnv !== null && exitEndpoint)
+        // Key guard is always a Spawner (reaper) in this layout.
+        if (placedKeyAndExit && keyEndpoint)
+            spawnSpawnerBossNear(keyEndpoint);
+        if (placedKeyAndExit && exitEndpoint)
             trySpawnBossNear(exitEndpoint);
         // Single-room sidepath maze: intentionally do NOT place vending machines.
         room.removeDoorObstructions();
     }
     addBossesAt(room, depth, x, y) {
-        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true || room.envType === environmentTypes_1.EnvType.TUTORIAL)
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true ||
+            room.envType === environmentTypes_1.EnvType.TUTORIAL)
             return;
         const pickWeightedBoss = (pool, rand) => {
             if (pool.length === 0)
@@ -74890,7 +75043,7 @@ class Populator {
         const boss = pickWeightedBoss(eligible, random_1.Random.rand);
         if (!boss)
             return;
-        const extraArgs = boss.class === spawner_1.Spawner && !(boss.additionalParams?.length)
+        const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
             ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
             : (boss.additionalParams ?? []);
         if (boss.class?.add)
