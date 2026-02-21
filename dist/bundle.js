@@ -25081,24 +25081,38 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Resource = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
-const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/player.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
 const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
 const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const isMiningWeapon = (w) => {
+    if (typeof w !== "object" || w === null)
+        return false;
+    // `canMine` is a boolean on mining-capable weapons/tools.
+    return "canMine" in w;
+};
+const isMiningActor = (x) => {
+    if (typeof x !== "object" || x === null)
+        return false;
+    const inv = x.inventory;
+    if (typeof inv !== "object" || inv === null)
+        return false;
+    const invLike = inv;
+    return (typeof invLike.getWeapon === "function" && typeof invLike.canMine === "function");
+};
 class Resource extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.hurt = (playerHitBy, damage) => {
             // Only players with a mining-capable weapon can mine resources.
             // Non-player damage (enemies, projectiles, etc.) should not crash or award mining XP.
-            if (playerHitBy !== null && !(playerHitBy instanceof player_1.Player))
-                return;
-            if (playerHitBy instanceof player_1.Player) {
-                const weapon = playerHitBy.inventory?.getWeapon?.() ?? null;
-                if (weapon?.canMine !== true)
+            if (playerHitBy !== null) {
+                if (!isMiningActor(playerHitBy))
+                    return;
+                const weapon = playerHitBy.inventory.getWeapon();
+                if (!isMiningWeapon(weapon) || weapon.canMine !== true)
                     return;
             }
             this.healthBar.hurt();
@@ -25123,10 +25137,10 @@ class Resource extends entity_1.Entity {
             const deadEntity = this.clone();
             this.room.deadEntities.push(deadEntity);
             this.removeLightSource(this.lightSource);
-            const minedByPlayer = player instanceof player_1.Player && player.inventory?.canMine?.() === true;
+            const minedByPlayer = isMiningActor(player) && player.inventory.canMine() === true;
             if (player === null || minedByPlayer) {
                 this.dropLoot();
-                if (player instanceof player_1.Player) {
+                if (isMiningActor(player)) {
                     const xp = (0, skillBalance_1.computeMiningXp)({
                         nodeName: this.name,
                         depth: this.room.depth,
