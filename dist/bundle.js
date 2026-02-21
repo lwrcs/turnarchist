@@ -50124,19 +50124,42 @@ EmeraldRing.itemName = "emerald ring";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GarnetRing = void 0;
 const equippable_1 = __webpack_require__(/*! ../equippable */ "./src/item/equippable.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class GarnetRing extends equippable_1.Equippable {
     constructor(level, x, y) {
         super(level, x, y);
         this.onEquip = () => {
+            if (!this.wielder)
+                return;
             this.wielder.damageBonus = 1;
+            this.wielder.maxHealth = 1;
+            if (this.wielder.health > 1) {
+                // "Hurt by the difference" (do not apply armor mitigation; this is a direct effect).
+                this.wielder.health = 1;
+                this.wielder.healthBar?.hurt?.();
+            }
             this.level.game.pushMessage("You feel a surge of power in your ring.");
         };
         this.onUnequip = () => {
+            if (!this.wielder)
+                return;
             this.wielder.damageBonus = 0;
+            this.wielder.maxHealth = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
+            if (this.wielder.health > this.wielder.maxHealth) {
+                this.wielder.health = this.wielder.maxHealth;
+            }
             this.level.game.pushMessage("The power in your ring fades.");
         };
         this.onDrop = () => {
-            this.wielder.damageBonus = 0;
+            if (this.wielder) {
+                this.wielder.damageBonus = 0;
+                if (this.equipped) {
+                    this.wielder.maxHealth = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
+                    if (this.wielder.health > this.wielder.maxHealth) {
+                        this.wielder.health = this.wielder.maxHealth;
+                    }
+                }
+            }
             if (this.equipped) {
                 this.level.game.pushMessage("The power in your ring fades.");
                 this.equipped = false;
