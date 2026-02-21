@@ -34,7 +34,9 @@ export namespace astar {
    * impossible steps).
    */
   const getTileCost = (tile: unknown): number => {
-    if (!tile) return 0;
+    // Hard-block sentinel used by enemy-specific grids.
+    // (Most room grids use `false` for missing tiles; that remains "very expensive" not blocked.)
+    if (tile === null) return 0;
 
     const isRecord = (v: unknown): v is Record<string, unknown> =>
       typeof v === "object" && v !== null;
@@ -45,11 +47,14 @@ export namespace astar {
       const isSolid = rec["isSolid"];
       if (isSolid instanceof Function) {
         const solid = isSolid.call(tile);
-        if (solid === true) return 0;
+        if (solid === true) return 99999999;
       }
     }
 
-    return 300;
+    // `false` / unknown tile objects should remain traversable but extremely expensive,
+    // matching legacy behavior. This avoids hard behavioral shifts in enemy AI while still
+    // allowing special-case grids (using null sentinel) to truly block nodes.
+    return tile ? 300 : 99999999;
   };
 
   export class Graph {
@@ -283,9 +288,8 @@ export namespace astar {
             disablePoints[i].y >= 0 &&
             disablePoints[i].y < this.grid[0].length
           )
-            // Disable points must be fully blocked (not merely expensive) so entities
-            // don't "path through" other entities when stuck.
-            this.grid[disablePoints[i].x][disablePoints[i].y].cost = 0;
+            // Legacy semantics: disabled points are "avoid" (very expensive), not hard walls.
+            this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
         }
       }
       if (lastPlayerPosition) {

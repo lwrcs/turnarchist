@@ -589,9 +589,11 @@ export abstract class Enemy extends Entity {
         const ry = top + gy;
         // IMPORTANT: for 2x2+ enemies, a path node represents the *top-left* tile of the footprint.
         // Mark nodes as blocked when the full footprint cannot legally occupy that position.
+        // Use `null` as a hard-block sentinel so A* will treat this as impassable,
+        // even though the global cost model uses "very expensive" for `false`.
         grid[gx][gy] = footprintFitsAt(rx, ry)
           ? this.room.roomArray[rx][ry]
-          : false;
+          : null;
       }
     }
 
@@ -612,7 +614,8 @@ export abstract class Enemy extends Entity {
       lx >= 0 && lx < w && ly >= 0 && ly < h;
     const isLocalNodeWalkable = (lx: number, ly: number): boolean => {
       if (!inLocalBounds(lx, ly)) return false;
-      return grid[lx]?.[ly] !== false && grid[lx]?.[ly] !== undefined;
+      const node = grid[lx]?.[ly];
+      return node !== false && node !== undefined && node !== null;
     };
 
     // For 2x2+ enemies, the player's exact (x,y) may not be a valid top-left anchor for the

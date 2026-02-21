@@ -15778,9 +15778,11 @@ class Enemy extends entity_1.Entity {
                 const ry = top + gy;
                 // IMPORTANT: for 2x2+ enemies, a path node represents the *top-left* tile of the footprint.
                 // Mark nodes as blocked when the full footprint cannot legally occupy that position.
+                // Use `null` as a hard-block sentinel so A* will treat this as impassable,
+                // even though the global cost model uses "very expensive" for `false`.
                 grid[gx][gy] = footprintFitsAt(rx, ry)
                     ? this.room.roomArray[rx][ry]
-                    : false;
+                    : null;
             }
         }
         // Translate disables into local grid coordinates; filter to local bounds to avoid large arrays
@@ -15798,7 +15800,8 @@ class Enemy extends entity_1.Entity {
         const isLocalNodeWalkable = (lx, ly) => {
             if (!inLocalBounds(lx, ly))
                 return false;
-            return grid[lx]?.[ly] !== false && grid[lx]?.[ly] !== undefined;
+            const node = grid[lx]?.[ly];
+            return node !== false && node !== undefined && node !== null;
         };
         // For 2x2+ enemies, the player's exact (x,y) may not be a valid top-left anchor for the
         // enemy footprint (e.g. player standing near a wall). If the target node is blocked,
@@ -78327,7 +78330,9 @@ var astar;
      * impossible steps).
      */
     const getTileCost = (tile) => {
-        if (!tile)
+        // Hard-block sentinel used by enemy-specific grids.
+        // (Most room grids use `false` for missing tiles; that remains "very expensive" not blocked.)
+        if (tile === null)
             return 0;
         const isRecord = (v) => typeof v === "object" && v !== null;
         if (isRecord(tile)) {
@@ -78336,10 +78341,13 @@ var astar;
             if (isSolid instanceof Function) {
                 const solid = isSolid.call(tile);
                 if (solid === true)
-                    return 0;
+                    return 99999999;
             }
         }
-        return 300;
+        // `false` / unknown tile objects should remain traversable but extremely expensive,
+        // matching legacy behavior. This avoids hard behavioral shifts in enemy AI while still
+        // allowing special-case grids (using null sentinel) to truly block nodes.
+        return tile ? 300 : 99999999;
     };
     class Graph {
         constructor(grid) {
@@ -78517,9 +78525,8 @@ var astar;
                         disablePoints[i].x < this.grid.length &&
                         disablePoints[i].y >= 0 &&
                         disablePoints[i].y < this.grid[0].length)
-                        // Disable points must be fully blocked (not merely expensive) so entities
-                        // don't "path through" other entities when stuck.
-                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 0;
+                        // Legacy semantics: disabled points are "avoid" (very expensive), not hard walls.
+                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
                 }
             }
             if (lastPlayerPosition) {

@@ -153,10 +153,12 @@ export class EnemyAIHandler {
         const tile = roomArray[x]?.[y] ?? false;
         // Enemies should not path onto doors or ladders (they can't move onto them in tryMove()).
         grid[x][y] =
-          tile && !(tile instanceof Door) && !(tile instanceof DownLadder)
-            && !(tile instanceof UpLadder)
+          tile &&
+          !(tile instanceof Door) &&
+          !(tile instanceof DownLadder) &&
+          !(tile instanceof UpLadder)
             ? tile
-            : false;
+            : null;
       }
     }
     return grid;
