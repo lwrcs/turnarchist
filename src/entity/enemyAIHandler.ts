@@ -3,6 +3,9 @@ import { astar } from "../utility/astarclass";
 import { Direction } from "../game";
 import { SpikeTrap } from "./../tile/spiketrap";
 import { Enemy } from "./enemy/enemy";
+import { Door } from "../tile/door";
+import { DownLadder } from "../tile/downLadder";
+import { UpLadder } from "../tile/upLadder";
 
 export class EnemyAIHandler {
   constructor(private enemy: Enemy) {}
@@ -117,7 +120,13 @@ export class EnemyAIHandler {
 
     for (const entity of this.enemy.room.entities) {
       if (entity !== this.enemy) {
-        disablePositions.push({ x: entity.x, y: entity.y });
+        const ew = entity.w ?? 1;
+        const eh = entity.h ?? 1;
+        for (let dx = 0; dx < ew; dx++) {
+          for (let dy = 0; dy < eh; dy++) {
+            disablePositions.push({ x: entity.x + dx, y: entity.y + dy });
+          }
+        }
       }
     }
 
@@ -141,7 +150,13 @@ export class EnemyAIHandler {
     for (let x = 0; x < roomX + width; x++) {
       grid[x] = [];
       for (let y = 0; y < roomY + height; y++) {
-        grid[x][y] = roomArray[x]?.[y] ?? false;
+        const tile = roomArray[x]?.[y] ?? false;
+        // Enemies should not path onto doors or ladders (they can't move onto them in tryMove()).
+        grid[x][y] =
+          tile && !(tile instanceof Door) && !(tile instanceof DownLadder)
+            && !(tile instanceof UpLadder)
+            ? tile
+            : false;
       }
     }
     return grid;

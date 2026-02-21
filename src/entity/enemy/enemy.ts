@@ -13,6 +13,7 @@ import { Utils } from "../../utility/utils";
 import { Door } from "../../tile/door";
 import { StunAnimation } from "../../projectile/stunAnimation";
 import { DownLadder } from "../../tile/downLadder";
+import { UpLadder } from "../../tile/upLadder";
 import { Random } from "../../utility/random";
 import { GameplaySettings } from "../../game/gameplaySettings";
 import { GameConstants } from "../../game/gameConstants";
@@ -107,7 +108,9 @@ export abstract class Enemy extends Entity {
    */
   get jumpY(): number {
     // No hop while being pushed OR while playing the crushed death-clone animation.
-    return this.isPushAnimating() || (this.cloned && this.crushed) ? 0 : this._jumpY;
+    return this.isPushAnimating() || (this.cloned && this.crushed)
+      ? 0
+      : this._jumpY;
   }
   set jumpY(v: number) {
     this._jumpY = v;
@@ -275,7 +278,16 @@ export abstract class Enemy extends Entity {
     let disablePositions = Array<astar.Position>();
     for (const e of this.room.entities) {
       if (e !== this) {
-        disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+        const ew = e.w ?? 1;
+        const eh = e.h ?? 1;
+        for (let dx = 0; dx < ew; dx++) {
+          for (let dy = 0; dy < eh; dy++) {
+            disablePositions.push({
+              x: e.x + dx,
+              y: e.y + dy,
+            } as astar.Position);
+          }
+        }
       }
     }
     for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -296,7 +308,16 @@ export abstract class Enemy extends Entity {
     let disablePositions = Array<astar.Position>();
     for (const e of this.room.entities) {
       if (e !== this) {
-        disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+        const ew = e.w ?? 1;
+        const eh = e.h ?? 1;
+        for (let dx = 0; dx < ew; dx++) {
+          for (let dy = 0; dy < eh; dy++) {
+            disablePositions.push({
+              x: e.x + dx,
+              y: e.y + dy,
+            } as astar.Position);
+          }
+        }
       }
     }
     for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -538,6 +559,27 @@ export abstract class Enemy extends Entity {
     const w = right - left + 1;
     const h = bottom - top + 1;
 
+    const selfW = this.w ?? 1;
+    const selfH = this.h ?? 1;
+    const selfZ = this.z ?? 0;
+
+    const footprintFitsAt = (rx: number, ry: number): boolean => {
+      // Ensure the whole footprint exists and is walkable for this entity's z-layer.
+      for (let dx = 0; dx < selfW; dx++) {
+        for (let dy = 0; dy < selfH; dy++) {
+          const x = rx + dx;
+          const y = ry + dy;
+          const tile = this.room.roomArray[x]?.[y];
+          if (!tile) return false;
+          if (this.room.isSolidAt(x, y, selfZ)) return false;
+          if (tile instanceof Door) return false;
+          if (tile instanceof DownLadder) return false;
+          if (tile instanceof UpLadder) return false;
+        }
+      }
+      return true;
+    };
+
     // Build subgrid
     const grid: any[][] = [];
     for (let gx = 0; gx < w; gx++) {
@@ -545,9 +587,11 @@ export abstract class Enemy extends Entity {
       for (let gy = 0; gy < h; gy++) {
         const rx = left + gx;
         const ry = top + gy;
-        if (this.room.roomArray[rx] && this.room.roomArray[rx][ry])
-          grid[gx][gy] = this.room.roomArray[rx][ry];
-        else grid[gx][gy] = false;
+        // IMPORTANT: for 2x2+ enemies, a path node represents the *top-left* tile of the footprint.
+        // Mark nodes as blocked when the full footprint cannot legally occupy that position.
+        grid[gx][gy] = footprintFitsAt(rx, ry)
+          ? this.room.roomArray[rx][ry]
+          : false;
       }
     }
 
@@ -558,11 +602,63 @@ export abstract class Enemy extends Entity {
 
     // Localized start/target
     const localStart: any = { ...this, x: this.x - left, y: this.y - top };
-    const localTarget: any = {
+    let localTarget: any = {
       ...target,
       x: target.x - left,
       y: target.y - top,
     };
+
+    const inLocalBounds = (lx: number, ly: number): boolean =>
+      lx >= 0 && lx < w && ly >= 0 && ly < h;
+    const isLocalNodeWalkable = (lx: number, ly: number): boolean => {
+      if (!inLocalBounds(lx, ly)) return false;
+      return grid[lx]?.[ly] !== false && grid[lx]?.[ly] !== undefined;
+    };
+
+    // For 2x2+ enemies, the player's exact (x,y) may not be a valid top-left anchor for the
+    // enemy footprint (e.g. player standing near a wall). If the target node is blocked,
+    // retarget to the nearest valid top-left that would still allow us to approach/overlap.
+    if (!isLocalNodeWalkable(localTarget.x, localTarget.y)) {
+      let best: { x: number; y: number; d: number } | null = null;
+
+      // Prefer anchors that would place the target point inside our footprint (overlap candidates).
+      for (let ox = 0; ox < selfW; ox++) {
+        for (let oy = 0; oy < selfH; oy++) {
+          const worldX = target.x - ox;
+          const worldY = target.y - oy;
+          const lx = worldX - left;
+          const ly = worldY - top;
+          if (!isLocalNodeWalkable(lx, ly)) continue;
+          const d =
+            Math.abs(lx - localStart.x) + Math.abs(ly - localStart.y);
+          if (!best || d < best.d) best = { x: lx, y: ly, d };
+        }
+      }
+
+      // If no overlap anchor is valid, fall back to the nearest walkable local node around the target.
+      if (!best) {
+        const maxR = Math.max(w, h);
+        for (let r = 1; r <= maxR && !best; r++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const dyAbs = r - Math.abs(dx);
+            const candidates: Array<{ x: number; y: number }> = [
+              { x: localTarget.x + dx, y: localTarget.y + dyAbs },
+              { x: localTarget.x + dx, y: localTarget.y - dyAbs },
+            ];
+            for (const c of candidates) {
+              if (!isLocalNodeWalkable(c.x, c.y)) continue;
+              best = { x: c.x, y: c.y, d: r };
+              break;
+            }
+            if (best) break;
+          }
+        }
+      }
+
+      if (best) {
+        localTarget = { ...localTarget, x: best.x, y: best.y };
+      }
+    }
 
     // Optionally include lastPlayerPos in local space for search variants that support it
     const localLast = options?.useLastPlayerPos
@@ -667,7 +763,8 @@ export abstract class Enemy extends Entity {
     target: { x: number; y: number },
     shouldBlock: (e: Entity) => boolean,
   ): Array<astar.Position> => {
-    const { left, right, top, bottom } = this.getSearchPathLocalizedBounds(target);
+    const { left, right, top, bottom } =
+      this.getSearchPathLocalizedBounds(target);
     const out: Array<astar.Position> = [];
 
     for (const e of this.room.entities) {

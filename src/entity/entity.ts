@@ -12,6 +12,7 @@ import type { LightSource } from "../lighting/lightSource";
 import { DamageNumber } from "../particle/damageNumber";
 import { DownLadder } from "../tile/downLadder";
 import { Door } from "../tile/door";
+import { UpLadder } from "../tile/upLadder";
 import { Wall } from "../tile/wall";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
@@ -935,7 +936,8 @@ export class Entity extends Drawable {
         if (
           !this.room.isSolidAt(x + xx, y + yy, this.z) &&
           !(this.room.roomArray[x + xx][y + yy] instanceof Door) &&
-          !(this.room.roomArray[x + xx][y + yy] instanceof DownLadder)
+          !(this.room.roomArray[x + xx][y + yy] instanceof DownLadder) &&
+          !(this.room.roomArray[x + xx][y + yy] instanceof UpLadder)
         ) {
           tiles.push(this.room.roomArray[x + xx][y + yy]);
         } else {
@@ -1911,9 +1913,11 @@ export class Entity extends Drawable {
   };
 
   private isEntityColliding = (x: number, y: number): boolean => {
-    return this.room.entities.some(
-      (entity) => entity.x === x && entity.y === y && entity.z === this.z,
-    );
+    const z = this.z ?? 0;
+    return this.room.entities.some((entity) => {
+      if ((entity.z ?? 0) !== z) return false;
+      return entity.pointIn(x, y);
+    });
   };
 
   private placeProjectile = (

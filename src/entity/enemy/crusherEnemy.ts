@@ -10,6 +10,7 @@ import { Entity } from "../entity";
 import { Utils } from "../../utility/utils";
 import { Door } from "../../tile/door";
 import { DownLadder } from "../../tile/downLadder";
+import { UpLadder } from "../../tile/upLadder";
 import { Sound } from "../../sound/sound";
 import { HitWarning } from "../../drawable/hitWarning";
 import { globalEventBus } from "../../event/eventBus";
@@ -104,7 +105,8 @@ export class CrusherEnemy extends Enemy {
           targetTile &&
           !targetTile.isSolid() &&
           !(targetTile instanceof Door) &&
-          !(targetTile instanceof DownLadder)
+          !(targetTile instanceof DownLadder) &&
+          !(targetTile instanceof UpLadder)
         ) {
           tiles.push(targetTile);
         } else {
@@ -338,7 +340,8 @@ export class CrusherEnemy extends Enemy {
 
       const rect = this.applyCrushToDrawRect({
         dX: this.x - this.drawX + rumbleX - 0.5,
-        dY: this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY,
+        dY:
+          this.y - this.drawYOffset - this.drawY + rumbleY + this.softAnimateY,
         dW: 2,
         dH: 2,
       });

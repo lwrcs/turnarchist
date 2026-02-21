@@ -13356,7 +13356,16 @@ class BishopEnemy extends enemy_1.Enemy {
                         let disablePositions = Array();
                         for (const e of this.room.entities) {
                             if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
+                                const ew = e.w ?? 1;
+                                const eh = e.h ?? 1;
+                                for (let dx = 0; dx < ew; dx++) {
+                                    for (let dy = 0; dy < eh; dy++) {
+                                        disablePositions.push({
+                                            x: e.x + dx,
+                                            y: e.y + dy,
+                                        });
+                                    }
+                                }
                             }
                         }
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -13377,7 +13386,6 @@ class BishopEnemy extends enemy_1.Enemy {
                         disablePositions.push({ x: this.x - 1, y: this.y });
                         disablePositions.push({ x: this.x, y: this.y + 1 });
                         disablePositions.push({ x: this.x, y: this.y - 1 });
-                        disablePositions.push({ x: this.x, y: this.y });
                         let moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true, allowOmni: true });
                         moves = moves.filter((move) => {
                             const dx = Math.abs(move.pos.x - this.x);
@@ -14513,6 +14521,7 @@ const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
@@ -14551,7 +14560,8 @@ class CrusherEnemy extends enemy_1.Enemy {
                     if (targetTile &&
                         !targetTile.isSolid() &&
                         !(targetTile instanceof door_1.Door) &&
-                        !(targetTile instanceof downLadder_1.DownLadder)) {
+                        !(targetTile instanceof downLadder_1.DownLadder) &&
+                        !(targetTile instanceof upLadder_1.UpLadder)) {
                         tiles.push(targetTile);
                     }
                     else {
@@ -15021,7 +15031,10 @@ const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const eventBus_1 = __webpack_require__(/*! ../../event/eventBus */ "./src/event/eventBus.ts");
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const door_1 = __webpack_require__(/*! ../../tile/door */ "./src/tile/door.ts");
 const stunAnimation_1 = __webpack_require__(/*! ../../projectile/stunAnimation */ "./src/projectile/stunAnimation.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 var EnemyState;
@@ -15178,7 +15191,16 @@ class Enemy extends entity_1.Entity {
             let disablePositions = Array();
             for (const e of this.room.entities) {
                 if (e !== this) {
-                    disablePositions.push({ x: e.x, y: e.y });
+                    const ew = e.w ?? 1;
+                    const eh = e.h ?? 1;
+                    for (let dx = 0; dx < ew; dx++) {
+                        for (let dy = 0; dy < eh; dy++) {
+                            disablePositions.push({
+                                x: e.x + dx,
+                                y: e.y + dy,
+                            });
+                        }
+                    }
                 }
             }
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -15196,7 +15218,16 @@ class Enemy extends entity_1.Entity {
             let disablePositions = Array();
             for (const e of this.room.entities) {
                 if (e !== this) {
-                    disablePositions.push({ x: e.x, y: e.y });
+                    const ew = e.w ?? 1;
+                    const eh = e.h ?? 1;
+                    for (let dx = 0; dx < ew; dx++) {
+                        for (let dy = 0; dy < eh; dy++) {
+                            disablePositions.push({
+                                x: e.x + dx,
+                                y: e.y + dy,
+                            });
+                        }
+                    }
                 }
             }
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -15677,7 +15708,9 @@ class Enemy extends entity_1.Entity {
      */
     get jumpY() {
         // No hop while being pushed OR while playing the crushed death-clone animation.
-        return this.isPushAnimating() || (this.cloned && this.crushed) ? 0 : this._jumpY;
+        return this.isPushAnimating() || (this.cloned && this.crushed)
+            ? 0
+            : this._jumpY;
     }
     set jumpY(v) {
         this._jumpY = v;
@@ -15712,6 +15745,30 @@ class Enemy extends entity_1.Entity {
         bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
         const w = right - left + 1;
         const h = bottom - top + 1;
+        const selfW = this.w ?? 1;
+        const selfH = this.h ?? 1;
+        const selfZ = this.z ?? 0;
+        const footprintFitsAt = (rx, ry) => {
+            // Ensure the whole footprint exists and is walkable for this entity's z-layer.
+            for (let dx = 0; dx < selfW; dx++) {
+                for (let dy = 0; dy < selfH; dy++) {
+                    const x = rx + dx;
+                    const y = ry + dy;
+                    const tile = this.room.roomArray[x]?.[y];
+                    if (!tile)
+                        return false;
+                    if (this.room.isSolidAt(x, y, selfZ))
+                        return false;
+                    if (tile instanceof door_1.Door)
+                        return false;
+                    if (tile instanceof downLadder_1.DownLadder)
+                        return false;
+                    if (tile instanceof upLadder_1.UpLadder)
+                        return false;
+                }
+            }
+            return true;
+        };
         // Build subgrid
         const grid = [];
         for (let gx = 0; gx < w; gx++) {
@@ -15719,10 +15776,11 @@ class Enemy extends entity_1.Entity {
             for (let gy = 0; gy < h; gy++) {
                 const rx = left + gx;
                 const ry = top + gy;
-                if (this.room.roomArray[rx] && this.room.roomArray[rx][ry])
-                    grid[gx][gy] = this.room.roomArray[rx][ry];
-                else
-                    grid[gx][gy] = false;
+                // IMPORTANT: for 2x2+ enemies, a path node represents the *top-left* tile of the footprint.
+                // Mark nodes as blocked when the full footprint cannot legally occupy that position.
+                grid[gx][gy] = footprintFitsAt(rx, ry)
+                    ? this.room.roomArray[rx][ry]
+                    : false;
             }
         }
         // Translate disables into local grid coordinates; filter to local bounds to avoid large arrays
@@ -15731,11 +15789,61 @@ class Enemy extends entity_1.Entity {
             .map((p) => ({ x: p.x - left, y: p.y - top }));
         // Localized start/target
         const localStart = { ...this, x: this.x - left, y: this.y - top };
-        const localTarget = {
+        let localTarget = {
             ...target,
             x: target.x - left,
             y: target.y - top,
         };
+        const inLocalBounds = (lx, ly) => lx >= 0 && lx < w && ly >= 0 && ly < h;
+        const isLocalNodeWalkable = (lx, ly) => {
+            if (!inLocalBounds(lx, ly))
+                return false;
+            return grid[lx]?.[ly] !== false && grid[lx]?.[ly] !== undefined;
+        };
+        // For 2x2+ enemies, the player's exact (x,y) may not be a valid top-left anchor for the
+        // enemy footprint (e.g. player standing near a wall). If the target node is blocked,
+        // retarget to the nearest valid top-left that would still allow us to approach/overlap.
+        if (!isLocalNodeWalkable(localTarget.x, localTarget.y)) {
+            let best = null;
+            // Prefer anchors that would place the target point inside our footprint (overlap candidates).
+            for (let ox = 0; ox < selfW; ox++) {
+                for (let oy = 0; oy < selfH; oy++) {
+                    const worldX = target.x - ox;
+                    const worldY = target.y - oy;
+                    const lx = worldX - left;
+                    const ly = worldY - top;
+                    if (!isLocalNodeWalkable(lx, ly))
+                        continue;
+                    const d = Math.abs(lx - localStart.x) + Math.abs(ly - localStart.y);
+                    if (!best || d < best.d)
+                        best = { x: lx, y: ly, d };
+                }
+            }
+            // If no overlap anchor is valid, fall back to the nearest walkable local node around the target.
+            if (!best) {
+                const maxR = Math.max(w, h);
+                for (let r = 1; r <= maxR && !best; r++) {
+                    for (let dx = -r; dx <= r; dx++) {
+                        const dyAbs = r - Math.abs(dx);
+                        const candidates = [
+                            { x: localTarget.x + dx, y: localTarget.y + dyAbs },
+                            { x: localTarget.x + dx, y: localTarget.y - dyAbs },
+                        ];
+                        for (const c of candidates) {
+                            if (!isLocalNodeWalkable(c.x, c.y))
+                                continue;
+                            best = { x: c.x, y: c.y, d: r };
+                            break;
+                        }
+                        if (best)
+                            break;
+                    }
+                }
+            }
+            if (best) {
+                localTarget = { ...localTarget, x: best.x, y: best.y };
+            }
+        }
         // Optionally include lastPlayerPos in local space for search variants that support it
         const localLast = options?.useLastPlayerPos
             ? options?.lastPlayerPos
@@ -20410,6 +20518,7 @@ const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils
 const damageNumber_1 = __webpack_require__(/*! ../particle/damageNumber */ "./src/particle/damageNumber.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
@@ -20836,7 +20945,8 @@ class Entity extends drawable_1.Drawable {
                 for (let yy = 0; yy < this.h; yy++) {
                     if (!this.room.isSolidAt(x + xx, y + yy, this.z) &&
                         !(this.room.roomArray[x + xx][y + yy] instanceof door_1.Door) &&
-                        !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder)) {
+                        !(this.room.roomArray[x + xx][y + yy] instanceof downLadder_1.DownLadder) &&
+                        !(this.room.roomArray[x + xx][y + yy] instanceof upLadder_1.UpLadder)) {
                         tiles.push(this.room.roomArray[x + xx][y + yy]);
                     }
                     else {
@@ -21664,7 +21774,12 @@ class Entity extends drawable_1.Drawable {
             return targetTile && !targetTile.isSolid() && !targetTile.isDoor;
         };
         this.isEntityColliding = (x, y) => {
-            return this.room.entities.some((entity) => entity.x === x && entity.y === y && entity.z === this.z);
+            const z = this.z ?? 0;
+            return this.room.entities.some((entity) => {
+                if ((entity.z ?? 0) !== z)
+                    return false;
+                return entity.pointIn(x, y);
+            });
         };
         this.placeProjectile = (projectileClass, x, y, color) => {
             this.room.projectiles.push(new projectileClass(this, x, y, color));
@@ -69459,10 +69574,7 @@ class Room {
         };
         this.hasEnemy = (x, y, z = this.getActiveZ()) => {
             for (const e of this.entities) {
-                if (e instanceof enemy_1.Enemy &&
-                    e.x === x &&
-                    e.y === y &&
-                    (e.z ?? 0) === z)
+                if (e instanceof enemy_1.Enemy && (e.z ?? 0) === z && e.pointIn(x, y))
                     return true;
             }
             return false;
@@ -78154,7 +78266,6 @@ exports.Tips = Tips;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.astar = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const random_1 = __webpack_require__(/*! ./random */ "./src/utility/random.ts");
 var astar;
 (function (astar_1) {
@@ -78172,13 +78283,28 @@ var astar;
         GraphNodeType[GraphNodeType["WALL"] = 0] = "WALL";
         GraphNodeType[GraphNodeType["OPEN"] = 1] = "OPEN";
     })(GraphNodeType = astar_1.GraphNodeType || (astar_1.GraphNodeType = {}));
-    let getTileCost = (tile) => {
-        if (tile)
-            return tile.isSolid() || tile.isDoor || tile instanceof downLadder_1.DownLadder
-                ? 99999999
-                : 300;
-        else
-            return 99999999;
+    /**
+     * Convert a room tile into an A* traversal cost.
+     *
+     * IMPORTANT: `AStar._search()` treats nodes as *blocked* when `cost <= 0`.
+     * We rely on that to ensure pathfinding never "routes through walls" when no
+     * path exists (which causes entities—especially 2x2+—to repeatedly attempt
+     * impossible steps).
+     */
+    const getTileCost = (tile) => {
+        if (!tile)
+            return 0;
+        const isRecord = (v) => typeof v === "object" && v !== null;
+        if (isRecord(tile)) {
+            const rec = tile;
+            const isSolid = rec["isSolid"];
+            if (isSolid instanceof Function) {
+                const solid = isSolid.call(tile);
+                if (solid === true)
+                    return 0;
+            }
+        }
+        return 300;
     };
     class Graph {
         constructor(grid) {
@@ -78356,7 +78482,9 @@ var astar;
                         disablePoints[i].x < this.grid.length &&
                         disablePoints[i].y >= 0 &&
                         disablePoints[i].y < this.grid[0].length)
-                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
+                        // Disable points must be fully blocked (not merely expensive) so entities
+                        // don't "path through" other entities when stuck.
+                        this.grid[disablePoints[i].x][disablePoints[i].y].cost = 0;
                 }
             }
             if (lastPlayerPosition) {
@@ -78364,7 +78492,11 @@ var astar;
                     lastPlayerPosition.x < this.grid.length &&
                     lastPlayerPosition.y >= 0 &&
                     lastPlayerPosition.y < this.grid[0].length)
-                    this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
+                    // Prefer the player's last position, but never override a blocked tile.
+                    this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost =
+                        this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost > 0
+                            ? 0.5
+                            : 0;
             }
         }
         heap() {

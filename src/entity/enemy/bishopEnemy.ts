@@ -110,7 +110,16 @@ export class BishopEnemy extends Enemy {
           let disablePositions = Array<astar.Position>();
           for (const e of this.room.entities) {
             if (e !== this) {
-              disablePositions.push({ x: e.x, y: e.y } as astar.Position);
+              const ew = e.w ?? 1;
+              const eh = e.h ?? 1;
+              for (let dx = 0; dx < ew; dx++) {
+                for (let dy = 0; dy < eh; dy++) {
+                  disablePositions.push({
+                    x: e.x + dx,
+                    y: e.y + dy,
+                  } as astar.Position);
+                }
+              }
             }
           }
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
@@ -133,7 +142,6 @@ export class BishopEnemy extends Enemy {
           disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
-          disablePositions.push({ x: this.x, y: this.y } as astar.Position);
           let moves = this.searchPathLocalized(
             this.targetPlayer,
             disablePositions,

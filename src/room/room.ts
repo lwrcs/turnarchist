@@ -4841,12 +4841,7 @@ export class Room {
 
   hasEnemy = (x: number, y: number, z: number = this.getActiveZ()): boolean => {
     for (const e of this.entities) {
-      if (
-        e instanceof Enemy &&
-        e.x === x &&
-        e.y === y &&
-        ((e as any).z ?? 0) === z
-      )
+      if (e instanceof Enemy && (e.z ?? 0) === z && e.pointIn(x, y))
         return true;
     }
     return false;

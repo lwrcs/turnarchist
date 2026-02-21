@@ -1,6 +1,5 @@
 import { EntityDirection } from "../entity/entity";
 import { Direction } from "../game";
-import { DownLadder } from "../tile/downLadder";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Wall } from "../tile/wall";
 import { Random } from "./random";
@@ -26,12 +25,31 @@ export namespace astar {
     OPEN,
   }
 
-  let getTileCost = (tile) => {
-    if (tile)
-      return tile.isSolid() || tile.isDoor || tile instanceof DownLadder
-        ? 99999999
-        : 300;
-    else return 99999999;
+  /**
+   * Convert a room tile into an A* traversal cost.
+   *
+   * IMPORTANT: `AStar._search()` treats nodes as *blocked* when `cost <= 0`.
+   * We rely on that to ensure pathfinding never "routes through walls" when no
+   * path exists (which causes entities—especially 2x2+—to repeatedly attempt
+   * impossible steps).
+   */
+  const getTileCost = (tile: unknown): number => {
+    if (!tile) return 0;
+
+    const isRecord = (v: unknown): v is Record<string, unknown> =>
+      typeof v === "object" && v !== null;
+
+    if (isRecord(tile)) {
+      const rec = tile;
+
+      const isSolid = rec["isSolid"];
+      if (isSolid instanceof Function) {
+        const solid = isSolid.call(tile);
+        if (solid === true) return 0;
+      }
+    }
+
+    return 300;
   };
 
   export class Graph {
@@ -265,7 +283,9 @@ export namespace astar {
             disablePoints[i].y >= 0 &&
             disablePoints[i].y < this.grid[0].length
           )
-            this.grid[disablePoints[i].x][disablePoints[i].y].cost = 99999999;
+            // Disable points must be fully blocked (not merely expensive) so entities
+            // don't "path through" other entities when stuck.
+            this.grid[disablePoints[i].x][disablePoints[i].y].cost = 0;
         }
       }
       if (lastPlayerPosition) {
@@ -275,7 +295,11 @@ export namespace astar {
           lastPlayerPosition.y >= 0 &&
           lastPlayerPosition.y < this.grid[0].length
         )
-          this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost = 0.5;
+          // Prefer the player's last position, but never override a blocked tile.
+          this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost =
+            this.grid[lastPlayerPosition.x][lastPlayerPosition.y].cost > 0
+              ? 0.5
+              : 0;
       }
     }
 
