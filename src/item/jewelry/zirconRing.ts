@@ -15,7 +15,7 @@ export class ZirconRing extends Equippable {
     this.tileY = 2;
     this.name = ZirconRing.itemName;
     this.stackable = false;
-    this.description = "A ring of zircon";
+    this.description = "A zircon ring. While worn, gain +1 magic damage.";
   }
 
   onEquip = () => {

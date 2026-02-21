@@ -27,6 +27,8 @@ export class Crossbow extends Weapon {
     this.state = CrossbowState.EMPTY;
     this.disabled = true;
     this.damage = 4;
+    this.description =
+      "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.";
   }
 
   toggleEquip = () => {

@@ -20,6 +20,8 @@ export class Scythe extends Weapon {
     this.iconOffset = 0.2;
     this.degradeable = false;
     this.twoHanded = true;
+    this.description =
+      "A wide reaping arc. Hits the tile ahead. On hit, hits the left and right of both you and your target.";
   }
 
   hitSound = () => {

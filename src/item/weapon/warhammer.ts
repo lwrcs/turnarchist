@@ -18,6 +18,7 @@ export class Warhammer extends Weapon {
     this.useCost = 2;
     //this.cooldownMax = 10;
     this.degradeable = false;
+    this.description = "A slow, heavy smash that hits only the tile ahead.";
   }
 
   hitSound = () => {

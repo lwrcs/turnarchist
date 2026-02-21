@@ -16,7 +16,8 @@ export class GarnetRing extends Equippable {
     this.tileY = 2;
     this.name = GarnetRing.itemName;
     this.stackable = false;
-    this.description = "A ring of garnet";
+    this.description =
+      "A cursed gem ring. While worn, gain +1 damage but your max health becomes 1.";
   }
 
   onEquip = () => {

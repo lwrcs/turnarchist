@@ -50200,7 +50200,8 @@ class GarnetRing extends equippable_1.Equippable {
         this.tileY = 2;
         this.name = GarnetRing.itemName;
         this.stackable = false;
-        this.description = "A ring of garnet";
+        this.description =
+            "A cursed gem ring. While worn, gain +1 damage but your max health becomes 1.";
     }
 }
 exports.GarnetRing = GarnetRing;
@@ -50292,7 +50293,7 @@ class ZirconRing extends equippable_1.Equippable {
         this.tileY = 2;
         this.name = ZirconRing.itemName;
         this.stackable = false;
-        this.description = "A ring of zircon";
+        this.description = "A zircon ring. While worn, gain +1 magic damage.";
     }
 }
 exports.ZirconRing = ZirconRing;
@@ -52458,6 +52459,8 @@ class Crossbow extends weapon_1.Weapon {
         this.state = CrossbowState.EMPTY;
         this.disabled = true;
         this.damage = 4;
+        this.description =
+            "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.";
     }
 }
 exports.Crossbow = Crossbow;
@@ -52844,6 +52847,8 @@ class QuarterStaff extends weapon_1.Weapon {
         this.useCost = 1;
         this.degradeable = false;
         this.knockbackDistance = 1;
+        this.description =
+            "Hitting an enemy will push them back 1 tile. Pin them against a wall to instantly kill them.";
     }
 }
 exports.QuarterStaff = QuarterStaff;
@@ -52965,6 +52970,8 @@ class Scythe extends weapon_1.Weapon {
         this.iconOffset = 0.2;
         this.degradeable = false;
         this.twoHanded = true;
+        this.description =
+            "A wide reaping arc. Hits the tile ahead. On hit, hits the left and right of both you and your target.";
     }
 }
 exports.Scythe = Scythe;
@@ -53826,6 +53833,8 @@ class Sword extends weapon_1.Weapon {
         this.degradeable = false;
         this.useCost = 2;
         this.offsetY = -0.5;
+        this.description =
+            "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.";
         //this.iconOffset = 0.2;
     }
 }
@@ -53893,6 +53902,7 @@ class Warhammer extends weapon_1.Weapon {
         this.useCost = 2;
         //this.cooldownMax = 10;
         this.degradeable = false;
+        this.description = "A slow, heavy smash that hits only the tile ahead.";
     }
 }
 exports.Warhammer = Warhammer;

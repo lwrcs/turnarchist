@@ -18,6 +18,8 @@ export class Sword extends Weapon {
     this.degradeable = false;
     this.useCost = 2;
     this.offsetY = -0.5;
+    this.description =
+      "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.";
     //this.iconOffset = 0.2;
   }
 
