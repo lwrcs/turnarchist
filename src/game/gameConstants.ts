@@ -77,7 +77,7 @@ export class GameConstants {
   static isIOS = false;
   static MOBILE_KEYBOARD_SUPPORT = false;
   static CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
-  static SAVING_ENABLED = true;
+  static SAVING_ENABLED = false;
 
   static readonly FPS = 120;
   static readonly ALPHA_ENABLED = true;
@@ -257,17 +257,15 @@ export class GameConstants {
   /**
    * Apply shade curve to a shade alpha in [0,1], clamped to [0,1].
    */
-  private static applyShadeCurve(alpha01: number, gammaRaw: number, mulRaw: number): number {
+  private static applyShadeCurve(
+    alpha01: number,
+    gammaRaw: number,
+    mulRaw: number,
+  ): number {
     const a = Number.isFinite(alpha01) ? alpha01 : 0;
     const clamped = Math.max(0, Math.min(1, a));
-    const gamma =
-      Number.isFinite(gammaRaw) && gammaRaw > 0
-        ? gammaRaw
-        : 1;
-    const mul =
-      Number.isFinite(mulRaw)
-        ? mulRaw
-        : 1;
+    const gamma = Number.isFinite(gammaRaw) && gammaRaw > 0 ? gammaRaw : 1;
+    const mul = Number.isFinite(mulRaw) ? mulRaw : 1;
     return Math.max(0, Math.min(1, Math.pow(clamped, gamma) * mul));
   }
   /** Shade curve used by `Tile.shadeAmount()` (and thus `Wall`). */

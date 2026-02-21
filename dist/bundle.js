@@ -33079,12 +33079,8 @@ class GameConstants {
     static applyShadeCurve(alpha01, gammaRaw, mulRaw) {
         const a = Number.isFinite(alpha01) ? alpha01 : 0;
         const clamped = Math.max(0, Math.min(1, a));
-        const gamma = Number.isFinite(gammaRaw) && gammaRaw > 0
-            ? gammaRaw
-            : 1;
-        const mul = Number.isFinite(mulRaw)
-            ? mulRaw
-            : 1;
+        const gamma = Number.isFinite(gammaRaw) && gammaRaw > 0 ? gammaRaw : 1;
+        const mul = Number.isFinite(mulRaw) ? mulRaw : 1;
         return Math.max(0, Math.min(1, Math.pow(clamped, gamma) * mul));
     }
     /** Shade curve used by `Tile.shadeAmount()` (and thus `Wall`). */
@@ -33121,7 +33117,7 @@ GameConstants.isMobile = false;
 GameConstants.isIOS = false;
 GameConstants.MOBILE_KEYBOARD_SUPPORT = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
-GameConstants.SAVING_ENABLED = true;
+GameConstants.SAVING_ENABLED = false;
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
