@@ -70,7 +70,7 @@ export class BigTree extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     if (!this.dead) {
-      if (this.hasShadow) this.drawShadow(delta);
+      if (this.hasShadow) this.drawShadow(delta, -1);
 
       this.updateDrawXY(delta);
       Game.ctx.save();
@@ -83,7 +83,7 @@ export class BigTree extends Entity {
         2,
         3,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - 0.75,
+        this.y - this.drawYOffset - this.drawY - 0.85,
         2,
         3,
         this.room.shadeColor,
@@ -97,7 +97,7 @@ export class BigTree extends Entity {
         2,
         3,
         this.x - this.drawX,
-        this.y - this.drawYOffset - this.drawY - 0.5,
+        this.y - this.drawYOffset - this.drawY - 0.85,
         2,
         3,
         this.room.shadeColor,

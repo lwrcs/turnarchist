@@ -20728,8 +20728,42 @@ class Entity extends drawable_1.Drawable {
         };
         this.shouldSeeThrough = () => {
             const player = this.room.getPlayer();
-            const entity = this.room.hasEnemy(this.x, this.y - 1);
-            if (!(player?.x === this.x && player?.y === this.y - 1) && !entity) {
+            const z = this.z ?? 0;
+            const topY = this.y - 1;
+            const w = this.w ?? 1;
+            const leftX = this.x;
+            const rightX = this.x + w - 1;
+            const playerAbove = player !== null &&
+                (player.z ?? 0) === z &&
+                player.y === topY &&
+                player.x >= leftX &&
+                player.x <= rightX;
+            // If *any* tile along our top edge is occupied by an enemy, we also see-through.
+            // Use footprint intersection so this works with enemies wider than 1 tile too.
+            let enemyAbove = false;
+            if (topY >= this.room.roomY) {
+                for (const e of this.room.entities) {
+                    if (e === this)
+                        continue;
+                    if (e.isEnemy !== true)
+                        continue;
+                    if ((e.z ?? 0) !== z)
+                        continue;
+                    const ew = e.w ?? 1;
+                    const eh = e.h ?? 1;
+                    const ex0 = e.x;
+                    const ex1 = e.x + ew - 1;
+                    const ey0 = e.y;
+                    const ey1 = e.y + eh - 1;
+                    const overlapsTopRow = topY >= ey0 && topY <= ey1;
+                    const overlapsX = ex1 >= leftX && ex0 <= rightX;
+                    if (overlapsTopRow && overlapsX) {
+                        enemyAbove = true;
+                        break;
+                    }
+                }
+            }
+            if (!playerAbove && !enemyAbove) {
                 this.seeThroughAlpha = 1;
             }
             else
@@ -21398,10 +21432,10 @@ class Entity extends drawable_1.Drawable {
             game_1.Game.ctx.globalAlpha = 1;
         };
         // Draw a soft blurred shadow under the entity using the shared Shadow utility
-        this.drawShadow = (delta) => {
+        this.drawShadow = (delta, offsetY = 0) => {
             if (this.cloned)
                 return;
-            shadow_1.Shadow.draw(this.x - this.drawX, this.y - this.drawY, this.w, this.h, this.extendShadow, this.shadowOpacity);
+            shadow_1.Shadow.draw(this.x - this.drawX, this.y - this.drawY + offsetY, this.w, this.h, this.extendShadow, this.shadowOpacity);
         };
         this.tick = () => {
             this.behavior();
@@ -21461,8 +21495,12 @@ class Entity extends drawable_1.Drawable {
             // Determine crush direction:
             // - Prefer explicit direction from the caller (push/knockback knows this).
             // - Otherwise fall back to drawX/drawY (some callers set these to the push direction).
-            const dx = typeof pushDX === "number" && Number.isFinite(pushDX) ? Math.sign(pushDX) : Math.sign(this.drawX ?? 0);
-            const dy = typeof pushDY === "number" && Number.isFinite(pushDY) ? Math.sign(pushDY) : Math.sign(this.drawY ?? 0);
+            const dx = typeof pushDX === "number" && Number.isFinite(pushDX)
+                ? Math.sign(pushDX)
+                : Math.sign(this.drawX ?? 0);
+            const dy = typeof pushDY === "number" && Number.isFinite(pushDY)
+                ? Math.sign(pushDY)
+                : Math.sign(this.drawY ?? 0);
             this.crushPushDX = dx;
             this.crushPushDY = dy;
             this.crushVertical = dy !== 0;
@@ -21493,7 +21531,9 @@ class Entity extends drawable_1.Drawable {
         };
         this.getCrushEaseInDecayBase = () => {
             // Ease-in in terms of decay base: start closer to 1 (slow), move toward a smaller base (fast).
-            const currentScale = this.crushVertical ? (this.crushY ?? 1) : (this.crushX ?? 1);
+            const currentScale = this.crushVertical
+                ? (this.crushY ?? 1)
+                : (this.crushX ?? 1);
             const start = Math.max(0.0001, this.crushAnimStartScale || 1);
             const t = Math.max(0, Math.min(1, 1 - currentScale / start)); // 0->1 as we compress
             const tt = t * t; // ease-in
@@ -21549,26 +21589,26 @@ class Entity extends drawable_1.Drawable {
             if (pushDX < 0) {
                 // Pulled out to the right; start at +1 tile, then increase slightly as it shrinks.
                 offX = differential + shrinkDX * 0.5;
-                scaleY = (1 - shrink);
+                scaleY = 1 - shrink;
                 //enemies generally have smaller sprites than the measurements, so we need to compensate for that
-                offY = (-scaleY - (0.25 * scaleY)) * 0.5;
+                offY = (-scaleY - 0.25 * scaleY) * 0.5;
             }
             else if (pushDX > 0) {
                 // Pulled out to the left; anchor via (1 - half current width) to avoid over-travel.
-                offX = (-differential + (shrinkDX * 0.5));
-                scaleY = (1 - shrink);
-                offY = (-scaleY - (0.25 * scaleY)) * 0.5;
+                offX = -differential + shrinkDX * 0.5;
+                scaleY = 1 - shrink;
+                offY = (-scaleY - 0.25 * scaleY) * 0.5;
             }
             if (pushDY < 0) {
                 // Pulled out downward
                 offY = differential + shrinkDY * 0.75;
-                scaleX = (1 - shrink);
+                scaleX = 1 - shrink;
                 offX = -scaleX * 0.5;
             }
             else if (pushDY > 0) {
                 // Pulled out upward
-                offY = (-differential + (shrinkDY * 0.75));
-                scaleX = (1 - shrink);
+                offY = -differential + shrinkDY * 0.75;
+                scaleX = 1 - shrink;
                 offX = -scaleX * 0.5;
             }
             return {
@@ -21701,7 +21741,8 @@ class Entity extends drawable_1.Drawable {
             }
         };
         this.makeHitWarnings = (hx = this.x, hy = this.y, arrowsOnly = false, directionOverride = null) => {
-            if (this.unconscious || (this.isEnemy && !this.seenPlayer))
+            if (this.unconscious ||
+                (this.isEnemy && !this.seenPlayer))
                 return;
             const player = this.getPlayer();
             const isPlayerOnTile = player.x === hx && player.y === hy;
@@ -22133,15 +22174,15 @@ class BigTree extends entity_1.Entity {
             game_1.Game.ctx.globalAlpha = this.alpha;
             if (!this.dead) {
                 if (this.hasShadow)
-                    this.drawShadow(delta);
+                    this.drawShadow(delta, -1);
                 this.updateDrawXY(delta);
                 game_1.Game.ctx.save();
                 this.updateSeeThroughAlpha(delta);
                 if (!this.cloned)
                     game_1.Game.ctx.globalAlpha = this.softSeeThroughAlpha;
-                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.75, 2, 3, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawObj(this.tileX, this.tileY, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.85, 2, 3, this.room.shadeColor, this.shadeAmount());
                 game_1.Game.ctx.restore();
-                game_1.Game.drawObj(this.tileX, 18, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.5, 2, 3, this.room.shadeColor, this.shadeAmount());
+                game_1.Game.drawObj(this.tileX, 18, 2, 3, this.x - this.drawX, this.y - this.drawYOffset - this.drawY - 0.85, 2, 3, this.room.shadeColor, this.shadeAmount());
             }
             game_1.Game.ctx.restore();
         };
