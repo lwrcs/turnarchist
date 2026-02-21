@@ -17446,7 +17446,7 @@ class OccultistEnemy extends enemy_1.Enemy {
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
-            let enemiesToShield = this.enemyShieldCandidates();
+            const enemiesToShield = this.enemyShieldCandidates();
             if (!this.dead) {
                 if (this.handleSkipTurns())
                     return;
@@ -17523,10 +17523,21 @@ class OccultistEnemy extends enemy_1.Enemy {
             this.lastHealth = this.health;
         };
         this.updateShieldedEnemies = () => {
-            this.shieldedEnemies.forEach((enemy) => {
-                if (enemy.dead) {
-                    this.shieldedEnemies = this.shieldedEnemies.filter((e) => e !== enemy);
+            const myZ = this.z ?? 0;
+            this.shieldedEnemies = this.shieldedEnemies.filter((enemy) => {
+                if (enemy.dead)
+                    return false;
+                // If an ally leaves our effective range/layer, the shield should drop immediately.
+                const sameZ = (enemy.z ?? 0) === myZ;
+                const inRange = utils_1.Utils.distance(this.x, this.y, enemy.x, enemy.y) <= this.range;
+                const shieldStillActive = enemy.shielded && enemy.shield;
+                if (!sameZ || !inRange || !shieldStillActive) {
+                    if (!enemy.cloned && enemy.shielded) {
+                        enemy.removeShield();
+                    }
+                    return false;
                 }
+                return true;
             });
         };
         this.shieldEnemies = (enemiesToShield) => {
@@ -17540,12 +17551,20 @@ class OccultistEnemy extends enemy_1.Enemy {
             }
         };
         this.enemyShieldCandidates = () => {
-            const uncappedCandidates = this.room.entities.filter((entity) => entity instanceof enemy_1.Enemy &&
-                utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range &&
-                !entity.shielded &&
-                !entity.dead &&
-                entity !== this &&
-                !entity.shieldedBefore);
+            const myZ = this.z ?? 0;
+            const uncappedCandidates = this.room.entities.filter((entity) => {
+                if (!(entity instanceof enemy_1.Enemy))
+                    return false;
+                if (entity === this)
+                    return false;
+                if (entity.dead)
+                    return false;
+                if (entity.shielded || entity.shieldedBefore)
+                    return false;
+                if ((entity.z ?? 0) !== myZ)
+                    return false;
+                return utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) <= this.range;
+            });
             return uncappedCandidates.slice(0, gameplaySettings_1.GameplaySettings.MAX_OCCULTIST_SHIELDS);
         };
         this.unshieldEnemies = () => {
