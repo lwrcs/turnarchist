@@ -474,7 +474,7 @@ export class Room {
   drawInterval: number = 4;
   builder: RoomBuilder;
   envType: EnvType;
-  keyPathDots: Array<{ x: number; y: number }>;
+  keyPathDots: Array<{ x: number; y: number }> | undefined;
 
   underwater: boolean = false;
 
@@ -1875,23 +1875,21 @@ export class Room {
       selectedKey = activeKey;
       selectedPlayer = activePlayer;
     } else {
-      // Fallback: find the first key with showPath=true on the current floor
+      // Fallback: find the first key with showPath=true (single-active-key rule enforced by Key)
       for (const p of Object.values(this.game.players)) {
         for (const i of p.inventory.items) {
           if (i instanceof Key && i.showPath) {
             if (i.depth === null) i.depth = p.depth;
-            if (i.depth === p.depth) {
-              selectedKey = i;
-              selectedPlayer = p;
-              break;
-            }
+            selectedKey = i;
+            selectedPlayer = p;
+            break;
           }
         }
         if (selectedKey) break;
       }
     }
 
-    // If no active key on this floor, clear path particles and exit
+    // If no active key, clear path particles and exit
     if (!selectedKey || !selectedPlayer) {
       let had = false;
       for (const p of this.particles) {
@@ -1907,9 +1905,7 @@ export class Room {
     selectedKey.updatePathToDoor(selectedPlayer);
 
     const showPath = selectedKey.showPath === true;
-    const path = this.keyPathDots as
-      | Array<{ x: number; y: number }>
-      | undefined;
+    const path = this.keyPathDots;
     if (!path || path.length === 0 || !showPath) {
       // When no path, mark existing key-path particles as dead
       let had = false;

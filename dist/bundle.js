@@ -25733,6 +25733,7 @@ const replayManager_1 = __webpack_require__(/*! ./game/replayManager */ "./src/g
 const environmentTypes_1 = __webpack_require__(/*! ./constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const wall_1 = __webpack_require__(/*! ./tile/wall */ "./src/tile/wall.ts");
 const floor_1 = __webpack_require__(/*! ./tile/floor */ "./src/tile/floor.ts");
+const key_1 = __webpack_require__(/*! ./item/key */ "./src/item/key.ts");
 const enemiesBuiltins_1 = __webpack_require__(/*! ./game/save/registry/enemiesBuiltins */ "./src/game/save/registry/enemiesBuiltins.ts");
 const itemsBuiltins_1 = __webpack_require__(/*! ./game/save/registry/itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
 const enemies_1 = __webpack_require__(/*! ./game/save/registry/enemies */ "./src/game/save/registry/enemies.ts");
@@ -27668,20 +27669,47 @@ class Game {
                 case "encounter":
                     this.pushMessage("Encountering enemies..." + this.encounteredEnemies.length);
                     break;
-                case "key":
-                    const keyRoom = this.level.getKeyRoom(this.room);
-                    if (keyRoom) {
-                        this.pushMessage(`Key room: ${keyRoom.id}`);
-                        keyRoom.entered = true;
-                        keyRoom.calculateWallInfo();
-                        this.changeLevelThroughDoor(this.players[this.localPlayerID], keyRoom.doors[0], 1);
-                        const tile = keyRoom.getRandomEmptyPosition(keyRoom.getEmptyTiles());
-                        this.players[this.localPlayerID].x = tile.x;
-                        this.players[this.localPlayerID].y = tile.y;
-                        keyRoom.updateLighting();
-                        this.pushMessage("Downladder located");
+                case "key": {
+                    // Debug nav: locate a key in the current path and move the player to it.
+                    // Must not assume doors exist (single-room sidepaths can be doorless).
+                    let found = undefined;
+                    for (const r of this.room.path()) {
+                        for (const it of r.items) {
+                            if (!(it instanceof key_1.Key))
+                                continue;
+                            if (it.pickedUp)
+                                continue;
+                            found = { room: r, key: it };
+                            break;
+                        }
+                        if (found)
+                            break;
                     }
+                    if (!found) {
+                        this.pushMessage("No key found.");
+                        break;
+                    }
+                    const player = this.players[this.localPlayerID];
+                    const targetRoom = found.room;
+                    const k = found.key;
+                    // Move to the target room without using doors (doorless sidepaths).
+                    if (this.room !== targetRoom) {
+                        this.prevLevel = this.room;
+                        this.prevLevel.exitLevel();
+                        this.room = targetRoom;
+                        this.updateLevel(targetRoom);
+                        this.updateDepth(targetRoom.depth);
+                        player.depth = targetRoom.depth;
+                        player.roomGID = targetRoom.globalId;
+                        const idx = this.level.rooms.indexOf(targetRoom);
+                        if (idx >= 0)
+                            player.levelID = idx;
+                    }
+                    // Snap player to key tile and refresh room state.
+                    targetRoom.enterLevel(player, { x: k.x, y: k.y });
+                    this.pushMessage("Key located");
                     break;
+                }
                 case "level":
                     this.pushMessage(`Level: ${this.level.globalId}`);
                     break;
@@ -50534,26 +50562,24 @@ const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts"
 const usable_1 = __webpack_require__(/*! ./usable/usable */ "./src/item/usable/usable.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 class Key extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.setPathGuideEnabled = (player, enabled, opts) => {
-            // A key can only show a path on the floor it belongs to
+            // Preserve "where I was found" for description/debug, but do NOT restrict usage by depth.
             if (this.depth === null)
                 this.depth = player.depth;
-            if (this.depth !== player.depth) {
-                this.showPath = false;
-                this.tileX = 1;
-                this.tileY = 0;
-                return;
-            }
-            // Only one key may be active; disable all other keys across all players.
-            for (const p of Object.values(this.room.game.players)) {
-                for (const it of p.inventory.items) {
-                    if (it instanceof Key && it !== this) {
-                        it.showPath = false;
-                        it.tileX = 1;
-                        it.tileY = 0;
+            // Only one key may be active; when enabling, disable all other keys across all players.
+            if (enabled) {
+                for (const p of Object.values(this.room.game.players)) {
+                    for (const it of p.inventory.items) {
+                        if (it instanceof Key && it !== this) {
+                            it.showPath = false;
+                            it.tileX = 1;
+                            it.tileY = 0;
+                        }
                     }
                 }
             }
@@ -50588,13 +50614,8 @@ class Key extends usable_1.Usable {
             }
         };
         this.onUse = (player) => {
-            // A key can only be toggled on the floor it belongs to
             if (this.depth === null)
                 this.depth = player.depth;
-            if (this.depth !== player.depth) {
-                this.room.game.pushMessage("This key doesn't fit on this floor.");
-                return;
-            }
             // Toggle this key, and ensure all other keys are turned off
             const togglingOn = !this.showPath;
             this.setPathGuideEnabled(player, togglingOn, { syncNow: true });
@@ -50609,7 +50630,9 @@ class Key extends usable_1.Usable {
         this.onDrop = () => {
             this.showPath = false;
             this.tileX = this.showPath ? 2 : 1;
-            this.room.syncKeyPathParticles();
+            const player = this.level?.game?.players?.[this.level.game.localPlayerID];
+            const room = player?.getRoom?.() ?? this.level;
+            room?.syncKeyPathParticles();
         };
         this.draw = (delta) => {
             game_1.Game.ctx.save();
@@ -50669,35 +50692,116 @@ class Key extends usable_1.Usable {
       */
         this.updatePathToDoor = (playerCtx) => {
             try {
-                const player = playerCtx || this.level.game.players[this.level.game.localPlayerID];
-                const playerRoom = player?.getRoom?.() || this.level;
+                const player = playerCtx ?? this.level.game.players[this.level.game.localPlayerID];
+                const playerRoom = player?.getRoom?.();
                 if (!playerRoom)
                     return;
-                // Only show path for sidepath downladder with matching key
-                const match = this.level.level.findSidepathDownLadderByKeyID(playerRoom, this.doorID);
-                if (!match) {
-                    // Clear any previous dots if stored on room
+                if (!this.showPath) {
                     playerRoom.keyPathDots = undefined;
                     return;
                 }
-                const { ladder, room: ladderRoom } = match;
-                // If ladder is in the same room, path to its tile (allow drawing on ladder)
-                if (ladderRoom === playerRoom) {
-                    const path = playerRoom.buildTilePathPositions(player.x, player.y, ladder.x, ladder.y);
-                    // Store dots on the room for renderer to consume
-                    playerRoom.keyPathDots = path;
-                    return;
+                const findTargetInRoom = (r) => {
+                    for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                        for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                            const t = r.roomArray[x]?.[y];
+                            if (t instanceof downLadder_1.DownLadder) {
+                                if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+                                    return { room: r, x: t.x, y: t.y };
+                                }
+                            }
+                            else if (t instanceof upLadder_1.UpLadder) {
+                                if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+                                    return { room: r, x: t.x, y: t.y };
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                };
+                const getNeighbors = (r) => {
+                    const out = [];
+                    // Doors within the same level/path graph
+                    for (const d of r.doors) {
+                        const nextRoom = d?.linkedDoor?.room;
+                        if (nextRoom && nextRoom !== r) {
+                            out.push({ room: nextRoom, via: { x: d.x, y: d.y } });
+                        }
+                    }
+                    // Ladders across depths and sidepaths
+                    for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                        for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                            const t = r.roomArray[x]?.[y];
+                            if (t instanceof upLadder_1.UpLadder) {
+                                if (!t.linkedRoom) {
+                                    try {
+                                        t.linkRoom();
+                                    }
+                                    catch {
+                                        // ignore
+                                    }
+                                }
+                                if (t.linkedRoom && t.linkedRoom !== r) {
+                                    out.push({ room: t.linkedRoom, via: { x: t.x, y: t.y } });
+                                }
+                            }
+                            else if (t instanceof downLadder_1.DownLadder) {
+                                if (t.linkedRoom && t.linkedRoom !== r) {
+                                    out.push({ room: t.linkedRoom, via: { x: t.x, y: t.y } });
+                                }
+                            }
+                        }
+                    }
+                    return out;
+                };
+                // BFS over the room graph (doors + ladders) to find the nearest matching locked passage.
+                const start = playerRoom;
+                const startGid = start.globalId;
+                const visited = new Set([startGid]);
+                const prev = new Map();
+                const queue = [start];
+                let found = null;
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    if (!current)
+                        continue;
+                    const targetHere = findTargetInRoom(current);
+                    if (targetHere) {
+                        found = targetHere;
+                        break;
+                    }
+                    for (const n of getNeighbors(current)) {
+                        const gid = n.room.globalId;
+                        if (visited.has(gid))
+                            continue;
+                        visited.add(gid);
+                        prev.set(gid, { prev: current, via: n.via });
+                        queue.push(n.room);
+                    }
                 }
-                // Otherwise, compute the room-to-room door path and build dots to the first door in this room
-                const doorPath = playerRoom.findShortestDoorPathTo(ladderRoom, true);
-                if (!doorPath || doorPath.length === 0) {
+                if (!found) {
                     playerRoom.keyPathDots = undefined;
                     return;
                 }
-                const firstDoor = doorPath[0];
-                // Path directly to the door tile (allow drawing on door)
-                const path = playerRoom.buildTilePathPositions(player.x, player.y, firstDoor.x, firstDoor.y);
-                playerRoom.keyPathDots = path;
+                // Decide which tile in THIS room we should path to:
+                // - if the target is here, path directly to it
+                // - otherwise, path to the first door/ladder that advances toward the target room
+                let tx = found.x;
+                let ty = found.y;
+                if (found.room !== start) {
+                    let cursorGid = found.room.globalId;
+                    while (true) {
+                        const e = prev.get(cursorGid);
+                        if (!e)
+                            break;
+                        if (e.prev.globalId === startGid) {
+                            tx = e.via.x;
+                            ty = e.via.y;
+                            break;
+                        }
+                        cursorGid = e.prev.globalId;
+                    }
+                }
+                playerRoom.keyPathDots = playerRoom.buildTilePathPositions(player.x, player.y, tx, ty);
             }
             catch (e) {
                 // Fail quiet
@@ -67333,24 +67437,22 @@ class Room {
                 selectedPlayer = activePlayer;
             }
             else {
-                // Fallback: find the first key with showPath=true on the current floor
+                // Fallback: find the first key with showPath=true (single-active-key rule enforced by Key)
                 for (const p of Object.values(this.game.players)) {
                     for (const i of p.inventory.items) {
                         if (i instanceof key_1.Key && i.showPath) {
                             if (i.depth === null)
                                 i.depth = p.depth;
-                            if (i.depth === p.depth) {
-                                selectedKey = i;
-                                selectedPlayer = p;
-                                break;
-                            }
+                            selectedKey = i;
+                            selectedPlayer = p;
+                            break;
                         }
                     }
                     if (selectedKey)
                         break;
                 }
             }
-            // If no active key on this floor, clear path particles and exit
+            // If no active key, clear path particles and exit
             if (!selectedKey || !selectedPlayer) {
                 let had = false;
                 for (const p of this.particles) {

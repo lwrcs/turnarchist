@@ -39,6 +39,7 @@ import { PlayerAction } from "./player/playerAction";
 import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
 import { Wall } from "./tile/wall";
 import { Floor } from "./tile/floor";
+import { Key } from "./item/key";
 import { registerBuiltinEnemyCodecsV2 } from "./game/save/registry/enemiesBuiltins";
 import { registerBuiltinItemCodecsV2 } from "./game/save/registry/itemsBuiltins";
 import { enemyRegistryV2 } from "./game/save/registry/enemies";
@@ -3041,24 +3042,47 @@ export class Game {
           "Encountering enemies..." + this.encounteredEnemies.length,
         );
         break;
-      case "key":
-        const keyRoom = this.level.getKeyRoom(this.room);
-        if (keyRoom) {
-          this.pushMessage(`Key room: ${keyRoom.id}`);
-          keyRoom.entered = true;
-          keyRoom.calculateWallInfo();
-          this.changeLevelThroughDoor(
-            this.players[this.localPlayerID],
-            keyRoom.doors[0],
-            1,
-          );
-          const tile = keyRoom.getRandomEmptyPosition(keyRoom.getEmptyTiles());
-          this.players[this.localPlayerID].x = tile.x;
-          this.players[this.localPlayerID].y = tile.y;
-          keyRoom.updateLighting();
-          this.pushMessage("Downladder located");
+      case "key": {
+        // Debug nav: locate a key in the current path and move the player to it.
+        // Must not assume doors exist (single-room sidepaths can be doorless).
+        let found: { room: Room; key: Key } | undefined = undefined;
+        for (const r of this.room.path()) {
+          for (const it of r.items) {
+            if (!(it instanceof Key)) continue;
+            if (it.pickedUp) continue;
+            found = { room: r, key: it };
+            break;
+          }
+          if (found) break;
         }
+
+        if (!found) {
+          this.pushMessage("No key found.");
+          break;
+        }
+
+        const player = this.players[this.localPlayerID];
+        const targetRoom = found.room;
+        const k = found.key;
+
+        // Move to the target room without using doors (doorless sidepaths).
+        if (this.room !== targetRoom) {
+          this.prevLevel = this.room;
+          this.prevLevel.exitLevel();
+          this.room = targetRoom;
+          this.updateLevel(targetRoom);
+          this.updateDepth(targetRoom.depth);
+          player.depth = targetRoom.depth;
+          player.roomGID = targetRoom.globalId;
+          const idx = this.level.rooms.indexOf(targetRoom);
+          if (idx >= 0) player.levelID = idx;
+        }
+
+        // Snap player to key tile and refresh room state.
+        targetRoom.enterLevel(player, { x: k.x, y: k.y });
+        this.pushMessage("Key located");
         break;
+      }
 
       case "level":
         this.pushMessage(`Level: ${this.level.globalId}`);
