@@ -6191,6 +6191,10 @@ export class Game {
     shadeColor = "black",
     shadeOpacity = 0,
     fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
   ) => {
     Game.drawHelper(
       Game.fxset,
@@ -6206,6 +6210,10 @@ export class Game {
       shadeOpacity,
       true,
       fadeDir,
+      outlineColor,
+      outlineOpacity,
+      outlineOffset,
+      outlineManhattan,
     );
   };
 

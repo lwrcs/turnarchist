@@ -6,6 +6,7 @@ import { Game } from "../game";
 import { Shadow } from "../drawable/shadow";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
+import { getKeyColorForId } from "../utility/keyColor";
 
 export class Key extends Usable {
   static itemName = "key";
@@ -15,6 +16,9 @@ export class Key extends Usable {
   room: Room;
   showPath: boolean;
   animateFrame: number;
+  private _cachedColorId: number;
+  private _cachedColorName: string;
+  private _cachedColorHex: string;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
@@ -26,7 +30,34 @@ export class Key extends Usable {
     this.room = level;
     this.showPath = false;
     this.animateFrame = 0;
+    this._cachedColorId = -1;
+    this._cachedColorName = "";
+    this._cachedColorHex = "#FFFFFF";
   }
+
+  private syncColor = (): void => {
+    if (this._cachedColorId === this.doorID) return;
+    this._cachedColorId = this.doorID;
+    if (this.doorID > 0) {
+      const c = getKeyColorForId(this.doorID);
+      this._cachedColorName = c.name;
+      this._cachedColorHex = c.hex;
+      this.name = `${c.name} key`;
+    } else {
+      this._cachedColorName = "";
+      this._cachedColorHex = "#FFFFFF";
+      this.name = "key";
+    }
+  };
+
+  private getOutlineOpacity = (): number => {
+    // Always outlined; when active, flash.
+    const base = 0.5;
+    if (!this.showPath) return base;
+    const t = Date.now() / 350;
+    const pulse = 0.5 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+    return Math.max(0, Math.min(1, base + pulse));
+  };
 
   private setPathGuideEnabled = (
     player: Player,
@@ -42,6 +73,7 @@ export class Key extends Usable {
         for (const it of p.inventory.items) {
           if (it instanceof Key && it !== this) {
             it.showPath = false;
+            // Keep icon stable; active state is shown via outline flash, not a different sprite.
             it.tileX = 1;
             it.tileY = 0;
           }
@@ -50,7 +82,9 @@ export class Key extends Usable {
     }
 
     this.showPath = enabled;
-    this.tileX = this.showPath ? 2 : 1;
+    // Do NOT swap to the "active" icon frame (it has a baked-in red outline).
+    // Active state is communicated via outline opacity flashing.
+    this.tileX = 1;
     this.tileY = 0;
 
     if (opts?.syncNow === true) {
@@ -63,15 +97,24 @@ export class Key extends Usable {
 
   getDescription = (): string => {
     //const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
+    this.syncColor();
     const depth = this.depth !== null ? "Depth: " + this.depth.toString() : "";
-    return `KEY\nA key. ${depth}`;
+    const title = this._cachedColorName
+      ? `${this._cachedColorName.toUpperCase()} KEY`
+      : "KEY";
+    return `${title}\nA key. ${depth}`;
   };
 
   onPickup = (player: Player) => {
     if (!this.pickedUp) {
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
-        this.level.game.pushMessage("You found a key!");
+        this.syncColor();
+        this.level.game.pushMessage(
+          this._cachedColorName
+            ? `You found a ${this._cachedColorName} key!`
+            : "You found a key!",
+        );
         this.level.game.pushMessage("Path guide enabled. Click key to toggle.");
 
         Sound.keyPickup();
@@ -103,7 +146,8 @@ export class Key extends Usable {
 
   onDrop = () => {
     this.showPath = false;
-    this.tileX = this.showPath ? 2 : 1;
+    // Keep icon stable; active state is shown via outline flash.
+    this.tileX = 1;
 
     const player = this.level?.game?.players?.[this.level.game.localPlayerID];
     const room = player?.getRoom?.() ?? this.level;
@@ -111,6 +155,7 @@ export class Key extends Usable {
   };
 
   draw = (delta: number) => {
+    this.syncColor();
     Game.ctx.save();
     this.animateFrame += delta / 8;
     if (this.animateFrame >= 8 || this.pickedUp) this.animateFrame = 0;
@@ -152,29 +197,26 @@ export class Key extends Usable {
         this.h * scale,
         this.level.shadeColor,
         this.shadeAmount(),
+        undefined,
+        this._cachedColorHex,
+        this.getOutlineOpacity(),
+        1,
+        true,
       );
     }
     Game.ctx.restore();
   };
-  /*
+
   outline = () => {
-    if (this.showPath) {
-      return {
-        color: "red",
-        opacity: 0.4,
-        offset: 1,
-        manhattan: true,
-      };
-    } else {
-      return {
-        color: "white",
-        opacity: 0,
-        offset: 0,
-        manhattan: false,
-      };
-    }
+    this.syncColor();
+    return {
+      color: this._cachedColorHex,
+      opacity: this.getOutlineOpacity(),
+      offset: 1,
+      manhattan: true,
+    };
   };
-*/
+
   updatePathToDoor = (playerCtx?: Player) => {
     try {
       const player =
@@ -197,11 +239,17 @@ export class Key extends Usable {
           for (let y = r.roomY; y < r.roomY + r.height; y++) {
             const t = r.roomArray[x]?.[y];
             if (t instanceof DownLadder) {
-              if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+              if (
+                t.lockable?.isLocked?.() === true &&
+                t.lockable.keyID === this.doorID
+              ) {
                 return { room: r, x: t.x, y: t.y };
               }
             } else if (t instanceof UpLadder) {
-              if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+              if (
+                t.lockable?.isLocked?.() === true &&
+                t.lockable.keyID === this.doorID
+              ) {
                 return { room: r, x: t.x, y: t.y };
               }
             }

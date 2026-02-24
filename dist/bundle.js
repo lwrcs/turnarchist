@@ -30711,8 +30711,8 @@ Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpac
  * Draw an FX frame from the FX sheet. Convenience wrapper.
  * Uses entity=true so FX uses entity shade quantization.
  */
-Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) => {
-    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir);
+Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
+    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
 };
 exports.game = new Game();
 exports.gs = new gameState_1.GameState();
@@ -50564,9 +50564,35 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const keyColor_1 = __webpack_require__(/*! ../utility/keyColor */ "./src/utility/keyColor.ts");
 class Key extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.syncColor = () => {
+            if (this._cachedColorId === this.doorID)
+                return;
+            this._cachedColorId = this.doorID;
+            if (this.doorID > 0) {
+                const c = (0, keyColor_1.getKeyColorForId)(this.doorID);
+                this._cachedColorName = c.name;
+                this._cachedColorHex = c.hex;
+                this.name = `${c.name} key`;
+            }
+            else {
+                this._cachedColorName = "";
+                this._cachedColorHex = "#FFFFFF";
+                this.name = "key";
+            }
+        };
+        this.getOutlineOpacity = () => {
+            // Always outlined; when active, flash.
+            const base = 0.5;
+            if (!this.showPath)
+                return base;
+            const t = Date.now() / 350;
+            const pulse = 0.5 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+            return Math.max(0, Math.min(1, base + pulse));
+        };
         this.setPathGuideEnabled = (player, enabled, opts) => {
             // Preserve "where I was found" for description/debug, but do NOT restrict usage by depth.
             if (this.depth === null)
@@ -50577,6 +50603,7 @@ class Key extends usable_1.Usable {
                     for (const it of p.inventory.items) {
                         if (it instanceof Key && it !== this) {
                             it.showPath = false;
+                            // Keep icon stable; active state is shown via outline flash, not a different sprite.
                             it.tileX = 1;
                             it.tileY = 0;
                         }
@@ -50584,7 +50611,9 @@ class Key extends usable_1.Usable {
                 }
             }
             this.showPath = enabled;
-            this.tileX = this.showPath ? 2 : 1;
+            // Do NOT swap to the "active" icon frame (it has a baked-in red outline).
+            // Active state is communicated via outline opacity flashing.
+            this.tileX = 1;
             this.tileY = 0;
             if (opts?.syncNow === true) {
                 const playerRoom = player.getRoom?.();
@@ -50595,14 +50624,21 @@ class Key extends usable_1.Usable {
         };
         this.getDescription = () => {
             //const ID = this.doorID === 0 ? "" : "ID: " + this.doorID.toString();
+            this.syncColor();
             const depth = this.depth !== null ? "Depth: " + this.depth.toString() : "";
-            return `KEY\nA key. ${depth}`;
+            const title = this._cachedColorName
+                ? `${this._cachedColorName.toUpperCase()} KEY`
+                : "KEY";
+            return `${title}\nA key. ${depth}`;
         };
         this.onPickup = (player) => {
             if (!this.pickedUp) {
                 this.pickedUp = player.inventory.addItem(this);
                 if (this.pickedUp) {
-                    this.level.game.pushMessage("You found a key!");
+                    this.syncColor();
+                    this.level.game.pushMessage(this._cachedColorName
+                        ? `You found a ${this._cachedColorName} key!`
+                        : "You found a key!");
                     this.level.game.pushMessage("Path guide enabled. Click key to toggle.");
                     sound_1.Sound.keyPickup();
                     if (this.depth === null)
@@ -50629,12 +50665,14 @@ class Key extends usable_1.Usable {
         };
         this.onDrop = () => {
             this.showPath = false;
-            this.tileX = this.showPath ? 2 : 1;
+            // Keep icon stable; active state is shown via outline flash.
+            this.tileX = 1;
             const player = this.level?.game?.players?.[this.level.game.localPlayerID];
             const room = player?.getRoom?.() ?? this.level;
             room?.syncKeyPathParticles();
         };
         this.draw = (delta) => {
+            this.syncColor();
             game_1.Game.ctx.save();
             this.animateFrame += delta / 8;
             if (this.animateFrame >= 8 || this.pickedUp)
@@ -50667,29 +50705,19 @@ class Key extends usable_1.Usable {
                     1 +
                     this.offsetY +
                     this.h * (scale * -0.5 + 0.5) +
-                    this.chestOffsetY, this.w * scale, this.h * scale, this.level.shadeColor, this.shadeAmount());
+                    this.chestOffsetY, this.w * scale, this.h * scale, this.level.shadeColor, this.shadeAmount(), undefined, this._cachedColorHex, this.getOutlineOpacity(), 1, true);
             }
             game_1.Game.ctx.restore();
         };
-        /*
-        outline = () => {
-          if (this.showPath) {
+        this.outline = () => {
+            this.syncColor();
             return {
-              color: "red",
-              opacity: 0.4,
-              offset: 1,
-              manhattan: true,
+                color: this._cachedColorHex,
+                opacity: this.getOutlineOpacity(),
+                offset: 1,
+                manhattan: true,
             };
-          } else {
-            return {
-              color: "white",
-              opacity: 0,
-              offset: 0,
-              manhattan: false,
-            };
-          }
         };
-      */
         this.updatePathToDoor = (playerCtx) => {
             try {
                 const player = playerCtx ?? this.level.game.players[this.level.game.localPlayerID];
@@ -50705,12 +50733,14 @@ class Key extends usable_1.Usable {
                         for (let y = r.roomY; y < r.roomY + r.height; y++) {
                             const t = r.roomArray[x]?.[y];
                             if (t instanceof downLadder_1.DownLadder) {
-                                if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+                                if (t.lockable?.isLocked?.() === true &&
+                                    t.lockable.keyID === this.doorID) {
                                     return { room: r, x: t.x, y: t.y };
                                 }
                             }
                             else if (t instanceof upLadder_1.UpLadder) {
-                                if (t.lockable?.isLocked?.() === true && t.lockable.keyID === this.doorID) {
+                                if (t.lockable?.isLocked?.() === true &&
+                                    t.lockable.keyID === this.doorID) {
                                     return { room: r, x: t.x, y: t.y };
                                 }
                             }
@@ -50815,6 +50845,9 @@ class Key extends usable_1.Usable {
         this.room = level;
         this.showPath = false;
         this.animateFrame = 0;
+        this._cachedColorId = -1;
+        this._cachedColorName = "";
+        this._cachedColorHex = "#FFFFFF";
     }
 }
 exports.Key = Key;
@@ -77249,6 +77282,7 @@ const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const keyColor_1 = __webpack_require__(/*! ../utility/keyColor */ "./src/utility/keyColor.ts");
 var LockType;
 (function (LockType) {
     LockType[LockType["NONE"] = 0] = "NONE";
@@ -77406,6 +77440,9 @@ class Lockable {
             }
         }
         const iconY = this.isTopDoor ? y - 1.25 : y - 1.25;
+        const outline = this.lockType === LockType.LOCKED && this.keyID > 0 && !this.unlocking
+            ? (0, keyColor_1.getKeyColorForId)(this.keyID)
+            : null;
         // Only draw the arrow if not unlocking and lockType is NONE
         if (this.lockType === LockType.NONE && !this.unlocking) {
             game_1.Game.drawFX(2, 2, 1, 1, x, y - 1.25 + multiplier * Math.sin((this.frame * Math.PI) / 50), 1, 1);
@@ -77414,7 +77451,7 @@ class Lockable {
         // Draw the lock icon (even when unlocking, to show the fade animation)
         game_1.Game.drawFX(this.iconTileX, 2, 1, 1, x + this.iconXOffset, iconY +
             multiplier * Math.sin((this.frame * Math.PI) / 50) +
-            this.iconYOffset, 1, 1);
+            this.iconYOffset, 1, 1, "black", 0, undefined, outline?.hex, outline ? 0.9 : 0, 1, true);
         game_1.Game.ctx.globalAlpha = 1;
     }
     setKey(key) {
@@ -78997,6 +79034,46 @@ const getDeviceInfo = () => {
     };
 };
 exports.getDeviceInfo = getDeviceInfo;
+
+
+/***/ }),
+
+/***/ "./src/utility/keyColor.ts":
+/*!*********************************!*\
+  !*** ./src/utility/keyColor.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getKeyColorForId = void 0;
+const PALETTE = [
+    { name: "blue", hex: "#3B6BFF" },
+    { name: "cyan", hex: "#00E5FF" },
+    { name: "green", hex: "#2EE56B" },
+    { name: "red", hex: "#FF3B3B" },
+    { name: "purple", hex: "#B14CFF" },
+    { name: "yellow", hex: "#FFE84A" },
+    { name: "orange", hex: "#FF9B3B" },
+];
+const mix32 = (x) => {
+    // Deterministic 32-bit mix (MurmurHash3 finalizer-ish).
+    let v = x >>> 0;
+    v ^= v >>> 16;
+    v = Math.imul(v, 0x85ebca6b) >>> 0;
+    v ^= v >>> 13;
+    v = Math.imul(v, 0xc2b2ae35) >>> 0;
+    v ^= v >>> 16;
+    return v >>> 0;
+};
+const getKeyColorForId = (id) => {
+    const n = Number.isFinite(id) ? Math.floor(id) : 0;
+    const h = mix32(n);
+    const idx = h % PALETTE.length;
+    return PALETTE[idx];
+};
+exports.getKeyColorForId = getKeyColorForId;
 
 
 /***/ }),

@@ -7,6 +7,7 @@ import { DownLadder } from "./downLadder";
 import { UpLadder } from "./upLadder";
 import { Random } from "../utility/random";
 import { GameConstants } from "../game/gameConstants";
+import { getKeyColorForId } from "../utility/keyColor";
 
 export enum LockType {
   NONE = 0,
@@ -200,6 +201,11 @@ export class Lockable {
 
     const iconY = this.isTopDoor ? y - 1.25 : y - 1.25;
 
+    const outline =
+      this.lockType === LockType.LOCKED && this.keyID > 0 && !this.unlocking
+        ? getKeyColorForId(this.keyID)
+        : null;
+
     // Only draw the arrow if not unlocking and lockType is NONE
     if (this.lockType === LockType.NONE && !this.unlocking) {
       Game.drawFX(
@@ -227,6 +233,13 @@ export class Lockable {
         this.iconYOffset,
       1,
       1,
+      "black",
+      0,
+      undefined,
+      outline?.hex,
+      outline ? 0.9 : 0,
+      1,
+      true,
     );
 
     Game.ctx.globalAlpha = 1;
