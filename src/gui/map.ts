@@ -44,7 +44,7 @@ export class Map {
   // Fog of war properties - now stored per mapGroup
   seenTilesByMapGroup: globalThis.Map<string, Set<string>> =
     new globalThis.Map();
-  visibilityRadius: number = 4;
+  visibilityRadius: number = 6;
   drawRadius: number = 25;
 
   constructor(game: Game, player: Player) {
@@ -53,6 +53,26 @@ export class Map {
     this.player = player;
     //this.depth = player.game.level.depth
   }
+
+  private getRoomsForCurrentLevel = (): Room[] => {
+    // Sidepaths use their own Level instance and are not necessarily present in `game.levels[depth]`.
+    // Use the player's current room to find the active Level rooms.
+    try {
+      const currentRoom = this.player.getRoom();
+      const levelRooms = currentRoom?.level?.rooms;
+      if (Array.isArray(levelRooms)) return levelRooms;
+    } catch {
+      // Fall through to other sources.
+    }
+
+    const gameRooms = this.game.rooms;
+    if (Array.isArray(gameRooms)) return gameRooms;
+
+    const fromLevels = this.game.levels?.[this.player.depth]?.rooms;
+    if (Array.isArray(fromLevels)) return fromLevels;
+
+    return [];
+  };
 
   // Add helper method to collect down ladders from room array
   getDownLaddersFromRoom = (room: Room): any[] => {
@@ -83,9 +103,10 @@ export class Map {
 
   saveMapData = () => {
     this.clearMap();
-    const currentMapGroup = this.game.room.mapGroup.toString();
+    const currentRoom = this.player.getRoom();
+    const currentMapGroup = currentRoom.mapGroup.toString();
 
-    for (const room of this.game.levels[this.player.depth].rooms) {
+    for (const room of this.getRoomsForCurrentLevel()) {
       if (
         currentMapGroup === room.mapGroup.toString() &&
         (room.entered === true || GameConstants.DEVELOPER_MODE)
@@ -767,7 +788,8 @@ export class Map {
     try {
       const hasUp = level?.hasLadder?.("up") === true;
       const hasDownMain = level?.hasMainDownLadder?.() === true;
-      if (hasUp && hasDownMain) outline = "#4B1460"; // both ladders
+      if (hasUp && hasDownMain)
+        outline = "#4B1460"; // both ladders
       else if (hasUp) outline = "#101460";
       else if (hasDownMain) outline = "#601410";
     } catch {}
@@ -814,19 +836,24 @@ export class Map {
     Game.ctx.restore(); // Restore the canvas state
   };
 
-  drawRoomPlayers = (players, delta: number) => {
+  drawRoomPlayers = (players: Record<string, Player>, delta: number) => {
     const s = this.scale;
     Game.ctx.save(); // Save the current canvas state
-    for (const i in players) {
+    for (const p of Object.values(players)) {
+      if (!p) continue;
       Game.ctx.fillStyle = "white";
-      if (
-        this.game.levels[players[i].depth].rooms[players[i].levelID]
-          .mapGroup === this.game.room.mapGroup
-      ) {
-        if (this.shouldDrawTile(players[i].x, players[i].y)) {
-          Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
-        }
+      let room: Room | null = null;
+      try {
+        room = p.getRoom();
+      } catch {
+        room = null;
       }
+      if (!room) continue;
+      if (!this.game.room) continue;
+      if (room.mapGroup !== this.game.room.mapGroup) continue;
+
+      if (!this.shouldDrawTile(p.x, p.y)) continue;
+      Game.ctx.fillRect(p.x * s, p.y * s, 1 * s, 1 * s);
     }
     Game.ctx.restore(); // Restore the canvas state
   };
@@ -922,7 +949,7 @@ export class Map {
       Game.ctx.fillStyle = "yellow";
     }
     if (enemy.type === EntityType.PROP) {
-      Game.ctx.fillStyle = "#847e87";
+      Game.ctx.fillStyle = "#222222";
     }
     if (enemy.type === EntityType.RESOURCE) {
       Game.ctx.fillStyle = "#5a595b";

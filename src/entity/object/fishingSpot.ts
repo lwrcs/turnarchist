@@ -96,7 +96,7 @@ export class FishingSpot extends Entity {
       }
       this.room.game.pushMessage(message);
       player.busyAnimating = false;
-    }, 1200);
+    }, 0);
 
     this.room.tick(player);
   };

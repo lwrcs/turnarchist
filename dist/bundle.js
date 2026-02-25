@@ -23476,7 +23476,7 @@ class FishingSpot extends entity_1.Entity {
                 }
                 this.room.game.pushMessage(message);
                 player.busyAnimating = false;
-            }, 1200);
+            }, 0);
             this.room.tick(player);
         };
         this.tryFish = () => {
@@ -44488,8 +44488,28 @@ class Map {
         this.frameMaskMaxY = 0;
         // Fog of war properties - now stored per mapGroup
         this.seenTilesByMapGroup = new globalThis.Map();
-        this.visibilityRadius = 4;
+        this.visibilityRadius = 6;
         this.drawRadius = 25;
+        this.getRoomsForCurrentLevel = () => {
+            // Sidepaths use their own Level instance and are not necessarily present in `game.levels[depth]`.
+            // Use the player's current room to find the active Level rooms.
+            try {
+                const currentRoom = this.player.getRoom();
+                const levelRooms = currentRoom?.level?.rooms;
+                if (Array.isArray(levelRooms))
+                    return levelRooms;
+            }
+            catch {
+                // Fall through to other sources.
+            }
+            const gameRooms = this.game.rooms;
+            if (Array.isArray(gameRooms))
+                return gameRooms;
+            const fromLevels = this.game.levels?.[this.player.depth]?.rooms;
+            if (Array.isArray(fromLevels))
+                return fromLevels;
+            return [];
+        };
         // Add helper method to collect down ladders from room array
         this.getDownLaddersFromRoom = (room) => {
             const downLadders = [];
@@ -44514,8 +44534,9 @@ class Map {
         };
         this.saveMapData = () => {
             this.clearMap();
-            const currentMapGroup = this.game.room.mapGroup.toString();
-            for (const room of this.game.levels[this.player.depth].rooms) {
+            const currentRoom = this.player.getRoom();
+            const currentMapGroup = currentRoom.mapGroup.toString();
+            for (const room of this.getRoomsForCurrentLevel()) {
                 if (currentMapGroup === room.mapGroup.toString() &&
                     (room.entered === true || gameConstants_1.GameConstants.DEVELOPER_MODE)) {
                     this.mapData.push({
@@ -45161,14 +45182,26 @@ class Map {
         this.drawRoomPlayers = (players, delta) => {
             const s = this.scale;
             game_1.Game.ctx.save(); // Save the current canvas state
-            for (const i in players) {
+            for (const p of Object.values(players)) {
+                if (!p)
+                    continue;
                 game_1.Game.ctx.fillStyle = "white";
-                if (this.game.levels[players[i].depth].rooms[players[i].levelID]
-                    .mapGroup === this.game.room.mapGroup) {
-                    if (this.shouldDrawTile(players[i].x, players[i].y)) {
-                        game_1.Game.ctx.fillRect(players[i].x * s, players[i].y * s, 1 * s, 1 * s);
-                    }
+                let room = null;
+                try {
+                    room = p.getRoom();
                 }
+                catch {
+                    room = null;
+                }
+                if (!room)
+                    continue;
+                if (!this.game.room)
+                    continue;
+                if (room.mapGroup !== this.game.room.mapGroup)
+                    continue;
+                if (!this.shouldDrawTile(p.x, p.y))
+                    continue;
+                game_1.Game.ctx.fillRect(p.x * s, p.y * s, 1 * s, 1 * s);
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -45222,7 +45255,7 @@ class Map {
                 game_1.Game.ctx.fillStyle = "yellow";
             }
             if (enemy.type === entity_1.EntityType.PROP) {
-                game_1.Game.ctx.fillStyle = "#847e87";
+                game_1.Game.ctx.fillStyle = "#222222";
             }
             if (enemy.type === entity_1.EntityType.RESOURCE) {
                 game_1.Game.ctx.fillStyle = "#5a595b";
