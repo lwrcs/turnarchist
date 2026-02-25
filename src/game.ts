@@ -45,7 +45,12 @@ import { registerBuiltinItemCodecsV2 } from "./game/save/registry/itemsBuiltins"
 import { enemyRegistryV2 } from "./game/save/registry/enemies";
 import { itemRegistryV2 } from "./game/save/registry/items";
 import { ITEM_KIND_VALUES_V2 } from "./game/save/schema";
-import type { EnemyKind, EnemySaveV2, ItemKind, ItemSaveV2 } from "./game/save/schema";
+import type {
+  EnemyKind,
+  EnemySaveV2,
+  ItemKind,
+  ItemSaveV2,
+} from "./game/save/schema";
 import { SKILL_DISPLAY_NAME } from "./game/skills";
 import type { Skill } from "./game/skills";
 import { FloatingTextPopup } from "./particle/floatingTextPopup";
@@ -876,7 +881,10 @@ export class Game {
       const NUM_RESOURCES = 6;
 
       // Boot loading renderer: uses the game's pixel font once available, but is independent of Game.
-      const bootLoading = new BootLoadingRenderer(canvas as HTMLCanvasElement, Game.ctx);
+      const bootLoading = new BootLoadingRenderer(
+        canvas as HTMLCanvasElement,
+        Game.ctx,
+      );
       bootLoading.setLabel("loading");
       bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       bootLoading.start();
@@ -1098,30 +1106,27 @@ export class Game {
     );
 
     type SkillLevelUpEventPayload = { skill: Skill; level: number };
-    globalEventBus.on<SkillLevelUpEventPayload>(
-      "SKILL_LEVEL_UP",
-      (payload) => {
-        const player = this.players?.[this.localPlayerID];
-        if (!player) return;
-        const room = player.getRoom?.() ?? this.room;
-        if (!room) return;
+    globalEventBus.on<SkillLevelUpEventPayload>("SKILL_LEVEL_UP", (payload) => {
+      const player = this.players?.[this.localPlayerID];
+      if (!player) return;
+      const room = player.getRoom?.() ?? this.room;
+      if (!room) return;
 
-        // First-time prompt: point at the Skills button in the top-left UI.
-        try {
-          this.maybeShowOpenSkillsPointer();
-        } catch {}
+      // First-time prompt: point at the Skills button in the top-left UI.
+      try {
+        this.maybeShowOpenSkillsPointer();
+      } catch {}
 
-        const text = `${SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
-        room.particles.push(
-          new FloatingTextPopup({
-            room,
-            anchor: player,
-            text,
-            color: "yellow",
-          }),
-        );
-      },
-    );
+      const text = `${SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
+      room.particles.push(
+        new FloatingTextPopup({
+          room,
+          anchor: player,
+          text,
+          color: "yellow",
+        }),
+      );
+    });
 
     // Add focus/blur event listeners
     //window.addEventListener("blur", this.handleWindowBlur);
@@ -1526,8 +1531,16 @@ export class Game {
    * - once fully black, holds a black frame and then runs `action`
    * - caller may call `endPreLevelGenBlackout()` when it is safe to show the normal loading screen
    */
-  public beginPreLevelGenFade(action: () => Promise<void>, durationMs: number = LevelConstants.LEVEL_TRANSITION_TIME): void {
-    if (this.preLevelGenFadeActive || this.preLevelGenHoldBlack || this.preLevelGenActionStarted) return;
+  public beginPreLevelGenFade(
+    action: () => Promise<void>,
+    durationMs: number = LevelConstants.LEVEL_TRANSITION_TIME,
+  ): void {
+    if (
+      this.preLevelGenFadeActive ||
+      this.preLevelGenHoldBlack ||
+      this.preLevelGenActionStarted
+    )
+      return;
     this.preLevelGenFadeActive = true;
     this.preLevelGenHoldBlack = false;
     this.preLevelGenFadeAlpha = 0;
@@ -1697,7 +1710,9 @@ export class Game {
     // DownLadder sidepaths are generated in `DownLadder.onCollide()` before calling this method.
     // Do not trigger generation here: it can race and cause the sidepath to be generated/populated twice.
     if (ladder instanceof DownLadder && !ladder.linkedRoom) {
-      console.warn("changeLevelThroughLadder: DownLadder has no linkedRoom yet");
+      console.warn(
+        "changeLevelThroughLadder: DownLadder has no linkedRoom yet",
+      );
       return;
     }
 
@@ -2390,7 +2405,9 @@ export class Game {
 
     if (command === "profiletick") {
       this.tickProfileEnabled = !this.tickProfileEnabled;
-      this.pushMessage(`Tick profiling is now ${this.tickProfileEnabled ? "ON" : "OFF"}`);
+      this.pushMessage(
+        `Tick profiling is now ${this.tickProfileEnabled ? "ON" : "OFF"}`,
+      );
       return;
     }
 
@@ -2434,8 +2451,11 @@ export class Game {
     }
 
     if (command === "slow") {
-      const slowMotionEnabled = this.players[this.localPlayerID].toggleSlowMotion();
-      this.pushMessage(`Slow motion is now ${slowMotionEnabled ? "enabled" : "disabled"}`);
+      const slowMotionEnabled =
+        this.players[this.localPlayerID].toggleSlowMotion();
+      this.pushMessage(
+        `Slow motion is now ${slowMotionEnabled ? "enabled" : "disabled"}`,
+      );
       return;
     }
 
@@ -3090,9 +3110,7 @@ export class Game {
       case "down":
         // Debug nav: locate a SIDE PATH rope-down ladder and move the player to it.
         // Must not assume doors exist (single-room sidepaths can be doorless).
-        let found:
-          | { ladder: DownLadder; room: Room }
-          | undefined = undefined;
+        let found: { ladder: DownLadder; room: Room } | undefined = undefined;
         for (const r of this.room.path()) {
           for (let x = r.roomX; x < r.roomX + r.width; x++) {
             for (let y = r.roomY; y < r.roomY + r.height; y++) {
@@ -3181,7 +3199,9 @@ export class Game {
         }
 
         targetRoom.enterLevel(player, { x: ul.x, y: ul.y });
-        this.pushMessage(ul.isRope ? "Rope up ladder located" : "Up ladder located");
+        this.pushMessage(
+          ul.isRope ? "Rope up ladder located" : "Up ladder located",
+        );
         break;
       }
       case "testlevel":
@@ -3507,7 +3527,9 @@ export class Game {
             this.pushMessage("Usage: kill <enemyType>");
             break;
           }
-          const EnemyCtor = (EnemyTypeMap as any)[enemyName as EnemyType] as any;
+          const EnemyCtor = (EnemyTypeMap as any)[
+            enemyName as EnemyType
+          ] as any;
           if (!EnemyCtor) {
             this.pushMessage(`Unknown enemy type "${enemyName}".`);
             break;
@@ -3618,7 +3640,8 @@ export class Game {
           if (lp && lp.dead) return;
 
           const now = Date.now();
-          if (now - this.lastAutosaveAtMs < GameConstants.AUTOSAVE_INTERVAL_MS) return;
+          if (now - this.lastAutosaveAtMs < GameConstants.AUTOSAVE_INTERVAL_MS)
+            return;
           this.lastAutosaveAtMs = now;
           saveOnExit();
         }, GameConstants.AUTOSAVE_INTERVAL_MS);
@@ -3649,7 +3672,10 @@ export class Game {
     const enemyKinds: EnemyKind[] = enemyRegistryV2.kinds();
     const nEntities = enemyKinds.length;
 
-    const columns = Math.max(8, Math.ceil(Math.sqrt(Math.max(1, nEntities))) + 2);
+    const columns = Math.max(
+      8,
+      Math.ceil(Math.sqrt(Math.max(1, nEntities))) + 2,
+    );
     const cell = 8; // conservative spacing for large entities
     const rows = Math.ceil(Math.max(1, nEntities) / columns) + 2;
     const roomW = Math.max(30, columns * cell + 2);
@@ -3658,7 +3684,16 @@ export class Game {
     // ---- Build minimal world state (single room, single level).
     const depth = 0;
     const mapGroup = 1;
-    const level = new Level(this, depth, roomW, roomH, true, mapGroup, EnvType.DUNGEON, true);
+    const level = new Level(
+      this,
+      depth,
+      roomW,
+      roomH,
+      true,
+      mapGroup,
+      EnvType.DUNGEON,
+      true,
+    );
     level.genSource = "procedural";
 
     const room = new Room(
@@ -3688,7 +3723,9 @@ export class Game {
           y === room.roomY ||
           x === room.roomX + room.width - 1 ||
           y === room.roomY + room.height - 1;
-        room.roomArray[x][y] = isBorder ? new Wall(room, x, y) : new Floor(room, x, y);
+        room.roomArray[x][y] = isBorder
+          ? new Wall(room, x, y)
+          : new Floor(room, x, y);
       }
     }
 
@@ -3744,7 +3781,13 @@ export class Game {
 
       switch (kind) {
         case "key":
-          return { ...base, kind: "key", doorId: 1, depth: null, showPath: false };
+          return {
+            ...base,
+            kind: "key",
+            doorId: 1,
+            depth: null,
+            showPath: false,
+          };
         case "torch":
         case "lantern":
         case "candle":
@@ -3753,9 +3796,20 @@ export class Game {
         case "glowshrooms":
           return { ...base, kind, fuel: 100, equipped: false };
         case "diving_helmet":
-          return { ...base, kind: "diving_helmet", equipped: false, currentAir: 100 };
+          return {
+            ...base,
+            kind: "diving_helmet",
+            equipped: false,
+            currentAir: 100,
+          };
         case "hourglass":
-          return { ...base, kind: "hourglass", durability: 100, durabilityMax: 100, broken: false };
+          return {
+            ...base,
+            kind: "hourglass",
+            durability: 100,
+            durabilityMax: 100,
+            broken: false,
+          };
         case "dagger":
         case "sword":
         case "spear":
@@ -3798,7 +3852,13 @@ export class Game {
         }
         case "occult_shield":
         case "wooden_shield":
-          return { ...base, kind, equipped: false, health: 100, rechargeTurnCounter: 0 };
+          return {
+            ...base,
+            kind,
+            equipped: false,
+            health: 100,
+            rechargeTurnCounter: 0,
+          };
         default:
           return { ...base, kind };
       }
@@ -3808,19 +3868,27 @@ export class Game {
     for (const kind of ITEM_KIND_VALUES_V2) {
       if (!itemRegistryV2.has(kind)) missingItems.push(kind);
     }
-    if (missingItems.length > 0) console.warn("testlevel: missing item codecs", missingItems);
+    if (missingItems.length > 0)
+      console.warn("testlevel: missing item codecs", missingItems);
 
     for (let i = 0; i < ITEM_KIND_VALUES_V2.length && i < totalSlots; i++) {
       const kind = ITEM_KIND_VALUES_V2[i];
       const codec = itemRegistryV2.get(kind);
       if (!codec) continue;
-      const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, { game: this });
+      const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, {
+        game: this,
+      });
       it.pickedUp = true;
       inv.items[i] = it;
     }
 
     // ---- Spawn one of each registered enemy/entity codec.
-    const makeEnemySave = (kind: EnemyKind, gid: string, x: number, y: number): EnemySaveV2 => {
+    const makeEnemySave = (
+      kind: EnemyKind,
+      gid: string,
+      x: number,
+      y: number,
+    ): EnemySaveV2 => {
       const base = {
         kind,
         gid,
@@ -3845,9 +3913,22 @@ export class Game {
           skipNextTurns: 0,
         };
       }
-      if (kind === "spawner") return { ...base, kind: "spawner", enemySpawnType: 0, ticks: 0, seenPlayer: false };
+      if (kind === "spawner")
+        return {
+          ...base,
+          kind: "spawner",
+          enemySpawnType: 0,
+          ticks: 0,
+          seenPlayer: false,
+        };
       if (kind === "chest")
-        return { ...base, kind: "chest", opened: false, destroyable: true, spawnedItemGids: undefined };
+        return {
+          ...base,
+          kind: "chest",
+          opened: false,
+          destroyable: true,
+          spawnedItemGids: undefined,
+        };
       if (kind === "vending_machine") {
         const cost = makeItemSave("coin", "I-vm-cost");
         const item = makeItemSave("apple", "I-vm-item");
@@ -3884,7 +3965,11 @@ export class Game {
       const kind = enemyKinds[i];
       const codec = enemyRegistryV2.get(kind);
       if (!codec) continue;
-      const ent = codec.spawn(makeEnemySave(kind, `E-test-${i}`, cx, cy), room, { game: this });
+      const ent = codec.spawn(
+        makeEnemySave(kind, `E-test-${i}`, cx, cy),
+        room,
+        { game: this },
+      );
       ent.dead = false;
       room.entities.push(ent);
 
@@ -5278,7 +5363,10 @@ export class Game {
     const id = "open-skills";
     const resolver: PointerAnchorResolver = () => XPCounter.getRect();
     const until = () => skillsMenu.open === true;
-    const safety = [() => this.levelState !== LevelState.IN_LEVEL, () => player.dead];
+    const safety = [
+      () => this.levelState !== LevelState.IN_LEVEL,
+      () => player.dead,
+    ];
 
     this.addPointer({
       id,
@@ -5732,6 +5820,9 @@ export class Game {
     outlineOpacity: number = 0,
     outlineOffset: number = 0,
     outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
   ) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
     // Critical: disable smoothing on the *destination* context that performs the scaling drawImage().
@@ -5790,6 +5881,14 @@ export class Game {
       key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
     if (outlineColor && outlineOpacity > 0 && outlineManhattan)
       key += `,outlineStyle=manhattan`;
+    if (colorOverlay && colorOverlayOpacity > 0) {
+      const ovLevels = Math.max(shadeLevel, 12);
+      const ovOpacity =
+        Math.round(colorOverlayOpacity * ovLevels) / Math.max(ovLevels, 1);
+      const ovColor = quantizeHexColor(colorOverlay, shadeColorLevels);
+      key += `,colov=${ovColor}:${Math.max(0, Math.min(1, ovOpacity))}`;
+      if (colorOverlayDesaturate) key += `,colovDesat=1`;
+    }
 
     if (!Game.shade_canvases[key]) {
       // First time for this shaded sprite: render it into an offscreen canvas and cache it
@@ -5822,6 +5921,16 @@ export class Game {
       const poisonActive =
         GameConstants.DEBUG_POISON_SHADE_CACHE &&
         GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES > 0;
+
+      // Optional: desaturate before applying color overlay (helps "colorize" look).
+      // We do this only for the initial sprite draw; the alpha mask later uses the original image.
+      let prevFilter: string | undefined = undefined;
+      if (colorOverlay && colorOverlayOpacity > 0 && colorOverlayDesaturate) {
+        try {
+          prevFilter = shCtx.filter;
+          shCtx.filter = "grayscale(1)";
+        } catch {}
+      }
       shCtx.drawImage(
         poisonActive ? Game.getDebugTransparent1x1() : set,
         poisonActive ? 0 : Math.round(sX * GameConstants.TILESIZE),
@@ -5833,6 +5942,30 @@ export class Game {
         baseW,
         baseH,
       );
+      if (prevFilter !== undefined) {
+        try {
+          shCtx.filter = prevFilter;
+        } catch {}
+      }
+
+      // 1b) Optional color overlay (masked later by destination-in).
+      if (colorOverlay && colorOverlayOpacity > 0) {
+        const ovLevels = Math.max(shadeLevel, 12);
+        const ovOpacity =
+          Math.round(colorOverlayOpacity * ovLevels) / Math.max(ovLevels, 1);
+        shCtx.globalAlpha = Math.max(0, Math.min(1, ovOpacity));
+        // Multiply over (optionally desaturated) sprite to colorize while preserving luminance.
+        shCtx.globalCompositeOperation = "lighter";
+        shCtx.fillStyle = colorOverlay;
+        shCtx.fillRect(
+          0,
+          0,
+          Game.shade_canvases[key].width,
+          Game.shade_canvases[key].height,
+        );
+        shCtx.globalCompositeOperation = "source-over";
+        shCtx.globalAlpha = 1.0;
+      }
 
       // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
       shCtx.globalAlpha = shadeOpacity;
@@ -6111,6 +6244,9 @@ export class Game {
     outlineOpacity: number = 0,
     outlineOffset: number = 0,
     outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -6130,6 +6266,9 @@ export class Game {
       outlineOpacity,
       outlineOffset,
       outlineManhattan,
+      colorOverlay,
+      colorOverlayOpacity,
+      colorOverlayDesaturate,
     );
   };
 
@@ -6153,6 +6292,9 @@ export class Game {
     outlineOpacity: number = 0,
     outlineOffset: number = 0,
     outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
   ) => {
     Game.drawHelper(
       Game.itemset,
@@ -6172,6 +6314,9 @@ export class Game {
       outlineOpacity,
       outlineOffset,
       outlineManhattan,
+      colorOverlay,
+      colorOverlayOpacity,
+      colorOverlayDesaturate,
     );
   };
 
@@ -6195,6 +6340,9 @@ export class Game {
     outlineOpacity: number = 0,
     outlineOffset: number = 0,
     outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
   ) => {
     Game.drawHelper(
       Game.fxset,
@@ -6214,6 +6362,9 @@ export class Game {
       outlineOpacity,
       outlineOffset,
       outlineManhattan,
+      colorOverlay,
+      colorOverlayOpacity,
+      colorOverlayDesaturate,
     );
   };
 

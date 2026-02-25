@@ -29157,7 +29157,10 @@ class Game {
             const id = "open-skills";
             const resolver = () => xpCounter_1.XPCounter.getRect();
             const until = () => skillsMenu.open === true;
-            const safety = [() => this.levelState !== LevelState.IN_LEVEL, () => player.dead];
+            const safety = [
+                () => this.levelState !== LevelState.IN_LEVEL,
+                () => player.dead,
+            ];
             this.addPointer({
                 id,
                 text: this.isMobile ? "Tap Skills" : "Click Skills",
@@ -29890,7 +29893,9 @@ class Game {
      * - caller may call `endPreLevelGenBlackout()` when it is safe to show the normal loading screen
      */
     beginPreLevelGenFade(action, durationMs = levelConstants_1.LevelConstants.LEVEL_TRANSITION_TIME) {
-        if (this.preLevelGenFadeActive || this.preLevelGenHoldBlack || this.preLevelGenActionStarted)
+        if (this.preLevelGenFadeActive ||
+            this.preLevelGenHoldBlack ||
+            this.preLevelGenActionStarted)
             return;
         this.preLevelGenFadeActive = true;
         this.preLevelGenHoldBlack = false;
@@ -30051,7 +30056,9 @@ class Game {
                     y === room.roomY ||
                     x === room.roomX + room.width - 1 ||
                     y === room.roomY + room.height - 1;
-                room.roomArray[x][y] = isBorder ? new wall_1.Wall(room, x, y) : new floor_1.Floor(room, x, y);
+                room.roomArray[x][y] = isBorder
+                    ? new wall_1.Wall(room, x, y)
+                    : new floor_1.Floor(room, x, y);
             }
         }
         level.rooms = [room];
@@ -30099,7 +30106,13 @@ class Game {
             };
             switch (kind) {
                 case "key":
-                    return { ...base, kind: "key", doorId: 1, depth: null, showPath: false };
+                    return {
+                        ...base,
+                        kind: "key",
+                        doorId: 1,
+                        depth: null,
+                        showPath: false,
+                    };
                 case "torch":
                 case "lantern":
                 case "candle":
@@ -30108,9 +30121,20 @@ class Game {
                 case "glowshrooms":
                     return { ...base, kind, fuel: 100, equipped: false };
                 case "diving_helmet":
-                    return { ...base, kind: "diving_helmet", equipped: false, currentAir: 100 };
+                    return {
+                        ...base,
+                        kind: "diving_helmet",
+                        equipped: false,
+                        currentAir: 100,
+                    };
                 case "hourglass":
-                    return { ...base, kind: "hourglass", durability: 100, durabilityMax: 100, broken: false };
+                    return {
+                        ...base,
+                        kind: "hourglass",
+                        durability: 100,
+                        durabilityMax: 100,
+                        broken: false,
+                    };
                 case "dagger":
                 case "sword":
                 case "spear":
@@ -30153,7 +30177,13 @@ class Game {
                 }
                 case "occult_shield":
                 case "wooden_shield":
-                    return { ...base, kind, equipped: false, health: 100, rechargeTurnCounter: 0 };
+                    return {
+                        ...base,
+                        kind,
+                        equipped: false,
+                        health: 100,
+                        rechargeTurnCounter: 0,
+                    };
                 default:
                     return { ...base, kind };
             }
@@ -30170,7 +30200,9 @@ class Game {
             const codec = items_1.itemRegistryV2.get(kind);
             if (!codec)
                 continue;
-            const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, { game: this });
+            const it = codec.spawn(makeItemSave(kind, `I-test-${i}`), room, {
+                game: this,
+            });
             it.pickedUp = true;
             inv.items[i] = it;
         }
@@ -30200,9 +30232,21 @@ class Game {
                 };
             }
             if (kind === "spawner")
-                return { ...base, kind: "spawner", enemySpawnType: 0, ticks: 0, seenPlayer: false };
+                return {
+                    ...base,
+                    kind: "spawner",
+                    enemySpawnType: 0,
+                    ticks: 0,
+                    seenPlayer: false,
+                };
             if (kind === "chest")
-                return { ...base, kind: "chest", opened: false, destroyable: true, spawnedItemGids: undefined };
+                return {
+                    ...base,
+                    kind: "chest",
+                    opened: false,
+                    destroyable: true,
+                    spawnedItemGids: undefined,
+                };
             if (kind === "vending_machine") {
                 const cost = makeItemSave("coin", "I-vm-cost");
                 const item = makeItemSave("apple", "I-vm-item");
@@ -30480,7 +30524,7 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  * @param entity If true, uses entity shade quantization levels
  * @param fadeDir Optional directional fade mask (left/right/up/down)
  */
-Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
+Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
     Game.ctx.save(); // Save current canvas state so we can safely modify it
     // Critical: disable smoothing on the *destination* context that performs the scaling drawImage().
     // This ensures squish scaling stays pixel-crisp (nearest-neighbor).
@@ -30520,6 +30564,14 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
     if (outlineColor && outlineOpacity > 0 && outlineManhattan)
         key += `,outlineStyle=manhattan`;
+    if (colorOverlay && colorOverlayOpacity > 0) {
+        const ovLevels = Math.max(shadeLevel, 12);
+        const ovOpacity = Math.round(colorOverlayOpacity * ovLevels) / Math.max(ovLevels, 1);
+        const ovColor = quantizeHexColor(colorOverlay, shadeColorLevels);
+        key += `,colov=${ovColor}:${Math.max(0, Math.min(1, ovOpacity))}`;
+        if (colorOverlayDesaturate)
+            key += `,colovDesat=1`;
+    }
     if (!Game.shade_canvases[key]) {
         // First time for this shaded sprite: render it into an offscreen canvas and cache it
         Game.shade_canvases[key] = document.createElement("canvas");
@@ -30541,7 +30593,35 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         shCtx.globalCompositeOperation = "source-over";
         const poisonActive = gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE &&
             gameConstants_1.GameConstants.DEBUG_POISON_SHADE_CACHE_FRAMES > 0;
+        // Optional: desaturate before applying color overlay (helps "colorize" look).
+        // We do this only for the initial sprite draw; the alpha mask later uses the original image.
+        let prevFilter = undefined;
+        if (colorOverlay && colorOverlayOpacity > 0 && colorOverlayDesaturate) {
+            try {
+                prevFilter = shCtx.filter;
+                shCtx.filter = "grayscale(1)";
+            }
+            catch { }
+        }
         shCtx.drawImage(poisonActive ? Game.getDebugTransparent1x1() : set, poisonActive ? 0 : Math.round(sX * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 0 : Math.round(sY * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sW * gameConstants_1.GameConstants.TILESIZE), poisonActive ? 1 : Math.round(sH * gameConstants_1.GameConstants.TILESIZE), dx, dy, baseW, baseH);
+        if (prevFilter !== undefined) {
+            try {
+                shCtx.filter = prevFilter;
+            }
+            catch { }
+        }
+        // 1b) Optional color overlay (masked later by destination-in).
+        if (colorOverlay && colorOverlayOpacity > 0) {
+            const ovLevels = Math.max(shadeLevel, 12);
+            const ovOpacity = Math.round(colorOverlayOpacity * ovLevels) / Math.max(ovLevels, 1);
+            shCtx.globalAlpha = Math.max(0, Math.min(1, ovOpacity));
+            // Multiply over (optionally desaturated) sprite to colorize while preserving luminance.
+            shCtx.globalCompositeOperation = "lighter";
+            shCtx.fillStyle = colorOverlay;
+            shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
+            shCtx.globalCompositeOperation = "source-over";
+            shCtx.globalAlpha = 1.0;
+        }
         // 2) Tint overlay (shadeColor at shadeOpacity) over the sprite area
         shCtx.globalAlpha = shadeOpacity;
         shCtx.fillStyle = quantizedShadeColor;
@@ -30697,22 +30777,22 @@ Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpaci
  * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
  * Uses entity=true so mobs use entity shade quantization.
  */
-Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
-    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
+Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
+    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate);
 };
 /**
  * Draw an item from the item sheet. Convenience wrapper.
  * Uses entity=true so items use entity shade quantization.
  */
-Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
-    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
+Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
+    Game.drawHelper(Game.itemset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate);
 };
 /**
  * Draw an FX frame from the FX sheet. Convenience wrapper.
  * Uses entity=true so FX uses entity shade quantization.
  */
-Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) => {
-    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
+Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
+    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate);
 };
 exports.game = new Game();
 exports.gs = new gameState_1.GameState();
@@ -50196,6 +50276,9 @@ class Item extends drawable_1.Drawable {
                 manhattan: false,
             };
         };
+        this.colorOverlay = () => {
+            return { color: undefined, opacity: 0, desaturate: false };
+        };
         // Function to draw the item's icon
         this.drawIcon = (delta, x, y, opacity = 1, count) => {
             if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -50210,7 +50293,8 @@ class Item extends drawable_1.Drawable {
             if (this.cooldown > 0) {
                 game_1.Game.ctx.globalAlpha = 0.35;
             }
-            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h, undefined, undefined, undefined, this.outline().color, this.outline().opacity, this.outline().offset, this.outline().manhattan);
+            const overlay = this.colorOverlay();
+            game_1.Game.drawItem(this.tileX, this.tileY, 1, 2, x + shake, y - 1 + this.iconOffset, this.w, this.h, undefined, undefined, undefined, this.outline().color, this.outline().opacity, this.outline().offset, this.outline().manhattan, overlay.color, overlay.opacity, overlay.desaturate);
             game_1.Game.ctx.globalAlpha = 1;
             let countToUse = count ? count : this.stackCount;
             let countText = countToUse <= 1 ? "" : "" + countToUse;
@@ -50584,13 +50668,20 @@ class Key extends usable_1.Usable {
                 this.name = "key";
             }
         };
+        this.colorOverlay = () => {
+            this.syncColor();
+            if (this.doorID > 0) {
+                return { color: this._cachedColorHex, opacity: 0.75, desaturate: true };
+            }
+            return { color: undefined, opacity: 0, desaturate: false };
+        };
         this.getOutlineOpacity = () => {
             // Always outlined; when active, flash.
-            const base = 0.5;
+            const base = 0;
             if (!this.showPath)
                 return base;
             const t = Date.now() / 350;
-            const pulse = 0.5 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+            const pulse = 0 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
             return Math.max(0, Math.min(1, base + pulse));
         };
         this.setPathGuideEnabled = (player, enabled, opts) => {
@@ -50705,7 +50796,7 @@ class Key extends usable_1.Usable {
                     1 +
                     this.offsetY +
                     this.h * (scale * -0.5 + 0.5) +
-                    this.chestOffsetY, this.w * scale, this.h * scale, this.level.shadeColor, this.shadeAmount(), undefined, this._cachedColorHex, this.getOutlineOpacity(), 1, true);
+                    this.chestOffsetY, this.w * scale, this.h * scale, this.level.shadeColor, this.shadeAmount(), undefined, this._cachedColorHex, this.getOutlineOpacity(), 1, true, this._cachedColorHex, 0.6, true);
             }
             game_1.Game.ctx.restore();
         };
@@ -77451,7 +77542,7 @@ class Lockable {
         // Draw the lock icon (even when unlocking, to show the fade animation)
         game_1.Game.drawFX(this.iconTileX, 2, 1, 1, x + this.iconXOffset, iconY +
             multiplier * Math.sin((this.frame * Math.PI) / 50) +
-            this.iconYOffset, 1, 1, "black", 0, undefined, outline?.hex, outline ? 0.9 : 0, 1, true);
+            this.iconYOffset, 1, 1, "black", 0, undefined, outline?.hex, outline ? 0 : 0, 1, true, outline?.hex, outline ? 0.65 : 0, true);
         game_1.Game.ctx.globalAlpha = 1;
     }
     setKey(key) {

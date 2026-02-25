@@ -36,4 +36,3 @@ export const getKeyColorForId = (id: number): KeyColor => {
   const idx = h % PALETTE.length;
   return PALETTE[idx];
 };
-

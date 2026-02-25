@@ -237,8 +237,11 @@ export class Lockable {
       0,
       undefined,
       outline?.hex,
-      outline ? 0.9 : 0,
+      outline ? 0 : 0,
       1,
+      true,
+      outline?.hex,
+      outline ? 0.65 : 0,
       true,
     );
 

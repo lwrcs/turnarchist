@@ -50,12 +50,20 @@ export class Key extends Usable {
     }
   };
 
+  colorOverlay = () => {
+    this.syncColor();
+    if (this.doorID > 0) {
+      return { color: this._cachedColorHex, opacity: 0.75, desaturate: true };
+    }
+    return { color: undefined, opacity: 0, desaturate: false };
+  };
+
   private getOutlineOpacity = (): number => {
     // Always outlined; when active, flash.
-    const base = 0.5;
+    const base = 0;
     if (!this.showPath) return base;
     const t = Date.now() / 350;
-    const pulse = 0.5 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+    const pulse = 0 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
     return Math.max(0, Math.min(1, base + pulse));
   };
 
@@ -201,6 +209,9 @@ export class Key extends Usable {
         this._cachedColorHex,
         this.getOutlineOpacity(),
         1,
+        true,
+        this._cachedColorHex,
+        0.6,
         true,
       );
     }

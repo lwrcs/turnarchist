@@ -466,6 +466,14 @@ export class Item extends Drawable {
       manhattan: false,
     };
   };
+
+  colorOverlay = (): {
+    color?: string;
+    opacity: number;
+    desaturate: boolean;
+  } => {
+    return { color: undefined, opacity: 0, desaturate: false };
+  };
   // Function to draw the item's icon
   drawIcon = (delta: number, x: number, y: number, opacity = 1, count?) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
@@ -480,6 +488,8 @@ export class Item extends Drawable {
     if (this.cooldown > 0) {
       Game.ctx.globalAlpha = 0.35;
     }
+
+    const overlay = this.colorOverlay();
 
     Game.drawItem(
       this.tileX,
@@ -497,6 +507,9 @@ export class Item extends Drawable {
       this.outline().opacity,
       this.outline().offset,
       this.outline().manhattan,
+      overlay.color,
+      overlay.opacity,
+      overlay.desaturate,
     );
     Game.ctx.globalAlpha = 1;
 
