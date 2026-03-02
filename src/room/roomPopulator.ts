@@ -351,39 +351,145 @@ export class Populator {
       this.populateByEnvironment(room);
     });
 
-    // add boss to furthest room from upladder if not main path
-    const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
-    const drops: Item[] = [];
-    switch (furthestFromUpLadder?.envType) {
-      case EnvType.CASTLE:
-        drops.push(new Sword(furthestFromUpLadder, 1, 1));
-        break;
-      case EnvType.CAVE:
-        drops.push(new Spear(furthestFromUpLadder, 1, 1));
-        break;
-      case EnvType.MAGMA_CAVE:
-        drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
-        break;
-    }
-    if (
-      furthestFromUpLadder &&
+    // Sidepath bosses:
+    // - Castle sidepath: boss room is generated as an actual RoomType.BOSS (guarded doors),
+    //   and the furthest room becomes a guarded exit room after the boss.
+    // - Other sidepaths: keep legacy behavior (spawn boss entity in the furthest room).
+    const isCastleSidepath =
       !this.level.isMainPath &&
-      !isSingleRoomSidepathMaze
-    ) {
-      this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+      !isSingleRoomSidepathMaze &&
+      this.level.environment.type === EnvType.CASTLE;
 
-      let tiles = furthestFromUpLadder.getEmptyTiles();
-      const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
-      if (position === null) return;
-      const { x, y } = position;
-      const chest = Chest.add(
-        furthestFromUpLadder,
-        furthestFromUpLadder.game,
-        x,
-        y,
-      );
-      chest.drops.push(...drops);
-      //furthestFromUpLadder.entities.push(chest);
+    if (isCastleSidepath) {
+      const bossRoom =
+        this.level.rooms.find((r) => r.type === RoomType.BOSS) ?? null;
+      const exitRoom = this.level.getFurthestFromLadder("up");
+
+      // If for some reason generation didn't create a BOSS room, fall back to the legacy
+      // "boss in furthest room" behavior so the sidepath still works.
+      if (!bossRoom) {
+        const furthestFromUpLadder = exitRoom;
+        const drops: Item[] = [];
+        switch (furthestFromUpLadder?.envType) {
+          case EnvType.CASTLE:
+            drops.push(new Sword(furthestFromUpLadder, 1, 1));
+            break;
+          case EnvType.CAVE:
+            drops.push(new Spear(furthestFromUpLadder, 1, 1));
+            break;
+          case EnvType.MAGMA_CAVE:
+            drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
+            break;
+        }
+        if (furthestFromUpLadder) {
+          this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+        }
+      }
+
+      const dropRoom = bossRoom ?? exitRoom;
+      if (dropRoom) {
+        const drops: Item[] = [];
+        switch (dropRoom.envType) {
+          case EnvType.CASTLE:
+            drops.push(new Sword(dropRoom, 1, 1));
+            break;
+          case EnvType.CAVE:
+            drops.push(new Spear(dropRoom, 1, 1));
+            break;
+          case EnvType.MAGMA_CAVE:
+            drops.push(new Warhammer(dropRoom, 1, 1));
+            break;
+        }
+
+        // Keep the chest reward, but associate it with the boss room when present.
+        const chestRoom = bossRoom ?? dropRoom;
+        const tiles = chestRoom.getEmptyTiles();
+        const position = chestRoom.getRandomEmptyPosition(tiles);
+        if (position) {
+          const chest = Chest.add(
+            chestRoom,
+            chestRoom.game,
+            position.x,
+            position.y,
+          );
+          chest.drops.push(...drops);
+        }
+      }
+
+      // Place a one-way rope-up ladder in the exit room that returns to the main-path
+      // sidepath entry ladder (where the player first entered the forest).
+      if (exitRoom) {
+        let alreadyPlaced = false;
+        for (let x = exitRoom.roomX; x < exitRoom.roomX + exitRoom.width; x++) {
+          for (
+            let y = exitRoom.roomY;
+            y < exitRoom.roomY + exitRoom.height;
+            y++
+          ) {
+            const t = exitRoom.roomArray[x]?.[y];
+            if (t instanceof UpLadder && (t as UpLadder).returnToRoot) {
+              alreadyPlaced = true;
+              break;
+            }
+          }
+          if (alreadyPlaced) break;
+        }
+
+        if (!alreadyPlaced) {
+          const baseTiles = exitRoom.getEmptyTilesNotBlockingDoors();
+          const desiredPadding = Math.floor(
+            this.level.generationOptions?.softMargin ?? 8,
+          );
+          const validTiles = this.getTilesWithRelaxedPadding(
+            exitRoom,
+            baseTiles,
+            desiredPadding,
+          );
+          const pos = exitRoom.getRandomEmptyPosition(validTiles);
+          if (pos) {
+            const up = new UpLadder(exitRoom, exitRoom.game, pos.x, pos.y);
+            up.isRope = true;
+            up.isSidePath = true;
+            up.returnToRoot = true;
+            exitRoom.roomArray[pos.x][pos.y] = up;
+          }
+        }
+      }
+    } else {
+      // Legacy: add boss to furthest room from upladder if not main path
+      const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
+      const drops: Item[] = [];
+      switch (furthestFromUpLadder?.envType) {
+        case EnvType.CASTLE:
+          drops.push(new Sword(furthestFromUpLadder, 1, 1));
+          break;
+        case EnvType.CAVE:
+          drops.push(new Spear(furthestFromUpLadder, 1, 1));
+          break;
+        case EnvType.MAGMA_CAVE:
+          drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
+          break;
+      }
+      if (
+        furthestFromUpLadder &&
+        !this.level.isMainPath &&
+        !isSingleRoomSidepathMaze
+      ) {
+        this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+
+        let tiles = furthestFromUpLadder.getEmptyTiles();
+        const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
+        if (position === null) return;
+        const { x, y } = position;
+        const chest = Chest.add(
+          furthestFromUpLadder,
+          furthestFromUpLadder.game,
+          x,
+          y,
+        );
+        chest.drops.push(...drops);
+        //furthestFromUpLadder.entities.push(chest);
+      }
     }
 
     //if (this.level.depth === 0) return;

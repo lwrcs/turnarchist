@@ -57940,6 +57940,7 @@ const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const levelValidator_1 = __webpack_require__(/*! ./levelValidator */ "./src/level/levelValidator.ts");
 const generationVisualizer_1 = __webpack_require__(/*! ./generationVisualizer */ "./src/level/generationVisualizer.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 var PathType;
 (function (PathType) {
     PathType[PathType["MAIN_PATH"] = 0] = "MAIN_PATH";
@@ -58144,10 +58145,10 @@ class PartitionGenerator {
             attempts++;
             this.visualizer.updateProgress(`Generating cave candidate ${attempts}`, attempts * 0.1);
             if (effectiveOpts.giantCentralRoom) {
-                await this.generateCaveCandidateWithGiantCenter(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, effectiveOpts.giantRoomScale ?? 0.65);
+                await this.generateCaveCandidateWithGiantCenter(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, effectiveOpts.giantRoomScale ?? 0.65, effectiveOpts);
             }
             else {
-                await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness);
+                await this.generateCaveCandidate(partialLevel, mapWidth, mapHeight, numRooms, branching, loopiness, effectiveOpts);
             }
             validationResult = this.validator.validateCavePartitions(partialLevel.partitions, numRooms);
             // Update visualization state
@@ -58244,7 +58245,7 @@ class PartitionGenerator {
             await this.addSpecialRooms(partialLevel);
         }
     }
-    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5) {
+    async generateCaveCandidate(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5, opts) {
         const CAVE_OFFSET = 100;
         partialLevel.partitions = [
             new Partition(CAVE_OFFSET, CAVE_OFFSET, map_w, map_h, "white"),
@@ -58264,9 +58265,12 @@ class PartitionGenerator {
         await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
         await this.addCaveLoops(partialLevel, loopiness);
         await this.calculateDistances(partialLevel, spawn);
+        // Castle sidepath: place a boss one room before the furthest room so that the
+        // final "exit" room is behind a guarded door (same guarding mechanism as main path).
+        this.assignCastleSidepathBoss(partialLevel, spawn, opts?.envType);
     }
     // Variant that creates a giant central room and smaller surrounding rooms connected to it
-    async generateCaveCandidateWithGiantCenter(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5, giantScale = 0.65) {
+    async generateCaveCandidateWithGiantCenter(partialLevel, map_w, map_h, num_rooms, branching = 0.5, loopiness = 0.5, giantScale = 0.65, opts) {
         const CAVE_OFFSET = 100;
         partialLevel.partitions = [];
         // Create the giant center room
@@ -58402,6 +58406,55 @@ class PartitionGenerator {
         await this.addCaveLoops(partialLevel, loopiness);
         // Distances from center
         await this.calculateDistances(partialLevel, center);
+        // In giant-center mode, the entry can be a peripheral ROPECAVE room; use that as spawn.
+        const spawn = partialLevel.partitions.find((p) => p.type === room_1.RoomType.ROPECAVE) ?? center;
+        this.assignCastleSidepathBoss(partialLevel, spawn, opts?.envType);
+    }
+    assignCastleSidepathBoss(partialLevel, spawn, envType) {
+        if (envType !== environmentTypes_1.EnvType.CASTLE)
+            return;
+        if (!spawn)
+            return;
+        // Find the furthest reachable room from the ROPECAVE spawn.
+        let exit = null;
+        let maxDist = -Infinity;
+        for (const p of partialLevel.partitions) {
+            if (!p || p === spawn)
+                continue;
+            const d = p.distance;
+            if (d === null || d === undefined)
+                continue;
+            if (!Number.isFinite(d))
+                continue;
+            if (d > maxDist) {
+                maxDist = d;
+                exit = p;
+            }
+        }
+        if (!exit || !Number.isFinite(exit.distance))
+            return;
+        // Need at least one intermediate room so we can do: ... -> BOSS -> EXIT
+        if (exit.distance < 2)
+            return;
+        // Pick a neighbor exactly one step closer to spawn as the boss room.
+        const desiredBossDist = exit.distance - 1;
+        const candidates = exit.connections
+            .map((c) => c.other)
+            .filter((p) => p && p.distance === desiredBossDist && p !== spawn);
+        if (candidates.length === 0)
+            return;
+        // Prefer a larger room for boss arena feel.
+        let boss = candidates[0];
+        for (let i = 1; i < candidates.length; i++) {
+            if (candidates[i].area() > boss.area())
+                boss = candidates[i];
+        }
+        boss.type = room_1.RoomType.BOSS;
+        boss.fillStyle = "red";
+        // Keep exit as a regular cave room (the guarding happens via the boss room's guarded door).
+        if (exit.type !== room_1.RoomType.ROPECAVE) {
+            exit.type = room_1.RoomType.CAVE;
+        }
     }
     async splitPartitions(partitions, prob) {
         for (let partition of partitions) {
@@ -59665,17 +59718,60 @@ class SidePathManager {
     }
     setUpLadderLink(downLadder, upLadder) {
         if (downLadder.isSidePath) {
-            upLadder.linkedRoom = downLadder.room;
             upLadder.isRope = true;
+            upLadder.isSidePath = true;
+            // Default: link back to the immediate parent room / ladder used to enter this sidepath
+            let targetRoom = downLadder.room;
+            let targetPos = { x: downLadder.x, y: downLadder.y };
+            // Special case: a "root return" rope-up ladder should go back to the main-path
+            // sidepath entry ladder (e.g., CASTLE sidepath returns to the FOREST entry on main).
+            if (upLadder.returnToRoot) {
+                const parentPid = downLadder.room?.pathId;
+                const parsed = this.tryParseRootSidePathAnchor(parentPid);
+                if (parsed) {
+                    const level = this.game.levels[parsed.depth];
+                    if (level) {
+                        const room = level.rooms.find((r) => r.roomX === parsed.roomX && r.roomY === parsed.roomY);
+                        if (room) {
+                            targetRoom = room;
+                            targetPos = { x: parsed.tileX, y: parsed.tileY };
+                        }
+                    }
+                }
+            }
+            upLadder.linkedRoom = targetRoom;
             // Record the exact parent down-ladder tile to spawn on when going back up
-            upLadder.exitDownLadderPos = {
-                x: downLadder.x,
-                y: downLadder.y,
-            };
+            upLadder.exitDownLadderPos = targetPos;
         }
         else {
             upLadder.linkedRoom = this.game.levels[downLadder.room.depth].exitRoom;
         }
+    }
+    /**
+     * Extract the root sidepath entry anchor from a first-level sidepath pid.
+     * Expected format: sp:main:<depth>:<roomX>,<roomY>:<tileX>,<tileY>
+     */
+    tryParseRootSidePathAnchor(pid) {
+        if (!pid)
+            return null;
+        // Only support the first-level sidepath form (parent pid is "main").
+        // Nested sidepaths have a more complex pid and should not root-return via parsing.
+        const m = /^sp:main:(\d+):(-?\d+),(-?\d+):(-?\d+),(-?\d+)$/.exec(pid);
+        if (!m)
+            return null;
+        const depth = Number(m[1]);
+        const roomX = Number(m[2]);
+        const roomY = Number(m[3]);
+        const tileX = Number(m[4]);
+        const tileY = Number(m[5]);
+        if (!Number.isFinite(depth) ||
+            !Number.isFinite(roomX) ||
+            !Number.isFinite(roomY) ||
+            !Number.isFinite(tileX) ||
+            !Number.isFinite(tileY)) {
+            return null;
+        }
+        return { depth, roomX, roomY, tileX, tileY };
     }
 }
 exports.SidePathManager = SidePathManager;
@@ -70224,13 +70320,19 @@ class Room {
         this.checkForNoEnemies = () => {
             if (this.hasNoEnemies()) {
                 const isBoss = this.type === RoomType.BOSS;
+                const bossDoor = isBoss ? this.getBossDoor() : null;
+                let didBossCamera = false;
                 let bossFlag = false;
                 this.doors.forEach((d) => {
                     if (d.type === door_1.DoorType.GUARDEDDOOR) {
                         d.unGuard(isBoss);
                         bossFlag = true;
                         if (isBoss) {
-                            this.game.startCameraAnimation(this.getBossDoor().x, this.getBossDoor().y, 175);
+                            if (!didBossCamera) {
+                                const target = bossDoor ?? { x: d.x, y: d.y, doorDir: d.doorDir };
+                                this.game.startCameraAnimation(target.x, target.y, 175);
+                                didBossCamera = true;
+                            }
                         }
                     }
                 });
@@ -73175,32 +73277,117 @@ class Populator {
                     return;
                 this.populateByEnvironment(room);
             });
-            // add boss to furthest room from upladder if not main path
-            const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
-            const drops = [];
-            switch (furthestFromUpLadder?.envType) {
-                case environmentTypes_1.EnvType.CASTLE:
-                    drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
-                    break;
-                case environmentTypes_1.EnvType.CAVE:
-                    drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
-                    break;
-                case environmentTypes_1.EnvType.MAGMA_CAVE:
-                    drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
-                    break;
+            // Sidepath bosses:
+            // - Castle sidepath: boss room is generated as an actual RoomType.BOSS (guarded doors),
+            //   and the furthest room becomes a guarded exit room after the boss.
+            // - Other sidepaths: keep legacy behavior (spawn boss entity in the furthest room).
+            const isCastleSidepath = !this.level.isMainPath &&
+                !isSingleRoomSidepathMaze &&
+                this.level.environment.type === environmentTypes_1.EnvType.CASTLE;
+            if (isCastleSidepath) {
+                const bossRoom = this.level.rooms.find((r) => r.type === room_1.RoomType.BOSS) ?? null;
+                const exitRoom = this.level.getFurthestFromLadder("up");
+                // If for some reason generation didn't create a BOSS room, fall back to the legacy
+                // "boss in furthest room" behavior so the sidepath still works.
+                if (!bossRoom) {
+                    const furthestFromUpLadder = exitRoom;
+                    const drops = [];
+                    switch (furthestFromUpLadder?.envType) {
+                        case environmentTypes_1.EnvType.CASTLE:
+                            drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
+                            break;
+                        case environmentTypes_1.EnvType.CAVE:
+                            drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
+                            break;
+                        case environmentTypes_1.EnvType.MAGMA_CAVE:
+                            drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
+                            break;
+                    }
+                    if (furthestFromUpLadder) {
+                        this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+                    }
+                }
+                const dropRoom = bossRoom ?? exitRoom;
+                if (dropRoom) {
+                    const drops = [];
+                    switch (dropRoom.envType) {
+                        case environmentTypes_1.EnvType.CASTLE:
+                            drops.push(new sword_1.Sword(dropRoom, 1, 1));
+                            break;
+                        case environmentTypes_1.EnvType.CAVE:
+                            drops.push(new spear_1.Spear(dropRoom, 1, 1));
+                            break;
+                        case environmentTypes_1.EnvType.MAGMA_CAVE:
+                            drops.push(new warhammer_1.Warhammer(dropRoom, 1, 1));
+                            break;
+                    }
+                    // Keep the chest reward, but associate it with the boss room when present.
+                    const chestRoom = bossRoom ?? dropRoom;
+                    const tiles = chestRoom.getEmptyTiles();
+                    const position = chestRoom.getRandomEmptyPosition(tiles);
+                    if (position) {
+                        const chest = chest_1.Chest.add(chestRoom, chestRoom.game, position.x, position.y);
+                        chest.drops.push(...drops);
+                    }
+                }
+                // Place a one-way rope-up ladder in the exit room that returns to the main-path
+                // sidepath entry ladder (where the player first entered the forest).
+                if (exitRoom) {
+                    let alreadyPlaced = false;
+                    for (let x = exitRoom.roomX; x < exitRoom.roomX + exitRoom.width; x++) {
+                        for (let y = exitRoom.roomY; y < exitRoom.roomY + exitRoom.height; y++) {
+                            const t = exitRoom.roomArray[x]?.[y];
+                            if (t instanceof upLadder_1.UpLadder && t.returnToRoot) {
+                                alreadyPlaced = true;
+                                break;
+                            }
+                        }
+                        if (alreadyPlaced)
+                            break;
+                    }
+                    if (!alreadyPlaced) {
+                        const baseTiles = exitRoom.getEmptyTilesNotBlockingDoors();
+                        const desiredPadding = Math.floor(this.level.generationOptions?.softMargin ?? 8);
+                        const validTiles = this.getTilesWithRelaxedPadding(exitRoom, baseTiles, desiredPadding);
+                        const pos = exitRoom.getRandomEmptyPosition(validTiles);
+                        if (pos) {
+                            const up = new upLadder_1.UpLadder(exitRoom, exitRoom.game, pos.x, pos.y);
+                            up.isRope = true;
+                            up.isSidePath = true;
+                            up.returnToRoot = true;
+                            exitRoom.roomArray[pos.x][pos.y] = up;
+                        }
+                    }
+                }
             }
-            if (furthestFromUpLadder &&
-                !this.level.isMainPath &&
-                !isSingleRoomSidepathMaze) {
-                this.addBosses(furthestFromUpLadder, this.level.depth, drops);
-                let tiles = furthestFromUpLadder.getEmptyTiles();
-                const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
-                if (position === null)
-                    return;
-                const { x, y } = position;
-                const chest = chest_1.Chest.add(furthestFromUpLadder, furthestFromUpLadder.game, x, y);
-                chest.drops.push(...drops);
-                //furthestFromUpLadder.entities.push(chest);
+            else {
+                // Legacy: add boss to furthest room from upladder if not main path
+                const furthestFromUpLadder = this.level.getFurthestFromLadder("up");
+                const drops = [];
+                switch (furthestFromUpLadder?.envType) {
+                    case environmentTypes_1.EnvType.CASTLE:
+                        drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
+                        break;
+                    case environmentTypes_1.EnvType.CAVE:
+                        drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
+                        break;
+                    case environmentTypes_1.EnvType.MAGMA_CAVE:
+                        drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
+                        break;
+                }
+                if (furthestFromUpLadder &&
+                    !this.level.isMainPath &&
+                    !isSingleRoomSidepathMaze) {
+                    this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+                    let tiles = furthestFromUpLadder.getEmptyTiles();
+                    const position = furthestFromUpLadder.getRandomEmptyPosition(tiles);
+                    if (position === null)
+                        return;
+                    const { x, y } = position;
+                    const chest = chest_1.Chest.add(furthestFromUpLadder, furthestFromUpLadder.game, x, y);
+                    chest.drops.push(...drops);
+                    //furthestFromUpLadder.entities.push(chest);
+                }
             }
             //if (this.level.depth === 0) return;
             if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
@@ -78365,6 +78552,11 @@ class UpLadder extends passageway_1.Passageway {
         super(room, game, x, y);
         this.isRope = false;
         this.isSidePath = false;
+        /**
+         * If true, this rope-up ladder should return to the root (main-path) entry
+         * ladder of the sidepath chain instead of the immediate parent.
+         */
+        this.returnToRoot = false;
         this.onCollide = (player) => {
             if (!this.game) {
                 console.error("Game instance is undefined in UpLadder:", this);

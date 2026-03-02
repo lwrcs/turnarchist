@@ -172,15 +172,66 @@ export class SidePathManager {
 
   private setUpLadderLink(downLadder: DownLadder, upLadder: UpLadder): void {
     if (downLadder.isSidePath) {
-      upLadder.linkedRoom = downLadder.room;
-      (upLadder as any).isRope = true;
+      upLadder.isRope = true;
+      upLadder.isSidePath = true;
+
+      // Default: link back to the immediate parent room / ladder used to enter this sidepath
+      let targetRoom: Room = downLadder.room;
+      let targetPos: { x: number; y: number } = { x: downLadder.x, y: downLadder.y };
+
+      // Special case: a "root return" rope-up ladder should go back to the main-path
+      // sidepath entry ladder (e.g., CASTLE sidepath returns to the FOREST entry on main).
+      if (upLadder.returnToRoot) {
+        const parentPid = downLadder.room?.pathId;
+        const parsed = this.tryParseRootSidePathAnchor(parentPid);
+        if (parsed) {
+          const level = this.game.levels[parsed.depth];
+          if (level) {
+            const room = level.rooms.find(
+              (r) => r.roomX === parsed.roomX && r.roomY === parsed.roomY,
+            );
+            if (room) {
+              targetRoom = room;
+              targetPos = { x: parsed.tileX, y: parsed.tileY };
+            }
+          }
+        }
+      }
+
+      upLadder.linkedRoom = targetRoom;
       // Record the exact parent down-ladder tile to spawn on when going back up
-      (upLadder as any).exitDownLadderPos = {
-        x: downLadder.x,
-        y: downLadder.y,
-      };
+      upLadder.exitDownLadderPos = targetPos;
     } else {
       upLadder.linkedRoom = this.game.levels[downLadder.room.depth].exitRoom;
     }
+  }
+
+  /**
+   * Extract the root sidepath entry anchor from a first-level sidepath pid.
+   * Expected format: sp:main:<depth>:<roomX>,<roomY>:<tileX>,<tileY>
+   */
+  private tryParseRootSidePathAnchor(
+    pid: string | undefined,
+  ): { depth: number; roomX: number; roomY: number; tileX: number; tileY: number } | null {
+    if (!pid) return null;
+    // Only support the first-level sidepath form (parent pid is "main").
+    // Nested sidepaths have a more complex pid and should not root-return via parsing.
+    const m = /^sp:main:(\d+):(-?\d+),(-?\d+):(-?\d+),(-?\d+)$/.exec(pid);
+    if (!m) return null;
+    const depth = Number(m[1]);
+    const roomX = Number(m[2]);
+    const roomY = Number(m[3]);
+    const tileX = Number(m[4]);
+    const tileY = Number(m[5]);
+    if (
+      !Number.isFinite(depth) ||
+      !Number.isFinite(roomX) ||
+      !Number.isFinite(roomY) ||
+      !Number.isFinite(tileX) ||
+      !Number.isFinite(tileY)
+    ) {
+      return null;
+    }
+    return { depth, roomX, roomY, tileX, tileY };
   }
 }

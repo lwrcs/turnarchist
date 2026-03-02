@@ -6,6 +6,7 @@ import { GameConstants } from "../game/gameConstants";
 import { LevelValidator, ValidationResult } from "./levelValidator";
 import { GenerationVisualizer } from "./generationVisualizer";
 import { SidePathOptions } from "./sidePathManager";
+import { EnvType } from "../constants/environmentTypes";
 
 export enum PathType {
   MAIN_PATH, // Has exit room (current dungeon)
@@ -329,6 +330,7 @@ export class PartitionGenerator {
           branching,
           loopiness,
           effectiveOpts.giantRoomScale ?? 0.65,
+          effectiveOpts,
         );
       } else {
         await this.generateCaveCandidate(
@@ -338,6 +340,7 @@ export class PartitionGenerator {
           numRooms,
           branching,
           loopiness,
+          effectiveOpts,
         );
       }
 
@@ -514,6 +517,7 @@ export class PartitionGenerator {
     num_rooms: number,
     branching: number = 0.5,
     loopiness: number = 0.5,
+    opts?: SidePathOptions,
   ) {
     const CAVE_OFFSET = 100;
     partialLevel.partitions = [
@@ -542,6 +546,10 @@ export class PartitionGenerator {
     await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
     await this.addCaveLoops(partialLevel, loopiness);
     await this.calculateDistances(partialLevel, spawn);
+
+    // Castle sidepath: place a boss one room before the furthest room so that the
+    // final "exit" room is behind a guarded door (same guarding mechanism as main path).
+    this.assignCastleSidepathBoss(partialLevel, spawn, opts?.envType);
   }
 
   // Variant that creates a giant central room and smaller surrounding rooms connected to it
@@ -553,6 +561,7 @@ export class PartitionGenerator {
     branching: number = 0.5,
     loopiness: number = 0.5,
     giantScale: number = 0.65,
+    opts?: SidePathOptions,
   ) {
     const CAVE_OFFSET = 100;
     partialLevel.partitions = [];
@@ -707,6 +716,56 @@ export class PartitionGenerator {
 
     // Distances from center
     await this.calculateDistances(partialLevel, center);
+
+    // In giant-center mode, the entry can be a peripheral ROPECAVE room; use that as spawn.
+    const spawn = partialLevel.partitions.find((p) => p.type === RoomType.ROPECAVE) ?? center;
+    this.assignCastleSidepathBoss(partialLevel, spawn, opts?.envType);
+  }
+
+  private assignCastleSidepathBoss(
+    partialLevel: PartialLevel,
+    spawn: Partition,
+    envType: EnvType | undefined,
+  ): void {
+    if (envType !== EnvType.CASTLE) return;
+    if (!spawn) return;
+
+    // Find the furthest reachable room from the ROPECAVE spawn.
+    let exit: Partition | null = null;
+    let maxDist = -Infinity;
+    for (const p of partialLevel.partitions) {
+      if (!p || p === spawn) continue;
+      const d = p.distance;
+      if (d === null || d === undefined) continue;
+      if (!Number.isFinite(d)) continue;
+      if (d > maxDist) {
+        maxDist = d;
+        exit = p;
+      }
+    }
+    if (!exit || !Number.isFinite(exit.distance)) return;
+    // Need at least one intermediate room so we can do: ... -> BOSS -> EXIT
+    if (exit.distance < 2) return;
+
+    // Pick a neighbor exactly one step closer to spawn as the boss room.
+    const desiredBossDist = exit.distance - 1;
+    const candidates = exit.connections
+      .map((c) => c.other)
+      .filter((p) => p && p.distance === desiredBossDist && p !== spawn);
+    if (candidates.length === 0) return;
+
+    // Prefer a larger room for boss arena feel.
+    let boss = candidates[0];
+    for (let i = 1; i < candidates.length; i++) {
+      if (candidates[i].area() > boss.area()) boss = candidates[i];
+    }
+
+    boss.type = RoomType.BOSS;
+    boss.fillStyle = "red";
+    // Keep exit as a regular cave room (the guarding happens via the boss room's guarded door).
+    if (exit.type !== RoomType.ROPECAVE) {
+      exit.type = RoomType.CAVE;
+    }
   }
 
   private async splitPartitions(

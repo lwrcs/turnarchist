@@ -17,6 +17,16 @@ export class UpLadder extends Passageway {
   depth: number;
   lockable: Lockable;
   isSidePath = false;
+  /**
+   * For sidepath exit ladders, this can record the exact down-ladder position
+   * in the linked (parent) room to spawn the player on.
+   */
+  exitDownLadderPos?: { x: number; y: number };
+  /**
+   * If true, this rope-up ladder should return to the root (main-path) entry
+   * ladder of the sidepath chain instead of the immediate parent.
+   */
+  returnToRoot = false;
 
   constructor(
     room: Room,
@@ -70,9 +80,7 @@ export class UpLadder extends Passageway {
           this.linkRoom();
         }
         // If we have an exact parent down-ladder coordinate recorded, stash it on the target room
-        const exitPos = (this as any).exitDownLadderPos as
-          | { x: number; y: number }
-          | undefined;
+        const exitPos = this.exitDownLadderPos;
         // If this is a rope (sidepath) exit, switch active path back to the linked room's path
         if (this.isRope && this.linkedRoom) {
           (this.game as any).currentPathId = this.linkedRoom.pathId || "main";

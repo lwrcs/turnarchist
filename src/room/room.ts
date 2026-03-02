@@ -4908,17 +4908,19 @@ export class Room {
   checkForNoEnemies = () => {
     if (this.hasNoEnemies()) {
       const isBoss = this.type === RoomType.BOSS;
+      const bossDoor = isBoss ? this.getBossDoor() : null;
+      let didBossCamera = false;
       let bossFlag = false;
       this.doors.forEach((d) => {
         if (d.type === DoorType.GUARDEDDOOR) {
           d.unGuard(isBoss);
           bossFlag = true;
           if (isBoss) {
-            this.game.startCameraAnimation(
-              this.getBossDoor().x,
-              this.getBossDoor().y,
-              175,
-            );
+            if (!didBossCamera) {
+              const target = bossDoor ?? { x: d.x, y: d.y, doorDir: d.doorDir };
+              this.game.startCameraAnimation(target.x, target.y, 175);
+              didBossCamera = true;
+            }
           }
         }
       });
