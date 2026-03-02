@@ -56,12 +56,12 @@ export class Item extends Drawable {
   degradeable: boolean = true;
   cooldown: number = 0;
   maximumStackCount: number = 8;
-  private animStartX: number = 0;
-  private animStartY: number = 0;
-  private animTargetX: number = 0;
-  private animTargetY: number = 0;
-  private animT: number = 0;
-  private animStartDistance: number = null;
+  protected animStartX: number = 0;
+  protected animStartY: number = 0;
+  protected animTargetX: number = 0;
+  protected animTargetY: number = 0;
+  protected animT: number = 0;
+  protected animStartDistance: number = null;
   player: Player;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number, z: number = 0) {
@@ -265,6 +265,14 @@ export class Item extends Drawable {
 
   drawStatus = (x: number, y: number) => {};
 
+  /**
+   * Items can opt out of the "fan out" drawOffset used when multiple items share a tile.
+   * This is purely visual; gameplay coordinates are unchanged.
+   */
+  wantsDrawOffset = (): boolean => {
+    return true;
+  };
+
   drawBrokenSymbol = (x: number, y: number) => {
     if (this.broken) {
       Game.drawFX(
@@ -335,11 +343,16 @@ export class Item extends Drawable {
     const itemsOnTile = this.level.items.filter(
       (item) => item.x === this.x && item.y === this.y,
     );
-    if (itemsOnTile.length > 1) {
-      itemsOnTile.forEach((item) => {
-        item.drawOffset =
-          (-itemsOnTile.length / 2 + itemsOnTile.indexOf(item) + 1) /
-          itemsOnTile.length;
+    const eligible = itemsOnTile.filter((item) => item.wantsDrawOffset());
+
+    // Ensure opt-out items are always centered.
+    for (const item of itemsOnTile) {
+      if (!item.wantsDrawOffset()) item.drawOffset = 0;
+    }
+
+    if (eligible.length > 1) {
+      eligible.forEach((item, idx) => {
+        item.drawOffset = (-eligible.length / 2 + idx + 1) / eligible.length;
       });
     }
   };

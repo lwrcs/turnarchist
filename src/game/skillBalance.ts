@@ -48,6 +48,20 @@ export function depthXpMultiplier(depth: number): number {
   return Math.pow(GATHERING_XP.depthMultiplierBase, depth);
 }
 
+/**
+ * XP crystals are intended to be "meaningful chunks" of skill XP (especially on deeper floors),
+ * scaling with both dungeon depth and the recipient skill's current level.
+ */
+export function computeXpCrystalXp(args: {
+  depth: number;
+  skillLevel: number;
+}): number {
+  const depthMultiplier = Math.pow(1.28, Math.max(0, Math.floor(args.depth)));
+  const lvl = Math.max(1, Math.floor(args.skillLevel));
+  const base = 240 + lvl * 55;
+  return Math.ceil(base * depthMultiplier);
+}
+
 export function computeMiningXp(args: {
   nodeName: string;
   depth: number;

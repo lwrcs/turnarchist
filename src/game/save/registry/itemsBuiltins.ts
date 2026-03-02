@@ -1,5 +1,6 @@
 import type { Item } from "../../../item/item";
 import { Coin } from "../../../item/coin";
+import { MagicXpCrystal, MeleeXpCrystal, RangedXpCrystal } from "../../../item/xpCrystal";
 import { Key } from "../../../item/key";
 import { GoldenKey } from "../../../item/goldenKey";
 import { BluePotion } from "../../../item/usable/bluePotion";
@@ -77,6 +78,9 @@ import { itemRegistryV2, type ItemCodecV2 } from "./items";
 
 const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof Coin) return "coin";
+  if (item instanceof MeleeXpCrystal) return "melee_xp_crystal";
+  if (item instanceof MagicXpCrystal) return "magic_xp_crystal";
+  if (item instanceof RangedXpCrystal) return "ranged_xp_crystal";
   if (item instanceof Key) return "key";
   if (item instanceof GoldenKey) return "golden_key";
   if (item instanceof BluePotion) return "blue_potion";
@@ -222,6 +226,9 @@ export const registerBuiltinItemCodecsV2 = (): void => {
 
   const GENERIC_ITEM_KINDS = [
     "coin",
+    "melee_xp_crystal",
+    "magic_xp_crystal",
+    "ranged_xp_crystal",
     "golden_key",
     "blue_potion",
     "green_potion",
@@ -264,6 +271,15 @@ export const registerBuiltinItemCodecsV2 = (): void => {
         switch (kind) {
           case "coin":
             item = new Coin(room, value.x, value.y);
+            break;
+          case "melee_xp_crystal":
+            item = new MeleeXpCrystal(room, value.x, value.y);
+            break;
+          case "magic_xp_crystal":
+            item = new MagicXpCrystal(room, value.x, value.y);
+            break;
+          case "ranged_xp_crystal":
+            item = new RangedXpCrystal(room, value.x, value.y);
             break;
           case "golden_key":
             item = new GoldenKey(room, value.x, value.y);

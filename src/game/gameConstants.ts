@@ -42,6 +42,7 @@ import { GoldRing } from "../item/jewelry/goldRing";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Coin } from "../item/coin";
 import { Fish } from "../item/usable/fish";
+import { MagicXpCrystal, MeleeXpCrystal, RangedXpCrystal } from "../item/xpCrystal";
 import { IronOre } from "../item/resource/ironOre";
 import { GarnetRing } from "../item/jewelry/garnetRing";
 import { WoodenShield } from "../item/woodenShield";
@@ -218,6 +219,9 @@ export class GameConstants {
     OrangeGem,
     Coin,
     Fish,
+    MeleeXpCrystal,
+    MagicXpCrystal,
+    RangedXpCrystal,
   ];
 
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented

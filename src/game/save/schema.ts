@@ -665,6 +665,9 @@ export const ITEM_KIND_VALUES_V2 = [
   // Resources/consumables/etc (envelope only)
   "coal",
   "coin",
+  "melee_xp_crystal",
+  "magic_xp_crystal",
+  "ranged_xp_crystal",
   "key",
   "golden_key",
   "blue_potion",

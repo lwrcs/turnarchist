@@ -4,6 +4,7 @@ import { GameConstants } from "../game/gameConstants";
 import { Equippable } from "../item/equippable";
 import { Armor } from "../item/armor";
 import { Coin } from "../item/coin";
+import { XpCrystal } from "../item/xpCrystal";
 import { Weapon } from "../item/weapon/weapon";
 import { Room } from "../room/room";
 import { Usable } from "../item/usable/usable";
@@ -23,6 +24,9 @@ import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
+import { statsTracker } from "../game/stats";
+import { computeXpCrystalXp } from "../game/skillBalance";
+import { XPPopup } from "../particle/xpPopup";
 
 // Inventory overlay transition timings (no size scaling; fade only).
 const INVENTORY_FADE_IN_MS = 160;
@@ -350,6 +354,7 @@ export class Inventory {
   canPickup = (item: Item): boolean => {
     if (!this.isFull()) return true;
     if (item instanceof Coin) return true;
+    if (item instanceof XpCrystal) return true;
     if (
       this.items.find(
         (i) => i !== null && i.constructor === item.constructor,
@@ -647,6 +652,17 @@ export class Inventory {
       this.coins += item.stackCount;
       // Emit coin collected event for statistics tracking
       globalEventBus.emit(EVENTS.COIN_COLLECTED, { amount: item.stackCount });
+      return true;
+    }
+    if (item instanceof XpCrystal) {
+      const depth = item.level?.depth ?? 0;
+      const skill = item.skillType;
+      const skillLevel = statsTracker.getSkillLevel(skill);
+      const xp = computeXpCrystalXp({ depth, skillLevel });
+      statsTracker.awardSkillXp(skill, xp);
+      if (item.level === item.level.game.room) {
+        item.level.particles.push(new XPPopup(item.level, item.x, item.y, xp));
+      }
       return true;
     }
     if (item instanceof Equippable) {

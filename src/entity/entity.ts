@@ -25,6 +25,7 @@ import { EnemyShield } from "../projectile/enemyShield";
 import { Sound } from "../sound/sound";
 import { ImageParticle } from "../particle/imageParticle";
 import { Coin } from "../item/coin";
+import { XpCrystal } from "../item/xpCrystal";
 import { Random } from "../utility/random";
 import { XPPopup } from "../particle/xpPopup";
 import { Tile } from "../tile/tile";
@@ -1221,6 +1222,21 @@ export class Entity extends Drawable {
     } else {
       coordX = this.x;
       coordY = this.y;
+    }
+
+    // Bonus XP crystal roll: additive to other loot (chests + boss enemies).
+    // Done here so bosses that call `getDrop()` multiple times don't roll multiple bonus crystals.
+    //
+    // Important: This uses a separate probability gate from the main drop selection so crystals
+    // don't compete with normal loot. When the bonus triggers, force exactly one XP crystal.
+    if (
+      (this.name === "chest" || this.isBossEnemy) &&
+      this.drops.every((d) => !(d instanceof XpCrystal))
+    ) {
+      const bonusChance = this.name === "chest" ? 0.22 : 0.55;
+      if (Random.rand() < bonusChance) {
+        DropTable.getDrop(this, ["xpCrystal"], true, 3, 1);
+      }
     }
 
     if (this.drops.length === 0 && this.isEnemy) {

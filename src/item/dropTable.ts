@@ -47,6 +47,7 @@ import { Gauntlets } from "./gauntlets";
 import { ShoulderPlates } from "./shoulderPlates";
 import { ChestPlate } from "./chestPlate";
 import { BluePotion } from "./usable/bluePotion";
+import { MagicXpCrystal, MeleeXpCrystal, RangedXpCrystal } from "./xpCrystal";
 
 interface Drop {
   itemType: string;
@@ -92,6 +93,9 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   weaponblood: WeaponBlood,
 
   coin: Coin,
+  meleeXpCrystal: MeleeXpCrystal,
+  magicXpCrystal: MagicXpCrystal,
+  rangedXpCrystal: RangedXpCrystal,
 
   weaponfragments: WeaponFragments,
   spellbookPage: SpellbookPage,
@@ -258,12 +262,22 @@ export class DropTable {
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
-    { itemType: "bluePotion", dropRate: 60, category: ["wizard", "consumable", "magic"], minDepth: 1 },
+    {
+      itemType: "bluePotion",
+      dropRate: 60,
+      category: ["wizard", "consumable", "magic"],
+      minDepth: 1,
+    },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
 
     // Common items
     { itemType: "coin", dropRate: 10, category: ["coin"] }, // Always drops
+
+    // XP crystals (melee favored)
+    { itemType: "meleeXpCrystal", dropRate: 10, category: ["xpCrystal"] },
+    { itemType: "magicXpCrystal", dropRate: 20, category: ["xpCrystal"] },
+    { itemType: "rangedXpCrystal", dropRate: 20, category: ["xpCrystal"] },
 
     // Crafting materials
     {

@@ -2,6 +2,7 @@ import { Game } from "../../game";
 import { Room } from "../../room/room";
 import { Entity } from "../entity";
 import { Coin } from "../../item/coin";
+import { XpCrystal } from "../../item/xpCrystal";
 import { EntityType } from "../entity";
 import { Random } from "../../utility/random";
 import { Player } from "../../player/player";
@@ -123,6 +124,9 @@ export class Chest extends Entity {
     this.drops.forEach((drop) => {
       drop.animateFromChest();
       if (drop instanceof Coin) {
+        drop.queueAutoPickupAfterChestReveal();
+      }
+      if (drop instanceof XpCrystal) {
         drop.queueAutoPickupAfterChestReveal();
       }
     });

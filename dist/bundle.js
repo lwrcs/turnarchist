@@ -20537,6 +20537,7 @@ const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./sr
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./src/particle/imageParticle.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../item/xpCrystal */ "./src/item/xpCrystal.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle/xpPopup.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
@@ -21191,6 +21192,18 @@ class Entity extends drawable_1.Drawable {
             else {
                 coordX = this.x;
                 coordY = this.y;
+            }
+            // Bonus XP crystal roll: additive to other loot (chests + boss enemies).
+            // Done here so bosses that call `getDrop()` multiple times don't roll multiple bonus crystals.
+            //
+            // Important: This uses a separate probability gate from the main drop selection so crystals
+            // don't compete with normal loot. When the bonus triggers, force exactly one XP crystal.
+            if ((this.name === "chest" || this.isBossEnemy) &&
+                this.drops.every((d) => !(d instanceof xpCrystal_1.XpCrystal))) {
+                const bonusChance = this.name === "chest" ? 0.22 : 0.55;
+                if (random_1.Random.rand() < bonusChance) {
+                    dropTable_1.DropTable.getDrop(this, ["xpCrystal"], true, 3, 1);
+                }
             }
             if (this.drops.length === 0 && this.isEnemy) {
                 this.drops.push(new coin_1.Coin(this.room, this.x, this.y));
@@ -22810,6 +22823,7 @@ exports.Chest = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../../item/xpCrystal */ "./src/item/xpCrystal.ts");
 const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
@@ -22877,6 +22891,9 @@ class Chest extends entity_1.Entity {
             this.drops.forEach((drop) => {
                 drop.animateFromChest();
                 if (drop instanceof coin_1.Coin) {
+                    drop.queueAutoPickupAfterChestReveal();
+                }
+                if (drop instanceof xpCrystal_1.XpCrystal) {
                     drop.queueAutoPickupAfterChestReveal();
                 }
             });
@@ -33378,6 +33395,7 @@ const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
 const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../item/xpCrystal */ "./src/item/xpCrystal.ts");
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
@@ -33565,6 +33583,9 @@ GameConstants.AUTO_PICKUP_ITEMS = [
     orangegem_1.OrangeGem,
     coin_1.Coin,
     fish_1.Fish,
+    xpCrystal_1.MeleeXpCrystal,
+    xpCrystal_1.MagicXpCrystal,
+    xpCrystal_1.RangedXpCrystal,
 ];
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
 GameConstants.HOVER_TEXT_ENABLED = true;
@@ -36317,7 +36338,7 @@ exports.GameplaySettings = GameplaySettings;
 // === MAP ===
 GameplaySettings.LEGACY_MINIMAP = false; // when true, use pre-existing minimap behavior and layout
 GameplaySettings.STARTING_HEALTH = 2;
-GameplaySettings.LIMIT_ENEMY_TYPES = true;
+GameplaySettings.LIMIT_ENEMY_TYPES = false;
 GameplaySettings.MEDIAN_ROOM_DENSITY = 0.25;
 GameplaySettings.UNLIMITED_SPAWNERS = true;
 GameplaySettings.THROTTLE_SPAWNERS = true;
@@ -39434,6 +39455,7 @@ exports.itemRegistryV2 = new registry_1.Registry();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getItemKindV2 = exports.registerBuiltinItemCodecsV2 = void 0;
 const coin_1 = __webpack_require__(/*! ../../../item/coin */ "./src/item/coin.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../../../item/xpCrystal */ "./src/item/xpCrystal.ts");
 const key_1 = __webpack_require__(/*! ../../../item/key */ "./src/item/key.ts");
 const goldenKey_1 = __webpack_require__(/*! ../../../item/goldenKey */ "./src/item/goldenKey.ts");
 const bluePotion_1 = __webpack_require__(/*! ../../../item/usable/bluePotion */ "./src/item/usable/bluePotion.ts");
@@ -39494,6 +39516,12 @@ const items_1 = __webpack_require__(/*! ./items */ "./src/game/save/registry/ite
 const itemToKind = (item) => {
     if (item instanceof coin_1.Coin)
         return "coin";
+    if (item instanceof xpCrystal_1.MeleeXpCrystal)
+        return "melee_xp_crystal";
+    if (item instanceof xpCrystal_1.MagicXpCrystal)
+        return "magic_xp_crystal";
+    if (item instanceof xpCrystal_1.RangedXpCrystal)
+        return "ranged_xp_crystal";
     if (item instanceof key_1.Key)
         return "key";
     if (item instanceof goldenKey_1.GoldenKey)
@@ -39678,6 +39706,9 @@ const registerBuiltinItemCodecsV2 = () => {
     };
     const GENERIC_ITEM_KINDS = [
         "coin",
+        "melee_xp_crystal",
+        "magic_xp_crystal",
+        "ranged_xp_crystal",
         "golden_key",
         "blue_potion",
         "green_potion",
@@ -39719,6 +39750,15 @@ const registerBuiltinItemCodecsV2 = () => {
                 switch (kind) {
                     case "coin":
                         item = new coin_1.Coin(room, value.x, value.y);
+                        break;
+                    case "melee_xp_crystal":
+                        item = new xpCrystal_1.MeleeXpCrystal(room, value.x, value.y);
+                        break;
+                    case "magic_xp_crystal":
+                        item = new xpCrystal_1.MagicXpCrystal(room, value.x, value.y);
+                        break;
+                    case "ranged_xp_crystal":
+                        item = new xpCrystal_1.RangedXpCrystal(room, value.x, value.y);
                         break;
                     case "golden_key":
                         item = new goldenKey_1.GoldenKey(room, value.x, value.y);
@@ -40695,6 +40735,9 @@ exports.ITEM_KIND_VALUES_V2 = [
     // Resources/consumables/etc (envelope only)
     "coal",
     "coin",
+    "melee_xp_crystal",
+    "magic_xp_crystal",
+    "ranged_xp_crystal",
     "key",
     "golden_key",
     "blue_potion",
@@ -43199,7 +43242,7 @@ exports.loadSettings = loadSettings;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
+exports.WEAPON_SKILL_RULES = exports.CRAFTING_XP = exports.computeWoodcuttingXp = exports.computeMiningXp = exports.computeXpCrystalXp = exports.depthXpMultiplier = exports.GATHERING_XP = exports.computeEnemyKillBaseXp = exports.ENEMY_XP = void 0;
 exports.ENEMY_XP = {
     enemyHpMultiplier: 5,
     // Bosses should be meaningfully better XP than regular mobs with similar HP.
@@ -43240,6 +43283,17 @@ function depthXpMultiplier(depth) {
     return Math.pow(exports.GATHERING_XP.depthMultiplierBase, depth);
 }
 exports.depthXpMultiplier = depthXpMultiplier;
+/**
+ * XP crystals are intended to be "meaningful chunks" of skill XP (especially on deeper floors),
+ * scaling with both dungeon depth and the recipient skill's current level.
+ */
+function computeXpCrystalXp(args) {
+    const depthMultiplier = Math.pow(1.28, Math.max(0, Math.floor(args.depth)));
+    const lvl = Math.max(1, Math.floor(args.skillLevel));
+    const base = 240 + lvl * 55;
+    return Math.ceil(base * depthMultiplier);
+}
+exports.computeXpCrystalXp = computeXpCrystalXp;
 function computeMiningXp(args) {
     const base = exports.GATHERING_XP.miningByNodeName[args.nodeName.toLowerCase()] ?? 60;
     return Math.ceil(base * depthXpMultiplier(args.depth));
@@ -47515,6 +47569,7 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 const armor_1 = __webpack_require__(/*! ../item/armor */ "./src/item/armor.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../item/xpCrystal */ "./src/item/xpCrystal.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
@@ -47532,6 +47587,9 @@ const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/bac
 const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/chestPlate.ts");
+const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const skillBalance_1 = __webpack_require__(/*! ../game/skillBalance */ "./src/game/skillBalance.ts");
+const xpPopup_1 = __webpack_require__(/*! ../particle/xpPopup */ "./src/particle/xpPopup.ts");
 // Inventory overlay transition timings (no size scaling; fade only).
 const INVENTORY_FADE_IN_MS = 160;
 const INVENTORY_FADE_OUT_MS = 140;
@@ -47779,6 +47837,8 @@ class Inventory {
                 return true;
             if (item instanceof coin_1.Coin)
                 return true;
+            if (item instanceof xpCrystal_1.XpCrystal)
+                return true;
             if (this.items.find((i) => i !== null && i.constructor === item.constructor) &&
                 item.stackable)
                 return true;
@@ -48023,6 +48083,17 @@ class Inventory {
                 this.coins += item.stackCount;
                 // Emit coin collected event for statistics tracking
                 eventBus_1.globalEventBus.emit(events_1.EVENTS.COIN_COLLECTED, { amount: item.stackCount });
+                return true;
+            }
+            if (item instanceof xpCrystal_1.XpCrystal) {
+                const depth = item.level?.depth ?? 0;
+                const skill = item.skillType;
+                const skillLevel = stats_1.statsTracker.getSkillLevel(skill);
+                const xp = (0, skillBalance_1.computeXpCrystalXp)({ depth, skillLevel });
+                stats_1.statsTracker.awardSkillXp(skill, xp);
+                if (item.level === item.level.game.room) {
+                    item.level.particles.push(new xpPopup_1.XPPopup(item.level, item.x, item.y, xp));
+                }
                 return true;
             }
             if (item instanceof equippable_1.Equippable) {
@@ -49464,6 +49535,7 @@ const gauntlets_1 = __webpack_require__(/*! ./gauntlets */ "./src/item/gauntlets
 const shoulderPlates_1 = __webpack_require__(/*! ./shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ./chestPlate */ "./src/item/chestPlate.ts");
 const bluePotion_1 = __webpack_require__(/*! ./usable/bluePotion */ "./src/item/usable/bluePotion.ts");
+const xpCrystal_1 = __webpack_require__(/*! ./xpCrystal */ "./src/item/xpCrystal.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
@@ -49495,6 +49567,9 @@ exports.ItemTypeMap = {
     weaponpoison: weaponPoison_1.WeaponPoison,
     weaponblood: weaponBlood_1.WeaponBlood,
     coin: coin_1.Coin,
+    meleeXpCrystal: xpCrystal_1.MeleeXpCrystal,
+    magicXpCrystal: xpCrystal_1.MagicXpCrystal,
+    rangedXpCrystal: xpCrystal_1.RangedXpCrystal,
     weaponfragments: weaponFragments_1.WeaponFragments,
     spellbookPage: spellbookPage_1.SpellbookPage,
     backpack: backpack_1.Backpack,
@@ -49652,11 +49727,20 @@ DropTable.drops = [
     // Consumables
     { itemType: "heart", dropRate: 20, category: ["consumable"] },
     // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
-    { itemType: "bluePotion", dropRate: 60, category: ["wizard", "consumable", "magic"], minDepth: 1 },
+    {
+        itemType: "bluePotion",
+        dropRate: 60,
+        category: ["wizard", "consumable", "magic"],
+        minDepth: 1,
+    },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
     // Common items
     { itemType: "coin", dropRate: 10, category: ["coin"] },
+    // XP crystals (melee favored)
+    { itemType: "meleeXpCrystal", dropRate: 10, category: ["xpCrystal"] },
+    { itemType: "magicXpCrystal", dropRate: 20, category: ["xpCrystal"] },
+    { itemType: "rangedXpCrystal", dropRate: 20, category: ["xpCrystal"] },
     // Crafting materials
     {
         itemType: "weaponfragments",
@@ -50181,6 +50265,13 @@ class Item extends drawable_1.Drawable {
             return gameConstants_1.GameConstants.applyShadeForSprites(v);
         };
         this.drawStatus = (x, y) => { };
+        /**
+         * Items can opt out of the "fan out" drawOffset used when multiple items share a tile.
+         * This is purely visual; gameplay coordinates are unchanged.
+         */
+        this.wantsDrawOffset = () => {
+            return true;
+        };
         this.drawBrokenSymbol = (x, y) => {
             if (this.broken) {
                 game_1.Game.drawFX(5, 0, 1, 1, x - 0.5 / gameConstants_1.GameConstants.TILESIZE, y - 0.5 / gameConstants_1.GameConstants.TILESIZE, 1, 1);
@@ -50223,11 +50314,15 @@ class Item extends drawable_1.Drawable {
         };
         this.setDrawOffset = () => {
             const itemsOnTile = this.level.items.filter((item) => item.x === this.x && item.y === this.y);
-            if (itemsOnTile.length > 1) {
-                itemsOnTile.forEach((item) => {
-                    item.drawOffset =
-                        (-itemsOnTile.length / 2 + itemsOnTile.indexOf(item) + 1) /
-                            itemsOnTile.length;
+            const eligible = itemsOnTile.filter((item) => item.wantsDrawOffset());
+            // Ensure opt-out items are always centered.
+            for (const item of itemsOnTile) {
+                if (!item.wantsDrawOffset())
+                    item.drawOffset = 0;
+            }
+            if (eligible.length > 1) {
+                eligible.forEach((item, idx) => {
+                    item.drawOffset = (-eligible.length / 2 + idx + 1) / eligible.length;
                 });
             }
         };
@@ -55018,6 +55113,223 @@ class WoodenShield extends equippable_1.Equippable {
 }
 exports.WoodenShield = WoodenShield;
 WoodenShield.itemName = "wooden shield";
+
+
+/***/ }),
+
+/***/ "./src/item/xpCrystal.ts":
+/*!*******************************!*\
+  !*** ./src/item/xpCrystal.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RangedXpCrystal = exports.MagicXpCrystal = exports.MeleeXpCrystal = exports.XpCrystal = void 0;
+const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
+const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
+const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
+class XpCrystal extends item_1.Item {
+    constructor(level, x, y, crystalType) {
+        super(level, x, y);
+        this.chestRevealPickupTimeoutId = null;
+        this.wantsDrawOffset = () => {
+            // Always render centered even when multiple items share a tile.
+            return false;
+        };
+        this.queueAutoPickupAfterChestReveal = () => {
+            // Items dropped from chests intentionally do NOT auto-pickup immediately (see Entity.dropLoot()).
+            // For XP crystals, we want: float-up reveal first, then animate-to-inventory pickup.
+            if (this.chestRevealPickupTimeoutId !== null)
+                return;
+            this.chestRevealPickupTimeoutId = window.setTimeout(() => {
+                this.chestRevealPickupTimeoutId = null;
+                if (this.pickedUp)
+                    return;
+                if (this.level !== this.level.game.room)
+                    return;
+                // Stop treating it as "in chest" so the pickup animation isn't offset strangely.
+                this.inChest = false;
+                this.autoPickup();
+            }, 750);
+        };
+        this.drawOrbitSprites = (centerX, centerY, shadeColor, shadeAmount) => {
+            // Draw 3 sprites orbiting around a shared center, each with a distinct orbit rotation,
+            // speed, and phase offset (out of sync).
+            for (const o of this.orbit) {
+                const a = this.orbitT * o.speed + o.phase;
+                const localX = Math.cos(a) * o.radius * o.ellipse.rx;
+                const localY = Math.sin(a) * o.radius * o.ellipse.ry;
+                const c = Math.cos(o.orbitRotation);
+                const s = Math.sin(o.orbitRotation);
+                const dx = localX * c - localY * s;
+                const dy = localX * s + localY * c;
+                game_1.Game.drawFX(o.tileX, o.tileY, 1, 1, centerX + dx - 0.5, centerY + dy - 0.5, 1, 1, shadeColor, shadeAmount);
+            }
+        };
+        this.draw = (delta) => {
+            game_1.Game.ctx.save();
+            if (!this.pickedUp) {
+                game_1.Game.ctx.globalAlpha = this.alpha;
+                if (this.alpha < 1)
+                    this.alpha += 0.01 * delta;
+                this.drawableY = this.y;
+                if (this.inChest) {
+                    this.chestOffsetY -= Math.abs(this.chestOffsetY + 0.5) * 0.035 * delta;
+                    if (this.chestOffsetY < -0.47)
+                        this.chestOffsetY = -0.5;
+                }
+                if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
+                    this.sineAnimateFactor += 0.2 * delta;
+                if (this.scaleFactor > 0) {
+                    this.scaleFactor *= 0.5 ** delta;
+                    if (this.scaleFactor < 0.01)
+                        this.scaleFactor = 0;
+                }
+                const scale = 1 / (this.scaleFactor + 1);
+                game_1.Game.ctx.imageSmoothingEnabled = false;
+                shadow_1.Shadow.draw(this.x, this.y, 1, 1);
+                // Keep orbit time stable and frame-rate independent.
+                this.orbitT += delta;
+                // Anchor the FX sprites like ImageParticles: center at tile center.
+                // (Unlike 1x2 item sprites, these are 1x1, so don't apply the -1 tile offset.)
+                const centerX = this.x + 0.5;
+                const centerY = this.y +
+                    0.5 +
+                    this.chestOffsetY +
+                    this.sineAnimateFactor * Math.sin(this.frame) * 0.07;
+                // Minor bob like items, but render using FX-sheet sprites.
+                this.frame += (delta * (Math.PI * 2)) / 60;
+                this.drawOrbitSprites(centerX, centerY, this.level.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawAboveShading = (delta) => {
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
+            if (this.pickedUp) {
+                if (this.animateToInventory === true && this.player) {
+                    // Lerp towards the inventory button with ease-out.
+                    const speed = 0.025 * delta;
+                    this.animT = Math.min(1, this.animT + speed);
+                    const t = Math.pow(this.animT, 2);
+                    const posX = this.animStartX * (1 - t) +
+                        this.animTargetX * t +
+                        (this.player.x - this.animTargetX - this.player.drawX) * t +
+                        this.drawOffset;
+                    const posY = this.animStartY * (1 - t) +
+                        this.animTargetY * t +
+                        (this.player.y - this.animTargetY - this.player.drawY) * t +
+                        this.chestOffsetY;
+                    if (this.animStartDistance === null) {
+                        this.animStartDistance = utils_1.Utils.distance(this.player.x - this.player.drawX, this.player.y - this.player.drawY, posX, posY);
+                    }
+                    const distance = Math.abs(utils_1.Utils.distance(this.player.x - this.player.drawX, this.player.y - this.player.drawY, posX, posY));
+                    const fadeStart = 0.5;
+                    if (t > fadeStart) {
+                        const k = (t - fadeStart) / (1 - fadeStart);
+                        this.alpha = Math.max(1 - k, Math.abs(distance / this.animStartDistance));
+                    }
+                    if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                        game_1.Game.ctx.globalAlpha = baseAlpha * Math.max(0, this.alpha);
+                    // Keep orbit time stable while animating.
+                    this.orbitT += delta;
+                    // Render FX sprites near the inventory button; keep the same vertical offset
+                    // as items so it visually "flies into" the UI.
+                    this.drawOrbitSprites(posX + 0.5, posY + 0.5, this.level.shadeColor, this.shadeAmount());
+                    game_1.Game.ctx.globalAlpha = baseAlpha;
+                    this.x = Math.floor(posX);
+                    this.y = Math.floor(posY);
+                    if (this.animT >= 1) {
+                        this.level.items = this.level.items.filter((x) => x !== this);
+                    }
+                    return;
+                }
+                return;
+            }
+            game_1.Game.ctx.globalAlpha = baseAlpha;
+        };
+        this.crystalType = crystalType;
+        // Placeholder coordinates on the image-particles tileset.
+        // These are intentionally in the FX sheet so the look matches ImageParticle-style sprites.
+        this.tileX = 9;
+        this.tileY = 26;
+        this.stackCount = 1;
+        this.stackable = false;
+        this.name = XpCrystal.itemName;
+        // Keep the three orbiting sprites out of sync across instances.
+        this.orbitT = random_1.Random.rand() * Math.PI * 2;
+        const phaseA = random_1.Random.rand() * Math.PI * 2;
+        const phaseB = random_1.Random.rand() * Math.PI * 2;
+        const phaseC = random_1.Random.rand() * Math.PI * 2;
+        this.orbit = [
+            {
+                tileX: this.tileX,
+                tileY: this.tileY,
+                orbitRotation: 0,
+                speed: 0.085,
+                phase: phaseA,
+                radius: 0.22,
+                ellipse: { rx: 1, ry: 0.65 },
+            },
+            {
+                tileX: this.tileX + 1,
+                tileY: this.tileY,
+                orbitRotation: (Math.PI * 2) / 3,
+                speed: 0.1,
+                phase: phaseB,
+                radius: 0.24,
+                ellipse: { rx: 1, ry: 0.55 },
+            },
+            {
+                tileX: this.tileX + 2,
+                tileY: this.tileY,
+                orbitRotation: (Math.PI * 4) / 3,
+                speed: 0.115,
+                phase: phaseC,
+                radius: 0.2,
+                ellipse: { rx: 1, ry: 0.75 },
+            },
+        ];
+    }
+    get skillType() {
+        // The crystal types are a strict subset of Skill.
+        return this.crystalType;
+    }
+}
+exports.XpCrystal = XpCrystal;
+XpCrystal.itemName = "xp crystal";
+XpCrystal.examineText = "A crystal of condensed experience.";
+class MeleeXpCrystal extends XpCrystal {
+    constructor(level, x, y) {
+        super(level, x, y, "melee");
+        this.name = MeleeXpCrystal.itemName;
+    }
+}
+exports.MeleeXpCrystal = MeleeXpCrystal;
+MeleeXpCrystal.itemName = "melee xp crystal";
+MeleeXpCrystal.examineText = "A crystal humming with martial memory.";
+class MagicXpCrystal extends XpCrystal {
+    constructor(level, x, y) {
+        super(level, x, y, "magic");
+        this.name = MagicXpCrystal.itemName;
+    }
+}
+exports.MagicXpCrystal = MagicXpCrystal;
+MagicXpCrystal.itemName = "magic xp crystal";
+MagicXpCrystal.examineText = "A crystal crackling with arcane insight.";
+class RangedXpCrystal extends XpCrystal {
+    constructor(level, x, y) {
+        super(level, x, y, "ranged");
+        this.name = RangedXpCrystal.itemName;
+    }
+}
+exports.RangedXpCrystal = RangedXpCrystal;
+RangedXpCrystal.itemName = "ranged xp crystal";
+RangedXpCrystal.examineText = "A crystal vibrating with steady aim.";
 
 
 /***/ }),
