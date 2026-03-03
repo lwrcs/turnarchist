@@ -1,9 +1,12 @@
 import type { Game } from "../game";
 import type { Room } from "../room/room";
 import { UpLadder } from "../tile/upLadder";
-import type { DownLadder } from "../tile/downLadder";
+import { DownLadder } from "../tile/downLadder";
 import { statsTracker } from "../game/stats";
 import { EnvType } from "../constants/environmentTypes";
+import { GameplaySettings } from "../game/gameplaySettings";
+import { Key } from "../item/key";
+import type { Level } from "./level";
 
 export interface SidePathOptions {
   caveRooms?: number;
@@ -103,6 +106,7 @@ export class SidePathManager {
   private handleLinkedRoom(downLadder: DownLadder, linkedRoom: Room): void {
     downLadder.linkedRoom = linkedRoom;
     this.linkUpLadders(downLadder);
+    this.maybePlaceMainPathKeyInCastleExitRoom(downLadder, linkedRoom);
   }
 
   /**
@@ -204,6 +208,57 @@ export class SidePathManager {
     } else {
       upLadder.linkedRoom = this.game.levels[downLadder.room.depth].exitRoom;
     }
+  }
+
+  private maybePlaceMainPathKeyInCastleExitRoom(
+    downLadder: DownLadder,
+    linkedRoom: Room,
+  ): void {
+    if (GameplaySettings.MAIN_PATH_KEY_REQUIRED !== true) return;
+    const sideLevel = linkedRoom.level;
+    if (!sideLevel || sideLevel.environment.type !== EnvType.CASTLE) return;
+
+    const mainLevel = this.game.levels[downLadder.room.depth];
+    const mainDownLadder = mainLevel
+      ? this.findMainPathDownLadder(mainLevel)
+      : null;
+    if (!mainDownLadder) return;
+    // Only place a key for locked main-path down ladders.
+    if (mainDownLadder.lockable?.isLocked?.() !== true) return;
+
+    // Place key in the final (post-boss) room of the castle sidepath.
+    const exitRoom = sideLevel.getFurthestFromLadder("up");
+    if (!exitRoom) return;
+
+    const existing = exitRoom.items.find(
+      (it) => it instanceof Key && it.doorID === mainDownLadder.lockable.keyID,
+    );
+    if (existing) return;
+
+    const tiles = exitRoom.getEmptyTilesNotBlockingDoors();
+    const pos = exitRoom.getRandomEmptyPosition(tiles);
+    if (!pos) return;
+
+    const key = new Key(exitRoom, pos.x, pos.y);
+    if (mainDownLadder.lockable.keyID > 0) {
+      key.doorID = mainDownLadder.lockable.keyID;
+    } else {
+      // Fallback: if keyID wasn't assigned at creation time, generate one now.
+      mainDownLadder.lockable.setKey(key);
+    }
+    exitRoom.items.push(key);
+  }
+
+  private findMainPathDownLadder(level: Level): DownLadder | null {
+    for (const room of level.rooms) {
+      for (let x = room.roomX; x < room.roomX + room.width; x++) {
+        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+          const t = room.roomArray[x]?.[y];
+          if (t instanceof DownLadder && t.isSidePath !== true) return t;
+        }
+      }
+    }
+    return null;
   }
 
   /**

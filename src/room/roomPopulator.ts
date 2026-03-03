@@ -15,7 +15,7 @@ import {
 } from "../level/environment";
 import { DownLadder } from "../tile/downLadder";
 import { EnvType } from "../constants/environmentTypes";
-import { LockType } from "../tile/lockable";
+import { Lockable, LockType } from "../tile/lockable";
 import { Level } from "../level/level";
 import { Random } from "../utility/random";
 import { Utils } from "../utility/utils";
@@ -554,6 +554,40 @@ export class Populator {
     if (!isSingleRoomSidepathMaze) {
       const envDriven = this.getEnvDrivenSidePathOptions();
       if (envDriven) this.addDownladder(envDriven);
+    }
+
+    // If the main-path down ladder is configured to require a key, but there is no
+    // forest sidepath entry on this floor (i.e., no way to reach the castle key),
+    // unlock the down ladder to avoid soft-locking progression.
+    if (
+      GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
+      this.level.isMainPath
+    ) {
+      let mainDown: DownLadder | null = null;
+      let hasForestSidepathEntry = false;
+      for (const r of this.level.rooms) {
+        for (let x = r.roomX; x < r.roomX + r.width; x++) {
+          for (let y = r.roomY; y < r.roomY + r.height; y++) {
+            const t = r.roomArray[x]?.[y];
+            if (t instanceof DownLadder) {
+              if (t.isSidePath === true) {
+                if (t.environment === EnvType.FOREST)
+                  hasForestSidepathEntry = true;
+              } else {
+                mainDown = t;
+              }
+            }
+          }
+        }
+      }
+      if (
+        mainDown &&
+        mainDown.lockable?.isLocked?.() === true &&
+        hasForestSidepathEntry !== true
+      ) {
+        mainDown.lockable.removeLock();
+        mainDown.lockable.removeLockIcon();
+      }
     }
 
     this.linkExitToStart();
@@ -2617,12 +2651,31 @@ export class Populator {
     const center = room.getRoomCenter();
     const ladderPos = this.pickTileClosestTo(ladderTiles, center, rand);
     if (!ladderPos) return;
-    room.roomArray[ladderPos.x][ladderPos.y] = new DownLadder(
-      room,
-      room.game,
-      ladderPos.x,
-      ladderPos.y,
-    );
+    const shouldLockMainPathDownLadder =
+      GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
+      room.level?.isMainPath === true;
+    if (shouldLockMainPathDownLadder) {
+      // Generate a non-zero key id up-front so we can place the matching key later.
+      const keyID = Math.max(1, Lockable.generateID());
+      room.roomArray[ladderPos.x][ladderPos.y] = new DownLadder(
+        room,
+        room.game,
+        ladderPos.x,
+        ladderPos.y,
+        false,
+        EnvType.DUNGEON,
+        LockType.LOCKED,
+        undefined,
+        { lockType: LockType.LOCKED, keyID },
+      );
+    } else {
+      room.roomArray[ladderPos.x][ladderPos.y] = new DownLadder(
+        room,
+        room.game,
+        ladderPos.x,
+        ladderPos.y,
+      );
+    }
 
     const numChests = Math.ceil(Random.rand() * 5);
 

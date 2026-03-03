@@ -68,6 +68,12 @@ export class GameplaySettings {
   static readonly MAIN_PATH_BRANCHING = 0.1;
   static readonly MAIN_PATH_LOOPINESS = 0.05;
 
+  /**
+   * When enabled, the main-path down ladder (staircase down) is locked and requires a key.
+   * Current design: that key is placed in the CASTLE sidepath's post-boss exit room.
+   */
+  static MAIN_PATH_KEY_REQUIRED = true;
+
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 

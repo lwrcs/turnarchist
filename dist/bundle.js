@@ -36395,6 +36395,11 @@ GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS = false;
 GameplaySettings.SAVE_V2_STRICT_KINDS = false;
 GameplaySettings.MAIN_PATH_BRANCHING = 0.1;
 GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
+/**
+ * When enabled, the main-path down ladder (staircase down) is locked and requires a key.
+ * Current design: that key is placed in the CASTLE sidepath's post-boss exit room.
+ */
+GameplaySettings.MAIN_PATH_KEY_REQUIRED = true;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 // === ENEMY POOL SETTINGS ===
@@ -59604,7 +59609,11 @@ exports.PngPartitionGenerator = PngPartitionGenerator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SidePathManager = void 0;
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 /**
  * Centralized manager for creating and wiring up sidepaths (rope caves).
  *
@@ -59661,6 +59670,7 @@ class SidePathManager {
     handleLinkedRoom(downLadder, linkedRoom) {
         downLadder.linkedRoom = linkedRoom;
         this.linkUpLadders(downLadder);
+        this.maybePlaceMainPathKeyInCastleExitRoom(downLadder, linkedRoom);
     }
     /**
      * Legacy: previously sidepath generation relied on `game.rooms` as a global container and then
@@ -59746,6 +59756,54 @@ class SidePathManager {
         else {
             upLadder.linkedRoom = this.game.levels[downLadder.room.depth].exitRoom;
         }
+    }
+    maybePlaceMainPathKeyInCastleExitRoom(downLadder, linkedRoom) {
+        if (gameplaySettings_1.GameplaySettings.MAIN_PATH_KEY_REQUIRED !== true)
+            return;
+        const sideLevel = linkedRoom.level;
+        if (!sideLevel || sideLevel.environment.type !== environmentTypes_1.EnvType.CASTLE)
+            return;
+        const mainLevel = this.game.levels[downLadder.room.depth];
+        const mainDownLadder = mainLevel
+            ? this.findMainPathDownLadder(mainLevel)
+            : null;
+        if (!mainDownLadder)
+            return;
+        // Only place a key for locked main-path down ladders.
+        if (mainDownLadder.lockable?.isLocked?.() !== true)
+            return;
+        // Place key in the final (post-boss) room of the castle sidepath.
+        const exitRoom = sideLevel.getFurthestFromLadder("up");
+        if (!exitRoom)
+            return;
+        const existing = exitRoom.items.find((it) => it instanceof key_1.Key && it.doorID === mainDownLadder.lockable.keyID);
+        if (existing)
+            return;
+        const tiles = exitRoom.getEmptyTilesNotBlockingDoors();
+        const pos = exitRoom.getRandomEmptyPosition(tiles);
+        if (!pos)
+            return;
+        const key = new key_1.Key(exitRoom, pos.x, pos.y);
+        if (mainDownLadder.lockable.keyID > 0) {
+            key.doorID = mainDownLadder.lockable.keyID;
+        }
+        else {
+            // Fallback: if keyID wasn't assigned at creation time, generate one now.
+            mainDownLadder.lockable.setKey(key);
+        }
+        exitRoom.items.push(key);
+    }
+    findMainPathDownLadder(level) {
+        for (const room of level.rooms) {
+            for (let x = room.roomX; x < room.roomX + room.width; x++) {
+                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                    const t = room.roomArray[x]?.[y];
+                    if (t instanceof downLadder_1.DownLadder && t.isSidePath !== true)
+                        return t;
+                }
+            }
+        }
+        return null;
     }
     /**
      * Extract the root sidepath entry anchor from a first-level sidepath pid.
@@ -73447,6 +73505,36 @@ class Populator {
                 if (envDriven)
                     this.addDownladder(envDriven);
             }
+            // If the main-path down ladder is configured to require a key, but there is no
+            // forest sidepath entry on this floor (i.e., no way to reach the castle key),
+            // unlock the down ladder to avoid soft-locking progression.
+            if (gameplaySettings_1.GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
+                this.level.isMainPath) {
+                let mainDown = null;
+                let hasForestSidepathEntry = false;
+                for (const r of this.level.rooms) {
+                    for (let x = r.roomX; x < r.roomX + r.width; x++) {
+                        for (let y = r.roomY; y < r.roomY + r.height; y++) {
+                            const t = r.roomArray[x]?.[y];
+                            if (t instanceof downLadder_1.DownLadder) {
+                                if (t.isSidePath === true) {
+                                    if (t.environment === environmentTypes_1.EnvType.FOREST)
+                                        hasForestSidepathEntry = true;
+                                }
+                                else {
+                                    mainDown = t;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (mainDown &&
+                    mainDown.lockable?.isLocked?.() === true &&
+                    hasForestSidepathEntry !== true) {
+                    mainDown.lockable.removeLock();
+                    mainDown.lockable.removeLockIcon();
+                }
+            }
             this.linkExitToStart();
             //this.level.distributeKeys();
         };
@@ -73681,7 +73769,16 @@ class Populator {
             const ladderPos = this.pickTileClosestTo(ladderTiles, center, rand);
             if (!ladderPos)
                 return;
-            room.roomArray[ladderPos.x][ladderPos.y] = new downLadder_1.DownLadder(room, room.game, ladderPos.x, ladderPos.y);
+            const shouldLockMainPathDownLadder = gameplaySettings_1.GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
+                room.level?.isMainPath === true;
+            if (shouldLockMainPathDownLadder) {
+                // Generate a non-zero key id up-front so we can place the matching key later.
+                const keyID = Math.max(1, lockable_1.Lockable.generateID());
+                room.roomArray[ladderPos.x][ladderPos.y] = new downLadder_1.DownLadder(room, room.game, ladderPos.x, ladderPos.y, false, environmentTypes_1.EnvType.DUNGEON, lockable_1.LockType.LOCKED, undefined, { lockType: lockable_1.LockType.LOCKED, keyID });
+            }
+            else {
+                room.roomArray[ladderPos.x][ladderPos.y] = new downLadder_1.DownLadder(room, room.game, ladderPos.x, ladderPos.y);
+            }
             const numChests = Math.ceil(random_1.Random.rand() * 5);
             let tiles = room.getEmptyTiles();
             let positions = [];
