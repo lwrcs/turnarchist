@@ -78596,7 +78596,8 @@ class Door extends passageway_1.Passageway {
         this.drawAboveShading = (delta) => {
             // Z: Door icons (locked arrow/key) should only draw on the active z-layer.
             const activeZ = this.room?.game?.players?.[this.room.game.localPlayerID]?.z ?? 0;
-            if ((this.z ?? 0) !== activeZ)
+            const inHallway = this.isInHallway();
+            if ((this.z ?? 0) !== activeZ || inHallway)
                 return;
             //if (this.type === DoorType.TUNNELDOOR) return;
             const baseAlpha = game_1.Game.ctx.globalAlpha;
@@ -78628,6 +78629,12 @@ class Door extends passageway_1.Passageway {
                     this.iconYOffset, 1, 1); //if not top door
             }
             game_1.Game.ctx.globalAlpha = baseAlpha;
+        };
+        this.isInHallway = () => {
+            return this.room?.width - 2 === 1 || this.room?.height - 2 === 1;
+        };
+        this.isPlayerInHallway = () => {
+            return this.game.room?.width - 2 === 1 || this.game.room?.height - 2 === 1;
         };
         this.globalId = IdGenerator_1.IdGenerator.generate("D");
         this.opened = false;
