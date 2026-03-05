@@ -8,6 +8,7 @@ import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound/sound";
 import { LevelConstants } from "./level/levelConstants";
 import { LevelGenerator } from "./level/levelGenerator";
+import { createCastleSidePathOptions } from "./level/sidePathManager";
 import { Input, InputEnum } from "./game/input";
 import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./game/textbox";
@@ -33,6 +34,7 @@ import { CameraAnimation } from "./game/cameraAnimation";
 import { Tips } from "./tips";
 import { GameplaySettings } from "./game/gameplaySettings";
 import { Random } from "./utility/random";
+import { LockType } from "./tile/lockable";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
@@ -3021,6 +3023,21 @@ export class Game {
         if (parsed) {
           const consumed = firstTwo === first ? 1 : 2;
           const seedInput = parts.slice(consumed).join(" ").trim();
+          // Special-case: "new castle" should spawn into the CASTLE as a sidepath
+          // (via a tiny forest staging level), not a main-path dungeon reskinned as castle.
+          if (parsed.envType === EnvType.CASTLE) {
+            const seedNumber = seedInput
+              ? this.convertSeedToNumber(seedInput)
+              : undefined;
+            this.pushMessage(
+              `Starting new CASTLE sidepath sandbox${
+                seedInput ? ` with seed: ${seedInput} (${seedNumber})` : ""
+              }`,
+            );
+            this.startCastleSidepathSandbox(seedNumber);
+            return;
+          }
+
           this.setPendingMainPathEnvOverride(parsed.envType);
           this.pushMessage(
             `Starting new ${getEnvTypeName(parsed.envType)} game${
@@ -3052,6 +3069,45 @@ export class Game {
     }
 
     switch (command) {
+      case "reveal": {
+        const player = this.players?.[this.localPlayerID];
+        if (!player || !player.map) {
+          this.pushMessage("No player/map available.");
+          break;
+        }
+        const enable = player.map.forceRevealAll !== true;
+
+        if (enable) {
+          // Mark all rooms in the current level as entered/active and open all doors.
+          const rooms = player.getRoom()?.level?.rooms ?? [];
+          for (const r of rooms) {
+            if (r.active) continue;
+            r.entered = true;
+            //game.updateLevel(r);
+            r.onScreen = true;
+            r.calculateWallInfo();
+            r.updateLighting();
+            for (const d of r.doors) {
+              d.opened = true;
+              d.locked = false;
+              if (d.linkedDoor) {
+                d.linkedDoor.opened = true;
+                d.linkedDoor.locked = false;
+              }
+            }
+          }
+
+          player.map.revealAllCurrentLevel();
+          this.pushMessage(
+            "Reveal: enabled (rooms entered, fog cleared, minimap unclamped).",
+          );
+        } else {
+          player.map.forceRevealAll = false;
+          player.map.saveMapData();
+          this.pushMessage("Reveal: disabled.");
+        }
+        break;
+      }
       case "ladder":
         this.pushMessage(
           `Distance to nearest up ladder: ${this.room.getDistanceToNearestLadder("up")}`,
@@ -4000,6 +4056,131 @@ export class Game {
     this.pushMessage(
       `Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${ITEM_KIND_VALUES_V2.length}`,
     );
+  }
+
+  /**
+   * Chat command: `/new castle`
+   *
+   * Creates a tiny 1-room FOREST "staging" level containing an unlocked sidepath rope-down ladder
+   * to the CASTLE, then immediately transitions through it so you spawn into a real castle sidepath.
+   */
+  private startCastleSidepathSandbox(seedNumber?: number): void {
+    const seed = Number.isFinite(seedNumber as number)
+      ? (seedNumber as number)
+      : Math.floor(Date.now() % 2147483647);
+
+    // Minimal levelgen is required for sidepath generation through ladders.
+    this.levelgen = new LevelGenerator();
+    this.levelgen.setSeed(seed);
+    this.levelgen.setMainPathEnvOverride(EnvType.FOREST);
+
+    const depth = 0;
+    const mapGroup = 1;
+    const roomW = 21;
+    const roomH = 21;
+
+    const level = new Level(
+      this,
+      depth,
+      roomW,
+      roomH,
+      true,
+      mapGroup,
+      EnvType.FOREST,
+      true, // skipPopulation: we build the room manually
+    );
+    level.genSource = "procedural";
+
+    const room = new Room(
+      this,
+      0,
+      0,
+      roomW,
+      roomH,
+      RoomType.START,
+      depth,
+      mapGroup,
+      level,
+      Random.rand,
+      EnvType.FOREST,
+    );
+    room.id = 0;
+    room.pathId = "main";
+    room.entered = true;
+    room.active = true;
+    room.onScreen = true;
+
+    // Fill tiles: perimeter walls + interior floors.
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const isBorder =
+          x === room.roomX ||
+          y === room.roomY ||
+          x === room.roomX + room.width - 1 ||
+          y === room.roomY + room.height - 1;
+        room.roomArray[x][y] = isBorder
+          ? new Wall(room, x, y)
+          : new Floor(room, x, y);
+      }
+    }
+
+    // Place a sidepath down ladder to the CASTLE in the center.
+    const lx = room.roomX + Math.floor(room.width / 2);
+    const ly = room.roomY + Math.floor(room.height / 2);
+    const sideOpts = createCastleSidePathOptions({ locked: false });
+    const dl = new DownLadder(
+      room,
+      this,
+      lx,
+      ly,
+      true,
+      EnvType.CASTLE,
+      LockType.NONE,
+      sideOpts,
+      { lockType: LockType.NONE },
+    );
+    room.roomArray[lx][ly] = dl;
+
+    level.rooms = [room];
+    level.roomsById.set(room.globalId, room);
+
+    this.levels = [];
+    this.levelsById = new Map();
+    this.levels[depth] = level;
+    this.levelsById.set(level.globalId, level);
+    this.level = level;
+
+    this.registerRooms([room]);
+    this.room = room;
+    this.currentDepth = depth;
+    this.currentPathId = "main";
+
+    // Create local player standing on the ladder so we can trigger it immediately.
+    const local = new Player(this, lx, ly, true);
+    local.dead = false;
+    local.depth = depth;
+    local.roomGID = room.globalId;
+    local.levelID = 0;
+    this.players = { [this.localPlayerID]: local };
+    this.offlinePlayers = {};
+    this.setPlayer();
+
+    // Finalize state for immediate play.
+    try {
+      room.calculateWallInfo();
+    } catch {}
+    try {
+      room.roomOnScreen(local);
+      room.updateLighting({ x: local.x, y: local.y });
+    } catch {}
+
+    this.levelState = LevelState.IN_LEVEL;
+    this.started = true;
+    this.startedFadeOut = true;
+    this.startMenuActive = false;
+
+    this.pushMessage("Entering castle sidepath...");
+    dl.onCollide(local);
   }
 
   private generateAndShowRoomLayout(): void {

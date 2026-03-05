@@ -267,7 +267,34 @@ export class LevelGenerator {
     } else {
       // Use procedural generation for side paths OR when PNG is disabled
       if (isSidePath) {
-        partitions = await this.partitionGenerator.generateCavePartitions(opts);
+        const useCastlePng =
+          GameplaySettings.CASTLE_USE_PNG_LEVEL &&
+          opts?.envType === EnvType.CASTLE;
+        if (useCastlePng) {
+          const CASTLE_PNG_COUNT = 3;
+          const pick = Math.floor(Random.rand() * CASTLE_PNG_COUNT) + 1;
+          const pngUrl = `res/levels/castle_${pick}.png`;
+          console.log(`[castle] Using PNG level: ${pngUrl}`);
+          partitions =
+            await this.pngPartitionGenerator.generatePartitionsFromPng(
+              pngUrl,
+              game,
+              depth,
+              true,
+            );
+          if (partitions.length > 0) {
+            selectedPngUrl = pngUrl;
+          } else {
+            console.warn(
+              "[castle] PNG generation returned 0 partitions, falling back to procedural",
+            );
+            partitions =
+              await this.partitionGenerator.generateCavePartitions(opts);
+          }
+        } else {
+          partitions =
+            await this.partitionGenerator.generateCavePartitions(opts);
+        }
       } else {
         partitions = await this.partitionGenerator.generateDungeonPartitions(
           game,
@@ -315,12 +342,10 @@ export class LevelGenerator {
       opts,
     );
     // Record how generation happened for save/load determinism.
-    if (!isSidePath) {
-      const usedPng = selectedPngUrl !== undefined && partitions.length > 0;
-      newLevel.genSource = usedPng ? "png" : "procedural";
-      if (usedPng) {
-        newLevel.pngUrl = selectedPngUrl;
-      }
+    const usedPng = selectedPngUrl !== undefined && partitions.length > 0;
+    newLevel.genSource = usedPng ? "png" : "procedural";
+    if (usedPng) {
+      newLevel.pngUrl = selectedPngUrl;
     }
 
     if (isSidePath) {
@@ -331,7 +356,14 @@ export class LevelGenerator {
       this.game.registerLevel(newLevel);
     }
 
-    let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid, newLevel);
+    let rooms = this.getRooms(
+      partitions,
+      depth,
+      mapGroup,
+      envType,
+      pid,
+      newLevel,
+    );
 
     newLevel.setRooms(rooms);
     newLevel.populator.populateRooms();
@@ -466,12 +498,11 @@ export class LevelGenerator {
       img.onerror = () => {
         resolve(false);
       };
-      // Set a timeout to avoid hanging
       setTimeout(() => {
         resolve(false);
       }, 1000);
 
-      img.src = imagePath;
+      img.src = `${imagePath}?v=${Date.now()}`;
     });
   }
 }

@@ -281,7 +281,7 @@ export class PartitionGenerator {
   }
 
   async generateCavePartitions(opts?: SidePathOptions): Promise<Partition[]> {
-    const effectiveOpts: SidePathOptions = opts ?? {};
+    const effectiveOpts: SidePathOptions = { ...(opts ?? {}) };
     const partialLevel = new PartialLevel();
     let validationResult: ValidationResult;
     let attempts = 0;
@@ -294,7 +294,13 @@ export class PartitionGenerator {
     // which breaks when numRooms<=1 (spawn would have no connections and gets filtered out).
     if (numRooms <= 1) {
       const CAVE_OFFSET = 100;
-      const p = new Partition(CAVE_OFFSET, CAVE_OFFSET, mapWidth, mapHeight, "white");
+      const p = new Partition(
+        CAVE_OFFSET,
+        CAVE_OFFSET,
+        mapWidth,
+        mapHeight,
+        "white",
+      );
       p.type = RoomType.ROPECAVE;
       return [p];
     }
@@ -316,37 +322,64 @@ export class PartitionGenerator {
 
     do {
       attempts++;
+      if (attempts > 250) {
+        throw new Error(
+          `Cave generation failed after ${attempts} attempts (general cap).`,
+        );
+      }
       this.visualizer.updateProgress(
         `Generating cave candidate ${attempts}`,
         attempts * 0.1,
       );
 
-      if (effectiveOpts.giantCentralRoom) {
-        await this.generateCaveCandidateWithGiantCenter(
-          partialLevel,
-          mapWidth,
-          mapHeight,
-          numRooms,
-          branching,
-          loopiness,
-          effectiveOpts.giantRoomScale ?? 0.65,
-          effectiveOpts,
-        );
-      } else {
-        await this.generateCaveCandidate(
-          partialLevel,
-          mapWidth,
-          mapHeight,
-          numRooms,
-          branching,
-          loopiness,
-          effectiveOpts,
-        );
+      try {
+        if (effectiveOpts.giantCentralRoom) {
+          await this.generateCaveCandidateWithGiantCenter(
+            partialLevel,
+            mapWidth,
+            mapHeight,
+            numRooms,
+            branching,
+            loopiness,
+            effectiveOpts.giantRoomScale ?? 0.65,
+            effectiveOpts,
+          );
+        } else {
+          await this.generateCaveCandidate(
+            partialLevel,
+            mapWidth,
+            mapHeight,
+            numRooms,
+            branching,
+            loopiness,
+            effectiveOpts,
+          );
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("No valid rooms after filtering.")) {
+          if (attempts >= 50) {
+            throw new Error(
+              `Cave generation failed after ${attempts} attempts: ${msg}`,
+            );
+          }
+          console.warn(
+            `[generateCavePartitions] Candidate rejected - retrying (attempt=${attempts}): ${msg}`,
+          );
+          partialLevel.partitions = [];
+          validationResult = { isValid: false, errorMessage: msg };
+          continue;
+        }
+        throw e;
       }
 
+      // For xySymmetry layouts the room count is determined by BSP+mirror,
+      // not directly by caveRooms. Accept any result with >= 4 partitions.
+      const validationRoomTarget =
+        effectiveOpts.xySymmetry === true ? 4 : numRooms;
       validationResult = this.validator.validateCavePartitions(
         partialLevel.partitions,
-        numRooms,
+        validationRoomTarget,
       );
 
       // Update visualization state
@@ -543,8 +576,66 @@ export class PartitionGenerator {
       partialLevel.partitions[i].type = RoomType.CAVE;
     }
 
-    await this.connectCavePartitions(partialLevel, spawn, num_rooms, branching);
-    await this.addCaveLoops(partialLevel, loopiness);
+    let xySymmetry: {
+      xAxisLine: number;
+      yAxisLine: number;
+      centralRoom: Partition | null;
+    } | null = null;
+    if (opts?.xySymmetry === true) {
+      this.pruneToSpawnQuadrantForXYSymmetry(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        spawn,
+        num_rooms,
+        opts,
+      );
+      const sym = this.applyCaveXYSymmetry(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        spawn,
+        opts?.xySymmetryCentralRoomSize,
+      );
+      spawn = sym.spawn;
+      xySymmetry = {
+        xAxisLine: sym.xAxisLine,
+        yAxisLine: sym.yAxisLine,
+        centralRoom: sym.centralRoom,
+      };
+    }
+
+    if (xySymmetry) {
+      // If a central room was requested but not placed, reject this candidate
+      // so the outer retry loop generates a new one.
+      if (
+        opts?.xySymmetryCentralRoomSize &&
+        opts.xySymmetryCentralRoomSize >= 3 &&
+        !xySymmetry.centralRoom
+      ) {
+        throw new Error("No valid rooms after filtering.");
+      }
+      this.connectCavePartitionsXYSymmetric(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        spawn,
+        xySymmetry.xAxisLine,
+        xySymmetry.yAxisLine,
+        xySymmetry.centralRoom,
+      );
+    } else {
+      await this.connectCavePartitions(
+        partialLevel,
+        spawn,
+        num_rooms,
+        branching,
+      );
+      await this.addCaveLoops(partialLevel, loopiness);
+    }
     await this.calculateDistances(partialLevel, spawn);
 
     // Castle sidepath: place a boss one room before the furthest room so that the
@@ -711,15 +802,683 @@ export class PartitionGenerator {
       center.type = RoomType.ROPECAVE;
     }
 
-    // Add additional connections/loops using existing helpers for some variety
-    await this.addCaveLoops(partialLevel, loopiness);
+    // Optional symmetry pass (will override the giant-center connectivity pattern).
+    if (opts?.xySymmetry === true) {
+      const symStart =
+        partialLevel.partitions.find((p) => p.type === RoomType.ROPECAVE) ??
+        center;
+      this.pruneToSpawnQuadrantForXYSymmetry(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        symStart,
+        num_rooms,
+        opts,
+      );
+      const sym = this.applyCaveXYSymmetry(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        symStart,
+        opts?.xySymmetryCentralRoomSize,
+      );
+      if (
+        opts?.xySymmetryCentralRoomSize &&
+        opts.xySymmetryCentralRoomSize >= 3 &&
+        !sym.centralRoom
+      ) {
+        throw new Error("No valid rooms after filtering.");
+      }
+      this.connectCavePartitionsXYSymmetric(
+        partialLevel,
+        CAVE_OFFSET,
+        map_w,
+        map_h,
+        sym.spawn,
+        sym.xAxisLine,
+        sym.yAxisLine,
+        sym.centralRoom,
+      );
+    }
 
-    // Distances from center
-    await this.calculateDistances(partialLevel, center);
+    // Add additional connections/loops using existing helpers for some variety.
+    // Symmetric layouts intentionally skip random loop-adding to preserve symmetry.
+    if (opts?.xySymmetry !== true) {
+      await this.addCaveLoops(partialLevel, loopiness);
+    }
 
     // In giant-center mode, the entry can be a peripheral ROPECAVE room; use that as spawn.
-    const spawn = partialLevel.partitions.find((p) => p.type === RoomType.ROPECAVE) ?? center;
+    const spawn =
+      partialLevel.partitions.find((p) => p.type === RoomType.ROPECAVE) ??
+      center;
+    // Distances should be measured from the actual entry room so "furthest room"
+    // and boss/exit selection are consistent with sidepath flow.
+    await this.calculateDistances(partialLevel, spawn);
     this.assignCastleSidepathBoss(partialLevel, spawn, opts?.envType);
+  }
+
+  private applyCaveXYSymmetry(
+    partialLevel: PartialLevel,
+    origin: number,
+    map_w: number,
+    map_h: number,
+    spawn: Partition,
+    centralRoomSize?: number,
+  ): {
+    spawn: Partition;
+    xAxisLine: number;
+    yAxisLine: number;
+    centralRoom: Partition | null;
+  } {
+    const rawSize =
+      centralRoomSize !== undefined && centralRoomSize >= 3
+        ? centralRoomSize
+        : 0;
+    // Central room must be odd-sized for integer-aligned symmetry.
+    let roomDim = rawSize > 0 ? rawSize | 1 : 0;
+    let halfDim = roomDim > 0 ? Math.floor(roomDim / 2) : 0;
+    // Use a soft, small axis-padding hint to avoid very large inter-room voids.
+    // The actual central room size is selected later from post-mirror geometry.
+    const centralPadding = halfDim > 0 ? Math.min(2, halfDim + 1) : 0;
+
+    const xAxisLine = this.applyCaveAxisSymmetry(
+      partialLevel,
+      origin,
+      map_w,
+      map_h,
+      "x",
+      spawn,
+      centralPadding,
+    );
+    const yAxisLine = this.applyCaveAxisSymmetry(
+      partialLevel,
+      origin,
+      map_w,
+      map_h,
+      "y",
+      spawn,
+      centralPadding,
+    );
+
+    // Normalize: ensure exactly one ROPECAVE (the spawn).
+    for (const p of partialLevel.partitions) {
+      if (p !== spawn && p.type === RoomType.ROPECAVE) {
+        p.type = RoomType.CAVE;
+      }
+    }
+    spawn.type = RoomType.ROPECAVE;
+
+    // Snapshot geometric gaps around the symmetry axes (post-mirror, pre-center).
+    const leftFar = partialLevel.partitions
+      .map((p) => p.x + p.w - 1)
+      .filter((edge) => edge < xAxisLine)
+      .reduce<number | null>(
+        (best, v) => (best === null || v > best ? v : best),
+        null,
+      );
+    const rightNear = partialLevel.partitions
+      .map((p) => p.x)
+      .filter((edge) => edge > xAxisLine)
+      .reduce<number | null>(
+        (best, v) => (best === null || v < best ? v : best),
+        null,
+      );
+    const topFar = partialLevel.partitions
+      .map((p) => p.y + p.h - 1)
+      .filter((edge) => edge < yAxisLine)
+      .reduce<number | null>(
+        (best, v) => (best === null || v > best ? v : best),
+        null,
+      );
+    const bottomNear = partialLevel.partitions
+      .map((p) => p.y)
+      .filter((edge) => edge > yAxisLine)
+      .reduce<number | null>(
+        (best, v) => (best === null || v < best ? v : best),
+        null,
+      );
+    const xGap =
+      leftFar !== null && rightNear !== null ? rightNear - leftFar - 1 : null;
+    const yGap =
+      topFar !== null && bottomNear !== null ? bottomNear - topFar - 1 : null;
+
+    // Place a central boss room at the axis intersection if configured.
+    let centralRoom: Partition | null = null;
+    if (roomDim > 0) {
+      const maxHalfX = Math.floor(
+        Math.min(xAxisLine - origin, origin + map_w - 1 - xAxisLine),
+      );
+      const maxHalfY = Math.floor(
+        Math.min(yAxisLine - origin, origin + map_h - 1 - yAxisLine),
+      );
+      const maxHalf = Math.max(0, Math.min(maxHalfX, maxHalfY));
+      const maxOddDim = maxHalf > 0 ? 2 * maxHalf + 1 : 0;
+      const preferredDim = roomDim > 0 ? roomDim : 9;
+
+      const rangesOverlap = (a0: number, a1: number, b0: number, b1: number) =>
+        Math.max(a0, b0) <= Math.min(a1, b1);
+
+      type CentralCandidate = {
+        dim: number;
+        cx: number;
+        cy: number;
+        leftCount: number;
+        rightCount: number;
+        topCount: number;
+        bottomCount: number;
+      };
+
+      const evaluateAt = (
+        dim: number,
+        cx: number,
+        cy: number,
+      ): CentralCandidate | null => {
+        if (
+          cx < origin ||
+          cy < origin ||
+          cx + dim > origin + map_w ||
+          cy + dim > origin + map_h
+        ) {
+          return null;
+        }
+
+        const central = new Partition(cx, cy, dim, dim, "white");
+        const hasOverlap = partialLevel.partitions.some((p) =>
+          p.overlaps(central),
+        );
+        if (hasOverlap) return null;
+
+        const x0 = cx;
+        const x1 = cx + dim - 1;
+        const y0 = cy;
+        const y1 = cy + dim - 1;
+
+        let leftCount = 0;
+        let rightCount = 0;
+        let topCount = 0;
+        let bottomCount = 0;
+        for (const p of partialLevel.partitions) {
+          const px0 = p.x;
+          const px1 = p.x + p.w - 1;
+          const py0 = p.y;
+          const py1 = p.y + p.h - 1;
+          if (cx === px1 + 2 && rangesOverlap(py0, py1, y0, y1)) leftCount++;
+          if (p.x === x1 + 2 && rangesOverlap(py0, py1, y0, y1)) rightCount++;
+          if (cy === py1 + 2 && rangesOverlap(px0, px1, x0, x1)) topCount++;
+          if (p.y === y1 + 2 && rangesOverlap(px0, px1, x0, x1)) bottomCount++;
+        }
+
+        return { dim, cx, cy, leftCount, rightCount, topCount, bottomCount };
+      };
+
+      // The central room must contain the axis intersection (xAxisLine, yAxisLine).
+      // Instead of only centering on the intersection, scan all valid placements
+      // within the gap so the room can slide toward nearby partitions for adjacency.
+      const cxMin = (dim: number): number =>
+        Math.max(origin, xAxisLine - dim + 1);
+      const cxMax = (dim: number): number =>
+        Math.min(origin + map_w - dim, xAxisLine);
+      const cyMin = (dim: number): number =>
+        Math.max(origin, yAxisLine - dim + 1);
+      const cyMax = (dim: number): number =>
+        Math.min(origin + map_h - dim, yAxisLine);
+
+      let best: CentralCandidate | null = null;
+      const candidateScore = (c: CentralCandidate): number => {
+        const sideCount =
+          (c.leftCount > 0 ? 1 : 0) +
+          (c.rightCount > 0 ? 1 : 0) +
+          (c.topCount > 0 ? 1 : 0) +
+          (c.bottomCount > 0 ? 1 : 0);
+        const hasHorizontal = c.leftCount > 0 && c.rightCount > 0;
+        const hasVertical = c.topCount > 0 && c.bottomCount > 0;
+        const fullAxisConnectivity = hasHorizontal && hasVertical;
+        const axisPairCount = (hasHorizontal ? 1 : 0) + (hasVertical ? 1 : 0);
+        const distPenalty = Math.abs(c.dim - preferredDim);
+        return (
+          (fullAxisConnectivity ? 100000 : 0) +
+          axisPairCount * 10000 +
+          sideCount * 1000 -
+          distPenalty * 10 +
+          c.dim
+        );
+      };
+      for (let dim = maxOddDim; dim >= 3; dim -= 2) {
+        // Build a focused set of X/Y positions to check: the edges of each
+        // existing partition that are within the gap dictate the only coordinates
+        // where a BSP +2 adjacency can form.
+        const xPositions = new Set<number>();
+        const yPositions = new Set<number>();
+        const lo = cxMin(dim);
+        const hi = cxMax(dim);
+        const tlo = cyMin(dim);
+        const thi = cyMax(dim);
+        for (const p of partialLevel.partitions) {
+          // cx that would make left edge adjacent to p's right edge: cx = (p.x+p.w-1) + 2
+          const cxFromLeft = p.x + p.w + 1;
+          if (cxFromLeft >= lo && cxFromLeft <= hi) xPositions.add(cxFromLeft);
+          // cx that would make right edge adjacent to p's left edge: cx+dim-1+2 = p.x → cx = p.x-dim-1
+          const cxFromRight = p.x - dim - 1;
+          if (cxFromRight >= lo && cxFromRight <= hi)
+            xPositions.add(cxFromRight);
+          // cy that would make top edge adjacent to p's bottom edge: cy = (p.y+p.h-1) + 2
+          const cyFromTop = p.y + p.h + 1;
+          if (cyFromTop >= tlo && cyFromTop <= thi) yPositions.add(cyFromTop);
+          // cy that would make bottom edge adjacent to p's top edge: cy+dim-1+2 = p.y → cy = p.y-dim-1
+          const cyFromBottom = p.y - dim - 1;
+          if (cyFromBottom >= tlo && cyFromBottom <= thi)
+            yPositions.add(cyFromBottom);
+        }
+        // Always include the axis-centered position as a fallback.
+        const half = Math.floor(dim / 2);
+        const centeredCx = xAxisLine - half;
+        const centeredCy = yAxisLine - half;
+        if (centeredCx >= lo && centeredCx <= hi) xPositions.add(centeredCx);
+        if (centeredCy >= tlo && centeredCy <= thi) yPositions.add(centeredCy);
+
+        for (const cx of xPositions) {
+          for (const cy of yPositions) {
+            const candidate = evaluateAt(dim, cx, cy);
+            if (!candidate) continue;
+            if (!best || candidateScore(candidate) > candidateScore(best)) {
+              best = candidate;
+            }
+          }
+        }
+      }
+
+      if (best) {
+        const central = new Partition(
+          best.cx,
+          best.cy,
+          best.dim,
+          best.dim,
+          "white",
+        );
+        central.type = RoomType.BOSS;
+        central.fillStyle = "red";
+        central.connections = [];
+        central.distance = 1000;
+        partialLevel.partitions.push(central);
+        centralRoom = central;
+        console.log(
+          `[xySymmetry] Added central boss room at (${best.cx},${best.cy},${best.dim},${best.dim}) neighbors L=${best.leftCount} R=${best.rightCount} T=${best.topCount} B=${best.bottomCount} gaps x=${xGap ?? "n/a"} y=${yGap ?? "n/a"}`,
+        );
+      } else {
+        console.warn(
+          `[xySymmetry] Could not place central room at axis intersection with valid adjacency; skipping (gaps x=${xGap ?? "n/a"} y=${yGap ?? "n/a"})`,
+        );
+      }
+    }
+
+    // ---- Post-mirror symmetry verification ----
+    this.verifyXYSymmetry(partialLevel, xAxisLine, yAxisLine, centralRoom);
+
+    return { spawn, xAxisLine, yAxisLine, centralRoom };
+  }
+
+  private verifyXYSymmetry(
+    partialLevel: PartialLevel,
+    xAxisLine: number,
+    yAxisLine: number,
+    centralRoom: Partition | null,
+  ): void {
+    const keyOf = (x: number, y: number, w: number, h: number) =>
+      `${x},${y},${w},${h}`;
+    const existing = new Set(
+      partialLevel.partitions.map((p) => keyOf(p.x, p.y, p.w, p.h)),
+    );
+
+    let xFails = 0;
+    let yFails = 0;
+    let xyFails = 0;
+    for (const p of partialLevel.partitions) {
+      if (p === centralRoom) continue;
+      const mx = 2 * xAxisLine - (p.x + p.w - 1);
+      const my = 2 * yAxisLine - (p.y + p.h - 1);
+      if (!existing.has(keyOf(mx, p.y, p.w, p.h))) xFails++;
+      if (!existing.has(keyOf(p.x, my, p.w, p.h))) yFails++;
+      if (!existing.has(keyOf(mx, my, p.w, p.h))) xyFails++;
+    }
+    if (xFails + yFails + xyFails > 0) {
+      console.warn(
+        `[xySymmetry] VERIFY: xMirrorMissing=${xFails} yMirrorMissing=${yFails} xyMirrorMissing=${xyFails} total=${partialLevel.partitions.length} axes=(${xAxisLine},${yAxisLine})`,
+      );
+    } else {
+      console.log(
+        `[xySymmetry] VERIFY: perfect symmetry confirmed (${partialLevel.partitions.length} partitions, axes=${xAxisLine},${yAxisLine})`,
+      );
+    }
+  }
+
+  private pruneToSpawnQuadrantForXYSymmetry(
+    partialLevel: PartialLevel,
+    origin: number,
+    map_w: number,
+    map_h: number,
+    spawn: Partition,
+    desiredTotalRooms: number,
+    opts?: SidePathOptions,
+  ): void {
+    const parts = partialLevel.partitions;
+    if (!parts || parts.length === 0) return;
+
+    const midX = (p: Partition): number => p.x + (p.w - 1) / 2;
+    const midY = (p: Partition): number => p.y + (p.h - 1) / 2;
+    const centerX = origin + (map_w - 1) / 2;
+    const centerY = origin + (map_h - 1) / 2;
+
+    const spawnOnLeft = midX(spawn) < centerX;
+    const spawnOnTop = midY(spawn) < centerY;
+
+    const inSpawnQuadrant = (p: Partition): boolean => {
+      const left = midX(p) < centerX;
+      const top = midY(p) < centerY;
+      return left === spawnOnLeft && top === spawnOnTop;
+    };
+
+    const quadrant = parts.filter(inSpawnQuadrant);
+    if (!quadrant.includes(spawn)) quadrant.unshift(spawn);
+
+    // Pick extra partitions per quadrant to compensate for mirrors that may
+    // go out of bounds when central room padding pushes the axis line outward.
+    const centralRoomConfigured =
+      typeof opts?.xySymmetryCentralRoomSize === "number" &&
+      opts.xySymmetryCentralRoomSize >= 3;
+    const mirrorLossBuffer = centralRoomConfigured ? 2 : 0;
+    const desiredQuadrant = Math.max(
+      2,
+      Math.ceil(desiredTotalRooms / 4) + mirrorLossBuffer,
+    );
+
+    // ---- Shape controls (hollow center / plus-shape preference) ----
+    const defaultVoid = Math.max(2, Math.floor(Math.min(map_w, map_h) * 0.12));
+    const defaultArm = Math.max(1, Math.floor(Math.min(map_w, map_h) * 0.04));
+    const voidHalfSize =
+      typeof opts?.xySymmetryCenterVoidHalfSize === "number"
+        ? Math.floor(opts.xySymmetryCenterVoidHalfSize)
+        : defaultVoid;
+    const armHalfThickness =
+      typeof opts?.xySymmetryArmHalfThickness === "number"
+        ? Math.floor(opts.xySymmetryArmHalfThickness)
+        : defaultArm;
+
+    const distToAxis = (p: Partition, axis: "x" | "y", c: number): number => {
+      if (axis === "x") {
+        const x0 = p.x;
+        const x1 = p.x + p.w - 1;
+        if (x0 <= c && c <= x1) return 0;
+        return Math.min(Math.abs(x0 - c), Math.abs(x1 - c));
+      }
+      const y0 = p.y;
+      const y1 = p.y + p.h - 1;
+      if (y0 <= c && c <= y1) return 0;
+      return Math.min(Math.abs(y0 - c), Math.abs(y1 - c));
+    };
+
+    const sx = midX(spawn);
+    const sy = midY(spawn);
+    const distToSpawn = (p: Partition): number =>
+      Math.abs(midX(p) - sx) + Math.abs(midY(p) - sy);
+
+    const inArmX = (p: Partition): boolean =>
+      distToAxis(p, "x", centerX) <= armHalfThickness;
+    const inArmY = (p: Partition): boolean =>
+      distToAxis(p, "y", centerY) <= armHalfThickness;
+
+    const rangesOverlap = (a0: number, a1: number, b0: number, b1: number) =>
+      Math.max(a0, b0) <= Math.min(a1, b1);
+    const canPotentiallyConnect = (a: Partition, b: Partition): boolean => {
+      const ax1 = a.x + a.w - 1;
+      const ay1 = a.y + a.h - 1;
+      const bx1 = b.x + b.w - 1;
+      const by1 = b.y + b.h - 1;
+      const horizGap = b.x === ax1 + 2 || a.x === bx1 + 2;
+      const vertGap = b.y === ay1 + 2 || a.y === by1 + 2;
+      const overlapY = rangesOverlap(a.y, ay1, b.y, by1);
+      const overlapX = rangesOverlap(a.x, ax1, b.x, bx1);
+      return (horizGap && overlapY) || (vertGap && overlapX);
+    };
+
+    const score = (p: Partition): number => {
+      if (p === spawn) return Number.POSITIVE_INFINITY;
+      const ax = inArmX(p);
+      const ay = inArmY(p);
+      const armReward = ax !== ay ? 200 : ax && ay ? -250 : 0;
+      const dx = distToAxis(p, "x", centerX);
+      const dy = distToAxis(p, "y", centerY);
+      const centerPenalty =
+        dx <= voidHalfSize + 2 && dy <= voidHalfSize + 2 ? 120 : 0;
+      return -distToSpawn(p) + armReward - centerPenalty;
+    };
+
+    // Build BSP-adjacency graph within the quadrant.
+    const adjMap = new Map<Partition, Partition[]>();
+    for (const p of quadrant) adjMap.set(p, []);
+    for (let i = 0; i < quadrant.length; i++) {
+      for (let j = i + 1; j < quadrant.length; j++) {
+        if (canPotentiallyConnect(quadrant[i], quadrant[j])) {
+          adjMap.get(quadrant[i])!.push(quadrant[j]);
+          adjMap.get(quadrant[j])!.push(quadrant[i]);
+        }
+      }
+    }
+
+    // BFS flood-fill from spawn, always expanding to the highest-scored
+    // BSP-adjacent neighbor first. This guarantees the picked set is a
+    // connected subgraph that connectCavePartitions can always wire up.
+    const picked = new Set<Partition>([spawn]);
+    const frontier = new Set<Partition>();
+    for (const n of adjMap.get(spawn) ?? []) frontier.add(n);
+
+    while (picked.size < desiredQuadrant && frontier.size > 0) {
+      let best: Partition | null = null;
+      let bestScore = -Infinity;
+      for (const p of frontier) {
+        const s = score(p);
+        if (s > bestScore) {
+          bestScore = s;
+          best = p;
+        }
+      }
+      if (!best) break;
+      frontier.delete(best);
+      picked.add(best);
+      for (const n of adjMap.get(best) ?? []) {
+        if (!picked.has(n)) frontier.add(n);
+      }
+    }
+
+    for (const p of picked) {
+      if (p !== spawn) p.type = RoomType.CAVE;
+      p.connections = [];
+      p.distance = 1000;
+    }
+    spawn.type = RoomType.ROPECAVE;
+
+    console.log(
+      `[xySymmetry] prune quadrant: totalBefore=${parts.length} quadrantSize=${quadrant.length} picked=${picked.size} desiredQuadrant=${desiredQuadrant}`,
+    );
+
+    partialLevel.partitions = Array.from(picked);
+  }
+
+  private applyCaveAxisSymmetry(
+    partialLevel: PartialLevel,
+    origin: number,
+    map_w: number,
+    map_h: number,
+    axis: "x" | "y",
+    spawn: Partition,
+    centralPadding: number = 0,
+  ): number {
+    const parts = partialLevel.partitions;
+    if (!parts || parts.length === 0) return 0;
+
+    const maxX = origin + map_w - 1;
+    const maxY = origin + map_h - 1;
+
+    const center =
+      axis === "x" ? origin + (map_w - 1) / 2 : origin + (map_h - 1) / 2;
+    const spawnMid =
+      axis === "x" ? spawn.x + (spawn.w - 1) / 2 : spawn.y + (spawn.h - 1) / 2;
+    const spawnIsLowSide = spawnMid < center;
+
+    // Choose an axis line that guarantees mirrors stay in-bounds.
+    // Keep the full candidate set whenever possible; if requested central padding
+    // is too large, clamp it down instead of dropping partitions.
+    const maxCoord = axis === "x" ? maxX : maxY;
+    const start = (p: Partition): number => (axis === "x" ? p.x : p.y);
+    const far = (p: Partition): number =>
+      axis === "x" ? p.x + p.w - 1 : p.y + p.h - 1;
+    const extent = (p: Partition): number =>
+      axis === "x" ? p.x + p.w : p.y + p.h;
+    const clamp = (v: number, lo: number, hi: number): number =>
+      Math.max(lo, Math.min(hi, v));
+
+    let axisLine: number;
+    const candidate = parts.slice();
+
+    if (spawnIsLowSide) {
+      const minStart = Math.min(...candidate.map(start));
+      const maxExtent = Math.max(...candidate.map(extent));
+      const axisMaxBound = Math.floor((maxCoord + minStart) / 2);
+      const paddedMinAxis = maxExtent + Math.max(0, centralPadding);
+      const axisMinBound = Math.min(paddedMinAxis, axisMaxBound);
+      // Pick the nearest feasible axis to the kept set to maximize overlap and
+      // avoid oversized center voids caused by center-biased axis choices.
+      axisLine = axisMinBound;
+      console.log(
+        `[xySymmetry] axis=${axis} lowSide bounds=[${axisMinBound},${axisMaxBound}] chosen=${axisLine} center=${Math.floor(center)} pad=${centralPadding}`,
+      );
+    } else {
+      const maxFar = Math.max(...candidate.map(far));
+      const minStart = Math.min(...candidate.map(start));
+      const axisMinBound = Math.ceil((origin + maxFar) / 2);
+      const paddedMaxAxis = minStart - 1 - Math.max(0, centralPadding);
+      const axisMaxBound = Math.max(paddedMaxAxis, axisMinBound);
+      // Symmetric counterpart of low-side behavior: keep axis as close as possible
+      // to the source set (from the high side) to maximize overlap.
+      axisLine = axisMaxBound;
+      console.log(
+        `[xySymmetry] axis=${axis} highSide bounds=[${axisMinBound},${axisMaxBound}] chosen=${axisLine} center=${Math.floor(center)} pad=${centralPadding}`,
+      );
+    }
+
+    // Exclude partitions that cross or touch the axis line — they can't
+    // mirror cleanly and produce overlaps that break symmetry.
+    const kept = spawnIsLowSide
+      ? candidate.filter((p) => far(p) < axisLine || p === spawn)
+      : candidate.filter((p) => start(p) > axisLine || p === spawn);
+
+    if (!kept.includes(spawn)) {
+      console.warn(
+        `[xySymmetry] axis=${axis} bail: spawn not kept (kept=${kept.length}) axisLine=${axisLine}`,
+      );
+      return axisLine;
+    }
+
+    const next: Partition[] = [];
+    for (const p of kept) {
+      p.connections = [];
+      p.distance = 1000;
+      next.push(p);
+    }
+
+    const mirrorOne = (p: Partition): Partition | null => {
+      if (axis === "x") {
+        const newX = 2 * axisLine - (p.x + p.w - 1);
+        if (newX < origin || newX + p.w - 1 > maxX) return null;
+        const m = new Partition(newX, p.y, p.w, p.h, p.fillStyle);
+        m.type = p.type === RoomType.ROPECAVE ? RoomType.CAVE : p.type;
+        m.fillStyle = p.fillStyle;
+        return m;
+      } else {
+        const newY = 2 * axisLine - (p.y + p.h - 1);
+        if (newY < origin || newY + p.h - 1 > maxY) return null;
+        const m = new Partition(p.x, newY, p.w, p.h, p.fillStyle);
+        m.type = p.type === RoomType.ROPECAVE ? RoomType.CAVE : p.type;
+        m.fillStyle = p.fillStyle;
+        return m;
+      }
+    };
+
+    let mirrorNull = 0;
+    let mirrorDup = 0;
+    let mirrorOverlap = 0;
+    for (const p of kept) {
+      const m = mirrorOne(p);
+      if (!m) {
+        mirrorNull++;
+        continue;
+      }
+      if (m.x === p.x && m.y === p.y && m.w === p.w && m.h === p.h) {
+        mirrorDup++;
+        continue;
+      }
+      if (next.some((o) => o.overlaps(m))) {
+        mirrorOverlap++;
+        continue;
+      }
+      next.push(m);
+    }
+
+    // Symmetry verification: every kept partition must have produced a
+    // valid mirror (not null/dup/overlap). If not, the result is asymmetric.
+    if (mirrorNull + mirrorOverlap > 0) {
+      console.warn(
+        `[xySymmetry] axis=${axis} ASYMMETRIC: null=${mirrorNull} overlap=${mirrorOverlap} — dropping offending source partitions`,
+      );
+      // Rebuild: only keep source partitions whose mirrors were successfully added.
+      const mirroredSet = new Set<string>();
+      for (const p of next) {
+        if (!kept.includes(p)) {
+          mirroredSet.add(`${p.x},${p.y},${p.w},${p.h}`);
+        }
+      }
+      const cleanKept: Partition[] = [];
+      const cleanNext: Partition[] = [];
+      for (const p of kept) {
+        const m = mirrorOne(p);
+        if (!m) continue;
+        const mKey = `${m.x},${m.y},${m.w},${m.h}`;
+        const isDup = m.x === p.x && m.y === p.y && m.w === p.w && m.h === p.h;
+        if (isDup || mirroredSet.has(mKey)) {
+          cleanKept.push(p);
+          if (!isDup) cleanNext.push(p);
+          else cleanNext.push(p);
+        }
+      }
+      // Rebuild from scratch with only clean pairs.
+      next.length = 0;
+      for (const p of kept) {
+        const m = mirrorOne(p);
+        if (!m) {
+          if (p === spawn) next.push(p);
+          continue;
+        }
+        const isDup = m.x === p.x && m.y === p.y && m.w === p.w && m.h === p.h;
+        if (isDup) {
+          next.push(p);
+          continue;
+        }
+        if (!next.some((o) => o.overlaps(p))) next.push(p);
+        if (!next.some((o) => o.overlaps(m))) next.push(m);
+      }
+    }
+
+    partialLevel.partitions = next;
+    console.log(
+      `[xySymmetry] axis=${axis} axisLine=${axisLine} kept=${kept.length} mirroredAdded=${next.length - kept.length} totalAfter=${next.length}`,
+    );
+    if (mirrorNull + mirrorDup + mirrorOverlap > 0) {
+      console.log(
+        `[xySymmetry] axis=${axis} mirrorStats null=${mirrorNull} dup=${mirrorDup} overlap=${mirrorOverlap}`,
+      );
+    }
+    return axisLine;
   }
 
   private assignCastleSidepathBoss(
@@ -730,7 +1489,33 @@ export class PartitionGenerator {
     if (envType !== EnvType.CASTLE) return;
     if (!spawn) return;
 
-    // Find the furthest reachable room from the ROPECAVE spawn.
+    // If a central BOSS room was already placed by the symmetry pass, pick
+    // the best exit room from its connections (farthest from spawn on the
+    // perimeter) and mark it.
+    const prePlacedBoss = partialLevel.partitions.find(
+      (p) => p.type === RoomType.BOSS,
+    );
+    if (prePlacedBoss) {
+      const neighbors = prePlacedBoss.connections
+        .map((c) => c.other)
+        .filter(
+          (p) =>
+            p &&
+            p !== spawn &&
+            p.type !== RoomType.ROPECAVE &&
+            Number.isFinite(p.distance),
+        );
+      if (neighbors.length === 0) return;
+      let exit = neighbors[0];
+      for (let i = 1; i < neighbors.length; i++) {
+        if (neighbors[i].distance > exit.distance) exit = neighbors[i];
+      }
+      exit.type = RoomType.CAVE;
+      this.constrainCastleExitToBoss(exit, prePlacedBoss);
+      return;
+    }
+
+    // Fallback: no pre-placed boss. Use distance-based heuristic.
     let exit: Partition | null = null;
     let maxDist = -Infinity;
     for (const p of partialLevel.partitions) {
@@ -744,17 +1529,14 @@ export class PartitionGenerator {
       }
     }
     if (!exit || !Number.isFinite(exit.distance)) return;
-    // Need at least one intermediate room so we can do: ... -> BOSS -> EXIT
     if (exit.distance < 2) return;
 
-    // Pick a neighbor exactly one step closer to spawn as the boss room.
     const desiredBossDist = exit.distance - 1;
     const candidates = exit.connections
       .map((c) => c.other)
       .filter((p) => p && p.distance === desiredBossDist && p !== spawn);
     if (candidates.length === 0) return;
 
-    // Prefer a larger room for boss arena feel.
     let boss = candidates[0];
     for (let i = 1; i < candidates.length; i++) {
       if (candidates[i].area() > boss.area()) boss = candidates[i];
@@ -762,10 +1544,40 @@ export class PartitionGenerator {
 
     boss.type = RoomType.BOSS;
     boss.fillStyle = "red";
-    // Keep exit as a regular cave room (the guarding happens via the boss room's guarded door).
     if (exit.type !== RoomType.ROPECAVE) {
       exit.type = RoomType.CAVE;
     }
+    this.constrainCastleExitToBoss(exit, boss);
+  }
+
+  /**
+   * Castle rule: the selected exit room must only connect to the boss room.
+   * Keep all other boss connections untouched so main traversal still reaches boss.
+   */
+  private constrainCastleExitToBoss(exit: Partition, boss: Partition): void {
+    const edgeFromExit = exit.connections.find((c) => c.other === boss) ?? null;
+    const edgeFromBoss = boss.connections.find((c) => c.other === exit) ?? null;
+    const doorX = edgeFromExit?.x ?? edgeFromBoss?.x;
+    const doorY = edgeFromExit?.y ?? edgeFromBoss?.y;
+    if (doorX === undefined || doorY === undefined) return;
+
+    // Remove reciprocal links from all non-boss neighbors of exit.
+    for (const c of exit.connections) {
+      if (c.other === boss) continue;
+      c.other.connections = c.other.connections.filter(
+        (oc) => oc.other !== exit,
+      );
+    }
+
+    // Exit keeps exactly one edge: to boss.
+    exit.connections = [new PartitionConnection(doorX, doorY, boss)];
+
+    // Boss may keep many edges, but ensure exactly one edge back to exit.
+    const bossWithoutExit = boss.connections.filter((c) => c.other !== exit);
+    boss.connections = [
+      ...bossWithoutExit,
+      new PartitionConnection(doorX, doorY, exit),
+    ];
   }
 
   private async splitPartitions(
@@ -1010,6 +1822,201 @@ export class PartitionGenerator {
 
     if (partialLevel.partitions.length === 0) {
       throw new Error("No valid rooms after filtering.");
+    }
+  }
+
+  private connectCavePartitionsXYSymmetric(
+    partialLevel: PartialLevel,
+    origin: number,
+    map_w: number,
+    map_h: number,
+    spawn: Partition,
+    xAxisLine: number,
+    yAxisLine: number,
+    centralRoom: Partition | null,
+  ): void {
+    const parts = partialLevel.partitions;
+    if (!parts || parts.length === 0) return;
+
+    // Reset connections so the result is purely symmetric/deterministic.
+    for (const p of parts) p.connections = [];
+
+    const keyOf = (p: Partition): string => `${p.x},${p.y},${p.w},${p.h}`;
+    const byKey = new Map<string, Partition>();
+    for (const p of parts) byKey.set(keyOf(p), p);
+
+    const rangesOverlap = (a0: number, a1: number, b0: number, b1: number) =>
+      Math.max(a0, b0) <= Math.min(a1, b1);
+
+    const doorBetween = (
+      a: Partition,
+      b: Partition,
+    ): { x: number; y: number } | null => {
+      const ax1 = a.x + a.w - 1;
+      const ay1 = a.y + a.h - 1;
+      const bx1 = b.x + b.w - 1;
+      const by1 = b.y + b.h - 1;
+
+      // b is to the right of a (1-tile BSP gap)
+      if (b.x === ax1 + 2 && rangesOverlap(a.y, ay1, b.y, by1)) {
+        const y0 = Math.max(a.y, b.y);
+        const y1 = Math.min(ay1, by1);
+        return { x: ax1 + 1, y: Math.floor((y0 + y1) / 2) };
+      }
+      // b is to the left of a
+      if (a.x === bx1 + 2 && rangesOverlap(a.y, ay1, b.y, by1)) {
+        const y0 = Math.max(a.y, b.y);
+        const y1 = Math.min(ay1, by1);
+        return { x: bx1 + 1, y: Math.floor((y0 + y1) / 2) };
+      }
+      // b is below a
+      if (b.y === ay1 + 2 && rangesOverlap(a.x, ax1, b.x, bx1)) {
+        const x0 = Math.max(a.x, b.x);
+        const x1 = Math.min(ax1, bx1);
+        return { x: Math.floor((x0 + x1) / 2), y: ay1 + 1 };
+      }
+      // b is above a
+      if (a.y === by1 + 2 && rangesOverlap(a.x, ax1, b.x, bx1)) {
+        const x0 = Math.max(a.x, b.x);
+        const x1 = Math.min(ax1, bx1);
+        return { x: Math.floor((x0 + x1) / 2), y: by1 + 1 };
+      }
+
+      return null;
+    };
+
+    const addConn = (a: Partition, b: Partition, x: number, y: number) => {
+      const already =
+        a.connections.some((c) => c.other === b && c.x === x && c.y === y) ||
+        b.connections.some((c) => c.other === a && c.x === x && c.y === y);
+      if (already) return;
+      const ab = new PartitionConnection(x, y, b);
+      const ba = new PartitionConnection(x, y, a);
+      a.connections.push(ab);
+      b.connections.push(ba);
+      a.setOpenWall(ab);
+      b.setOpenWall(ba);
+    };
+
+    // ---- Build a deterministic tree inside the spawn quadrant ----
+    const midX = (p: Partition): number => p.x + (p.w - 1) / 2;
+    const midY = (p: Partition): number => p.y + (p.h - 1) / 2;
+    const spawnOnLeft = midX(spawn) < xAxisLine;
+    const spawnOnTop = midY(spawn) < yAxisLine;
+    const inSpawnQuadrant = (p: Partition): boolean => {
+      const left = midX(p) < xAxisLine;
+      const top = midY(p) < yAxisLine;
+      return left === spawnOnLeft && top === spawnOnTop;
+    };
+
+    const base = parts.filter(inSpawnQuadrant);
+    if (!base.includes(spawn)) base.push(spawn);
+    base.sort((a, b) => {
+      const ka = keyOf(a);
+      const kb = keyOf(b);
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+
+    type BaseEdge = {
+      a: Partition;
+      b: Partition;
+      pt: { x: number; y: number };
+    };
+    const baseEdges: BaseEdge[] = [];
+
+    const visited = new Set<Partition>([spawn]);
+    const queue: Partition[] = [spawn];
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      if (!cur) break;
+      for (const n of base) {
+        if (visited.has(n) || n === cur) continue;
+        const pt = doorBetween(cur, n);
+        if (!pt) continue;
+        visited.add(n);
+        queue.push(n);
+        baseEdges.push({ a: cur, b: n, pt });
+      }
+    }
+
+    // If the quadrant set isn't fully connected under the doorBetween predicate,
+    // connect remaining partitions by any available BSP-adjacent edge.
+    while (visited.size < base.length) {
+      let bridged = false;
+      for (const a of base) {
+        if (!visited.has(a)) continue;
+        for (const b of base) {
+          if (visited.has(b) || a === b) continue;
+          const pt = doorBetween(a, b);
+          if (!pt) continue;
+          visited.add(b);
+          queue.push(b);
+          baseEdges.push({ a, b, pt });
+          bridged = true;
+          break;
+        }
+        if (bridged) break;
+      }
+      if (!bridged) break;
+    }
+
+    const transformPartition = (
+      p: Partition,
+      mirrorX: boolean,
+      mirrorY: boolean,
+    ): Partition | null => {
+      const x = mirrorX ? 2 * xAxisLine - (p.x + p.w - 1) : p.x;
+      const y = mirrorY ? 2 * yAxisLine - (p.y + p.h - 1) : p.y;
+      return byKey.get(`${x},${y},${p.w},${p.h}`) ?? null;
+    };
+
+    const transformPoint = (
+      pt: { x: number; y: number },
+      mirrorX: boolean,
+      mirrorY: boolean,
+    ): { x: number; y: number } => {
+      const x = mirrorX ? 2 * xAxisLine - pt.x : pt.x;
+      const y = mirrorY ? 2 * yAxisLine - pt.y : pt.y;
+      return { x, y };
+    };
+
+    for (const e of baseEdges) {
+      for (const mx of [false, true]) {
+        for (const my of [false, true]) {
+          const aT = transformPartition(e.a, mx, my);
+          const bT = transformPartition(e.b, mx, my);
+          if (!aT || !bT) continue;
+          const pt = transformPoint(e.pt, mx, my);
+          addConn(aT, bT, pt.x, pt.y);
+        }
+      }
+    }
+
+    // Bridge across symmetry axes when rooms are BSP-adjacent to their mirror.
+    // This is essential when no central room is present (centralPadding=0),
+    // otherwise the layout would be four disconnected quadrants.
+    for (const p of parts) {
+      const mx = transformPartition(p, true, false);
+      if (mx && mx !== p) {
+        const pt = doorBetween(p, mx);
+        if (pt) addConn(p, mx, pt.x, pt.y);
+      }
+      const my = transformPartition(p, false, true);
+      if (my && my !== p) {
+        const pt = doorBetween(p, my);
+        if (pt) addConn(p, my, pt.x, pt.y);
+      }
+    }
+
+    // Ensure the central room (if any) is connected. It is a fixed point of the symmetry,
+    // so connecting it to all BSP-adjacent neighbors preserves symmetry.
+    if (centralRoom) {
+      for (const p of parts) {
+        if (p === centralRoom) continue;
+        const pt = doorBetween(centralRoom, p);
+        if (!pt) continue;
+        addConn(centralRoom, p, pt.x, pt.y);
+      }
     }
   }
 

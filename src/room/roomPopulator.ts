@@ -84,7 +84,10 @@ import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
-import { SidePathOptions } from "../level/sidePathManager";
+import {
+  createCastleSidePathOptions,
+  SidePathOptions,
+} from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 import { GarnetResource } from "../entity/resource/garnetResource";
@@ -250,18 +253,7 @@ export class Populator {
     }
 
     if (env === EnvType.FOREST) {
-      return {
-        caveRooms: this.numRooms(),
-        locked: true,
-        envType: EnvType.CASTLE,
-        linearity: 0.8,
-        entranceInMainRoom: false,
-        keyInMainRoom: false,
-        exitInMainRoom: false,
-        organicTunnelsAvoidCenter: false,
-        mapWidth: 90,
-        mapHeight: 90,
-      };
+      return createCastleSidePathOptions();
     }
 
     return null;
@@ -336,18 +328,26 @@ export class Populator {
       this.populate(room, Random.rand);
     }
 
+    const isPngCastle =
+      this.level.genSource === "png" &&
+      this.level.environment.type === EnvType.CASTLE;
+
     // populate each room by environment (enemies added here)
     this.level.rooms.forEach((room) => {
       const singleRoomException = this.level.rooms.length === 1;
       if (
         //room.type === RoomType.START ||
-        room.type === RoomType.DOWNLADDER ||
+        (room.type === RoomType.DOWNLADDER && !isPngCastle) ||
         room.type === RoomType.UPLADDER ||
         room.type === RoomType.ROPEHOLE ||
         (room.type === RoomType.ROPECAVE && !singleRoomException)
       )
         return;
 
+      if (room.width - 2 <= 1 || room.height - 2 <= 1) {
+        this.populateEmpty(room, Random.rand);
+        return;
+      }
       this.populateByEnvironment(room);
     });
 
@@ -363,7 +363,35 @@ export class Populator {
     if (isCastleSidepath) {
       const bossRoom =
         this.level.rooms.find((r) => r.type === RoomType.BOSS) ?? null;
-      const exitRoom = this.level.getFurthestFromLadder("up");
+
+      // PNG castle levels have a designer-placed DOWNLADDER room as the exit.
+      // Use it directly instead of computing one from boss neighbors.
+      let exitRoom: Room | null = null;
+      if (isPngCastle) {
+        exitRoom =
+          this.level.rooms.find((r) => r.type === RoomType.DOWNLADDER) ?? null;
+      }
+      if (!exitRoom && bossRoom && bossRoom.doors.length > 0) {
+        const neighbors = bossRoom.doors
+          .map((d) => d.linkedDoor?.room)
+          .filter(
+            (r): r is Room =>
+              r !== undefined &&
+              r !== null &&
+              r !== bossRoom &&
+              r.type !== RoomType.ROPECAVE,
+          );
+        if (neighbors.length > 0) {
+          exitRoom = neighbors.reduce((best, r) => {
+            const bd = best.getDistanceToNearestLadder("up") ?? -Infinity;
+            const rd = r.getDistanceToNearestLadder("up") ?? -Infinity;
+            return rd > bd ? r : best;
+          });
+        }
+      }
+      if (!exitRoom) {
+        exitRoom = this.level.getFurthestFromLadder("up");
+      }
 
       // If for some reason generation didn't create a BOSS room, fall back to the legacy
       // "boss in furthest room" behavior so the sidepath still works.
@@ -3320,7 +3348,14 @@ export class Populator {
 
         break;
       case RoomType.DOWNLADDER:
-        this.populateDownLadder(room, rand);
+        if (
+          this.level.genSource === "png" &&
+          this.level.environment.type === EnvType.CASTLE
+        ) {
+          this.populateEmpty(room, rand);
+        } else {
+          this.populateDownLadder(room, rand);
+        }
         room.name = "FLOOR " + -room.depth;
         break;
       case RoomType.ROPEHOLE:

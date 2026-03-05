@@ -14,6 +14,21 @@ export interface SidePathOptions {
   mapHeight?: number;
   locked?: boolean;
   envType?: EnvType;
+  /**
+   * If true, enforce X+Y symmetry for cave/sidepath partition layouts by keeping one quadrant
+   * and mirroring it across both axes before connectivity is generated.
+   */
+  xySymmetry?: boolean;
+  /** Half-size (in tiles) of the empty central "courtyard" to preserve after mirroring. */
+  xySymmetryCenterVoidHalfSize?: number;
+  /** Half-thickness (in tiles) of the preferred plus-shaped arms near the center axes. */
+  xySymmetryArmHalfThickness?: number;
+  /**
+   * When set (odd integer >= 3), a square boss room of this size is placed at the center
+   * of the mirrored layout. The axis lines are offset to create space with proper 1-tile
+   * BSP gaps. Ignored when xySymmetry is false.
+   */
+  xySymmetryCentralRoomSize?: number;
   linearity?: number;
   branching?: number; // 0..1 probability of adding a second branch door
   loopiness?: number; // 0..1 scale for number of loop connections
@@ -31,6 +46,33 @@ export interface SidePathOptions {
   entranceInMainRoom?: boolean;
   /** If true, place the exit (DownLadder) inside the main room (not in a dedicated satellite room). */
   exitInMainRoom?: boolean;
+}
+
+/**
+ * Canonical options for CASTLE sidepaths.
+ * Keep this centralized so environment-driven generation and debug/test entry points
+ * (e.g. `/new castle`) stay in sync.
+ */
+export function createCastleSidePathOptions(
+  overrides?: Partial<SidePathOptions>,
+): SidePathOptions {
+  return {
+    caveRooms: 12,
+    locked: true,
+    xySymmetry: true,
+    xySymmetryCenterVoidHalfSize: 6,
+    xySymmetryArmHalfThickness: 2,
+    xySymmetryCentralRoomSize: 9,
+    linearity: 0.8,
+    entranceInMainRoom: false,
+    keyInMainRoom: false,
+    exitInMainRoom: false,
+    organicTunnelsAvoidCenter: false,
+    mapWidth: 30,
+    mapHeight: 30,
+    ...(overrides ?? {}),
+    envType: EnvType.CASTLE,
+  };
 }
 
 /**

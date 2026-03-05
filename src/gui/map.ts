@@ -46,6 +46,8 @@ export class Map {
     new globalThis.Map();
   visibilityRadius: number = 6;
   drawRadius: number = 25;
+  /** Debug: reveal all rooms/tiles and disable minimap bounds clamps. */
+  forceRevealAll: boolean = false;
 
   constructor(game: Game, player: Player) {
     this.game = game;
@@ -142,6 +144,39 @@ export class Map {
       this.offsetX = 0;
       this.offsetY = 0;
     }
+  };
+
+  /**
+   * Debug helper: reveal everything on the current level/mapGroup.
+   * - marks all rooms entered (so they appear on the map)
+   * - marks all tiles as seen (fog-of-war fully revealed)
+   * - disables minimap bounds clamping so the whole map can render
+   */
+  revealAllCurrentLevel = (): void => {
+    const currentRoom = this.player.getRoom();
+    const currentMapGroup = currentRoom.mapGroup.toString();
+
+    // Ensure seen set exists
+    if (!this.seenTilesByMapGroup.has(currentMapGroup)) {
+      this.seenTilesByMapGroup.set(currentMapGroup, new Set<string>());
+    }
+    const seenTiles = this.seenTilesByMapGroup.get(currentMapGroup)!;
+
+    for (const room of this.getRoomsForCurrentLevel()) {
+      if (room.mapGroup.toString() !== currentMapGroup) continue;
+      room.entered = true;
+      //room.active = true;
+      for (let x = room.roomX; x < room.roomX + room.width; x++) {
+        for (let y = room.roomY; y < room.roomY + room.height; y++) {
+          seenTiles.add(`${x},${y}`);
+        }
+      }
+    }
+
+    // Ensure the current-frame cache is updated immediately
+    this.forceRevealAll = true;
+    this.currentSeenTiles = seenTiles;
+    this.saveMapData();
   };
 
   clearMap = () => {
@@ -452,6 +487,7 @@ export class Map {
 
   // Fog of war methods
   updateSeenTiles = () => {
+    if (this.forceRevealAll) return;
     const playerX = Math.floor(this.player.x);
     const playerY = Math.floor(this.player.y);
     const currentMapGroup = this.game.room.mapGroup.toString();
@@ -600,6 +636,7 @@ export class Map {
   // Single-pass fog-of-war over all rooms to avoid intermediate unmasked states
   applyFogOfWarAllRooms = () => {
     if (this.mapOpen) return; // no fog when full map is open
+    if (this.forceRevealAll) return; // fully revealed: no fog mask
     const s = this.scale;
     const currentMapGroup = this.game.room.mapGroup.toString();
     let seenTiles = this.seenTilesByMapGroup.get(currentMapGroup);
@@ -645,23 +682,42 @@ export class Map {
   drawRoomFloorTiles = (room) => {
     const s = this.scale;
     Game.ctx.save();
-    // Restrict iteration to bounding box around mask/radius
-    const minX = Math.max(
-      room.roomX,
-      Math.min(this.framePlayerX - this.effectiveRadius, this.frameMaskMinX),
-    );
-    const maxX = Math.min(
-      room.roomX + room.width - 1,
-      Math.max(this.framePlayerX + this.effectiveRadius, this.frameMaskMaxX),
-    );
-    const minY = Math.max(
-      room.roomY,
-      Math.min(this.framePlayerY - this.effectiveRadius, this.frameMaskMinY),
-    );
-    const maxY = Math.min(
-      room.roomY + room.height - 1,
-      Math.max(this.framePlayerY + this.effectiveRadius, this.frameMaskMaxY),
-    );
+    const minX = this.forceRevealAll
+      ? room.roomX
+      : Math.max(
+          room.roomX,
+          Math.min(
+            this.framePlayerX - this.effectiveRadius,
+            this.frameMaskMinX,
+          ),
+        );
+    const maxX = this.forceRevealAll
+      ? room.roomX + room.width - 1
+      : Math.min(
+          room.roomX + room.width - 1,
+          Math.max(
+            this.framePlayerX + this.effectiveRadius,
+            this.frameMaskMaxX,
+          ),
+        );
+    const minY = this.forceRevealAll
+      ? room.roomY
+      : Math.max(
+          room.roomY,
+          Math.min(
+            this.framePlayerY - this.effectiveRadius,
+            this.frameMaskMinY,
+          ),
+        );
+    const maxY = this.forceRevealAll
+      ? room.roomY + room.height - 1
+      : Math.min(
+          room.roomY + room.height - 1,
+          Math.max(
+            this.framePlayerY + this.effectiveRadius,
+            this.frameMaskMaxY,
+          ),
+        );
     for (let x = minX; x <= maxX; x++) {
       for (let y = minY; y <= maxY; y++) {
         if (this.shouldDrawTile(x, y)) {
@@ -687,6 +743,7 @@ export class Map {
   };
 
   isWithinDrawRadius = (x: number, y: number): boolean => {
+    if (this.forceRevealAll) return true;
     // In non-legacy minimap mode (not mapOpen), use square 50x50 mask bounds instead of radius
     if (
       !GameplaySettings.LEGACY_MINIMAP &&
@@ -709,6 +766,7 @@ export class Map {
 
   shouldDrawTile = (x: number, y: number): boolean => {
     if (GameplaySettings.LEGACY_MINIMAP) return true;
+    if (this.forceRevealAll) return true;
     const within = this.isWithinDrawRadius(x, y);
     if (!within) return false;
     // During full-open, only draw discovered tiles; during transition and minimap, draw regardless of seen
@@ -719,6 +777,7 @@ export class Map {
   // Add fog of war overlay/erase method
   drawFogOfWar = (room) => {
     if (this.mapOpen) return; // full map: no mask; during transition, still apply mask
+    if (this.forceRevealAll) return;
     const s = this.scale;
     // Use the seen tiles from the current mapData if available
     const currentMapGroup = this.game.room.mapGroup.toString();

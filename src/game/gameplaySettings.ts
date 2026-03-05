@@ -19,6 +19,7 @@ export class GameplaySettings {
   static ARMOR_FLAT_REDUCTION = true;
   static readonly PRESET_BOSSES = false;
   static readonly PNG_LEVEL_PROBABILITY = 0.1;
+  static CASTLE_USE_PNG_LEVEL = true;
   static readonly TUTORIAL_ENABLED = false;
   static readonly MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
 

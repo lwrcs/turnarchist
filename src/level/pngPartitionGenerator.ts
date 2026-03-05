@@ -150,8 +150,7 @@ export class PngPartitionGenerator {
         reject(new Error(`Failed to load image at ${imageUrl}: ${err}`));
       };
 
-      image.src = imageUrl;
-      //console.log("  Image loading initiated...");
+      image.src = `${imageUrl}?v=${Date.now()}`;
     });
   }
 
@@ -313,10 +312,13 @@ export class PngPartitionGenerator {
   }
 
   private getCaveRoomTypeFromColor(color: string): RoomType {
-    // Cave-specific color mappings
     switch (color) {
       case "rgb(0, 255, 0)": // Green - Cave spawn point
         return RoomType.ROPECAVE;
+      case "rgb(255, 0, 0)": // Red - Boss room
+        return RoomType.BOSS;
+      case "rgb(0, 0, 255)": // Blue - Stairs down (exit after boss)
+        return RoomType.DOWNLADDER;
       case "rgb(0, 255, 255)": // Cyan - Up ladder (exit to main path)
         return RoomType.UPLADDER;
       case "rgb(255, 255, 0)": // Yellow - Treasure room
@@ -324,7 +326,7 @@ export class PngPartitionGenerator {
       case "rgb(255, 0, 255)": // Magenta - Shop
         return RoomType.SHOP;
       default:
-        return RoomType.CAVE; // Default cave room
+        return RoomType.CAVE;
     }
   }
 
@@ -735,20 +737,12 @@ export class PngPartitionGenerator {
     partialLevel: PartialLevel,
     spawn: Partition,
   ) {
-    //console.log("    Connecting cave partitions...");
     let connected = [spawn];
     let frontier = [spawn];
-    const maxRooms = partialLevel.partitions.length; // Connect all available rooms
 
-    while (frontier.length > 0 && connected.length < maxRooms) {
-      let room = frontier[0];
-      frontier.splice(0, 1);
+    while (frontier.length > 0) {
+      const room = frontier.shift()!;
 
-      //console.log(
-      //  `    Processing cave room ${room.type} at (${room.x}, ${room.y})`,
-      //);
-
-      // Find adjacent unconnected rooms
       const adjacentRooms = partialLevel.partitions.filter((p) => {
         return (
           p !== room &&
@@ -757,15 +751,8 @@ export class PngPartitionGenerator {
         );
       });
 
-      const maxConnections = Math.min(
-        adjacentRooms.length,
-        Math.floor(Random.rand() * 2 + 1),
-      );
-
-      for (let i = 0; i < maxConnections && connected.length < maxRooms; i++) {
-        const target = adjacentRooms[i];
+      for (const target of adjacentRooms) {
         const adjacencyInfo = this.arePartitionsAdjacent(room, target);
-
         if (adjacencyInfo) {
           const connectionPoint = adjacencyInfo.connectionPoint;
 
@@ -782,15 +769,19 @@ export class PngPartitionGenerator {
 
           frontier.push(target);
           connected.push(target);
-          //console.log(`    ✓ Cave connection: ${room.type} <-> ${target.type}`);
         }
       }
     }
 
-    // Remove unconnected rooms
-    partialLevel.partitions = partialLevel.partitions.filter(
-      (p) => p.connections.length > 0,
-    );
+    // Force-connect any isolated rooms to their nearest connected neighbour
+    for (const p of partialLevel.partitions) {
+      if (p.connections.length === 0) {
+        this.connectIsolatedRoom(
+          p,
+          partialLevel.partitions.filter((r) => r.connections.length > 0),
+        );
+      }
+    }
     //  console.log(
     //  `    ✓ Cave connection complete: ${connected.length} rooms connected`,
     //);
