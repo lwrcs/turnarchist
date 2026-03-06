@@ -1131,11 +1131,11 @@ export class Player extends Drawable {
           this.shakeScreen(this.x, this.y, x, y);
           if (other.lockable.canUnlock(this)) {
             other.lockable.unlock(this);
+            other.addLightSource();
+            this.game.room.updateLighting();
           } else {
             Sound.playLocked();
           }
-          other.addLightSource();
-          this.game.room.updateLighting();
           return;
         }
       }

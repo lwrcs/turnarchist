@@ -51050,6 +51050,7 @@ class Key extends usable_1.Usable {
                     console.log(this.depth);
                     // Automatically enable the path guide on pickup.
                     this.setPathGuideEnabled(player, true, { syncNow: true });
+                    this.onPickupCallback?.(player);
                 }
             }
         };
@@ -60545,12 +60546,14 @@ exports.PngPartitionGenerator = PngPartitionGenerator;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SidePathManager = exports.createCastleSidePathOptions = void 0;
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const stats_1 = __webpack_require__(/*! ../game/stats */ "./src/game/stats.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
+const lockable_1 = __webpack_require__(/*! ../tile/lockable */ "./src/tile/lockable.ts");
 /**
  * Canonical options for CASTLE sidepaths.
  * Keep this centralized so environment-driven generation and debug/test entry points
@@ -60694,7 +60697,10 @@ class SidePathManager {
             upLadder.isSidePath = true;
             // Default: link back to the immediate parent room / ladder used to enter this sidepath
             let targetRoom = downLadder.room;
-            let targetPos = { x: downLadder.x, y: downLadder.y };
+            let targetPos = {
+                x: downLadder.x,
+                y: downLadder.y,
+            };
             // Special case: a "root return" rope-up ladder should go back to the main-path
             // sidepath entry ladder (e.g., CASTLE sidepath returns to the FOREST entry on main).
             if (upLadder.returnToRoot) {
@@ -60734,8 +60740,7 @@ class SidePathManager {
         // Only place a key for locked main-path down ladders.
         if (mainDownLadder.lockable?.isLocked?.() !== true)
             return;
-        // Place key in the final (post-boss) room of the castle sidepath.
-        const exitRoom = sideLevel.getFurthestFromLadder("up");
+        const exitRoom = this.findCastleExitRoom(sideLevel);
         if (!exitRoom)
             return;
         const existing = exitRoom.items.find((it) => it instanceof key_1.Key && it.doorID === mainDownLadder.lockable.keyID);
@@ -60750,10 +60755,63 @@ class SidePathManager {
             key.doorID = mainDownLadder.lockable.keyID;
         }
         else {
-            // Fallback: if keyID wasn't assigned at creation time, generate one now.
             mainDownLadder.lockable.setKey(key);
         }
         exitRoom.items.push(key);
+        // Lock the rope-up ladder in the exit room so the player can't leave
+        // without picking up the key first. Picking up the key auto-unlocks it.
+        const ropeUp = this.findReturnToRootLadder(exitRoom);
+        if (ropeUp) {
+            const ropeKeyID = lockable_1.Lockable.generateID();
+            ropeUp.lockable.keyID = ropeKeyID;
+            ropeUp.lockable.lock();
+            ropeUp.lockable.lockedMessage = "Grab the key first!";
+            key.onPickupCallback = () => {
+                ropeUp.lockable.removeLock();
+                ropeUp.lockable.removeLockIcon();
+            };
+        }
+    }
+    findReturnToRootLadder(room) {
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+            for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                const t = room.roomArray[x]?.[y];
+                if (t instanceof upLadder_1.UpLadder && t.returnToRoot)
+                    return t;
+            }
+        }
+        return null;
+    }
+    /**
+     * Finds the castle exit room using the same logic as the roomPopulator:
+     * PNG castles use the designer-placed DOWNLADDER room; procedural castles
+     * use the boss-neighbor furthest from the up ladder; final fallback is
+     * getFurthestFromLadder("up").
+     */
+    findCastleExitRoom(sideLevel) {
+        const isPng = sideLevel.genSource === "png";
+        if (isPng) {
+            const dlRoom = sideLevel.rooms.find((r) => r.type === room_1.RoomType.DOWNLADDER);
+            if (dlRoom)
+                return dlRoom;
+        }
+        const bossRoom = sideLevel.rooms.find((r) => r.type === room_1.RoomType.BOSS) ?? null;
+        if (bossRoom && bossRoom.doors.length > 0) {
+            const neighbors = bossRoom.doors
+                .map((d) => d.linkedDoor?.room)
+                .filter((r) => r !== undefined &&
+                r !== null &&
+                r !== bossRoom &&
+                r.type !== room_1.RoomType.ROPECAVE);
+            if (neighbors.length > 0) {
+                return neighbors.reduce((best, r) => {
+                    const bd = best.getDistanceToNearestLadder("up") ?? -Infinity;
+                    const rd = r.getDistanceToNearestLadder("up") ?? -Infinity;
+                    return rd > bd ? r : best;
+                });
+            }
+        }
+        return sideLevel.getFurthestFromLadder("up");
     }
     findMainPathDownLadder(level) {
         for (const room of level.rooms) {
@@ -63421,12 +63479,12 @@ class Player extends drawable_1.Drawable {
                         this.shakeScreen(this.x, this.y, x, y);
                         if (other.lockable.canUnlock(this)) {
                             other.lockable.unlock(this);
+                            other.addLightSource();
+                            this.game.room.updateLighting();
                         }
                         else {
                             sound_1.Sound.playLocked();
                         }
-                        other.addLightSource();
-                        this.game.room.updateLighting();
                         return;
                     }
                 }
@@ -79034,7 +79092,7 @@ class Lockable {
                 this.guard();
                 break;
             case LockType.TUNNEL:
-                this.lock();
+                this.locked = true;
                 this.iconTileX = 10;
                 this.iconXOffset = 1 / 32;
                 break;
@@ -79050,6 +79108,7 @@ class Lockable {
         return this.unlocking;
     }
     lock() {
+        this.lockType = LockType.LOCKED;
         this.locked = true;
         this.iconTileX = 10;
         this.iconXOffset = 1 / 32;
@@ -79082,13 +79141,17 @@ class Lockable {
                 console.log("key.doorID", key.doorID, "lock.keyID", this.keyID);
                 return true;
             }
-            // If no matching key, check if player has any key at all
-            const hasAnyKey = player.inventory.hasItem(key_1.Key);
-            if (hasAnyKey) {
-                this.game.pushMessage("The key doesn't fit the lock.");
+            if (this.lockedMessage) {
+                this.game.pushMessage(this.lockedMessage);
             }
             else {
-                this.game.pushMessage("It's locked tightly and won't budge.");
+                const hasAnyKey = player.inventory.hasItem(key_1.Key);
+                if (hasAnyKey) {
+                    this.game.pushMessage("The key doesn't fit the lock.");
+                }
+                else {
+                    this.game.pushMessage("It's locked tightly and won't budge.");
+                }
             }
             return false;
         }

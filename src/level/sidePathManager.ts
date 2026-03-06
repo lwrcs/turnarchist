@@ -1,11 +1,12 @@
 import type { Game } from "../game";
-import type { Room } from "../room/room";
+import { type Room, RoomType } from "../room/room";
 import { UpLadder } from "../tile/upLadder";
 import { DownLadder } from "../tile/downLadder";
 import { statsTracker } from "../game/stats";
 import { EnvType } from "../constants/environmentTypes";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Key } from "../item/key";
+import { Lockable, LockType } from "../tile/lockable";
 import type { Level } from "./level";
 
 export interface SidePathOptions {
@@ -223,7 +224,10 @@ export class SidePathManager {
 
       // Default: link back to the immediate parent room / ladder used to enter this sidepath
       let targetRoom: Room = downLadder.room;
-      let targetPos: { x: number; y: number } = { x: downLadder.x, y: downLadder.y };
+      let targetPos: { x: number; y: number } = {
+        x: downLadder.x,
+        y: downLadder.y,
+      };
 
       // Special case: a "root return" rope-up ladder should go back to the main-path
       // sidepath entry ladder (e.g., CASTLE sidepath returns to the FOREST entry on main).
@@ -268,8 +272,7 @@ export class SidePathManager {
     // Only place a key for locked main-path down ladders.
     if (mainDownLadder.lockable?.isLocked?.() !== true) return;
 
-    // Place key in the final (post-boss) room of the castle sidepath.
-    const exitRoom = sideLevel.getFurthestFromLadder("up");
+    const exitRoom = this.findCastleExitRoom(sideLevel);
     if (!exitRoom) return;
 
     const existing = exitRoom.items.find(
@@ -285,10 +288,72 @@ export class SidePathManager {
     if (mainDownLadder.lockable.keyID > 0) {
       key.doorID = mainDownLadder.lockable.keyID;
     } else {
-      // Fallback: if keyID wasn't assigned at creation time, generate one now.
       mainDownLadder.lockable.setKey(key);
     }
     exitRoom.items.push(key);
+
+    // Lock the rope-up ladder in the exit room so the player can't leave
+    // without picking up the key first. Picking up the key auto-unlocks it.
+    const ropeUp = this.findReturnToRootLadder(exitRoom);
+    if (ropeUp) {
+      const ropeKeyID = Lockable.generateID();
+      ropeUp.lockable.keyID = ropeKeyID;
+      ropeUp.lockable.lock();
+      ropeUp.lockable.lockedMessage = "Grab the key first!";
+      key.onPickupCallback = () => {
+        ropeUp.lockable.removeLock();
+        ropeUp.lockable.removeLockIcon();
+      };
+    }
+  }
+
+  private findReturnToRootLadder(room: Room): UpLadder | null {
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const t = room.roomArray[x]?.[y];
+        if (t instanceof UpLadder && t.returnToRoot) return t;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Finds the castle exit room using the same logic as the roomPopulator:
+   * PNG castles use the designer-placed DOWNLADDER room; procedural castles
+   * use the boss-neighbor furthest from the up ladder; final fallback is
+   * getFurthestFromLadder("up").
+   */
+  private findCastleExitRoom(sideLevel: Level): Room | null {
+    const isPng = sideLevel.genSource === "png";
+    if (isPng) {
+      const dlRoom = sideLevel.rooms.find(
+        (r) => r.type === RoomType.DOWNLADDER,
+      );
+      if (dlRoom) return dlRoom;
+    }
+
+    const bossRoom =
+      sideLevel.rooms.find((r) => r.type === RoomType.BOSS) ?? null;
+    if (bossRoom && bossRoom.doors.length > 0) {
+      const neighbors = bossRoom.doors
+        .map((d) => d.linkedDoor?.room)
+        .filter(
+          (r): r is Room =>
+            r !== undefined &&
+            r !== null &&
+            r !== bossRoom &&
+            r.type !== RoomType.ROPECAVE,
+        );
+      if (neighbors.length > 0) {
+        return neighbors.reduce((best, r) => {
+          const bd = best.getDistanceToNearestLadder("up") ?? -Infinity;
+          const rd = r.getDistanceToNearestLadder("up") ?? -Infinity;
+          return rd > bd ? r : best;
+        });
+      }
+    }
+
+    return sideLevel.getFurthestFromLadder("up");
   }
 
   private findMainPathDownLadder(level: Level): DownLadder | null {
@@ -307,9 +372,13 @@ export class SidePathManager {
    * Extract the root sidepath entry anchor from a first-level sidepath pid.
    * Expected format: sp:main:<depth>:<roomX>,<roomY>:<tileX>,<tileY>
    */
-  private tryParseRootSidePathAnchor(
-    pid: string | undefined,
-  ): { depth: number; roomX: number; roomY: number; tileX: number; tileY: number } | null {
+  private tryParseRootSidePathAnchor(pid: string | undefined): {
+    depth: number;
+    roomX: number;
+    roomY: number;
+    tileX: number;
+    tileY: number;
+  } | null {
     if (!pid) return null;
     // Only support the first-level sidepath form (parent pid is "main").
     // Nested sidepaths have a more complex pid and should not root-return via parsing.

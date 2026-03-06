@@ -36,6 +36,8 @@ export class Lockable {
   private iconXOffset: number;
   private isTopDoor: boolean;
   private game: Game;
+  /** When set, replaces the default "locked" messages in canUnlock. */
+  lockedMessage?: string;
 
   constructor(game: Game, config: LockableConfig) {
     this.game = game;
@@ -62,7 +64,7 @@ export class Lockable {
         this.guard();
         break;
       case LockType.TUNNEL:
-        this.lock();
+        this.locked = true;
         this.iconTileX = 10;
         this.iconXOffset = 1 / 32;
         break;
@@ -81,6 +83,7 @@ export class Lockable {
   }
 
   lock() {
+    this.lockType = LockType.LOCKED;
     this.locked = true;
     this.iconTileX = 10;
     this.iconXOffset = 1 / 32;
@@ -117,12 +120,15 @@ export class Lockable {
         return true;
       }
 
-      // If no matching key, check if player has any key at all
-      const hasAnyKey = player.inventory.hasItem(Key);
-      if (hasAnyKey) {
-        this.game.pushMessage("The key doesn't fit the lock.");
+      if (this.lockedMessage) {
+        this.game.pushMessage(this.lockedMessage);
       } else {
-        this.game.pushMessage("It's locked tightly and won't budge.");
+        const hasAnyKey = player.inventory.hasItem(Key);
+        if (hasAnyKey) {
+          this.game.pushMessage("The key doesn't fit the lock.");
+        } else {
+          this.game.pushMessage("It's locked tightly and won't budge.");
+        }
       }
       return false;
     }

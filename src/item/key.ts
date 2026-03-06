@@ -16,6 +16,8 @@ export class Key extends Usable {
   room: Room;
   showPath: boolean;
   animateFrame: number;
+  /** Optional callback invoked after a successful pickup (key already in inventory). */
+  onPickupCallback?: (player: Player) => void;
   private _cachedColorId: number;
   private _cachedColorName: string;
   private _cachedColorHex: string;
@@ -131,6 +133,8 @@ export class Key extends Usable {
 
         // Automatically enable the path guide on pickup.
         this.setPathGuideEnabled(player, true, { syncNow: true });
+
+        this.onPickupCallback?.(player);
       }
     }
   };
