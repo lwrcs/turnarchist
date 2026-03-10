@@ -23657,7 +23657,7 @@ class Glowshrooms extends entity_1.Entity {
         this.bloomColor = "#054B4B";
         this.bloomAlpha = 1;
         this.softBloomAlpha = 0;
-        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 100, 150], 5);
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 7, [5, 100, 150], 2);
         this.addLightSource(this.lightSource);
     }
     get type() {
@@ -36533,6 +36533,7 @@ GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
 GameplaySettings.MAIN_PATH_KEY_REQUIRED = true;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
+GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -49923,9 +49924,9 @@ DropTable.drops = [
     // Common items
     { itemType: "coin", dropRate: 10, category: ["coin"] },
     // XP crystals (melee favored)
-    { itemType: "meleeXpCrystal", dropRate: 10, category: ["xpCrystal"] },
-    { itemType: "magicXpCrystal", dropRate: 20, category: ["xpCrystal"] },
-    { itemType: "rangedXpCrystal", dropRate: 20, category: ["xpCrystal"] },
+    { itemType: "meleeXpCrystal", dropRate: 25, category: ["xpCrystal"] },
+    { itemType: "magicXpCrystal", dropRate: 25, category: ["xpCrystal"] },
+    { itemType: "rangedXpCrystal", dropRate: 25, category: ["xpCrystal"] },
     // Crafting materials
     {
         itemType: "weaponfragments",
@@ -55672,14 +55673,14 @@ const environmentData = {
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
-            { class: pawnEnemy_1.PawnEnemy, weight: 1.0, minDepth: 1 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 0.5, minDepth: 1 },
             { class: kingEnemy_1.KingEnemy, weight: 0.1, minDepth: 2 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 4 },
             // Mid game enemies (depth 1+)
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
-            { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+            { class: rookEnemy_1.RookEnemy, weight: 0.3, minDepth: 2 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 0.3, minDepth: 2 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.5, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
             // Late game enemies (depth 2+)
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
@@ -55723,7 +55724,7 @@ const environmentData = {
     },
     [environmentTypes_1.EnvType.CAVE]: {
         props: [
-            { class: NullProp, weight: 1 },
+            { class: NullProp, weight: 0.25 },
             {
                 class: coalResource_1.CoalResource,
                 weight: 0.5,
@@ -55732,7 +55733,7 @@ const environmentData = {
             {
                 class: goldResource_1.GoldResource,
                 weight: 0.05,
-                blob: { enabled: true, weight: 0.25, diameter: 5 },
+                blob: { enabled: true, weight: 0.75, diameter: 5 },
             },
             {
                 class: ironResource_1.IronResource,
@@ -55742,10 +55743,20 @@ const environmentData = {
             { class: emeraldResource_1.EmeraldResource, weight: 0.001 },
             { class: amberResource_1.AmberResource, weight: 0.001 },
             { class: caveRockResource_1.CaveRock, weight: 0.5 },
-            { class: mushrooms_1.Mushrooms, weight: 0.02 },
+            {
+                class: mushrooms_1.Mushrooms,
+                weight: 0.02,
+                blob: { enabled: true, weight: 0.5, diameter: 8 },
+            },
             { class: pot_1.Pot, weight: 0.01 },
             { class: chest_1.Chest, weight: 0.01 },
             { class: caveBlock_1.CaveBlock, weight: 0.5 },
+            {
+                class: glowshrooms_1.Glowshrooms,
+                weight: 0.5,
+                blob: { enabled: true, weight: 1, diameter: 6, maxBlobs: 4 },
+                ignoreClusterWeights: true,
+            },
         ],
         enemies: [
             // Cave-dwelling creatures
@@ -55769,7 +55780,7 @@ const environmentData = {
             //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
         ],
         bosses: [
-            { class: bigSkullEnemy_1.BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+            //{ class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
             { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
             { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
@@ -55989,12 +56000,12 @@ const environmentData = {
             { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
             { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 0 },
             // Castle undead
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.25, minDepth: 0 },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.25, minDepth: 0 },
+            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.025, minDepth: 0 },
+            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.025, minDepth: 0 },
             // Other castle inhabitants
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
-            { class: chargeEnemy_1.ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
+            { class: chargeEnemy_1.ChargeEnemy, weight: 0.01, minDepth: 0 }, // War beasts
         ],
         bosses: [
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 1.0 },
@@ -56204,9 +56215,7 @@ const environmentData = {
         //{ class: CrabEnemy, weight: 1.0, minDepth: 0 },
         //{ class: FrogEnemy, weight: 1.0, minDepth: 0 },
         ],
-        bosses: [
-            { class: spawner_1.Spawner, depth: 0 },
-        ],
+        bosses: [{ class: spawner_1.Spawner, depth: 0 }],
     },
 };
 exports.environmentData = environmentData;
@@ -71433,11 +71442,13 @@ class Room {
                 }
             }
             if (obstacles.length > 0) {
-                for (let obstacle of obstacles) {
-                    // console.log(`Removing obstacle at (${obstacle.x},${obstacle.y})`);
-                    this.entities = this.entities.filter((e) => e !== obstacle);
-                    obstacle = null;
+                for (const obstacle of obstacles) {
+                    if (obstacle.lightSource) {
+                        obstacle.removeLightSource(obstacle.lightSource);
+                    }
                 }
+                const obstacleSet = new Set(obstacles);
+                this.entities = this.entities.filter((e) => !obstacleSet.has(e));
             }
         };
         this.hasUpladder = () => {
@@ -74500,7 +74511,8 @@ class Populator {
             }
             //if (this.level.depth === 0) return;
             if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
-                this.level.depth !== 0) {
+                this.level.depth !== 0 &&
+                this.level.depth <= gameplaySettings_1.GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS) {
                 let sidePathOptions = {
                     caveRooms: 5,
                     locked: true,
@@ -75174,13 +75186,29 @@ class Populator {
         if (env === environmentTypes_1.EnvType.CASTLE)
             return null;
         if (env === environmentTypes_1.EnvType.CAVE) {
+            /*{
+              caveRooms: 1, //this.numRooms() * 3,
+              locked: true,
+              envType: EnvType.FLOODED_CAVE,
+              linearity: 0.75,
+              mapWidth: 100,
+              mapHeight: 30,
+              giantRoomScale: 0.25,
+              giantCentralRoom: false,
+              loopiness: 1,
+              branching: 0.5,
+              softMargin: 8,
+              entranceInMainRoom: true,
+              exitInMainRoom: true,
+              keyInMainRoom: true,
+            };*/
             return {
                 caveRooms: 1,
                 locked: true,
-                envType: environmentTypes_1.EnvType.FLOODED_CAVE,
+                envType: environmentTypes_1.EnvType.MAGMA_CAVE,
                 linearity: 0.75,
-                mapWidth: 100,
-                mapHeight: 30,
+                mapWidth: 75,
+                mapHeight: 50,
                 giantRoomScale: 0.25,
                 giantCentralRoom: false,
                 loopiness: 1,
@@ -75209,6 +75237,9 @@ class Populator {
                 mapWidth: 75,
                 mapHeight: 75,
                 giantRoomScale: 0.8,
+                entranceInMainRoom: true,
+                exitInMainRoom: true,
+                keyInMainRoom: true,
             };
         }
         if (env === environmentTypes_1.EnvType.FOREST) {
@@ -75311,8 +75342,17 @@ class Populator {
             if (!selectedProp)
                 continue;
             const size = selectedProp.size || { w: 1, h: 1 };
+            const useRandom = selectedProp.ignoreClusterWeights === true;
             let pos = null;
-            if (size.w === 1 && size.h === 1) {
+            if (useRandom) {
+                if (size.w === 1 && size.h === 1) {
+                    pos = room.getRandomEmptyPosition(tiles);
+                }
+                else {
+                    pos = room.getEmptyAreaPosition(tiles, size.w, size.h);
+                }
+            }
+            else if (size.w === 1 && size.h === 1) {
                 // Use the seed directly if available
                 const hasSeed = tiles.some((t) => t.x === seed.x && t.y === seed.y);
                 pos = hasSeed
@@ -76229,7 +76269,13 @@ class Populator {
         for (let xx = 0; xx < w; xx++) {
             for (let yy = 0; yy < h; yy++) {
                 room.roomArray[x + xx][y + yy] = new floor_1.Floor(room, x + xx, y + yy);
-                if (room.entities.some((e) => e.x === x + xx && e.y === y + yy)) {
+                const displaced = room.entities.filter((e) => e.x === x + xx && e.y === y + yy && e !== enemy);
+                for (const e of displaced) {
+                    if (e.lightSource) {
+                        e.removeLightSource(e.lightSource);
+                    }
+                }
+                if (displaced.length > 0) {
                     room.entities = room.entities.filter((e) => (e.x !== x + xx && e.y !== y + yy) || e === enemy);
                 }
             }

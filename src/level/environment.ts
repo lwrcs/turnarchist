@@ -144,6 +144,8 @@ interface PropInfo {
   additionalParams?: any[]; // Extra constructor parameters if needed
   size?: { w: number; h: number }; // Optional footprint size in tiles
   blob?: boolean | PropBlobOptions; // Optional blob placement config
+  /** When true, placement ignores clusterer seed positions and picks uniformly at random. */
+  ignoreClusterWeights?: boolean;
 }
 
 interface EnemyInfo {
@@ -219,15 +221,15 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
-      { class: PawnEnemy, weight: 1.0, minDepth: 1 },
+      { class: PawnEnemy, weight: 0.5, minDepth: 1 },
       { class: KingEnemy, weight: 0.1, minDepth: 2 },
       { class: BoltcasterEnemy, weight: 0.25, minDepth: 4 },
 
       // Mid game enemies (depth 1+)
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
-      { class: RookEnemy, weight: 0.6, minDepth: 1 },
-      { class: BishopEnemy, weight: 0.6, minDepth: 1 },
-      { class: ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
+      { class: RookEnemy, weight: 0.3, minDepth: 2 },
+      { class: BishopEnemy, weight: 0.3, minDepth: 2 },
+      { class: ArmoredzombieEnemy, weight: 0.5, minDepth: 1 },
       { class: KnightEnemy, weight: 0.7, minDepth: 1 },
 
       // Late game enemies (depth 2+)
@@ -272,7 +274,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
   },
   [EnvType.CAVE]: {
     props: [
-      { class: NullProp, weight: 1 },
+      { class: NullProp, weight: 0.25 },
       {
         class: CoalResource,
         weight: 0.5,
@@ -281,7 +283,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       {
         class: GoldResource,
         weight: 0.05,
-        blob: { enabled: true, weight: 0.25, diameter: 5 },
+        blob: { enabled: true, weight: 0.75, diameter: 5 },
       },
       {
         class: IronResource,
@@ -291,10 +293,20 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: EmeraldResource, weight: 0.001 },
       { class: AmberResource, weight: 0.001 },
       { class: CaveRock, weight: 0.5 },
-      { class: Mushrooms, weight: 0.02 },
+      {
+        class: Mushrooms,
+        weight: 0.02,
+        blob: { enabled: true, weight: 0.5, diameter: 8 },
+      },
       { class: Pot, weight: 0.01 },
       { class: Chest, weight: 0.01 },
       { class: CaveBlock, weight: 0.5 },
+      {
+        class: Glowshrooms,
+        weight: 0.5,
+        blob: { enabled: true, weight: 1, diameter: 6, maxBlobs: 4 },
+        ignoreClusterWeights: true,
+      },
     ],
     enemies: [
       // Cave-dwelling creatures
@@ -320,7 +332,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
     ],
     bosses: [
-      { class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
+      //{ class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
       { class: BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
       { class: Spawner, depth: 0, weight: 0.35 },
       { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
@@ -547,13 +559,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: KingEnemy, weight: 0.125, minDepth: 0 },
 
       // Castle undead
-      { class: ArmoredzombieEnemy, weight: 0.25, minDepth: 0 }, // Fallen guards
-      { class: ArmoredSkullEnemy, weight: 0.25, minDepth: 0 }, // Armored spirits
+      { class: ArmoredzombieEnemy, weight: 0.025, minDepth: 0 }, // Fallen guards
+      { class: ArmoredSkullEnemy, weight: 0.025, minDepth: 0 }, // Armored spirits
 
       // Other castle inhabitants
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
       { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
-      { class: ChargeEnemy, weight: 0.1, minDepth: 0 }, // War beasts
+      { class: ChargeEnemy, weight: 0.01, minDepth: 0 }, // War beasts
     ],
     bosses: [
       { class: ExalterEnemy, depth: 0, weight: 1.0 },
@@ -769,9 +781,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       //{ class: FrogEnemy, weight: 1.0, minDepth: 0 },
     ],
 
-    bosses: [
-      { class: Spawner, depth: 0},
-    ],
+    bosses: [{ class: Spawner, depth: 0 }],
   },
 };
 

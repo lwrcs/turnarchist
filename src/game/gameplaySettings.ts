@@ -78,6 +78,8 @@ export class GameplaySettings {
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 
+  static readonly MAX_DEPTH_FOR_SIDEPATHS = 3;
+
   // === ENEMY POOL SETTINGS ===
 
   // Enemy Type Progression

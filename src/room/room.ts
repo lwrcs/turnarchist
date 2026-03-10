@@ -5053,11 +5053,13 @@ export class Room {
       }
     }
     if (obstacles.length > 0) {
-      for (let obstacle of obstacles) {
-        // console.log(`Removing obstacle at (${obstacle.x},${obstacle.y})`);
-        this.entities = this.entities.filter((e) => e !== obstacle);
-        obstacle = null;
+      for (const obstacle of obstacles) {
+        if (obstacle.lightSource) {
+          obstacle.removeLightSource(obstacle.lightSource);
+        }
       }
+      const obstacleSet = new Set(obstacles);
+      this.entities = this.entities.filter((e) => !obstacleSet.has(e));
     }
   };
 

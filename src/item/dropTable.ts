@@ -275,9 +275,9 @@ export class DropTable {
     { itemType: "coin", dropRate: 10, category: ["coin"] }, // Always drops
 
     // XP crystals (melee favored)
-    { itemType: "meleeXpCrystal", dropRate: 10, category: ["xpCrystal"] },
-    { itemType: "magicXpCrystal", dropRate: 20, category: ["xpCrystal"] },
-    { itemType: "rangedXpCrystal", dropRate: 20, category: ["xpCrystal"] },
+    { itemType: "meleeXpCrystal", dropRate: 25, category: ["xpCrystal"] },
+    { itemType: "magicXpCrystal", dropRate: 25, category: ["xpCrystal"] },
+    { itemType: "rangedXpCrystal", dropRate: 25, category: ["xpCrystal"] },
 
     // Crafting materials
     {

@@ -212,13 +212,29 @@ export class Populator {
     if (env === EnvType.CASTLE) return null;
 
     if (env === EnvType.CAVE) {
-      return {
+      /*{
         caveRooms: 1, //this.numRooms() * 3,
         locked: true,
         envType: EnvType.FLOODED_CAVE,
         linearity: 0.75,
         mapWidth: 100,
         mapHeight: 30,
+        giantRoomScale: 0.25,
+        giantCentralRoom: false,
+        loopiness: 1,
+        branching: 0.5,
+        softMargin: 8,
+        entranceInMainRoom: true,
+        exitInMainRoom: true,
+        keyInMainRoom: true,
+      };*/
+      return {
+        caveRooms: 1, //this.numRooms() * 3,
+        locked: true,
+        envType: EnvType.MAGMA_CAVE,
+        linearity: 0.75,
+        mapWidth: 75,
+        mapHeight: 50,
         giantRoomScale: 0.25,
         giantCentralRoom: false,
         loopiness: 1,
@@ -249,6 +265,9 @@ export class Populator {
         mapWidth: 75,
         mapHeight: 75,
         giantRoomScale: 0.8,
+        entranceInMainRoom: true,
+        exitInMainRoom: true,
+        keyInMainRoom: true,
       };
     }
 
@@ -524,7 +543,8 @@ export class Populator {
 
     if (
       this.level.environment.type === EnvType.DUNGEON &&
-      this.level.depth !== 0
+      this.level.depth !== 0 &&
+      this.level.depth <= GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS
     ) {
       let sidePathOptions: SidePathOptions = {
         caveRooms: 5, //this.numRooms(),
@@ -884,8 +904,15 @@ export class Populator {
       if (!selectedProp) continue;
       const size = selectedProp.size || { w: 1, h: 1 };
 
+      const useRandom = selectedProp.ignoreClusterWeights === true;
       let pos: { x: number; y: number } | null = null;
-      if (size.w === 1 && size.h === 1) {
+      if (useRandom) {
+        if (size.w === 1 && size.h === 1) {
+          pos = room.getRandomEmptyPosition(tiles);
+        } else {
+          pos = room.getEmptyAreaPosition(tiles, size.w, size.h);
+        }
+      } else if (size.w === 1 && size.h === 1) {
         // Use the seed directly if available
         const hasSeed = tiles.some((t) => t.x === seed.x && t.y === seed.y);
         pos = hasSeed
@@ -1585,7 +1612,6 @@ export class Populator {
       room.roomArray[x][y] = new Window(room, x, y, true);
     }
   }
-
   private addRectangularTileArea<
     T extends new (
       room: Room,
@@ -2103,7 +2129,15 @@ export class Populator {
     for (let xx = 0; xx < w; xx++) {
       for (let yy = 0; yy < h; yy++) {
         room.roomArray[x + xx][y + yy] = new Floor(room, x + xx, y + yy);
-        if (room.entities.some((e) => e.x === x + xx && e.y === y + yy)) {
+        const displaced = room.entities.filter(
+          (e) => e.x === x + xx && e.y === y + yy && e !== enemy,
+        );
+        for (const e of displaced) {
+          if (e.lightSource) {
+            e.removeLightSource(e.lightSource);
+          }
+        }
+        if (displaced.length > 0) {
           room.entities = room.entities.filter(
             (e) => (e.x !== x + xx && e.y !== y + yy) || e === enemy,
           );

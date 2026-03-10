@@ -34,7 +34,7 @@ export class Glowshrooms extends Entity {
       this.y + 0.5,
       7,
       [5, 100, 150],
-      5,
+      2,
     );
     this.addLightSource(this.lightSource);
   }
