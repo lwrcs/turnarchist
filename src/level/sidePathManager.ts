@@ -49,12 +49,20 @@ export interface SidePathOptions {
   exitInMainRoom?: boolean;
 }
 
+/** Env types that use the castle sidepath structure (PNG levels, boss room, key in exit). */
+export const CASTLE_LIKE_ENV_TYPES: ReadonlySet<EnvType> = new Set([
+  EnvType.CASTLE,
+  EnvType.DARK_CASTLE,
+]);
+
 /**
  * Canonical options for CASTLE sidepaths.
  * Keep this centralized so environment-driven generation and debug/test entry points
  * (e.g. `/new castle`) stay in sync.
  */
-export function createCastleSidePathOptions(
+/** Base castle-structure options shared by CASTLE and DARK_CASTLE sidepaths. */
+function baseCastleOptions(
+  envType: EnvType,
   overrides?: Partial<SidePathOptions>,
 ): SidePathOptions {
   return {
@@ -72,8 +80,20 @@ export function createCastleSidePathOptions(
     mapWidth: 30,
     mapHeight: 30,
     ...(overrides ?? {}),
-    envType: EnvType.CASTLE,
+    envType,
   };
+}
+
+export function createCastleSidePathOptions(
+  overrides?: Partial<SidePathOptions>,
+): SidePathOptions {
+  return baseCastleOptions(EnvType.CASTLE, overrides);
+}
+
+export function createDarkCastleSidePathOptions(
+  overrides?: Partial<SidePathOptions>,
+): SidePathOptions {
+  return baseCastleOptions(EnvType.DARK_CASTLE, overrides);
 }
 
 /**
@@ -262,7 +282,8 @@ export class SidePathManager {
   ): void {
     if (GameplaySettings.MAIN_PATH_KEY_REQUIRED !== true) return;
     const sideLevel = linkedRoom.level;
-    if (!sideLevel || sideLevel.environment.type !== EnvType.CASTLE) return;
+    if (!sideLevel || !CASTLE_LIKE_ENV_TYPES.has(sideLevel.environment.type))
+      return;
 
     const mainLevel = this.game.levels[downLadder.room.depth];
     const mainDownLadder = mainLevel
@@ -320,8 +341,8 @@ export class SidePathManager {
   /**
    * Finds the castle exit room using the same logic as the roomPopulator:
    * PNG castles use the designer-placed DOWNLADDER room; procedural castles
-   * use the boss-neighbor furthest from the up ladder; final fallback is
-   * getFurthestFromLadder("up").
+   * use the boss-neighbor furthest from the down ladder (entry); final fallback
+   * is getFurthestFromLadder("down").
    */
   private findCastleExitRoom(sideLevel: Level): Room | null {
     const isPng = sideLevel.genSource === "png";
@@ -346,14 +367,14 @@ export class SidePathManager {
         );
       if (neighbors.length > 0) {
         return neighbors.reduce((best, r) => {
-          const bd = best.getDistanceToNearestLadder("up") ?? -Infinity;
-          const rd = r.getDistanceToNearestLadder("up") ?? -Infinity;
+          const bd = best.getDistanceToNearestLadder("down") ?? -Infinity;
+          const rd = r.getDistanceToNearestLadder("down") ?? -Infinity;
           return rd > bd ? r : best;
         });
       }
     }
 
-    return sideLevel.getFurthestFromLadder("up");
+    return sideLevel.getFurthestFromLadder("down");
   }
 
   private findMainPathDownLadder(level: Level): DownLadder | null {

@@ -269,7 +269,8 @@ export class LevelGenerator {
       if (isSidePath) {
         const useCastlePng =
           GameplaySettings.CASTLE_USE_PNG_LEVEL &&
-          opts?.envType === EnvType.CASTLE;
+          (opts?.envType === EnvType.CASTLE ||
+            opts?.envType === EnvType.DARK_CASTLE);
         if (useCastlePng) {
           const CASTLE_PNG_COUNT = 3;
           const pick = Math.floor(Random.rand() * CASTLE_PNG_COUNT) + 1;

@@ -86,6 +86,8 @@ import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
 import {
   createCastleSidePathOptions,
+  createDarkCastleSidePathOptions,
+  CASTLE_LIKE_ENV_TYPES,
   SidePathOptions,
 } from "../level/sidePathManager";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
@@ -209,41 +211,10 @@ export class Populator {
 
   private getEnvDrivenSidePathOptions(): SidePathOptions | null {
     const env = this.level.environment.type;
-    if (env === EnvType.CASTLE) return null;
+    if (CASTLE_LIKE_ENV_TYPES.has(env)) return null;
 
     if (env === EnvType.CAVE) {
-      /*{
-        caveRooms: 1, //this.numRooms() * 3,
-        locked: true,
-        envType: EnvType.FLOODED_CAVE,
-        linearity: 0.75,
-        mapWidth: 100,
-        mapHeight: 30,
-        giantRoomScale: 0.25,
-        giantCentralRoom: false,
-        loopiness: 1,
-        branching: 0.5,
-        softMargin: 8,
-        entranceInMainRoom: true,
-        exitInMainRoom: true,
-        keyInMainRoom: true,
-      };*/
-      return {
-        caveRooms: 1, //this.numRooms() * 3,
-        locked: true,
-        envType: EnvType.MAGMA_CAVE,
-        linearity: 0.75,
-        mapWidth: 75,
-        mapHeight: 50,
-        giantRoomScale: 0.25,
-        giantCentralRoom: false,
-        loopiness: 1,
-        branching: 0.5,
-        softMargin: 8,
-        entranceInMainRoom: true,
-        exitInMainRoom: true,
-        keyInMainRoom: true,
-      };
+      return createDarkCastleSidePathOptions();
     }
 
     if (env === EnvType.DARK_DUNGEON) {
@@ -252,22 +223,6 @@ export class Populator {
         locked: true,
         envType: EnvType.DARK_CASTLE,
         linearity: 0.8,
-      };
-    }
-
-    if (env === EnvType.DARK_CASTLE) {
-      return {
-        caveRooms: this.numRooms() * 2,
-        locked: true,
-        envType: EnvType.MAGMA_CAVE,
-        linearity: 1,
-        giantCentralRoom: true,
-        mapWidth: 75,
-        mapHeight: 75,
-        giantRoomScale: 0.8,
-        entranceInMainRoom: true,
-        exitInMainRoom: true,
-        keyInMainRoom: true,
       };
     }
 
@@ -330,6 +285,52 @@ export class Populator {
     this.levelEnemyPoolIds = this.generateEnemyPoolIds(depth);
   };
 
+  /**
+   * Pre-compute the castle sidepath exit room (where the rope-up ladder goes)
+   * so we can skip enemy placement there during environment population.
+   */
+  private findCastleSidepathExitRoom(
+    isSingleRoomSidepathMaze: boolean,
+    isPngCastle: boolean,
+  ): Room | null {
+    if (
+      this.level.isMainPath ||
+      isSingleRoomSidepathMaze ||
+      !CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type)
+    ) {
+      return null;
+    }
+
+    if (isPngCastle) {
+      return (
+        this.level.rooms.find((r) => r.type === RoomType.DOWNLADDER) ?? null
+      );
+    }
+
+    const bossRoom =
+      this.level.rooms.find((r) => r.type === RoomType.BOSS) ?? null;
+    if (bossRoom && bossRoom.doors.length > 0) {
+      const neighbors = bossRoom.doors
+        .map((d) => d.linkedDoor?.room)
+        .filter(
+          (r): r is Room =>
+            r !== undefined &&
+            r !== null &&
+            r !== bossRoom &&
+            r.type !== RoomType.ROPECAVE,
+        );
+      if (neighbors.length > 0) {
+        return neighbors.reduce((best, r) => {
+          const bd = best.getDistanceToNearestLadder("down") ?? -Infinity;
+          const rd = r.getDistanceToNearestLadder("down") ?? -Infinity;
+          return rd > bd ? r : best;
+        });
+      }
+    }
+
+    return this.level.getFurthestFromLadder("down");
+  }
+
   populateRooms = () => {
     if (this.skipPopulation) return;
     const isSingleRoomSidepathMaze =
@@ -349,7 +350,13 @@ export class Populator {
 
     const isPngCastle =
       this.level.genSource === "png" &&
-      this.level.environment.type === EnvType.CASTLE;
+      CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type);
+
+    // Pre-compute the castle exit room so we can skip enemies there.
+    const castleExitRoom = this.findCastleSidepathExitRoom(
+      isSingleRoomSidepathMaze,
+      isPngCastle,
+    );
 
     // populate each room by environment (enemies added here)
     this.level.rooms.forEach((room) => {
@@ -367,7 +374,7 @@ export class Populator {
         this.populateEmpty(room, Random.rand);
         return;
       }
-      this.populateByEnvironment(room);
+      this.populateByEnvironment(room, room === castleExitRoom);
     });
 
     // Sidepath bosses:
@@ -377,7 +384,7 @@ export class Populator {
     const isCastleSidepath =
       !this.level.isMainPath &&
       !isSingleRoomSidepathMaze &&
-      this.level.environment.type === EnvType.CASTLE;
+      CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type);
 
     if (isCastleSidepath) {
       const bossRoom =
@@ -401,15 +408,17 @@ export class Populator {
               r.type !== RoomType.ROPECAVE,
           );
         if (neighbors.length > 0) {
+          // Use "down" not "up": rope-up isn't placed yet. Entry has the DownLadder.
+          // Furthest from entry = natural exit room.
           exitRoom = neighbors.reduce((best, r) => {
-            const bd = best.getDistanceToNearestLadder("up") ?? -Infinity;
-            const rd = r.getDistanceToNearestLadder("up") ?? -Infinity;
+            const bd = best.getDistanceToNearestLadder("down") ?? -Infinity;
+            const rd = r.getDistanceToNearestLadder("down") ?? -Infinity;
             return rd > bd ? r : best;
           });
         }
       }
       if (!exitRoom) {
-        exitRoom = this.level.getFurthestFromLadder("up");
+        exitRoom = this.level.getFurthestFromLadder("down");
       }
 
       // If for some reason generation didn't create a BOSS room, fall back to the legacy
@@ -419,6 +428,7 @@ export class Populator {
         const drops: Item[] = [];
         switch (furthestFromUpLadder?.envType) {
           case EnvType.CASTLE:
+          case EnvType.DARK_CASTLE:
             drops.push(new Sword(furthestFromUpLadder, 1, 1));
             break;
           case EnvType.CAVE:
@@ -438,6 +448,7 @@ export class Populator {
         const drops: Item[] = [];
         switch (dropRoom.envType) {
           case EnvType.CASTLE:
+          case EnvType.DARK_CASTLE:
             drops.push(new Sword(dropRoom, 1, 1));
             break;
           case EnvType.CAVE:
@@ -508,6 +519,7 @@ export class Populator {
       const drops: Item[] = [];
       switch (furthestFromUpLadder?.envType) {
         case EnvType.CASTLE:
+        case EnvType.DARK_CASTLE:
           drops.push(new Sword(furthestFromUpLadder, 1, 1));
           break;
         case EnvType.CAVE:
@@ -605,22 +617,27 @@ export class Populator {
     }
 
     // If the main-path down ladder is configured to require a key, but there is no
-    // forest sidepath entry on this floor (i.e., no way to reach the castle key),
+    // sidepath entry that leads to a castle-like environment (where the key is placed),
     // unlock the down ladder to avoid soft-locking progression.
+    // Depth 1: forest entry → castle.  Depth 2: cave entry → dark castle.
     if (
       GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
       this.level.isMainPath
     ) {
+      const castleEntryEnvs: ReadonlySet<EnvType> = new Set([
+        EnvType.FOREST,
+        EnvType.CAVE,
+      ]);
       let mainDown: DownLadder | null = null;
-      let hasForestSidepathEntry = false;
+      let hasCastleChainEntry = false;
       for (const r of this.level.rooms) {
         for (let x = r.roomX; x < r.roomX + r.width; x++) {
           for (let y = r.roomY; y < r.roomY + r.height; y++) {
             const t = r.roomArray[x]?.[y];
             if (t instanceof DownLadder) {
               if (t.isSidePath === true) {
-                if (t.environment === EnvType.FOREST)
-                  hasForestSidepathEntry = true;
+                if (castleEntryEnvs.has(t.environment))
+                  hasCastleChainEntry = true;
               } else {
                 mainDown = t;
               }
@@ -631,7 +648,7 @@ export class Populator {
       if (
         mainDown &&
         mainDown.lockable?.isLocked?.() === true &&
-        hasForestSidepathEntry !== true
+        hasCastleChainEntry !== true
       ) {
         mainDown.lockable.removeLock();
         mainDown.lockable.removeLockIcon();
@@ -643,7 +660,7 @@ export class Populator {
     //this.level.distributeKeys();
   };
 
-  populateByEnvironment = (room: Room) => {
+  populateByEnvironment = (room: Room, skipEnemies = false) => {
     if (room.type === RoomType.START) return;
 
     switch (room.envType) {
@@ -657,7 +674,8 @@ export class Populator {
         this.populateMagmaCaveEnvironment(room);
         break;
       case EnvType.CASTLE:
-        this.populateCastleEnvironment(room);
+      case EnvType.DARK_CASTLE:
+        this.populateCastleEnvironment(room, skipEnemies);
         break;
       case EnvType.TUTORIAL:
         this.populateTutorialEnvironment(room);
@@ -1355,7 +1373,7 @@ export class Populator {
     this.addRandomEnemies(room);
   }
 
-  private populateCastleEnvironment(room: Room) {
+  private populateCastleEnvironment(room: Room, skipEnemies = false) {
     const numProps = this.getNumProps(room);
     this.addPropsWithClustering(room, numProps, room.envType, {
       falloffExponent: 2,
@@ -1364,8 +1382,9 @@ export class Populator {
       useSeedPosition: false,
     });
 
-    // ADD: Enemies after props, based on remaining space
-    this.addRandomEnemies(room);
+    if (!skipEnemies) {
+      this.addRandomEnemies(room);
+    }
   }
 
   private getNumProps(room: Room, medianDensity?: number) {
@@ -2591,7 +2610,13 @@ export class Populator {
   populateEmpty = (room: Room, rand: () => number) => {};
 
   populateTreasure = (room: Room, rand: () => number) => {
-    this.addChests(room, 10, rand);
+    const chestCap = Math.round(Math.sqrt(room.roomArea));
+    const chestRoll = Game.randTable(
+      [1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 8, 9, 10],
+      rand,
+    );
+    const numChests = Math.min(chestCap, chestRoll);
+    this.addChests(room, numChests, rand);
   };
 
   populateDungeon = (room: Room, rand: () => number) => {
@@ -2739,7 +2764,7 @@ export class Populator {
       );
     }
 
-    const numChests = Math.ceil(Random.rand() * 5);
+    const numChests = Math.ceil(Random.rand() * 5) + 2;
 
     let tiles: Tile[] = room.getEmptyTiles();
     let positions: { x: number; y: number }[] = [];
