@@ -151,6 +151,8 @@ interface PropInfo {
 interface EnemyInfo {
   class: any;
   weight?: number;
+  /** 0 = spawn near start room, 0.5 = uniform, 1 = spawn far from start room. Default 0.5. */
+  entityWeight?: number;
   minDepth?: number;
   blacklistedEnvironments?: EnvType[];
   additionalParams?: any[];
@@ -553,10 +555,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
       { class: PawnEnemy, weight: 1.5, minDepth: 0 }, // Castle pawns
-      { class: RookEnemy, weight: 1, minDepth: 0 }, // Castle guardians
-      { class: BishopEnemy, weight: 1, minDepth: 0 }, // Castle clergy
-      { class: QueenEnemy, weight: 0.5, minDepth: 0 }, // Royal enemies
-      { class: KingEnemy, weight: 0.125, minDepth: 0 },
+      { class: RookEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 }, // Castle guardians
+      { class: BishopEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 }, // Castle clergy
+      { class: QueenEnemy, weight: 0.5, minDepth: 0, entityWeight: 1 }, // Royal enemies
+      { class: KingEnemy, weight: 0.125, minDepth: 0, entityWeight: 1 },
 
       // Castle undead
       { class: ArmoredzombieEnemy, weight: 0.025, minDepth: 0 }, // Fallen guards

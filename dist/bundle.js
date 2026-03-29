@@ -55995,10 +55995,10 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
             { class: pawnEnemy_1.PawnEnemy, weight: 1.5, minDepth: 0 },
-            { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0 },
-            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0 },
-            { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 0 },
+            { class: rookEnemy_1.RookEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 },
+            { class: bishopEnemy_1.BishopEnemy, weight: 1, minDepth: 0, entityWeight: 0.5 },
+            { class: queenEnemy_1.QueenEnemy, weight: 0.5, minDepth: 0, entityWeight: 1 },
+            { class: kingEnemy_1.KingEnemy, weight: 0.125, minDepth: 0, entityWeight: 1 },
             // Castle undead
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.025, minDepth: 0 },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.025, minDepth: 0 },
@@ -74373,12 +74373,12 @@ class Populator {
                 sidePathManager_1.CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type);
             // Pre-compute the castle exit room so we can skip enemies there.
             const castleExitRoom = this.findCastleSidepathExitRoom(isSingleRoomSidepathMaze, isPngCastle);
-            // populate each room by environment (enemies added here)
+            // populate each room by environment (props only; enemies placed level-wide below)
+            const populatedRooms = [];
             this.level.rooms.forEach((room) => {
                 const singleRoomException = this.level.rooms.length === 1;
-                if (
-                //room.type === RoomType.START ||
-                (room.type === room_1.RoomType.DOWNLADDER && !isPngCastle) ||
+                if (room.type === room_1.RoomType.START ||
+                    (room.type === room_1.RoomType.DOWNLADDER && !isPngCastle) ||
                     room.type === room_1.RoomType.UPLADDER ||
                     room.type === room_1.RoomType.ROPEHOLE ||
                     (room.type === room_1.RoomType.ROPECAVE && !singleRoomException))
@@ -74388,7 +74388,12 @@ class Populator {
                     return;
                 }
                 this.populateByEnvironment(room, room === castleExitRoom);
+                if (room !== castleExitRoom)
+                    populatedRooms.push(room);
             });
+            // Level-wide enemy placement with entityWeight (distance-from-start preference).
+            // addEnemiesForLevel also calls addSpecialEnemies for each populated room.
+            this.addEnemiesForLevel(populatedRooms, castleExitRoom);
             // Sidepath bosses:
             // - Castle sidepath: boss room is generated as an actual RoomType.BOSS (guarded doors),
             //   and the furthest room becomes a guarded exit room after the boss.
@@ -75548,7 +75553,7 @@ class Populator {
         };
     }
     getBlobFieldFromCache(room, options, cache) {
-        const key = this.getBlobOptionsKey(options);
+        const key = `${room.globalId}:${this.getBlobOptionsKey(options)}`;
         if (cache.has(key)) {
             return cache.get(key) ?? null;
         }
@@ -76160,6 +76165,169 @@ class Populator {
                 tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
+    }
+    /**
+     * BFS from level start room to compute room-hop distance for each room.
+     * Used for entityWeight-based spawn distribution (far vs near start).
+     */
+    computeRoomDistanceFromStart(level) {
+        const dist = new Map();
+        const start = level.startRoom ?? level.rooms.find((r) => r.hasUpladder());
+        if (!start)
+            return dist;
+        const queue = [start];
+        dist.set(start.globalId, 0);
+        while (queue.length > 0) {
+            const r = queue.shift();
+            const d = dist.get(r.globalId) ?? 0;
+            for (const door of r.doors) {
+                const next = door.linkedDoor?.room;
+                if (!next || dist.has(next.globalId))
+                    continue;
+                dist.set(next.globalId, d + 1);
+                queue.push(next);
+            }
+        }
+        return dist;
+    }
+    /**
+     * Level-wide enemy placement with entityWeight: 0 = near start, 0.5 = uniform, 1 = far from start.
+     */
+    addEnemiesForLevel(populatedRooms, castleExitRoom) {
+        if (gameplaySettings_1.GameplaySettings.NO_ENEMIES === true)
+            return;
+        const level = this.level;
+        const distMap = this.computeRoomDistanceFromStart(level);
+        const maxDist = distMap.size > 0 ? Math.max(...distMap.values()) : 0;
+        const allTiles = [];
+        for (const room of populatedRooms) {
+            if (room === castleExitRoom)
+                continue;
+            let tiles = room.getEmptyTiles();
+            const excludedCoords = new Set();
+            for (const door of room.doors) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dy = -2; dy <= 2; dy++) {
+                        excludedCoords.add(`${door.x + dx},${door.y + dy}`);
+                    }
+                }
+            }
+            tiles = tiles.filter((t) => !excludedCoords.has(`${t.x},${t.y}`));
+            const d = distMap.get(room.globalId) ?? 0;
+            const distNorm = maxDist > 0 ? d / maxDist : 0.5;
+            for (const tile of tiles) {
+                allTiles.push({ room, tile, distNorm });
+            }
+        }
+        let totalEnemies = 0;
+        for (const room of populatedRooms) {
+            if (room === castleExitRoom)
+                continue;
+            const numEmptyTiles = room.getEmptyTiles().length;
+            const meanValue = (room.roomArea + numEmptyTiles) / 2;
+            const rawFactor = (room.depth + gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET) *
+                gameplaySettings_1.GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER;
+            const factor = gameplaySettings_1.GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS === true
+                ? rawFactor
+                : Math.min(rawFactor, gameplaySettings_1.GameplaySettings.MAX_ENEMY_DENSITY);
+            const baseEnemyCount = Math.ceil(Math.max(utils_1.Utils.randomNormalInt(0, meanValue * factor), meanValue * factor));
+            const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
+            let count = numEnemies;
+            if (gameplaySettings_1.GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS !== true &&
+                level.rooms.length === 1) {
+                const cap = Math.min(120, Math.max(10, Math.floor(Math.sqrt(numEmptyTiles) * 1.2)));
+                count = Math.min(count, cap);
+            }
+            totalEnemies += count;
+        }
+        totalEnemies = Math.min(totalEnemies, allTiles.length);
+        if (totalEnemies <= 0 || allTiles.length === 0) {
+            for (const room of populatedRooms)
+                this.addSpecialEnemies(room);
+            return;
+        }
+        const usedTiles = new Set();
+        const enemyBlobFieldCache = new Map();
+        const envType = level.environment.type;
+        const availableEnemies = this.getAvailableEnemiesForRoom(populatedRooms[0], envType);
+        if (availableEnemies.length === 0) {
+            for (const room of populatedRooms)
+                this.addSpecialEnemies(room);
+            return;
+        }
+        for (let i = 0; i < totalEnemies; i++) {
+            const pool = allTiles.filter((e) => !usedTiles.has(`${e.room.globalId}:${e.tile.x},${e.tile.y}`));
+            if (pool.length === 0)
+                break;
+            const selectedEnemy = utils_1.Utils.randTableWeighted(availableEnemies);
+            if (!selectedEnemy?.class?.add)
+                continue;
+            const entityWeight = Math.max(0, Math.min(1, selectedEnemy.entityWeight ?? 0.5));
+            const enemyBlobOptions = this.resolveBlobOptions(selectedEnemy.blob);
+            const useBlob = enemyBlobOptions && random_1.Random.rand() <= (enemyBlobOptions.chance ?? 1);
+            let candidatePool = pool;
+            if (useBlob && enemyBlobOptions) {
+                const blobFiltered = pool.filter((e) => {
+                    const bf = this.getBlobFieldFromCache(e.room, enemyBlobOptions, enemyBlobFieldCache);
+                    return bf?.allowedTiles.has(this.coordKey(e.tile.x, e.tile.y));
+                });
+                if (blobFiltered.length > 0)
+                    candidatePool = blobFiltered;
+            }
+            const footprint = this.getEntityFootprint(selectedEnemy);
+            const scores = candidatePool.map((e) => {
+                const w = (1 - entityWeight) * (1 - e.distNorm) + entityWeight * e.distNorm;
+                return { ...e, score: Math.max(0.001, w) };
+            });
+            const totalScore = scores.reduce((s, e) => s + e.score, 0);
+            if (totalScore <= 0)
+                continue;
+            let r = random_1.Random.rand() * totalScore;
+            let chosen = null;
+            for (const s of scores) {
+                r -= s.score;
+                if (r <= 0) {
+                    chosen = s;
+                    break;
+                }
+            }
+            if (!chosen)
+                chosen = scores[scores.length - 1];
+            const { room, tile } = chosen;
+            const x = tile.x;
+            const y = tile.y;
+            const chosenBlobField = useBlob && enemyBlobOptions
+                ? this.getBlobFieldFromCache(room, enemyBlobOptions, enemyBlobFieldCache)
+                : null;
+            if (chosenBlobField &&
+                !this.isPlacementWithinBlobField(chosenBlobField, x, y, footprint.w, footprint.h)) {
+                i--;
+                continue;
+            }
+            const args = selectedEnemy.additionalParams || [];
+            if (selectedEnemy.specialSpawnLogic === "clearFloor") {
+                const tiles = room.getEmptyTiles();
+                const enemy = new selectedEnemy.class(room, room.game, x, y, ...args);
+                if (this.canPlaceBigEnemy(room, enemy, x, y, tiles)) {
+                    room.entities.push(enemy);
+                    this.clearFloorForBigEnemy(room, x, y, enemy.w, enemy.h, enemy);
+                }
+                else {
+                    i--;
+                    continue;
+                }
+            }
+            else {
+                selectedEnemy.class.add(room, room.game, x, y, ...args);
+            }
+            for (let dx = 0; dx < footprint.w; dx++) {
+                for (let dy = 0; dy < footprint.h; dy++) {
+                    usedTiles.add(`${room.globalId}:${x + dx},${y + dy}`);
+                }
+            }
+        }
+        for (const room of populatedRooms)
+            this.addSpecialEnemies(room);
     }
     /**
      * Add special enemies (spawners, occultists) - extracted for clarity
