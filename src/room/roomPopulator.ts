@@ -85,11 +85,14 @@ import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
 import { Window } from "../tile/window";
 import {
-  createCastleSidePathOptions,
-  createDarkCastleSidePathOptions,
   CASTLE_LIKE_ENV_TYPES,
   SidePathOptions,
 } from "../level/sidePathManager";
+import {
+  getSidePathSpecs,
+  getDefaultSidePathEnv,
+  getEnvDrivenSidePathSpec,
+} from "../level/levelProgressionConfig";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 import { GarnetResource } from "../entity/resource/garnetResource";
@@ -180,57 +183,6 @@ export class Populator {
     return tiles.filter(
       (t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY,
     );
-  }
-
-  /**
-   * Mapping for "sidepath of a sidepath" (i.e., the rope-down exit inside a sidepath)
-   * and for environment-driven sidepath ladders.
-   *
-   * Keep this centralized so single-room and multi-room sidepaths stay consistent.
-   */
-  private getNextSidePathEnvType(current: EnvType): EnvType | null {
-    switch (current) {
-      case EnvType.CAVE:
-        return EnvType.FLOODED_CAVE;
-      case EnvType.FOREST:
-        return EnvType.CASTLE;
-      case EnvType.DARK_DUNGEON:
-        return EnvType.DARK_CASTLE;
-      case EnvType.DARK_CASTLE:
-        return EnvType.MAGMA_CAVE;
-      // No further sidepath routing from these (by design / not yet implemented).
-      case EnvType.CASTLE:
-      case EnvType.MAGMA_CAVE:
-      case EnvType.FLOODED_CAVE:
-      case EnvType.TUTORIAL:
-      case EnvType.DUNGEON:
-      default:
-        return null;
-    }
-  }
-
-  private getEnvDrivenSidePathOptions(): SidePathOptions | null {
-    const env = this.level.environment.type;
-    if (CASTLE_LIKE_ENV_TYPES.has(env)) return null;
-
-    if (env === EnvType.CAVE) {
-      return createDarkCastleSidePathOptions();
-    }
-
-    if (env === EnvType.DARK_DUNGEON) {
-      return {
-        caveRooms: this.numRooms() * 2,
-        locked: true,
-        envType: EnvType.DARK_CASTLE,
-        linearity: 0.8,
-      };
-    }
-
-    if (env === EnvType.FOREST) {
-      return createCastleSidePathOptions();
-    }
-
-    return null;
   }
 
   /**
@@ -559,67 +511,19 @@ export class Populator {
 
     //if (this.level.depth === 0) return;
 
-    if (
-      this.level.environment.type === EnvType.DUNGEON &&
-      this.level.depth !== 0 &&
-      this.level.depth <= GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS
-    ) {
-      let sidePathOptions: SidePathOptions = {
-        caveRooms: 5, //this.numRooms(),
-        locked: true,
-        linearity: 0,
-        mapWidth: 100,
-        mapHeight: 100,
-        giantCentralRoom: true,
-        giantRoomScale: 0.4,
-      };
-      switch (this.level.depth) {
-        case 1:
-          sidePathOptions.caveRooms = 1; //this.numRooms();
-          sidePathOptions.mapWidth = 50;
-          sidePathOptions.mapHeight = 50;
-          sidePathOptions.giantRoomScale = 0.6;
-          sidePathOptions.linearity = 0.5;
-          sidePathOptions.entranceInMainRoom = true;
-          sidePathOptions.keyInMainRoom = true;
-          sidePathOptions.exitInMainRoom = true;
-          sidePathOptions.organicTunnelsAvoidCenter = true;
-          sidePathOptions.softMargin = 5;
-
-          break;
-        case 2:
-          // Depth-2 sidepath is a cave: use the single-room tunneling maze layout
-          // (same pattern as the forest), but at a significantly larger base size.
-          // The "room size" in this mode is effectively mapWidth/mapHeight.
-          sidePathOptions.caveRooms = 1;
-          // ~+75% vs the 50x50 base used for the depth-1 single-room maze.
-          sidePathOptions.mapWidth = 88;
-          sidePathOptions.mapHeight = 88;
-          sidePathOptions.linearity = 0.5;
-          sidePathOptions.softMargin = 6;
-          break;
-      }
-      this.addDownladder(sidePathOptions);
-    } else if (
-      this.level.environment.type === EnvType.DUNGEON &&
-      this.level.depth === 0 &&
-      GameplaySettings.TUTORIAL_ENABLED
-    ) {
-      this.addDownladder({
-        caveRooms: 5,
-        locked: true,
-        envType: EnvType.TUTORIAL,
-        linearity: 1,
-        mapWidth: 20,
-        mapHeight: 10,
-      });
-    }
-
-    // For single-room sidepath mazes, the exit rope-down ladder is placed by
-    // `populateSingleRoomSidepathMaze`. Do NOT add another environment-driven downladder here.
-    if (!isSingleRoomSidepathMaze) {
-      const envDriven = this.getEnvDrivenSidePathOptions();
-      if (envDriven) this.addDownladder(envDriven);
+    // Sidepath ladder placement — all progression logic lives in levelProgressionConfig.ts.
+    // Single-room sidepath mazes place their own exit ladder in populateSingleRoomSidepathMaze,
+    // so we skip the env-driven spec here to avoid a duplicate.
+    const sidePathSpecs = getSidePathSpecs(
+      this.level.depth,
+      this.level.environment.type,
+      {
+        skipEnvDriven: isSingleRoomSidepathMaze,
+        numParentRooms: this.numRooms(),
+      },
+    );
+    for (const spec of sidePathSpecs) {
+      this.addDownladder(spec.options);
     }
 
     // If the main-path down ladder is configured to require a key, but there is no
@@ -809,19 +713,7 @@ export class Populator {
       return;
 
     // Place a DownLadder tile directly; avoid entity side-effects post-load
-    const env = opts?.envType
-      ? opts.envType
-      : downLadderRoom.depth < 2
-        ? EnvType.FOREST
-        : downLadderRoom.depth === 2
-          ? EnvType.CAVE
-          : downLadderRoom.depth === 3
-            ? EnvType.FLOODED_CAVE
-            : downLadderRoom.depth > 3
-              ? Random.rand() < 0.5
-                ? EnvType.FOREST
-                : EnvType.CAVE
-              : EnvType.CAVE;
+    const env = opts?.envType ?? getDefaultSidePathEnv(downLadderRoom.depth);
     const lockOverride =
       opts && typeof opts.locked === "boolean"
         ? { lockType: opts.locked ? LockType.LOCKED : LockType.NONE }
@@ -3120,7 +3012,7 @@ export class Populator {
 
     const { x, y } = room.getRoomCenter();
 
-    const environment = room.depth < 1 ? EnvType.FOREST : EnvType.CAVE;
+    const environment = getDefaultSidePathEnv(room.depth);
     //console.log("About to create DownLadder in rope hole");
     let d = new DownLadder(room, room.game, x, y, true, environment);
     //console.log("DownLadder created, about to add to room array");
@@ -3745,8 +3637,12 @@ export class Populator {
       // The exit rope-down ladder in a sidepath should use the *current environment's*
       // env-driven sidepath options (e.g., FOREST -> CASTLE). Do NOT reuse this room's
       // own generationOptions.envType, which describes how this room was generated.
-      const exitOpts = this.getEnvDrivenSidePathOptions();
-      const desiredExitEnv = exitOpts?.envType ?? null;
+      const exitSpec = getEnvDrivenSidePathSpec(
+        this.level.environment.type,
+        this.numRooms(),
+      );
+      const exitOpts = exitSpec?.options ?? null;
+      const desiredExitEnv = exitSpec?.environment ?? null;
       if (desiredExitEnv === null) {
         // No configured sidepath for this environment: ensure no exit ladder exists.
         for (const d of sideDowns) {
@@ -3921,10 +3817,14 @@ export class Populator {
     room.roomArray[entrance.x][entrance.y] = up;
 
     // Place the exit downladder (locked) at exit endpoint.
-    const exitOpts = this.getEnvDrivenSidePathOptions();
-    const exitEnv = exitOpts?.envType ?? null;
+    const mazeExitSpec = getEnvDrivenSidePathSpec(
+      this.level.environment.type,
+      this.numRooms(),
+    );
+    const mazeExitEnv = mazeExitSpec?.environment ?? null;
+    const mazeExitOpts = mazeExitSpec?.options ?? null;
     const placedKeyAndExit =
-      exitEnv !== null && !!exitEndpoint && !!keyEndpoint;
+      mazeExitEnv !== null && !!exitEndpoint && !!keyEndpoint;
     if (placedKeyAndExit) {
       const dl = new DownLadder(
         room,
@@ -3932,9 +3832,9 @@ export class Populator {
         exitEndpoint.x,
         exitEndpoint.y,
         true, // sidepath down ladder (rope down)
-        exitEnv,
+        mazeExitEnv,
         LockType.LOCKED,
-        exitOpts ?? opts,
+        mazeExitOpts ?? opts,
       );
       room.roomArray[exitEndpoint.x][exitEndpoint.y] = dl;
 

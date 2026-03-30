@@ -58,6 +58,19 @@
 - [ ] Make exalter the castle boss
 - [ ] Underwater mobs
 
+- bishops too soon?
+- exalter change beam color?
+- up arrow hitwarning not displaying?
+- unclear if could hit queen and take damage
+- hover over enemies to reveal healthbar
+- mushroom message to not eat unclear
+- new enemy encounter bestiary arrow
+- show what floor you're on not only in starting/exit rooms
+- rook 2 hearts ?
+- low chance of hearts/gold from pots
+- big skeleton health mechanic unclear?
+- CLEAR ENTRANCE TO CAVES OF ROCKS
+
 ### Backlog
 
 #### Core gameplay

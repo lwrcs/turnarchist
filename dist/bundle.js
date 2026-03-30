@@ -57793,6 +57793,212 @@ exports.LevelParameterGenerator = LevelParameterGenerator;
 
 /***/ }),
 
+/***/ "./src/level/levelProgressionConfig.ts":
+/*!*********************************************!*\
+  !*** ./src/level/levelProgressionConfig.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/**
+ * Single source of truth for sidepath progression.
+ *
+ * Maps (depth, parentEnvironment) → what sidepath(s) to create, including
+ * environment type and SidePathOptions. Consolidates logic previously spread
+ * across roomPopulator.populateRooms(), roomPopulator.addDownladder(),
+ * roomPopulator.getEnvDrivenSidePathOptions(), and roomPopulator.getNextSidePathEnvType().
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getEnvDrivenSidePathSpec = exports.getDefaultSidePathEnv = exports.getSidePathSpecs = void 0;
+const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const sidePathManager_1 = __webpack_require__(/*! ./sidePathManager */ "./src/level/sidePathManager.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+// ---------------------------------------------------------------------------
+// Depth-based sidepath specs for DUNGEON parent environments
+// ---------------------------------------------------------------------------
+function getDungeonDepthSpec(depth) {
+    if (depth === 0 && gameplaySettings_1.GameplaySettings.TUTORIAL_ENABLED) {
+        return {
+            environment: environmentTypes_1.EnvType.TUTORIAL,
+            options: {
+                caveRooms: 5,
+                locked: true,
+                envType: environmentTypes_1.EnvType.TUTORIAL,
+                linearity: 1,
+                mapWidth: 20,
+                mapHeight: 10,
+            },
+        };
+    }
+    if (depth < 1 || depth > gameplaySettings_1.GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS) {
+        return null;
+    }
+    // Base options shared by all non-tutorial dungeon sidepaths
+    const base = {
+        caveRooms: 5,
+        locked: true,
+        linearity: 0,
+        mapWidth: 100,
+        mapHeight: 100,
+        giantCentralRoom: true,
+        giantRoomScale: 0.4,
+    };
+    switch (depth) {
+        case 1:
+            return {
+                environment: environmentTypes_1.EnvType.FOREST,
+                options: {
+                    ...base,
+                    envType: environmentTypes_1.EnvType.FOREST,
+                    caveRooms: 1,
+                    mapWidth: 50,
+                    mapHeight: 50,
+                    giantRoomScale: 0.6,
+                    linearity: 0.5,
+                    entranceInMainRoom: true,
+                    keyInMainRoom: true,
+                    exitInMainRoom: true,
+                    organicTunnelsAvoidCenter: true,
+                    softMargin: 5,
+                },
+            };
+        case 2:
+            return {
+                environment: environmentTypes_1.EnvType.CAVE,
+                options: {
+                    ...base,
+                    envType: environmentTypes_1.EnvType.CAVE,
+                    caveRooms: 1,
+                    mapWidth: 88,
+                    mapHeight: 88,
+                    linearity: 0.5,
+                    softMargin: 6,
+                },
+            };
+        default:
+            // Depth 3+: use the default env for this depth with base options
+            return {
+                environment: getDefaultSidePathEnv(depth),
+                options: {
+                    ...base,
+                    envType: getDefaultSidePathEnv(depth),
+                },
+            };
+    }
+}
+// ---------------------------------------------------------------------------
+// Environment-driven sidepath specs (sidepath-of-sidepath chains)
+// ---------------------------------------------------------------------------
+/**
+ * When inside a sidepath with a given environment, what further sidepath
+ * should the exit ladder lead to?
+ *
+ * `numParentRooms` is needed for DARK_DUNGEON which scales cave rooms.
+ */
+function getEnvDrivenSpec(parentEnv, numParentRooms) {
+    switch (parentEnv) {
+        case environmentTypes_1.EnvType.CAVE:
+            return {
+                environment: environmentTypes_1.EnvType.DARK_CASTLE,
+                options: (0, sidePathManager_1.createDarkCastleSidePathOptions)(),
+            };
+        case environmentTypes_1.EnvType.FOREST:
+            return {
+                environment: environmentTypes_1.EnvType.CASTLE,
+                options: (0, sidePathManager_1.createCastleSidePathOptions)(),
+            };
+        case environmentTypes_1.EnvType.DARK_DUNGEON:
+            return {
+                environment: environmentTypes_1.EnvType.DARK_CASTLE,
+                options: {
+                    caveRooms: (numParentRooms ?? 5) * 2,
+                    locked: true,
+                    envType: environmentTypes_1.EnvType.DARK_CASTLE,
+                    linearity: 0.8,
+                },
+            };
+        case environmentTypes_1.EnvType.DARK_CASTLE:
+            // Previously defined in getNextSidePathEnvType but not wired into
+            // getEnvDrivenSidePathOptions. Preserved here for future use.
+            return {
+                environment: environmentTypes_1.EnvType.MAGMA_CAVE,
+                options: {
+                    envType: environmentTypes_1.EnvType.MAGMA_CAVE,
+                    caveRooms: 8,
+                    locked: true,
+                },
+            };
+        // Terminal environments: no further sidepaths
+        case environmentTypes_1.EnvType.CASTLE:
+        case environmentTypes_1.EnvType.MAGMA_CAVE:
+        case environmentTypes_1.EnvType.FLOODED_CAVE:
+        case environmentTypes_1.EnvType.TUTORIAL:
+        case environmentTypes_1.EnvType.DUNGEON:
+        default:
+            return null;
+    }
+}
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+/**
+ * Returns 0–2 sidepath specs for the given (depth, parentEnvironment) combo.
+ *
+ * A DUNGEON level can produce both a depth-based sidepath (forest/cave/tutorial)
+ * AND an env-driven sidepath, so this returns an array.
+ *
+ * `skipEnvDriven` should be true when the caller handles the env-driven exit
+ * ladder itself (e.g. single-room sidepath mazes).
+ */
+function getSidePathSpecs(depth, parentEnv, opts) {
+    const specs = [];
+    // Depth-based spec (only applies to DUNGEON parent on the main path)
+    if (parentEnv === environmentTypes_1.EnvType.DUNGEON) {
+        const depthSpec = getDungeonDepthSpec(depth);
+        if (depthSpec)
+            specs.push(depthSpec);
+    }
+    // Environment-driven spec (applies to any non-castle, non-terminal env)
+    if (!opts?.skipEnvDriven && !sidePathManager_1.CASTLE_LIKE_ENV_TYPES.has(parentEnv)) {
+        const envSpec = getEnvDrivenSpec(parentEnv, opts?.numParentRooms);
+        if (envSpec)
+            specs.push(envSpec);
+    }
+    return specs;
+}
+exports.getSidePathSpecs = getSidePathSpecs;
+/**
+ * Default depth→environment mapping used when opts.envType is not set.
+ * This is the fallback in `addDownladder` for the rare case where a
+ * DownLadder is created without explicit environment configuration.
+ */
+function getDefaultSidePathEnv(depth) {
+    if (depth < 2)
+        return environmentTypes_1.EnvType.FOREST;
+    if (depth === 2)
+        return environmentTypes_1.EnvType.CAVE;
+    if (depth === 3)
+        return environmentTypes_1.EnvType.FLOODED_CAVE;
+    // depth > 3: random, but since this is a pure function we default to FOREST.
+    // Callers that need randomness should set envType explicitly via getSidePathSpecs.
+    return environmentTypes_1.EnvType.FOREST;
+}
+exports.getDefaultSidePathEnv = getDefaultSidePathEnv;
+/**
+ * For the env-driven exit ladder in single-room sidepath mazes.
+ * Returns the spec for the next sidepath in the chain, or null if terminal.
+ */
+function getEnvDrivenSidePathSpec(parentEnv, numParentRooms) {
+    if (sidePathManager_1.CASTLE_LIKE_ENV_TYPES.has(parentEnv))
+        return null;
+    return getEnvDrivenSpec(parentEnv, numParentRooms);
+}
+exports.getEnvDrivenSidePathSpec = getEnvDrivenSidePathSpec;
+
+
+/***/ }),
+
 /***/ "./src/level/levelValidator.ts":
 /*!*************************************!*\
   !*** ./src/level/levelValidator.ts ***!
@@ -74322,6 +74528,7 @@ const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/i
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const sidePathManager_1 = __webpack_require__(/*! ../level/sidePathManager */ "./src/level/sidePathManager.ts");
+const levelProgressionConfig_1 = __webpack_require__(/*! ../level/levelProgressionConfig */ "./src/level/levelProgressionConfig.ts");
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
@@ -74536,63 +74743,15 @@ class Populator {
                 }
             }
             //if (this.level.depth === 0) return;
-            if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
-                this.level.depth !== 0 &&
-                this.level.depth <= gameplaySettings_1.GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS) {
-                let sidePathOptions = {
-                    caveRooms: 5,
-                    locked: true,
-                    linearity: 0,
-                    mapWidth: 100,
-                    mapHeight: 100,
-                    giantCentralRoom: true,
-                    giantRoomScale: 0.4,
-                };
-                switch (this.level.depth) {
-                    case 1:
-                        sidePathOptions.caveRooms = 1; //this.numRooms();
-                        sidePathOptions.mapWidth = 50;
-                        sidePathOptions.mapHeight = 50;
-                        sidePathOptions.giantRoomScale = 0.6;
-                        sidePathOptions.linearity = 0.5;
-                        sidePathOptions.entranceInMainRoom = true;
-                        sidePathOptions.keyInMainRoom = true;
-                        sidePathOptions.exitInMainRoom = true;
-                        sidePathOptions.organicTunnelsAvoidCenter = true;
-                        sidePathOptions.softMargin = 5;
-                        break;
-                    case 2:
-                        // Depth-2 sidepath is a cave: use the single-room tunneling maze layout
-                        // (same pattern as the forest), but at a significantly larger base size.
-                        // The "room size" in this mode is effectively mapWidth/mapHeight.
-                        sidePathOptions.caveRooms = 1;
-                        // ~+75% vs the 50x50 base used for the depth-1 single-room maze.
-                        sidePathOptions.mapWidth = 88;
-                        sidePathOptions.mapHeight = 88;
-                        sidePathOptions.linearity = 0.5;
-                        sidePathOptions.softMargin = 6;
-                        break;
-                }
-                this.addDownladder(sidePathOptions);
-            }
-            else if (this.level.environment.type === environmentTypes_1.EnvType.DUNGEON &&
-                this.level.depth === 0 &&
-                gameplaySettings_1.GameplaySettings.TUTORIAL_ENABLED) {
-                this.addDownladder({
-                    caveRooms: 5,
-                    locked: true,
-                    envType: environmentTypes_1.EnvType.TUTORIAL,
-                    linearity: 1,
-                    mapWidth: 20,
-                    mapHeight: 10,
-                });
-            }
-            // For single-room sidepath mazes, the exit rope-down ladder is placed by
-            // `populateSingleRoomSidepathMaze`. Do NOT add another environment-driven downladder here.
-            if (!isSingleRoomSidepathMaze) {
-                const envDriven = this.getEnvDrivenSidePathOptions();
-                if (envDriven)
-                    this.addDownladder(envDriven);
+            // Sidepath ladder placement — all progression logic lives in levelProgressionConfig.ts.
+            // Single-room sidepath mazes place their own exit ladder in populateSingleRoomSidepathMaze,
+            // so we skip the env-driven spec here to avoid a duplicate.
+            const sidePathSpecs = (0, levelProgressionConfig_1.getSidePathSpecs)(this.level.depth, this.level.environment.type, {
+                skipEnvDriven: isSingleRoomSidepathMaze,
+                numParentRooms: this.numRooms(),
+            });
+            for (const spec of sidePathSpecs) {
+                this.addDownladder(spec.options);
             }
             // If the main-path down ladder is configured to require a key, but there is no
             // sidepath entry that leads to a castle-like environment (where the key is placed),
@@ -74737,19 +74896,7 @@ class Populator {
                 position.y === undefined)
                 return;
             // Place a DownLadder tile directly; avoid entity side-effects post-load
-            const env = opts?.envType
-                ? opts.envType
-                : downLadderRoom.depth < 2
-                    ? environmentTypes_1.EnvType.FOREST
-                    : downLadderRoom.depth === 2
-                        ? environmentTypes_1.EnvType.CAVE
-                        : downLadderRoom.depth === 3
-                            ? environmentTypes_1.EnvType.FLOODED_CAVE
-                            : downLadderRoom.depth > 3
-                                ? random_1.Random.rand() < 0.5
-                                    ? environmentTypes_1.EnvType.FOREST
-                                    : environmentTypes_1.EnvType.CAVE
-                                : environmentTypes_1.EnvType.CAVE;
+            const env = opts?.envType ?? (0, levelProgressionConfig_1.getDefaultSidePathEnv)(downLadderRoom.depth);
             const lockOverride = opts && typeof opts.locked === "boolean"
                 ? { lockType: opts.locked ? lockable_1.LockType.LOCKED : lockable_1.LockType.NONE }
                 : undefined;
@@ -74992,7 +75139,7 @@ class Populator {
         this.populateRopeHole = (room, rand) => {
             // Removed: this.addRandomTorches(room, "medium");
             const { x, y } = room.getRoomCenter();
-            const environment = room.depth < 1 ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+            const environment = (0, levelProgressionConfig_1.getDefaultSidePathEnv)(room.depth);
             //console.log("About to create DownLadder in rope hole");
             let d = new downLadder_1.DownLadder(room, room.game, x, y, true, environment);
             //console.log("DownLadder created, about to add to room array");
@@ -75189,52 +75336,6 @@ class Populator {
         if (maxX < minX || maxY < minY)
             return tiles;
         return tiles.filter((t) => t.x >= minX && t.x <= maxX && t.y >= minY && t.y <= maxY);
-    }
-    /**
-     * Mapping for "sidepath of a sidepath" (i.e., the rope-down exit inside a sidepath)
-     * and for environment-driven sidepath ladders.
-     *
-     * Keep this centralized so single-room and multi-room sidepaths stay consistent.
-     */
-    getNextSidePathEnvType(current) {
-        switch (current) {
-            case environmentTypes_1.EnvType.CAVE:
-                return environmentTypes_1.EnvType.FLOODED_CAVE;
-            case environmentTypes_1.EnvType.FOREST:
-                return environmentTypes_1.EnvType.CASTLE;
-            case environmentTypes_1.EnvType.DARK_DUNGEON:
-                return environmentTypes_1.EnvType.DARK_CASTLE;
-            case environmentTypes_1.EnvType.DARK_CASTLE:
-                return environmentTypes_1.EnvType.MAGMA_CAVE;
-            // No further sidepath routing from these (by design / not yet implemented).
-            case environmentTypes_1.EnvType.CASTLE:
-            case environmentTypes_1.EnvType.MAGMA_CAVE:
-            case environmentTypes_1.EnvType.FLOODED_CAVE:
-            case environmentTypes_1.EnvType.TUTORIAL:
-            case environmentTypes_1.EnvType.DUNGEON:
-            default:
-                return null;
-        }
-    }
-    getEnvDrivenSidePathOptions() {
-        const env = this.level.environment.type;
-        if (sidePathManager_1.CASTLE_LIKE_ENV_TYPES.has(env))
-            return null;
-        if (env === environmentTypes_1.EnvType.CAVE) {
-            return (0, sidePathManager_1.createDarkCastleSidePathOptions)();
-        }
-        if (env === environmentTypes_1.EnvType.DARK_DUNGEON) {
-            return {
-                caveRooms: this.numRooms() * 2,
-                locked: true,
-                envType: environmentTypes_1.EnvType.DARK_CASTLE,
-                linearity: 0.8,
-            };
-        }
-        if (env === environmentTypes_1.EnvType.FOREST) {
-            return (0, sidePathManager_1.createCastleSidePathOptions)();
-        }
-        return null;
     }
     /**
      * Prefer tiles within the padded interior, but gracefully relax padding if it would
@@ -77198,8 +77299,9 @@ class Populator {
             // The exit rope-down ladder in a sidepath should use the *current environment's*
             // env-driven sidepath options (e.g., FOREST -> CASTLE). Do NOT reuse this room's
             // own generationOptions.envType, which describes how this room was generated.
-            const exitOpts = this.getEnvDrivenSidePathOptions();
-            const desiredExitEnv = exitOpts?.envType ?? null;
+            const exitSpec = (0, levelProgressionConfig_1.getEnvDrivenSidePathSpec)(this.level.environment.type, this.numRooms());
+            const exitOpts = exitSpec?.options ?? null;
+            const desiredExitEnv = exitSpec?.environment ?? null;
             if (desiredExitEnv === null) {
                 // No configured sidepath for this environment: ensure no exit ladder exists.
                 for (const d of sideDowns) {
@@ -77339,12 +77441,13 @@ class Populator {
         up.isSidePath = true;
         room.roomArray[entrance.x][entrance.y] = up;
         // Place the exit downladder (locked) at exit endpoint.
-        const exitOpts = this.getEnvDrivenSidePathOptions();
-        const exitEnv = exitOpts?.envType ?? null;
-        const placedKeyAndExit = exitEnv !== null && !!exitEndpoint && !!keyEndpoint;
+        const mazeExitSpec = (0, levelProgressionConfig_1.getEnvDrivenSidePathSpec)(this.level.environment.type, this.numRooms());
+        const mazeExitEnv = mazeExitSpec?.environment ?? null;
+        const mazeExitOpts = mazeExitSpec?.options ?? null;
+        const placedKeyAndExit = mazeExitEnv !== null && !!exitEndpoint && !!keyEndpoint;
         if (placedKeyAndExit) {
             const dl = new downLadder_1.DownLadder(room, room.game, exitEndpoint.x, exitEndpoint.y, true, // sidepath down ladder (rope down)
-            exitEnv, lockable_1.LockType.LOCKED, exitOpts ?? opts);
+            mazeExitEnv, lockable_1.LockType.LOCKED, mazeExitOpts ?? opts);
             room.roomArray[exitEndpoint.x][exitEndpoint.y] = dl;
             // Place a key to unlock the exit downladder.
             const key = new key_1.Key(room, keyEndpoint.x, keyEndpoint.y);
