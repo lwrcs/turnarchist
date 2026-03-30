@@ -26141,7 +26141,7 @@ class Game {
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
         // Reference package.json
-        this.version = "0.3.0";
+        this.version = "0.3.1";
         this.loginMessage = "";
         /**
          * True while a save is being loaded and the Game instance is temporarily in an inconsistent state
