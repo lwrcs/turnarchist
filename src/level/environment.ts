@@ -223,7 +223,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SkullEnemy, weight: 1.0, minDepth: 0 },
       { class: SpiderEnemy, weight: 1.0, minDepth: 2 },
       { class: MummyEnemy, weight: 1.0, minDepth: 2 },
-      { class: PawnEnemy, weight: 0.5, minDepth: 1 },
+      { class: PawnEnemy, weight: 0.5, minDepth: 2 },
       { class: KingEnemy, weight: 0.1, minDepth: 2 },
       { class: BoltcasterEnemy, weight: 0.25, minDepth: 4 },
 
@@ -399,7 +399,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       }, // Frogs love forests
       {
         class: BeetleEnemy,
-        weight: 0.1,
+        weight: 0.001,
         minDepth: 0,
         blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
       }, // Rare magic users
@@ -428,20 +428,20 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       // Rare magical forest creatures
       {
         class: EnergyWizardEnemy,
-        weight: 0.2,
+        weight: 0.05,
         minDepth: 1,
         blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
       }, // Forest wizards
       {
         class: EarthWizardEnemy,
-        weight: 0.2,
+        weight: 0.05,
         minDepth: 1,
         blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
       },
       //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
       {
         class: BigFrogEnemy,
-        weight: 0.1,
+        weight: 0.01,
         minDepth: 2,
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },

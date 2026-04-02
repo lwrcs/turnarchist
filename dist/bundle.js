@@ -55673,7 +55673,7 @@ const environmentData = {
             { class: skullEnemy_1.SkullEnemy, weight: 1.0, minDepth: 0 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.0, minDepth: 2 },
             { class: mummyEnemy_1.MummyEnemy, weight: 1.0, minDepth: 2 },
-            { class: pawnEnemy_1.PawnEnemy, weight: 0.5, minDepth: 1 },
+            { class: pawnEnemy_1.PawnEnemy, weight: 0.5, minDepth: 2 },
             { class: kingEnemy_1.KingEnemy, weight: 0.1, minDepth: 2 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 4 },
             // Mid game enemies (depth 1+)
@@ -55845,7 +55845,7 @@ const environmentData = {
             },
             {
                 class: beetleEnemy_1.BeetleEnemy,
-                weight: 0.1,
+                weight: 0.001,
                 minDepth: 0,
                 blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
             },
@@ -55872,20 +55872,20 @@ const environmentData = {
             // Rare magical forest creatures
             {
                 class: energyWizard_1.EnergyWizardEnemy,
-                weight: 0.2,
+                weight: 0.05,
                 minDepth: 1,
                 blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
             },
             {
                 class: earthWizard_1.EarthWizardEnemy,
-                weight: 0.2,
+                weight: 0.05,
                 minDepth: 1,
                 blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
             },
             //{ class: ChargeEnemy, weight: 0.3, minDepth: 2 }, // Charging forest beasts
             {
                 class: bigFrogEnemy_1.BigFrogEnemy,
-                weight: 0.1,
+                weight: 0.01,
                 minDepth: 2,
                 specialSpawnLogic: "clearFloor",
                 size: { w: 2, h: 2 },
