@@ -36605,9 +36605,9 @@ GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spa
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
-GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.04; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.028; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
-GameplaySettings.MAX_ENEMY_DENSITY = 0.25; // Maximum enemy density cap
+GameplaySettings.MAX_ENEMY_DENSITY = 0.175; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
