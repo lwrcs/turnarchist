@@ -265,11 +265,11 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     bosses: [
       // "Reaper" boss is the Spawner enemy.
       { class: Spawner, depth: 0, weight: 0.9 },
-      { class: QueenEnemy, depth: 0, weight: 0.6, maxDepth: 0 },
       { class: BigSkullEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
       { class: BigZombieEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
-      { class: BigFrogEnemy, depth: 0, weight: 0.35, big: true },
-      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: QueenEnemy, depth: 1, weight: 0.6, maxDepth: 4 },
+      { class: BigFrogEnemy, depth: 1, weight: 0.35, big: true },
+      { class: ExalterEnemy, depth: 1, weight: 0.35 },
       { class: OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
       { class: WardenEnemy, depth: 5, weight: 0.5, big: true },
     ],
@@ -614,9 +614,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
     ],
     bosses: [
-      { class: ExalterEnemy, depth: 0, weight: 0.8 },
-      { class: OccultistEnemy, depth: 0, weight: 0.35, maxDepth: 4 },
-      { class: WardenEnemy, depth: 4, weight: 0.6, big: true },
+      { class: WardenEnemy, depth: 2, weight: 1.0, big: true },
     ],
   },
   [EnvType.PLACEHOLDER]: {

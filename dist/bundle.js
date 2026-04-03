@@ -55769,11 +55769,11 @@ const environmentData = {
         bosses: [
             // "Reaper" boss is the Spawner enemy.
             { class: spawner_1.Spawner, depth: 0, weight: 0.9 },
-            { class: queenEnemy_1.QueenEnemy, depth: 0, weight: 0.6, maxDepth: 0 },
             { class: bigSkullEnemy_1.BigSkullEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
             { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
-            { class: bigFrogEnemy_1.BigFrogEnemy, depth: 0, weight: 0.35, big: true },
-            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: queenEnemy_1.QueenEnemy, depth: 1, weight: 0.6, maxDepth: 4 },
+            { class: bigFrogEnemy_1.BigFrogEnemy, depth: 1, weight: 0.35, big: true },
+            { class: exalterEnemy_1.ExalterEnemy, depth: 1, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.5, big: true },
         ],
@@ -56106,9 +56106,7 @@ const environmentData = {
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
         ],
         bosses: [
-            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.8 },
-            { class: occultistEnemy_1.OccultistEnemy, depth: 0, weight: 0.35, maxDepth: 4 },
-            { class: wardenEnemy_1.WardenEnemy, depth: 4, weight: 0.6, big: true },
+            { class: wardenEnemy_1.WardenEnemy, depth: 2, weight: 1.0, big: true },
         ],
     },
     [environmentTypes_1.EnvType.PLACEHOLDER]: {
