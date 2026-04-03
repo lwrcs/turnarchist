@@ -142,14 +142,16 @@ export class MummyEnemy extends Enemy {
                   this.game.players[i].y === moveY
                 ) {
                   // Attack the player if they are in the way
-                  this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
-                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (
-                    this.game.players[i] ===
-                    this.game.players[this.game.localPlayerID]
-                  )
-                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                  if (!this.shouldSkipAttack()) {
+                    this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                    if (
+                      this.game.players[i] ===
+                      this.game.players[this.game.localPlayerID]
+                    )
+                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                  }
                 }
               }
               if (!hitPlayer) {

@@ -144,16 +144,18 @@ export class FrogEnemy extends Enemy {
                   this.game.players[i].x === moves[1].pos.x &&
                   this.game.players[i].y === moves[1].pos.y
                 ) {
-                  this.game.players[i].hurt(this.hit(), this.name, {
-                    source: { x: this.x, y: this.y },
-                  });
-                  this.drawX += 1.5 * (this.x - this.game.players[i].x);
-                  this.drawY += 1.5 * (this.y - this.game.players[i].y);
-                  if (
-                    this.game.players[i] ===
-                    this.game.players[this.game.localPlayerID]
-                  )
-                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                  if (!this.shouldSkipAttack()) {
+                    this.game.players[i].hurt(this.hit(), this.name, {
+                      source: { x: this.x, y: this.y },
+                    });
+                    this.drawX += 1.5 * (this.x - this.game.players[i].x);
+                    this.drawY += 1.5 * (this.y - this.game.players[i].y);
+                    if (
+                      this.game.players[i] ===
+                      this.game.players[this.game.localPlayerID]
+                    )
+                      this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                  }
                   hitPlayer = true;
                 }
               }

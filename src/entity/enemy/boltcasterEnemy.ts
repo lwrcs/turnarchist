@@ -315,7 +315,7 @@ export class BoltcasterEnemy extends Enemy {
     );
 
     // Apply damage
-    if (hitPlayer && player) {
+    if (hitPlayer && player && !this.shouldSkipAttack()) {
       const src = this.closestTileToPoint(player.x, player.y);
       player.hurt(this.hit(), this.name, { source: { x: src.x, y: src.y } });
     } else if (hitEntity) {

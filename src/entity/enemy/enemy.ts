@@ -59,6 +59,7 @@ export abstract class Enemy extends Entity {
   private bleedHitCount: number;
   protected alertRange: number;
   justHurt: boolean = false;
+  hurtThisTurn: boolean = false;
   orthogonalAttack: boolean;
   diagonalAttack: boolean;
   buffed: boolean;
@@ -95,6 +96,7 @@ export abstract class Enemy extends Entity {
     this.bleedHitCount = 0;
     this.drawMoveSpeed = 0.85; //lower is faster
     this.justHurt = false;
+    this.hurtThisTurn = false;
     this.orthogonalAttack = false;
     this.diagonalAttack = false;
     this.baseDamage = 1;
@@ -234,17 +236,6 @@ export abstract class Enemy extends Entity {
     }
   };
 
-  tick = () => {
-    this.tickPoison();
-    this.tickBleed();
-    this.behavior();
-    if (this.x !== this.lastX || this.y !== this.lastY) {
-      this.emitEntityData();
-    }
-    if (this.shielded) this.shield.updateLightSourcePos();
-    this.alertNearbyEnemies();
-  };
-
   lookForPlayer = (face: boolean = true) => {
     if (this.seenPlayer) return;
 
@@ -343,6 +334,18 @@ export abstract class Enemy extends Entity {
     } else return false;
   };
 
+  tick = () => {
+    this.tickPoison();
+    this.tickBleed();
+    this.behavior();
+    if (this.x !== this.lastX || this.y !== this.lastY) {
+      this.emitEntityData();
+    }
+    if (this.shielded) this.shield.updateLightSourcePos();
+    this.alertNearbyEnemies();
+    this.hurtThisTurn = false;
+  };
+
   behavior = () => {
     // Store the current position
     this.lastX = this.x;
@@ -418,16 +421,18 @@ export abstract class Enemy extends Entity {
                   this.game.players[i].y === moveY
                 ) {
                   // Attack the player if they are in the way
-                  this.game.players[i].hurt(this.hit(), this.name, {
-                    source: { x: this.x, y: this.y },
-                  });
-                  this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                  this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                  if (
-                    this.game.players[i] ===
-                    this.game.players[this.game.localPlayerID]
-                  )
-                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                  if (!this.shouldSkipAttack()) {
+                    this.game.players[i].hurt(this.hit(), this.name, {
+                      source: { x: this.x, y: this.y },
+                    });
+                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                    if (
+                      this.game.players[i] ===
+                      this.game.players[this.game.localPlayerID]
+                    )
+                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                  }
                 }
               }
               if (!hitPlayer) {
@@ -802,9 +807,22 @@ export abstract class Enemy extends Entity {
     if (this.health > 0) {
       if (type === "none") {
         this.justHurt = true;
+        this.hurtThisTurn = true;
       }
     }
   };
+
+  /**
+   * Returns true if this enemy should skip its attack this turn because it was
+   * hit by the player. Consuming the flag here resets it so it doesn't persist.
+   * Only active when GameplaySettings.HIT_STUNS_ATTACK is enabled.
+   */
+  protected shouldSkipAttack(): boolean {
+    if (!GameplaySettings.HIT_STUNS_ATTACK) return false;
+    const skip = this.hurtThisTurn;
+    this.hurtThisTurn = false;
+    return skip;
+  }
 
   stun = () => {
     if (this.stunned) return;

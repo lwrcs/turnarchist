@@ -75,6 +75,13 @@ export class GameplaySettings {
    */
   static MAIN_PATH_KEY_REQUIRED = true;
 
+  /**
+   * When enabled, an enemy that takes damage from the player cannot attack back
+   * in the same turn. Movement is unaffected — only the damage call is skipped.
+   * Chess pieces (which use the existing justHurt retreat mechanic) are exempt.
+   */
+  static HIT_STUNS_ATTACK: boolean = true;
+
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 

@@ -161,7 +161,9 @@ export class ChargeEnemy extends Enemy {
                 (this.targetY <= this.game.players[i].y &&
                   this.game.players[i].y < this.y)))
           ) {
-            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+            if (!this.shouldSkipAttack()) {
+              this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+            }
           }
         }
 

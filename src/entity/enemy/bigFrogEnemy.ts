@@ -292,16 +292,18 @@ export class BigFrogEnemy extends Enemy {
                   wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)
                 ) {
                   const closestTile = this.closestTile(this.game.players[i]);
-                  this.game.players[i].hurt(this.hit(), this.name, {
-                    source: { x: closestTile.x, y: closestTile.y },
-                  });
-                  this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
-                  this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
-                  if (
-                    this.game.players[i] ===
-                    this.game.players[this.game.localPlayerID]
-                  )
-                    this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                  if (!this.shouldSkipAttack()) {
+                    this.game.players[i].hurt(this.hit(), this.name, {
+                      source: { x: closestTile.x, y: closestTile.y },
+                    });
+                    this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
+                    this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
+                    if (
+                      this.game.players[i] ===
+                      this.game.players[this.game.localPlayerID]
+                    )
+                      this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                  }
                   hitPlayer = true;
                 }
               }

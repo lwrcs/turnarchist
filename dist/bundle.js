@@ -10834,8 +10834,10 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24);
                 this.kill();
             }
-            else
+            else {
+                this.hurtThisTurn = true;
                 this.hurtCallback();
+            }
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -10901,14 +10903,16 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -11134,12 +11138,14 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY &&
                                         oldDir == this.direction) {
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -11474,7 +11480,7 @@ class BeetleEnemy extends enemy_1.Enemy {
                     this.game.players[i].x === destX &&
                     this.game.players[i].y === destY) {
                     // Only allow attacks when moving 2-3 tiles in a single action
-                    if (stepDist >= 2 && stepDist <= 3) {
+                    if (stepDist >= 2 && stepDist <= 3 && !this.shouldSkipAttack()) {
                         this.game.players[i].hurt(this.hit(), this.name, {
                             source: { x: this.x, y: this.y },
                         });
@@ -12120,14 +12126,16 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                         continue;
                                     if (wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)) {
                                         const closestTile = this.closestTile(this.game.players[i]);
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: closestTile.x, y: closestTile.y },
-                                        });
-                                        this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
-                                        this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: closestTile.x, y: closestTile.y },
+                                            });
+                                            this.drawX += 1.5 * (closestTile.x - this.game.players[i].x);
+                                            this.drawY += 1.5 * (closestTile.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        }
                                         hitPlayer = true;
                                     }
                                 }
@@ -12728,8 +12736,10 @@ class BigSkullEnemy extends enemy_1.Enemy {
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 1, this.y + 1, 0, 24);
                 this.kill();
             }
-            else
+            else {
+                this.hurtThisTurn = true;
                 this.hurtCallback();
+            }
         };
         this.bleed = () => { };
         this.poison = () => { };
@@ -12818,14 +12828,16 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                     const closestTile = this.closestTile(this.game.players[i]);
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         wouldHit(this.game.players[i], moveX, moveY)) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                         hitPlayer = true;
                                     }
                                 }
@@ -13113,14 +13125,16 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                         }
                                         if (playerHit) {
                                             const src = this.closestTileToPoint(this.game.players[i].x, this.game.players[i].y);
-                                            this.game.players[i].hurt(this.hit(), this.name, {
-                                                source: { x: src.x, y: src.y },
-                                            });
-                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                            if (this.game.players[i] ===
-                                                this.game.players[this.game.localPlayerID])
-                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            if (!this.shouldSkipAttack()) {
+                                                this.game.players[i].hurt(this.hit(), this.name, {
+                                                    source: { x: src.x, y: src.y },
+                                                });
+                                                this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                                this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                                if (this.game.players[i] ===
+                                                    this.game.players[this.game.localPlayerID])
+                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            }
                                             hitPlayer = true;
                                         }
                                     }
@@ -13770,7 +13784,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
             const finalEndY = horizontal ? endY - 0.25 : endY;
             this.room.particles.push(new arrowParticle_1.ArrowParticle(this.room, startX, startY, finalEndX, finalEndY));
             // Apply damage
-            if (hitPlayer && player) {
+            if (hitPlayer && player && !this.shouldSkipAttack()) {
                 const src = this.closestTileToPoint(player.x, player.y);
                 player.hurt(this.hit(), this.name, { source: { x: src.x, y: src.y } });
             }
@@ -14122,7 +14136,9 @@ class ChargeEnemy extends enemy_1.Enemy {
                                     this.game.players[i].y <= this.targetY) ||
                                     (this.targetY <= this.game.players[i].y &&
                                         this.game.players[i].y < this.y)))) {
-                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                            if (!this.shouldSkipAttack()) {
+                                this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                            }
                         }
                     }
                     this.startX = this.x;
@@ -14347,14 +14363,16 @@ class CrabEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                         hitPlayer = true;
                                     }
                                 }
@@ -15049,6 +15067,7 @@ class Enemy extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
         this.justHurt = false;
+        this.hurtThisTurn = false;
         this.hit = () => {
             return this.damage;
         };
@@ -15151,17 +15170,6 @@ class Enemy extends entity_1.Entity {
                 }
             }
         };
-        this.tick = () => {
-            this.tickPoison();
-            this.tickBleed();
-            this.behavior();
-            if (this.x !== this.lastX || this.y !== this.lastY) {
-                this.emitEntityData();
-            }
-            if (this.shielded)
-                this.shield.updateLightSourcePos();
-            this.alertNearbyEnemies();
-        };
         this.lookForPlayer = (face = true) => {
             if (this.seenPlayer)
                 return;
@@ -15252,6 +15260,18 @@ class Enemy extends entity_1.Entity {
             else
                 return false;
         };
+        this.tick = () => {
+            this.tickPoison();
+            this.tickBleed();
+            this.behavior();
+            if (this.x !== this.lastX || this.y !== this.lastY) {
+                this.emitEntityData();
+            }
+            if (this.shielded)
+                this.shield.updateLightSourcePos();
+            this.alertNearbyEnemies();
+            this.hurtThisTurn = false;
+        };
         this.behavior = () => {
             // Store the current position
             this.lastX = this.x;
@@ -15317,14 +15337,16 @@ class Enemy extends entity_1.Entity {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -15476,6 +15498,7 @@ class Enemy extends entity_1.Entity {
             if (this.health > 0) {
                 if (type === "none") {
                     this.justHurt = true;
+                    this.hurtThisTurn = true;
                 }
             }
         };
@@ -15696,6 +15719,7 @@ class Enemy extends entity_1.Entity {
         this.bleedHitCount = 0;
         this.drawMoveSpeed = 0.85; //lower is faster
         this.justHurt = false;
+        this.hurtThisTurn = false;
         this.orthogonalAttack = false;
         this.diagonalAttack = false;
         this.baseDamage = 1;
@@ -15877,6 +15901,18 @@ class Enemy extends entity_1.Entity {
             m.pos.y = m.pos.y + top;
         }
         return moves;
+    }
+    /**
+     * Returns true if this enemy should skip its attack this turn because it was
+     * hit by the player. Consuming the flag here resets it so it doesn't persist.
+     * Only active when GameplaySettings.HIT_STUNS_ATTACK is enabled.
+     */
+    shouldSkipAttack() {
+        if (!gameplaySettings_1.GameplaySettings.HIT_STUNS_ATTACK)
+            return false;
+        const skip = this.hurtThisTurn;
+        this.hurtThisTurn = false;
+        return skip;
     }
     get lastPlayerPos() {
         return {
@@ -16546,14 +16582,16 @@ class FrogEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[1].pos.x &&
                                         this.game.players[i].y === moves[1].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX += 1.5 * (this.x - this.game.players[i].x);
-                                        this.drawY += 1.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX += 1.5 * (this.x - this.game.players[i].x);
+                                            this.drawY += 1.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        }
                                         hitPlayer = true;
                                     }
                                 }
@@ -17383,12 +17421,14 @@ class MummyEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, { source: { x: this.x, y: this.y } });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -18505,8 +18545,10 @@ class SkullEnemy extends enemy_1.Enemy {
                 imageParticle_1.ImageParticle.spawnCluster(this.room, this.x + 0.5, this.y + 0.5, 0, 24);
                 this.kill();
             }
-            else
+            else {
+                this.hurtThisTurn = true;
                 this.hurtCallback();
+            }
         };
         this.behavior = () => {
             this.lastX = this.x;
@@ -18569,14 +18611,16 @@ class SkullEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -19323,13 +19367,15 @@ class SpiderEnemy extends enemy_1.Enemy {
                 if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                     this.game.players[i].x === destX &&
                     this.game.players[i].y === destY) {
-                    this.game.players[i].hurt(this.hit(), this.name, {
-                        source: { x: this.x, y: this.y },
-                    });
-                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                    if (this.game.players[i] === this.game.players[this.game.localPlayerID])
-                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    if (!this.shouldSkipAttack()) {
+                        this.game.players[i].hurt(this.hit(), this.name, {
+                            source: { x: this.x, y: this.y },
+                        });
+                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                        if (this.game.players[i] === this.game.players[this.game.localPlayerID])
+                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    }
                     hitPlayer = true;
                 }
             }
@@ -19853,14 +19899,16 @@ class WardenEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                         hitPlayer = true;
                                     }
                                 }
@@ -20364,14 +20412,16 @@ class ZombieEnemy extends enemy_1.Enemy {
                                         this.game.players[i].x === moveX &&
                                         this.game.players[i].y === moveY) {
                                         // Attack the player if they are in the way
-                                        this.game.players[i].hurt(this.hit(), this.name, {
-                                            source: { x: this.x, y: this.y },
-                                        });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -36531,6 +36581,12 @@ GameplaySettings.MAIN_PATH_LOOPINESS = 0.05;
  * Current design: that key is placed in the CASTLE sidepath's post-boss exit room.
  */
 GameplaySettings.MAIN_PATH_KEY_REQUIRED = true;
+/**
+ * When enabled, an enemy that takes damage from the player cannot attack back
+ * in the same turn. Movement is unaffected — only the damage call is skipped.
+ * Chess pieces (which use the existing justHurt retreat mechanic) are exempt.
+ */
+GameplaySettings.HIT_STUNS_ATTACK = true;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;

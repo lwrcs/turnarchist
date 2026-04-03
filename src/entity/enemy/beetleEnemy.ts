@@ -302,7 +302,7 @@ export class BeetleEnemy extends Enemy {
         this.game.players[i].y === destY
       ) {
         // Only allow attacks when moving 2-3 tiles in a single action
-        if (stepDist >= 2 && stepDist <= 3) {
+        if (stepDist >= 2 && stepDist <= 3 && !this.shouldSkipAttack()) {
           this.game.players[i].hurt(this.hit(), this.name, {
             source: { x: this.x, y: this.y },
           });
