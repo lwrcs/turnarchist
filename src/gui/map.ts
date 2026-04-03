@@ -885,12 +885,13 @@ export class Map {
     Game.ctx.save(); // Save the current canvas state
     for (const door of doors) {
       if (!this.shouldDrawTile(door.x, door.y)) continue;
-      if (door.opened === false) Game.ctx.fillStyle = "#5A5A5A";
-      if (door.opened === true) {
+      if (door.opened === false && GameConstants.DEVELOPER_MODE) {
+        Game.ctx.fillStyle = "#00AA00";
+        Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+      } else if (door.opened === true) {
         Game.ctx.fillStyle = "black";
         Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
       }
-      Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
     }
     Game.ctx.restore(); // Restore the canvas state
   };

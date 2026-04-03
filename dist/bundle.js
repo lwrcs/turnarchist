@@ -36605,9 +36605,9 @@ GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spa
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
-GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.028; // Multiplied by (depth + 2) for base density
+GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.019; // Multiplied by (depth + 2) for base density
 GameplaySettings.ENEMY_DENSITY_DEPTH_OFFSET = 2; // Added to depth before multiplying
-GameplaySettings.MAX_ENEMY_DENSITY = 0.175; // Maximum enemy density cap
+GameplaySettings.MAX_ENEMY_DENSITY = 0.117; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
@@ -45465,13 +45465,14 @@ class Map {
             for (const door of doors) {
                 if (!this.shouldDrawTile(door.x, door.y))
                     continue;
-                if (door.opened === false)
-                    game_1.Game.ctx.fillStyle = "#5A5A5A";
-                if (door.opened === true) {
+                if (door.opened === false && gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                    game_1.Game.ctx.fillStyle = "#00AA00";
+                    game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
+                }
+                else if (door.opened === true) {
                     game_1.Game.ctx.fillStyle = "black";
                     game_1.Game.ctx.fillRect(door.x * s, door.y * s, 1 * s, 1 * s);
                 }
-                game_1.Game.ctx.fillStyle = "#5A5A5A"; // Reset to default after each door
             }
             game_1.Game.ctx.restore(); // Restore the canvas state
         };
@@ -76251,15 +76252,10 @@ class Populator {
         if (tiles.length === 0)
             return;
         const enemyBlobFieldCache = new Map();
-        // Existing door avoidance logic
-        const excludedCoords = new Set();
-        for (const door of room.doors) {
-            for (let dx = -2; dx <= 2; dx++) {
-                for (let dy = -2; dy <= 2; dy++) {
-                    excludedCoords.add(`${door.x + dx},${door.y + dy}`);
-                }
-            }
-        }
+        // Exclude tiles around entry-side doors only — exit doors are left open for spawns.
+        const entryPoint = this.computeEntryPoint(room);
+        const exitPoint = this.computeExitPoint(room);
+        const excludedCoords = this.buildEntryExclusionZone(room);
         tiles = tiles.filter((tile) => !excludedCoords.has(`${tile.x},${tile.y}`));
         // Spawn enemies
         for (let i = 0; i < numEnemies; i++) {
@@ -76285,7 +76281,7 @@ class Populator {
             if (candidateTiles.length === 0) {
                 continue;
             }
-            const position = room.getRandomEmptyPosition(candidateTiles);
+            const position = this.pickTileFarFromEntry(candidateTiles, entryPoint, exitPoint);
             if (position === null)
                 break;
             const { x, y } = position;
@@ -76320,6 +76316,148 @@ class Populator {
                 tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
+    }
+    /**
+     * Builds a set of tile coord strings to exclude from enemy spawning.
+     * Only excludes the 5×5 zone around entry-side doors (those leading back toward
+     * the start room). Exit doors are intentionally left unexcluded so enemies can
+     * spawn near them. Falls back to excluding all doors if distMap is not provided
+     * and the room has no door with a clearly lower-distanced linked room.
+     */
+    buildEntryExclusionZone(room, distMap) {
+        const excluded = new Set();
+        const map = distMap ?? (room.level ? this.computeRoomDistanceFromStart(room.level) : null);
+        // Find the minimum linked-room distance to identify entry-side doors.
+        let minLinkedDist = Infinity;
+        for (const door of room.doors) {
+            const linkedDist = map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
+            if (linkedDist < minLinkedDist)
+                minLinkedDist = linkedDist;
+        }
+        for (const door of room.doors) {
+            const linkedDist = map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
+            // Only exclude around doors on the entry side (same min distance tier).
+            if (linkedDist > minLinkedDist)
+                continue;
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    excluded.add(`${door.x + dx},${door.y + dy}`);
+                }
+            }
+        }
+        return excluded;
+    }
+    /**
+     * Returns the tile position of the most likely player entry point for a room.
+     * For rooms with door connections, finds the door leading back toward the start
+     * room (lowest distMap value). For single-room levels with no doors, falls back
+     * to the UpLadder tile position.
+     */
+    computeEntryPoint(room) {
+        if (room.doors.length > 0 && room.level) {
+            const distMap = this.computeRoomDistanceFromStart(room.level);
+            let entryX = -1;
+            let entryY = -1;
+            let minLinkedDist = Infinity;
+            for (const door of room.doors) {
+                const linkedRoom = door.linkedDoor?.room;
+                if (!linkedRoom)
+                    continue;
+                const linkedDist = distMap.get(linkedRoom.globalId) ?? Infinity;
+                if (linkedDist < minLinkedDist) {
+                    minLinkedDist = linkedDist;
+                    entryX = door.x;
+                    entryY = door.y;
+                }
+            }
+            if (entryX >= 0)
+                return { x: entryX, y: entryY };
+        }
+        return room.findPrimaryUpLadderCoords() ?? null;
+    }
+    /**
+     * Returns the tile position of the player's most likely exit from a room.
+     * For rooms with door connections, finds the door leading away from start
+     * (highest distMap value among neighbours). For single-room levels, falls back
+     * to the DownLadder tile position.
+     */
+    computeExitPoint(room) {
+        if (room.doors.length > 0 && room.level) {
+            const distMap = this.computeRoomDistanceFromStart(room.level);
+            let exitX = -1;
+            let exitY = -1;
+            let maxLinkedDist = -1;
+            for (const door of room.doors) {
+                const linkedRoom = door.linkedDoor?.room;
+                if (!linkedRoom)
+                    continue;
+                const linkedDist = distMap.get(linkedRoom.globalId) ?? -1;
+                if (linkedDist > maxLinkedDist) {
+                    maxLinkedDist = linkedDist;
+                    exitX = door.x;
+                    exitY = door.y;
+                }
+            }
+            if (exitX >= 0)
+                return { x: exitX, y: exitY };
+        }
+        return room.findPrimaryDownLadderCoords() ?? null;
+    }
+    /**
+     * Weighted random tile selection that favours tiles far from the entry point
+     * and near the exit point.
+     *
+     * Weight formula: entrance_dist_norm² × (1 + exit_proximity)
+     *   - entrance_dist_norm² strongly suppresses tiles near the entrance
+     *   - exit_proximity (1 at exit, 0 far away) boosts tiles near the exit
+     *   - if entry and exit are adjacent, entrance suppression still wins
+     *
+     * Splices the chosen tile from `tiles` (mirrors getRandomEmptyPosition behaviour).
+     */
+    pickTileFarFromEntry(tiles, entry, exit = null) {
+        if (tiles.length === 0)
+            return null;
+        if (!entry) {
+            const idx = Math.floor(random_1.Random.rand() * tiles.length);
+            const tile = tiles.splice(idx, 1)[0];
+            return { x: tile.x, y: tile.y };
+        }
+        const entryDists = tiles.map((t) => Math.abs(t.x - entry.x) + Math.abs(t.y - entry.y));
+        const maxEntryDist = Math.max(...entryDists);
+        if (maxEntryDist === 0) {
+            const idx = Math.floor(random_1.Random.rand() * tiles.length);
+            const tile = tiles.splice(idx, 1)[0];
+            return { x: tile.x, y: tile.y };
+        }
+        let exitDists = null;
+        let maxExitDist = 0;
+        if (exit) {
+            exitDists = tiles.map((t) => Math.abs(t.x - exit.x) + Math.abs(t.y - exit.y));
+            maxExitDist = Math.max(...exitDists);
+        }
+        const weights = tiles.map((_, i) => {
+            const entranceNorm = entryDists[i] / maxEntryDist;
+            const exitProximity = exitDists && maxExitDist > 0 ? 1 - exitDists[i] / maxExitDist : 0;
+            // entrance_norm gates everything (near entrance → 0 regardless of exit),
+            // exit proximity adds an additive boost that can't be suppressed at a distance.
+            return entranceNorm * entranceNorm + entranceNorm * exitProximity;
+        });
+        const total = weights.reduce((s, w) => s + w, 0);
+        if (total <= 0) {
+            const idx = Math.floor(random_1.Random.rand() * tiles.length);
+            const tile = tiles.splice(idx, 1)[0];
+            return { x: tile.x, y: tile.y };
+        }
+        let r = random_1.Random.rand() * total;
+        for (let i = 0; i < tiles.length; i++) {
+            r -= weights[i];
+            if (r <= 0) {
+                const tile = tiles.splice(i, 1)[0];
+                return { x: tile.x, y: tile.y };
+            }
+        }
+        const tile = tiles.splice(tiles.length - 1, 1)[0];
+        return { x: tile.x, y: tile.y };
     }
     /**
      * BFS from level start room to compute room-hop distance for each room.
@@ -76359,19 +76497,28 @@ class Populator {
             if (room === castleExitRoom)
                 continue;
             let tiles = room.getEmptyTiles();
-            const excludedCoords = new Set();
-            for (const door of room.doors) {
-                for (let dx = -2; dx <= 2; dx++) {
-                    for (let dy = -2; dy <= 2; dy++) {
-                        excludedCoords.add(`${door.x + dx},${door.y + dy}`);
-                    }
-                }
-            }
+            // Exclude tiles around entry-side doors only — exit doors are left open for spawns.
+            const excludedCoords = this.buildEntryExclusionZone(room, distMap);
             tiles = tiles.filter((t) => !excludedCoords.has(`${t.x},${t.y}`));
             const d = distMap.get(room.globalId) ?? 0;
             const distNorm = maxDist > 0 ? d / maxDist : 0.5;
-            for (const tile of tiles) {
-                allTiles.push({ room, tile, distNorm });
+            // Find entry and exit points for this room.
+            const entryPoint = this.computeEntryPoint(room);
+            const exitPoint = this.computeExitPoint(room);
+            const entryDists = tiles.map((t) => entryPoint
+                ? Math.abs(t.x - entryPoint.x) + Math.abs(t.y - entryPoint.y)
+                : 0);
+            const maxEntryDist = entryDists.length > 0 ? Math.max(...entryDists) : 0;
+            const exitDists = exitPoint
+                ? tiles.map((t) => Math.abs(t.x - exitPoint.x) + Math.abs(t.y - exitPoint.y))
+                : null;
+            const maxExitDist = exitDists ? Math.max(...exitDists) : 0;
+            for (let j = 0; j < tiles.length; j++) {
+                const entranceNorm = entryPoint && maxEntryDist > 0 ? entryDists[j] / maxEntryDist : 0.5;
+                const exitProximity = exitDists && maxExitDist > 0 ? 1 - exitDists[j] / maxExitDist : 0;
+                // Normalise to [0,1]: max of (norm²+ norm×1) = 2 when norm=1, proximity=1.
+                const doorDistNorm = (entranceNorm * entranceNorm + entranceNorm * exitProximity) / 2;
+                allTiles.push({ room, tile: tiles[j], distNorm, doorDistNorm });
             }
         }
         let totalEnemies = 0;
@@ -76431,7 +76578,10 @@ class Populator {
             }
             const footprint = this.getEntityFootprint(selectedEnemy);
             const scores = candidatePool.map((e) => {
-                const w = (1 - entityWeight) * (1 - e.distNorm) + entityWeight * e.distNorm;
+                // Blend room-level distance from start with tile-level distance from
+                // the room's entry door, then apply entityWeight preference.
+                const positional = 0.5 * e.distNorm + 0.5 * e.doorDistNorm;
+                const w = (1 - entityWeight) * (1 - positional) + entityWeight * positional;
                 return { ...e, score: Math.max(0.001, w) };
             });
             const totalScore = scores.reduce((s, e) => s + e.score, 0);
@@ -76659,18 +76809,18 @@ class Populator {
         if (tiles.length === 0) {
             return;
         }
+        const entry = this.computeEntryPoint(room);
+        const exit = this.computeExitPoint(room);
         let lastSpawner = null;
         // If numSpawners is provided, force generate that many
         if (numSpawners !== undefined) {
             for (let i = 0; i < numSpawners; i++) {
-                const position = room.getRandomEmptyPosition(tiles);
+                const position = this.pickTileFarFromEntry(tiles, entry, exit);
                 if (position === null)
                     break;
                 const { x, y } = position;
                 const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
-                // Remove used tile
-                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
         else {
@@ -76679,13 +76829,12 @@ class Populator {
             for (let i = 0; i < maxPossibleSpawners; i++) {
                 if (rand() > gameplaySettings_1.GameplaySettings.SPAWNER_SPAWN_CHANCE)
                     continue;
-                const position = room.getRandomEmptyPosition(tiles);
+                const position = this.pickTileFarFromEntry(tiles, entry, exit);
                 if (position === null)
                     break;
                 const { x, y } = position;
                 const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
-                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
         return lastSpawner;
@@ -76695,17 +76844,17 @@ class Populator {
         if (tiles.length === 0) {
             return;
         }
+        const entry = this.computeEntryPoint(room);
+        const exit = this.computeExitPoint(room);
         let lastOccultist = null;
         // If numOccultists is provided, force generate that many
         if (numOccultists !== undefined) {
             for (let i = 0; i < numOccultists; i++) {
-                const position = room.getRandomEmptyPosition(tiles);
+                const position = this.pickTileFarFromEntry(tiles, entry, exit);
                 if (position === null)
                     break;
                 const { x, y } = position;
                 lastOccultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
-                // Remove used tile
-                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
         else {
@@ -76714,12 +76863,11 @@ class Populator {
             for (let i = 0; i < maxPossibleOccultists; i++) {
                 if (rand() > gameplaySettings_1.GameplaySettings.OCCULTIST_SPAWN_CHANCE)
                     continue;
-                const position = room.getRandomEmptyPosition(tiles);
+                const position = this.pickTileFarFromEntry(tiles, entry, exit);
                 if (position === null)
                     break;
                 const { x, y } = position;
                 lastOccultist = occultistEnemy_1.OccultistEnemy.add(room, room.game, x, y);
-                tiles = tiles.filter((t) => !(t.x === x && t.y === y));
             }
         }
         return lastOccultist;
@@ -76767,9 +76915,13 @@ class Populator {
             const boss = pickWeightedBoss(getEligibleBosses(), random_1.Random.rand);
             if (!boss)
                 return;
+            // Weight boss position toward the far end of the room from the entry point,
+            // with positive pull toward the exit.
+            const entry = this.computeEntryPoint(room);
+            const exit = this.computeExitPoint(room);
             const position = boss.big
                 ? room.getBigRandomEmptyPosition(tiles)
-                : room.getRandomEmptyPosition(tiles);
+                : this.pickTileFarFromEntry(tiles, entry, exit);
             if (position === null)
                 return;
             const { x, y } = position;
