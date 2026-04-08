@@ -50056,12 +50056,17 @@ DropTable.getDrop = (entity, useCategory = [], force = false, increaseDepth = 0,
             }
         }
     }
-    // Force drop the most common item if needed and we haven't dropped anything yet
+    // Force drop an item if needed and we haven't dropped anything yet.
+    // Find the minimum dropRate (most common), collect all tied candidates, pick one randomly.
     if (force && droppedCount === 0 && eligibleDrops.length > 0) {
-        const mostCommonDrop = eligibleDrops.reduce((prev, curr) => prev.dropRate < curr.dropRate ? prev : curr);
-        const item = _a.addNewItem(mostCommonDrop.itemType, entity);
-        if (item) {
-            droppedItems.push(item);
+        const minRate = eligibleDrops.reduce((min, d) => Math.min(min, d.dropRate), Infinity);
+        const candidates = eligibleDrops.filter((d) => d.dropRate === minRate);
+        const pick = candidates[Math.floor(random_1.Random.rand() * candidates.length)];
+        if (pick) {
+            const item = _a.addNewItem(pick.itemType, entity);
+            if (item) {
+                droppedItems.push(item);
+            }
         }
     }
     return droppedItems.length > 0 ? droppedItems : null;

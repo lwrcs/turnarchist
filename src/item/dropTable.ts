@@ -383,14 +383,20 @@ export class DropTable {
       }
     }
 
-    // Force drop the most common item if needed and we haven't dropped anything yet
+    // Force drop an item if needed and we haven't dropped anything yet.
+    // Find the minimum dropRate (most common), collect all tied candidates, pick one randomly.
     if (force && droppedCount === 0 && eligibleDrops.length > 0) {
-      const mostCommonDrop = eligibleDrops.reduce((prev, curr) =>
-        prev.dropRate < curr.dropRate ? prev : curr,
+      const minRate = eligibleDrops.reduce(
+        (min, d) => Math.min(min, d.dropRate),
+        Infinity,
       );
-      const item = this.addNewItem(mostCommonDrop.itemType, entity);
-      if (item) {
-        droppedItems.push(item);
+      const candidates = eligibleDrops.filter((d) => d.dropRate === minRate);
+      const pick = candidates[Math.floor(Random.rand() * candidates.length)];
+      if (pick) {
+        const item = this.addNewItem(pick.itemType, entity);
+        if (item) {
+          droppedItems.push(item);
+        }
       }
     }
 
