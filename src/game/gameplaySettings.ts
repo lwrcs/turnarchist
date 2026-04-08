@@ -104,6 +104,7 @@ export class GameplaySettings {
 
   // Special Enemy Area Thresholds
   static readonly SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
+  static readonly MAX_SPAWNERS_PER_ROOM = 3; // Hard cap on spawners regardless of room area
   static readonly OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 
   // Enemy Density Settings

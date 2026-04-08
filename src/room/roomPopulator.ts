@@ -2256,9 +2256,9 @@ export class Populator {
   private addSpecialEnemies(room: Room) {
     // Spawner logic - now based on room area and probability
     if (!room.underwater) {
-      // Disable area-scaled spawners for caves: single-room cave sidepaths are large,
-      // and the area-based loop can easily produce many spawners.
-      if (room.envType !== EnvType.CAVE) {
+      // Disable area-scaled spawners for caves and forests: both are large environments
+      // where the area-based loop can easily produce too many spawners.
+      if (room.envType !== EnvType.CAVE && room.envType !== EnvType.FOREST) {
         if (
           GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
           room.depth > GameplaySettings.SPAWNER_MIN_DEPTH
@@ -2524,8 +2524,9 @@ export class Populator {
       }
     } else {
       // Original random spawner logic with configurable parameters
-      const maxPossibleSpawners = Math.ceil(
-        room.roomArea / GameplaySettings.SPAWNER_AREA_THRESHOLD,
+      const maxPossibleSpawners = Math.min(
+        Math.ceil(room.roomArea / GameplaySettings.SPAWNER_AREA_THRESHOLD),
+        GameplaySettings.MAX_SPAWNERS_PER_ROOM,
       );
 
       for (let i = 0; i < maxPossibleSpawners; i++) {
@@ -4056,8 +4057,27 @@ export class Populator {
       this.addBossesAt(room, room.depth, pos.x, pos.y);
     };
 
-    // Key guard is always a Spawner (reaper) in this layout.
-    if (placedKeyAndExit && keyEndpoint) spawnSpawnerBossNear(keyEndpoint);
+    // Key guard: BigFrog in forest, Spawner (reaper) everywhere else.
+    if (placedKeyAndExit && keyEndpoint) {
+      if (room.envType === EnvType.FOREST) {
+        const tiles = room
+          .getEmptyTiles()
+          .filter(
+            (t) =>
+              Math.abs(t.x - keyEndpoint.x) + Math.abs(t.y - keyEndpoint.y) <=
+              6,
+          );
+        if (tiles.length > 0) {
+          const pos = room.getBigRandomEmptyPosition(tiles);
+          if (pos) {
+            const frog = BigFrogEnemy.add(room, room.game, pos.x, pos.y);
+            if (frog) frog.isBossEnemy = true;
+          }
+        }
+      } else {
+        spawnSpawnerBossNear(keyEndpoint);
+      }
+    }
     if (placedKeyAndExit && exitEndpoint) trySpawnBossNear(exitEndpoint);
 
     // Single-room sidepath maze: intentionally do NOT place vending machines.

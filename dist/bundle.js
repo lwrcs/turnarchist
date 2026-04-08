@@ -36603,6 +36603,7 @@ GameplaySettings.SPAWNER_SPAWN_CHANCE = 0.1; // Probability per attempt to spawn
 GameplaySettings.OCCULTIST_SPAWN_CHANCE = 0.1; // Probability per attempt to spawn an occultist (10%)
 // Special Enemy Area Thresholds
 GameplaySettings.SPAWNER_AREA_THRESHOLD = 50; // Room area divided by this = max possible spawners
+GameplaySettings.MAX_SPAWNERS_PER_ROOM = 3; // Hard cap on spawners regardless of room area
 GameplaySettings.OCCULTIST_AREA_THRESHOLD = 200; // Room area divided by this = max possible occultists
 // Enemy Density Settings
 GameplaySettings.ENEMY_DENSITY_DEPTH_MULTIPLIER = 0.019; // Multiplied by (depth + 2) for base density
@@ -74584,6 +74585,7 @@ const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool
 const window_1 = __webpack_require__(/*! ../tile/window */ "./src/tile/window.ts");
 const sidePathManager_1 = __webpack_require__(/*! ../level/sidePathManager */ "./src/level/sidePathManager.ts");
 const levelProgressionConfig_1 = __webpack_require__(/*! ../level/levelProgressionConfig */ "./src/level/levelProgressionConfig.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const amberResource_1 = __webpack_require__(/*! ../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
@@ -76640,9 +76642,9 @@ class Populator {
     addSpecialEnemies(room) {
         // Spawner logic - now based on room area and probability
         if (!room.underwater) {
-            // Disable area-scaled spawners for caves: single-room cave sidepaths are large,
-            // and the area-based loop can easily produce many spawners.
-            if (room.envType !== environmentTypes_1.EnvType.CAVE) {
+            // Disable area-scaled spawners for caves and forests: both are large environments
+            // where the area-based loop can easily produce too many spawners.
+            if (room.envType !== environmentTypes_1.EnvType.CAVE && room.envType !== environmentTypes_1.EnvType.FOREST) {
                 if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
                     room.depth > gameplaySettings_1.GameplaySettings.SPAWNER_MIN_DEPTH) {
                     this.addSpawners(room, random_1.Random.rand);
@@ -76825,7 +76827,7 @@ class Populator {
         }
         else {
             // Original random spawner logic with configurable parameters
-            const maxPossibleSpawners = Math.ceil(room.roomArea / gameplaySettings_1.GameplaySettings.SPAWNER_AREA_THRESHOLD);
+            const maxPossibleSpawners = Math.min(Math.ceil(room.roomArea / gameplaySettings_1.GameplaySettings.SPAWNER_AREA_THRESHOLD), gameplaySettings_1.GameplaySettings.MAX_SPAWNERS_PER_ROOM);
             for (let i = 0; i < maxPossibleSpawners; i++) {
                 if (rand() > gameplaySettings_1.GameplaySettings.SPAWNER_SPAWN_CHANCE)
                     continue;
@@ -77703,9 +77705,26 @@ class Populator {
             // We don't change RoomType; we just spawn a boss entity.
             this.addBossesAt(room, room.depth, pos.x, pos.y);
         };
-        // Key guard is always a Spawner (reaper) in this layout.
-        if (placedKeyAndExit && keyEndpoint)
-            spawnSpawnerBossNear(keyEndpoint);
+        // Key guard: BigFrog in forest, Spawner (reaper) everywhere else.
+        if (placedKeyAndExit && keyEndpoint) {
+            if (room.envType === environmentTypes_1.EnvType.FOREST) {
+                const tiles = room
+                    .getEmptyTiles()
+                    .filter((t) => Math.abs(t.x - keyEndpoint.x) + Math.abs(t.y - keyEndpoint.y) <=
+                    6);
+                if (tiles.length > 0) {
+                    const pos = room.getBigRandomEmptyPosition(tiles);
+                    if (pos) {
+                        const frog = bigFrogEnemy_1.BigFrogEnemy.add(room, room.game, pos.x, pos.y);
+                        if (frog)
+                            frog.isBossEnemy = true;
+                    }
+                }
+            }
+            else {
+                spawnSpawnerBossNear(keyEndpoint);
+            }
+        }
         if (placedKeyAndExit && exitEndpoint)
             trySpawnBossNear(exitEndpoint);
         // Single-room sidepath maze: intentionally do NOT place vending machines.
