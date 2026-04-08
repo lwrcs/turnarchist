@@ -74701,9 +74701,9 @@ class Populator {
                     const drops = [];
                     switch (furthestFromUpLadder?.envType) {
                         case environmentTypes_1.EnvType.CASTLE:
-                        case environmentTypes_1.EnvType.DARK_CASTLE:
                             drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
                             break;
+                        case environmentTypes_1.EnvType.DARK_CASTLE:
                         case environmentTypes_1.EnvType.CAVE:
                             drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
                             break;
@@ -74715,27 +74715,25 @@ class Populator {
                         this.addBosses(furthestFromUpLadder, this.level.depth, drops);
                     }
                 }
-                const dropRoom = bossRoom ?? exitRoom;
-                if (dropRoom) {
+                // The chest reward always goes in the exit room (after the boss), not the boss room.
+                if (exitRoom) {
                     const drops = [];
-                    switch (dropRoom.envType) {
+                    switch (exitRoom.envType) {
                         case environmentTypes_1.EnvType.CASTLE:
-                        case environmentTypes_1.EnvType.DARK_CASTLE:
-                            drops.push(new sword_1.Sword(dropRoom, 1, 1));
+                            drops.push(new sword_1.Sword(exitRoom, 1, 1));
                             break;
+                        case environmentTypes_1.EnvType.DARK_CASTLE:
                         case environmentTypes_1.EnvType.CAVE:
-                            drops.push(new spear_1.Spear(dropRoom, 1, 1));
+                            drops.push(new spear_1.Spear(exitRoom, 1, 1));
                             break;
                         case environmentTypes_1.EnvType.MAGMA_CAVE:
-                            drops.push(new warhammer_1.Warhammer(dropRoom, 1, 1));
+                            drops.push(new warhammer_1.Warhammer(exitRoom, 1, 1));
                             break;
                     }
-                    // Keep the chest reward, but associate it with the boss room when present.
-                    const chestRoom = bossRoom ?? dropRoom;
-                    const tiles = chestRoom.getEmptyTiles();
-                    const position = chestRoom.getRandomEmptyPosition(tiles);
+                    const tiles = exitRoom.getEmptyTiles();
+                    const position = exitRoom.getRandomEmptyPosition(tiles);
                     if (position) {
-                        const chest = chest_1.Chest.add(chestRoom, chestRoom.game, position.x, position.y);
+                        const chest = chest_1.Chest.add(exitRoom, exitRoom.game, position.x, position.y);
                         chest.drops.push(...drops);
                     }
                 }
@@ -74756,9 +74754,23 @@ class Populator {
                     }
                     if (!alreadyPlaced) {
                         const baseTiles = exitRoom.getEmptyTilesNotBlockingDoors();
-                        const desiredPadding = Math.floor(this.level.generationOptions?.softMargin ?? 8);
-                        const validTiles = this.getTilesWithRelaxedPadding(exitRoom, baseTiles, desiredPadding);
-                        const pos = exitRoom.getRandomEmptyPosition(validTiles);
+                        const baseTileSet = new Set(baseTiles.map((t) => `${t.x},${t.y}`));
+                        // Place at top-center of the room interior, scanning downward until
+                        // an empty non-door-blocking tile is found.
+                        const centerX = Math.floor(exitRoom.roomX + exitRoom.width / 2);
+                        const interiorTop = exitRoom.roomY + 1;
+                        const interiorBottom = exitRoom.roomY + exitRoom.height - 2;
+                        let pos = null;
+                        for (let y = interiorTop; y <= interiorBottom; y++) {
+                            if (baseTileSet.has(`${centerX},${y}`)) {
+                                pos = { x: centerX, y };
+                                break;
+                            }
+                        }
+                        // Fallback: any valid tile
+                        if (!pos) {
+                            pos = exitRoom.getRandomEmptyPosition(baseTiles);
+                        }
                         if (pos) {
                             const up = new upLadder_1.UpLadder(exitRoom, exitRoom.game, pos.x, pos.y);
                             up.isRope = true;
@@ -75342,7 +75354,7 @@ class Populator {
                     break;
                 case room_1.RoomType.DOWNLADDER:
                     if (this.level.genSource === "png" &&
-                        this.level.environment.type === environmentTypes_1.EnvType.CASTLE) {
+                        sidePathManager_1.CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type)) {
                         this.populateEmpty(room, rand);
                     }
                     else {
@@ -76328,7 +76340,8 @@ class Populator {
      */
     buildEntryExclusionZone(room, distMap) {
         const excluded = new Set();
-        const map = distMap ?? (room.level ? this.computeRoomDistanceFromStart(room.level) : null);
+        const map = distMap ??
+            (room.level ? this.computeRoomDistanceFromStart(room.level) : null);
         // Find the minimum linked-room distance to identify entry-side doors.
         let minLinkedDist = Infinity;
         for (const door of room.doors) {

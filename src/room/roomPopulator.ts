@@ -386,9 +386,9 @@ export class Populator {
         const drops: Item[] = [];
         switch (furthestFromUpLadder?.envType) {
           case EnvType.CASTLE:
-          case EnvType.DARK_CASTLE:
             drops.push(new Sword(furthestFromUpLadder, 1, 1));
             break;
+          case EnvType.DARK_CASTLE:
           case EnvType.CAVE:
             drops.push(new Spear(furthestFromUpLadder, 1, 1));
             break;
@@ -401,30 +401,28 @@ export class Populator {
         }
       }
 
-      const dropRoom = bossRoom ?? exitRoom;
-      if (dropRoom) {
+      // The chest reward always goes in the exit room (after the boss), not the boss room.
+      if (exitRoom) {
         const drops: Item[] = [];
-        switch (dropRoom.envType) {
+        switch (exitRoom.envType) {
           case EnvType.CASTLE:
-          case EnvType.DARK_CASTLE:
-            drops.push(new Sword(dropRoom, 1, 1));
+            drops.push(new Sword(exitRoom, 1, 1));
             break;
+          case EnvType.DARK_CASTLE:
           case EnvType.CAVE:
-            drops.push(new Spear(dropRoom, 1, 1));
+            drops.push(new Spear(exitRoom, 1, 1));
             break;
           case EnvType.MAGMA_CAVE:
-            drops.push(new Warhammer(dropRoom, 1, 1));
+            drops.push(new Warhammer(exitRoom, 1, 1));
             break;
         }
 
-        // Keep the chest reward, but associate it with the boss room when present.
-        const chestRoom = bossRoom ?? dropRoom;
-        const tiles = chestRoom.getEmptyTiles();
-        const position = chestRoom.getRandomEmptyPosition(tiles);
+        const tiles = exitRoom.getEmptyTiles();
+        const position = exitRoom.getRandomEmptyPosition(tiles);
         if (position) {
           const chest = Chest.add(
-            chestRoom,
-            chestRoom.game,
+            exitRoom,
+            exitRoom.game,
             position.x,
             position.y,
           );
@@ -453,15 +451,27 @@ export class Populator {
 
         if (!alreadyPlaced) {
           const baseTiles = exitRoom.getEmptyTilesNotBlockingDoors();
-          const desiredPadding = Math.floor(
-            this.level.generationOptions?.softMargin ?? 8,
-          );
-          const validTiles = this.getTilesWithRelaxedPadding(
-            exitRoom,
-            baseTiles,
-            desiredPadding,
-          );
-          const pos = exitRoom.getRandomEmptyPosition(validTiles);
+          const baseTileSet = new Set(baseTiles.map((t) => `${t.x},${t.y}`));
+
+          // Place at top-center of the room interior, scanning downward until
+          // an empty non-door-blocking tile is found.
+          const centerX = Math.floor(exitRoom.roomX + exitRoom.width / 2);
+          const interiorTop = exitRoom.roomY + 1;
+          const interiorBottom = exitRoom.roomY + exitRoom.height - 2;
+
+          let pos: { x: number; y: number } | null = null;
+          for (let y = interiorTop; y <= interiorBottom; y++) {
+            if (baseTileSet.has(`${centerX},${y}`)) {
+              pos = { x: centerX, y };
+              break;
+            }
+          }
+
+          // Fallback: any valid tile
+          if (!pos) {
+            pos = exitRoom.getRandomEmptyPosition(baseTiles);
+          }
+
           if (pos) {
             const up = new UpLadder(exitRoom, exitRoom.game, pos.x, pos.y);
             up.isRope = true;
@@ -1826,7 +1836,11 @@ export class Populator {
         continue;
       }
 
-      const position = this.pickTileFarFromEntry(candidateTiles, entryPoint, exitPoint);
+      const position = this.pickTileFarFromEntry(
+        candidateTiles,
+        entryPoint,
+        exitPoint,
+      );
       if (position === null) break;
       const { x, y } = position;
       const footprint = this.getEntityFootprint(selectedEnemy);
@@ -1883,17 +1897,21 @@ export class Populator {
     distMap?: Map<string, number>,
   ): Set<string> {
     const excluded = new Set<string>();
-    const map = distMap ?? (room.level ? this.computeRoomDistanceFromStart(room.level) : null);
+    const map =
+      distMap ??
+      (room.level ? this.computeRoomDistanceFromStart(room.level) : null);
 
     // Find the minimum linked-room distance to identify entry-side doors.
     let minLinkedDist = Infinity;
     for (const door of room.doors) {
-      const linkedDist = map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
+      const linkedDist =
+        map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
       if (linkedDist < minLinkedDist) minLinkedDist = linkedDist;
     }
 
     for (const door of room.doors) {
-      const linkedDist = map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
+      const linkedDist =
+        map?.get(door.linkedDoor?.room?.globalId ?? "") ?? Infinity;
       // Only exclude around doors on the entry side (same min distance tier).
       if (linkedDist > minLinkedDist) continue;
       for (let dx = -2; dx <= 2; dx++) {
@@ -2060,7 +2078,12 @@ export class Populator {
     const distMap = this.computeRoomDistanceFromStart(level);
     const maxDist = distMap.size > 0 ? Math.max(...distMap.values()) : 0;
 
-    type TileEntry = { room: Room; tile: Tile; distNorm: number; doorDistNorm: number };
+    type TileEntry = {
+      room: Room;
+      tile: Tile;
+      distNorm: number;
+      doorDistNorm: number;
+    };
     const allTiles: TileEntry[] = [];
 
     for (const room of populatedRooms) {
@@ -2084,7 +2107,9 @@ export class Populator {
       const maxEntryDist = entryDists.length > 0 ? Math.max(...entryDists) : 0;
 
       const exitDists = exitPoint
-        ? tiles.map((t) => Math.abs(t.x - exitPoint.x) + Math.abs(t.y - exitPoint.y))
+        ? tiles.map(
+            (t) => Math.abs(t.x - exitPoint.x) + Math.abs(t.y - exitPoint.y),
+          )
         : null;
       const maxExitDist = exitDists ? Math.max(...exitDists) : 0;
 
@@ -2185,7 +2210,8 @@ export class Populator {
         // Blend room-level distance from start with tile-level distance from
         // the room's entry door, then apply entityWeight preference.
         const positional = 0.5 * e.distNorm + 0.5 * e.doorDistNorm;
-        const w = (1 - entityWeight) * (1 - positional) + entityWeight * positional;
+        const w =
+          (1 - entityWeight) * (1 - positional) + entityWeight * positional;
         return { ...e, score: Math.max(0.001, w) };
       });
       const totalScore = scores.reduce((s, e) => s + e.score, 0);
@@ -3680,7 +3706,7 @@ export class Populator {
       case RoomType.DOWNLADDER:
         if (
           this.level.genSource === "png" &&
-          this.level.environment.type === EnvType.CASTLE
+          CASTLE_LIKE_ENV_TYPES.has(this.level.environment.type)
         ) {
           this.populateEmpty(room, rand);
         } else {
