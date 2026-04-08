@@ -36580,7 +36580,7 @@ GameplaySettings.MAIN_PATH_KEY_REQUIRED = true;
  * in the same turn. Movement is unaffected — only the damage call is skipped.
  * Chess pieces (which use the existing justHurt retreat mechanic) are exempt.
  */
-GameplaySettings.HIT_STUNS_ATTACK = true;
+GameplaySettings.HIT_STUNS_ATTACK = false;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;

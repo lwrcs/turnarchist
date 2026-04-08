@@ -80,7 +80,7 @@ export class GameplaySettings {
    * in the same turn. Movement is unaffected — only the damage call is skipped.
    * Chess pieces (which use the existing justHurt retreat mechanic) are exempt.
    */
-  static HIT_STUNS_ATTACK: boolean = true;
+  static HIT_STUNS_ATTACK: boolean = false;
 
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
