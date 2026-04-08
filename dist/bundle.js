@@ -10521,7 +10521,7 @@ class HitWarning extends drawable_1.Drawable {
             this.fadeHitwarnings(delta);
             const baseAlpha = game_1.Game.ctx.globalAlpha;
             game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha;
-            if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
+            if (this.isEnemy) {
                 //white arrow top layer
                 game_1.Game.drawFX(this.tileX + Math.floor(HitWarning.frame), this.tileY + 1, 1, 1, this.x + this.pointerOffset.x, this.y + this.pointerOffset.y - this.offsetY, 1, 1);
             }
@@ -10665,11 +10665,6 @@ HitWarning.pointerOffsetForDir = (dir) => {
     return offsets[dir];
 };
 HitWarning.drawPreviewArrow = (args) => {
-    if (args.variant === "white" &&
-        args.suppressIfNorth &&
-        args.dir === HitWarningDirection.North) {
-        return;
-    }
     const baseTileX = 0 + 2 * args.dir;
     const frame = Math.floor(HitWarning.previewFrame);
     const tileX = baseTileX + frame;
@@ -32162,7 +32157,6 @@ class Bestiary {
                                 dir,
                                 variant: "white",
                                 alpha,
-                                suppressIfNorth: true,
                             });
                         }
                     }

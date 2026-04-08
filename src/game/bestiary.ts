@@ -1446,7 +1446,6 @@ export class Bestiary {
               dir,
               variant: "white",
               alpha,
-              suppressIfNorth: true,
             });
           }
         }

@@ -135,20 +135,7 @@ export class HitWarning extends Drawable {
      */
     variant: "red" | "white";
     alpha?: number;
-    /**
-     * When true, mimics the in-game top-layer behavior where the white arrow is
-     * suppressed for North.
-     */
-    suppressIfNorth?: boolean;
   }) => {
-    if (
-      args.variant === "white" &&
-      args.suppressIfNorth &&
-      args.dir === HitWarningDirection.North
-    ) {
-      return;
-    }
-
     const baseTileX = 0 + 2 * args.dir;
     const frame = Math.floor(HitWarning.previewFrame);
     const tileX = baseTileX + frame;
@@ -328,7 +315,7 @@ export class HitWarning extends Drawable {
     const baseAlpha = Game.ctx.globalAlpha;
     Game.ctx.globalAlpha = baseAlpha * this.alpha;
 
-    if (this.isEnemy && this.getPointerDir() !== HitWarningDirection.North) {
+    if (this.isEnemy) {
       //white arrow top layer
       Game.drawFX(
         this.tileX + Math.floor(HitWarning.frame),
