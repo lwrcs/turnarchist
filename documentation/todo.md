@@ -45,22 +45,22 @@
 - [ ] Tall grass
 
 - [x] Restructure caves
-- [ ] Make side paths mandatory
+- [x] Make side paths mandatory
 - [x] Disable saving for now
 - [ ] increase xp rate of harder mobs
 - [ ] Add effects for emerald and amber rings
 - [x] Make pawns jump back when hurt
 - [ ] Fix bug with boltcaster aiming at resources
-- [ ] Design castle premade levels
+- [x] Design castle premade levels
 - [ ] Make castle doors entrance
-- [ ] Make keys automatically show path on pickup
-- [ ] Make keys pathfind between levels (prioritize active key)
-- [ ] Make exalter the castle boss
+- [x] Make keys automatically show path on pickup
+- [x] Make keys pathfind between levels (prioritize active key)
+- [x] Make exalter the castle boss
 - [ ] Underwater mobs
 
-- bishops too soon?
+- [x] bishops too soon?
 - exalter change beam color?
-- up arrow hitwarning not displaying?
+- [x] up arrow hitwarning not displaying?
 - unclear if could hit queen and take damage
 - hover over enemies to reveal healthbar
 - mushroom message to not eat unclear

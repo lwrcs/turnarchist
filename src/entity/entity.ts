@@ -18,6 +18,7 @@ import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { Shadow } from "../drawable/shadow";
+import { MouseCursor } from "../gui/mouseCursor";
 
 import { DropTable } from "../item/dropTable";
 import { Weapon } from "../item/weapon/weapon";
@@ -1678,10 +1679,41 @@ export class Entity extends Drawable {
     });
   };
 
+  /**
+   * If the mouse cursor is currently over this enemy's tile footprint, refresh
+   * the health bar hover timer so it stays visible during the hover.
+   * Call this at the start of any `drawTopLayer` override that draws a health bar.
+   */
+  protected tickHealthBarHover = (): void => {
+    if (!this.isEnemy) return;
+    if (!MouseCursor.getInstance().isCursorVisible()) {
+      this.healthBar.clearHover();
+      return;
+    }
+    const player = this.game?.players?.[this.game.localPlayerID];
+    if (!player) return;
+    const tile = player.mouseToTile();
+    const tileAbove = player.mouseToTile(GameConstants.TILESIZE / 2);
+    const over =
+      (typeof tile.x === "number" &&
+        typeof tile.y === "number" &&
+        this.pointIn(tile.x, tile.y)) ||
+      (typeof tileAbove.x === "number" &&
+        typeof tileAbove.y === "number" &&
+        this.pointIn(tileAbove.x, tileAbove.y));
+    if (over) {
+      this.healthBar.hover();
+    } else {
+      this.healthBar.clearHover();
+    }
+  };
+
   drawTopLayer = (delta: number) => {
     //this.updateDrawXY(delta);
 
     this.drawableY = this.y - this.drawY;
+
+    this.tickHealthBarHover();
 
     this.healthBar.draw(
       delta,

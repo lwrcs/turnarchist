@@ -4,14 +4,28 @@ import { LevelConstants } from "../level/levelConstants";
 
 export class HealthBar {
   hurtTimer: number;
+  hoverTimer: number;
   shouldDraw: boolean;
+  private isHovered: boolean = false;
 
   constructor() {
     this.hurtTimer = 0;
+    this.hoverTimer = 0;
   }
 
   hurt = () => {
     this.hurtTimer = Date.now();
+  };
+
+  hover = () => {
+    if (!this.isHovered) {
+      this.hoverTimer = Date.now();
+      this.isHovered = true;
+    }
+  };
+
+  clearHover = () => {
+    this.isHovered = false;
   };
 
   draw = (
@@ -25,9 +39,10 @@ export class HealthBar {
       mana?: { current: number; max: number };
     },
   ) => {
+    const activeTimer = Math.max(this.hurtTimer, this.hoverTimer);
     let t = Math.min(
       LevelConstants.HEALTH_BAR_TOTALTIME,
-      Math.max(Date.now() - this.hurtTimer, 0),
+      Math.max(Date.now() - activeTimer, 0),
     );
     if (t <= LevelConstants.HEALTH_BAR_TOTALTIME) {
       let fullHearts = Math.floor(hearts);
@@ -138,7 +153,9 @@ export class HealthBar {
 
     // Fill rows from bottom to top, row-by-row.
     const innerR = Math.max(0, r - 1);
-    const filledRows = Math.floor(sizePx * Math.max(0, Math.min(1, args.percent01)));
+    const filledRows = Math.floor(
+      sizePx * Math.max(0, Math.min(1, args.percent01)),
+    );
     const fillStartY = y0 + (sizePx - filledRows);
 
     for (let py = 0; py < sizePx; py++) {

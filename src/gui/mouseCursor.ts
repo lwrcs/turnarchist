@@ -124,9 +124,12 @@ export class MouseCursor {
     }
   };
 
+  public isCursorVisible(): boolean {
+    return Date.now() - this.posChangeTime < this.cursorTimeout;
+  }
+
   public draw = (delta: number, mobile: boolean = false) => {
-    if (!mobile && Date.now() - this.posChangeTime < this.cursorTimeout)
-      this.drawCursor();
+    if (!mobile && this.isCursorVisible()) this.drawCursor();
     this.drawAnimation(delta);
   };
 

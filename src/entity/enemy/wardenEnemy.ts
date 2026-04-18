@@ -362,6 +362,7 @@ export class WardenEnemy extends Enemy {
 
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
+    this.tickHealthBarHover();
 
     this.healthBar.draw(
       delta,

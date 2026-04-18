@@ -10266,11 +10266,22 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 class HealthBar {
     constructor() {
+        this.isHovered = false;
         this.hurt = () => {
             this.hurtTimer = Date.now();
         };
+        this.hover = () => {
+            if (!this.isHovered) {
+                this.hoverTimer = Date.now();
+                this.isHovered = true;
+            }
+        };
+        this.clearHover = () => {
+            this.isHovered = false;
+        };
         this.draw = (delta, hearts, maxHearts, x, y, flashing, opts) => {
-            let t = Math.min(levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME, Math.max(Date.now() - this.hurtTimer, 0));
+            const activeTimer = Math.max(this.hurtTimer, this.hoverTimer);
+            let t = Math.min(levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME, Math.max(Date.now() - activeTimer, 0));
             if (t <= levelConstants_1.LevelConstants.HEALTH_BAR_TOTALTIME) {
                 let fullHearts = Math.floor(hearts);
                 let halfHearts = Math.ceil(hearts - fullHearts);
@@ -10375,6 +10386,7 @@ class HealthBar {
             game_1.Game.ctx.imageSmoothingEnabled = prevSmoothing;
         };
         this.hurtTimer = 0;
+        this.hoverTimer = 0;
     }
 }
 exports.HealthBar = HealthBar;
@@ -12328,6 +12340,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
         };
         this.draw = (delta) => {
@@ -12629,6 +12642,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
         };
         this.w = 2;
@@ -12964,6 +12978,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y - 0.5, true);
         };
         this.w = 2;
@@ -13222,6 +13237,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, true);
         };
         this.draw = (delta) => {
@@ -19982,6 +19998,7 @@ class WardenEnemy extends enemy_1.Enemy {
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
         };
         this.draw = (delta) => {
@@ -20576,6 +20593,7 @@ const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator 
 const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eventBus.ts");
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
+const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
@@ -21631,9 +21649,40 @@ class Entity extends drawable_1.Drawable {
                 location: { x: this.x, y: this.y, z: this.z ?? 0 },
             });
         };
+        /**
+         * If the mouse cursor is currently over this enemy's tile footprint, refresh
+         * the health bar hover timer so it stays visible during the hover.
+         * Call this at the start of any `drawTopLayer` override that draws a health bar.
+         */
+        this.tickHealthBarHover = () => {
+            if (!this.isEnemy)
+                return;
+            if (!mouseCursor_1.MouseCursor.getInstance().isCursorVisible()) {
+                this.healthBar.clearHover();
+                return;
+            }
+            const player = this.game?.players?.[this.game.localPlayerID];
+            if (!player)
+                return;
+            const tile = player.mouseToTile();
+            const tileAbove = player.mouseToTile(gameConstants_1.GameConstants.TILESIZE / 2);
+            const over = (typeof tile.x === "number" &&
+                typeof tile.y === "number" &&
+                this.pointIn(tile.x, tile.y)) ||
+                (typeof tileAbove.x === "number" &&
+                    typeof tileAbove.y === "number" &&
+                    this.pointIn(tileAbove.x, tileAbove.y));
+            if (over) {
+                this.healthBar.hover();
+            }
+            else {
+                this.healthBar.clearHover();
+            }
+        };
         this.drawTopLayer = (delta) => {
             //this.updateDrawXY(delta);
             this.drawableY = this.y - this.drawY;
+            this.tickHealthBarHover();
             this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
         };
         this.drawSleepingZs = (delta, offsetX = 0, offsetY = 0) => {
@@ -46320,7 +46369,7 @@ class MouseCursor {
             }
         };
         this.draw = (delta, mobile = false) => {
-            if (!mobile && Date.now() - this.posChangeTime < this.cursorTimeout)
+            if (!mobile && this.isCursorVisible())
                 this.drawCursor();
             this.drawAnimation(delta);
         };
@@ -46368,6 +46417,9 @@ class MouseCursor {
             this.clickX = Math.floor(this.rawClickX / game_1.Game.scale);
             this.clickY = Math.floor(this.rawClickY / game_1.Game.scale);
         }
+    }
+    isCursorVisible() {
+        return Date.now() - this.posChangeTime < this.cursorTimeout;
     }
     getPosition() {
         if (input_1.Input.mouseX !== this.lastMouseX || input_1.Input.mouseY !== this.lastMouseY) {
@@ -74695,23 +74747,11 @@ class Populator {
                 }
                 // If for some reason generation didn't create a BOSS room, fall back to the legacy
                 // "boss in furthest room" behavior so the sidepath still works.
+                // Drops are NOT passed to the boss here — they go in the exit room chest below.
                 if (!bossRoom) {
                     const furthestFromUpLadder = exitRoom;
-                    const drops = [];
-                    switch (furthestFromUpLadder?.envType) {
-                        case environmentTypes_1.EnvType.CASTLE:
-                            drops.push(new sword_1.Sword(furthestFromUpLadder, 1, 1));
-                            break;
-                        case environmentTypes_1.EnvType.DARK_CASTLE:
-                        case environmentTypes_1.EnvType.CAVE:
-                            drops.push(new spear_1.Spear(furthestFromUpLadder, 1, 1));
-                            break;
-                        case environmentTypes_1.EnvType.MAGMA_CAVE:
-                            drops.push(new warhammer_1.Warhammer(furthestFromUpLadder, 1, 1));
-                            break;
-                    }
                     if (furthestFromUpLadder) {
-                        this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+                        this.addBosses(furthestFromUpLadder, this.level.depth);
                     }
                 }
                 // The chest reward always goes in the exit room (after the boss), not the boss room.

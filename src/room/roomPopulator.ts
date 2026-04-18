@@ -381,23 +381,11 @@ export class Populator {
 
       // If for some reason generation didn't create a BOSS room, fall back to the legacy
       // "boss in furthest room" behavior so the sidepath still works.
+      // Drops are NOT passed to the boss here — they go in the exit room chest below.
       if (!bossRoom) {
         const furthestFromUpLadder = exitRoom;
-        const drops: Item[] = [];
-        switch (furthestFromUpLadder?.envType) {
-          case EnvType.CASTLE:
-            drops.push(new Sword(furthestFromUpLadder, 1, 1));
-            break;
-          case EnvType.DARK_CASTLE:
-          case EnvType.CAVE:
-            drops.push(new Spear(furthestFromUpLadder, 1, 1));
-            break;
-          case EnvType.MAGMA_CAVE:
-            drops.push(new Warhammer(furthestFromUpLadder, 1, 1));
-            break;
-        }
         if (furthestFromUpLadder) {
-          this.addBosses(furthestFromUpLadder, this.level.depth, drops);
+          this.addBosses(furthestFromUpLadder, this.level.depth);
         }
       }
 
