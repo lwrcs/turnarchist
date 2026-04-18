@@ -40,6 +40,29 @@ function getDungeonDepthSpec(depth: number): SidePathSpec | null {
     };
   }
 
+  if (depth === 0) {
+    return {
+      environment: EnvType.SEWER,
+      options: {
+        caveRooms: 1,
+        envType: EnvType.SEWER,
+        locked: false,
+        terminal: true,
+        noBoss: true,
+        linearity: 0.5,
+        mapWidth: 25,
+        mapHeight: 25,
+        giantRoomScale: 0.6,
+        entranceInMainRoom: true,
+        organicTunnelsAvoidCenter: true,
+        softMargin: 5,
+        tunnelRadiusScale: 0.5,
+        squareBrush: true,
+        enemyDensityScale: 0.2,
+      },
+    };
+  }
+
   if (depth < 1 || depth > GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS) {
     return null;
   }

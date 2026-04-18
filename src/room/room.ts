@@ -689,7 +689,7 @@ export class Room {
     //initialize the skin for the given environment
     this.envType = envType;
     this.skin = envType as unknown as SkinType;
-    if (this.envType === EnvType.TUTORIAL) {
+    if (this.envType === EnvType.TUTORIAL || this.envType === EnvType.SEWER) {
       this.skin = SkinType.DUNGEON as SkinType;
     }
     /*

@@ -28,6 +28,8 @@ export const envTypeToEnvKind = (env: EnvType): EnvKind => {
       return "tutorial";
     case EnvType.FLOODED_CAVE:
       return "flooded_cave";
+    case EnvType.SEWER:
+      return "sewer";
   }
 };
 
@@ -80,6 +82,8 @@ export const envKindToEnvType = (env: EnvKind): EnvType => {
       return EnvType.TUTORIAL;
     case "flooded_cave":
       return EnvType.FLOODED_CAVE;
+    case "sewer":
+      return EnvType.SEWER;
   }
 };
 

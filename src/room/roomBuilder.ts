@@ -362,6 +362,41 @@ export class RoomBuilder {
     }
   }
 
+  /** Carve a filled square (Chebyshev) of floor at (cx, cy) with the given half-extent. */
+  private carveSquare(cx: number, cy: number, radius: number) {
+    const minX = Math.floor(cx - radius);
+    const maxX = Math.ceil(cx + radius);
+    const minY = Math.floor(cy - radius);
+    const maxY = Math.ceil(cy + radius);
+    const allowed = this.carveAllowedOverride;
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        if (allowed) {
+          if (!allowed(x, y)) continue;
+        } else if (!this.isInterior(x, y)) {
+          continue;
+        }
+        if (this.room.roomArray[x][y] instanceof Wall) {
+          this.room.removeWall(x, y);
+        }
+        this.room.roomArray[x][y] = new Floor(this.room, x, y);
+        this.room.innerWalls = this.room.innerWalls.filter(
+          (w) => w.x !== x || w.y !== y,
+        );
+      }
+    }
+  }
+
+  private carve(cx: number, cy: number, radius: number, square: boolean) {
+    if (square) this.carveSquare(cx, cy, radius);
+    else this.carveDisk(cx, cy, radius);
+  }
+
+  /** Carve a filled disk (or square if square=true) of floor at (cx, cy). Interior-only. */
+  public carveAt(cx: number, cy: number, radius: number, square = false): void {
+    this.carve(cx, cy, radius, square);
+  }
+
   // --- single-room sidepath maze helpers ---
   private keyOf(x: number, y: number): string {
     return `${x},${y}`;
@@ -568,12 +603,15 @@ export class RoomBuilder {
       radiusJitter?: number;
       pocketChance?: number;
       pocketRadius?: [number, number];
+      tunnelRadiusScale?: number;
+      squareBrush?: boolean;
     },
   ): void {
     // Use a smooth pseudo-random radius curve (sum of sines) so tunnel width
     // varies continuously along its length instead of frame-to-frame jitter.
-    const minRadius = 1.0;
-    const maxRadius = 7;
+    const scale = opts?.tunnelRadiusScale ?? 1.0;
+    const minRadius = 1.0 * scale;
+    const maxRadius = 7 * scale;
 
     // Frequency multipliers (cycles across the whole path) and phases.
     // Keep these low so the radius changes slowly over distance.
@@ -598,7 +636,11 @@ export class RoomBuilder {
     };
 
     const pocketChance = opts?.pocketChance ?? 0.1;
-    const pocketRadius = opts?.pocketRadius ?? [2, 3];
+    const rawPocketRadius = opts?.pocketRadius ?? [2, 3];
+    const pocketRadius: [number, number] = [
+      rawPocketRadius[0] * scale,
+      rawPocketRadius[1] * scale,
+    ];
 
     // Additional smoothing: cap how fast the radius can change per step, so adjacent
     // disks blend more continuously even on short paths.
@@ -627,7 +669,8 @@ export class RoomBuilder {
         else if (delta < -maxDeltaPerStep) r = prevR - maxDeltaPerStep;
       }
       prevR = r;
-      this.carveDisk(p.x, p.y, r);
+      const sq = opts?.squareBrush ?? false;
+      this.carve(p.x, p.y, r, sq);
 
       if (rand() < pocketChance) {
         const pr = Game.rand(pocketRadius[0], pocketRadius[1], rand);
@@ -643,7 +686,7 @@ export class RoomBuilder {
           dx === 0 && dy === 0 ? Game.randTable([-1, 0, 1], rand) : Math.sign(dx);
         const pocketCx = p.x + ox * (1 + Game.rand(0, 2, rand));
         const pocketCy = p.y + oy * (1 + Game.rand(0, 2, rand));
-        this.carveDisk(pocketCx, pocketCy, pr);
+        this.carve(pocketCx, pocketCy, pr, sq);
       }
     }
   }
@@ -663,11 +706,15 @@ export class RoomBuilder {
       softMargin: number;
       nodeCount: number;
       requiredConnectedNodes: number;
+      tunnelRadiusScale?: number;
+      squareBrush?: boolean;
     },
   ): {
     allNodes: Array<{ x: number; y: number }>;
     connectedNodes: Array<{ x: number; y: number }>;
   } {
+    const scale = config.tunnelRadiusScale ?? 1.0;
+    const sq = config.squareBrush ?? false;
     const soft = Math.max(1, Math.floor(config.softMargin));
     const minX = this.room.roomX + 1 + soft;
     const maxX = this.room.roomX + this.room.width - 2 - soft;
@@ -675,7 +722,7 @@ export class RoomBuilder {
     const maxY = this.room.roomY + this.room.height - 2 - soft;
 
     // Allow tunnel edges to spill into the margin a bit (soft, not hard fence).
-    const maxCarveRadius = 4;
+    const maxCarveRadius = Math.ceil(4 * scale);
     const carveMinX = minX - maxCarveRadius;
     const carveMaxX = maxX + maxCarveRadius;
     const carveMinY = minY - maxCarveRadius;
@@ -727,7 +774,7 @@ export class RoomBuilder {
 
       // Start from a random node, carve a chamber there.
       let current = allNodes[Math.floor(rand() * allNodes.length)];
-      this.carveDisk(current.x, current.y, 3.0);
+      this.carve(current.x, current.y, 3.0 * scale, sq);
       connected.add(keyOf(current));
 
       const required = Math.max(
@@ -788,12 +835,14 @@ export class RoomBuilder {
           radiusJitter: 1.1,
           pocketChance: 0.12,
           pocketRadius: [2, 4],
+          tunnelRadiusScale: scale,
+          squareBrush: sq,
         });
 
         // Only carve target chamber if this is the first time we connect it.
         const k = keyOf(target);
         if (!connected.has(k)) {
-          this.carveDisk(target.x, target.y, 2.25);
+          this.carve(target.x, target.y, 2.25 * scale, sq);
           connected.add(k);
         }
         current = target;

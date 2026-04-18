@@ -488,7 +488,8 @@ export class Populator {
       if (
         furthestFromUpLadder &&
         !this.level.isMainPath &&
-        !isSingleRoomSidepathMaze
+        !isSingleRoomSidepathMaze &&
+        !this.level.generationOptions?.noBoss
       ) {
         this.addBosses(furthestFromUpLadder, this.level.depth, drops);
 
@@ -516,7 +517,9 @@ export class Populator {
       this.level.depth,
       this.level.environment.type,
       {
-        skipEnvDriven: isSingleRoomSidepathMaze,
+        skipEnvDriven:
+          isSingleRoomSidepathMaze ||
+          this.level.generationOptions?.terminal === true,
         numParentRooms: this.numRooms(),
       },
     );
@@ -584,6 +587,9 @@ export class Populator {
       case EnvType.CASTLE:
       case EnvType.DARK_CASTLE:
         this.populateCastleEnvironment(room, skipEnemies);
+        break;
+      case EnvType.SEWER:
+        if (!skipEnemies) this.addRandomEnemies(room);
         break;
       case EnvType.TUTORIAL:
         this.populateTutorialEnvironment(room);
@@ -666,7 +672,7 @@ export class Populator {
           room.type !== RoomType.UPLADDER &&
           room.type !== RoomType.ROPEHOLE &&
           room.type !== RoomType.BOSS) ||
-        (room.type === RoomType.START && room.depth === 0),
+        (room.type === RoomType.START && room.depth === 0 && !opts?.terminal),
     );
 
     let downLadderRoom = this.level.isMainPath
@@ -677,8 +683,9 @@ export class Populator {
       downLadderRoom = rooms[0] ?? this.level.rooms[0];
     }
 
-    // On depth 0, always place the downladder in the START room
-    if (this.level.depth === 0) {
+    // On depth 0, place the downladder in the START room (e.g. tutorial entrance).
+    // Terminal sidepaths (e.g. depth-0 forest) are placed randomly like other sidepaths.
+    if (this.level.depth === 0 && !opts?.terminal) {
       const startRoom = this.level.rooms.find(
         (room) => room.type === RoomType.START,
       );
@@ -746,12 +753,16 @@ export class Populator {
     const envData = envType
       ? environmentData[envType]
       : environmentData[room.level.environment.type];
+    const peaceful = this.level.generationOptions?.peaceful === true;
+    const props = peaceful
+      ? envData.props.filter((p) => p.class !== TombStone)
+      : envData.props;
     let tiles = room.getEmptyTiles();
 
     for (let i = 0; i < numProps; i++) {
       if (tiles.length === 0) break;
 
-      const selectedProp = Utils.randTableWeighted(envData.props);
+      const selectedProp = Utils.randTableWeighted(props);
       if (!selectedProp) continue;
 
       // Determine required footprint
@@ -799,7 +810,11 @@ export class Populator {
     const envData = envType
       ? environmentData[envType]
       : environmentData[room.level.environment.type];
-    const props = propsOverride ?? envData.props;
+    const peaceful = this.level.generationOptions?.peaceful === true;
+    const baseProps = propsOverride ?? envData.props;
+    const props = peaceful
+      ? baseProps.filter((p) => p.class !== TombStone)
+      : baseProps;
 
     const clusterer = new PropClusterer(room, clusteringOptions);
     const positions = clusterer.generateClusteredPositions(numProps);
@@ -2061,6 +2076,7 @@ export class Populator {
     castleExitRoom: Room | null,
   ) {
     if (GameplaySettings.NO_ENEMIES === true) return;
+    if (this.level.generationOptions?.peaceful === true) return;
 
     const level = this.level;
     const distMap = this.computeRoomDistanceFromStart(level);
@@ -2146,6 +2162,8 @@ export class Populator {
       totalEnemies += count;
     }
 
+    const densityScale = this.level.generationOptions?.enemyDensityScale ?? 1.0;
+    totalEnemies = Math.round(totalEnemies * densityScale);
     totalEnemies = Math.min(totalEnemies, allTiles.length);
     if (totalEnemies <= 0 || allTiles.length === 0) {
       for (const room of populatedRooms) this.addSpecialEnemies(room);
@@ -2474,6 +2492,7 @@ export class Populator {
     multiplier: number = 1,
     addByIndex: boolean = false,
   ) {
+    if (this.level.generationOptions?.peaceful === true) return;
     const numEmptyTiles = room.getEmptyTiles().length;
     const meanValue = (room.roomArea + numEmptyTiles) / 2;
 
@@ -2497,7 +2516,8 @@ export class Populator {
 
     // Cap at the number of empty tiles (hard limit)
     const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
-    let numEnemiesToAdd = addByIndex ? indexAdd : numEnemies * multiplier;
+    const densityScale = this.level.generationOptions?.enemyDensityScale ?? 1.0;
+    let numEnemiesToAdd = (addByIndex ? indexAdd : numEnemies * multiplier) * densityScale;
     // Single-room levels can be huge; cap enemy count to avoid pathological slowdowns.
     if (
       GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS !== true &&
@@ -3223,6 +3243,9 @@ export class Populator {
       case EnvType.TUTORIAL:
         message = "Tutorial";
         break;
+      case EnvType.SEWER:
+        message = "Sewer";
+        break;
     }
     room.name = message;
     const { x, y } = room.getRoomCenter();
@@ -3773,6 +3796,9 @@ export class Populator {
         case EnvType.TUTORIAL:
           room.name = "Tutorial";
           break;
+        case EnvType.SEWER:
+          room.name = "Sewer";
+          break;
         default:
           room.name = "Sidepath";
           break;
@@ -3823,7 +3849,8 @@ export class Populator {
         this.numRooms(),
       );
       const exitOpts = exitSpec?.options ?? null;
-      const desiredExitEnv = exitSpec?.environment ?? null;
+      const desiredExitEnv =
+        opts?.terminal === true ? null : (exitSpec?.environment ?? null);
       if (desiredExitEnv === null) {
         // No configured sidepath for this environment: ensure no exit ladder exists.
         for (const d of sideDowns) {
@@ -3955,15 +3982,22 @@ export class Populator {
       rand,
     );
     // Caves get extra "ore pocket" endpoints (2), so ensure we carve/connect enough nodes.
+    // Forest gets a pool node, so needs at least 4. Sewer gets a pool node but only needs 3.
     const requiredConnected =
       room.envType === EnvType.CAVE
         ? Math.max(5, requiredConnectedBase)
+        : room.envType === EnvType.FOREST
+        ? Math.max(4, requiredConnectedBase)
+        : room.envType === EnvType.SEWER
+        ? Math.max(3, requiredConnectedBase)
         : requiredConnectedBase;
     const nodeCount = Game.randTable([12, 14, 16, 18, 20], rand);
     const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
       softMargin,
       nodeCount,
       requiredConnectedNodes: requiredConnected,
+      tunnelRadiusScale: opts?.tunnelRadiusScale,
+      squareBrush: opts?.squareBrush,
     });
 
     const minConnectedNodes = room.envType === EnvType.CAVE ? 5 : 3;
@@ -3989,6 +4023,11 @@ export class Populator {
       room.envType === EnvType.CAVE && network.connectedNodes.length >= 5
         ? (shuffled[4] ?? null)
         : null;
+    const poolEndpoint =
+      (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER) &&
+      network.connectedNodes.length >= 4
+        ? (shuffled[3] ?? null)
+        : null;
     if (!entrance) return;
 
     // Place rope-up ladder at entrance.
@@ -3998,11 +4037,13 @@ export class Populator {
     room.roomArray[entrance.x][entrance.y] = up;
 
     // Place the exit downladder (locked) at exit endpoint.
+    // If this sidepath is terminal (no further chain), suppress the exit entirely.
     const mazeExitSpec = getEnvDrivenSidePathSpec(
       this.level.environment.type,
       this.numRooms(),
     );
-    const mazeExitEnv = mazeExitSpec?.environment ?? null;
+    const mazeExitEnv =
+      opts?.terminal === true ? null : (mazeExitSpec?.environment ?? null);
     const mazeExitOpts = mazeExitSpec?.options ?? null;
     const placedKeyAndExit =
       mazeExitEnv !== null && !!exitEndpoint && !!keyEndpoint;
@@ -4093,6 +4134,88 @@ export class Populator {
       }
     }
     if (placedKeyAndExit && exitEndpoint) trySpawnBossNear(exitEndpoint);
+
+    // Forest/Sewer pool: carve a larger chamber at the pool node and fill it with water.
+    if (poolEndpoint) {
+      const scale = opts?.tunnelRadiusScale ?? 1.0;
+      // Chamber must be large enough for a 3×3 pool plus a 1-tile walkable border on
+      // all sides: corner distance = sqrt((1.5+1)² + (1.5+1)²) ≈ 3.54, so use 4.0.
+      const poolChamberRadius = Math.max(4.0, 2.25 * scale * 1.5);
+      room.builder.carveAt(poolEndpoint.x, poolEndpoint.y, poolChamberRadius, opts?.squareBrush ?? false);
+
+      // Find the largest w×h pool (up to 3 in either dimension, min 2) that fits
+      // entirely on floor tiles AND has a 1-tile floor border on all four sides so
+      // the player can always walk around the pool.
+      const maxW = Game.rand(2, 3, rand);
+      const maxH = Game.rand(2, 3, rand);
+      let poolW = 0;
+      let poolH = 0;
+      outer: for (let w = maxW; w >= 2; w--) {
+        for (let h = maxH; h >= 2; h--) {
+          const px0 = poolEndpoint.x - Math.floor(w / 2);
+          const py0 = poolEndpoint.y - Math.floor(h / 2);
+          let fits = true;
+          // Pool tiles themselves
+          for (let dx = 0; dx < w && fits; dx++) {
+            for (let dy = 0; dy < h && fits; dy++) {
+              if (!(room.roomArray[px0 + dx]?.[py0 + dy] instanceof Floor))
+                fits = false;
+            }
+          }
+          // 1-tile walkable border on all four sides
+          if (fits) {
+            for (let dx = 0; dx < w && fits; dx++) {
+              if (!(room.roomArray[px0 + dx]?.[py0 - 1] instanceof Floor))
+                fits = false;
+              if (!(room.roomArray[px0 + dx]?.[py0 + h] instanceof Floor))
+                fits = false;
+            }
+            for (let dy = 0; dy < h && fits; dy++) {
+              if (!(room.roomArray[px0 - 1]?.[py0 + dy] instanceof Floor))
+                fits = false;
+              if (!(room.roomArray[px0 + w]?.[py0 + dy] instanceof Floor))
+                fits = false;
+            }
+          }
+          if (fits) {
+            poolW = w;
+            poolH = h;
+            break outer;
+          }
+        }
+      }
+
+      if (poolW >= 2 && poolH >= 2) {
+        const px = poolEndpoint.x - Math.floor(poolW / 2);
+        const py = poolEndpoint.y - Math.floor(poolH / 2);
+        for (let dx = 0; dx < poolW; dx++) {
+          for (let dy = 0; dy < poolH; dy++) {
+            room.roomArray[px + dx][py + dy] = new Pool(
+              room,
+              px + dx,
+              py + dy,
+              dx === 0,
+              dx === poolW - 1,
+              dy === 0,
+              dy === poolH - 1,
+            );
+          }
+        }
+      }
+    }
+
+    // d0 peaceful forest: place a fishing rod on a floor tile adjacent to the entrance.
+    if (entrance && opts?.peaceful === true && room.envType === EnvType.FOREST) {
+      const adjacent = [
+        { x: entrance.x + 1, y: entrance.y },
+        { x: entrance.x - 1, y: entrance.y },
+        { x: entrance.x, y: entrance.y + 1 },
+        { x: entrance.x, y: entrance.y - 1 },
+      ].find((p) => room.roomArray[p.x]?.[p.y] instanceof Floor);
+      if (adjacent) {
+        room.items.push(new FishingRod(room, adjacent.x, adjacent.y));
+      }
+    }
 
     // Single-room sidepath maze: intentionally do NOT place vending machines.
 

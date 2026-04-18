@@ -47,6 +47,31 @@ export interface SidePathOptions {
   entranceInMainRoom?: boolean;
   /** If true, place the exit (DownLadder) inside the main room (not in a dedicated satellite room). */
   exitInMainRoom?: boolean;
+  /**
+   * If true, this sidepath level has no exit downladder to a further layer.
+   * Suppresses the env-driven sidepath spec that would normally chain to the next environment.
+   */
+  terminal?: boolean;
+  /** If true, skip boss spawning in this sidepath level. */
+  noBoss?: boolean;
+  /** If true, no enemies spawn in this sidepath level. */
+  peaceful?: boolean;
+  /**
+   * Scale factor for tunnel carve radius in single-room sidepath mazes.
+   * 1.0 = default width; 0.5 = half-width tunnels. Applies to tunnel body,
+   * node chambers, and side pockets.
+   */
+  tunnelRadiusScale?: number;
+  /**
+   * If true, the maze tunnel carver uses a square (Chebyshev) brush instead of
+   * a circular one. Produces blocky, rectilinear-feeling corridors.
+   */
+  squareBrush?: boolean;
+  /**
+   * Multiplier applied to enemy counts in this sidepath level.
+   * 1.0 = default density; 0.2 = one-fifth as many enemies.
+   */
+  enemyDensityScale?: number;
 }
 
 /** Env types that use the castle sidepath structure (PNG levels, boss room, key in exit). */

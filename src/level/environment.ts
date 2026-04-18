@@ -116,7 +116,7 @@ export class Environment {
   constructor(type: EnvType) {
     this.type = type;
     this.skin = this.type as unknown as SkinType;
-    if (this.type === EnvType.TUTORIAL) {
+    if (this.type === EnvType.TUTORIAL || this.type === EnvType.SEWER) {
       this.skin = SkinType.DUNGEON as SkinType;
     }
   }
@@ -782,6 +782,13 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     ],
 
     bosses: [{ class: Spawner, depth: 0 }],
+  },
+
+  [EnvType.SEWER]: {
+    props: [],
+    enemies: [
+      { class: CrabEnemy, weight: 1.0, minDepth: 0 },
+    ],
   },
 };
 
