@@ -1,0 +1,20 @@
+{
+  "name": "turnarchist-electron",
+  "version": "0.3.1",
+  "description": "Electron wrapper for Turnarchist (Steam target)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "build-app": "node build.js",
+    "start": "npm run build-app && electron .",
+    "pack:win": "node pack.js win32 x64",
+    "pack:mac": "node pack.js darwin x64",
+    "pack:mac-arm": "node pack.js darwin arm64",
+    "pack": "npm run pack:win && npm run pack:mac && npm run pack:mac-arm"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "@electron/packager": "^18.3.0",
+    "png2icons": "^2.0.1"
+  }
+}
