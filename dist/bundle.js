@@ -26238,7 +26238,7 @@ class Game {
         this.hasRecordedStats = false;
         this.loadedFromSaveFile = false;
         // Reference package.json
-        this.version = "0.3.1";
+        this.version = "0.3.2";
         this.loginMessage = "";
         /**
          * True while a save is being loaded and the Game instance is temporarily in an inconsistent state
@@ -33667,7 +33667,7 @@ class GameConstants {
     }
 }
 exports.GameConstants = GameConstants;
-GameConstants.VERSION = "Alpha v0.3.1"; //"v0.6.3";
+GameConstants.VERSION = "Alpha v0.3.2"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
 /**
  * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)

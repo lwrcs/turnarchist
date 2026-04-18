@@ -61,7 +61,7 @@ import { WeaponCurse } from "../item/usable/weaponCurse";
 import { BluePotion } from "../item/usable/bluePotion";
 
 export class GameConstants {
-  static readonly VERSION = "Alpha v0.3.1"; //"v0.6.3";
+  static readonly VERSION = "Alpha v0.3.2"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   /**
    * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)
