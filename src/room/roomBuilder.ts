@@ -712,7 +712,7 @@ export class RoomBuilder {
       this.carve(p.x, p.y, r, sq);
 
       if (rand() < pocketChance) {
-        const pr = Game.rand(pocketRadius[0], pocketRadius[1], rand);
+        const pr = Math.min(maxRadius, Game.rand(pocketRadius[0], pocketRadius[1], rand));
         // Offset pocket perpendicular-ish to local direction if available.
         const prev = path[i - 1] ?? p;
         const next = path[i + 1] ?? p;

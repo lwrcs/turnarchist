@@ -74231,7 +74231,7 @@ class RoomBuilder {
             const sq = opts?.squareBrush ?? false;
             this.carve(p.x, p.y, r, sq);
             if (rand() < pocketChance) {
-                const pr = game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand);
+                const pr = Math.min(maxRadius, game_1.Game.rand(pocketRadius[0], pocketRadius[1], rand));
                 // Offset pocket perpendicular-ish to local direction if available.
                 const prev = path[i - 1] ?? p;
                 const next = path[i + 1] ?? p;
@@ -78360,17 +78360,20 @@ class Populator {
         }
         if (placedKeyAndExit && exitEndpoint)
             trySpawnBossNear(exitEndpoint);
-        // Forest/Sewer pool: carve a larger chamber at the pool node and fill it with water.
+        // Forest/Sewer pool: carve the pool area + 1-tile border, then fill with water.
         if (poolEndpoint) {
-            const scale = opts?.tunnelRadiusScale ?? 1.0;
-            // Pick the target pool size first so we can carve a chamber exactly large enough.
+            // Pick the target pool size first so we can carve exactly the needed area.
             const maxW = game_1.Game.rand(2, 4, rand);
             const maxH = game_1.Game.rand(2, 4, rand);
-            // Euclidean distance from center to the far corner of pool + 1-tile border.
-            // For a w×h pool: half-extents are ceil(w/2) and ceil(h/2), plus 1 for the border.
-            const neededRadius = Math.hypot(Math.ceil(maxW / 2) + 1, Math.ceil(maxH / 2) + 1);
-            const poolChamberRadius = Math.max(neededRadius + 0.5, 2.25 * scale * 1.5);
-            room.builder.carveAt(poolEndpoint.x, poolEndpoint.y, poolChamberRadius, opts?.squareBrush ?? false);
+            // Carve only the pool rectangle + 1-tile border so the chamber doesn't bleed
+            // back into the tunnel approach and breach the tunnel width max.
+            const cpx0 = poolEndpoint.x - Math.floor(maxW / 2) - 1;
+            const cpy0 = poolEndpoint.y - Math.floor(maxH / 2) - 1;
+            for (let dx = 0; dx <= maxW + 1; dx++) {
+                for (let dy = 0; dy <= maxH + 1; dy++) {
+                    room.builder.carveAt(cpx0 + dx, cpy0 + dy, 0.6, false);
+                }
+            }
             // Find the largest w×h pool (up to maxW×maxH, min 2) that fits entirely on floor
             // tiles AND has a 1-tile floor border on all four sides.
             let poolW = 0;
