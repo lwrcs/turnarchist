@@ -4204,8 +4204,8 @@ export class Populator {
       }
     }
 
-    // d0 peaceful forest: place a fishing rod on a floor tile adjacent to the entrance.
-    if (entrance && opts?.peaceful === true && room.envType === EnvType.FOREST) {
+    // Forest and Sewer: place a fishing rod on a floor tile adjacent to the entrance.
+    if (entrance && (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER)) {
       const adjacent = [
         { x: entrance.x + 1, y: entrance.y },
         { x: entrance.x - 1, y: entrance.y },
