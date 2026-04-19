@@ -52604,7 +52604,12 @@ class BluePotion extends usable_1.Usable {
             player.syncManaFromSpellbookCooldowns();
             if (this.level.game.rooms[player.levelID] === this.level.game.room)
                 sound_1.Sound.playMagic();
-            player.inventory.removeItem(this);
+            if (this.stackCount > 1) {
+                this.stackCount--;
+            }
+            else {
+                player.inventory.removeItem(this);
+            }
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
         this.getDescription = () => {
@@ -52614,6 +52619,7 @@ class BluePotion extends usable_1.Usable {
         this.tileY = 0;
         this.offsetY = -0.3;
         this.name = BluePotion.itemName;
+        this.stackable = true;
     }
 }
 exports.BluePotion = BluePotion;
