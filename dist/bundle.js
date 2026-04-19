@@ -10584,8 +10584,20 @@ class HitWarning extends drawable_1.Drawable {
     }
     getPointerDir() {
         if (this._pointerDir === null) {
-            const dx = this.eX - this.x;
-            const dy = this.eY - this.y;
+            // For multi-tile entities, point from the closest tile in their footprint
+            // rather than always from the origin corner.
+            let eX = this.eX;
+            let eY = this.eY;
+            const eW = this.parent?.w ?? 1;
+            const eH = this.parent?.h ?? 1;
+            if (eW > 1 || eH > 1) {
+                const pX = this.parent.x;
+                const pY = this.parent.y;
+                eX = Math.max(pX, Math.min(pX + eW - 1, this.x));
+                eY = Math.max(pY, Math.min(pY + eH - 1, this.y));
+            }
+            const dx = eX - this.x;
+            const dy = eY - this.y;
             if (dx === 0 && dy === 0) {
                 this._pointerDir = HitWarningDirection.Center;
             }
@@ -67760,7 +67772,7 @@ class BigWizardFireball extends projectile_1.Projectile {
                 // Hit warnings for the full 2×2 area
                 for (let dx = 0; dx < 2; dx++) {
                     for (let dy = 0; dy < 2; dy++) {
-                        this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(this.parent.game, this.x + dx, this.y + dy, this.parent.x, this.parent.y, true));
+                        this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(this.parent.game, this.x + dx, this.y + dy, this.parent.x, this.parent.y, true, false, this.parent));
                     }
                 }
             }

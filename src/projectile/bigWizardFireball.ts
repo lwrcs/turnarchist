@@ -66,6 +66,8 @@ export class BigWizardFireball extends Projectile {
               this.parent.x,
               this.parent.y,
               true,
+              false,
+              this.parent,
             ),
           );
         }
