@@ -9646,7 +9646,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.883d845a67f221b85bc2.png";
+module.exports = __webpack_require__.p + "assets/fxset.ff9eae9e39cfb5f243a3.png";
 
 /***/ }),
 
@@ -13049,6 +13049,7 @@ exports.BigWizardEnemy = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ./wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const bigWizardFireball_1 = __webpack_require__(/*! ../../projectile/bigWizardFireball */ "./src/projectile/bigWizardFireball.ts");
+const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const wizardTeleportParticle_1 = __webpack_require__(/*! ../../particle/wizardTeleportParticle */ "./src/particle/wizardTeleportParticle.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
@@ -13131,6 +13132,46 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
             }
             return best;
         };
+        /**
+         * Tries to spawn a BigWizardFireball at (this.x + offsetX, this.y + offsetY).
+         * Falls back to a regular WizardFireball if any of the 4 tiles the 2×2 fireball
+         * would occupy are solid or out of bounds.
+         */
+        this.spawnFireball = (offsetX, offsetY) => {
+            const tx = this.x + offsetX;
+            const ty = this.y + offsetY;
+            if (!this.isWithinRoomBounds(tx, ty))
+                return;
+            // Check all 4 tiles of the 2×2 footprint.
+            let canFitBig = true;
+            for (let dx = 0; dx < 2 && canFitBig; dx++) {
+                for (let dy = 0; dy < 2 && canFitBig; dy++) {
+                    if (!this.isWithinRoomBounds(tx + dx, ty + dy)) {
+                        canFitBig = false;
+                        break;
+                    }
+                    const t = this.room.roomArray[tx + dx]?.[ty + dy];
+                    if (!t || t.isSolid() || t.isDoor)
+                        canFitBig = false;
+                }
+            }
+            if (canFitBig) {
+                this.room.projectiles.push(new bigWizardFireball_1.BigWizardFireball(this, tx, ty));
+            }
+            else {
+                // Spawn a WizardFireball on each free tile in the 2×2 footprint.
+                for (let dx = 0; dx < 2; dx++) {
+                    for (let dy = 0; dy < 2; dy++) {
+                        if (!this.isWithinRoomBounds(tx + dx, ty + dy))
+                            continue;
+                        const t = this.room.roomArray[tx + dx]?.[ty + dy];
+                        if (!t || t.isSolid() || t.isDoor)
+                            continue;
+                        this.room.projectiles.push(new wizardFireball_1.WizardFireball(this, tx + dx, ty + dy));
+                    }
+                }
+            }
+        };
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -13145,7 +13186,7 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
                         case wizardEnemy_1.WizardState.attack:
                             const nearestPlayerInfo = this.nearestPlayer();
                             if (nearestPlayerInfo !== false) {
-                                this.attemptProjectilePlacement([
+                                for (const off of [
                                     { x: -2, y: 0 },
                                     { x: -4, y: 0 },
                                     { x: 2, y: 0 },
@@ -13154,7 +13195,9 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
                                     { x: 0, y: -4 },
                                     { x: 0, y: 2 },
                                     { x: 0, y: 4 },
-                                ], bigWizardFireball_1.BigWizardFireball, false);
+                                ]) {
+                                    this.spawnFireball(off.x, off.y);
+                                }
                             }
                             this.state = wizardEnemy_1.WizardState.justAttacked;
                             break;
@@ -13183,7 +13226,7 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
                             this.tryMove(bestPos.x, bestPos.y);
                             this.drawX = this.x - oldX;
                             this.drawY = this.y - oldY;
-                            this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX, oldY));
+                            this.room.particles.push(new wizardTeleportParticle_1.WizardTeleportParticle(oldX + 0.5, oldY + 0.5));
                             if (this.withinAttackingRangeOfPlayer()) {
                                 this.state = wizardEnemy_1.WizardState.attack;
                             }
@@ -67831,10 +67874,11 @@ class BigWizardFireball extends projectile_1.Projectile {
                         this.delay--;
                         return;
                     }
-                    this.frame += 0.3 * delta;
+                    const speed = this.frame >= 4 && this.frame < 5 ? 0.1 : 0.3;
+                    this.frame += speed * delta;
                     if (this.frame > 17)
                         this.dead = true;
-                    game_1.Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 2, 4);
+                    game_1.Game.drawFX(Math.floor(this.frame) * 2, 56, 2, 4, this.x, this.y - 2, 2, 4);
                 }
             }
         };
@@ -68288,7 +68332,7 @@ class WizardFireball extends projectile_1.Projectile {
                 this.bloomAlpha = 0.5;
                 const lightSource = this.parent.room.lightSources.find((ls) => ls === this.lightSource);
                 lightSource.b = 0.4;
-                this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(this.parent.game, this.x, this.y, this.parent.x, this.parent.y, true));
+                this.parent.room.hitwarnings.push(new hitWarning_1.HitWarning(this.parent.game, this.x, this.y, this.parent.x, this.parent.y, true, false, this.parent));
             }
             if (!this.dead && this.state === 2) {
                 this.bloomAlpha = 0;
@@ -68300,7 +68344,9 @@ class WizardFireball extends projectile_1.Projectile {
         };
         this.hitPlayer = (player) => {
             if (!this.dead && this.state === 2) {
-                player.hurt(1, this.parent.name, { source: { x: this.parent.x, y: this.parent.y } });
+                player.hurt(1, this.parent.name, {
+                    source: { x: this.parent.x, y: this.parent.y },
+                });
             }
         };
         this.draw = (delta) => {
@@ -68351,6 +68397,9 @@ class WizardFireball extends projectile_1.Projectile {
                 break;
             case "earth wizard":
                 this.tileY = 10;
+                break;
+            case "big wizard":
+                this.tileY = 7;
                 break;
         }
         this.parent = parent;

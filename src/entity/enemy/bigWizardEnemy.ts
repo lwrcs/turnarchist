@@ -3,6 +3,7 @@ import { Room } from "../../room/room";
 import { Item } from "../../item/item";
 import { WizardEnemy, WizardState } from "./wizardEnemy";
 import { BigWizardFireball } from "../../projectile/bigWizardFireball";
+import { WizardFireball } from "../../projectile/wizardFireball";
 import { WizardTeleportParticle } from "../../particle/wizardTeleportParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { Random } from "../../utility/random";
@@ -106,6 +107,47 @@ export class BigWizardEnemy extends WizardEnemy {
     return best;
   };
 
+  /**
+   * Tries to spawn a BigWizardFireball at (this.x + offsetX, this.y + offsetY).
+   * Falls back to a regular WizardFireball if any of the 4 tiles the 2×2 fireball
+   * would occupy are solid or out of bounds.
+   */
+  private spawnFireball = (offsetX: number, offsetY: number): void => {
+    const tx = this.x + offsetX;
+    const ty = this.y + offsetY;
+
+    if (!this.isWithinRoomBounds(tx, ty)) return;
+
+    // Check all 4 tiles of the 2×2 footprint.
+    let canFitBig = true;
+    for (let dx = 0; dx < 2 && canFitBig; dx++) {
+      for (let dy = 0; dy < 2 && canFitBig; dy++) {
+        if (!this.isWithinRoomBounds(tx + dx, ty + dy)) {
+          canFitBig = false;
+          break;
+        }
+        const t = this.room.roomArray[tx + dx]?.[ty + dy];
+        if (!t || t.isSolid() || t.isDoor) canFitBig = false;
+      }
+    }
+
+    if (canFitBig) {
+      this.room.projectiles.push(new BigWizardFireball(this, tx, ty));
+    } else {
+      // Spawn a WizardFireball on each free tile in the 2×2 footprint.
+      for (let dx = 0; dx < 2; dx++) {
+        for (let dy = 0; dy < 2; dy++) {
+          if (!this.isWithinRoomBounds(tx + dx, ty + dy)) continue;
+          const t = this.room.roomArray[tx + dx]?.[ty + dy];
+          if (!t || t.isSolid() || t.isDoor) continue;
+          this.room.projectiles.push(
+            new WizardFireball(this, tx + dx, ty + dy),
+          );
+        }
+      }
+    }
+  };
+
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;
@@ -118,20 +160,18 @@ export class BigWizardEnemy extends WizardEnemy {
           case WizardState.attack:
             const nearestPlayerInfo = this.nearestPlayer();
             if (nearestPlayerInfo !== false) {
-              this.attemptProjectilePlacement(
-                [
-                  { x: -2, y: 0 },
-                  { x: -4, y: 0 },
-                  { x: 2, y: 0 },
-                  { x: 4, y: 0 },
-                  { x: 0, y: -2 },
-                  { x: 0, y: -4 },
-                  { x: 0, y: 2 },
-                  { x: 0, y: 4 },
-                ],
-                BigWizardFireball,
-                false,
-              );
+              for (const off of [
+                { x: -2, y: 0 },
+                { x: -4, y: 0 },
+                { x: 2, y: 0 },
+                { x: 4, y: 0 },
+                { x: 0, y: -2 },
+                { x: 0, y: -4 },
+                { x: 0, y: 2 },
+                { x: 0, y: 4 },
+              ]) {
+                this.spawnFireball(off.x, off.y);
+              }
             }
             this.state = WizardState.justAttacked;
             break;
@@ -166,7 +206,9 @@ export class BigWizardEnemy extends WizardEnemy {
             this.tryMove(bestPos.x, bestPos.y);
             this.drawX = this.x - oldX;
             this.drawY = this.y - oldY;
-            this.room.particles.push(new WizardTeleportParticle(oldX, oldY));
+            this.room.particles.push(
+              new WizardTeleportParticle(oldX + 0.5, oldY + 0.5),
+            );
             if (this.withinAttackingRangeOfPlayer()) {
               this.state = WizardState.attack;
             } else {

@@ -34,6 +34,9 @@ export class WizardFireball extends Projectile {
       case "earth wizard":
         this.tileY = 10;
         break;
+      case "big wizard":
+        this.tileY = 7;
+        break;
     }
     this.parent = parent;
     this.frame = 0;
@@ -87,6 +90,8 @@ export class WizardFireball extends Projectile {
           this.parent.x,
           this.parent.y,
           true,
+          false,
+          this.parent,
         ),
       );
     }
@@ -110,7 +115,9 @@ export class WizardFireball extends Projectile {
 
   hitPlayer = (player: Player) => {
     if (!this.dead && this.state === 2) {
-      player.hurt(1, this.parent.name, { source: { x: this.parent.x, y: this.parent.y } });
+      player.hurt(1, this.parent.name, {
+        source: { x: this.parent.x, y: this.parent.y },
+      });
     }
   };
 
