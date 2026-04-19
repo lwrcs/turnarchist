@@ -13,8 +13,8 @@
     "pack": "npm run pack:win && npm run pack:mac && npm run pack:mac-arm"
   },
   "devDependencies": {
-    "electron": "^32.0.0",
     "@electron/packager": "^18.3.0",
+    "electron": "^41.2.1",
     "png2icons": "^2.0.1"
   }
 }
