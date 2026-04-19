@@ -521,6 +521,7 @@ export class Populator {
           isSingleRoomSidepathMaze ||
           this.level.generationOptions?.terminal === true,
         numParentRooms: this.numRooms(),
+        rand: Random.rand,
       },
     );
     for (const spec of sidePathSpecs) {
@@ -3982,16 +3983,17 @@ export class Populator {
       rand,
     );
     // Caves get extra "ore pocket" endpoints (2), so ensure we carve/connect enough nodes.
-    // Forest gets a pool node, so needs at least 4. Sewer gets a pool node but only needs 3.
+    // Forest and Sewer both get a pool node, so need at least 4.
     const requiredConnected =
       room.envType === EnvType.CAVE
         ? Math.max(5, requiredConnectedBase)
         : room.envType === EnvType.FOREST
         ? Math.max(4, requiredConnectedBase)
         : room.envType === EnvType.SEWER
-        ? Math.max(3, requiredConnectedBase)
+        ? Math.max(4, requiredConnectedBase)
         : requiredConnectedBase;
-    const nodeCount = Game.randTable([12, 14, 16, 18, 20], rand);
+    const nodeCountTable = opts?.nodeCountTable ?? [12, 14, 16, 18, 20];
+    const nodeCount = Game.randTable(nodeCountTable, rand);
     const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
       softMargin,
       nodeCount,
@@ -3999,6 +4001,10 @@ export class Populator {
       tunnelRadiusScale: opts?.tunnelRadiusScale,
       squareBrush: opts?.squareBrush,
       angularMaze: opts?.angularMaze,
+      tunnelMinRadius: opts?.tunnelMinRadius,
+      tunnelMaxRadius: opts?.tunnelMaxRadius,
+      maxNodeRadius: opts?.maxNodeRadius,
+      minNodeSeparation: opts?.minNodeSeparation,
     });
 
     const minConnectedNodes = room.envType === EnvType.CAVE ? 5 : 3;
@@ -4139,16 +4145,19 @@ export class Populator {
     // Forest/Sewer pool: carve a larger chamber at the pool node and fill it with water.
     if (poolEndpoint) {
       const scale = opts?.tunnelRadiusScale ?? 1.0;
-      // Chamber must be large enough for a 3×3 pool plus a 1-tile walkable border on
-      // all sides: corner distance = sqrt((1.5+1)² + (1.5+1)²) ≈ 3.54, so use 4.0.
-      const poolChamberRadius = Math.max(4.0, 2.25 * scale * 1.5);
+
+      // Pick the target pool size first so we can carve a chamber exactly large enough.
+      const maxW = Game.rand(2, 4, rand);
+      const maxH = Game.rand(2, 4, rand);
+
+      // Euclidean distance from center to the far corner of pool + 1-tile border.
+      // For a w×h pool: half-extents are ceil(w/2) and ceil(h/2), plus 1 for the border.
+      const neededRadius = Math.hypot(Math.ceil(maxW / 2) + 1, Math.ceil(maxH / 2) + 1);
+      const poolChamberRadius = Math.max(neededRadius + 0.5, 2.25 * scale * 1.5);
       room.builder.carveAt(poolEndpoint.x, poolEndpoint.y, poolChamberRadius, opts?.squareBrush ?? false);
 
-      // Find the largest w×h pool (up to 3 in either dimension, min 2) that fits
-      // entirely on floor tiles AND has a 1-tile floor border on all four sides so
-      // the player can always walk around the pool.
-      const maxW = Game.rand(2, 3, rand);
-      const maxH = Game.rand(2, 3, rand);
+      // Find the largest w×h pool (up to maxW×maxH, min 2) that fits entirely on floor
+      // tiles AND has a 1-tile floor border on all four sides.
       let poolW = 0;
       let poolH = 0;
       outer: for (let w = maxW; w >= 2; w--) {
@@ -4203,6 +4212,14 @@ export class Populator {
           }
         }
       }
+    }
+
+    // Re-place the uprope in case pool carving overwrote it.
+    if (!(room.roomArray[entrance.x][entrance.y] instanceof UpLadder)) {
+      const upReplace = new UpLadder(room, room.game, entrance.x, entrance.y);
+      upReplace.isRope = true;
+      upReplace.isSidePath = true;
+      room.roomArray[entrance.x][entrance.y] = upReplace;
     }
 
     // Forest and Sewer: place a fishing rod on a floor tile adjacent to the entrance.

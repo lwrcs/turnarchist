@@ -25,7 +25,7 @@ export interface SidePathSpec {
 // Depth-based sidepath specs for DUNGEON parent environments
 // ---------------------------------------------------------------------------
 
-function getDungeonDepthSpec(depth: number): SidePathSpec | null {
+function getDungeonDepthSpec(depth: number, rand?: () => number): SidePathSpec | null {
   if (depth === 0 && GameplaySettings.TUTORIAL_ENABLED) {
     return {
       environment: EnvType.TUTORIAL,
@@ -41,6 +41,9 @@ function getDungeonDepthSpec(depth: number): SidePathSpec | null {
   }
 
   if (depth === 0) {
+    const baseSize = 25;
+    const longSize = 35;
+    const tall = rand ? rand() < 0.5 : Math.random() < 0.5;
     return {
       environment: EnvType.SEWER,
       options: {
@@ -50,8 +53,8 @@ function getDungeonDepthSpec(depth: number): SidePathSpec | null {
         terminal: true,
         noBoss: true,
         linearity: 0.5,
-        mapWidth: 25,
-        mapHeight: 25,
+        mapWidth: tall ? baseSize : longSize,
+        mapHeight: tall ? longSize : baseSize,
         giantRoomScale: 0.6,
         entranceInMainRoom: true,
         organicTunnelsAvoidCenter: true,
@@ -59,6 +62,11 @@ function getDungeonDepthSpec(depth: number): SidePathSpec | null {
         tunnelRadiusScale: 0.5,
         squareBrush: true,
         angularMaze: true,
+        tunnelMinRadius: 1,
+        tunnelMaxRadius: 1.5,
+        maxNodeRadius: 2,
+        minNodeSeparation: 13,
+        nodeCountTable: [5, 6, 7],
         enemyDensityScale: 0.2,
       },
     };
@@ -202,13 +210,13 @@ function getEnvDrivenSpec(
 export function getSidePathSpecs(
   depth: number,
   parentEnv: EnvType,
-  opts?: { skipEnvDriven?: boolean; numParentRooms?: number },
+  opts?: { skipEnvDriven?: boolean; numParentRooms?: number; rand?: () => number },
 ): SidePathSpec[] {
   const specs: SidePathSpec[] = [];
 
   // Depth-based spec (only applies to DUNGEON parent on the main path)
   if (parentEnv === EnvType.DUNGEON) {
-    const depthSpec = getDungeonDepthSpec(depth);
+    const depthSpec = getDungeonDepthSpec(depth, opts?.rand);
     if (depthSpec) specs.push(depthSpec);
   }
 

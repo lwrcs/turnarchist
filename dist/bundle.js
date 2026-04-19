@@ -58217,7 +58217,7 @@ const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "
 // ---------------------------------------------------------------------------
 // Depth-based sidepath specs for DUNGEON parent environments
 // ---------------------------------------------------------------------------
-function getDungeonDepthSpec(depth) {
+function getDungeonDepthSpec(depth, rand) {
     if (depth === 0 && gameplaySettings_1.GameplaySettings.TUTORIAL_ENABLED) {
         return {
             environment: environmentTypes_1.EnvType.TUTORIAL,
@@ -58232,6 +58232,9 @@ function getDungeonDepthSpec(depth) {
         };
     }
     if (depth === 0) {
+        const baseSize = 25;
+        const longSize = 35;
+        const tall = rand ? rand() < 0.5 : Math.random() < 0.5;
         return {
             environment: environmentTypes_1.EnvType.SEWER,
             options: {
@@ -58241,8 +58244,8 @@ function getDungeonDepthSpec(depth) {
                 terminal: true,
                 noBoss: true,
                 linearity: 0.5,
-                mapWidth: 25,
-                mapHeight: 25,
+                mapWidth: tall ? baseSize : longSize,
+                mapHeight: tall ? longSize : baseSize,
                 giantRoomScale: 0.6,
                 entranceInMainRoom: true,
                 organicTunnelsAvoidCenter: true,
@@ -58250,6 +58253,11 @@ function getDungeonDepthSpec(depth) {
                 tunnelRadiusScale: 0.5,
                 squareBrush: true,
                 angularMaze: true,
+                tunnelMinRadius: 1,
+                tunnelMaxRadius: 1.5,
+                maxNodeRadius: 2,
+                minNodeSeparation: 13,
+                nodeCountTable: [5, 6, 7],
                 enemyDensityScale: 0.2,
             },
         };
@@ -58378,7 +58386,7 @@ function getSidePathSpecs(depth, parentEnv, opts) {
     const specs = [];
     // Depth-based spec (only applies to DUNGEON parent on the main path)
     if (parentEnv === environmentTypes_1.EnvType.DUNGEON) {
-        const depthSpec = getDungeonDepthSpec(depth);
+        const depthSpec = getDungeonDepthSpec(depth, opts?.rand);
         if (depthSpec)
             specs.push(depthSpec);
     }
@@ -74164,8 +74172,8 @@ class RoomBuilder {
         // Use a smooth pseudo-random radius curve (sum of sines) so tunnel width
         // varies continuously along its length instead of frame-to-frame jitter.
         const scale = opts?.tunnelRadiusScale ?? 1.0;
-        const minRadius = 1.0 * scale;
-        const maxRadius = 7 * scale;
+        const minRadius = opts?.tunnelMinRadius ?? (1.0 * scale);
+        const maxRadius = opts?.tunnelMaxRadius ?? (7.0 * scale);
         // Frequency multipliers (cycles across the whole path) and phases.
         // Keep these low so the radius changes slowly over distance.
         const f1 = 0.25 + rand() * 0.35; // 0.25..0.6
@@ -74251,6 +74259,9 @@ class RoomBuilder {
         const scale = config.tunnelRadiusScale ?? 1.0;
         const sq = config.squareBrush ?? false;
         const angular = config.angularMaze ?? false;
+        const tunnelMinRadius = config.tunnelMinRadius;
+        const tunnelMaxRadius = config.tunnelMaxRadius;
+        const maxNodeRadius = config.maxNodeRadius ?? Infinity;
         const soft = Math.max(1, Math.floor(config.softMargin));
         const minX = this.room.roomX + 1 + soft;
         const maxX = this.room.roomX + this.room.width - 2 - soft;
@@ -74278,7 +74289,7 @@ class RoomBuilder {
             const connected = new Set();
             const keyOf = (p) => `${p.x},${p.y}`;
             const addNode = () => {
-                const minSeparation = 8;
+                const minSeparation = config.minNodeSeparation ?? 8;
                 for (let tries = 0; tries < 160; tries++) {
                     const x = game_1.Game.rand(minX, maxX, rand);
                     const y = game_1.Game.rand(minY, maxY, rand);
@@ -74305,7 +74316,7 @@ class RoomBuilder {
                 return { allNodes: [], connectedNodes: [] };
             // Start from a random node, carve a chamber there.
             let current = allNodes[Math.floor(rand() * allNodes.length)];
-            this.carve(current.x, current.y, 3.0 * scale, sq);
+            this.carve(current.x, current.y, Math.min(maxNodeRadius, 3.0 * scale), sq);
             connected.add(keyOf(current));
             const required = Math.max(3, Math.min(allNodes.length, Math.floor(config.requiredConnectedNodes)));
             const pickTarget = () => {
@@ -74347,11 +74358,13 @@ class RoomBuilder {
                     pocketRadius: [2, 4],
                     tunnelRadiusScale: scale,
                     squareBrush: sq,
+                    tunnelMinRadius,
+                    tunnelMaxRadius,
                 });
                 // Only carve target chamber if this is the first time we connect it.
                 const k = keyOf(target);
                 if (!connected.has(k)) {
-                    this.carve(target.x, target.y, 2.25 * scale, sq);
+                    this.carve(target.x, target.y, Math.min(maxNodeRadius, 2.25 * scale), sq);
                     connected.add(k);
                 }
                 current = target;
@@ -75380,6 +75393,7 @@ class Populator {
                 skipEnvDriven: isSingleRoomSidepathMaze ||
                     this.level.generationOptions?.terminal === true,
                 numParentRooms: this.numRooms(),
+                rand: random_1.Random.rand,
             });
             for (const spec of sidePathSpecs) {
                 this.addDownladder(spec.options);
@@ -78213,15 +78227,16 @@ class Populator {
         // Connect a random number of distinct nodes in [3..7], median biased toward 5.
         const requiredConnectedBase = game_1.Game.randTable([3, 4, 4, 5, 5, 5, 6, 6, 7], rand);
         // Caves get extra "ore pocket" endpoints (2), so ensure we carve/connect enough nodes.
-        // Forest gets a pool node, so needs at least 4. Sewer gets a pool node but only needs 3.
+        // Forest and Sewer both get a pool node, so need at least 4.
         const requiredConnected = room.envType === environmentTypes_1.EnvType.CAVE
             ? Math.max(5, requiredConnectedBase)
             : room.envType === environmentTypes_1.EnvType.FOREST
                 ? Math.max(4, requiredConnectedBase)
                 : room.envType === environmentTypes_1.EnvType.SEWER
-                    ? Math.max(3, requiredConnectedBase)
+                    ? Math.max(4, requiredConnectedBase)
                     : requiredConnectedBase;
-        const nodeCount = game_1.Game.randTable([12, 14, 16, 18, 20], rand);
+        const nodeCountTable = opts?.nodeCountTable ?? [12, 14, 16, 18, 20];
+        const nodeCount = game_1.Game.randTable(nodeCountTable, rand);
         const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
             softMargin,
             nodeCount,
@@ -78229,6 +78244,10 @@ class Populator {
             tunnelRadiusScale: opts?.tunnelRadiusScale,
             squareBrush: opts?.squareBrush,
             angularMaze: opts?.angularMaze,
+            tunnelMinRadius: opts?.tunnelMinRadius,
+            tunnelMaxRadius: opts?.tunnelMaxRadius,
+            maxNodeRadius: opts?.maxNodeRadius,
+            minNodeSeparation: opts?.minNodeSeparation,
         });
         const minConnectedNodes = room.envType === environmentTypes_1.EnvType.CAVE ? 5 : 3;
         const connected = network.connectedNodes.length >= minConnectedNodes
@@ -78344,15 +78363,16 @@ class Populator {
         // Forest/Sewer pool: carve a larger chamber at the pool node and fill it with water.
         if (poolEndpoint) {
             const scale = opts?.tunnelRadiusScale ?? 1.0;
-            // Chamber must be large enough for a 3×3 pool plus a 1-tile walkable border on
-            // all sides: corner distance = sqrt((1.5+1)² + (1.5+1)²) ≈ 3.54, so use 4.0.
-            const poolChamberRadius = Math.max(4.0, 2.25 * scale * 1.5);
+            // Pick the target pool size first so we can carve a chamber exactly large enough.
+            const maxW = game_1.Game.rand(2, 4, rand);
+            const maxH = game_1.Game.rand(2, 4, rand);
+            // Euclidean distance from center to the far corner of pool + 1-tile border.
+            // For a w×h pool: half-extents are ceil(w/2) and ceil(h/2), plus 1 for the border.
+            const neededRadius = Math.hypot(Math.ceil(maxW / 2) + 1, Math.ceil(maxH / 2) + 1);
+            const poolChamberRadius = Math.max(neededRadius + 0.5, 2.25 * scale * 1.5);
             room.builder.carveAt(poolEndpoint.x, poolEndpoint.y, poolChamberRadius, opts?.squareBrush ?? false);
-            // Find the largest w×h pool (up to 3 in either dimension, min 2) that fits
-            // entirely on floor tiles AND has a 1-tile floor border on all four sides so
-            // the player can always walk around the pool.
-            const maxW = game_1.Game.rand(2, 3, rand);
-            const maxH = game_1.Game.rand(2, 3, rand);
+            // Find the largest w×h pool (up to maxW×maxH, min 2) that fits entirely on floor
+            // tiles AND has a 1-tile floor border on all four sides.
             let poolW = 0;
             let poolH = 0;
             outer: for (let w = maxW; w >= 2; w--) {
@@ -78398,6 +78418,13 @@ class Populator {
                     }
                 }
             }
+        }
+        // Re-place the uprope in case pool carving overwrote it.
+        if (!(room.roomArray[entrance.x][entrance.y] instanceof upLadder_1.UpLadder)) {
+            const upReplace = new upLadder_1.UpLadder(room, room.game, entrance.x, entrance.y);
+            upReplace.isRope = true;
+            upReplace.isSidePath = true;
+            room.roomArray[entrance.x][entrance.y] = upReplace;
         }
         // Forest and Sewer: place a fishing rod on a floor tile adjacent to the entrance.
         if (entrance && (room.envType === environmentTypes_1.EnvType.FOREST || room.envType === environmentTypes_1.EnvType.SEWER)) {

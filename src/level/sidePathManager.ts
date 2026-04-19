@@ -69,6 +69,16 @@ export interface SidePathOptions {
   squareBrush?: boolean;
   /** If true, the maze tunnel network uses L-shaped (angular) paths instead of wormy ones. */
   angularMaze?: boolean;
+  /** Pre-scale minimum tunnel radius (multiplied by tunnelRadiusScale). Default: 1.0. */
+  tunnelMinRadius?: number;
+  /** Pre-scale maximum tunnel radius (multiplied by tunnelRadiusScale). Default: 7.0. */
+  tunnelMaxRadius?: number;
+  /** Maximum radius for node chamber carveouts (absolute, not scaled). Default: unlimited. */
+  maxNodeRadius?: number;
+  /** Minimum Manhattan distance between maze nodes. Default: 8. */
+  minNodeSeparation?: number;
+  /** Weighted table for total node count in the maze network. Default: [12,14,16,18,20]. */
+  nodeCountTable?: number[];
   /**
    * Multiplier applied to enemy counts in this sidepath level.
    * 1.0 = default density; 0.2 = one-fifth as many enemies.

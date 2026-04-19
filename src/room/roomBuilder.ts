@@ -642,13 +642,15 @@ export class RoomBuilder {
       pocketRadius?: [number, number];
       tunnelRadiusScale?: number;
       squareBrush?: boolean;
+      tunnelMinRadius?: number;
+      tunnelMaxRadius?: number;
     },
   ): void {
     // Use a smooth pseudo-random radius curve (sum of sines) so tunnel width
     // varies continuously along its length instead of frame-to-frame jitter.
     const scale = opts?.tunnelRadiusScale ?? 1.0;
-    const minRadius = 1.0 * scale;
-    const maxRadius = 7 * scale;
+    const minRadius = opts?.tunnelMinRadius ?? (1.0 * scale);
+    const maxRadius = opts?.tunnelMaxRadius ?? (7.0 * scale);
 
     // Frequency multipliers (cycles across the whole path) and phases.
     // Keep these low so the radius changes slowly over distance.
@@ -746,6 +748,10 @@ export class RoomBuilder {
       tunnelRadiusScale?: number;
       squareBrush?: boolean;
       angularMaze?: boolean;
+      tunnelMinRadius?: number;
+      tunnelMaxRadius?: number;
+      maxNodeRadius?: number;
+      minNodeSeparation?: number;
     },
   ): {
     allNodes: Array<{ x: number; y: number }>;
@@ -754,6 +760,9 @@ export class RoomBuilder {
     const scale = config.tunnelRadiusScale ?? 1.0;
     const sq = config.squareBrush ?? false;
     const angular = config.angularMaze ?? false;
+    const tunnelMinRadius = config.tunnelMinRadius;
+    const tunnelMaxRadius = config.tunnelMaxRadius;
+    const maxNodeRadius = config.maxNodeRadius ?? Infinity;
     const soft = Math.max(1, Math.floor(config.softMargin));
     const minX = this.room.roomX + 1 + soft;
     const maxX = this.room.roomX + this.room.width - 2 - soft;
@@ -788,7 +797,7 @@ export class RoomBuilder {
       const keyOf = (p: { x: number; y: number }): string => `${p.x},${p.y}`;
 
       const addNode = (): void => {
-        const minSeparation = 8;
+        const minSeparation = config.minNodeSeparation ?? 8;
         for (let tries = 0; tries < 160; tries++) {
           const x = Game.rand(minX, maxX, rand);
           const y = Game.rand(minY, maxY, rand);
@@ -813,7 +822,7 @@ export class RoomBuilder {
 
       // Start from a random node, carve a chamber there.
       let current = allNodes[Math.floor(rand() * allNodes.length)];
-      this.carve(current.x, current.y, 3.0 * scale, sq);
+      this.carve(current.x, current.y, Math.min(maxNodeRadius, 3.0 * scale), sq);
       connected.add(keyOf(current));
 
       const required = Math.max(
@@ -876,12 +885,14 @@ export class RoomBuilder {
           pocketRadius: [2, 4],
           tunnelRadiusScale: scale,
           squareBrush: sq,
+          tunnelMinRadius,
+          tunnelMaxRadius,
         });
 
         // Only carve target chamber if this is the first time we connect it.
         const k = keyOf(target);
         if (!connected.has(k)) {
-          this.carve(target.x, target.y, 2.25 * scale, sq);
+          this.carve(target.x, target.y, Math.min(maxNodeRadius, 2.25 * scale), sq);
           connected.add(k);
         }
         current = target;
