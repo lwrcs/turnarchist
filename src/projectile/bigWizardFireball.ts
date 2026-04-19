@@ -121,12 +121,12 @@ export class BigWizardFireball extends Projectile {
         this.frame += 0.25 * delta;
         if (this.frame >= 4) this.frame = 0;
         Game.drawFX(
-          11 + Math.floor(this.frame) * 2,
+          19 + Math.floor(this.frame) * 2,
           18,
           2,
           2,
-          this.x - 0.5,
-          this.y - 0.5,
+          this.x,
+          this.y,
           2,
           2,
         );
@@ -138,8 +138,8 @@ export class BigWizardFireball extends Projectile {
           18,
           2,
           2,
-          this.x - 0.5,
-          this.y - 0.7,
+          this.x,
+          this.y,
           2,
           2,
         );
@@ -150,16 +150,7 @@ export class BigWizardFireball extends Projectile {
         }
         this.frame += 0.3 * delta;
         if (this.frame > 17) this.dead = true;
-        Game.drawFX(
-          Math.floor(this.frame),
-          6,
-          1,
-          2,
-          this.x - 0.5,
-          this.y - 2,
-          2,
-          4,
-        );
+        Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 2, 4);
       }
     }
   };

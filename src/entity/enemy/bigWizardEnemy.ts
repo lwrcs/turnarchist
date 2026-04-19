@@ -121,13 +121,13 @@ export class BigWizardEnemy extends WizardEnemy {
               this.attemptProjectilePlacement(
                 [
                   { x: -2, y: 0 },
-                  { x: -3, y: 0 },
+                  { x: -4, y: 0 },
                   { x: 2, y: 0 },
-                  { x: 3, y: 0 },
+                  { x: 4, y: 0 },
                   { x: 0, y: -2 },
-                  { x: 0, y: -3 },
+                  { x: 0, y: -4 },
                   { x: 0, y: 2 },
-                  { x: 0, y: 3 },
+                  { x: 0, y: 4 },
                 ],
                 BigWizardFireball,
                 false,
@@ -188,8 +188,8 @@ export class BigWizardEnemy extends WizardEnemy {
     this.updateDrawXY(delta);
     if (this.hasShadow) this.drawShadow(delta);
     this.drawMobWithCrush(
-      35,
-      0,
+      this.tileX,
+      this.tileY,
       2,
       4,
       this.x - this.drawX,

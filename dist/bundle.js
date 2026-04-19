@@ -9646,7 +9646,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.d61ee8f9414883c73a44.png";
+module.exports = __webpack_require__.p + "assets/fxset.883d845a67f221b85bc2.png";
 
 /***/ }),
 
@@ -13135,13 +13135,13 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
                             if (nearestPlayerInfo !== false) {
                                 this.attemptProjectilePlacement([
                                     { x: -2, y: 0 },
-                                    { x: -3, y: 0 },
+                                    { x: -4, y: 0 },
                                     { x: 2, y: 0 },
-                                    { x: 3, y: 0 },
+                                    { x: 4, y: 0 },
                                     { x: 0, y: -2 },
-                                    { x: 0, y: -3 },
+                                    { x: 0, y: -4 },
                                     { x: 0, y: 2 },
-                                    { x: 0, y: 3 },
+                                    { x: 0, y: 4 },
                                 ], bigWizardFireball_1.BigWizardFireball, false);
                             }
                             this.state = wizardEnemy_1.WizardState.justAttacked;
@@ -13194,7 +13194,7 @@ class BigWizardEnemy extends wizardEnemy_1.WizardEnemy {
             this.updateDrawXY(delta);
             if (this.hasShadow)
                 this.drawShadow(delta);
-            this.drawMobWithCrush(35, 0, 2, 4, this.x - this.drawX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            this.drawMobWithCrush(this.tileX, this.tileY, 2, 4, this.x - this.drawX, this.y - 2.5 - this.drawY, 2, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.seenPlayer) {
                 this.drawSleepingZs(delta, gameConstants_1.GameConstants.TILESIZE * 0.5, gameConstants_1.GameConstants.TILESIZE * -1);
             }
@@ -67806,13 +67806,13 @@ class BigWizardFireball extends projectile_1.Projectile {
                     this.frame += 0.25 * delta;
                     if (this.frame >= 4)
                         this.frame = 0;
-                    game_1.Game.drawFX(11 + Math.floor(this.frame) * 2, 18, 2, 2, this.x - 0.5, this.y - 0.5, 2, 2);
+                    game_1.Game.drawFX(19 + Math.floor(this.frame) * 2, 18, 2, 2, this.x, this.y, 2, 2);
                 }
                 else if (this.state === 1) {
                     this.frame += 0.25 * delta;
                     if (this.frame >= 4)
                         this.frame = 0;
-                    game_1.Game.drawFX(11 + Math.floor(this.frame) * 2, 18, 2, 2, this.x - 0.5, this.y - 0.7, 2, 2);
+                    game_1.Game.drawFX(11 + Math.floor(this.frame) * 2, 18, 2, 2, this.x, this.y, 2, 2);
                 }
                 else {
                     if (this.delay > 0) {
@@ -67822,7 +67822,7 @@ class BigWizardFireball extends projectile_1.Projectile {
                     this.frame += 0.3 * delta;
                     if (this.frame > 17)
                         this.dead = true;
-                    game_1.Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x - 0.5, this.y - 2, 2, 4);
+                    game_1.Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 2, 4);
                 }
             }
         };
