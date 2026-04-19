@@ -317,7 +317,7 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   buffedBefore?: boolean;
 };
 
-export type WizardTypeKind = "energy" | "fire" | "earth";
+export type WizardTypeKind = "energy" | "fire" | "earth" | "big";
 
 export type WizardEnemySaveV2 = EnemySaveEnvelopeV2 & {
   kind: "wizard";

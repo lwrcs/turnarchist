@@ -72,6 +72,7 @@ import { WizardState as WizardEnemyState } from "../../../entity/enemy/wizardEne
 import { FireWizardEnemy } from "../../../entity/enemy/fireWizard";
 import { EarthWizardEnemy } from "../../../entity/enemy/earthWizard";
 import { EnergyWizardEnemy } from "../../../entity/enemy/energyWizard";
+import { BigWizardEnemy } from "../../../entity/enemy/bigWizardEnemy";
 import { ZombieEnemy } from "../../../entity/enemy/zombieEnemy";
 import { OccultistEnemy } from "../../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../../entity/enemy/exalterEnemy";
@@ -416,16 +417,18 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
     },
   });
 
-  // Wizard (energy/fire/earth)
+  // Wizard (energy/fire/earth/big)
   register("wizard", {
     save: (value) => {
       if (!(value instanceof WizardEnemy)) throw new Error("wizard codec received non-WizardEnemy");
       const wizardType =
-        value instanceof FireWizardEnemy
-          ? "fire"
-          : value instanceof EarthWizardEnemy
-            ? "earth"
-            : "energy";
+        value instanceof BigWizardEnemy
+          ? "big"
+          : value instanceof FireWizardEnemy
+            ? "fire"
+            : value instanceof EarthWizardEnemy
+              ? "earth"
+              : "energy";
 
       return {
         kind: "wizard",
@@ -450,11 +453,13 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
     spawn: (value, room, ctx) => {
       if (value.kind !== "wizard") throw new Error("wizard codec spawn received non-wizard save");
       const w =
-        value.wizardType === "fire"
-          ? new FireWizardEnemy(room, ctx.game, value.x, value.y)
-          : value.wizardType === "earth"
-            ? new EarthWizardEnemy(room, ctx.game, value.x, value.y)
-            : new EnergyWizardEnemy(room, ctx.game, value.x, value.y);
+        value.wizardType === "big"
+          ? new BigWizardEnemy(room, ctx.game, value.x, value.y)
+          : value.wizardType === "fire"
+            ? new FireWizardEnemy(room, ctx.game, value.x, value.y)
+            : value.wizardType === "earth"
+              ? new EarthWizardEnemy(room, ctx.game, value.x, value.y)
+              : new EnergyWizardEnemy(room, ctx.game, value.x, value.y);
 
       w.dead = value.dead;
       w.health = value.health;

@@ -58,6 +58,7 @@ import { Pumpkin } from "../entity/object/pumpkin";
 import { QueenEnemy } from "../entity/enemy/queenEnemy";
 import { FrogEnemy } from "../entity/enemy/frogEnemy";
 import { BigKnightEnemy } from "../entity/enemy/bigKnightEnemy";
+import { BigWizardEnemy } from "../entity/enemy/bigWizardEnemy";
 import { Enemy } from "../entity/enemy/enemy";
 import { FireWizardEnemy } from "../entity/enemy/fireWizard";
 import { EnergyWizardEnemy } from "../entity/enemy/energyWizard";
@@ -129,6 +130,7 @@ export enum EnemyType {
   queen = "queen",
   knight = "knight",
   bigknight = "bigknight",
+  bigwizard = "bigwizard",
   firewizard = "firewizard",
   spawner = "spawner",
   occultist = "occultist",
@@ -173,6 +175,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.queen]: QueenEnemy,
   [EnemyType.knight]: KnightEnemy,
   [EnemyType.bigknight]: BigKnightEnemy,
+  [EnemyType.bigwizard]: BigWizardEnemy,
   [EnemyType.firewizard]: FireWizardEnemy,
   [EnemyType.spawner]: Spawner,
   [EnemyType.occultist]: OccultistEnemy,
