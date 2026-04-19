@@ -58249,6 +58249,7 @@ function getDungeonDepthSpec(depth) {
                 softMargin: 5,
                 tunnelRadiusScale: 0.5,
                 squareBrush: true,
+                angularMaze: true,
                 enemyDensityScale: 0.2,
             },
         };
@@ -74040,6 +74041,36 @@ class RoomBuilder {
         }
         return dist;
     }
+    /**
+     * Builds an L-shaped path from `from` to `to`.
+     * Randomly chooses horizontal-first or vertical-first for the turn direction.
+     */
+    buildLPath(from, to, rand) {
+        const path = [];
+        const addSegment = (x0, y0, x1, y1) => {
+            const dx = x0 === x1 ? 0 : Math.sign(x1 - x0);
+            const dy = y0 === y1 ? 0 : Math.sign(y1 - y0);
+            let x = x0;
+            let y = y0;
+            path.push({ x, y });
+            while (x !== x1 || y !== y1) {
+                x += dx;
+                y += dy;
+                path.push({ x, y });
+            }
+        };
+        if (rand() < 0.5) {
+            // Horizontal first, then vertical
+            addSegment(from.x, from.y, to.x, from.y);
+            addSegment(to.x, from.y, to.x, to.y);
+        }
+        else {
+            // Vertical first, then horizontal
+            addSegment(from.x, from.y, from.x, to.y);
+            addSegment(from.x, to.y, to.x, to.y);
+        }
+        return path;
+    }
     buildWormyPath(from, to, rand, isPassable) {
         const dist = this.computeDistanceField(to, isPassable);
         const w = this.room.width;
@@ -74219,6 +74250,7 @@ class RoomBuilder {
     addSingleRoomSidepathMazeNetwork(rand, config) {
         const scale = config.tunnelRadiusScale ?? 1.0;
         const sq = config.squareBrush ?? false;
+        const angular = config.angularMaze ?? false;
         const soft = Math.max(1, Math.floor(config.softMargin));
         const minX = this.room.roomX + 1 + soft;
         const maxX = this.room.roomX + this.room.width - 2 - soft;
@@ -74302,9 +74334,10 @@ class RoomBuilder {
                 const target = pickTarget();
                 if (target.x === current.x && target.y === current.y)
                     continue;
-                const noCross = this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableNoCross(current, target));
-                const path = noCross ??
-                    this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableAllowCross(current, target));
+                const path = angular
+                    ? this.buildLPath(current, target, rand)
+                    : (this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableNoCross(current, target)) ??
+                        this.buildWormyPath({ x: current.x, y: current.y }, { x: target.x, y: target.y }, rand, passableAllowCross(current, target)));
                 if (!path)
                     continue;
                 this.carveWormyTunnelAlong(path, rand, {
@@ -78195,6 +78228,7 @@ class Populator {
             requiredConnectedNodes: requiredConnected,
             tunnelRadiusScale: opts?.tunnelRadiusScale,
             squareBrush: opts?.squareBrush,
+            angularMaze: opts?.angularMaze,
         });
         const minConnectedNodes = room.envType === environmentTypes_1.EnvType.CAVE ? 5 : 3;
         const connected = network.connectedNodes.length >= minConnectedNodes

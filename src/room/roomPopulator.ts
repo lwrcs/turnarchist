@@ -3998,6 +3998,7 @@ export class Populator {
       requiredConnectedNodes: requiredConnected,
       tunnelRadiusScale: opts?.tunnelRadiusScale,
       squareBrush: opts?.squareBrush,
+      angularMaze: opts?.angularMaze,
     });
 
     const minConnectedNodes = room.envType === EnvType.CAVE ? 5 : 3;

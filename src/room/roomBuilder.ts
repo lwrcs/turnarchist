@@ -496,6 +496,43 @@ export class RoomBuilder {
     return dist;
   }
 
+  /**
+   * Builds an L-shaped path from `from` to `to`.
+   * Randomly chooses horizontal-first or vertical-first for the turn direction.
+   */
+  private buildLPath(
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    rand: () => number,
+  ): Array<{ x: number; y: number }> {
+    const path: Array<{ x: number; y: number }> = [];
+
+    const addSegment = (x0: number, y0: number, x1: number, y1: number) => {
+      const dx = x0 === x1 ? 0 : Math.sign(x1 - x0);
+      const dy = y0 === y1 ? 0 : Math.sign(y1 - y0);
+      let x = x0;
+      let y = y0;
+      path.push({ x, y });
+      while (x !== x1 || y !== y1) {
+        x += dx;
+        y += dy;
+        path.push({ x, y });
+      }
+    };
+
+    if (rand() < 0.5) {
+      // Horizontal first, then vertical
+      addSegment(from.x, from.y, to.x, from.y);
+      addSegment(to.x, from.y, to.x, to.y);
+    } else {
+      // Vertical first, then horizontal
+      addSegment(from.x, from.y, from.x, to.y);
+      addSegment(from.x, to.y, to.x, to.y);
+    }
+
+    return path;
+  }
+
   private buildWormyPath(
     from: { x: number; y: number },
     to: { x: number; y: number },
@@ -708,6 +745,7 @@ export class RoomBuilder {
       requiredConnectedNodes: number;
       tunnelRadiusScale?: number;
       squareBrush?: boolean;
+      angularMaze?: boolean;
     },
   ): {
     allNodes: Array<{ x: number; y: number }>;
@@ -715,6 +753,7 @@ export class RoomBuilder {
   } {
     const scale = config.tunnelRadiusScale ?? 1.0;
     const sq = config.squareBrush ?? false;
+    const angular = config.angularMaze ?? false;
     const soft = Math.max(1, Math.floor(config.softMargin));
     const minX = this.room.roomX + 1 + soft;
     const maxX = this.room.roomX + this.room.width - 2 - soft;
@@ -814,20 +853,20 @@ export class RoomBuilder {
         const target = pickTarget();
         if (target.x === current.x && target.y === current.y) continue;
 
-        const noCross = this.buildWormyPath(
-          { x: current.x, y: current.y },
-          { x: target.x, y: target.y },
-          rand,
-          passableNoCross(current, target),
-        );
-        const path =
-          noCross ??
-          this.buildWormyPath(
-            { x: current.x, y: current.y },
-            { x: target.x, y: target.y },
-            rand,
-            passableAllowCross(current, target),
-          );
+        const path = angular
+          ? this.buildLPath(current, target, rand)
+          : (this.buildWormyPath(
+              { x: current.x, y: current.y },
+              { x: target.x, y: target.y },
+              rand,
+              passableNoCross(current, target),
+            ) ??
+            this.buildWormyPath(
+              { x: current.x, y: current.y },
+              { x: target.x, y: target.y },
+              rand,
+              passableAllowCross(current, target),
+            ));
         if (!path) continue;
 
         this.carveWormyTunnelAlong(path, rand, {

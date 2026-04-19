@@ -67,6 +67,8 @@ export interface SidePathOptions {
    * a circular one. Produces blocky, rectilinear-feeling corridors.
    */
   squareBrush?: boolean;
+  /** If true, the maze tunnel network uses L-shaped (angular) paths instead of wormy ones. */
+  angularMaze?: boolean;
   /**
    * Multiplier applied to enemy counts in this sidepath level.
    * 1.0 = default density; 0.2 = one-fifth as many enemies.

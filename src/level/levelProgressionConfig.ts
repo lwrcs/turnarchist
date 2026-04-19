@@ -58,6 +58,7 @@ function getDungeonDepthSpec(depth: number): SidePathSpec | null {
         softMargin: 5,
         tunnelRadiusScale: 0.5,
         squareBrush: true,
+        angularMaze: true,
         enemyDensityScale: 0.2,
       },
     };
