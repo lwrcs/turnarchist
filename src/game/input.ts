@@ -90,6 +90,7 @@ export const Input = {
 
   lastPressTime: 0,
   lastPressKey: "",
+  lastKeydownTime: 0,
 
   // Add mouse repeat tracking
   lastMouseDownTime: 0,
@@ -152,6 +153,7 @@ export const Input = {
     if (event.cancelable && event.key != "F12" && event.key != "F5")
       event.preventDefault();
     Input.lastPressTime = Date.now();
+    Input.lastKeydownTime = Date.now();
     Input.lastPressKey = event.key;
     Input._pressed[event.code] = true;
     switch (event.code) {

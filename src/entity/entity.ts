@@ -1686,7 +1686,8 @@ export class Entity extends Drawable {
    */
   protected tickHealthBarHover = (): void => {
     if (!this.isEnemy) return;
-    if (!MouseCursor.getInstance().isCursorVisible()) {
+    const cursor = MouseCursor.getInstance();
+    if (!cursor.isCursorVisible() || cursor.isKeyboardActive()) {
       this.healthBar.clearHover();
       return;
     }

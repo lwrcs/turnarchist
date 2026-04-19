@@ -21660,7 +21660,8 @@ class Entity extends drawable_1.Drawable {
         this.tickHealthBarHover = () => {
             if (!this.isEnemy)
                 return;
-            if (!mouseCursor_1.MouseCursor.getInstance().isCursorVisible()) {
+            const cursor = mouseCursor_1.MouseCursor.getInstance();
+            if (!cursor.isCursorVisible() || cursor.isKeyboardActive()) {
                 this.healthBar.clearHover();
                 return;
             }
@@ -36759,6 +36760,7 @@ exports.Input = {
     mouseDown: false,
     lastPressTime: 0,
     lastPressKey: "",
+    lastKeydownTime: 0,
     // Add mouse repeat tracking
     lastMouseDownTime: 0,
     lastMouseDownX: 0,
@@ -36817,6 +36819,7 @@ exports.Input = {
         if (event.cancelable && event.key != "F12" && event.key != "F5")
             event.preventDefault();
         exports.Input.lastPressTime = Date.now();
+        exports.Input.lastKeydownTime = Date.now();
         exports.Input.lastPressKey = event.key;
         exports.Input._pressed[event.code] = true;
         switch (event.code) {
@@ -46428,6 +46431,10 @@ class MouseCursor {
     }
     isCursorVisible() {
         return Date.now() - this.posChangeTime < this.cursorTimeout;
+    }
+    /** Returns true if a keyboard key was pressed within the last 1000ms. */
+    isKeyboardActive() {
+        return Date.now() - input_1.Input.lastKeydownTime < 1000;
     }
     getPosition() {
         if (input_1.Input.mouseX !== this.lastMouseX || input_1.Input.mouseY !== this.lastMouseY) {

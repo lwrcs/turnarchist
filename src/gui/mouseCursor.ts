@@ -128,6 +128,11 @@ export class MouseCursor {
     return Date.now() - this.posChangeTime < this.cursorTimeout;
   }
 
+  /** Returns true if a keyboard key was pressed within the last 1000ms. */
+  public isKeyboardActive(): boolean {
+    return Date.now() - Input.lastKeydownTime < 1000;
+  }
+
   public draw = (delta: number, mobile: boolean = false) => {
     if (!mobile && this.isCursorVisible()) this.drawCursor();
     this.drawAnimation(delta);
