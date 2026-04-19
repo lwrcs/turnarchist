@@ -43849,19 +43849,19 @@ exports.WEAPON_SKILL_RULES = {
     },
     spear: {
         requiredSkill: "melee",
-        requiredLevel: 15,
+        requiredLevel: 13,
         killXpMultiplier: 3,
         combatSkill: "melee",
     },
     "dual daggers": {
         requiredSkill: "melee",
-        requiredLevel: 18,
+        requiredLevel: 15,
         killXpMultiplier: 3,
         combatSkill: "melee",
     },
     warhammer: {
         requiredSkill: "melee",
-        requiredLevel: 22,
+        requiredLevel: 18,
         killXpMultiplier: 4,
         combatSkill: "melee",
     },
@@ -43874,7 +43874,7 @@ exports.WEAPON_SKILL_RULES = {
     scythe: {
         requiredSkill: "melee",
         // High-tier melee gate.
-        requiredLevel: 30,
+        requiredLevel: 20,
         killXpMultiplier: 6,
         combatSkill: "melee",
     },
