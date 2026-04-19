@@ -26203,12 +26203,13 @@ class Game {
             }
             // Otherwise: current room fades in, all others fade out and *stay* out.
             // This ensures once a room has faded out, it remains hidden until re-entered.
-            const fadeSpeed = 0.18 * delta;
+            // Use the exact framerate-independent formula: decay = (1-rate)^delta.
+            const decay = Math.pow(1 - 0.18, delta);
             for (const r of this.rooms) {
                 if (r.pathId !== this.currentPathId)
                     continue;
                 const target = r === this.room ? 1 : 0;
-                r.overShadeAlpha += (target - r.overShadeAlpha) * fadeSpeed;
+                r.overShadeAlpha = target + (r.overShadeAlpha - target) * decay;
                 if (r.overShadeAlpha < 0.001)
                     r.overShadeAlpha = 0;
                 if (r.overShadeAlpha > 0.999)
@@ -26225,7 +26226,8 @@ class Game {
         this.preLevelGenFadeActive = false;
         this.preLevelGenHoldBlack = false;
         this.preLevelGenFadeAlpha = 0;
-        this.preLevelGenFadeDurationDelta = 0;
+        this.preLevelGenFadeStartMs = 0;
+        this.preLevelGenFadeDurationMs = 0;
         this.preLevelGenActionStarted = false;
         this.preLevelGenAction = null;
         this.localPlayerID = "localplayer";
@@ -26832,9 +26834,8 @@ class Game {
                         Game.ctx.fillRect(0, 0, w, h);
                     }
                     else {
-                        // Advance fade using game delta (normalized to 60fps), not wall-clock time.
-                        this.preLevelGenFadeAlpha = Math.max(0, Math.min(1, this.preLevelGenFadeAlpha +
-                            delta / Math.max(1 / 1000, this.preLevelGenFadeDurationDelta)));
+                        // Advance fade using wall-clock time so it's framerate-independent.
+                        this.preLevelGenFadeAlpha = Math.max(0, Math.min(1, (Date.now() - this.preLevelGenFadeStartMs) / this.preLevelGenFadeDurationMs));
                         const t = this.preLevelGenFadeAlpha;
                         Game.ctx.fillStyle = "black";
                         Game.ctx.globalAlpha = t;
@@ -26862,7 +26863,8 @@ class Game {
                                             this.preLevelGenAction = null;
                                             this.preLevelGenActionStarted = false;
                                             this.preLevelGenFadeAlpha = 0;
-                                            this.preLevelGenFadeDurationDelta = 0;
+                                            this.preLevelGenFadeStartMs = 0;
+                                            this.preLevelGenFadeDurationMs = 0;
                                         });
                                     }, 0);
                                 });
@@ -30064,8 +30066,8 @@ class Game {
         this.preLevelGenFadeActive = true;
         this.preLevelGenHoldBlack = false;
         this.preLevelGenFadeAlpha = 0;
-        // Convert milliseconds to the game's normalized "delta" units (60fps => delta=1).
-        this.preLevelGenFadeDurationDelta = Math.max(1 / 1000, (Math.max(1, Math.floor(durationMs)) * 60) / 1000);
+        this.preLevelGenFadeStartMs = Date.now();
+        this.preLevelGenFadeDurationMs = Math.max(1, Math.floor(durationMs));
         this.preLevelGenActionStarted = false;
         this.preLevelGenAction = action;
     }
