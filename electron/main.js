@@ -12,7 +12,10 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      // sandbox: false so the preload script can use Node's fs/path for
+      // synchronous file-backed saves. The renderer itself still has no Node
+      // access (nodeIntegration: false + contextIsolation: true).
+      sandbox: false,
       devTools: !app.isPackaged,
     },
   });
@@ -21,7 +24,12 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "app", "play.html"));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Expose userData path to the preload via environment variable.
+  // The preload uses this to resolve the saves directory without needing IPC.
+  process.env.ELECTRON_USERDATA = app.getPath("userData");
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   app.quit();

@@ -9,6 +9,35 @@ import {
 } from "../utility/cookies";
 
 const SAVE_PREFIX = "wr_save";
+const ELECTRON_SAVE_NAME = "autosave";
+
+// ---------------------------------------------------------------------------
+// Electron file-backed save bridge
+// ---------------------------------------------------------------------------
+
+interface ElectronSave {
+  read(name: string): string | null;
+  write(name: string, json: string): void;
+  exists(name: string): boolean;
+  remove(name: string): void;
+}
+
+/**
+ * Returns the Electron save bridge if running inside the desktop build,
+ * or null in a normal browser context.
+ */
+const getElectronSave = (): ElectronSave | null => {
+  try {
+    const es = (window as any).electronSave;
+    return es && typeof es.read === "function" ? (es as ElectronSave) : null;
+  } catch {
+    return null;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Legacy save shape guard
+// ---------------------------------------------------------------------------
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -25,6 +54,10 @@ const isLegacyGameState = (v: unknown): v is GameState => {
   return true;
 };
 
+// ---------------------------------------------------------------------------
+// Save
+// ---------------------------------------------------------------------------
+
 export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
   let v2;
   try {
@@ -40,77 +73,134 @@ export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
     return;
   }
   const json = JSON.stringify(v2.value);
-  // For now, skip compression to avoid adding deps; chunk directly
+
+  const es = getElectronSave();
+  if (es) {
+    try {
+      es.write(ELECTRON_SAVE_NAME, json);
+      if (opts?.silent !== true) game.pushMessage?.("Saved.");
+    } catch (e) {
+      console.error("Electron save write failed", e);
+      if (opts?.silent !== true) game.pushMessage?.("Save failed.");
+    }
+    return;
+  }
+
   setCookieChunks(SAVE_PREFIX, json, 30);
-  if (opts?.silent !== true) game.pushMessage?.("Saved to cookies (V2).");
+  if (opts?.silent !== true) game.pushMessage?.("Saved.");
 };
 
+// ---------------------------------------------------------------------------
+// Load
+// ---------------------------------------------------------------------------
+
 export const loadFromCookies = async (game: Game): Promise<boolean> => {
-  const json = getCookieChunks(SAVE_PREFIX);
-  if (!json) {
-    game.pushMessage?.("No cookie save found.");
-    return false;
+  let json: string | null = null;
+
+  const es = getElectronSave();
+  if (es) {
+    if (!es.exists(ELECTRON_SAVE_NAME)) {
+      game.pushMessage?.("No save found.");
+      return false;
+    }
+    json = es.read(ELECTRON_SAVE_NAME);
+    if (!json) {
+      game.pushMessage?.("No save found.");
+      return false;
+    }
+  } else {
+    json = getCookieChunks(SAVE_PREFIX);
+    if (!json) {
+      game.pushMessage?.("No save found.");
+      return false;
+    }
   }
+
   try {
     // Prefer V2.
     const parsedV2 = parseSaveV2Json(json);
     if (parsedV2.ok) {
       const lr = await loadSaveV2(game, parsedV2.value);
       if (lr.ok === false) {
-        console.error("V2 cookie load failed", lr.error);
-        game.pushMessage?.("Cookie load failed.");
-        // Ensure we don't keep running with a partially cleared world.
-        try {
-          game.newGame();
-        } catch {}
+        console.error("V2 load failed", lr.error);
+        game.pushMessage?.("Load failed.");
+        try { game.newGame(); } catch {}
         return false;
       }
-      game.pushMessage?.("Loaded cookie save (V2).");
+      game.pushMessage?.("Loaded.");
       return true;
     } else {
       // Legacy fallback (pre-V2 saves).
       const state: unknown = JSON.parse(json);
       if (!isLegacyGameState(state)) {
-        console.error("Legacy cookie save failed basic shape check");
-        game.pushMessage?.("Cookie load failed.");
+        console.error("Legacy save failed basic shape check");
+        game.pushMessage?.("Load failed.");
         return false;
       }
       const activeUsernames = [game.localPlayerID];
       await loadGameState(game, activeUsernames, state, false);
-      game.pushMessage?.("Loaded cookie save (legacy).");
+      game.pushMessage?.("Loaded (legacy save).");
       return true;
     }
   } catch (e) {
-    console.error("Cookie load failed", e);
-    game.pushMessage?.("Cookie load failed.");
-    // Ensure we don't keep running with a partially cleared world.
-    try {
-      game.newGame();
-    } catch {}
+    console.error("Load failed", e);
+    game.pushMessage?.("Load failed.");
+    try { game.newGame(); } catch {}
     return false;
   }
 };
 
+// ---------------------------------------------------------------------------
+// Clear
+// ---------------------------------------------------------------------------
+
 export const clearCookieSave = () => {
+  const es = getElectronSave();
+  if (es) {
+    es.remove(ELECTRON_SAVE_NAME);
+    return;
+  }
+
   try {
     const meta = getCookie(`${SAVE_PREFIX}_meta`);
     const total = meta ? parseInt(meta, 10) : NaN;
     if (Number.isFinite(total) && total > 0) {
       for (let i = 0; i < total; i++) deleteCookie(`${SAVE_PREFIX}_${i}`);
     } else {
-      // Try a conservative cleanup of first few chunks if meta is corrupt
       for (let i = 0; i < 32; i++) deleteCookie(`${SAVE_PREFIX}_${i}`);
     }
   } catch {}
   deleteCookie(`${SAVE_PREFIX}_meta`);
 };
 
+// ---------------------------------------------------------------------------
+// Check
+// ---------------------------------------------------------------------------
+
 /**
- * Synchronous check used by UI: do we have a loadable save present?
- * - prefers V2 validation
- * - falls back to legacy shape check
+ * Synchronous check: is there a loadable save present?
+ * Used by UI before the menu is shown.
  */
 export const hasCookieSave = (): boolean => {
+  const es = getElectronSave();
+  if (es) {
+    try {
+      if (!es.exists(ELECTRON_SAVE_NAME)) return false;
+      const json = es.read(ELECTRON_SAVE_NAME);
+      if (!json) return false;
+      const v2 = parseSaveV2Json(json);
+      if (v2.ok) return true;
+      try {
+        const parsed: unknown = JSON.parse(json);
+        return isLegacyGameState(parsed);
+      } catch {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
   const json = getCookieChunks(SAVE_PREFIX);
   if (!json) return false;
   const v2 = parseSaveV2Json(json);
