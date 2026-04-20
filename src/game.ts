@@ -1087,7 +1087,7 @@ export class Game {
             (window as any).__devPopulateTestRoom = (clearFirst = false) => {
               const { populateTestRoom } = require("./game/save/testBed");
               const player = Object.values(self.players)[0] as any;
-              const room = player?.room ?? self.rooms[0];
+              const room = player?.getRoom?.() ?? self.room ?? self.rooms[0];
               populateTestRoom(room, self, clearFirst);
             };
           }

@@ -19,6 +19,7 @@ import type {
   SaveV2,
   SaveVersion,
   ShieldItemKind,
+  StatsSaveV2,
   TileKind,
   TileSaveV2,
   WeaponItemKind,
@@ -229,7 +230,7 @@ const isShieldItemKind = (k: ItemKind): k is ShieldItemKind => {
   return false;
 };
 
-const PROJECTILE_KINDS = ["wizard_fireball", "enemy_spawn_animation"] as const satisfies readonly ProjectileKind[];
+const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation"] as const satisfies readonly ProjectileKind[];
 
 const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"] as const satisfies readonly WizardTypeKind[];
 
@@ -531,7 +532,50 @@ const validateWorldDeltaV2 = (v: unknown, path: string): Result<WorldDeltaV2> =>
     rooms.push(rr.value);
   }
 
-  return ok({ players, offlinePlayers, rooms });
+  // Optional: stats (skill XP, run stats). Accept any well-formed object; old saves won't have it.
+  let stats: StatsSaveV2 | undefined;
+  const statsU = get(v, "stats");
+  if (isRecord(statsU)) {
+    stats = validateStatsSaveV2(statsU) ?? undefined;
+  }
+
+  // Optional: encounteredEnemies (array of number). Old saves won't have it.
+  let encounteredEnemies: number[] | undefined;
+  const encU = get(v, "encounteredEnemies");
+  if (Array.isArray(encU) && encU.every((n) => isNumber(n))) {
+    encounteredEnemies = encU as number[];
+  }
+
+  return ok({ players, offlinePlayers, rooms, stats, encounteredEnemies });
+};
+
+const validateStatsSaveV2 = (v: Record<string, unknown>): StatsSaveV2 | null => {
+  // Leniently extract fields — migration handles missing fields on load.
+  const enemiesKilled = isNumber(v.enemiesKilled) ? v.enemiesKilled : 0;
+  const damageDone = isNumber(v.damageDone) ? v.damageDone : 0;
+  const damageTaken = isNumber(v.damageTaken) ? v.damageTaken : 0;
+  const turnsPassed = isNumber(v.turnsPassed) ? v.turnsPassed : 0;
+  const coinsCollected = isNumber(v.coinsCollected) ? v.coinsCollected : 0;
+  const itemsCollected = isNumber(v.itemsCollected) ? v.itemsCollected : 0;
+  const enemies = Array.isArray(v.enemies) && v.enemies.every(isString) ? (v.enemies as string[]) : [];
+  const weaponChoice = isString(v.weaponChoice) ? v.weaponChoice : null;
+  const sidePathsEntered =
+    Array.isArray(v.sidePathsEntered) &&
+    v.sidePathsEntered.every((e) => isRecord(e) && isNumber(e.depth) && isString(e.sidePath))
+      ? (v.sidePathsEntered as Array<{ depth: number; sidePath: string }>)
+      : [];
+  const xp = isNumber(v.xp) ? v.xp : 0;
+  const level = isNumber(v.level) ? v.level : 1;
+  const skillsXp =
+    isRecord(v.skillsXp) &&
+    Object.values(v.skillsXp).every(isNumber)
+      ? (v.skillsXp as Record<string, number>)
+      : {};
+  return {
+    enemiesKilled, damageDone, damageTaken, turnsPassed, coinsCollected,
+    itemsCollected, enemies, weaponChoice, sidePathsEntered,
+    xp, level, skillsXp, skillsVersion: 1,
+  };
 };
 
 const validatePlayerSaveV2 = (
@@ -1948,6 +1992,35 @@ const validateProjectileSaveV2 = (v: unknown, path: string): Result<ProjectileSa
   const y = get(v, "y");
   if (!isNumber(x)) return err({ kind: "InvalidSchema", message: "x must be number", path: `${path}.x` });
   if (!isNumber(y)) return err({ kind: "InvalidSchema", message: "y must be number", path: `${path}.y` });
+
+  if (kindR.value === "big_wizard_fireball") {
+    const deadU = get(v, "dead");
+    if (!isBoolean(deadU))
+      return err({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
+    const parentGidR = asGid(get(v, "parentGid"), `${path}.parentGid`);
+    if (isErr(parentGidR)) return err(parentGidR.error);
+    const stateU = get(v, "state");
+    if (!isNumber(stateU))
+      return err({ kind: "InvalidSchema", message: "state must be number", path: `${path}.state` });
+    const delayU = get(v, "delay");
+    let delay: number | undefined = undefined;
+    if (delayU !== undefined) {
+      if (!isNumber(delayU))
+        return err({ kind: "InvalidSchema", message: "delay must be number if present", path: `${path}.delay` });
+      delay = delayU;
+    }
+    return ok({
+      kind: "big_wizard_fireball",
+      gid: gidR.value,
+      roomGid: roomGidR.value,
+      x,
+      y,
+      dead: deadU,
+      parentGid: parentGidR.value,
+      state: stateU,
+      delay,
+    });
+  }
 
   if (kindR.value === "wizard_fireball") {
     const deadU = get(v, "dead");

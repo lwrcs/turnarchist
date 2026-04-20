@@ -24795,7 +24795,6 @@ class TombStone extends entity_1.Entity {
                     }
                     sound_1.Sound.delayPlay(sound_1.Sound.skeleSpawn, 50);
                 }
-                this.tileX += 2;
                 //draw half broken tombstone based on skintype after it takes one damage
             }
         };
@@ -24808,7 +24807,8 @@ class TombStone extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             //if (!this.dead || !this.cloned) {{}
-            game_1.Game.drawObj(this.tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            const tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
+            game_1.Game.drawObj(tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             game_1.Game.ctx.restore();
         };
         this.drawTopLayer = (delta) => {
@@ -30172,7 +30172,7 @@ class Game {
                         window.__devPopulateTestRoom = (clearFirst = false) => {
                             const { populateTestRoom } = __webpack_require__(/*! ./game/save/testBed */ "./src/game/save/testBed.ts");
                             const player = Object.values(self.players)[0];
-                            const room = player?.room ?? self.rooms[0];
+                            const room = player?.getRoom?.() ?? self.room ?? self.rooms[0];
                             populateTestRoom(room, self, clearFirst);
                         };
                     }
@@ -38393,11 +38393,13 @@ const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ 
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
+const bigWizardFireball_1 = __webpack_require__(/*! ../../projectile/bigWizardFireball */ "./src/projectile/bigWizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 const equippable_1 = __webpack_require__(/*! ../../item/equippable */ "./src/item/equippable.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../input */ "./src/game/input.ts");
+const stats_1 = __webpack_require__(/*! ../stats */ "./src/game/stats.ts");
 const collectSaveGids = (save) => {
     const out = new Set();
     for (const rd of save.delta.rooms) {
@@ -39205,6 +39207,24 @@ const loadSaveV2 = async (game, save) => {
                         return gidRes;
                     room.projectiles.push(proj);
                 }
+                if (ps.kind === "big_wizard_fireball") {
+                    const parent = entitiesByGid.get(ps.parentGid);
+                    if (!parent) {
+                        return (0, errors_1.err)({ kind: "MissingReference", message: `big_wizard_fireball parent missing gid=${ps.parentGid}` });
+                    }
+                    if (!(parent instanceof wizardEnemy_1.WizardEnemy)) {
+                        return (0, errors_1.err)({ kind: "InvalidState", message: "big_wizard_fireball parent is not WizardEnemy" });
+                    }
+                    const proj = new bigWizardFireball_1.BigWizardFireball(parent, ps.x, ps.y);
+                    proj.dead = ps.dead;
+                    proj.state = ps.state;
+                    if (ps.delay !== undefined)
+                        proj.delay = ps.delay;
+                    const gidRes = reserveAndAssignGid(proj, ps.gid, preReservedGids, assignedByGid, assignedGidByObj);
+                    if (!gidRes.ok)
+                        return gidRes;
+                    room.projectiles.push(proj);
+                }
                 if (ps.kind === "enemy_spawn_animation") {
                     const enemyCodec = enemies_1.enemyRegistryV2.get(ps.enemy.kind);
                     if (!enemyCodec)
@@ -39468,6 +39488,13 @@ const loadSaveV2 = async (game, save) => {
         }
         else {
             game.currentPathId = "main";
+        }
+        // Restore stats and encounteredEnemies.
+        if (save.delta.stats) {
+            stats_1.statsTracker.setStats(save.delta.stats);
+        }
+        if (save.delta.encounteredEnemies) {
+            game.encounteredEnemies = save.delta.encounteredEnemies.slice();
         }
         // Restore gameplay RNG state AFTER regeneration and object reconstruction.
         // Generation itself reseeds per depth/path; we only want to continue the run deterministically.
@@ -41645,6 +41672,22 @@ const registerBuiltinTileCodecsV2 = () => {
                         keyInMainRoom: value.opts.keyInMainRoom,
                         entranceInMainRoom: value.opts.entranceInMainRoom,
                         exitInMainRoom: value.opts.exitInMainRoom,
+                        xySymmetry: value.opts.xySymmetry,
+                        xySymmetryCenterVoidHalfSize: value.opts.xySymmetryCenterVoidHalfSize,
+                        xySymmetryArmHalfThickness: value.opts.xySymmetryArmHalfThickness,
+                        xySymmetryCentralRoomSize: value.opts.xySymmetryCentralRoomSize,
+                        terminal: value.opts.terminal,
+                        noBoss: value.opts.noBoss,
+                        peaceful: value.opts.peaceful,
+                        tunnelRadiusScale: value.opts.tunnelRadiusScale,
+                        squareBrush: value.opts.squareBrush,
+                        angularMaze: value.opts.angularMaze,
+                        tunnelMinRadius: value.opts.tunnelMinRadius,
+                        tunnelMaxRadius: value.opts.tunnelMaxRadius,
+                        maxNodeRadius: value.opts.maxNodeRadius,
+                        minNodeSeparation: value.opts.minNodeSeparation,
+                        nodeCountTable: value.opts.nodeCountTable,
+                        enemyDensityScale: value.opts.enemyDensityScale,
                     };
                 }
                 // Always rebuild lockable from saved state (including the unlocked/no-lock case),
@@ -42997,7 +43040,7 @@ const isShieldItemKind = (k) => {
             return true;
     return false;
 };
-const PROJECTILE_KINDS = ["wizard_fireball", "enemy_spawn_animation"];
+const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation"];
 const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"];
 const asEnvKind = (v, path) => isOneOf(v, ENV_KINDS)
     ? (0, errors_1.ok)(v)
@@ -43269,7 +43312,45 @@ const validateWorldDeltaV2 = (v, path) => {
             return (0, errors_1.err)(rr.error);
         rooms.push(rr.value);
     }
-    return (0, errors_1.ok)({ players, offlinePlayers, rooms });
+    // Optional: stats (skill XP, run stats). Accept any well-formed object; old saves won't have it.
+    let stats;
+    const statsU = get(v, "stats");
+    if (isRecord(statsU)) {
+        stats = validateStatsSaveV2(statsU) ?? undefined;
+    }
+    // Optional: encounteredEnemies (array of number). Old saves won't have it.
+    let encounteredEnemies;
+    const encU = get(v, "encounteredEnemies");
+    if (Array.isArray(encU) && encU.every((n) => isNumber(n))) {
+        encounteredEnemies = encU;
+    }
+    return (0, errors_1.ok)({ players, offlinePlayers, rooms, stats, encounteredEnemies });
+};
+const validateStatsSaveV2 = (v) => {
+    // Leniently extract fields — migration handles missing fields on load.
+    const enemiesKilled = isNumber(v.enemiesKilled) ? v.enemiesKilled : 0;
+    const damageDone = isNumber(v.damageDone) ? v.damageDone : 0;
+    const damageTaken = isNumber(v.damageTaken) ? v.damageTaken : 0;
+    const turnsPassed = isNumber(v.turnsPassed) ? v.turnsPassed : 0;
+    const coinsCollected = isNumber(v.coinsCollected) ? v.coinsCollected : 0;
+    const itemsCollected = isNumber(v.itemsCollected) ? v.itemsCollected : 0;
+    const enemies = Array.isArray(v.enemies) && v.enemies.every(isString) ? v.enemies : [];
+    const weaponChoice = isString(v.weaponChoice) ? v.weaponChoice : null;
+    const sidePathsEntered = Array.isArray(v.sidePathsEntered) &&
+        v.sidePathsEntered.every((e) => isRecord(e) && isNumber(e.depth) && isString(e.sidePath))
+        ? v.sidePathsEntered
+        : [];
+    const xp = isNumber(v.xp) ? v.xp : 0;
+    const level = isNumber(v.level) ? v.level : 1;
+    const skillsXp = isRecord(v.skillsXp) &&
+        Object.values(v.skillsXp).every(isNumber)
+        ? v.skillsXp
+        : {};
+    return {
+        enemiesKilled, damageDone, damageTaken, turnsPassed, coinsCollected,
+        itemsCollected, enemies, weaponChoice, sidePathsEntered,
+        xp, level, skillsXp, skillsVersion: 1,
+    };
 };
 const validatePlayerSaveV2 = (v, path, id) => {
     if (!isRecord(v)) {
@@ -44654,6 +44735,35 @@ const validateProjectileSaveV2 = (v, path) => {
         return (0, errors_1.err)({ kind: "InvalidSchema", message: "x must be number", path: `${path}.x` });
     if (!isNumber(y))
         return (0, errors_1.err)({ kind: "InvalidSchema", message: "y must be number", path: `${path}.y` });
+    if (kindR.value === "big_wizard_fireball") {
+        const deadU = get(v, "dead");
+        if (!isBoolean(deadU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
+        const parentGidR = asGid(get(v, "parentGid"), `${path}.parentGid`);
+        if (isErr(parentGidR))
+            return (0, errors_1.err)(parentGidR.error);
+        const stateU = get(v, "state");
+        if (!isNumber(stateU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "state must be number", path: `${path}.state` });
+        const delayU = get(v, "delay");
+        let delay = undefined;
+        if (delayU !== undefined) {
+            if (!isNumber(delayU))
+                return (0, errors_1.err)({ kind: "InvalidSchema", message: "delay must be number if present", path: `${path}.delay` });
+            delay = delayU;
+        }
+        return (0, errors_1.ok)({
+            kind: "big_wizard_fireball",
+            gid: gidR.value,
+            roomGid: roomGidR.value,
+            x,
+            y,
+            dead: deadU,
+            parentGid: parentGidR.value,
+            state: stateU,
+            delay,
+        });
+    }
     if (kindR.value === "wizard_fireball") {
         const deadU = get(v, "dead");
         if (!isBoolean(deadU))
@@ -44732,6 +44842,7 @@ const validateHitWarningSaveV2 = (v, path) => {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSaveV2 = exports.collectRoomsForSaveAtCurrentDepth = void 0;
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const stats_1 = __webpack_require__(/*! ../stats */ "./src/game/stats.ts");
 const errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 const mappers_1 = __webpack_require__(/*! ./mappers */ "./src/game/save/mappers.ts");
 const tilesBuiltins_1 = __webpack_require__(/*! ./registry/tilesBuiltins */ "./src/game/save/registry/tilesBuiltins.ts");
@@ -44747,6 +44858,7 @@ const enemiesBuiltins_1 = __webpack_require__(/*! ./registry/enemiesBuiltins */ 
 const items_1 = __webpack_require__(/*! ./registry/items */ "./src/game/save/registry/items.ts");
 const enemies_1 = __webpack_require__(/*! ./registry/enemies */ "./src/game/save/registry/enemies.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
+const bigWizardFireball_1 = __webpack_require__(/*! ../../projectile/bigWizardFireball */ "./src/projectile/bigWizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
@@ -44865,6 +44977,8 @@ const createSaveV2 = (game, nowMs = Date.now()) => {
         players: mapPlayers(game, game.players, nowMs),
         offlinePlayers: mapPlayers(game, game.offlinePlayers, nowMs),
         rooms: mapRooms(game, roomsToSave, nowMs),
+        stats: stats_1.statsTracker.getStats(),
+        encounteredEnemies: game.encounteredEnemies.slice(),
     };
     const out = {
         saveVersion: 2,
@@ -44998,6 +45112,19 @@ const collectPersistedProjectiles = (game, room, nowMs) => {
         if (p instanceof wizardFireball_1.WizardFireball) {
             out.push({
                 kind: "wizard_fireball",
+                gid: p.globalId,
+                roomGid: room.globalId,
+                x: p.x,
+                y: p.y,
+                dead: p.dead,
+                parentGid: p.parent.globalId,
+                state: p.state,
+                delay: typeof p.delay === "number" ? p.delay : undefined,
+            });
+        }
+        if (p instanceof bigWizardFireball_1.BigWizardFireball) {
+            out.push({
+                kind: "big_wizard_fireball",
                 gid: p.globalId,
                 roomGid: room.globalId,
                 x: p.x,

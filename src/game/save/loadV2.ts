@@ -32,11 +32,13 @@ import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { Enemy } from "../../entity/enemy/enemy";
 import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
+import { BigWizardFireball } from "../../projectile/bigWizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { Equippable } from "../../item/equippable";
 import { GameplaySettings } from "../gameplaySettings";
 import { GameConstants } from "../gameConstants";
 import { Input } from "../input";
+import { statsTracker } from "../stats";
 
 type GidCarrier = { globalId: string };
 
@@ -974,6 +976,28 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         if (!gidRes.ok) return gidRes;
         room.projectiles.push(proj);
       }
+      if (ps.kind === "big_wizard_fireball") {
+        const parent = entitiesByGid.get(ps.parentGid);
+        if (!parent) {
+          return err({ kind: "MissingReference", message: `big_wizard_fireball parent missing gid=${ps.parentGid}` });
+        }
+        if (!(parent instanceof WizardEnemy)) {
+          return err({ kind: "InvalidState", message: "big_wizard_fireball parent is not WizardEnemy" });
+        }
+        const proj = new BigWizardFireball(parent, ps.x, ps.y);
+        proj.dead = ps.dead;
+        proj.state = ps.state;
+        if (ps.delay !== undefined) proj.delay = ps.delay;
+        const gidRes = reserveAndAssignGid(
+          proj,
+          ps.gid,
+          preReservedGids,
+          assignedByGid,
+          assignedGidByObj,
+        );
+        if (!gidRes.ok) return gidRes;
+        room.projectiles.push(proj);
+      }
       if (ps.kind === "enemy_spawn_animation") {
         const enemyCodec = enemyRegistryV2.get(ps.enemy.kind);
         if (!enemyCodec) continue;
@@ -1239,6 +1263,14 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     game.currentPathId = game.room.pathId;
   } else {
     game.currentPathId = "main";
+  }
+
+  // Restore stats and encounteredEnemies.
+  if (save.delta.stats) {
+    statsTracker.setStats(save.delta.stats as any);
+  }
+  if (save.delta.encounteredEnemies) {
+    game.encounteredEnemies = save.delta.encounteredEnemies.slice();
   }
 
   // Restore gameplay RNG state AFTER regeneration and object reconstruction.

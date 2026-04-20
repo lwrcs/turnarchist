@@ -115,6 +115,22 @@ export type SidepathOptionsSaveV2 = {
  * Mutable state layered on top of regenerated world.
  * This should include any state that can change during play and must persist.
  */
+export type StatsSaveV2 = {
+  enemiesKilled: number;
+  damageDone: number;
+  damageTaken: number;
+  turnsPassed: number;
+  coinsCollected: number;
+  itemsCollected: number;
+  enemies: string[];
+  weaponChoice: string | null;
+  sidePathsEntered: Array<{ depth: number; sidePath: string }>;
+  xp: number;
+  level: number;
+  skillsXp: Record<string, number>;
+  skillsVersion: 1;
+};
+
 export type WorldDeltaV2 = {
   players: Record<string, PlayerSaveV2>;
   offlinePlayers: Record<string, PlayerSaveV2>;
@@ -124,6 +140,12 @@ export type WorldDeltaV2 = {
    * Room ordering is never used as an identifier.
    */
   rooms: Array<RoomDeltaV2>;
+
+  /** Player stats and skill XP (optional for backward-compat with pre-stats saves). */
+  stats?: StatsSaveV2;
+
+  /** Enemy type diversity tracker for room population (optional for backward-compat). */
+  encounteredEnemies?: number[];
 };
 
 export type RoomDeltaV2 = {
@@ -540,8 +562,21 @@ export type WizardFireballProjectileSaveV2 = {
   delay?: number;
 };
 
+export type BigWizardFireballProjectileSaveV2 = {
+  kind: "big_wizard_fireball";
+  gid: Gid;
+  roomGid: Gid;
+  x: number;
+  y: number;
+  dead: boolean;
+  parentGid: Gid;
+  state: number;
+  delay?: number;
+};
+
 export type ProjectileSaveV2 =
   | WizardFireballProjectileSaveV2
+  | BigWizardFireballProjectileSaveV2
   | EnemySpawnAnimationProjectileSaveV2;
 
 export type HitWarningSaveV2 = {
@@ -760,6 +795,6 @@ export const ITEM_KIND_VALUES_V2 = [
 
 export type ItemKind = (typeof ITEM_KIND_VALUES_V2)[number];
 
-export type ProjectileKind = "wizard_fireball" | "enemy_spawn_animation";
+export type ProjectileKind = "wizard_fireball" | "big_wizard_fireball" | "enemy_spawn_animation";
 
 

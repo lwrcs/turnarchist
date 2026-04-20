@@ -1,5 +1,6 @@
 import { Game } from "../../game";
 import { Random } from "../../utility/random";
+import { statsTracker } from "../stats";
 import type { Player } from "../../player/player";
 import type { Room } from "../../room/room";
 import type { Result } from "./errors";
@@ -33,6 +34,7 @@ import type { ItemSaveV2, EnemySaveV2 } from "./schema";
 import type { Item } from "../../item/item";
 import type { Entity } from "../../entity/entity";
 import { WizardFireball } from "../../projectile/wizardFireball";
+import { BigWizardFireball } from "../../projectile/bigWizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
 import { GameplaySettings } from "../gameplaySettings";
 import { GameConstants } from "../gameConstants";
@@ -152,6 +154,8 @@ export const createSaveV2 = (game: Game, nowMs: number = Date.now()): Result<Sav
     players: mapPlayers(game, game.players, nowMs),
     offlinePlayers: mapPlayers(game, game.offlinePlayers, nowMs),
     rooms: mapRooms(game, roomsToSave, nowMs),
+    stats: statsTracker.getStats(),
+    encounteredEnemies: game.encounteredEnemies.slice(),
   };
 
   const out: SaveV2 = {
@@ -295,6 +299,19 @@ const collectPersistedProjectiles = (game: Game, room: Room, nowMs: number): Roo
     if (p instanceof WizardFireball) {
       out.push({
         kind: "wizard_fireball",
+        gid: p.globalId,
+        roomGid: room.globalId,
+        x: p.x,
+        y: p.y,
+        dead: p.dead,
+        parentGid: p.parent.globalId,
+        state: p.state,
+        delay: typeof p.delay === "number" ? p.delay : undefined,
+      });
+    }
+    if (p instanceof BigWizardFireball) {
+      out.push({
+        kind: "big_wizard_fireball",
         gid: p.globalId,
         roomGid: room.globalId,
         x: p.x,

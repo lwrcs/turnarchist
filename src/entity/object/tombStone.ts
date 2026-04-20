@@ -96,7 +96,6 @@ export class TombStone extends Entity {
         }
         Sound.delayPlay(Sound.skeleSpawn, 50);
       }
-      this.tileX += 2;
       //draw half broken tombstone based on skintype after it takes one damage
     }
   };
@@ -109,8 +108,9 @@ export class TombStone extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     //if (!this.dead || !this.cloned) {{}
+    const tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
     Game.drawObj(
-      this.tileX,
+      tileX,
       this.tileY,
       1,
       2,
