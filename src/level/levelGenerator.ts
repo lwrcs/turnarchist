@@ -217,10 +217,16 @@ export class LevelGenerator {
     let selectedPngUrl: string | undefined = undefined;
     if (shouldUsePNG && rollPNG) {
       // Use PNG-based level generation for MAIN PATHS ONLY
-      const pngUrl =
-        genOverride?.forcePngUrl !== undefined
-          ? genOverride.forcePngUrl
-          : await this.selectRandomLevelForDepth(depth);
+      let pngUrl: string | null;
+      if (genOverride?.forcePngUrl !== undefined) {
+        // During load we skip selectRandomLevelForDepth(), but that function always calls
+        // Random.rand() once to pick among available variations. Consume one rand() here
+        // to keep RNG state in sync with the original gameplay run.
+        Random.rand();
+        pngUrl = genOverride.forcePngUrl;
+      } else {
+        pngUrl = await this.selectRandomLevelForDepth(depth);
+      }
 
       if (pngUrl) {
         selectedPngUrl = pngUrl;
@@ -367,6 +373,13 @@ export class LevelGenerator {
     );
 
     newLevel.setRooms(rooms);
+    // Reset RNG to a deterministic state before population.
+    // async awaits in generateDungeonPartitions() allow the game loop to interleave
+    // Random.rand() calls (rAF ticks for particles/animations), making the state
+    // before populateRooms() non-deterministic. An explicit reset here ensures
+    // population (SpikeTrap/enemy placement, etc.) is identical between the original
+    // run and load-time regeneration.
+    Random.setState(((this.seed + depth + 37) ^ pathHash) >>> 0);
     newLevel.populator.populateRooms();
     // After ladders/props are placed, refresh start/exit rooms using tile presence.
     // This preserves existing behavior while enabling single-room ladder layouts.

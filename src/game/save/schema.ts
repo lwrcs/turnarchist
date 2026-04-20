@@ -93,6 +93,22 @@ export type SidepathOptionsSaveV2 = {
   keyInMainRoom?: boolean;
   entranceInMainRoom?: boolean;
   exitInMainRoom?: boolean;
+  xySymmetry?: boolean;
+  xySymmetryCenterVoidHalfSize?: number;
+  xySymmetryArmHalfThickness?: number;
+  xySymmetryCentralRoomSize?: number;
+  terminal?: boolean;
+  noBoss?: boolean;
+  peaceful?: boolean;
+  tunnelRadiusScale?: number;
+  squareBrush?: boolean;
+  angularMaze?: boolean;
+  tunnelMinRadius?: number;
+  tunnelMaxRadius?: number;
+  maxNodeRadius?: number;
+  minNodeSeparation?: number;
+  nodeCountTable?: number[];
+  enemyDensityScale?: number;
 };
 
 /**
@@ -154,6 +170,7 @@ export type PlayerSaveV2 = {
 
   sightRadius: number;
   light?: PlayerLightSaveV2;
+  turnCount?: number;
 };
 
 export type PlayerLightSaveV2 = {
@@ -244,11 +261,13 @@ export type UpLadderTileSaveV2 = BaseTileSaveV2 & {
   gid?: Gid;
   isRope: boolean;
   linkedRoomGid?: Gid;
+  lock?: { lockType: LockKind; keyId?: number };
 };
 
 export type SpikeTrapTileSaveV2 = BaseTileSaveV2 & {
   kind: "spike_trap";
   triggered: boolean;
+  tickCount: number;
 };
 
 export type FountainTileSaveV2 = BaseTileSaveV2 & {
@@ -650,6 +669,7 @@ export type EnemyKind =
   | "rook_statue"
   | "bishop_statue"
   | "fallen_pillar"
+  | "dark_pillar"
   // Resources (room.entities)
   | "coal_resource"
   | "gold_resource"
@@ -727,6 +747,15 @@ export const ITEM_KIND_VALUES_V2 = [
   // shields
   "occult_shield",
   "wooden_shield",
+  // armor equippables
+  "backplate",
+  "gauntlets",
+  "shoulder_plates",
+  "chest_plate",
+  // ammo
+  "crossbow_bolt",
+  // dev items
+  "god_stone",
 ] as const;
 
 export type ItemKind = (typeof ITEM_KIND_VALUES_V2)[number];

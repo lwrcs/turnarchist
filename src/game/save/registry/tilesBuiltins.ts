@@ -1,6 +1,8 @@
 import { Door, DoorType } from "../../../tile/door";
 import { DownLadder } from "../../../tile/downLadder";
 import { UpLadder } from "../../../tile/upLadder";
+import { Floor } from "../../../tile/floor";
+import { SpikeTrap } from "../../../tile/spiketrap";
 import { Button } from "../../../tile/button";
 import { InsideLevelDoor } from "../../../tile/insideLevelDoor";
 import { LockType } from "../../../tile/lockable";
@@ -164,6 +166,37 @@ export const registerBuiltinTileCodecsV2 = (): void => {
                 entranceInMainRoom:
                   typeof opts.entranceInMainRoom === "boolean" ? opts.entranceInMainRoom : undefined,
                 exitInMainRoom: typeof opts.exitInMainRoom === "boolean" ? opts.exitInMainRoom : undefined,
+                xySymmetry: typeof opts.xySymmetry === "boolean" ? opts.xySymmetry : undefined,
+                xySymmetryCenterVoidHalfSize:
+                  typeof opts.xySymmetryCenterVoidHalfSize === "number"
+                    ? opts.xySymmetryCenterVoidHalfSize
+                    : undefined,
+                xySymmetryArmHalfThickness:
+                  typeof opts.xySymmetryArmHalfThickness === "number"
+                    ? opts.xySymmetryArmHalfThickness
+                    : undefined,
+                xySymmetryCentralRoomSize:
+                  typeof opts.xySymmetryCentralRoomSize === "number"
+                    ? opts.xySymmetryCentralRoomSize
+                    : undefined,
+                terminal: typeof opts.terminal === "boolean" ? opts.terminal : undefined,
+                noBoss: typeof opts.noBoss === "boolean" ? opts.noBoss : undefined,
+                peaceful: typeof opts.peaceful === "boolean" ? opts.peaceful : undefined,
+                tunnelRadiusScale:
+                  typeof opts.tunnelRadiusScale === "number" ? opts.tunnelRadiusScale : undefined,
+                squareBrush: typeof opts.squareBrush === "boolean" ? opts.squareBrush : undefined,
+                angularMaze: typeof opts.angularMaze === "boolean" ? opts.angularMaze : undefined,
+                tunnelMinRadius:
+                  typeof opts.tunnelMinRadius === "number" ? opts.tunnelMinRadius : undefined,
+                tunnelMaxRadius:
+                  typeof opts.tunnelMaxRadius === "number" ? opts.tunnelMaxRadius : undefined,
+                maxNodeRadius:
+                  typeof opts.maxNodeRadius === "number" ? opts.maxNodeRadius : undefined,
+                minNodeSeparation:
+                  typeof opts.minNodeSeparation === "number" ? opts.minNodeSeparation : undefined,
+                nodeCountTable: Array.isArray(opts.nodeCountTable) ? opts.nodeCountTable : undefined,
+                enemyDensityScale:
+                  typeof opts.enemyDensityScale === "number" ? opts.enemyDensityScale : undefined,
               };
         return {
           kind: "down_ladder",
@@ -228,6 +261,12 @@ export const registerBuiltinTileCodecsV2 = (): void => {
         if (!(tile instanceof UpLadder)) {
           throw new Error("up_ladder codec received non-UpLadder tile");
         }
+        const lockType = tile.lockable.getLockType();
+        const lockKind = lockTypeToLockKind(lockType);
+        const lock: { lockType: LockKind; keyId?: number } | undefined =
+          lockKind !== "none"
+            ? { lockType: lockKind, keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined }
+            : undefined;
         return {
           kind: "up_ladder",
           gid: tile.globalId,
@@ -235,18 +274,82 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           y: tile.y,
           isRope: tile.isRope === true,
           linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
+          lock,
+        };
+      },
+      apply: (value: TileSaveV2, room, ctx: LoadContext): void => {
+        if (value.kind !== "up_ladder") return;
+        let t = room.roomArray[value.x]?.[value.y];
+        if (!(t instanceof UpLadder)) {
+          // Generation placed the UpLadder at a different position (non-deterministic
+          // relocation during cave population). Scan the room for it and move it.
+          let found: UpLadder | null = null;
+          let foundX = 0;
+          let foundY = 0;
+          outer: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+            for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+              const candidate = room.roomArray[x]?.[y];
+              if (candidate instanceof UpLadder) {
+                found = candidate;
+                foundX = x;
+                foundY = y;
+                break outer;
+              }
+            }
+          }
+          if (!found) {
+            throw new Error(
+              `up_ladder codec apply: no UpLadder found in room (expected at ${value.x},${value.y})`,
+            );
+          }
+          // Relocate: put a Floor where it was, move UpLadder to saved position.
+          room.roomArray[foundX][foundY] = new Floor(room, foundX, foundY);
+          found.x = value.x;
+          found.y = value.y;
+          room.roomArray[value.x][value.y] = found;
+          t = found;
+        }
+        const ladder = t as UpLadder;
+        ladder.isRope = value.isRope;
+        // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
+        ladder.isSidePath = value.isRope === true;
+        // Restore lockable state
+        if (value.lock) {
+          const lockType: LockType =
+            value.lock.lockType === "locked"
+              ? LockType.LOCKED
+              : value.lock.lockType === "guarded"
+                ? LockType.GUARDED
+                : value.lock.lockType === "tunnel"
+                  ? LockType.TUNNEL
+                  : LockType.NONE;
+          ladder.lockable = new Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: true });
+        }
+        // linkedRoom linking happens in post-pass by gid
+      },
+    });
+  }
+
+  if (!tileRegistryV2.has("spike_trap")) {
+    tileRegistryV2.register("spike_trap", {
+      save: (tile: Tile, _ctx: SaveContext): TileSaveV2 => {
+        if (!(tile instanceof SpikeTrap)) {
+          throw new Error("spike_trap codec received non-SpikeTrap tile");
+        }
+        return {
+          kind: "spike_trap",
+          x: tile.x,
+          y: tile.y,
+          triggered: tile.on,
+          tickCount: tile.tickCount,
         };
       },
       apply: (value: TileSaveV2, room, _ctx: LoadContext): void => {
-        if (value.kind !== "up_ladder") return;
+        if (value.kind !== "spike_trap") return;
         const t = room.roomArray[value.x]?.[value.y];
-        if (!(t instanceof UpLadder)) {
-          throw new Error("up_ladder codec apply: target tile is not UpLadder");
-        }
-        t.isRope = value.isRope;
-        // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
-        t.isSidePath = value.isRope === true;
-        // linkedRoom linking happens in post-pass by gid
+        if (!(t instanceof SpikeTrap)) return;
+        t.on = value.triggered;
+        t.tickCount = value.tickCount;
       },
     });
   }

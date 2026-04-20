@@ -1068,6 +1068,30 @@ export class Game {
           this.encounteredEnemies = [];
 
           this.newGame();
+
+          // Expose dev roundtrip tools on window for console access
+          {
+            const self = this;
+            (window as any).__devRoundtrip = async () => {
+              const { devRoundtripWithReport } = require("./game/save/devRoundtrip");
+              return devRoundtripWithReport(self);
+            };
+            (window as any).__devFingerprint = () => {
+              const { devCaptureFingerprint } = require("./game/save/devRoundtrip");
+              return devCaptureFingerprint(self);
+            };
+            (window as any).__devValidateSave = () => {
+              const { devCreateAndValidateSaveV2 } = require("./game/save/devRoundtrip");
+              return devCreateAndValidateSaveV2(self);
+            };
+            (window as any).__devPopulateTestRoom = (clearFirst = false) => {
+              const { populateTestRoom } = require("./game/save/testBed");
+              const player = Object.values(self.players)[0] as any;
+              const room = player?.room ?? self.rooms[0];
+              populateTestRoom(room, self, clearFirst);
+            };
+          }
+
           // Defer pointer initialization until first IN_LEVEL frame
           this.hasInitializedTutorialPointers = false;
           // If a save exists, build a start-screen menu to choose Continue/New

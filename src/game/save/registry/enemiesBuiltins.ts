@@ -32,6 +32,7 @@ import { PawnStatue } from "../../../entity/object/pawnStatue";
 import { RookStatue } from "../../../entity/object/rookStatue";
 import { BishopStatue } from "../../../entity/object/bishopStatue";
 import { FallenPillar } from "../../../entity/object/fallenPillar";
+import { DarkPillar } from "../../../entity/object/darkPillar";
 import { VendingMachine } from "../../../entity/object/vendingMachine";
 import { CoalResource } from "../../../entity/resource/coalResource";
 import { GoldResource } from "../../../entity/resource/goldResource";
@@ -125,6 +126,7 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof RookStatue) return "rook_statue";
   if (e instanceof BishopStatue) return "bishop_statue";
   if (e instanceof FallenPillar) return "fallen_pillar";
+  if (e instanceof DarkPillar) return "dark_pillar";
   if (e instanceof Chest) return "chest";
   if (e instanceof VendingMachine) return "vending_machine";
   if (e instanceof Spawner) return "spawner";
@@ -274,6 +276,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("rook_statue", RookStatue);
   registerBasic("bishop_statue", BishopStatue);
   registerBasic("fallen_pillar", FallenPillar);
+  registerBasic("dark_pillar", DarkPillar);
 
   // Chest
   register("chest", {
@@ -557,6 +560,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("furnace", Furnace);
   registerBasic("fishing_spot", FishingSpot);
   registerBasic("mushrooms_prop", Mushrooms);
+  registerBasic("glowshrooms_prop", Glowshrooms);
   registerBasic("potted_plant", PottedPlant);
 
   registerBasic("coal_resource", CoalResource);

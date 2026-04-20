@@ -59,6 +59,12 @@ import { Armor } from "../../../item/armor";
 import { WoodenShield } from "../../../item/woodenShield";
 import { FishingRod } from "../../../item/tool/fishingRod";
 import { Hammer } from "../../../item/tool/hammer";
+import { Backplate } from "../../../item/backplate";
+import { Gauntlets } from "../../../item/gauntlets";
+import { ShoulderPlates } from "../../../item/shoulderPlates";
+import { ChestPlate } from "../../../item/chestPlate";
+import { CrossbowBolt } from "../../../item/weapon/crossbowBolt";
+import { GodStone } from "../../../item/godStone";
 
 import type { LoadContext, SaveContext } from "../context";
 import type {
@@ -131,6 +137,12 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof Armor) return "occult_shield";
   if (item instanceof WoodenShield) return "wooden_shield";
   if (item instanceof DivingHelmet) return "diving_helmet";
+  if (item instanceof Backplate) return "backplate";
+  if (item instanceof Gauntlets) return "gauntlets";
+  if (item instanceof ShoulderPlates) return "shoulder_plates";
+  if (item instanceof ChestPlate) return "chest_plate";
+  if (item instanceof CrossbowBolt) return "crossbow_bolt";
+  if (item instanceof GodStone) return "god_stone";
   if (item instanceof GoldRing) return "gold_ring";
   if (item instanceof EmeraldRing) return "emerald_ring";
   if (item instanceof ZirconRing) return "zircon_ring";
@@ -260,6 +272,12 @@ export const registerBuiltinItemCodecsV2 = (): void => {
     "zircon_ring",
     "amber_ring",
     "garnet_ring",
+    "backplate",
+    "gauntlets",
+    "shoulder_plates",
+    "chest_plate",
+    "crossbow_bolt",
+    "god_stone",
   ] as const satisfies readonly GenericItemKind[];
 
   for (const kind of GENERIC_ITEM_KINDS) {
@@ -373,6 +391,24 @@ export const registerBuiltinItemCodecsV2 = (): void => {
             break;
           case "garnet_ring":
             item = new GarnetRing(room, value.x, value.y);
+            break;
+          case "backplate":
+            item = new Backplate(room, value.x, value.y);
+            break;
+          case "gauntlets":
+            item = new Gauntlets(room, value.x, value.y);
+            break;
+          case "shoulder_plates":
+            item = new ShoulderPlates(room, value.x, value.y);
+            break;
+          case "chest_plate":
+            item = new ChestPlate(room, value.x, value.y);
+            break;
+          case "crossbow_bolt":
+            item = new CrossbowBolt(room, value.x, value.y);
+            break;
+          case "god_stone":
+            item = new GodStone(room, value.x, value.y);
             break;
           default:
             throw new Error(`Unsupported builtin item kind: ${kind}`);

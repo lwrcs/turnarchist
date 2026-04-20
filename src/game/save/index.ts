@@ -15,8 +15,10 @@ export { registerBuiltinItemCodecsV2 } from "./registry/itemsBuiltins";
 export { registerBuiltinEnemyCodecsV2 } from "./registry/enemiesBuiltins";
 
 export { createSaveV2 } from "./writeV2";
-export { devCreateAndValidateSaveV2 } from "./devRoundtrip";
+export { devCreateAndValidateSaveV2, devRoundtripWithReport, devCaptureFingerprint } from "./devRoundtrip";
 export { loadSaveV2 } from "./loadV2";
 export { devSaveAndLoadV2 } from "./devSaveLoadV2";
+export { captureFingerprint } from "./fingerprint";
+export { diffFingerprints, validateRoundtrip, formatReport } from "./roundtripValidator";
 
 

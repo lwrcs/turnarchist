@@ -167,6 +167,7 @@ const ENEMY_KINDS = [
   "rook_statue",
   "bishop_statue",
   "fallen_pillar",
+  "dark_pillar",
   "coal_resource",
   "gold_resource",
   "iron_resource",
@@ -230,7 +231,7 @@ const isShieldItemKind = (k: ItemKind): k is ShieldItemKind => {
 
 const PROJECTILE_KINDS = ["wizard_fireball", "enemy_spawn_animation"] as const satisfies readonly ProjectileKind[];
 
-const WIZARD_TYPE_KINDS = ["energy", "fire", "earth"] as const satisfies readonly WizardTypeKind[];
+const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"] as const satisfies readonly WizardTypeKind[];
 
 const asEnvKind = (v: unknown, path: string): Result<EnvKind> =>
   isOneOf(v, ENV_KINDS)
@@ -588,6 +589,9 @@ const validatePlayerSaveV2 = (
       path: `${path}.sightRadius`,
     });
 
+  const turnCountU = get(v, "turnCount");
+  const turnCount: number | undefined = isNumber(turnCountU) ? turnCountU : undefined;
+
   const lightU = get(v, "light");
   let light: PlayerSaveV2["light"] = undefined;
   if (lightU !== undefined) {
@@ -647,6 +651,7 @@ const validatePlayerSaveV2 = (
     inventory: invR.value,
     sightRadius,
     light,
+    turnCount,
   });
 };
 
@@ -1274,6 +1279,22 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
             keyInMainRoom?: boolean;
             entranceInMainRoom?: boolean;
             exitInMainRoom?: boolean;
+            xySymmetry?: boolean;
+            xySymmetryCenterVoidHalfSize?: number;
+            xySymmetryArmHalfThickness?: number;
+            xySymmetryCentralRoomSize?: number;
+            terminal?: boolean;
+            noBoss?: boolean;
+            peaceful?: boolean;
+            tunnelRadiusScale?: number;
+            squareBrush?: boolean;
+            angularMaze?: boolean;
+            tunnelMinRadius?: number;
+            tunnelMaxRadius?: number;
+            maxNodeRadius?: number;
+            minNodeSeparation?: number;
+            nodeCountTable?: number[];
+            enemyDensityScale?: number;
           }
         | undefined = undefined;
       if (optsU !== undefined) {
@@ -1295,6 +1316,22 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         const keyInMainRoomU = get(optsU, "keyInMainRoom");
         const entranceInMainRoomU = get(optsU, "entranceInMainRoom");
         const exitInMainRoomU = get(optsU, "exitInMainRoom");
+        const xySymmetryU = get(optsU, "xySymmetry");
+        const xySymmetryCenterVoidHalfSizeU = get(optsU, "xySymmetryCenterVoidHalfSize");
+        const xySymmetryArmHalfThicknessU = get(optsU, "xySymmetryArmHalfThickness");
+        const xySymmetryCentralRoomSizeU = get(optsU, "xySymmetryCentralRoomSize");
+        const terminalU = get(optsU, "terminal");
+        const noBossU = get(optsU, "noBoss");
+        const peacefulU = get(optsU, "peaceful");
+        const tunnelRadiusScaleU = get(optsU, "tunnelRadiusScale");
+        const squareBrushU = get(optsU, "squareBrush");
+        const angularMazeU = get(optsU, "angularMaze");
+        const tunnelMinRadiusU = get(optsU, "tunnelMinRadius");
+        const tunnelMaxRadiusU = get(optsU, "tunnelMaxRadius");
+        const maxNodeRadiusU = get(optsU, "maxNodeRadius");
+        const minNodeSeparationU = get(optsU, "minNodeSeparation");
+        const nodeCountTableU = get(optsU, "nodeCountTable");
+        const enemyDensityScaleU = get(optsU, "enemyDensityScale");
 
         const asOptNum = (u: unknown, p: string): Result<number | undefined> => {
           if (u === undefined) return ok(undefined);
@@ -1339,6 +1376,42 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         if (isErr(entranceInMainRoomR)) return err(entranceInMainRoomR.error);
         const exitInMainRoomR = asOptBool(exitInMainRoomU, `${path}.opts.exitInMainRoom`);
         if (isErr(exitInMainRoomR)) return err(exitInMainRoomR.error);
+        const xySymmetryR = asOptBool(xySymmetryU, `${path}.opts.xySymmetry`);
+        if (isErr(xySymmetryR)) return err(xySymmetryR.error);
+        const xySymmetryCenterVoidHalfSizeR = asOptNum(xySymmetryCenterVoidHalfSizeU, `${path}.opts.xySymmetryCenterVoidHalfSize`);
+        if (isErr(xySymmetryCenterVoidHalfSizeR)) return err(xySymmetryCenterVoidHalfSizeR.error);
+        const xySymmetryArmHalfThicknessR = asOptNum(xySymmetryArmHalfThicknessU, `${path}.opts.xySymmetryArmHalfThickness`);
+        if (isErr(xySymmetryArmHalfThicknessR)) return err(xySymmetryArmHalfThicknessR.error);
+        const xySymmetryCentralRoomSizeR = asOptNum(xySymmetryCentralRoomSizeU, `${path}.opts.xySymmetryCentralRoomSize`);
+        if (isErr(xySymmetryCentralRoomSizeR)) return err(xySymmetryCentralRoomSizeR.error);
+        const terminalR = asOptBool(terminalU, `${path}.opts.terminal`);
+        if (isErr(terminalR)) return err(terminalR.error);
+        const noBossR = asOptBool(noBossU, `${path}.opts.noBoss`);
+        if (isErr(noBossR)) return err(noBossR.error);
+        const peacefulR = asOptBool(peacefulU, `${path}.opts.peaceful`);
+        if (isErr(peacefulR)) return err(peacefulR.error);
+        const tunnelRadiusScaleR = asOptNum(tunnelRadiusScaleU, `${path}.opts.tunnelRadiusScale`);
+        if (isErr(tunnelRadiusScaleR)) return err(tunnelRadiusScaleR.error);
+        const squareBrushR = asOptBool(squareBrushU, `${path}.opts.squareBrush`);
+        if (isErr(squareBrushR)) return err(squareBrushR.error);
+        const angularMazeR = asOptBool(angularMazeU, `${path}.opts.angularMaze`);
+        if (isErr(angularMazeR)) return err(angularMazeR.error);
+        const tunnelMinRadiusR = asOptNum(tunnelMinRadiusU, `${path}.opts.tunnelMinRadius`);
+        if (isErr(tunnelMinRadiusR)) return err(tunnelMinRadiusR.error);
+        const tunnelMaxRadiusR = asOptNum(tunnelMaxRadiusU, `${path}.opts.tunnelMaxRadius`);
+        if (isErr(tunnelMaxRadiusR)) return err(tunnelMaxRadiusR.error);
+        const maxNodeRadiusR = asOptNum(maxNodeRadiusU, `${path}.opts.maxNodeRadius`);
+        if (isErr(maxNodeRadiusR)) return err(maxNodeRadiusR.error);
+        const minNodeSeparationR = asOptNum(minNodeSeparationU, `${path}.opts.minNodeSeparation`);
+        if (isErr(minNodeSeparationR)) return err(minNodeSeparationR.error);
+        let nodeCountTable: number[] | undefined = undefined;
+        if (nodeCountTableU !== undefined) {
+          if (!Array.isArray(nodeCountTableU) || !nodeCountTableU.every(isNumber))
+            return err({ kind: "InvalidSchema", message: "nodeCountTable must be number[] if present", path: `${path}.opts.nodeCountTable` });
+          nodeCountTable = nodeCountTableU as number[];
+        }
+        const enemyDensityScaleR = asOptNum(enemyDensityScaleU, `${path}.opts.enemyDensityScale`);
+        if (isErr(enemyDensityScaleR)) return err(enemyDensityScaleR.error);
 
         let envType: EnvKind | undefined = undefined;
         if (envTypeU !== undefined) {
@@ -1363,6 +1436,22 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
           keyInMainRoom: keyInMainRoomR.value,
           entranceInMainRoom: entranceInMainRoomR.value,
           exitInMainRoom: exitInMainRoomR.value,
+          xySymmetry: xySymmetryR.value,
+          xySymmetryCenterVoidHalfSize: xySymmetryCenterVoidHalfSizeR.value,
+          xySymmetryArmHalfThickness: xySymmetryArmHalfThicknessR.value,
+          xySymmetryCentralRoomSize: xySymmetryCentralRoomSizeR.value,
+          terminal: terminalR.value,
+          noBoss: noBossR.value,
+          peaceful: peacefulR.value,
+          tunnelRadiusScale: tunnelRadiusScaleR.value,
+          squareBrush: squareBrushR.value,
+          angularMaze: angularMazeR.value,
+          tunnelMinRadius: tunnelMinRadiusR.value,
+          tunnelMaxRadius: tunnelMaxRadiusR.value,
+          maxNodeRadius: maxNodeRadiusR.value,
+          minNodeSeparation: minNodeSeparationR.value,
+          nodeCountTable,
+          enemyDensityScale: enemyDensityScaleR.value,
         };
       }
       const lockU = get(v, "lock");
@@ -1409,13 +1498,27 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         if (isErr(lg)) return err(lg.error);
         linkedRoomGid = lg.value;
       }
-      return ok({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid });
+      const upLockU = get(v, "lock");
+      let upLock: { lockType: LockKind; keyId?: number } | undefined = undefined;
+      if (upLockU !== undefined) {
+        if (!isRecord(upLockU)) {
+          return err({ kind: "InvalidSchema", message: "lock must be object", path: `${path}.lock` });
+        }
+        const lockTypeR = asLockKind(get(upLockU, "lockType"), `${path}.lock.lockType`);
+        if (isErr(lockTypeR)) return err(lockTypeR.error);
+        const keyIdU = get(upLockU, "keyId");
+        const keyId = isNumber(keyIdU) ? keyIdU : undefined;
+        upLock = { lockType: lockTypeR.value, keyId };
+      }
+      return ok({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid, lock: upLock });
     }
     case "spike_trap": {
       const triggered = get(v, "triggered");
       if (!isBoolean(triggered))
         return err({ kind: "InvalidSchema", message: "triggered must be boolean", path: `${path}.triggered` });
-      return ok({ kind: "spike_trap", gid, x, y, triggered });
+      const rawTickCount = get(v, "tickCount");
+      const tickCount = isNumber(rawTickCount) ? rawTickCount : 0;
+      return ok({ kind: "spike_trap", gid, x, y, triggered, tickCount });
     }
     case "fountain": {
       const subTileX = get(v, "subTileX");

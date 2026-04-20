@@ -24,6 +24,7 @@ import { DownLadder } from "../../tile/downLadder";
 import { UpLadder } from "../../tile/upLadder";
 import { Button } from "../../tile/button";
 import { InsideLevelDoor } from "../../tile/insideLevelDoor";
+import { SpikeTrap } from "../../tile/spiketrap";
 import { registerBuiltinItemCodecsV2, getItemKindV2 } from "./registry/itemsBuiltins";
 import { registerBuiltinEnemyCodecsV2, getEnemyKindV2 } from "./registry/enemiesBuiltins";
 import { itemRegistryV2 } from "./registry/items";
@@ -52,7 +53,7 @@ const stableRoomSort = (a: Room, b: Room): number => {
  * Collect all rooms we should persist for the current depth even when the player is in a sidepath.
  * This is important because sidepath generation parameters live on the *main-path room's* rope-down ladder tiles.
  */
-const collectRoomsForSaveAtCurrentDepth = (game: Game): Room[] => {
+export const collectRoomsForSaveAtCurrentDepth = (game: Game): Room[] => {
   const depth = game.level.depth;
   const mainLevel = game.levels?.[depth];
   const seedRooms: Room[] = [];
@@ -207,6 +208,7 @@ const playerToSave = (game: Game, id: string, p: Player, nowMs: number): PlayerS
     roomGid: room.globalId,
     inventory,
     sightRadius: p.sightRadius,
+    turnCount: p.turnCount,
     light: {
       equipped: p.lightEquipped,
       colorRgb: [p.lightColor[0], p.lightColor[1], p.lightColor[2]],
@@ -326,6 +328,7 @@ const tileToKind = (t: Tile): TileKind | null => {
   if (t instanceof Button) return "button";
   if (t instanceof DownLadder) return "down_ladder";
   if (t instanceof UpLadder) return "up_ladder";
+  if (t instanceof SpikeTrap) return "spike_trap";
   return null;
 };
 

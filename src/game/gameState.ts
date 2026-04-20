@@ -2261,6 +2261,7 @@ export const loadGameState = (
         } else {
           game.players[game.localPlayerID] = new Player(game, 0, 0, true);
           game.room = game.rooms[game.players[game.localPlayerID].levelID];
+          game.players[game.localPlayerID].roomGID = game.room.globalId;
           game.room.enterLevel(game.players[game.localPlayerID]);
           game.players[game.localPlayerID].map.updateSeenTiles();
           game.players[game.localPlayerID].map.saveMapData();

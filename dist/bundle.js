@@ -30154,6 +30154,28 @@ class Game {
                     this.levels = [];
                     this.encounteredEnemies = [];
                     this.newGame();
+                    // Expose dev roundtrip tools on window for console access
+                    {
+                        const self = this;
+                        window.__devRoundtrip = async () => {
+                            const { devRoundtripWithReport } = __webpack_require__(/*! ./game/save/devRoundtrip */ "./src/game/save/devRoundtrip.ts");
+                            return devRoundtripWithReport(self);
+                        };
+                        window.__devFingerprint = () => {
+                            const { devCaptureFingerprint } = __webpack_require__(/*! ./game/save/devRoundtrip */ "./src/game/save/devRoundtrip.ts");
+                            return devCaptureFingerprint(self);
+                        };
+                        window.__devValidateSave = () => {
+                            const { devCreateAndValidateSaveV2 } = __webpack_require__(/*! ./game/save/devRoundtrip */ "./src/game/save/devRoundtrip.ts");
+                            return devCreateAndValidateSaveV2(self);
+                        };
+                        window.__devPopulateTestRoom = (clearFirst = false) => {
+                            const { populateTestRoom } = __webpack_require__(/*! ./game/save/testBed */ "./src/game/save/testBed.ts");
+                            const player = Object.values(self.players)[0];
+                            const room = player?.room ?? self.rooms[0];
+                            populateTestRoom(room, self, clearFirst);
+                        };
+                    }
                     // Defer pointer initialization until first IN_LEVEL frame
                     this.hasInitializedTutorialPointers = false;
                     // If a save exists, build a start-screen menu to choose Continue/New
@@ -33946,7 +33968,7 @@ GameConstants.isMobile = false;
 GameConstants.isIOS = false;
 GameConstants.MOBILE_KEYBOARD_SUPPORT = false;
 GameConstants.CAMERA_SPEED = 1; // 1 is instant 0.1 is slow
-GameConstants.SAVING_ENABLED = false;
+GameConstants.SAVING_ENABLED = true;
 GameConstants.FPS = 120;
 GameConstants.ALPHA_ENABLED = true;
 GameConstants.SHADE_LEVELS = 50; //25
@@ -36501,6 +36523,7 @@ const loadGameState = (game, activeUsernames, gameState, newWorld) => {
             else {
                 game.players[game.localPlayerID] = new player_1.Player(game, 0, 0, true);
                 game.room = game.rooms[game.players[game.localPlayerID].levelID];
+                game.players[game.localPlayerID].roomGID = game.room.globalId;
                 game.room.enterLevel(game.players[game.localPlayerID]);
                 game.players[game.localPlayerID].map.updateSeenTiles();
                 game.players[game.localPlayerID].map.saveMapData();
@@ -37895,10 +37918,12 @@ exports.ReplayManager = ReplayManager;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.devCreateAndValidateSaveV2 = void 0;
+exports.devCaptureFingerprint = exports.devRoundtripWithReport = exports.devCreateAndValidateSaveV2 = void 0;
 const errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 const validate_1 = __webpack_require__(/*! ./validate */ "./src/game/save/validate.ts");
 const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
+const fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
+const roundtripValidator_1 = __webpack_require__(/*! ./roundtripValidator */ "./src/game/save/roundtripValidator.ts");
 /**
  * Dev-only helper: create a SaveV2, stringify, then validate parse.
  * This catches schema drift early while we iterate.
@@ -37914,6 +37939,25 @@ const devCreateAndValidateSaveV2 = (game) => {
     return (0, errors_1.ok)(undefined);
 };
 exports.devCreateAndValidateSaveV2 = devCreateAndValidateSaveV2;
+/**
+ * Dev-only helper: full roundtrip with fingerprint diff.
+ * Captures fingerprint → saves → loads into fresh Game → captures fingerprint → diffs.
+ * Logs a full report to the console.
+ */
+const devRoundtripWithReport = async (game) => {
+    console.log("[devRoundtrip] Starting roundtrip validation...");
+    const report = await (0, roundtripValidator_1.validateRoundtrip)(game);
+    console.log((0, roundtripValidator_1.formatReport)(report));
+    return report;
+};
+exports.devRoundtripWithReport = devRoundtripWithReport;
+/**
+ * Dev-only helper: capture and return current game fingerprint.
+ */
+const devCaptureFingerprint = (game) => {
+    return (0, fingerprint_1.captureFingerprint)(game);
+};
+exports.devCaptureFingerprint = devCaptureFingerprint;
 
 
 /***/ }),
@@ -37972,6 +38016,298 @@ exports.err = err;
 
 /***/ }),
 
+/***/ "./src/game/save/fingerprint.ts":
+/*!**************************************!*\
+  !*** ./src/game/save/fingerprint.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/**
+ * State fingerprinting for save/load validation.
+ *
+ * A fingerprint is a structured, diffable snapshot of the entire game state.
+ * When two fingerprints differ, the diff tells you exactly which room, entity,
+ * or item diverged — unlike a hash, which only tells you "something changed".
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.captureFingerprint = void 0;
+const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const enemiesBuiltins_1 = __webpack_require__(/*! ./registry/enemiesBuiltins */ "./src/game/save/registry/enemiesBuiltins.ts");
+const itemsBuiltins_1 = __webpack_require__(/*! ./registry/itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
+const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
+// Entity-specific imports for state fingerprinting
+const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const spawner_1 = __webpack_require__(/*! ../../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
+const vendingMachine_1 = __webpack_require__(/*! ../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+// Item-specific imports for state fingerprinting
+const weapon_1 = __webpack_require__(/*! ../../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
+const crossbow_1 = __webpack_require__(/*! ../../item/weapon/crossbow */ "./src/item/weapon/crossbow.ts");
+const key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
+const light_1 = __webpack_require__(/*! ../../item/light/light */ "./src/item/light/light.ts");
+// ---------------------------------------------------------------------------
+// djb2 hash utility
+// ---------------------------------------------------------------------------
+function djb2(str) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
+    }
+    return hash >>> 0; // unsigned 32-bit
+}
+// ---------------------------------------------------------------------------
+// Tile fingerprinting helpers
+// ---------------------------------------------------------------------------
+/** Tile class names that carry mutable state worth tracking. */
+const STATEFUL_TILE_NAMES = new Set([
+    "Door",
+    "BottomDoor",
+    "InsideLevelDoor",
+    "Button",
+    "SpikeTrap",
+    "DownLadder",
+    "UpLadder",
+    "FountainTile",
+]);
+function tileFP(tile) {
+    const ctor = tile.constructor.name;
+    if (!STATEFUL_TILE_NAMES.has(ctor))
+        return null;
+    let stateStr = ctor;
+    switch (ctor) {
+        case "Door":
+        case "BottomDoor":
+            stateStr += `,opened=${tile.opened},locked=${tile.locked}`;
+            break;
+        case "InsideLevelDoor":
+            stateStr += `,opened=${tile.opened}`;
+            break;
+        case "Button":
+            stateStr += `,pressed=${tile.pressed}`;
+            break;
+        case "SpikeTrap":
+            stateStr += `,on=${tile.on},tickCount=${tile.tickCount}`;
+            break;
+        case "DownLadder":
+            stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth}`;
+            if (tile.lockable)
+                stateStr += `,lockType=${tile.lockable.lockType}`;
+            break;
+        case "UpLadder":
+            stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},depth=${tile.depth}`;
+            if (tile.lockable)
+                stateStr += `,lockType=${tile.lockable.lockType}`;
+            break;
+        case "FountainTile":
+            stateStr += `,subTileX=${tile.subTileX},subTileY=${tile.subTileY}`;
+            break;
+    }
+    return {
+        kind: ctor,
+        x: tile.x,
+        y: tile.y,
+        stateHash: djb2(stateStr),
+        stateStr,
+    };
+}
+// ---------------------------------------------------------------------------
+// Entity fingerprinting
+// ---------------------------------------------------------------------------
+function entityFP(entity) {
+    const kind = (0, enemiesBuiltins_1.getEnemyKindV2)(entity) ?? entity.constructor.name;
+    let stateStr = `${kind},dir=${entity.direction},skip=${entity.skipNextTurns}`;
+    if (entity instanceof enemy_1.Enemy) {
+        stateStr += `,aggro=${entity.aggro},ticks=${entity.ticks}`;
+        stateStr += `,heard=${entity.heardPlayer},buffed=${entity.buffed}`;
+        if (entity.status) {
+            const p = entity.status.poison;
+            const b = entity.status.bleed;
+            stateStr += `,poison=${p.active}:${p.hitCount}:${p.startTick}`;
+            stateStr += `,bleed=${b.active}:${b.hitCount}:${b.startTick}`;
+        }
+    }
+    // Entity-type-specific state
+    if (entity instanceof wizardEnemy_1.WizardEnemy) {
+        stateStr += `,wizardState=${entity.state}`;
+    }
+    if (entity instanceof occultistEnemy_1.OccultistEnemy) {
+        stateStr += `,shielded=${entity.shieldedEnemies?.length ?? 0}`;
+    }
+    if (entity instanceof exalterEnemy_1.ExalterEnemy) {
+        stateStr += `,exaltBuffed=${entity.buffedEnemies?.length ?? 0}`;
+    }
+    if (entity instanceof spawner_1.Spawner) {
+        stateStr += `,spawnType=${entity.enemySpawnType},nextTick=${entity.nextSpawnTick}`;
+    }
+    if (entity instanceof chest_1.Chest) {
+        stateStr += `,opened=${entity.health <= 2}`;
+    }
+    if (entity instanceof vendingMachine_1.VendingMachine) {
+        const vmKind = entity.item ? ((0, itemsBuiltins_1.getItemKindV2)(entity.item) ?? "?") : "none";
+        stateStr += `,vmItem=${vmKind},qty=${entity.quantity}`;
+    }
+    return {
+        kind,
+        x: entity.x,
+        y: entity.y,
+        health: entity.health,
+        maxHealth: entity.maxHealth,
+        dead: entity.dead,
+        seenPlayer: entity instanceof enemy_1.Enemy ? entity.seenPlayer : false,
+        stateHash: djb2(stateStr),
+    };
+}
+// ---------------------------------------------------------------------------
+// Item fingerprinting
+// ---------------------------------------------------------------------------
+function itemFP(item) {
+    const kind = (0, itemsBuiltins_1.getItemKindV2)(item) ?? item.constructor.name;
+    let stateStr = `${kind},dur=${item.durability}/${item.durabilityMax}`;
+    stateStr += `,broken=${item.broken}`;
+    // Item-type-specific state
+    if (item instanceof weapon_1.Weapon) {
+        const s = item.status;
+        stateStr += `,wPoison=${s?.poison ? 1 : 0},wBlood=${s?.blood ? 1 : 0},wCurse=${s?.curse ? 1 : 0}`;
+    }
+    if (item instanceof crossbow_1.Crossbow) {
+        stateStr += `,cbState=${item.state}`;
+    }
+    if (item instanceof key_1.Key) {
+        stateStr += `,keyDoor=${item.doorID},keyDepth=${item.depth}`;
+    }
+    if (item instanceof light_1.Light) {
+        stateStr += `,fuel=${item.fuel}`;
+    }
+    return {
+        kind,
+        x: item.x,
+        y: item.y,
+        stackCount: item.stackCount,
+        pickedUp: item.pickedUp,
+        stateHash: djb2(stateStr),
+    };
+}
+// ---------------------------------------------------------------------------
+// Player fingerprinting
+// ---------------------------------------------------------------------------
+function playerFP(player) {
+    const inv = player.inventory;
+    const inventorySlots = [];
+    for (let i = 0; i < inv.items.length; i++) {
+        const it = inv.items[i];
+        if (it) {
+            const kind = (0, itemsBuiltins_1.getItemKindV2)(it) ?? it.constructor.name;
+            inventorySlots.push(`${i}:${kind}:${it.stackCount}`);
+        }
+    }
+    const equippedWeapon = inv.weapon
+        ? ((0, itemsBuiltins_1.getItemKindV2)(inv.weapon) ?? inv.weapon.constructor.name)
+        : "none";
+    return {
+        id: player.id,
+        x: player.x,
+        y: player.y,
+        health: player.health,
+        maxHealth: player.maxHealth,
+        mana: player.mana,
+        maxMana: player.maxMana,
+        dead: player.dead,
+        roomPathId: player.roomGID ?? `levelID:${player.levelID}`,
+        inventorySlots,
+        equippedWeapon,
+        coins: inv.coins,
+        sightRadius: player.sightRadius,
+        turnCount: player.turnCount,
+        depth: player.depth,
+    };
+}
+// ---------------------------------------------------------------------------
+// Room fingerprinting
+// ---------------------------------------------------------------------------
+function roomFP(room) {
+    // Tile grid hash: sorted "x,y,ctorName" for every tile
+    const tileEntries = [];
+    const statefulTiles = [];
+    // roomArray is indexed by GLOBAL coordinates (roomX-1 .. roomX+width+1).
+    // Iterating local 0..width would read the wrong cells for rooms not near origin.
+    for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+            const tile = room.roomArray[x]?.[y];
+            if (!tile)
+                continue;
+            // Normalize cosmetic floor variants to Floor so the tileGrid hash is stable
+            // across save/load (SpawnFloor is placed by Spawners during gameplay but
+            // regeneration produces a plain Floor — they are functionally identical).
+            const tileName = tile.constructor.name === "SpawnFloor" ? "Floor" : tile.constructor.name;
+            tileEntries.push(`${x},${y},${tileName}`);
+            const sfp = tileFP(tile);
+            if (sfp)
+                statefulTiles.push(sfp);
+        }
+    }
+    tileEntries.sort();
+    const tileGridHash = djb2(tileEntries.join("|")).toString(16);
+    // Entities (sorted by x, y, kind for stable ordering)
+    const entities = room.entities
+        .filter((e) => !e.dead)
+        .map(entityFP)
+        .sort((a, b) => a.x - b.x || a.y - b.y || a.kind.localeCompare(b.kind));
+    // Items (sorted by x, y, kind for stable ordering)
+    const items = room.items
+        .filter((it) => !it.pickedUp)
+        .map(itemFP)
+        .sort((a, b) => a.x - b.x || a.y - b.y || a.kind.localeCompare(b.kind));
+    // Stateful tiles sorted
+    statefulTiles.sort((a, b) => a.x - b.x || a.y - b.y || a.kind.localeCompare(b.kind));
+    return {
+        roomX: room.roomX,
+        roomY: room.roomY,
+        width: room.width,
+        height: room.height,
+        pathId: room.pathId,
+        entered: room.entered,
+        tileGrid: tileGridHash,
+        tileEntries,
+        statefulTiles,
+        entities,
+        items,
+        projectileCount: room.projectiles?.length ?? 0,
+    };
+}
+// ---------------------------------------------------------------------------
+// Main capture function
+// ---------------------------------------------------------------------------
+function captureFingerprint(game) {
+    const playerFPs = [];
+    for (const pid of Object.keys(game.players)) {
+        playerFPs.push(playerFP(game.players[pid]));
+    }
+    playerFPs.sort((a, b) => (a.id ?? a.roomPathId).localeCompare(b.id ?? b.roomPathId));
+    // Collect all rooms the save tracks (main path + active sidepaths via BFS),
+    // same logic as collectRoomsForSaveAtCurrentDepth so before/after fingerprints are comparable.
+    const allRooms = game.level ? (0, writeV2_1.collectRoomsForSaveAtCurrentDepth)(game) : game.rooms;
+    const roomFPs = [];
+    for (const room of allRooms) {
+        roomFPs.push(roomFP(room));
+    }
+    roomFPs.sort((a, b) => a.pathId.localeCompare(b.pathId) || a.roomX - b.roomX || a.roomY - b.roomY);
+    return {
+        rngState: random_1.Random.state,
+        depth: game.currentDepth,
+        playerFingerprints: playerFPs,
+        roomFingerprints: roomFPs,
+    };
+}
+exports.captureFingerprint = captureFingerprint;
+
+
+/***/ }),
+
 /***/ "./src/game/save/index.ts":
 /*!********************************!*\
   !*** ./src/game/save/index.ts ***!
@@ -37981,7 +38317,7 @@ exports.err = err;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.devSaveAndLoadV2 = exports.loadSaveV2 = exports.devCreateAndValidateSaveV2 = exports.createSaveV2 = exports.registerBuiltinEnemyCodecsV2 = exports.registerBuiltinItemCodecsV2 = exports.registerBuiltinTileCodecsV2 = exports.tileRegistryV2 = exports.enemyRegistryV2 = exports.itemRegistryV2 = exports.validateSaveV2 = exports.parseSaveV2Json = exports.ok = exports.err = void 0;
+exports.formatReport = exports.validateRoundtrip = exports.diffFingerprints = exports.captureFingerprint = exports.devSaveAndLoadV2 = exports.loadSaveV2 = exports.devCaptureFingerprint = exports.devRoundtripWithReport = exports.devCreateAndValidateSaveV2 = exports.createSaveV2 = exports.registerBuiltinEnemyCodecsV2 = exports.registerBuiltinItemCodecsV2 = exports.registerBuiltinTileCodecsV2 = exports.tileRegistryV2 = exports.enemyRegistryV2 = exports.itemRegistryV2 = exports.validateSaveV2 = exports.parseSaveV2Json = exports.ok = exports.err = void 0;
 var errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 Object.defineProperty(exports, "err", ({ enumerable: true, get: function () { return errors_1.err; } }));
 Object.defineProperty(exports, "ok", ({ enumerable: true, get: function () { return errors_1.ok; } }));
@@ -38004,10 +38340,18 @@ var writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts
 Object.defineProperty(exports, "createSaveV2", ({ enumerable: true, get: function () { return writeV2_1.createSaveV2; } }));
 var devRoundtrip_1 = __webpack_require__(/*! ./devRoundtrip */ "./src/game/save/devRoundtrip.ts");
 Object.defineProperty(exports, "devCreateAndValidateSaveV2", ({ enumerable: true, get: function () { return devRoundtrip_1.devCreateAndValidateSaveV2; } }));
+Object.defineProperty(exports, "devRoundtripWithReport", ({ enumerable: true, get: function () { return devRoundtrip_1.devRoundtripWithReport; } }));
+Object.defineProperty(exports, "devCaptureFingerprint", ({ enumerable: true, get: function () { return devRoundtrip_1.devCaptureFingerprint; } }));
 var loadV2_1 = __webpack_require__(/*! ./loadV2 */ "./src/game/save/loadV2.ts");
 Object.defineProperty(exports, "loadSaveV2", ({ enumerable: true, get: function () { return loadV2_1.loadSaveV2; } }));
 var devSaveLoadV2_1 = __webpack_require__(/*! ./devSaveLoadV2 */ "./src/game/save/devSaveLoadV2.ts");
 Object.defineProperty(exports, "devSaveAndLoadV2", ({ enumerable: true, get: function () { return devSaveLoadV2_1.devSaveAndLoadV2; } }));
+var fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
+Object.defineProperty(exports, "captureFingerprint", ({ enumerable: true, get: function () { return fingerprint_1.captureFingerprint; } }));
+var roundtripValidator_1 = __webpack_require__(/*! ./roundtripValidator */ "./src/game/save/roundtripValidator.ts");
+Object.defineProperty(exports, "diffFingerprints", ({ enumerable: true, get: function () { return roundtripValidator_1.diffFingerprints; } }));
+Object.defineProperty(exports, "validateRoundtrip", ({ enumerable: true, get: function () { return roundtripValidator_1.validateRoundtrip; } }));
+Object.defineProperty(exports, "formatReport", ({ enumerable: true, get: function () { return roundtripValidator_1.formatReport; } }));
 
 
 /***/ }),
@@ -38053,6 +38397,7 @@ const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpaw
 const equippable_1 = __webpack_require__(/*! ../../item/equippable */ "./src/item/equippable.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../input */ "./src/game/input.ts");
 const collectSaveGids = (save) => {
     const out = new Set();
     for (const rd of save.delta.rooms) {
@@ -38216,6 +38561,15 @@ const findGeneratedRoomCandidatesForDelta = (rooms, d) => {
 };
 const loadSaveV2 = async (game, save) => {
     game.loadingSaveV2 = true;
+    // Clear accumulated mouse listeners from the previous game session so that
+    // player/inventory setup during load doesn't double-register them.
+    input_1.Input.mouseDownListeners.length = 0;
+    input_1.Input.mouseUpListeners.length = 0;
+    input_1.Input.mouseMoveListeners.length = 0;
+    input_1.Input.mouseLeftClickListeners.length = 0;
+    input_1.Input.mouseRightClickListeners.length = 0;
+    input_1.Input.touchStartListeners.length = 0;
+    input_1.Input.touchEndListeners.length = 0;
     try {
         // Restore developer mode early so subsequent load/debug behavior matches the saved session.
         // Back-compat: old saves omit this field.
@@ -38266,12 +38620,18 @@ const loadSaveV2 = async (game, save) => {
                 : planEntry?.kind === "procedural"
                     ? { forceProcedural: true }
                     : undefined;
-            await game.levelgen.generate(game, depth, false, () => { }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, undefined, 
-            // IMPORTANT: pass no controls here to match runtime generation.
-            // Main-path generation in live gameplay is triggered via `DownLadder`/`SidePathManager`,
-            // which calls `levelgen.generate(..., pathId="main", opts=undefined)`. If we pass explicit
-            // branching/loopiness overrides here, the layout can diverge and room reassociation fails.
-            undefined, genOverride);
+            // Depth 0 is always generated by generateFirstNFloors() which explicitly uses
+            // MAIN_PATH_BRANCHING/LOOPINESS. Depth 1+ is generated on-demand by
+            // sidePathManager.generateFor() with downLadder.opts=undefined, which lets
+            // connectPartitions/addLoopConnections use their defaults (0.5/0.5).
+            // We must reproduce the same opts each depth used during gameplay.
+            const mainPathOpts = depth === 0
+                ? {
+                    branching: gameplaySettings_1.GameplaySettings.MAIN_PATH_BRANCHING,
+                    loopiness: gameplaySettings_1.GameplaySettings.MAIN_PATH_LOOPINESS,
+                }
+                : undefined;
+            await game.levelgen.generate(game, depth, false, () => { }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, undefined, mainPathOpts, genOverride);
         }
         // Switch to the active depth.
         const activeLevel = game.levels[save.worldSpec.depth];
@@ -38342,6 +38702,22 @@ const loadSaveV2 = async (game, save) => {
                         keyInMainRoom: optsSave.keyInMainRoom,
                         entranceInMainRoom: optsSave.entranceInMainRoom,
                         exitInMainRoom: optsSave.exitInMainRoom,
+                        xySymmetry: optsSave.xySymmetry,
+                        xySymmetryCenterVoidHalfSize: optsSave.xySymmetryCenterVoidHalfSize,
+                        xySymmetryArmHalfThickness: optsSave.xySymmetryArmHalfThickness,
+                        xySymmetryCentralRoomSize: optsSave.xySymmetryCentralRoomSize,
+                        terminal: optsSave.terminal,
+                        noBoss: optsSave.noBoss,
+                        peaceful: optsSave.peaceful,
+                        tunnelRadiusScale: optsSave.tunnelRadiusScale,
+                        squareBrush: optsSave.squareBrush,
+                        angularMaze: optsSave.angularMaze,
+                        tunnelMinRadius: optsSave.tunnelMinRadius,
+                        tunnelMaxRadius: optsSave.tunnelMaxRadius,
+                        maxNodeRadius: optsSave.maxNodeRadius,
+                        minNodeSeparation: optsSave.minNodeSeparation,
+                        nodeCountTable: optsSave.nodeCountTable,
+                        enemyDensityScale: optsSave.enemyDensityScale,
                     };
                 // First write wins (stable); multiple ladders could point to the same sidepath.
                 if (!sidepathGenOverrides.has(pid)) {
@@ -38359,8 +38735,13 @@ const loadSaveV2 = async (game, save) => {
             let linkedRoom = undefined;
             const override = sidepathGenOverrides.get(sp.pathId);
             const env = override?.env ?? (0, mappers_1.envKindToEnvType)(save.worldSpec.env);
-            const opts = override?.opts ??
-                inferSidepathOptsFallback(env, save.worldSpec.depth, sp.rooms);
+            // If we found the ladder in the saved tiles, use its opts exactly (even if undefined —
+            // opts=undefined means the original was generated with no constraints, and we must
+            // reproduce that exactly). Only fall back to inferSidepathOptsFallback when no ladder
+            // delta was found at all, which indicates a pre-V2 save that didn't persist opts.
+            const opts = override !== undefined
+                ? override.opts
+                : inferSidepathOptsFallback(env, save.worldSpec.depth, sp.rooms);
             await game.levelgen.generate(game, save.worldSpec.depth, true, (r) => {
                 linkedRoom = r ?? undefined;
             }, env, false, sp.pathId, opts);
@@ -38576,6 +38957,22 @@ const loadSaveV2 = async (game, save) => {
                                         keyInMainRoom: ts.opts.keyInMainRoom,
                                         entranceInMainRoom: ts.opts.entranceInMainRoom,
                                         exitInMainRoom: ts.opts.exitInMainRoom,
+                                        xySymmetry: ts.opts.xySymmetry,
+                                        xySymmetryCenterVoidHalfSize: ts.opts.xySymmetryCenterVoidHalfSize,
+                                        xySymmetryArmHalfThickness: ts.opts.xySymmetryArmHalfThickness,
+                                        xySymmetryCentralRoomSize: ts.opts.xySymmetryCentralRoomSize,
+                                        terminal: ts.opts.terminal,
+                                        noBoss: ts.opts.noBoss,
+                                        peaceful: ts.opts.peaceful,
+                                        tunnelRadiusScale: ts.opts.tunnelRadiusScale,
+                                        squareBrush: ts.opts.squareBrush,
+                                        angularMaze: ts.opts.angularMaze,
+                                        tunnelMinRadius: ts.opts.tunnelMinRadius,
+                                        tunnelMaxRadius: ts.opts.tunnelMaxRadius,
+                                        maxNodeRadius: ts.opts.maxNodeRadius,
+                                        minNodeSeparation: ts.opts.minNodeSeparation,
+                                        nodeCountTable: ts.opts.nodeCountTable,
+                                        enemyDensityScale: ts.opts.enemyDensityScale,
                                     };
                                 const dl = new downLadder_1.DownLadder(room, game, place.x, place.y, ts.isSidePath, (0, mappers_1.envKindToEnvType)(ts.environment), lockable_1.LockType.NONE, opts, lockStateOverride);
                                 room.roomArray[place.x][place.y] = dl;
@@ -38602,8 +38999,15 @@ const loadSaveV2 = async (game, save) => {
                     else {
                         const found = findFirstUpLadder();
                         if (found) {
+                            // Move the UpLadder from wherever generation placed it to the saved position.
+                            // Generation may place it at a non-deterministic position due to cave population.
+                            if (found.x !== ts.x || found.y !== ts.y) {
+                                room.roomArray[found.x][found.y] = new floor_1.Floor(room, found.x, found.y);
+                                found.x = ts.x;
+                                found.y = ts.y;
+                                room.roomArray[ts.x][ts.y] = found;
+                            }
                             t = found;
-                            effectiveTs = { ...ts, x: found.x, y: found.y };
                         }
                         else {
                             const place = (() => {
@@ -38923,6 +39327,8 @@ const loadSaveV2 = async (game, save) => {
             p.mana = ps.mana;
             p.maxMana = ps.maxMana;
             p.sightRadius = ps.sightRadius;
+            if (ps.turnCount !== undefined)
+                p.turnCount = ps.turnCount;
             if (ps.light) {
                 p.lightEquipped = ps.light.equipped;
                 p.lightColor = [ps.light.colorRgb[0], ps.light.colorRgb[1], ps.light.colorRgb[2]];
@@ -39313,6 +39719,7 @@ const pawnStatue_1 = __webpack_require__(/*! ../../../entity/object/pawnStatue *
 const rookStatue_1 = __webpack_require__(/*! ../../../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
 const bishopStatue_1 = __webpack_require__(/*! ../../../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
 const fallenPillar_1 = __webpack_require__(/*! ../../../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
+const darkPillar_1 = __webpack_require__(/*! ../../../entity/object/darkPillar */ "./src/entity/object/darkPillar.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const coalResource_1 = __webpack_require__(/*! ../../../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../../../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
@@ -39422,6 +39829,8 @@ const entityToKind = (e) => {
         return "bishop_statue";
     if (e instanceof fallenPillar_1.FallenPillar)
         return "fallen_pillar";
+    if (e instanceof darkPillar_1.DarkPillar)
+        return "dark_pillar";
     if (e instanceof chest_1.Chest)
         return "chest";
     if (e instanceof vendingMachine_1.VendingMachine)
@@ -39622,6 +40031,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("rook_statue", rookStatue_1.RookStatue);
     registerBasic("bishop_statue", bishopStatue_1.BishopStatue);
     registerBasic("fallen_pillar", fallenPillar_1.FallenPillar);
+    registerBasic("dark_pillar", darkPillar_1.DarkPillar);
     // Chest
     register("chest", {
         save: (value) => {
@@ -39922,6 +40332,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("furnace", furnace_1.Furnace);
     registerBasic("fishing_spot", fishingSpot_1.FishingSpot);
     registerBasic("mushrooms_prop", mushrooms_1.Mushrooms);
+    registerBasic("glowshrooms_prop", glowshrooms_1.Glowshrooms);
     registerBasic("potted_plant", pottedPlant_1.PottedPlant);
     registerBasic("coal_resource", coalResource_1.CoalResource);
     registerBasic("gold_resource", goldResource_1.GoldResource);
@@ -40025,6 +40436,12 @@ const armor_1 = __webpack_require__(/*! ../../../item/armor */ "./src/item/armor
 const woodenShield_1 = __webpack_require__(/*! ../../../item/woodenShield */ "./src/item/woodenShield.ts");
 const fishingRod_1 = __webpack_require__(/*! ../../../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const hammer_1 = __webpack_require__(/*! ../../../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const backplate_1 = __webpack_require__(/*! ../../../item/backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ../../../item/gauntlets */ "./src/item/gauntlets.ts");
+const shoulderPlates_1 = __webpack_require__(/*! ../../../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
+const chestPlate_1 = __webpack_require__(/*! ../../../item/chestPlate */ "./src/item/chestPlate.ts");
+const crossbowBolt_1 = __webpack_require__(/*! ../../../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const godStone_1 = __webpack_require__(/*! ../../../item/godStone */ "./src/item/godStone.ts");
 const items_1 = __webpack_require__(/*! ./items */ "./src/game/save/registry/items.ts");
 const itemToKind = (item) => {
     if (item instanceof coin_1.Coin)
@@ -40135,6 +40552,18 @@ const itemToKind = (item) => {
         return "wooden_shield";
     if (item instanceof divingHelmet_1.DivingHelmet)
         return "diving_helmet";
+    if (item instanceof backplate_1.Backplate)
+        return "backplate";
+    if (item instanceof gauntlets_1.Gauntlets)
+        return "gauntlets";
+    if (item instanceof shoulderPlates_1.ShoulderPlates)
+        return "shoulder_plates";
+    if (item instanceof chestPlate_1.ChestPlate)
+        return "chest_plate";
+    if (item instanceof crossbowBolt_1.CrossbowBolt)
+        return "crossbow_bolt";
+    if (item instanceof godStone_1.GodStone)
+        return "god_stone";
     if (item instanceof goldRing_1.GoldRing)
         return "gold_ring";
     if (item instanceof emeraldRing_1.EmeraldRing)
@@ -40253,6 +40682,12 @@ const registerBuiltinItemCodecsV2 = () => {
         "zircon_ring",
         "amber_ring",
         "garnet_ring",
+        "backplate",
+        "gauntlets",
+        "shoulder_plates",
+        "chest_plate",
+        "crossbow_bolt",
+        "god_stone",
     ];
     for (const kind of GENERIC_ITEM_KINDS) {
         register(kind, {
@@ -40365,6 +40800,24 @@ const registerBuiltinItemCodecsV2 = () => {
                         break;
                     case "garnet_ring":
                         item = new garnetRing_1.GarnetRing(room, value.x, value.y);
+                        break;
+                    case "backplate":
+                        item = new backplate_1.Backplate(room, value.x, value.y);
+                        break;
+                    case "gauntlets":
+                        item = new gauntlets_1.Gauntlets(room, value.x, value.y);
+                        break;
+                    case "shoulder_plates":
+                        item = new shoulderPlates_1.ShoulderPlates(room, value.x, value.y);
+                        break;
+                    case "chest_plate":
+                        item = new chestPlate_1.ChestPlate(room, value.x, value.y);
+                        break;
+                    case "crossbow_bolt":
+                        item = new crossbowBolt_1.CrossbowBolt(room, value.x, value.y);
+                        break;
+                    case "god_stone":
+                        item = new godStone_1.GodStone(room, value.x, value.y);
                         break;
                     default:
                         throw new Error(`Unsupported builtin item kind: ${kind}`);
@@ -40977,6 +41430,8 @@ exports.registerBuiltinTileCodecsV2 = void 0;
 const door_1 = __webpack_require__(/*! ../../../tile/door */ "./src/tile/door.ts");
 const downLadder_1 = __webpack_require__(/*! ../../../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../../../tile/upLadder */ "./src/tile/upLadder.ts");
+const floor_1 = __webpack_require__(/*! ../../../tile/floor */ "./src/tile/floor.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const button_1 = __webpack_require__(/*! ../../../tile/button */ "./src/tile/button.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../../../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
 const lockable_1 = __webpack_require__(/*! ../../../tile/lockable */ "./src/tile/lockable.ts");
@@ -41130,6 +41585,28 @@ const registerBuiltinTileCodecsV2 = () => {
                         keyInMainRoom: typeof opts.keyInMainRoom === "boolean" ? opts.keyInMainRoom : undefined,
                         entranceInMainRoom: typeof opts.entranceInMainRoom === "boolean" ? opts.entranceInMainRoom : undefined,
                         exitInMainRoom: typeof opts.exitInMainRoom === "boolean" ? opts.exitInMainRoom : undefined,
+                        xySymmetry: typeof opts.xySymmetry === "boolean" ? opts.xySymmetry : undefined,
+                        xySymmetryCenterVoidHalfSize: typeof opts.xySymmetryCenterVoidHalfSize === "number"
+                            ? opts.xySymmetryCenterVoidHalfSize
+                            : undefined,
+                        xySymmetryArmHalfThickness: typeof opts.xySymmetryArmHalfThickness === "number"
+                            ? opts.xySymmetryArmHalfThickness
+                            : undefined,
+                        xySymmetryCentralRoomSize: typeof opts.xySymmetryCentralRoomSize === "number"
+                            ? opts.xySymmetryCentralRoomSize
+                            : undefined,
+                        terminal: typeof opts.terminal === "boolean" ? opts.terminal : undefined,
+                        noBoss: typeof opts.noBoss === "boolean" ? opts.noBoss : undefined,
+                        peaceful: typeof opts.peaceful === "boolean" ? opts.peaceful : undefined,
+                        tunnelRadiusScale: typeof opts.tunnelRadiusScale === "number" ? opts.tunnelRadiusScale : undefined,
+                        squareBrush: typeof opts.squareBrush === "boolean" ? opts.squareBrush : undefined,
+                        angularMaze: typeof opts.angularMaze === "boolean" ? opts.angularMaze : undefined,
+                        tunnelMinRadius: typeof opts.tunnelMinRadius === "number" ? opts.tunnelMinRadius : undefined,
+                        tunnelMaxRadius: typeof opts.tunnelMaxRadius === "number" ? opts.tunnelMaxRadius : undefined,
+                        maxNodeRadius: typeof opts.maxNodeRadius === "number" ? opts.maxNodeRadius : undefined,
+                        minNodeSeparation: typeof opts.minNodeSeparation === "number" ? opts.minNodeSeparation : undefined,
+                        nodeCountTable: Array.isArray(opts.nodeCountTable) ? opts.nodeCountTable : undefined,
+                        enemyDensityScale: typeof opts.enemyDensityScale === "number" ? opts.enemyDensityScale : undefined,
                     };
                 return {
                     kind: "down_ladder",
@@ -41193,6 +41670,11 @@ const registerBuiltinTileCodecsV2 = () => {
                 if (!(tile instanceof upLadder_1.UpLadder)) {
                     throw new Error("up_ladder codec received non-UpLadder tile");
                 }
+                const lockType = tile.lockable.getLockType();
+                const lockKind = lockTypeToLockKind(lockType);
+                const lock = lockKind !== "none"
+                    ? { lockType: lockKind, keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined }
+                    : undefined;
                 return {
                     kind: "up_ladder",
                     gid: tile.globalId,
@@ -41200,24 +41682,622 @@ const registerBuiltinTileCodecsV2 = () => {
                     y: tile.y,
                     isRope: tile.isRope === true,
                     linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
+                    lock,
+                };
+            },
+            apply: (value, room, ctx) => {
+                if (value.kind !== "up_ladder")
+                    return;
+                let t = room.roomArray[value.x]?.[value.y];
+                if (!(t instanceof upLadder_1.UpLadder)) {
+                    // Generation placed the UpLadder at a different position (non-deterministic
+                    // relocation during cave population). Scan the room for it and move it.
+                    let found = null;
+                    let foundX = 0;
+                    let foundY = 0;
+                    outer: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                            const candidate = room.roomArray[x]?.[y];
+                            if (candidate instanceof upLadder_1.UpLadder) {
+                                found = candidate;
+                                foundX = x;
+                                foundY = y;
+                                break outer;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        throw new Error(`up_ladder codec apply: no UpLadder found in room (expected at ${value.x},${value.y})`);
+                    }
+                    // Relocate: put a Floor where it was, move UpLadder to saved position.
+                    room.roomArray[foundX][foundY] = new floor_1.Floor(room, foundX, foundY);
+                    found.x = value.x;
+                    found.y = value.y;
+                    room.roomArray[value.x][value.y] = found;
+                    t = found;
+                }
+                const ladder = t;
+                ladder.isRope = value.isRope;
+                // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
+                ladder.isSidePath = value.isRope === true;
+                // Restore lockable state
+                if (value.lock) {
+                    const lockType = value.lock.lockType === "locked"
+                        ? lockable_1.LockType.LOCKED
+                        : value.lock.lockType === "guarded"
+                            ? lockable_1.LockType.GUARDED
+                            : value.lock.lockType === "tunnel"
+                                ? lockable_1.LockType.TUNNEL
+                                : lockable_1.LockType.NONE;
+                    ladder.lockable = new lockable_2.Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: true });
+                }
+                // linkedRoom linking happens in post-pass by gid
+            },
+        });
+    }
+    if (!tiles_1.tileRegistryV2.has("spike_trap")) {
+        tiles_1.tileRegistryV2.register("spike_trap", {
+            save: (tile, _ctx) => {
+                if (!(tile instanceof spiketrap_1.SpikeTrap)) {
+                    throw new Error("spike_trap codec received non-SpikeTrap tile");
+                }
+                return {
+                    kind: "spike_trap",
+                    x: tile.x,
+                    y: tile.y,
+                    triggered: tile.on,
+                    tickCount: tile.tickCount,
                 };
             },
             apply: (value, room, _ctx) => {
-                if (value.kind !== "up_ladder")
+                if (value.kind !== "spike_trap")
                     return;
                 const t = room.roomArray[value.x]?.[value.y];
-                if (!(t instanceof upLadder_1.UpLadder)) {
-                    throw new Error("up_ladder codec apply: target tile is not UpLadder");
-                }
-                t.isRope = value.isRope;
-                // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
-                t.isSidePath = value.isRope === true;
-                // linkedRoom linking happens in post-pass by gid
+                if (!(t instanceof spiketrap_1.SpikeTrap))
+                    return;
+                t.on = value.triggered;
+                t.tickCount = value.tickCount;
             },
         });
     }
 };
 exports.registerBuiltinTileCodecsV2 = registerBuiltinTileCodecsV2;
+
+
+/***/ }),
+
+/***/ "./src/game/save/roundtripValidator.ts":
+/*!*********************************************!*\
+  !*** ./src/game/save/roundtripValidator.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/**
+ * Roundtrip validation engine for save/load.
+ *
+ * Compares two GameFingerprints and produces human-readable diffs
+ * describing exactly what diverged.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatReport = exports.validateRoundtrip = exports.diffFingerprints = void 0;
+const fingerprint_1 = __webpack_require__(/*! ./fingerprint */ "./src/game/save/fingerprint.ts");
+const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.ts");
+const validate_1 = __webpack_require__(/*! ./validate */ "./src/game/save/validate.ts");
+const loadV2_1 = __webpack_require__(/*! ./loadV2 */ "./src/game/save/loadV2.ts");
+// ---------------------------------------------------------------------------
+// Diff engine
+// ---------------------------------------------------------------------------
+function diffFingerprints(before, after) {
+    const diffs = [];
+    // Global state
+    if (before.rngState !== after.rngState) {
+        diffs.push({
+            category: "global",
+            path: "RNG",
+            message: `rngState ${before.rngState} vs ${after.rngState}`,
+        });
+    }
+    if (before.depth !== after.depth) {
+        diffs.push({
+            category: "global",
+            path: "depth",
+            message: `depth ${before.depth} vs ${after.depth}`,
+        });
+    }
+    // Players
+    diffPlayers(before.playerFingerprints, after.playerFingerprints, diffs);
+    // Rooms
+    diffRooms(before.roomFingerprints, after.roomFingerprints, diffs);
+    return diffs;
+}
+exports.diffFingerprints = diffFingerprints;
+// ---------------------------------------------------------------------------
+// Player diffs
+// ---------------------------------------------------------------------------
+function diffPlayers(before, after, diffs) {
+    const beforeMap = new Map(before.map((p) => [p.id, p]));
+    const afterMap = new Map(after.map((p) => [p.id, p]));
+    for (const [id, bp] of beforeMap) {
+        const ap = afterMap.get(id);
+        if (!ap) {
+            diffs.push({
+                category: "player",
+                path: `Player ${id}`,
+                message: "missing after load",
+            });
+            continue;
+        }
+        diffPlayerFields(bp, ap, diffs);
+    }
+    for (const id of afterMap.keys()) {
+        if (!beforeMap.has(id)) {
+            diffs.push({
+                category: "player",
+                path: `Player ${id}`,
+                message: "unexpected player after load (not in before)",
+            });
+        }
+    }
+}
+function diffPlayerFields(b, a, diffs) {
+    const path = `Player ${b.id}`;
+    const fields = [
+        "x",
+        "y",
+        "health",
+        "maxHealth",
+        "mana",
+        "maxMana",
+        "dead",
+        "sightRadius",
+        "turnCount",
+        "coins",
+        "depth",
+        "equippedWeapon",
+    ];
+    for (const f of fields) {
+        if (b[f] !== a[f]) {
+            diffs.push({
+                category: "player",
+                path,
+                message: `${f}: ${b[f]} vs ${a[f]}`,
+            });
+        }
+    }
+    if (b.roomPathId !== a.roomPathId) {
+        diffs.push({
+            category: "player",
+            path,
+            message: `room: ${b.roomPathId} vs ${a.roomPathId}`,
+        });
+    }
+    // Per-slot inventory diff
+    const beforeSlots = new Map(b.inventorySlots.map((s) => [s.split(":")[0], s]));
+    const afterSlots = new Map(a.inventorySlots.map((s) => [s.split(":")[0], s]));
+    for (const [slot, bs] of beforeSlots) {
+        const as = afterSlots.get(slot);
+        if (!as) {
+            diffs.push({ category: "player", path, message: `inventory slot ${slot} missing after load: ${bs}` });
+        }
+        else if (bs !== as) {
+            diffs.push({ category: "player", path, message: `inventory slot ${slot}: ${bs} vs ${as}` });
+        }
+    }
+    for (const [slot, as] of afterSlots) {
+        if (!beforeSlots.has(slot)) {
+            diffs.push({ category: "player", path, message: `inventory slot ${slot} appeared after load: ${as}` });
+        }
+    }
+}
+// ---------------------------------------------------------------------------
+// Room diffs
+// ---------------------------------------------------------------------------
+function roomKey(r) {
+    return `${r.pathId}:${r.roomX},${r.roomY}`;
+}
+function roomLabel(r) {
+    return `Room (${r.roomX},${r.roomY} ${r.pathId})`;
+}
+function diffRooms(before, after, diffs) {
+    const beforeMap = new Map(before.map((r) => [roomKey(r), r]));
+    const afterMap = new Map(after.map((r) => [roomKey(r), r]));
+    if (before.length !== after.length) {
+        diffs.push({
+            category: "room",
+            path: "rooms",
+            message: `room count ${before.length} vs ${after.length}`,
+        });
+    }
+    for (const [key, br] of beforeMap) {
+        const ar = afterMap.get(key);
+        if (!ar) {
+            diffs.push({
+                category: "room",
+                path: roomLabel(br),
+                message: "missing after load",
+            });
+            continue;
+        }
+        diffRoomFields(br, ar, diffs);
+    }
+    for (const [key] of afterMap) {
+        if (!beforeMap.has(key)) {
+            const ar = afterMap.get(key);
+            diffs.push({
+                category: "room",
+                path: roomLabel(ar),
+                message: "unexpected room after load (not in before)",
+            });
+        }
+    }
+}
+function diffRoomFields(b, a, diffs) {
+    const path = roomLabel(b);
+    if (b.width !== a.width || b.height !== a.height) {
+        diffs.push({
+            category: "room",
+            path,
+            message: `dimensions ${b.width}x${b.height} vs ${a.width}x${a.height}`,
+        });
+    }
+    if (b.entered !== a.entered) {
+        diffs.push({
+            category: "room",
+            path,
+            message: `entered: ${b.entered} vs ${a.entered}`,
+        });
+    }
+    if (b.tileGrid !== a.tileGrid) {
+        // Find which specific tiles changed
+        const beforeSet = new Set(b.tileEntries);
+        const afterSet = new Set(a.tileEntries);
+        const removed = b.tileEntries.filter((e) => !afterSet.has(e)).slice(0, 5);
+        const added = a.tileEntries.filter((e) => !beforeSet.has(e)).slice(0, 5);
+        const detail = [
+            removed.length ? `removed: ${removed.join(", ")}` : "",
+            added.length ? `added: ${added.join(", ")}` : "",
+        ].filter(Boolean).join("; ");
+        diffs.push({
+            category: "room",
+            path,
+            message: `tileGrid mismatch (${b.tileGrid} vs ${a.tileGrid}): ${detail || "unknown diff"}`,
+        });
+    }
+    // Stateful tiles
+    diffStatefulTiles(b.statefulTiles, a.statefulTiles, path, diffs);
+    // Entities
+    diffEntities(b.entities, a.entities, path, diffs);
+    // Items
+    diffItems(b.items, a.items, path, diffs);
+}
+// ---------------------------------------------------------------------------
+// Stateful tile diffs
+// ---------------------------------------------------------------------------
+function tileKey(t) {
+    return `${t.kind}@${t.x},${t.y}`;
+}
+function diffStatefulTiles(before, after, roomPath, diffs) {
+    const beforeMap = new Map(before.map((t) => [tileKey(t), t]));
+    const afterMap = new Map(after.map((t) => [tileKey(t), t]));
+    for (const [key, bt] of beforeMap) {
+        const at = afterMap.get(key);
+        if (!at) {
+            diffs.push({
+                category: "tile",
+                path: roomPath,
+                message: `missing tile ${key} after load`,
+            });
+            continue;
+        }
+        if (bt.stateHash !== at.stateHash) {
+            diffs.push({
+                category: "tile",
+                path: roomPath,
+                message: `tile ${key} state mismatch: before="${bt.stateStr}" after="${at.stateStr}"`,
+            });
+        }
+    }
+    for (const key of afterMap.keys()) {
+        if (!beforeMap.has(key)) {
+            diffs.push({
+                category: "tile",
+                path: roomPath,
+                message: `unexpected tile ${key} after load`,
+            });
+        }
+    }
+}
+// ---------------------------------------------------------------------------
+// Entity diffs
+// ---------------------------------------------------------------------------
+function entityKey(e) {
+    return `${e.kind}@${e.x},${e.y}`;
+}
+function diffEntities(before, after, roomPath, diffs) {
+    if (before.length !== after.length) {
+        diffs.push({
+            category: "entity",
+            path: roomPath,
+            message: `entity count ${before.length} vs ${after.length}`,
+        });
+    }
+    // Match by key, report missing/extra/changed
+    const beforeMap = new Map();
+    for (const e of before) {
+        const k = entityKey(e);
+        if (!beforeMap.has(k))
+            beforeMap.set(k, []);
+        beforeMap.get(k).push(e);
+    }
+    const afterMap = new Map();
+    for (const e of after) {
+        const k = entityKey(e);
+        if (!afterMap.has(k))
+            afterMap.set(k, []);
+        afterMap.get(k).push(e);
+    }
+    for (const [key, bList] of beforeMap) {
+        const aList = afterMap.get(key);
+        if (!aList) {
+            for (const be of bList) {
+                diffs.push({
+                    category: "entity",
+                    path: roomPath,
+                    message: `missing ${be.kind} at (${be.x},${be.y})`,
+                });
+            }
+            continue;
+        }
+        const minLen = Math.min(bList.length, aList.length);
+        for (let i = 0; i < minLen; i++) {
+            diffEntityFields(bList[i], aList[i], roomPath, diffs);
+        }
+        for (let i = minLen; i < bList.length; i++) {
+            diffs.push({
+                category: "entity",
+                path: roomPath,
+                message: `missing extra ${bList[i].kind} at (${bList[i].x},${bList[i].y})`,
+            });
+        }
+        for (let i = minLen; i < aList.length; i++) {
+            diffs.push({
+                category: "entity",
+                path: roomPath,
+                message: `unexpected extra ${aList[i].kind} at (${aList[i].x},${aList[i].y})`,
+            });
+        }
+    }
+    for (const [key, aList] of afterMap) {
+        if (!beforeMap.has(key)) {
+            for (const ae of aList) {
+                diffs.push({
+                    category: "entity",
+                    path: roomPath,
+                    message: `unexpected ${ae.kind} at (${ae.x},${ae.y})`,
+                });
+            }
+        }
+    }
+}
+function diffEntityFields(b, a, roomPath, diffs) {
+    const label = `${b.kind} at (${b.x},${b.y})`;
+    const fields = [
+        "health",
+        "maxHealth",
+        "dead",
+        "seenPlayer",
+    ];
+    for (const f of fields) {
+        if (b[f] !== a[f]) {
+            diffs.push({
+                category: "entity",
+                path: roomPath,
+                message: `${label}: ${f} ${b[f]} vs ${a[f]}`,
+            });
+        }
+    }
+    if (b.stateHash !== a.stateHash) {
+        diffs.push({
+            category: "entity",
+            path: roomPath,
+            message: `${label}: state hash mismatch (${b.stateHash} vs ${a.stateHash})`,
+        });
+    }
+}
+// ---------------------------------------------------------------------------
+// Item diffs
+// ---------------------------------------------------------------------------
+function itemKey(it) {
+    return `${it.kind}@${it.x},${it.y}`;
+}
+function diffItems(before, after, roomPath, diffs) {
+    if (before.length !== after.length) {
+        diffs.push({
+            category: "item",
+            path: roomPath,
+            message: `item count ${before.length} vs ${after.length}`,
+        });
+    }
+    const beforeMap = new Map();
+    for (const it of before) {
+        const k = itemKey(it);
+        if (!beforeMap.has(k))
+            beforeMap.set(k, []);
+        beforeMap.get(k).push(it);
+    }
+    const afterMap = new Map();
+    for (const it of after) {
+        const k = itemKey(it);
+        if (!afterMap.has(k))
+            afterMap.set(k, []);
+        afterMap.get(k).push(it);
+    }
+    for (const [key, bList] of beforeMap) {
+        const aList = afterMap.get(key);
+        if (!aList) {
+            for (const bi of bList) {
+                diffs.push({
+                    category: "item",
+                    path: roomPath,
+                    message: `missing ${bi.kind} at (${bi.x},${bi.y})`,
+                });
+            }
+            continue;
+        }
+        const minLen = Math.min(bList.length, aList.length);
+        for (let i = 0; i < minLen; i++) {
+            diffItemFields(bList[i], aList[i], roomPath, diffs);
+        }
+        for (let i = minLen; i < bList.length; i++) {
+            diffs.push({
+                category: "item",
+                path: roomPath,
+                message: `missing extra ${bList[i].kind} at (${bList[i].x},${bList[i].y})`,
+            });
+        }
+        for (let i = minLen; i < aList.length; i++) {
+            diffs.push({
+                category: "item",
+                path: roomPath,
+                message: `unexpected extra ${aList[i].kind} at (${aList[i].x},${aList[i].y})`,
+            });
+        }
+    }
+    for (const [key, aList] of afterMap) {
+        if (!beforeMap.has(key)) {
+            for (const ai of aList) {
+                diffs.push({
+                    category: "item",
+                    path: roomPath,
+                    message: `unexpected ${ai.kind} at (${ai.x},${ai.y})`,
+                });
+            }
+        }
+    }
+}
+function diffItemFields(b, a, roomPath, diffs) {
+    const label = `${b.kind} at (${b.x},${b.y})`;
+    if (b.stackCount !== a.stackCount) {
+        diffs.push({
+            category: "item",
+            path: roomPath,
+            message: `${label}: stackCount ${b.stackCount} vs ${a.stackCount}`,
+        });
+    }
+    if (b.pickedUp !== a.pickedUp) {
+        diffs.push({
+            category: "item",
+            path: roomPath,
+            message: `${label}: pickedUp ${b.pickedUp} vs ${a.pickedUp}`,
+        });
+    }
+    if (b.stateHash !== a.stateHash) {
+        diffs.push({
+            category: "item",
+            path: roomPath,
+            message: `${label}: state hash mismatch (${b.stateHash} vs ${a.stateHash})`,
+        });
+    }
+}
+// ---------------------------------------------------------------------------
+// Roundtrip orchestrator
+// ---------------------------------------------------------------------------
+async function validateRoundtrip(game) {
+    const start = performance.now();
+    try {
+        // 1. Capture "before" fingerprint
+        const before = (0, fingerprint_1.captureFingerprint)(game);
+        // 2. Save
+        const saveR = (0, writeV2_1.createSaveV2)(game);
+        if (saveR.ok === false) {
+            return {
+                passed: false,
+                diffs: [],
+                timingMs: performance.now() - start,
+                error: `Save failed: ${saveR.error}`,
+            };
+        }
+        // 3. Serialize → parse (validates schema)
+        const raw = JSON.stringify(saveR.value);
+        const parsed = (0, validate_1.parseSaveV2Json)(raw);
+        if (parsed.ok === false) {
+            return {
+                passed: false,
+                diffs: [],
+                timingMs: performance.now() - start,
+                error: `Parse/validate failed: ${typeof parsed.error === "object" ? JSON.stringify(parsed.error) : parsed.error}`,
+            };
+        }
+        // 4. Load back into the same game instance.
+        // loadSaveV2 clears and rebuilds game.rooms/players/etc internally,
+        // so this is safe to call on the original game.
+        const loadR = await (0, loadV2_1.loadSaveV2)(game, parsed.value);
+        if (loadR.ok === false) {
+            const errDetail = typeof loadR.error === "object"
+                ? JSON.stringify(loadR.error)
+                : String(loadR.error);
+            // Diagnostic: dump all generated rooms so we can see what was produced
+            if (Array.isArray(game.rooms) && game.rooms.length > 0) {
+                console.warn("[devRoundtrip] Generated rooms after failed load:", game.rooms.map((r) => `${r.pathId}:(${r.roomX},${r.roomY}) depth=${r.depth}`));
+            }
+            else {
+                console.warn("[devRoundtrip] game.rooms is empty after failed load");
+            }
+            // Diagnostic: dump save delta room coords
+            const savedRoomCoords = parsed.value.delta.rooms.map((rd) => `${rd.pathId}:(${rd.roomX},${rd.roomY}) gid=${rd.roomGid}`);
+            console.warn("[devRoundtrip] Save delta rooms:", savedRoomCoords);
+            return {
+                passed: false,
+                diffs: [],
+                timingMs: performance.now() - start,
+                error: `Load failed: ${errDetail}`,
+            };
+        }
+        // 5. Capture "after" fingerprint
+        const after = (0, fingerprint_1.captureFingerprint)(game);
+        // 6. Diff
+        const diffs = diffFingerprints(before, after);
+        return {
+            passed: diffs.length === 0,
+            diffs,
+            timingMs: performance.now() - start,
+        };
+    }
+    catch (e) {
+        return {
+            passed: false,
+            diffs: [],
+            timingMs: performance.now() - start,
+            error: `Exception: ${e.message ?? e}`,
+        };
+    }
+}
+exports.validateRoundtrip = validateRoundtrip;
+// ---------------------------------------------------------------------------
+// Pretty-print helpers
+// ---------------------------------------------------------------------------
+function formatReport(report) {
+    const lines = [];
+    lines.push(`=== Roundtrip Validation Report ===`);
+    lines.push(`Passed: ${report.passed}`);
+    lines.push(`Time: ${report.timingMs.toFixed(1)}ms`);
+    if (report.error) {
+        lines.push(`Error: ${report.error}`);
+    }
+    if (report.diffs.length > 0) {
+        lines.push(`\nDivergences (${report.diffs.length}):`);
+        for (const d of report.diffs) {
+            lines.push(`  [${d.category}] ${d.path}: ${d.message}`);
+        }
+    }
+    else if (!report.error) {
+        lines.push(`\nNo divergences — roundtrip is clean!`);
+    }
+    return lines.join("\n");
+}
+exports.formatReport = formatReport;
 
 
 /***/ }),
@@ -41309,7 +42389,415 @@ exports.ITEM_KIND_VALUES_V2 = [
     // shields
     "occult_shield",
     "wooden_shield",
+    // armor equippables
+    "backplate",
+    "gauntlets",
+    "shoulder_plates",
+    "chest_plate",
+    // ammo
+    "crossbow_bolt",
+    // dev items
+    "god_stone",
 ];
+
+
+/***/ }),
+
+/***/ "./src/game/save/testBed.ts":
+/*!**********************************!*\
+  !*** ./src/game/save/testBed.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+/**
+ * Test bed populator — spawns one of every registered entity/item kind
+ * into the current room, so __devRoundtrip() can test them all.
+ *
+ * Usage (browser console):
+ *   __devPopulateTestRoom()      — fills player's current room
+ *   __devPopulateTestRoom(true)  — clear existing entities/items first
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.populateTestRoom = void 0;
+// ---- Entity constructors ----
+const barrel_1 = __webpack_require__(/*! ../../entity/object/barrel */ "./src/entity/object/barrel.ts");
+const bomb_1 = __webpack_require__(/*! ../../entity/object/bomb */ "./src/entity/object/bomb.ts");
+const block_1 = __webpack_require__(/*! ../../entity/object/block */ "./src/entity/object/block.ts");
+const bush_1 = __webpack_require__(/*! ../../entity/object/bush */ "./src/entity/object/bush.ts");
+const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
+const crate_1 = __webpack_require__(/*! ../../entity/object/crate */ "./src/entity/object/crate.ts");
+const darkCrate_1 = __webpack_require__(/*! ../../entity/object/darkCrate */ "./src/entity/object/darkCrate.ts");
+const decoBlock_1 = __webpack_require__(/*! ../../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
+const caveBlock_1 = __webpack_require__(/*! ../../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
+const obsidianBlock_1 = __webpack_require__(/*! ../../entity/object/obsidianBlock */ "./src/entity/object/obsidianBlock.ts");
+const rubble_1 = __webpack_require__(/*! ../../entity/object/rubble */ "./src/entity/object/rubble.ts");
+const pot_1 = __webpack_require__(/*! ../../entity/object/pot */ "./src/entity/object/pot.ts");
+const darkPot_1 = __webpack_require__(/*! ../../entity/object/darkPot */ "./src/entity/object/darkPot.ts");
+const darkVase_1 = __webpack_require__(/*! ../../entity/object/darkVase */ "./src/entity/object/darkVase.ts");
+const candelabra_1 = __webpack_require__(/*! ../../entity/object/candelabra */ "./src/entity/object/candelabra.ts");
+const pumpkin_1 = __webpack_require__(/*! ../../entity/object/pumpkin */ "./src/entity/object/pumpkin.ts");
+const tombStone_1 = __webpack_require__(/*! ../../entity/object/tombStone */ "./src/entity/object/tombStone.ts");
+const furnace_1 = __webpack_require__(/*! ../../entity/object/furnace */ "./src/entity/object/furnace.ts");
+const fishingSpot_1 = __webpack_require__(/*! ../../entity/object/fishingSpot */ "./src/entity/object/fishingSpot.ts");
+const mushrooms_1 = __webpack_require__(/*! ../../entity/object/mushrooms */ "./src/entity/object/mushrooms.ts");
+const glowshrooms_1 = __webpack_require__(/*! ../../entity/object/glowshrooms */ "./src/entity/object/glowshrooms.ts");
+const pottedPlant_1 = __webpack_require__(/*! ../../entity/object/pottedPlant */ "./src/entity/object/pottedPlant.ts");
+const sprout_1 = __webpack_require__(/*! ../../entity/object/sprout */ "./src/entity/object/sprout.ts");
+const lilyPlant_1 = __webpack_require__(/*! ../../entity/object/lilyPlant */ "./src/entity/object/lilyPlant.ts");
+const tree_1 = __webpack_require__(/*! ../../entity/object/tree */ "./src/entity/object/tree.ts");
+const bigTree_1 = __webpack_require__(/*! ../../entity/object/bigTree */ "./src/entity/object/bigTree.ts");
+const tallSucculent_1 = __webpack_require__(/*! ../../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
+const succulent_1 = __webpack_require__(/*! ../../entity/object/succulent */ "./src/entity/object/succulent.ts");
+const smallBush_1 = __webpack_require__(/*! ../../entity/object/smallBush */ "./src/entity/object/smallBush.ts");
+const pawnStatue_1 = __webpack_require__(/*! ../../entity/object/pawnStatue */ "./src/entity/object/pawnStatue.ts");
+const rookStatue_1 = __webpack_require__(/*! ../../entity/object/rookStatue */ "./src/entity/object/rookStatue.ts");
+const bishopStatue_1 = __webpack_require__(/*! ../../entity/object/bishopStatue */ "./src/entity/object/bishopStatue.ts");
+const fallenPillar_1 = __webpack_require__(/*! ../../entity/object/fallenPillar */ "./src/entity/object/fallenPillar.ts");
+const darkPillar_1 = __webpack_require__(/*! ../../entity/object/darkPillar */ "./src/entity/object/darkPillar.ts");
+const vendingMachine_1 = __webpack_require__(/*! ../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
+const spawner_1 = __webpack_require__(/*! ../../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
+const armoredSkullEnemy_1 = __webpack_require__(/*! ../../entity/enemy/armoredSkullEnemy */ "./src/entity/enemy/armoredSkullEnemy.ts");
+const armoredzombieEnemy_1 = __webpack_require__(/*! ../../entity/enemy/armoredzombieEnemy */ "./src/entity/enemy/armoredzombieEnemy.ts");
+const beetleEnemy_1 = __webpack_require__(/*! ../../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
+const bishopEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bishopEnemy */ "./src/entity/enemy/bishopEnemy.ts");
+const boltcasterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
+const chargeEnemy_1 = __webpack_require__(/*! ../../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
+const crabEnemy_1 = __webpack_require__(/*! ../../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const crusherEnemy_1 = __webpack_require__(/*! ../../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ../../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const glowBugEnemy_1 = __webpack_require__(/*! ../../entity/enemy/glowBugEnemy */ "./src/entity/enemy/glowBugEnemy.ts");
+const kingEnemy_1 = __webpack_require__(/*! ../../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
+const knightEnemy_1 = __webpack_require__(/*! ../../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
+const bigKnightEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
+const mummyEnemy_1 = __webpack_require__(/*! ../../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
+const pawnEnemy_1 = __webpack_require__(/*! ../../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
+const queenEnemy_1 = __webpack_require__(/*! ../../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
+const rookEnemy_1 = __webpack_require__(/*! ../../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
+const skullEnemy_1 = __webpack_require__(/*! ../../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
+const bigSkullEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
+const bigZombieEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
+const spiderEnemy_1 = __webpack_require__(/*! ../../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
+const wardenEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
+const fireWizard_1 = __webpack_require__(/*! ../../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
+const earthWizard_1 = __webpack_require__(/*! ../../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
+const energyWizard_1 = __webpack_require__(/*! ../../entity/enemy/energyWizard */ "./src/entity/enemy/energyWizard.ts");
+const bigWizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigWizardEnemy */ "./src/entity/enemy/bigWizardEnemy.ts");
+const zombieEnemy_1 = __webpack_require__(/*! ../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const coalResource_1 = __webpack_require__(/*! ../../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
+const goldResource_1 = __webpack_require__(/*! ../../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
+const ironResource_1 = __webpack_require__(/*! ../../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
+const emeraldResource_1 = __webpack_require__(/*! ../../entity/resource/emeraldResource */ "./src/entity/resource/emeraldResource.ts");
+const zirconResource_1 = __webpack_require__(/*! ../../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
+const amberResource_1 = __webpack_require__(/*! ../../entity/resource/amberResource */ "./src/entity/resource/amberResource.ts");
+const garnetResource_1 = __webpack_require__(/*! ../../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
+const rockResource_1 = __webpack_require__(/*! ../../entity/resource/rockResource */ "./src/entity/resource/rockResource.ts");
+const caveRockResource_1 = __webpack_require__(/*! ../../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
+const obsidianResource_1 = __webpack_require__(/*! ../../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
+// ---- Item constructors ----
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const xpCrystal_1 = __webpack_require__(/*! ../../item/xpCrystal */ "./src/item/xpCrystal.ts");
+const key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
+const goldenKey_1 = __webpack_require__(/*! ../../item/goldenKey */ "./src/item/goldenKey.ts");
+const bluePotion_1 = __webpack_require__(/*! ../../item/usable/bluePotion */ "./src/item/usable/bluePotion.ts");
+const greenPotion_1 = __webpack_require__(/*! ../../item/usable/greenPotion */ "./src/item/usable/greenPotion.ts");
+const backpack_1 = __webpack_require__(/*! ../../item/backpack */ "./src/item/backpack.ts");
+const apple_1 = __webpack_require__(/*! ../../item/usable/apple */ "./src/item/usable/apple.ts");
+const fish_1 = __webpack_require__(/*! ../../item/usable/fish */ "./src/item/usable/fish.ts");
+const heart_1 = __webpack_require__(/*! ../../item/usable/heart */ "./src/item/usable/heart.ts");
+const hourglass_1 = __webpack_require__(/*! ../../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
+const shrooms_1 = __webpack_require__(/*! ../../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
+const weaponPoison_1 = __webpack_require__(/*! ../../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
+const weaponBlood_1 = __webpack_require__(/*! ../../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
+const weaponCurse_1 = __webpack_require__(/*! ../../item/usable/weaponCurse */ "./src/item/usable/weaponCurse.ts");
+const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const dagger_1 = __webpack_require__(/*! ../../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
+const sword_1 = __webpack_require__(/*! ../../item/weapon/sword */ "./src/item/weapon/sword.ts");
+const spear_1 = __webpack_require__(/*! ../../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const dualdagger_1 = __webpack_require__(/*! ../../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
+const greataxe_1 = __webpack_require__(/*! ../../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
+const warhammer_1 = __webpack_require__(/*! ../../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
+const quarterStaff_1 = __webpack_require__(/*! ../../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
+const scythe_1 = __webpack_require__(/*! ../../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
+const crossbow_1 = __webpack_require__(/*! ../../item/weapon/crossbow */ "./src/item/weapon/crossbow.ts");
+const shotgun_1 = __webpack_require__(/*! ../../item/weapon/shotgun */ "./src/item/weapon/shotgun.ts");
+const slingshot_1 = __webpack_require__(/*! ../../item/weapon/slingshot */ "./src/item/weapon/slingshot.ts");
+const pickaxe_1 = __webpack_require__(/*! ../../item/tool/pickaxe */ "./src/item/tool/pickaxe.ts");
+const divingHelmet_1 = __webpack_require__(/*! ../../item/divingHelmet */ "./src/item/divingHelmet.ts");
+const goldRing_1 = __webpack_require__(/*! ../../item/jewelry/goldRing */ "./src/item/jewelry/goldRing.ts");
+const emeraldRing_1 = __webpack_require__(/*! ../../item/jewelry/emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
+const zirconRing_1 = __webpack_require__(/*! ../../item/jewelry/zirconRing */ "./src/item/jewelry/zirconRing.ts");
+const amberRing_1 = __webpack_require__(/*! ../../item/jewelry/amberRing */ "./src/item/jewelry/amberRing.ts");
+const garnetRing_1 = __webpack_require__(/*! ../../item/jewelry/garnetRing */ "./src/item/jewelry/garnetRing.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
+const weaponFragments_1 = __webpack_require__(/*! ../../item/usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const coal_1 = __webpack_require__(/*! ../../item/resource/coal */ "./src/item/resource/coal.ts");
+const geode_1 = __webpack_require__(/*! ../../item/resource/geode */ "./src/item/resource/geode.ts");
+const stone_1 = __webpack_require__(/*! ../../item/resource/stone */ "./src/item/resource/stone.ts");
+const bluegem_1 = __webpack_require__(/*! ../../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
+const greengem_1 = __webpack_require__(/*! ../../item/resource/greengem */ "./src/item/resource/greengem.ts");
+const redgem_1 = __webpack_require__(/*! ../../item/resource/redgem */ "./src/item/resource/redgem.ts");
+const orangegem_1 = __webpack_require__(/*! ../../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
+const goldOre_1 = __webpack_require__(/*! ../../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
+const ironOre_1 = __webpack_require__(/*! ../../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
+const goldBar_1 = __webpack_require__(/*! ../../item/resource/goldBar */ "./src/item/resource/goldBar.ts");
+const ironBar_1 = __webpack_require__(/*! ../../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
+const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
+const lantern_1 = __webpack_require__(/*! ../../item/light/lantern */ "./src/item/light/lantern.ts");
+const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
+const glowStick_1 = __webpack_require__(/*! ../../item/light/glowStick */ "./src/item/light/glowStick.ts");
+const glowBugs_1 = __webpack_require__(/*! ../../item/light/glowBugs */ "./src/item/light/glowBugs.ts");
+const shroomLight_1 = __webpack_require__(/*! ../../item/usable/shroomLight */ "./src/item/usable/shroomLight.ts");
+const armor_1 = __webpack_require__(/*! ../../item/armor */ "./src/item/armor.ts");
+const woodenShield_1 = __webpack_require__(/*! ../../item/woodenShield */ "./src/item/woodenShield.ts");
+const fishingRod_1 = __webpack_require__(/*! ../../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
+const hammer_1 = __webpack_require__(/*! ../../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const backplate_1 = __webpack_require__(/*! ../../item/backplate */ "./src/item/backplate.ts");
+const gauntlets_1 = __webpack_require__(/*! ../../item/gauntlets */ "./src/item/gauntlets.ts");
+const shoulderPlates_1 = __webpack_require__(/*! ../../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
+const chestPlate_1 = __webpack_require__(/*! ../../item/chestPlate */ "./src/item/chestPlate.ts");
+const crossbowBolt_1 = __webpack_require__(/*! ../../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const godStone_1 = __webpack_require__(/*! ../../item/godStone */ "./src/item/godStone.ts");
+/** Collect all passable positions in the room, avoiding the 1-tile border. */
+function floorPositions(room) {
+    const positions = [];
+    for (let x = room.roomX + 1; x < room.roomX + room.width - 1; x++) {
+        for (let y = room.roomY + 1; y < room.roomY + room.height - 1; y++) {
+            const tile = room.roomArray[x]?.[y];
+            if (tile && !tile.isSolid()) {
+                positions.push({ x, y });
+            }
+        }
+    }
+    return positions;
+}
+/** Try to place an entity; return true on success. */
+function placeEntity(Ctor, room, game, positions, label) {
+    const pos = positions.shift();
+    if (!pos) {
+        console.warn(`[testBed] No floor space left for entity: ${label}`);
+        return false;
+    }
+    try {
+        const e = new Ctor(room, game, pos.x, pos.y);
+        room.entities.push(e);
+        return true;
+    }
+    catch (err) {
+        console.warn(`[testBed] Failed to spawn entity ${label}:`, err);
+        return false;
+    }
+}
+/** Try to drop an item on the floor; return true on success. */
+function placeItem(Ctor, room, positions, label) {
+    const pos = positions.shift();
+    if (!pos) {
+        console.warn(`[testBed] No floor space left for item: ${label}`);
+        return false;
+    }
+    try {
+        const it = new Ctor(room, pos.x, pos.y);
+        room.items.push(it);
+        return true;
+    }
+    catch (err) {
+        console.warn(`[testBed] Failed to drop item ${label}:`, err);
+        return false;
+    }
+}
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+function populateTestRoom(room, game, clearFirst = false) {
+    if (clearFirst) {
+        room.entities = [];
+        room.items = [];
+    }
+    const positions = floorPositions(room);
+    console.log(`[testBed] ${positions.length} floor tiles available in room (${room.roomX},${room.roomY})`);
+    // ---- Entities (objects + enemies + resources) ----
+    // Objects
+    const objectCtors = [
+        [barrel_1.Barrel, "barrel"],
+        [bomb_1.Bomb, "bomb"],
+        [block_1.Block, "block"],
+        [decoBlock_1.DecoBlock, "deco_block"],
+        [caveBlock_1.CaveBlock, "cave_block"],
+        [obsidianBlock_1.ObsidianBlock, "obsidian_block"],
+        [rubble_1.Rubble, "rubble"],
+        [bush_1.Bush, "bush"],
+        [smallBush_1.SmallBush, "small_bush"],
+        [sprout_1.Sprout, "sprout"],
+        [lilyPlant_1.LilyPlant, "lily_plant"],
+        [tree_1.Tree, "tree"],
+        [bigTree_1.BigTree, "big_tree"],
+        [tallSucculent_1.TallSucculent, "tall_succulent"],
+        [succulent_1.Succulent, "succulent"],
+        [darkVase_1.DarkVase, "dark_vase"],
+        [candelabra_1.Candelabra, "candelabra"],
+        [pawnStatue_1.PawnStatue, "pawn_statue"],
+        [rookStatue_1.RookStatue, "rook_statue"],
+        [bishopStatue_1.BishopStatue, "bishop_statue"],
+        [fallenPillar_1.FallenPillar, "fallen_pillar"],
+        [darkPillar_1.DarkPillar, "dark_pillar"],
+        [chest_1.Chest, "chest"],
+        [crate_1.Crate, "crate"],
+        [darkCrate_1.DarkCrate, "dark_crate"],
+        [pot_1.Pot, "pot"],
+        [darkPot_1.DarkPot, "dark_pot"],
+        [pumpkin_1.Pumpkin, "pumpkin"],
+        [tombStone_1.TombStone, "tomb_stone"],
+        [furnace_1.Furnace, "furnace"],
+        [fishingSpot_1.FishingSpot, "fishing_spot"],
+        [mushrooms_1.Mushrooms, "mushrooms_prop"],
+        [glowshrooms_1.Glowshrooms, "glowshrooms_prop"],
+        [pottedPlant_1.PottedPlant, "potted_plant"],
+        [spawner_1.Spawner, "spawner"],
+    ];
+    // VendingMachine needs an Item arg — supply a Coin as placeholder
+    const vmPos = positions.shift();
+    if (vmPos) {
+        try {
+            const vm = new vendingMachine_1.VendingMachine(room, game, vmPos.x, vmPos.y, new coin_1.Coin(room, vmPos.x, vmPos.y));
+            room.entities.push(vm);
+        }
+        catch (err) {
+            console.warn("[testBed] Failed to spawn vending_machine:", err);
+        }
+    }
+    // Enemies
+    const enemyCtors = [
+        [armoredSkullEnemy_1.ArmoredSkullEnemy, "armored_skull"],
+        [armoredzombieEnemy_1.ArmoredzombieEnemy, "armored_zombie"],
+        [beetleEnemy_1.BeetleEnemy, "beetle"],
+        [bishopEnemy_1.BishopEnemy, "bishop"],
+        [boltcasterEnemy_1.BoltcasterEnemy, "boltcaster"],
+        [chargeEnemy_1.ChargeEnemy, "charge"],
+        [crabEnemy_1.CrabEnemy, "crab"],
+        [crusherEnemy_1.CrusherEnemy, "crusher"],
+        [frogEnemy_1.FrogEnemy, "frog"],
+        [bigFrogEnemy_1.BigFrogEnemy, "big_frog"],
+        [glowBugEnemy_1.GlowBugEnemy, "glow_bug"],
+        [kingEnemy_1.KingEnemy, "king"],
+        [knightEnemy_1.KnightEnemy, "knight"],
+        [bigKnightEnemy_1.BigKnightEnemy, "big_knight"],
+        [mummyEnemy_1.MummyEnemy, "mummy"],
+        [pawnEnemy_1.PawnEnemy, "pawn"],
+        [queenEnemy_1.QueenEnemy, "queen"],
+        [rookEnemy_1.RookEnemy, "rook"],
+        [skullEnemy_1.SkullEnemy, "skull"],
+        [bigSkullEnemy_1.BigSkullEnemy, "big_skull"],
+        [bigZombieEnemy_1.BigZombieEnemy, "big_zombie"],
+        [spiderEnemy_1.SpiderEnemy, "spider"],
+        [wardenEnemy_1.WardenEnemy, "warden"],
+        [fireWizard_1.FireWizardEnemy, "fire_wizard"],
+        [earthWizard_1.EarthWizardEnemy, "earth_wizard"],
+        [energyWizard_1.EnergyWizardEnemy, "energy_wizard"],
+        [bigWizardEnemy_1.BigWizardEnemy, "big_wizard"],
+        [zombieEnemy_1.ZombieEnemy, "zombie"],
+        [occultistEnemy_1.OccultistEnemy, "occultist"],
+        [exalterEnemy_1.ExalterEnemy, "exalter"],
+    ];
+    // Resources
+    const resourceCtors = [
+        [coalResource_1.CoalResource, "coal_resource"],
+        [goldResource_1.GoldResource, "gold_resource"],
+        [ironResource_1.IronResource, "iron_resource"],
+        [emeraldResource_1.EmeraldResource, "emerald_resource"],
+        [zirconResource_1.ZirconResource, "zircon_resource"],
+        [amberResource_1.AmberResource, "amber_resource"],
+        [garnetResource_1.GarnetResource, "garnet_resource"],
+        [rockResource_1.Rock, "rock_resource"],
+        [caveRockResource_1.CaveRock, "cave_rock_resource"],
+        [obsidianResource_1.ObsidianResource, "obsidian_resource"],
+    ];
+    let entityCount = 0;
+    for (const [Ctor, label] of [...objectCtors, ...enemyCtors, ...resourceCtors]) {
+        if (placeEntity(Ctor, room, game, positions, label))
+            entityCount++;
+    }
+    // ---- Items ----
+    const itemCtors = [
+        [coin_1.Coin, "coin"],
+        [key_1.Key, "key"],
+        [hourglass_1.Hourglass, "hourglass"],
+        [xpCrystal_1.MeleeXpCrystal, "melee_xp_crystal"],
+        [xpCrystal_1.MagicXpCrystal, "magic_xp_crystal"],
+        [xpCrystal_1.RangedXpCrystal, "ranged_xp_crystal"],
+        [goldenKey_1.GoldenKey, "golden_key"],
+        [bluePotion_1.BluePotion, "blue_potion"],
+        [greenPotion_1.GreenPotion, "green_potion"],
+        [backpack_1.Backpack, "backpack"],
+        [apple_1.Apple, "apple"],
+        [fish_1.Fish, "fish"],
+        [heart_1.Heart, "health_potion"],
+        [shrooms_1.Shrooms, "mushrooms"],
+        [weaponPoison_1.WeaponPoison, "weapon_poison"],
+        [weaponBlood_1.WeaponBlood, "weapon_blood"],
+        [weaponCurse_1.WeaponCurse, "weapon_curse"],
+        [spellbookPage_1.SpellbookPage, "spellbook_page"],
+        [weaponFragments_1.WeaponFragments, "weapon_fragments"],
+        [coal_1.Coal, "coal"],
+        [geode_1.Geode, "geode"],
+        [stone_1.Stone, "stone"],
+        [bluegem_1.BlueGem, "blue_gem"],
+        [greengem_1.GreenGem, "green_gem"],
+        [redgem_1.RedGem, "red_gem"],
+        [orangegem_1.OrangeGem, "orange_gem"],
+        [goldOre_1.GoldOre, "gold_ore"],
+        [ironOre_1.IronOre, "iron_ore"],
+        [goldBar_1.GoldBar, "gold_bar"],
+        [ironBar_1.IronBar, "iron_bar"],
+        [torch_1.Torch, "torch"],
+        [lantern_1.Lantern, "lantern"],
+        [candle_1.Candle, "candle"],
+        [glowStick_1.GlowStick, "glow_stick"],
+        [glowBugs_1.GlowBugs, "glow_bugs"],
+        [shroomLight_1.ShroomLight, "glowshrooms"],
+        [dagger_1.Dagger, "dagger"],
+        [sword_1.Sword, "sword"],
+        [spear_1.Spear, "spear"],
+        [dualdagger_1.DualDagger, "dual_daggers"],
+        [greataxe_1.Greataxe, "greataxe"],
+        [warhammer_1.Warhammer, "warhammer"],
+        [quarterStaff_1.QuarterStaff, "quarterstaff"],
+        [scythe_1.Scythe, "scythe"],
+        [crossbow_1.Crossbow, "crossbow"],
+        [shotgun_1.Shotgun, "shotgun"],
+        [slingshot_1.Slingshot, "slingshot"],
+        [spellbook_1.Spellbook, "spellbook"],
+        [pickaxe_1.Pickaxe, "pickaxe"],
+        [fishingRod_1.FishingRod, "fishing_rod"],
+        [hammer_1.Hammer, "hammer"],
+        [armor_1.Armor, "occult_shield"],
+        [woodenShield_1.WoodenShield, "wooden_shield"],
+        [divingHelmet_1.DivingHelmet, "diving_helmet"],
+        [backplate_1.Backplate, "backplate"],
+        [gauntlets_1.Gauntlets, "gauntlets"],
+        [shoulderPlates_1.ShoulderPlates, "shoulder_plates"],
+        [chestPlate_1.ChestPlate, "chest_plate"],
+        [crossbowBolt_1.CrossbowBolt, "crossbow_bolt"],
+        [godStone_1.GodStone, "god_stone"],
+        [goldRing_1.GoldRing, "gold_ring"],
+        [emeraldRing_1.EmeraldRing, "emerald_ring"],
+        [zirconRing_1.ZirconRing, "zircon_ring"],
+        [amberRing_1.AmberRing, "amber_ring"],
+        [garnetRing_1.GarnetRing, "garnet_ring"],
+    ];
+    let itemCount = 0;
+    for (const [Ctor, label] of itemCtors) {
+        if (placeItem(Ctor, room, positions, label))
+            itemCount++;
+    }
+    console.log(`[testBed] Populated room (${room.roomX},${room.roomY}): ` +
+        `${entityCount + 1} entities (incl. vending_machine), ${itemCount} items. ` +
+        `${positions.length} floor positions remaining.`);
+}
+exports.populateTestRoom = populateTestRoom;
 
 
 /***/ }),
@@ -41452,6 +42940,7 @@ const ENEMY_KINDS = [
     "rook_statue",
     "bishop_statue",
     "fallen_pillar",
+    "dark_pillar",
     "coal_resource",
     "gold_resource",
     "iron_resource",
@@ -41509,7 +42998,7 @@ const isShieldItemKind = (k) => {
     return false;
 };
 const PROJECTILE_KINDS = ["wizard_fireball", "enemy_spawn_animation"];
-const WIZARD_TYPE_KINDS = ["energy", "fire", "earth"];
+const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"];
 const asEnvKind = (v, path) => isOneOf(v, ENV_KINDS)
     ? (0, errors_1.ok)(v)
     : (0, errors_1.err)({ kind: "InvalidSchema", message: "Invalid env kind", path });
@@ -41834,6 +43323,8 @@ const validatePlayerSaveV2 = (v, path, id) => {
             message: "sightRadius must be a number",
             path: `${path}.sightRadius`,
         });
+    const turnCountU = get(v, "turnCount");
+    const turnCount = isNumber(turnCountU) ? turnCountU : undefined;
     const lightU = get(v, "light");
     let light = undefined;
     if (lightU !== undefined) {
@@ -41890,6 +43381,7 @@ const validatePlayerSaveV2 = (v, path, id) => {
         inventory: invR.value,
         sightRadius,
         light,
+        turnCount,
     });
 };
 const validateInventorySaveV2 = (v, path) => {
@@ -42505,6 +43997,22 @@ const validateTileSaveV2 = (v, path) => {
                 const keyInMainRoomU = get(optsU, "keyInMainRoom");
                 const entranceInMainRoomU = get(optsU, "entranceInMainRoom");
                 const exitInMainRoomU = get(optsU, "exitInMainRoom");
+                const xySymmetryU = get(optsU, "xySymmetry");
+                const xySymmetryCenterVoidHalfSizeU = get(optsU, "xySymmetryCenterVoidHalfSize");
+                const xySymmetryArmHalfThicknessU = get(optsU, "xySymmetryArmHalfThickness");
+                const xySymmetryCentralRoomSizeU = get(optsU, "xySymmetryCentralRoomSize");
+                const terminalU = get(optsU, "terminal");
+                const noBossU = get(optsU, "noBoss");
+                const peacefulU = get(optsU, "peaceful");
+                const tunnelRadiusScaleU = get(optsU, "tunnelRadiusScale");
+                const squareBrushU = get(optsU, "squareBrush");
+                const angularMazeU = get(optsU, "angularMaze");
+                const tunnelMinRadiusU = get(optsU, "tunnelMinRadius");
+                const tunnelMaxRadiusU = get(optsU, "tunnelMaxRadius");
+                const maxNodeRadiusU = get(optsU, "maxNodeRadius");
+                const minNodeSeparationU = get(optsU, "minNodeSeparation");
+                const nodeCountTableU = get(optsU, "nodeCountTable");
+                const enemyDensityScaleU = get(optsU, "enemyDensityScale");
                 const asOptNum = (u, p) => {
                     if (u === undefined)
                         return (0, errors_1.ok)(undefined);
@@ -42561,6 +44069,57 @@ const validateTileSaveV2 = (v, path) => {
                 const exitInMainRoomR = asOptBool(exitInMainRoomU, `${path}.opts.exitInMainRoom`);
                 if (isErr(exitInMainRoomR))
                     return (0, errors_1.err)(exitInMainRoomR.error);
+                const xySymmetryR = asOptBool(xySymmetryU, `${path}.opts.xySymmetry`);
+                if (isErr(xySymmetryR))
+                    return (0, errors_1.err)(xySymmetryR.error);
+                const xySymmetryCenterVoidHalfSizeR = asOptNum(xySymmetryCenterVoidHalfSizeU, `${path}.opts.xySymmetryCenterVoidHalfSize`);
+                if (isErr(xySymmetryCenterVoidHalfSizeR))
+                    return (0, errors_1.err)(xySymmetryCenterVoidHalfSizeR.error);
+                const xySymmetryArmHalfThicknessR = asOptNum(xySymmetryArmHalfThicknessU, `${path}.opts.xySymmetryArmHalfThickness`);
+                if (isErr(xySymmetryArmHalfThicknessR))
+                    return (0, errors_1.err)(xySymmetryArmHalfThicknessR.error);
+                const xySymmetryCentralRoomSizeR = asOptNum(xySymmetryCentralRoomSizeU, `${path}.opts.xySymmetryCentralRoomSize`);
+                if (isErr(xySymmetryCentralRoomSizeR))
+                    return (0, errors_1.err)(xySymmetryCentralRoomSizeR.error);
+                const terminalR = asOptBool(terminalU, `${path}.opts.terminal`);
+                if (isErr(terminalR))
+                    return (0, errors_1.err)(terminalR.error);
+                const noBossR = asOptBool(noBossU, `${path}.opts.noBoss`);
+                if (isErr(noBossR))
+                    return (0, errors_1.err)(noBossR.error);
+                const peacefulR = asOptBool(peacefulU, `${path}.opts.peaceful`);
+                if (isErr(peacefulR))
+                    return (0, errors_1.err)(peacefulR.error);
+                const tunnelRadiusScaleR = asOptNum(tunnelRadiusScaleU, `${path}.opts.tunnelRadiusScale`);
+                if (isErr(tunnelRadiusScaleR))
+                    return (0, errors_1.err)(tunnelRadiusScaleR.error);
+                const squareBrushR = asOptBool(squareBrushU, `${path}.opts.squareBrush`);
+                if (isErr(squareBrushR))
+                    return (0, errors_1.err)(squareBrushR.error);
+                const angularMazeR = asOptBool(angularMazeU, `${path}.opts.angularMaze`);
+                if (isErr(angularMazeR))
+                    return (0, errors_1.err)(angularMazeR.error);
+                const tunnelMinRadiusR = asOptNum(tunnelMinRadiusU, `${path}.opts.tunnelMinRadius`);
+                if (isErr(tunnelMinRadiusR))
+                    return (0, errors_1.err)(tunnelMinRadiusR.error);
+                const tunnelMaxRadiusR = asOptNum(tunnelMaxRadiusU, `${path}.opts.tunnelMaxRadius`);
+                if (isErr(tunnelMaxRadiusR))
+                    return (0, errors_1.err)(tunnelMaxRadiusR.error);
+                const maxNodeRadiusR = asOptNum(maxNodeRadiusU, `${path}.opts.maxNodeRadius`);
+                if (isErr(maxNodeRadiusR))
+                    return (0, errors_1.err)(maxNodeRadiusR.error);
+                const minNodeSeparationR = asOptNum(minNodeSeparationU, `${path}.opts.minNodeSeparation`);
+                if (isErr(minNodeSeparationR))
+                    return (0, errors_1.err)(minNodeSeparationR.error);
+                let nodeCountTable = undefined;
+                if (nodeCountTableU !== undefined) {
+                    if (!Array.isArray(nodeCountTableU) || !nodeCountTableU.every(isNumber))
+                        return (0, errors_1.err)({ kind: "InvalidSchema", message: "nodeCountTable must be number[] if present", path: `${path}.opts.nodeCountTable` });
+                    nodeCountTable = nodeCountTableU;
+                }
+                const enemyDensityScaleR = asOptNum(enemyDensityScaleU, `${path}.opts.enemyDensityScale`);
+                if (isErr(enemyDensityScaleR))
+                    return (0, errors_1.err)(enemyDensityScaleR.error);
                 let envType = undefined;
                 if (envTypeU !== undefined) {
                     const er = asEnvKind(envTypeU, `${path}.opts.envType`);
@@ -42584,6 +44143,22 @@ const validateTileSaveV2 = (v, path) => {
                     keyInMainRoom: keyInMainRoomR.value,
                     entranceInMainRoom: entranceInMainRoomR.value,
                     exitInMainRoom: exitInMainRoomR.value,
+                    xySymmetry: xySymmetryR.value,
+                    xySymmetryCenterVoidHalfSize: xySymmetryCenterVoidHalfSizeR.value,
+                    xySymmetryArmHalfThickness: xySymmetryArmHalfThicknessR.value,
+                    xySymmetryCentralRoomSize: xySymmetryCentralRoomSizeR.value,
+                    terminal: terminalR.value,
+                    noBoss: noBossR.value,
+                    peaceful: peacefulR.value,
+                    tunnelRadiusScale: tunnelRadiusScaleR.value,
+                    squareBrush: squareBrushR.value,
+                    angularMaze: angularMazeR.value,
+                    tunnelMinRadius: tunnelMinRadiusR.value,
+                    tunnelMaxRadius: tunnelMaxRadiusR.value,
+                    maxNodeRadius: maxNodeRadiusR.value,
+                    minNodeSeparation: minNodeSeparationR.value,
+                    nodeCountTable,
+                    enemyDensityScale: enemyDensityScaleR.value,
                 };
             }
             const lockU = get(v, "lock");
@@ -42633,13 +44208,28 @@ const validateTileSaveV2 = (v, path) => {
                     return (0, errors_1.err)(lg.error);
                 linkedRoomGid = lg.value;
             }
-            return (0, errors_1.ok)({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid });
+            const upLockU = get(v, "lock");
+            let upLock = undefined;
+            if (upLockU !== undefined) {
+                if (!isRecord(upLockU)) {
+                    return (0, errors_1.err)({ kind: "InvalidSchema", message: "lock must be object", path: `${path}.lock` });
+                }
+                const lockTypeR = asLockKind(get(upLockU, "lockType"), `${path}.lock.lockType`);
+                if (isErr(lockTypeR))
+                    return (0, errors_1.err)(lockTypeR.error);
+                const keyIdU = get(upLockU, "keyId");
+                const keyId = isNumber(keyIdU) ? keyIdU : undefined;
+                upLock = { lockType: lockTypeR.value, keyId };
+            }
+            return (0, errors_1.ok)({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid, lock: upLock });
         }
         case "spike_trap": {
             const triggered = get(v, "triggered");
             if (!isBoolean(triggered))
                 return (0, errors_1.err)({ kind: "InvalidSchema", message: "triggered must be boolean", path: `${path}.triggered` });
-            return (0, errors_1.ok)({ kind: "spike_trap", gid, x, y, triggered });
+            const rawTickCount = get(v, "tickCount");
+            const tickCount = isNumber(rawTickCount) ? rawTickCount : 0;
+            return (0, errors_1.ok)({ kind: "spike_trap", gid, x, y, triggered, tickCount });
         }
         case "fountain": {
             const subTileX = get(v, "subTileX");
@@ -43140,7 +44730,7 @@ const validateHitWarningSaveV2 = (v, path) => {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createSaveV2 = void 0;
+exports.createSaveV2 = exports.collectRoomsForSaveAtCurrentDepth = void 0;
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const errors_1 = __webpack_require__(/*! ./errors */ "./src/game/save/errors.ts");
 const mappers_1 = __webpack_require__(/*! ./mappers */ "./src/game/save/mappers.ts");
@@ -43151,6 +44741,7 @@ const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/til
 const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
 const button_1 = __webpack_require__(/*! ../../tile/button */ "./src/tile/button.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const itemsBuiltins_1 = __webpack_require__(/*! ./registry/itemsBuiltins */ "./src/game/save/registry/itemsBuiltins.ts");
 const enemiesBuiltins_1 = __webpack_require__(/*! ./registry/enemiesBuiltins */ "./src/game/save/registry/enemiesBuiltins.ts");
 const items_1 = __webpack_require__(/*! ./registry/items */ "./src/game/save/registry/items.ts");
@@ -43227,6 +44818,7 @@ const collectRoomsForSaveAtCurrentDepth = (game) => {
     }
     return Array.from(byGid.values()).sort(stableRoomSort);
 };
+exports.collectRoomsForSaveAtCurrentDepth = collectRoomsForSaveAtCurrentDepth;
 const createSaveV2 = (game, nowMs = Date.now()) => {
     // Ensure builtin codecs are registered before we attempt to encode tiles.
     (0, tilesBuiltins_1.registerBuiltinTileCodecsV2)();
@@ -43241,7 +44833,7 @@ const createSaveV2 = (game, nowMs = Date.now()) => {
     if (!Array.isArray(game.rooms)) {
         return (0, errors_1.err)({ kind: "InvalidState", message: "Cannot save: game.rooms is not initialized" });
     }
-    const roomsToSave = collectRoomsForSaveAtCurrentDepth(game);
+    const roomsToSave = (0, exports.collectRoomsForSaveAtCurrentDepth)(game);
     if (roomsToSave.length === 0) {
         return (0, errors_1.err)({ kind: "InvalidState", message: "Cannot save: no rooms collected for current depth" });
     }
@@ -43322,6 +44914,7 @@ const playerToSave = (game, id, p, nowMs) => {
         roomGid: room.globalId,
         inventory,
         sightRadius: p.sightRadius,
+        turnCount: p.turnCount,
         light: {
             equipped: p.lightEquipped,
             colorRgb: [p.lightColor[0], p.lightColor[1], p.lightColor[2]],
@@ -43443,6 +45036,8 @@ const tileToKind = (t) => {
         return "down_ladder";
     if (t instanceof upLadder_1.UpLadder)
         return "up_ladder";
+    if (t instanceof spiketrap_1.SpikeTrap)
+        return "spike_trap";
     return null;
 };
 const collectPersistedTiles = (game, room, nowMs) => {
@@ -57471,9 +59066,17 @@ class LevelGenerator {
             let selectedPngUrl = undefined;
             if (shouldUsePNG && rollPNG) {
                 // Use PNG-based level generation for MAIN PATHS ONLY
-                const pngUrl = genOverride?.forcePngUrl !== undefined
-                    ? genOverride.forcePngUrl
-                    : await this.selectRandomLevelForDepth(depth);
+                let pngUrl;
+                if (genOverride?.forcePngUrl !== undefined) {
+                    // During load we skip selectRandomLevelForDepth(), but that function always calls
+                    // Random.rand() once to pick among available variations. Consume one rand() here
+                    // to keep RNG state in sync with the original gameplay run.
+                    random_1.Random.rand();
+                    pngUrl = genOverride.forcePngUrl;
+                }
+                else {
+                    pngUrl = await this.selectRandomLevelForDepth(depth);
+                }
                 if (pngUrl) {
                     selectedPngUrl = pngUrl;
                     console.log(`Using PNG level generation from: ${pngUrl}`);
@@ -57570,6 +59173,13 @@ class LevelGenerator {
             }
             let rooms = this.getRooms(partitions, depth, mapGroup, envType, pid, newLevel);
             newLevel.setRooms(rooms);
+            // Reset RNG to a deterministic state before population.
+            // async awaits in generateDungeonPartitions() allow the game loop to interleave
+            // Random.rand() calls (rAF ticks for particles/animations), making the state
+            // before populateRooms() non-deterministic. An explicit reset here ensures
+            // population (SpikeTrap/enemy placement, etc.) is identical between the original
+            // run and load-time regeneration.
+            random_1.Random.setState(((this.seed + depth + 37) ^ pathHash) >>> 0);
             newLevel.populator.populateRooms();
             // After ladders/props are placed, refresh start/exit rooms using tile presence.
             // This preserves existing behavior while enabling single-room ladder layouts.
