@@ -82,6 +82,12 @@ export class GameplaySettings {
    */
   static HIT_STUNS_ATTACK: boolean = false;
 
+  /**
+   * When enabled, the pickaxe is a passive tool rather than an equippable weapon.
+   * It cannot be equipped, and mining only requires a pickaxe anywhere in inventory.
+   */
+  static PICKAXE_AS_TOOL: boolean = true;
+
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 

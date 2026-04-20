@@ -16,6 +16,7 @@ import { statsTracker } from "../../game/stats";
 import { computeMiningXp } from "../../game/skillBalance";
 import { XPPopup } from "../../particle/xpPopup";
 import { GameConstants } from "../../game/gameConstants";
+import { GameplaySettings } from "../../game/gameplaySettings";
 
 type MiningWeaponLike = { canMine?: unknown };
 type MiningInventoryLike = {
@@ -64,8 +65,12 @@ export class Resource extends Entity {
     // Non-player damage (enemies, projectiles, etc.) should not crash or award mining XP.
     if (playerHitBy !== null) {
       if (!isMiningActor(playerHitBy)) return;
-      const weapon = playerHitBy.inventory.getWeapon();
-      if (!isMiningWeapon(weapon) || weapon.canMine !== true) return;
+      if (GameplaySettings.PICKAXE_AS_TOOL) {
+        if (!playerHitBy.inventory.canMine()) return;
+      } else {
+        const weapon = playerHitBy.inventory.getWeapon();
+        if (!isMiningWeapon(weapon) || weapon.canMine !== true) return;
+      }
     }
     this.healthBar.hurt();
     this.health -= damage;

@@ -4,6 +4,7 @@ import { Item } from "../item";
 import { Usable } from "../usable/usable";
 import { WeaponFragments } from "../usable/weaponFragments";
 import { Player } from "../../player/player";
+import { GameplaySettings } from "../../game/gameplaySettings";
 
 export class Pickaxe extends Weapon {
   static itemName = "pickaxe";
@@ -15,4 +16,9 @@ export class Pickaxe extends Weapon {
     this.description = "allows mining rocks without equipping";
     this.canMine = true;
   }
+
+  toggleEquip = () => {
+    if (GameplaySettings.PICKAXE_AS_TOOL) return;
+    super.toggleEquip();
+  };
 }

@@ -25634,6 +25634,7 @@ const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts
 const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
 const xpPopup_1 = __webpack_require__(/*! ../../particle/xpPopup */ "./src/particle/xpPopup.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const isMiningWeapon = (w) => {
     if (typeof w !== "object" || w === null)
         return false;
@@ -25658,9 +25659,15 @@ class Resource extends entity_1.Entity {
             if (playerHitBy !== null) {
                 if (!isMiningActor(playerHitBy))
                     return;
-                const weapon = playerHitBy.inventory.getWeapon();
-                if (!isMiningWeapon(weapon) || weapon.canMine !== true)
-                    return;
+                if (gameplaySettings_1.GameplaySettings.PICKAXE_AS_TOOL) {
+                    if (!playerHitBy.inventory.canMine())
+                        return;
+                }
+                else {
+                    const weapon = playerHitBy.inventory.getWeapon();
+                    if (!isMiningWeapon(weapon) || weapon.canMine !== true)
+                        return;
+                }
             }
             this.healthBar.hurt();
             this.health -= damage;
@@ -36918,6 +36925,11 @@ GameplaySettings.MAIN_PATH_KEY_REQUIRED = true;
  * Chess pieces (which use the existing justHurt retreat mechanic) are exempt.
  */
 GameplaySettings.HIT_STUNS_ATTACK = false;
+/**
+ * When enabled, the pickaxe is a passive tool rather than an equippable weapon.
+ * It cannot be equipped, and mining only requires a pickaxe anywhere in inventory.
+ */
+GameplaySettings.PICKAXE_AS_TOOL = true;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;
@@ -54578,9 +54590,15 @@ Hammer.itemName = "hammer";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Pickaxe = void 0;
 const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class Pickaxe extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.toggleEquip = () => {
+            if (gameplaySettings_1.GameplaySettings.PICKAXE_AS_TOOL)
+                return;
+            super.toggleEquip();
+        };
         this.tileX = 30;
         this.tileY = 0;
         this.name = Pickaxe.itemName;
