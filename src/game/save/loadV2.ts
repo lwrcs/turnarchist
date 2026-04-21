@@ -29,6 +29,7 @@ import { Player } from "../../player/player";
 import { Weapon } from "../../item/weapon/weapon";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
+import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
 import { Enemy } from "../../entity/enemy/enemy";
 import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
@@ -949,6 +950,17 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
           }
           spawned.drops = drops;
         }
+      }
+    }
+
+    // Post-pass: re-link occultist shieldedEnemies (enemies may appear after their occultist in rd.enemies).
+    for (const es of rd.enemies) {
+      if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids)) continue;
+      const occultist = entitiesByGid.get(es.gid);
+      if (!(occultist instanceof OccultistEnemy)) continue;
+      for (const sgid of es.shieldedEnemyGids) {
+        const shielded = entitiesByGid.get(sgid);
+        if (shielded instanceof Enemy) occultist.shieldedEnemies.push(shielded);
       }
     }
 

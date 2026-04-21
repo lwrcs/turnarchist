@@ -356,6 +356,8 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   shield?: { health: number };
   buffed?: boolean;
   buffedBefore?: boolean;
+  /** Occultist: GIDs of enemies this occultist is actively shielding. */
+  shieldedEnemyGids?: Gid[];
 };
 
 export type WizardTypeKind = "energy" | "fire" | "earth" | "big";

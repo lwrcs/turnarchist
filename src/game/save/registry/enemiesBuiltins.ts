@@ -215,6 +215,10 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       shield: value.shield ? { health: value.shield.health } : undefined,
       buffed: value.buffed === true ? true : undefined,
       buffedBefore: value.buffedBefore === true ? true : undefined,
+      shieldedEnemyGids:
+        value instanceof OccultistEnemy && value.shieldedEnemies.length > 0
+          ? value.shieldedEnemies.map((e) => e.globalId)
+          : undefined,
     } satisfies BasicEnemySaveV2;
   };
 

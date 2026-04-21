@@ -38402,6 +38402,7 @@ const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/pl
 const weapon_1 = __webpack_require__(/*! ../../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
+const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
@@ -39197,6 +39198,19 @@ const loadSaveV2 = async (game, save) => {
                         }
                         spawned.drops = drops;
                     }
+                }
+            }
+            // Post-pass: re-link occultist shieldedEnemies (enemies may appear after their occultist in rd.enemies).
+            for (const es of rd.enemies) {
+                if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids))
+                    continue;
+                const occultist = entitiesByGid.get(es.gid);
+                if (!(occultist instanceof occultistEnemy_1.OccultistEnemy))
+                    continue;
+                for (const sgid of es.shieldedEnemyGids) {
+                    const shielded = entitiesByGid.get(sgid);
+                    if (shielded instanceof enemy_1.Enemy)
+                        occultist.shieldedEnemies.push(shielded);
                 }
             }
             room.projectiles = [];
@@ -40003,6 +40017,9 @@ const registerBuiltinEnemyCodecsV2 = () => {
             shield: value.shield ? { health: value.shield.health } : undefined,
             buffed: value.buffed === true ? true : undefined,
             buffedBefore: value.buffedBefore === true ? true : undefined,
+            shieldedEnemyGids: value instanceof occultistEnemy_1.OccultistEnemy && value.shieldedEnemies.length > 0
+                ? value.shieldedEnemies.map((e) => e.globalId)
+                : undefined,
         };
     };
     const spawnBasic = (Ctor, value, room, ctx) => {
@@ -44616,6 +44633,7 @@ const validateEnemySaveV2 = (v, path) => {
     const shieldU = get(v, "shield");
     const buffedU = get(v, "buffed");
     const buffedBeforeU = get(v, "buffedBefore");
+    const shieldedEnemyGidsU = get(v, "shieldedEnemyGids");
     let seenPlayer = undefined;
     if (seenPlayerU !== undefined) {
         if (!isBoolean(seenPlayerU))
@@ -44707,6 +44725,23 @@ const validateEnemySaveV2 = (v, path) => {
             });
         buffedBefore = buffedBeforeU;
     }
+    let shieldedEnemyGids = undefined;
+    if (shieldedEnemyGidsU !== undefined) {
+        if (!Array.isArray(shieldedEnemyGidsU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "shieldedEnemyGids must be array if present",
+                path: `${path}.shieldedEnemyGids`,
+            });
+        const gids = [];
+        for (let i = 0; i < shieldedEnemyGidsU.length; i++) {
+            const g = asGid(shieldedEnemyGidsU[i], `${path}.shieldedEnemyGids[${i}]`);
+            if (isErr(g))
+                return (0, errors_1.err)(g.error);
+            gids.push(g.value);
+        }
+        shieldedEnemyGids = gids;
+    }
     return (0, errors_1.ok)({
         kind,
         gid: gidR.value,
@@ -44727,6 +44762,7 @@ const validateEnemySaveV2 = (v, path) => {
         shield,
         buffed,
         buffedBefore,
+        shieldedEnemyGids,
     });
 };
 const validateProjectileSaveV2 = (v, path) => {

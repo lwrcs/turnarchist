@@ -1858,6 +1858,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
   const shieldU = get(v, "shield");
   const buffedU = get(v, "buffed");
   const buffedBeforeU = get(v, "buffedBefore");
+  const shieldedEnemyGidsU = get(v, "shieldedEnemyGids");
 
   let seenPlayer: boolean | undefined = undefined;
   if (seenPlayerU !== undefined) {
@@ -1957,6 +1958,23 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     buffedBefore = buffedBeforeU;
   }
 
+  let shieldedEnemyGids: string[] | undefined = undefined;
+  if (shieldedEnemyGidsU !== undefined) {
+    if (!Array.isArray(shieldedEnemyGidsU))
+      return err({
+        kind: "InvalidSchema",
+        message: "shieldedEnemyGids must be array if present",
+        path: `${path}.shieldedEnemyGids`,
+      });
+    const gids: string[] = [];
+    for (let i = 0; i < shieldedEnemyGidsU.length; i++) {
+      const g = asGid(shieldedEnemyGidsU[i], `${path}.shieldedEnemyGids[${i}]`);
+      if (isErr(g)) return err(g.error);
+      gids.push(g.value);
+    }
+    shieldedEnemyGids = gids;
+  }
+
   return ok({
     kind,
     gid: gidR.value,
@@ -1977,6 +1995,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     shield,
     buffed,
     buffedBefore,
+    shieldedEnemyGids,
   });
 };
 
