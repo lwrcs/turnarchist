@@ -733,6 +733,7 @@ export const ITEM_KIND_VALUES_V2 = [
   "health_potion",
   "hourglass",
   "apple",
+  "berries",
   "fish",
   "mushrooms",
   "weapon_poison",

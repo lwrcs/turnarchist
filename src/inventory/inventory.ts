@@ -44,7 +44,7 @@ export class Inventory {
   globalId: string;
   player: Player;
   items: Array<Item | null>;
-  rows = 4;
+  rows = 5;
   cols = 5;
   selX = 0;
   selY = 0;

@@ -56,6 +56,7 @@ import { CrossbowBolt } from "../item/weapon/crossbowBolt";
 import { Crossbow } from "../item/weapon/crossbow";
 import { GlowStick } from "../item/light/glowStick";
 import { DivingHelmet } from "../item/divingHelmet";
+import { Berries } from "../item/usable/berries";
 import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
@@ -226,6 +227,8 @@ export class GameConstants {
     MeleeXpCrystal,
     MagicXpCrystal,
     RangedXpCrystal,
+    Apple,
+    Berries,
   ];
 
   static readonly PERSISTENT_HEALTH_BAR = false; //not implemented

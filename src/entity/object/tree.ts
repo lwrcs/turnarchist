@@ -34,11 +34,17 @@ export class Tree extends Entity {
     this.imageParticleY = 28;
     this.opaque = true;
     this.hitSound = Sound.playBush;
-    if (Random.rand() < 0.5)
-      this.drops.push(new Apple(this.room, this.x, this.y));
-    //this.drawableY = 0.1;
-    //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
+
+  onHurt = () => {
+    if (this.health === 1 && Random.rand() < 0.5) {
+      const apple = new Apple(this.room, this.x, this.y);
+      apple.level = this.room;
+      this.room.items.push(apple);
+      apple.onDrop();
+      apple.autoPickup();
+    }
+  };
 
   get type() {
     return EntityType.PROP;

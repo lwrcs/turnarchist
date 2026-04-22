@@ -1,13 +1,9 @@
-import { Entity } from "../entity";
+import { Entity, EntityType } from "../entity";
 import { Room } from "../../room/room";
 import { Game } from "../../game";
-import { Heart } from "../../item/usable/heart";
-import { LevelConstants } from "../../level/levelConstants";
-import { GenericParticle } from "../../particle/genericParticle";
-import { Shrooms } from "../../item/usable/shrooms";
-import { EntityType } from "../entity";
-import { ImageParticle } from "../../particle/imageParticle";
 import { Sound } from "../../sound/sound";
+import { Random } from "../../utility/random";
+import { Berries } from "../../item/usable/berries";
 
 export class Bush extends Entity {
   static examineText = "A bush. Rustles when you hit it.";
@@ -15,6 +11,7 @@ export class Bush extends Entity {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
+    this.maxHealth = 1;
     this.tileX = 19;
     this.tileY = 2;
     this.hasShadow = true;
@@ -24,8 +21,12 @@ export class Bush extends Entity {
     this.imageParticleY = 28;
     this.opaque = true;
     this.hitSound = Sound.playBush;
-    //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
+
+  onHurt = () => {
+    if (Random.rand() < 1 / 7)
+      this.drops.push(new Berries(this.room, this.x, this.y));
+  };
 
   get type() {
     return EntityType.PROP;

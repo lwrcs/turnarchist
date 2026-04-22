@@ -8,16 +8,9 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
-/**
- * Create a bound version of a function with a specified `this` context
- *
- * @param {Function} fn - The function to bind
- * @param {*} thisArg - The value to be passed as the `this` parameter
- * @returns {Function} A new function that will call the original function with the specified `this` context
- */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1270,7 +1263,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {void}
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2236,38 +2229,27 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure, sameSite) {
-      if (typeof document === 'undefined') return;
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
 
-      const cookie = [`${name}=${encodeURIComponent(value)}`];
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
 
-      if (utils$1.isNumber(expires)) {
-        cookie.push(`expires=${new Date(expires).toUTCString()}`);
-      }
-      if (utils$1.isString(path)) {
-        cookie.push(`path=${path}`);
-      }
-      if (utils$1.isString(domain)) {
-        cookie.push(`domain=${domain}`);
-      }
-      if (secure === true) {
-        cookie.push('secure');
-      }
-      if (utils$1.isString(sameSite)) {
-        cookie.push(`SameSite=${sameSite}`);
-      }
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      if (typeof document === 'undefined') return null;
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000, '/');
+      this.write(name, '', Date.now() - 86400000);
     }
   }
 
@@ -2356,11 +2338,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop, caseless) {
+  function mergeDeepProperties(a, b, prop , caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop, caseless);
+      return getMergedValue(a, b, prop , caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop, caseless);
+      return getMergedValue(undefined, a, prop , caseless);
     }
   }
 
@@ -2418,7 +2400,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3058,7 +3040,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = (config && config.env) || {};
+  let env = config ? config.env : {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3081,15 +3063,6 @@ const getFetch = (config) => {
 
 getFetch();
 
-/**
- * Known adapters mapping.
- * Provides environment-specific adapters for Axios:
- * - `http` for Node.js
- * - `xhr` for browsers
- * - `fetch` for fetch API-based requests
- * 
- * @type {Object<string, Function|Object>}
- */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3098,107 +3071,71 @@ const knownAdapters = {
   }
 };
 
-// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', { value });
+      Object.defineProperty(fn, 'name', {value});
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', { value });
+    Object.defineProperty(fn, 'adapterName', {value});
   }
 });
 
-/**
- * Render a rejection reason string for unknown or unsupported adapters
- * 
- * @param {string} reason
- * @returns {string}
- */
 const renderReason = (reason) => `- ${reason}`;
 
-/**
- * Check if the adapter is resolved (function, null, or false)
- * 
- * @param {Function|null|false} adapter
- * @returns {boolean}
- */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-/**
- * Get the first suitable adapter from the provided list.
- * Tries each adapter in order until a supported one is found.
- * Throws an AxiosError if no adapter is suitable.
- * 
- * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
- * @param {Object} config - Axios request configuration
- * @throws {AxiosError} If no suitable adapter is available
- * @returns {Function} The resolved adapter function
- */
-function getAdapter(adapters, config) {
-  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
-
-  const { length } = adapters;
-  let nameOrAdapter;
-  let adapter;
-
-  const rejectedReasons = {};
-
-  for (let i = 0; i < length; i++) {
-    nameOrAdapter = adapters[i];
-    let id;
-
-    adapter = nameOrAdapter;
-
-    if (!isResolvedHandle(nameOrAdapter)) {
-      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
-
-      if (adapter === undefined) {
-        throw new AxiosError(`Unknown adapter '${id}'`);
-      }
-    }
-
-    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-      break;
-    }
-
-    rejectedReasons[id || '#' + i] = adapter;
-  }
-
-  if (!adapter) {
-    const reasons = Object.entries(rejectedReasons)
-      .map(([id, state]) => `adapter ${id} ` +
-        (state === false ? 'is not supported by the environment' : 'is not available in the build')
-      );
-
-    let s = length ?
-      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-      'as no adapter specified';
-
-    throw new AxiosError(
-      `There is no suitable adapter to dispatch the request ` + s,
-      'ERR_NOT_SUPPORT'
-    );
-  }
-
-  return adapter;
-}
-
-/**
- * Exports Axios adapters and utility to resolve an adapter
- */
 var adapters = {
-  /**
-   * Resolve an adapter from a list of adapter names or functions.
-   * @type {Function}
-   */
-  getAdapter,
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-  /**
-   * Exposes all known adapters
-   * @type {Object<string, Function|Object>}
-   */
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
   adapters: knownAdapters
 };
 
@@ -3275,7 +3212,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.13.2";
+const VERSION = "1.12.2";
 
 const validators$1 = {};
 
@@ -3834,12 +3771,6 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
-  WebServerIsDown: 521,
-  ConnectionTimedOut: 522,
-  OriginIsUnreachable: 523,
-  TimeoutOccurred: 524,
-  SslHandshakeFailed: 525,
-  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -23002,11 +22933,16 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Bush = void 0;
 const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
-const entity_2 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const berries_1 = __webpack_require__(/*! ../../item/usable/berries */ "./src/item/usable/berries.ts");
 class Bush extends entity_1.Entity {
     constructor(room, game, x, y) {
         super(room, game, x, y);
+        this.onHurt = () => {
+            if (random_1.Random.rand() < 1 / 7)
+                this.drops.push(new berries_1.Berries(this.room, this.x, this.y));
+        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -23025,6 +22961,7 @@ class Bush extends entity_1.Entity {
         };
         this.room = room;
         this.health = 1;
+        this.maxHealth = 1;
         this.tileX = 19;
         this.tileY = 2;
         this.hasShadow = true;
@@ -23034,10 +22971,9 @@ class Bush extends entity_1.Entity {
         this.imageParticleY = 28;
         this.opaque = true;
         this.hitSound = sound_1.Sound.playBush;
-        //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
-        return entity_2.EntityType.PROP;
+        return entity_1.EntityType.PROP;
     }
 }
 exports.Bush = Bush;
@@ -24879,6 +24815,15 @@ class Tree extends entity_1.Entity {
         super(room, game, x, y);
         this.seeThroughAlpha = 1;
         this.softSeeThroughAlpha = 1;
+        this.onHurt = () => {
+            if (this.health === 1 && random_1.Random.rand() < 0.5) {
+                const apple = new apple_1.Apple(this.room, this.x, this.y);
+                apple.level = this.room;
+                this.room.items.push(apple);
+                apple.onDrop();
+                apple.autoPickup();
+            }
+        };
         this.uniqueKillBehavior = () => {
             if (this.cloned)
                 return;
@@ -24932,10 +24877,6 @@ class Tree extends entity_1.Entity {
         this.imageParticleY = 28;
         this.opaque = true;
         this.hitSound = sound_1.Sound.playBush;
-        if (random_1.Random.rand() < 0.5)
-            this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
-        //this.drawableY = 0.1;
-        //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
@@ -33908,6 +33849,7 @@ const pickaxe_1 = __webpack_require__(/*! ../item/tool/pickaxe */ "./src/item/to
 const scythe_1 = __webpack_require__(/*! ../item/weapon/scythe */ "./src/item/weapon/scythe.ts");
 const goldOre_1 = __webpack_require__(/*! ../item/resource/goldOre */ "./src/item/resource/goldOre.ts");
 const sword_1 = __webpack_require__(/*! ../item/weapon/sword */ "./src/item/weapon/sword.ts");
+const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
 const orangegem_1 = __webpack_require__(/*! ../item/resource/orangegem */ "./src/item/resource/orangegem.ts");
 const fishingRod_1 = __webpack_require__(/*! ../item/tool/fishingRod */ "./src/item/tool/fishingRod.ts");
 const coin_1 = __webpack_require__(/*! ../item/coin */ "./src/item/coin.ts");
@@ -33920,6 +33862,7 @@ const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ ".
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
+const berries_1 = __webpack_require__(/*! ../item/usable/berries */ "./src/item/usable/berries.ts");
 const backplate_1 = __webpack_require__(/*! ../item/backplate */ "./src/item/backplate.ts");
 const gauntlets_1 = __webpack_require__(/*! ../item/gauntlets */ "./src/item/gauntlets.ts");
 const shoulderPlates_1 = __webpack_require__(/*! ../item/shoulderPlates */ "./src/item/shoulderPlates.ts");
@@ -34103,6 +34046,8 @@ GameConstants.AUTO_PICKUP_ITEMS = [
     xpCrystal_1.MeleeXpCrystal,
     xpCrystal_1.MagicXpCrystal,
     xpCrystal_1.RangedXpCrystal,
+    apple_1.Apple,
+    berries_1.Berries,
 ];
 GameConstants.PERSISTENT_HEALTH_BAR = false; //not implemented
 GameConstants.HOVER_TEXT_ENABLED = true;
@@ -40446,6 +40391,7 @@ const fish_1 = __webpack_require__(/*! ../../../item/usable/fish */ "./src/item/
 const heart_1 = __webpack_require__(/*! ../../../item/usable/heart */ "./src/item/usable/heart.ts");
 const hourglass_1 = __webpack_require__(/*! ../../../item/usable/hourglass */ "./src/item/usable/hourglass.ts");
 const shrooms_1 = __webpack_require__(/*! ../../../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
+const berries_1 = __webpack_require__(/*! ../../../item/usable/berries */ "./src/item/usable/berries.ts");
 const weaponPoison_1 = __webpack_require__(/*! ../../../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 const weaponBlood_1 = __webpack_require__(/*! ../../../item/usable/weaponBlood */ "./src/item/usable/weaponBlood.ts");
 const weaponCurse_1 = __webpack_require__(/*! ../../../item/usable/weaponCurse */ "./src/item/usable/weaponCurse.ts");
@@ -40520,6 +40466,8 @@ const itemToKind = (item) => {
         return "backpack";
     if (item instanceof apple_1.Apple)
         return "apple";
+    if (item instanceof berries_1.Berries)
+        return "berries";
     if (item instanceof fish_1.Fish)
         return "fish";
     if (item instanceof heart_1.Heart)
@@ -40712,6 +40660,7 @@ const registerBuiltinItemCodecsV2 = () => {
         "green_potion",
         "health_potion",
         "apple",
+        "berries",
         "fish",
         "mushrooms",
         "weapon_poison",
@@ -40778,6 +40727,9 @@ const registerBuiltinItemCodecsV2 = () => {
                         break;
                     case "apple":
                         item = new apple_1.Apple(room, value.x, value.y);
+                        break;
+                    case "berries":
+                        item = new berries_1.Berries(room, value.x, value.y);
                         break;
                     case "fish":
                         item = new fish_1.Fish(room, value.x, value.y);
@@ -42410,6 +42362,7 @@ exports.ITEM_KIND_VALUES_V2 = [
     "health_potion",
     "hourglass",
     "apple",
+    "berries",
     "fish",
     "mushrooms",
     "weapon_poison",
@@ -50025,7 +49978,7 @@ let EQUIP_COLOR = "#85a8e6";
 let FULL_OUTLINE = "white";
 class Inventory {
     constructor(game, player) {
-        this.rows = 4;
+        this.rows = 5;
         this.cols = 5;
         this.selX = 0;
         this.selY = 0;
@@ -54686,6 +54639,48 @@ class Apple extends usable_1.Usable {
 }
 exports.Apple = Apple;
 Apple.itemName = "apple";
+
+
+/***/ }),
+
+/***/ "./src/item/usable/berries.ts":
+/*!************************************!*\
+  !*** ./src/item/usable/berries.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Berries = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class Berries extends usable_1.Usable {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            if (player.health < player.maxHealth) {
+                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                sound_1.Sound.playEat();
+                if (this.stackCount > 1) {
+                    this.stackCount--;
+                }
+                else
+                    player.inventory.removeItem(this);
+                player.game.pushMessage("You eat the berries and feel better.");
+            }
+        };
+        this.getDescription = () => {
+            return "BERRIES\nSmall and sweet.";
+        };
+        this.tileX = 6;
+        this.tileY = 0;
+        this.name = Berries.itemName;
+        this.stackable = true;
+    }
+}
+exports.Berries = Berries;
+Berries.itemName = "berries";
 
 
 /***/ }),

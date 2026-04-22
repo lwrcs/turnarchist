@@ -11,6 +11,7 @@ import { Fish } from "../../../item/usable/fish";
 import { Heart } from "../../../item/usable/heart";
 import { Hourglass } from "../../../item/usable/hourglass";
 import { Shrooms } from "../../../item/usable/shrooms";
+import { Berries } from "../../../item/usable/berries";
 import { WeaponPoison } from "../../../item/usable/weaponPoison";
 import { WeaponBlood } from "../../../item/usable/weaponBlood";
 import { WeaponCurse } from "../../../item/usable/weaponCurse";
@@ -93,6 +94,7 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof GreenPotion) return "green_potion";
   if (item instanceof Backpack) return "backpack";
   if (item instanceof Apple) return "apple";
+  if (item instanceof Berries) return "berries";
   if (item instanceof Fish) return "fish";
   if (item instanceof Heart) return "health_potion";
   if (item instanceof Hourglass) return "hourglass";
@@ -246,6 +248,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
     "green_potion",
     "health_potion",
     "apple",
+    "berries",
     "fish",
     "mushrooms",
     "weapon_poison",
@@ -313,6 +316,9 @@ export const registerBuiltinItemCodecsV2 = (): void => {
             break;
           case "apple":
             item = new Apple(room, value.x, value.y);
+            break;
+          case "berries":
+            item = new Berries(room, value.x, value.y);
             break;
           case "fish":
             item = new Fish(room, value.x, value.y);
