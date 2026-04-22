@@ -26506,6 +26506,70 @@ class Game {
     getBackgroundFillStyle() {
         return this.debugBackgroundRed ? "red" : "black";
     }
+    applyPhotoModeResize() {
+        // Use SOFT_SCALE (the integer scale the user chose) so that logical dimensions divide
+        // evenly into PHOTO_W×PHOTO_H regardless of device pixel ratio. This guarantees
+        // screenshot output is exactly 1920×1080 (k = 1920/logW is always a whole number).
+        const intScale = gameConstants_1.GameConstants.SOFT_SCALE ?? gameConstants_1.GameConstants.SCALE ?? 3;
+        const logW = Math.floor(Game.PHOTO_W / intScale);
+        const logH = Math.floor(Game.PHOTO_H / intScale);
+        gameConstants_1.GameConstants.WIDTH = logW;
+        gameConstants_1.GameConstants.HEIGHT = logH;
+        levelConstants_1.LevelConstants.SCREEN_W = Math.floor(logW / gameConstants_1.GameConstants.TILESIZE);
+        levelConstants_1.LevelConstants.SCREEN_H = Math.floor(logH / gameConstants_1.GameConstants.TILESIZE);
+        Game.ctx.canvas.setAttribute("width", `${logW}`);
+        Game.ctx.canvas.setAttribute("height", `${logH}`);
+        Game.ctx.canvas.setAttribute("style", `width: ${Game.PHOTO_W}px; height: ${Game.PHOTO_H}px;
+      display: block;
+      margin: 0 auto;
+      image-rendering: optimizeSpeed;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -o-crisp-edges;
+      image-rendering: pixelated;
+      -ms-interpolation-mode: nearest-neighbor;
+      `);
+        console.log(`[PhotoMode] applyPhotoModeResize: SOFT_SCALE=${intScale} Game.scale=${Game.scale} DPR=${window.devicePixelRatio}` +
+            ` → logical=${logW}×${logH} CSS=${Game.PHOTO_W}×${Game.PHOTO_H}` +
+            ` SCREEN_W=${levelConstants_1.LevelConstants.SCREEN_W} SCREEN_H=${levelConstants_1.LevelConstants.SCREEN_H}`);
+        this.chat?.forEach((msg) => msg.clearCache());
+        this.alerts?.forEach((a) => a.clearCache());
+        this.alertGhosts?.forEach((g) => g.alert.clearCache());
+        this.pointers?.forEach((p) => p.clearCache());
+    }
+    takeScreenshot() {
+        const srcCanvas = Game.ctx.canvas;
+        const srcW = srcCanvas.width;
+        const srcH = srcCanvas.height;
+        const rect = srcCanvas.getBoundingClientRect();
+        // Largest whole-pixel scale that fits within 1920×1080
+        const k = Math.max(1, Math.floor(Math.min(1920 / srcW, 1080 / srcH)));
+        const dstW = srcW * k;
+        const dstH = srcH * k;
+        console.log(`[Screenshot] photoMode=${this.photoMode} Game.scale=${Game.scale}` +
+            ` srcCanvas=${srcW}×${srcH} cssRect=${rect.width.toFixed(1)}×${rect.height.toFixed(1)}` +
+            ` k=${k} → output=${dstW}×${dstH}` +
+            ` (GameConstants.WIDTH=${gameConstants_1.GameConstants.WIDTH} HEIGHT=${gameConstants_1.GameConstants.HEIGHT})`);
+        const offscreen = document.createElement("canvas");
+        offscreen.width = dstW;
+        offscreen.height = dstH;
+        const offCtx = offscreen.getContext("2d");
+        offCtx.imageSmoothingEnabled = false;
+        offCtx.drawImage(srcCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+        offscreen.toBlob((blob) => {
+            if (!blob)
+                return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `screenshot_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
+        this.pushMessage(`Screenshot saved (${dstW}×${dstH})`);
+    }
     constructor() {
         /**
          * Shared animation frame used for door icon "floating" sine motion.
@@ -26544,6 +26608,7 @@ class Game {
         };
         // Debug: show the "void" / unrendered background as full red to make boundaries obvious.
         this.debugBackgroundRed = false;
+        this.photoMode = false;
         // Active path identifier for filtering draw/update
         this.currentPathId = "main";
         this.autosaveIntervalId = null;
@@ -26980,6 +27045,12 @@ class Game {
                     case "C":
                         this.chatOpen = true;
                         return;
+                    case "P":
+                        if (this.photoMode) {
+                            this.takeScreenshot();
+                            return;
+                        }
+                        break;
                     case "/":
                         this.chatOpen = true;
                         this.chatTextBox.clear();
@@ -28117,6 +28188,27 @@ class Game {
                 }
                 return;
             }
+            if (command === "pm") {
+                this.photoMode = !this.photoMode;
+                if (this.photoMode) {
+                    this.applyPhotoModeResize();
+                    this.pushMessage("Photo mode ON — type /ss to screenshot");
+                }
+                else {
+                    this.onResize();
+                    this.pushMessage("Photo mode OFF");
+                }
+                return;
+            }
+            if (command === "ss") {
+                this.takeScreenshot();
+                return;
+            }
+            if (command === "cm") {
+                gameConstants_1.GameConstants.CLEAN_MODE = !gameConstants_1.GameConstants.CLEAN_MODE;
+                this.pushMessage(`Clean mode ${gameConstants_1.GameConstants.CLEAN_MODE ? "ON" : "OFF"}`);
+                return;
+            }
             switch (command) {
                 case "reveal": {
                     const player = this.players?.[this.localPlayerID];
@@ -28826,6 +28918,10 @@ class Game {
                 this.pointers?.forEach((p) => p.clearCache());
                 this.lastPointerWidth = newPointerWidth;
             }
+            // If photo mode is active, lock canvas back to photo dimensions after scale computation.
+            if (this.photoMode) {
+                this.applyPhotoModeResize();
+            }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
             if (gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED) {
@@ -29272,24 +29368,28 @@ class Game {
                         }
                     }
                     // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
-                    this.drawPointers(delta);
+                    if (!gameConstants_1.GameConstants.CLEAN_MODE)
+                        this.drawPointers(delta);
                     this.players[this.localPlayerID].drawGUI(delta);
                     //for (const i in this.players) this.players[i].updateDrawXY(delta);
                 }
-                this.drawChat(delta);
+                if (!gameConstants_1.GameConstants.CLEAN_MODE)
+                    this.drawChat(delta);
                 this.drawAlerts(delta);
-                // game version
-                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                    Game.ctx.globalAlpha = 0.1;
-                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-                Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
-                Game.ctx.globalAlpha = 1;
-                // fps
-                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                    Game.ctx.globalAlpha = 0.1;
-                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-                Game.fillText(fps + "fps", 1, 1);
-                Game.ctx.globalAlpha = 1;
+                if (!this.photoMode) {
+                    // game version
+                    if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                        Game.ctx.globalAlpha = 0.1;
+                    Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                    Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
+                    Game.ctx.globalAlpha = 1;
+                    // fps
+                    if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                        Game.ctx.globalAlpha = 0.1;
+                    Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                    Game.fillText(fps + "fps", 1, 1);
+                    Game.ctx.globalAlpha = 1;
+                }
                 if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
                     this.drawStartScreen(delta * 10);
                 }
@@ -29297,7 +29397,8 @@ class Game {
                 if (this.currentLevelGenerator) {
                     this.currentLevelGenerator.draw(10, 10, 3);
                 }
-                mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
+                if (!gameConstants_1.GameConstants.CLEAN_MODE)
+                    mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
                 Game.ctx.restore(); // Restore the canvas state
             }
             finally {
@@ -30426,24 +30527,27 @@ class Game {
     /** Draw UI that should remain visible even during temporary blackout/fade (cursor, fps, version). */
     drawCursorFpsVersionOverlay(delta) {
         try {
-            // game version
-            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                Game.ctx.globalAlpha = 0.1;
-            Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
-            Game.ctx.globalAlpha = 1;
-            // fps
-            if (gameConstants_1.GameConstants.ALPHA_ENABLED)
-                Game.ctx.globalAlpha = 0.1;
-            Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            Game.fillText(fps + "fps", 1, 1);
-            Game.ctx.globalAlpha = 1;
+            if (!this.photoMode) {
+                // game version
+                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                    Game.ctx.globalAlpha = 0.1;
+                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                Game.fillText(gameConstants_1.GameConstants.VERSION, gameConstants_1.GameConstants.WIDTH - Game.measureText(gameConstants_1.GameConstants.VERSION).width - 1, 1);
+                Game.ctx.globalAlpha = 1;
+                // fps
+                if (gameConstants_1.GameConstants.ALPHA_ENABLED)
+                    Game.ctx.globalAlpha = 0.1;
+                Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                Game.fillText(fps + "fps", 1, 1);
+                Game.ctx.globalAlpha = 1;
+            }
         }
         catch {
             // Never crash overlays.
         }
         try {
-            mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
+            if (!gameConstants_1.GameConstants.CLEAN_MODE)
+                mouseCursor_1.MouseCursor.getInstance().draw(delta, this.isMobile);
         }
         catch {
             // Never crash overlays.
@@ -30976,6 +31080,8 @@ Game._replayManager = null;
 Game.shade_canvas_order = [];
 // Debug: a transparent canvas used to intentionally poison cached shaded sprites.
 Game._debugTransparent1x1 = null;
+Game.PHOTO_W = 960;
+Game.PHOTO_H = 540;
 Game.inputReceived = false;
 Game.text_canvas_order = [];
 Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
@@ -34176,6 +34282,8 @@ GameConstants.PLAYER_SHIELD_COLOR = "#5b6ee1";
 GameConstants.PLAYER_DAMAGE_BUFF_COLOR = "#ff0000";
 // Map toggle - when false, skip all minimap calculations unless map is open
 GameConstants.MAP_ENABLED = true;
+// Clean mode - hides all HUD elements for unobstructed screenshots
+GameConstants.CLEAN_MODE = false;
 GameConstants.COIN_ANIMATION = true;
 GameConstants.COIN_AUTO_PICKUP = true;
 GameConstants.ITEM_AUTO_PICKUP = true;
@@ -37195,6 +37303,14 @@ exports.Input = {
     F: "KeyF",
     rawMouseX: 0,
     rawMouseY: 0,
+    // Returns the CSS-to-logical-pixel ratio for the game canvas.
+    // Using this instead of Game.scale directly means photo mode (canvas CSS=logical) works correctly.
+    getCanvasScale: function () {
+        const canvas = window.document.getElementById("gameCanvas");
+        if (!canvas || canvas.width === 0)
+            return game_1.Game.scale;
+        return canvas.getBoundingClientRect().width / canvas.width;
+    },
     isDown: function (keyCode) {
         return this._pressed[keyCode];
     },
@@ -37341,9 +37457,10 @@ exports.Input = {
                 .getBoundingClientRect();
             let x = event.clientX - rect.left;
             let y = event.clientY - rect.top;
-            let scaledX = Math.floor(x / game_1.Game.scale);
-            let scaledY = Math.floor(y / game_1.Game.scale);
-            console.log(`Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${game_1.Game.scale}, scaledX: ${scaledX}, scaledY: ${scaledY}`);
+            const cs = exports.Input.getCanvasScale();
+            let scaledX = Math.floor(x / cs);
+            let scaledY = Math.floor(y / cs);
+            console.log(`Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${cs}, scaledX: ${scaledX}, scaledY: ${scaledY}`);
             if (event.button === 0) {
                 exports.Input.mouseLeftClickListener(scaledX, scaledY);
             }
@@ -37363,14 +37480,16 @@ exports.Input = {
         exports.Input.rawMouseX = x;
         exports.Input.rawMouseY = y;
         // Calculate scaled coordinates
-        exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
-        exports.Input.mouseY = Math.floor(y / game_1.Game.scale);
+        const cs = exports.Input.getCanvasScale();
+        exports.Input.mouseX = Math.floor(x / cs);
+        exports.Input.mouseY = Math.floor(y / cs);
         exports.Input.mouseMoveListener(exports.Input.mouseX, exports.Input.mouseY);
     },
     recalculateMousePosition: function () {
         if (exports.Input.rawMouseX !== undefined && exports.Input.rawMouseY !== undefined) {
-            exports.Input.mouseX = Math.floor(exports.Input.rawMouseX / game_1.Game.scale);
-            exports.Input.mouseY = Math.floor(exports.Input.rawMouseY / game_1.Game.scale);
+            const cs = exports.Input.getCanvasScale();
+            exports.Input.mouseX = Math.floor(exports.Input.rawMouseX / cs);
+            exports.Input.mouseY = Math.floor(exports.Input.rawMouseY / cs);
             // Also recalculate click animation position
             mouseCursor_1.MouseCursor.getInstance().recalculateClickPosition();
         }
@@ -37709,8 +37828,9 @@ window.document.getElementById("gameCanvas").addEventListener("contextmenu", (ev
     const y = event.clientY - rect.top;
     exports.Input.rawMouseX = x;
     exports.Input.rawMouseY = y;
-    exports.Input.mouseX = Math.floor(x / game_1.Game.scale);
-    exports.Input.mouseY = Math.floor(y / game_1.Game.scale);
+    const csRight = exports.Input.getCanvasScale();
+    exports.Input.mouseX = Math.floor(x / csRight);
+    exports.Input.mouseY = Math.floor(y / csRight);
     exports.Input.mouseRightClickListener(exports.Input.mouseX, exports.Input.mouseY);
 }, false);
 window.document.getElementById("gameCanvas").addEventListener("wheel", (event) => {
@@ -51037,13 +51157,17 @@ class Inventory {
             const height = Math.floor(invRows * (s + 2 * b + g) - g);
             const mainBgX = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * width) - ob;
             const mainBgY = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * height) - ob;
-            // Draw coins and quickbar (these are always visible)
-            this.drawCoins(delta);
-            this.drawQuickbar(delta);
+            // Draw coins and quickbar (hidden in clean mode)
+            if (!gameConstants_1.GameConstants.CLEAN_MODE) {
+                this.drawCoins(delta);
+                this.drawQuickbar(delta);
+            }
             this.updateEquipAnimAmount(delta);
-            this.drawInventoryButton(delta);
-            menu_1.Menu.drawOpenMenuButton();
-            xpCounter_1.XPCounter.draw(delta);
+            if (!gameConstants_1.GameConstants.CLEAN_MODE) {
+                this.drawInventoryButton(delta);
+                menu_1.Menu.drawOpenMenuButton();
+                xpCounter_1.XPCounter.draw(delta);
+            }
             const overlayAlpha = this.openAlpha();
             if (overlayAlpha > 0) {
                 const offCtx = this.ensureOverlayCanvasCtx();
@@ -68931,53 +69055,56 @@ class PlayerRenderer {
                         heartStartX = minHeartStartX;
                 }
                 const offsetY = gameConstants_1.GameConstants.WIDTH > 175 ? 0 : -1.25;
-                for (let i = 0; i < this.player.maxHealth; i++) {
-                    let shake = 0;
-                    let shakeY = 0;
-                    if (this.player.health <= 1 &&
-                        this.player.health !== this.player.maxHealth) {
-                        shake =
-                            Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
-                                2 /
-                                gameConstants_1.GameConstants.TILESIZE;
-                        shakeY =
-                            Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
-                                2 /
-                                gameConstants_1.GameConstants.TILESIZE;
-                    }
-                    let frame = this.guiHeartFrame > 0 ? 1 : 0;
-                    if (i >= Math.floor(this.player.health)) {
-                        if (i == Math.floor(this.player.health) &&
-                            (this.player.health * 2) % 2 == 1) {
-                            // draw half heart
-                            game_1.Game.drawFX(4, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
-                                1 +
-                                shakeY +
-                                offsetY, 0.75, 0.75);
+                if (!gameConstants_1.GameConstants.CLEAN_MODE) {
+                    for (let i = 0; i < this.player.maxHealth; i++) {
+                        let shake = 0;
+                        let shakeY = 0;
+                        if (this.player.health <= 1 &&
+                            this.player.health !== this.player.maxHealth) {
+                            shake =
+                                Math.round(Math.sin(Date.now() / 25 / (i + 1)) + i / 2) /
+                                    2 /
+                                    gameConstants_1.GameConstants.TILESIZE;
+                            shakeY =
+                                Math.round(Math.sin(Date.now() / 25 / (i + 2)) + i / 2) /
+                                    2 /
+                                    gameConstants_1.GameConstants.TILESIZE;
+                        }
+                        let frame = this.guiHeartFrame > 0 ? 1 : 0;
+                        if (i >= Math.floor(this.player.health)) {
+                            if (i == Math.floor(this.player.health) &&
+                                (this.player.health * 2) % 2 == 1) {
+                                // draw half heart
+                                game_1.Game.drawFX(4, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                                    1 +
+                                    shakeY +
+                                    offsetY, 0.75, 0.75);
+                            }
+                            else {
+                                game_1.Game.drawFX(3, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                                    1 +
+                                    shakeY +
+                                    offsetY, 0.75, 0.75);
+                            }
                         }
                         else {
-                            game_1.Game.drawFX(3, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
+                            game_1.Game.drawFX(frame, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
                                 1 +
                                 shakeY +
                                 offsetY, 0.75, 0.75);
                         }
                     }
-                    else {
-                        game_1.Game.drawFX(frame, 2, 0.75, 0.75, heartStartX + i / 1.5 + shake, gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE -
-                            1 +
-                            shakeY +
-                            offsetY, 0.75, 0.75);
-                    }
-                }
-                // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
-                this.drawManaOrbGUI(heartStartX, offsetY);
-                //this.drawCooldownBar();
-                this.drawBreathStatus(quickbarStartX);
-                if (armor)
-                    armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
+                    // Mana orb (GUI): draw above the heart row, not tied to the floating HealthBar animation.
+                    this.drawManaOrbGUI(heartStartX, offsetY);
+                    //this.drawCooldownBar();
+                    this.drawBreathStatus(quickbarStartX);
+                    if (armor)
+                        armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
+                } // end !CLEAN_MODE
                 if (!transitioning) {
                     // Draw the bestiary button first so the inventory can draw over it (requested layering).
-                    this.player.bestiary?.drawBestiaryButton(delta);
+                    if (!gameConstants_1.GameConstants.CLEAN_MODE)
+                        this.player.bestiary?.drawBestiaryButton(delta);
                     this.player.inventory.draw(delta);
                 }
                 const inventoryOpen = this.player.inventory.isOpen;
@@ -69168,7 +69295,7 @@ class PlayerRenderer {
             postProcess_1.PostProcessor.draw(delta, this.player?.getRoom()?.underwater ?? false, cameraOrigin);
             if (this.hurting)
                 this.drawHurt(delta);
-            if (this.player.mapToggled === true && !this.player.bestiary?.isOpen)
+            if (!gameConstants_1.GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
                 this.player.map.draw(delta);
             this.drawTileCursor(delta);
             this.player.setCursorIcon();
@@ -73882,11 +74009,13 @@ class Room {
             game_1.Game.ctx.save();
             // gui stuff
             // room name
-            let old = game_1.Game.ctx.font;
-            game_1.Game.ctx.font = gameConstants_1.GameConstants.SCRIPT_FONT_SIZE + "px Script";
-            game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
-            game_1.Game.fillText(this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(this.name).width / 2, 5);
-            game_1.Game.ctx.font = old;
+            if (!gameConstants_1.GameConstants.CLEAN_MODE) {
+                let old = game_1.Game.ctx.font;
+                game_1.Game.ctx.font = gameConstants_1.GameConstants.SCRIPT_FONT_SIZE + "px Script";
+                game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
+                game_1.Game.fillText(this.message, gameConstants_1.GameConstants.WIDTH / 2 - game_1.Game.measureText(this.name).width / 2, 5);
+                game_1.Game.ctx.font = old;
+            }
             game_1.Game.ctx.restore();
         };
         this.drawTopBeams = (delta, zLayer = this.game?.players?.[this.game.localPlayerID]?.z ?? 0) => {

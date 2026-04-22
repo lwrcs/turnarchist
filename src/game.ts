@@ -577,9 +577,90 @@ export class Game {
   // Debug: show the "void" / unrendered background as full red to make boundaries obvious.
   private debugBackgroundRed: boolean = false;
 
+  photoMode: boolean = false;
+
   private getBackgroundFillStyle(): string {
     return this.debugBackgroundRed ? "red" : "black";
   }
+
+  static readonly PHOTO_W = 960;
+  static readonly PHOTO_H = 540;
+
+  private applyPhotoModeResize(): void {
+    // Use SOFT_SCALE (the integer scale the user chose) so that logical dimensions divide
+    // evenly into PHOTO_W×PHOTO_H regardless of device pixel ratio. This guarantees
+    // screenshot output is exactly 1920×1080 (k = 1920/logW is always a whole number).
+    const intScale = GameConstants.SOFT_SCALE ?? GameConstants.SCALE ?? 3;
+    const logW = Math.floor(Game.PHOTO_W / intScale);
+    const logH = Math.floor(Game.PHOTO_H / intScale);
+    GameConstants.WIDTH = logW;
+    GameConstants.HEIGHT = logH;
+    LevelConstants.SCREEN_W = Math.floor(logW / GameConstants.TILESIZE);
+    LevelConstants.SCREEN_H = Math.floor(logH / GameConstants.TILESIZE);
+    Game.ctx.canvas.setAttribute("width", `${logW}`);
+    Game.ctx.canvas.setAttribute("height", `${logH}`);
+    Game.ctx.canvas.setAttribute(
+      "style",
+      `width: ${Game.PHOTO_W}px; height: ${Game.PHOTO_H}px;
+      display: block;
+      margin: 0 auto;
+      image-rendering: optimizeSpeed;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -o-crisp-edges;
+      image-rendering: pixelated;
+      -ms-interpolation-mode: nearest-neighbor;
+      `,
+    );
+    console.log(
+      `[PhotoMode] applyPhotoModeResize: SOFT_SCALE=${intScale} Game.scale=${Game.scale} DPR=${window.devicePixelRatio}` +
+      ` → logical=${logW}×${logH} CSS=${Game.PHOTO_W}×${Game.PHOTO_H}` +
+      ` SCREEN_W=${LevelConstants.SCREEN_W} SCREEN_H=${LevelConstants.SCREEN_H}`,
+    );
+    this.chat?.forEach((msg) => msg.clearCache());
+    this.alerts?.forEach((a) => a.clearCache());
+    this.alertGhosts?.forEach((g) => g.alert.clearCache());
+    this.pointers?.forEach((p) => p.clearCache());
+  }
+
+  takeScreenshot(): void {
+    const srcCanvas = Game.ctx.canvas;
+    const srcW = srcCanvas.width;
+    const srcH = srcCanvas.height;
+    const rect = srcCanvas.getBoundingClientRect();
+    // Largest whole-pixel scale that fits within 1920×1080
+    const k = Math.max(1, Math.floor(Math.min(1920 / srcW, 1080 / srcH)));
+    const dstW = srcW * k;
+    const dstH = srcH * k;
+
+    console.log(
+      `[Screenshot] photoMode=${this.photoMode} Game.scale=${Game.scale}` +
+      ` srcCanvas=${srcW}×${srcH} cssRect=${rect.width.toFixed(1)}×${rect.height.toFixed(1)}` +
+      ` k=${k} → output=${dstW}×${dstH}` +
+      ` (GameConstants.WIDTH=${GameConstants.WIDTH} HEIGHT=${GameConstants.HEIGHT})`,
+    );
+
+    const offscreen = document.createElement("canvas");
+    offscreen.width = dstW;
+    offscreen.height = dstH;
+    const offCtx = offscreen.getContext("2d")!;
+    offCtx.imageSmoothingEnabled = false;
+    offCtx.drawImage(srcCanvas, 0, 0, srcW, srcH, 0, 0, dstW, dstH);
+
+    offscreen.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `screenshot_${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    this.pushMessage(`Screenshot saved (${dstW}×${dstH})`);
+  }
+
   prevLevel: Room; // for transitions
   room: Room;
   rooms: Array<Room>;
@@ -1586,26 +1667,28 @@ export class Game {
   /** Draw UI that should remain visible even during temporary blackout/fade (cursor, fps, version). */
   private drawCursorFpsVersionOverlay(delta: number): void {
     try {
-      // game version
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      Game.fillText(
-        GameConstants.VERSION,
-        GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
-        1,
-      );
-      Game.ctx.globalAlpha = 1;
+      if (!this.photoMode) {
+        // game version
+        if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+        Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+        Game.fillText(
+          GameConstants.VERSION,
+          GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
+          1,
+        );
+        Game.ctx.globalAlpha = 1;
 
-      // fps
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      Game.fillText(fps + "fps", 1, 1);
-      Game.ctx.globalAlpha = 1;
+        // fps
+        if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+        Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+        Game.fillText(fps + "fps", 1, 1);
+        Game.ctx.globalAlpha = 1;
+      }
     } catch {
       // Never crash overlays.
     }
     try {
-      MouseCursor.getInstance().draw(delta, this.isMobile);
+      if (!GameConstants.CLEAN_MODE) MouseCursor.getInstance().draw(delta, this.isMobile);
     } catch {
       // Never crash overlays.
     }
@@ -1695,6 +1778,13 @@ export class Game {
         case "C":
           this.chatOpen = true;
           return;
+
+        case "P":
+          if (this.photoMode) {
+            this.takeScreenshot();
+            return;
+          }
+          break;
 
         case "/":
           this.chatOpen = true;
@@ -3091,6 +3181,29 @@ export class Game {
       return;
     }
 
+    if (command === "pm") {
+      this.photoMode = !this.photoMode;
+      if (this.photoMode) {
+        this.applyPhotoModeResize();
+        this.pushMessage("Photo mode ON — type /ss to screenshot");
+      } else {
+        this.onResize();
+        this.pushMessage("Photo mode OFF");
+      }
+      return;
+    }
+
+    if (command === "ss") {
+      this.takeScreenshot();
+      return;
+    }
+
+    if (command === "cm") {
+      GameConstants.CLEAN_MODE = !GameConstants.CLEAN_MODE;
+      this.pushMessage(`Clean mode ${GameConstants.CLEAN_MODE ? "ON" : "OFF"}`);
+      return;
+    }
+
     switch (command) {
       case "reveal": {
         const player = this.players?.[this.localPlayerID];
@@ -4482,6 +4595,11 @@ export class Game {
       this.pointers?.forEach((p) => p.clearCache());
       this.lastPointerWidth = newPointerWidth;
     }
+
+    // If photo mode is active, lock canvas back to photo dimensions after scale computation.
+    if (this.photoMode) {
+      this.applyPhotoModeResize();
+    }
   };
 
   shakeScreen = (shakeX: number, shakeY: number, clamp: boolean = false) => {
@@ -5168,28 +5286,30 @@ export class Game {
           }
         }
         // Draw pointers *behind* GUI (inventory/bestiary), similar to world-space hints.
-        this.drawPointers(delta);
+        if (!GameConstants.CLEAN_MODE) this.drawPointers(delta);
         this.players[this.localPlayerID].drawGUI(delta);
         //for (const i in this.players) this.players[i].updateDrawXY(delta);
       }
-      this.drawChat(delta);
+      if (!GameConstants.CLEAN_MODE) this.drawChat(delta);
       this.drawAlerts(delta);
 
-      // game version
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      Game.fillText(
-        GameConstants.VERSION,
-        GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
-        1,
-      );
-      Game.ctx.globalAlpha = 1;
+      if (!this.photoMode) {
+        // game version
+        if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+        Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+        Game.fillText(
+          GameConstants.VERSION,
+          GameConstants.WIDTH - Game.measureText(GameConstants.VERSION).width - 1,
+          1,
+        );
+        Game.ctx.globalAlpha = 1;
 
-      // fps
-      if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
-      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-      Game.fillText(fps + "fps", 1, 1);
-      Game.ctx.globalAlpha = 1;
+        // fps
+        if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.1;
+        Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+        Game.fillText(fps + "fps", 1, 1);
+        Game.ctx.globalAlpha = 1;
+      }
       if (!this.started && this.levelState !== LevelState.LEVEL_GENERATION) {
         this.drawStartScreen(delta * 10);
       }
@@ -5199,7 +5319,7 @@ export class Game {
         this.currentLevelGenerator.draw(10, 10, 3);
       }
 
-      MouseCursor.getInstance().draw(delta, this.isMobile);
+      if (!GameConstants.CLEAN_MODE) MouseCursor.getInstance().draw(delta, this.isMobile);
       Game.ctx.restore(); // Restore the canvas state
     } finally {
       this.drawProfileEnd("Game.draw.total", tTotal);

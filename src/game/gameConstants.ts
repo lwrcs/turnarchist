@@ -210,6 +210,9 @@ export class GameConstants {
   // Map toggle - when false, skip all minimap calculations unless map is open
   static MAP_ENABLED = true;
 
+  // Clean mode - hides all HUD elements for unobstructed screenshots
+  static CLEAN_MODE = false;
+
   static readonly COIN_ANIMATION = true;
   static readonly COIN_AUTO_PICKUP = true;
   static readonly ITEM_AUTO_PICKUP = true;

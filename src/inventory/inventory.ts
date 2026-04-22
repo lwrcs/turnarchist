@@ -1171,13 +1171,17 @@ export class Inventory {
     const mainBgX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
     const mainBgY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob;
 
-    // Draw coins and quickbar (these are always visible)
-    this.drawCoins(delta);
-    this.drawQuickbar(delta);
+    // Draw coins and quickbar (hidden in clean mode)
+    if (!GameConstants.CLEAN_MODE) {
+      this.drawCoins(delta);
+      this.drawQuickbar(delta);
+    }
     this.updateEquipAnimAmount(delta);
-    this.drawInventoryButton(delta);
-    Menu.drawOpenMenuButton();
-    XPCounter.draw(delta);
+    if (!GameConstants.CLEAN_MODE) {
+      this.drawInventoryButton(delta);
+      Menu.drawOpenMenuButton();
+      XPCounter.draw(delta);
+    }
 
     const overlayAlpha = this.openAlpha();
     if (overlayAlpha > 0) {

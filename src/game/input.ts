@@ -143,6 +143,16 @@ export const Input = {
   rawMouseX: 0,
   rawMouseY: 0,
 
+  // Returns the CSS-to-logical-pixel ratio for the game canvas.
+  // Using this instead of Game.scale directly means photo mode (canvas CSS=logical) works correctly.
+  getCanvasScale: function (): number {
+    const canvas = window.document.getElementById(
+      "gameCanvas",
+    ) as HTMLCanvasElement;
+    if (!canvas || canvas.width === 0) return Game.scale;
+    return canvas.getBoundingClientRect().width / canvas.width;
+  },
+
   isDown: function (keyCode: string) {
     return this._pressed[keyCode];
   },
@@ -293,11 +303,12 @@ export const Input = {
         .getBoundingClientRect();
       let x = event.clientX - rect.left;
       let y = event.clientY - rect.top;
-      let scaledX = Math.floor(x / Game.scale);
-      let scaledY = Math.floor(y / Game.scale);
+      const cs = Input.getCanvasScale();
+      let scaledX = Math.floor(x / cs);
+      let scaledY = Math.floor(y / cs);
 
       console.log(
-        `Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${Game.scale}, scaledX: ${scaledX}, scaledY: ${scaledY}`,
+        `Input.mouseClickListener: raw x: ${x}, y: ${y}, scale: ${cs}, scaledX: ${scaledX}, scaledY: ${scaledY}`,
       );
 
       if (event.button === 0) {
@@ -322,16 +333,18 @@ export const Input = {
     Input.rawMouseY = y;
 
     // Calculate scaled coordinates
-    Input.mouseX = Math.floor(x / Game.scale);
-    Input.mouseY = Math.floor(y / Game.scale);
+    const cs = Input.getCanvasScale();
+    Input.mouseX = Math.floor(x / cs);
+    Input.mouseY = Math.floor(y / cs);
 
     Input.mouseMoveListener(Input.mouseX, Input.mouseY);
   },
 
   recalculateMousePosition: function () {
     if (Input.rawMouseX !== undefined && Input.rawMouseY !== undefined) {
-      Input.mouseX = Math.floor(Input.rawMouseX / Game.scale);
-      Input.mouseY = Math.floor(Input.rawMouseY / Game.scale);
+      const cs = Input.getCanvasScale();
+      Input.mouseX = Math.floor(Input.rawMouseX / cs);
+      Input.mouseY = Math.floor(Input.rawMouseY / cs);
 
       // Also recalculate click animation position
       MouseCursor.getInstance().recalculateClickPosition();
@@ -731,8 +744,9 @@ window.document.getElementById("gameCanvas").addEventListener(
     const y = event.clientY - rect.top;
     Input.rawMouseX = x;
     Input.rawMouseY = y;
-    Input.mouseX = Math.floor(x / Game.scale);
-    Input.mouseY = Math.floor(y / Game.scale);
+    const csRight = Input.getCanvasScale();
+    Input.mouseX = Math.floor(x / csRight);
+    Input.mouseY = Math.floor(y / csRight);
 
     Input.mouseRightClickListener(Input.mouseX, Input.mouseY);
   },

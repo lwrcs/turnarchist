@@ -729,6 +729,7 @@ export class PlayerRenderer {
       }
 
       const offsetY = GameConstants.WIDTH > 175 ? 0 : -1.25;
+      if (!GameConstants.CLEAN_MODE) {
       for (let i = 0; i < this.player.maxHealth; i++) {
         let shake = 0;
         let shakeY = 0;
@@ -804,9 +805,10 @@ export class PlayerRenderer {
       //this.drawCooldownBar();
       this.drawBreathStatus(quickbarStartX);
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
+      } // end !CLEAN_MODE
       if (!transitioning) {
         // Draw the bestiary button first so the inventory can draw over it (requested layering).
-        this.player.bestiary?.drawBestiaryButton(delta);
+        if (!GameConstants.CLEAN_MODE) this.player.bestiary?.drawBestiaryButton(delta);
         this.player.inventory.draw(delta);
       }
       const inventoryOpen = this.player.inventory.isOpen;
@@ -1077,7 +1079,7 @@ export class PlayerRenderer {
     );
     if (this.hurting) this.drawHurt(delta);
 
-    if (this.player.mapToggled === true && !this.player.bestiary?.isOpen)
+    if (!GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
       this.player.map.draw(delta);
     this.drawTileCursor(delta);
     this.player.setCursorIcon();

@@ -4393,15 +4393,17 @@ export class Room {
     // gui stuff
 
     // room name
-    let old = Game.ctx.font;
-    Game.ctx.font = GameConstants.SCRIPT_FONT_SIZE + "px Script";
-    Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
-    Game.fillText(
-      this.message,
-      GameConstants.WIDTH / 2 - Game.measureText(this.name).width / 2,
-      5,
-    );
-    Game.ctx.font = old;
+    if (!GameConstants.CLEAN_MODE) {
+      let old = Game.ctx.font;
+      Game.ctx.font = GameConstants.SCRIPT_FONT_SIZE + "px Script";
+      Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
+      Game.fillText(
+        this.message,
+        GameConstants.WIDTH / 2 - Game.measureText(this.name).width / 2,
+        5,
+      );
+      Game.ctx.font = old;
+    }
     Game.ctx.restore();
   };
 
