@@ -9588,7 +9588,7 @@ module.exports = __webpack_require__.p + "assets/fxset.ff9eae9e39cfb5f243a3.png"
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/itemset.9c9a77978cc0f48b60b3.png";
+module.exports = __webpack_require__.p + "assets/itemset.fd13f4e4b2a8a56366c6.png";
 
 /***/ }),
 
@@ -54863,8 +54863,8 @@ class Berries extends usable_1.Usable {
         this.getDescription = () => {
             return "BERRIES\nSmall and sweet.";
         };
-        this.tileX = 6;
-        this.tileY = 0;
+        this.tileX = 8;
+        this.tileY = 4;
         this.name = Berries.itemName;
         this.stackable = true;
     }

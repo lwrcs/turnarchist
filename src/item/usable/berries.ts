@@ -8,8 +8,8 @@ export class Berries extends Usable {
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
 
-    this.tileX = 6;
-    this.tileY = 0;
+    this.tileX = 8;
+    this.tileY = 4;
     this.name = Berries.itemName;
 
     this.stackable = true;
