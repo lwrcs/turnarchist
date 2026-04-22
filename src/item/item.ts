@@ -62,6 +62,7 @@ export class Item extends Drawable {
   protected animTargetY: number = 0;
   protected animT: number = 0;
   protected animStartDistance: number = null;
+  groundedNoAnimate: boolean = false;
   player: Player;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number, z: number = 0) {
@@ -114,6 +115,7 @@ export class Item extends Drawable {
   };
 
   get animateToInventory() {
+    if (this.groundedNoAnimate) return false;
     return GameConstants.AUTO_PICKUP_ITEMS.includes(
       this.constructor as new (...args: any[]) => Item,
     );
@@ -215,6 +217,9 @@ export class Item extends Drawable {
   autoPickup = () => {
     if (GameConstants.ITEM_AUTO_PICKUP && this.animateToInventory) {
       this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
+      if (!this.pickedUp) {
+        this.groundedNoAnimate = true;
+      }
     }
   };
 

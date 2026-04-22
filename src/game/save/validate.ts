@@ -819,6 +819,19 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     equipped = equippedU;
   }
 
+  const groundedNoAnimateU = get(v, "groundedNoAnimate");
+  let groundedNoAnimate: boolean | undefined = undefined;
+  if (groundedNoAnimateU !== undefined) {
+    if (!isBoolean(groundedNoAnimateU)) {
+      return err({
+        kind: "InvalidSchema",
+        message: "groundedNoAnimate must be boolean if present",
+        path: `${path}.groundedNoAnimate`,
+      });
+    }
+    groundedNoAnimate = groundedNoAnimateU;
+  }
+
   if (kindR.value === "key") {
     const doorIdU = get(v, "doorId");
     const depthU = get(v, "depth");
@@ -839,6 +852,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       stackCount,
       pickedUp,
       equipped,
+      groundedNoAnimate,
       doorId: doorIdU,
       depth,
       showPath: showPathU,
@@ -858,6 +872,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       stackCount,
       pickedUp,
       equipped,
+      groundedNoAnimate,
       fuel: fuelU,
     });
   }
@@ -880,6 +895,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       stackCount,
       pickedUp,
       equipped,
+      groundedNoAnimate,
       currentAir: airU,
     });
   }
@@ -907,6 +923,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       roomGid,
       stackCount,
       pickedUp,
+      groundedNoAnimate,
       durability: durabilityU,
       durabilityMax: durabilityMaxU,
       broken: brokenU,
@@ -1004,6 +1021,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
         stackCount,
         pickedUp,
         equipped,
+        groundedNoAnimate,
         durability: durabilityU,
         durabilityMax: durabilityMaxU,
         broken: brokenU,
@@ -1023,6 +1041,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       stackCount,
       pickedUp,
       equipped,
+      groundedNoAnimate,
       durability: durabilityU,
       durabilityMax: durabilityMaxU,
       broken: brokenU,
@@ -1056,6 +1075,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       stackCount,
       pickedUp,
       equipped,
+      groundedNoAnimate,
       health: healthU,
       rechargeTurnCounter: rtcU,
     });
@@ -1070,6 +1090,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     stackCount,
     pickedUp,
     equipped,
+    groundedNoAnimate,
   });
 };
 

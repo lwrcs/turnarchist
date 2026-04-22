@@ -72,6 +72,7 @@ export interface ItemFP {
   y: number;
   stackCount: number;
   pickedUp: boolean;
+  groundedNoAnimate: boolean;
   stateHash: number;
 }
 
@@ -231,6 +232,7 @@ function itemFP(item: Item): ItemFP {
 
   let stateStr = `${kind},dur=${item.durability}/${item.durabilityMax}`;
   stateStr += `,broken=${item.broken}`;
+  stateStr += `,groundedNoAnimate=${item.groundedNoAnimate}`;
   // Item-type-specific state
   if (item instanceof Weapon) {
     const s = item.status;
@@ -252,6 +254,7 @@ function itemFP(item: Item): ItemFP {
     y: item.y,
     stackCount: item.stackCount,
     pickedUp: item.pickedUp,
+    groundedNoAnimate: item.groundedNoAnimate,
     stateHash: djb2(stateStr),
   };
 }

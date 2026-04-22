@@ -38126,6 +38126,7 @@ function itemFP(item) {
     const kind = (0, itemsBuiltins_1.getItemKindV2)(item) ?? item.constructor.name;
     let stateStr = `${kind},dur=${item.durability}/${item.durabilityMax}`;
     stateStr += `,broken=${item.broken}`;
+    stateStr += `,groundedNoAnimate=${item.groundedNoAnimate}`;
     // Item-type-specific state
     if (item instanceof weapon_1.Weapon) {
         const s = item.status;
@@ -38146,6 +38147,7 @@ function itemFP(item) {
         y: item.y,
         stackCount: item.stackCount,
         pickedUp: item.pickedUp,
+        groundedNoAnimate: item.groundedNoAnimate,
         stateHash: djb2(stateStr),
     };
 }
@@ -40648,6 +40650,7 @@ const registerBuiltinItemCodecsV2 = () => {
             stackCount: item.stackCount,
             pickedUp: item.pickedUp,
             equipped,
+            groundedNoAnimate: item.groundedNoAnimate || undefined,
         };
     };
     const GENERIC_ITEM_KINDS = [
@@ -40833,6 +40836,7 @@ const registerBuiltinItemCodecsV2 = () => {
                 // Apply generic state
                 item.stackCount = value.stackCount;
                 item.pickedUp = value.pickedUp;
+                item.groundedNoAnimate = value.groundedNoAnimate ?? false;
                 if (item instanceof equippable_1.Equippable && "equipped" in value && typeof value.equipped === "boolean") {
                     item.equipped = value.equipped;
                 }
@@ -42217,6 +42221,13 @@ function diffItemFields(b, a, roomPath, diffs) {
             message: `${label}: pickedUp ${b.pickedUp} vs ${a.pickedUp}`,
         });
     }
+    if (b.groundedNoAnimate !== a.groundedNoAnimate) {
+        diffs.push({
+            category: "item",
+            path: roomPath,
+            message: `${label}: groundedNoAnimate ${b.groundedNoAnimate} vs ${a.groundedNoAnimate}`,
+        });
+    }
     if (b.stateHash !== a.stateHash) {
         diffs.push({
             category: "item",
@@ -43565,6 +43576,18 @@ const validateItemSaveV2 = (v, path) => {
         }
         equipped = equippedU;
     }
+    const groundedNoAnimateU = get(v, "groundedNoAnimate");
+    let groundedNoAnimate = undefined;
+    if (groundedNoAnimateU !== undefined) {
+        if (!isBoolean(groundedNoAnimateU)) {
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "groundedNoAnimate must be boolean if present",
+                path: `${path}.groundedNoAnimate`,
+            });
+        }
+        groundedNoAnimate = groundedNoAnimateU;
+    }
     if (kindR.value === "key") {
         const doorIdU = get(v, "doorId");
         const depthU = get(v, "depth");
@@ -43585,6 +43608,7 @@ const validateItemSaveV2 = (v, path) => {
             stackCount,
             pickedUp,
             equipped,
+            groundedNoAnimate,
             doorId: doorIdU,
             depth,
             showPath: showPathU,
@@ -43603,6 +43627,7 @@ const validateItemSaveV2 = (v, path) => {
             stackCount,
             pickedUp,
             equipped,
+            groundedNoAnimate,
             fuel: fuelU,
         });
     }
@@ -43624,6 +43649,7 @@ const validateItemSaveV2 = (v, path) => {
             stackCount,
             pickedUp,
             equipped,
+            groundedNoAnimate,
             currentAir: airU,
         });
     }
@@ -43649,6 +43675,7 @@ const validateItemSaveV2 = (v, path) => {
             roomGid,
             stackCount,
             pickedUp,
+            groundedNoAnimate,
             durability: durabilityU,
             durabilityMax: durabilityMaxU,
             broken: brokenU,
@@ -43739,6 +43766,7 @@ const validateItemSaveV2 = (v, path) => {
                 stackCount,
                 pickedUp,
                 equipped,
+                groundedNoAnimate,
                 durability: durabilityU,
                 durabilityMax: durabilityMaxU,
                 broken: brokenU,
@@ -43757,6 +43785,7 @@ const validateItemSaveV2 = (v, path) => {
             stackCount,
             pickedUp,
             equipped,
+            groundedNoAnimate,
             durability: durabilityU,
             durabilityMax: durabilityMaxU,
             broken: brokenU,
@@ -43789,6 +43818,7 @@ const validateItemSaveV2 = (v, path) => {
             stackCount,
             pickedUp,
             equipped,
+            groundedNoAnimate,
             health: healthU,
             rechargeTurnCounter: rtcU,
         });
@@ -43802,6 +43832,7 @@ const validateItemSaveV2 = (v, path) => {
         stackCount,
         pickedUp,
         equipped,
+        groundedNoAnimate,
     });
 };
 const validateRoomDeltaV2 = (v, path) => {
@@ -52519,6 +52550,7 @@ class Item extends drawable_1.Drawable {
         this.animTargetY = 0;
         this.animT = 0;
         this.animStartDistance = null;
+        this.groundedNoAnimate = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -52609,6 +52641,9 @@ class Item extends drawable_1.Drawable {
         this.autoPickup = () => {
             if (gameConstants_1.GameConstants.ITEM_AUTO_PICKUP && this.animateToInventory) {
                 this.onPickup(this.level.game.players[this.level.game.localPlayerID]);
+                if (!this.pickedUp) {
+                    this.groundedNoAnimate = true;
+                }
             }
         };
         this.pickupMessage = () => {
@@ -52882,6 +52917,8 @@ class Item extends drawable_1.Drawable {
         return new this(room, x, y, ...rest);
     }
     get animateToInventory() {
+        if (this.groundedNoAnimate)
+            return false;
         return gameConstants_1.GameConstants.AUTO_PICKUP_ITEMS.includes(this.constructor);
     }
     destroy() {

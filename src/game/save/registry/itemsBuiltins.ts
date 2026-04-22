@@ -235,6 +235,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
       stackCount: item.stackCount,
       pickedUp: item.pickedUp,
       equipped,
+      groundedNoAnimate: item.groundedNoAnimate || undefined,
     };
   };
 
@@ -422,6 +423,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
         // Apply generic state
         item.stackCount = value.stackCount;
         item.pickedUp = value.pickedUp;
+        item.groundedNoAnimate = value.groundedNoAnimate ?? false;
         if (item instanceof Equippable && "equipped" in value && typeof value.equipped === "boolean") {
           item.equipped = value.equipped;
         }

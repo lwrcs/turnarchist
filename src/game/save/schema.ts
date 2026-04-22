@@ -420,6 +420,7 @@ export type ItemSaveEnvelopeV2 = {
   roomGid?: Gid;
   stackCount: number;
   pickedUp: boolean;
+  groundedNoAnimate?: boolean;
 };
 
 export type StackableItemSaveV2 = ItemSaveEnvelopeV2 & {

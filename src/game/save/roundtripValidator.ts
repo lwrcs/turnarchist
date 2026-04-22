@@ -528,6 +528,13 @@ function diffItemFields(
       message: `${label}: pickedUp ${b.pickedUp} vs ${a.pickedUp}`,
     });
   }
+  if (b.groundedNoAnimate !== a.groundedNoAnimate) {
+    diffs.push({
+      category: "item",
+      path: roomPath,
+      message: `${label}: groundedNoAnimate ${b.groundedNoAnimate} vs ${a.groundedNoAnimate}`,
+    });
+  }
   if (b.stateHash !== a.stateHash) {
     diffs.push({
       category: "item",
