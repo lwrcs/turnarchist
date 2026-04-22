@@ -43,6 +43,7 @@ const enemyMinimumDepth: Record<number, number> = {
   16: 2, // SpiderEnemy
   17: 2, // MummyEnemy
   18: 3, // WardenEnemy
+  19: 0, // RatEnemy
 };
 /*
 interface enemySpawnPoolData {

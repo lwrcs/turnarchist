@@ -9599,7 +9599,7 @@ module.exports = __webpack_require__.p + "assets/itemset.9c9a77978cc0f48b60b3.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.f313b1092cbff046c7ce.png";
+module.exports = __webpack_require__.p + "assets/mobset.8c75bd9ce9500d7407b1.png";
 
 /***/ }),
 
@@ -18452,6 +18452,212 @@ QueenEnemy.difficulty = 4;
 QueenEnemy.tileX = 23;
 QueenEnemy.tileY = 8;
 QueenEnemy.examineText = "A queen. Threatens straight and diagonal lines.";
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/ratEnemy.ts":
+/*!**************************************!*\
+  !*** ./src/entity/enemy/ratEnemy.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RatEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+class RatEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return this.damage;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (!this.dead) {
+                if (this.handleSkipTurns())
+                    return;
+                if (!this.seenPlayer)
+                    this.lookForPlayer();
+                else if (this.seenPlayer) {
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            for (const e of this.room.entities) {
+                                if (e !== this) {
+                                    disablePositions.push({ x: e.x, y: e.y });
+                                }
+                            }
+                            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                                    if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            this.target =
+                                this.getAverageLuminance() > 0
+                                    ? this.targetPlayer
+                                    : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
+                                        .darkest;
+                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
+                            if (moves.length > 0) {
+                                let hitPlayer = false;
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                                        this.game.players[i].x === moves[0].pos.x &&
+                                        this.game.players[i].y === moves[0].pos.y) {
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        }
+                                        hitPlayer = true;
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    this.tryMove(moves[0].pos.x, moves[0].pos.y);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                }
+                            }
+                            this.rumbling = false;
+                            this.unconscious = true;
+                        }
+                        else {
+                            this.rumbling = true;
+                            this.unconscious = false;
+                            this.makeHitWarnings();
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 4 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        this.makeHitWarnings();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                switch (this.direction) {
+                    case game_1.Direction.DOWN:
+                        this.tileX = 15;
+                        this.tileY = 4;
+                        break;
+                    case game_1.Direction.UP:
+                        this.tileX = 15;
+                        this.tileY = 6;
+                        break;
+                    case game_1.Direction.RIGHT:
+                        this.tileX = 17;
+                        this.tileY = 4;
+                        break;
+                    case game_1.Direction.LEFT:
+                        this.tileX = 17;
+                        this.tileY = 6;
+                        break;
+                }
+                let rumbleX = this.rumble(this.rumbling, this.frame, this.direction).x;
+                let rumbleY = this.rumble(this.rumbling, this.frame, this.direction).y;
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                const rect = this.applyCrushToDrawRect({
+                    dX: this.x - this.drawX + rumbleX - 0.5,
+                    dY: this.y - this.drawYOffset - this.drawY + rumbleY,
+                    dW: 2,
+                    dH: 2,
+                });
+                game_1.Game.drawMob(this.tileX, this.tileY, 2, 2, rect.dX, rect.dY, rect.dW, rect.dH, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+                if (this.crushed) {
+                    this.crushAnim(delta);
+                }
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta, 0, 0.75 * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 15;
+        this.tileY = 4;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "rat";
+        this.orthogonalAttack = true;
+        this.imageParticleX = 3;
+        this.imageParticleY = 24;
+        this.drawYOffset = 1;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+    }
+    get alertText() {
+        return `New Enemy Spotted: Rat
+    Health: ${this.health}
+    Attack Pattern: Omnidirectional
+    Moves every other turn`;
+    }
+}
+exports.RatEnemy = RatEnemy;
+RatEnemy.difficulty = 1;
+RatEnemy.tileX = 15;
+RatEnemy.tileY = 4;
+RatEnemy.examineText = "A rat. Fast and foul.";
 
 
 /***/ }),
@@ -32638,6 +32844,33 @@ exports.BESTIARY_ENEMIES = {
             },
         ],
     },
+    RatEnemy: {
+        typeName: "RatEnemy",
+        displayName: "Rat",
+        description: "A scurrying pest that moves every other turn. Small but relentless — it will close the gap faster than it looks.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 15,
+                tileY: 4,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+            },
+            {
+                label: "Armed",
+                tileX: 15,
+                tileY: 4,
+                w: 1,
+                h: 2,
+                hp: 1,
+                maxHp: 1,
+                rumbling: true,
+                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+            },
+        ],
+    },
     FrogEnemy: {
         typeName: "FrogEnemy",
         displayName: "Frog",
@@ -39652,6 +39885,7 @@ const bishopEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/bishopEnemy 
 const boltcasterEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
 const crabEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const ratEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/ratEnemy */ "./src/entity/enemy/ratEnemy.ts");
 const crusherEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
@@ -39772,6 +40006,8 @@ const entityToKind = (e) => {
         return "charge";
     if (e instanceof crabEnemy_1.CrabEnemy)
         return "crab";
+    if (e instanceof ratEnemy_1.RatEnemy)
+        return "rat";
     if (e instanceof crusherEnemy_1.CrusherEnemy)
         return "crusher";
     if (e instanceof frogEnemy_1.FrogEnemy)
@@ -40223,6 +40459,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("boltcaster", boltcasterEnemy_1.BoltcasterEnemy);
     registerBasic("charge", chargeEnemy_1.ChargeEnemy);
     registerBasic("crab", crabEnemy_1.CrabEnemy);
+    registerBasic("rat", ratEnemy_1.RatEnemy);
     registerBasic("crusher", crusherEnemy_1.CrusherEnemy);
     registerBasic("frog", frogEnemy_1.FrogEnemy);
     registerBasic("big_frog", bigFrogEnemy_1.BigFrogEnemy);
@@ -42414,6 +42651,7 @@ const bishopEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bishopEnemy */ 
 const boltcasterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
 const crabEnemy_1 = __webpack_require__(/*! ../../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const ratEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ratEnemy */ "./src/entity/enemy/ratEnemy.ts");
 const crusherEnemy_1 = __webpack_require__(/*! ../../entity/enemy/crusherEnemy */ "./src/entity/enemy/crusherEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
@@ -42627,6 +42865,7 @@ function populateTestRoom(room, game, clearFirst = false) {
         [boltcasterEnemy_1.BoltcasterEnemy, "boltcaster"],
         [chargeEnemy_1.ChargeEnemy, "charge"],
         [crabEnemy_1.CrabEnemy, "crab"],
+        [ratEnemy_1.RatEnemy, "rat"],
         [crusherEnemy_1.CrusherEnemy, "crusher"],
         [frogEnemy_1.FrogEnemy, "frog"],
         [bigFrogEnemy_1.BigFrogEnemy, "big_frog"],
@@ -42842,6 +43081,7 @@ const ENEMY_KINDS = [
     "boltcaster",
     "charge",
     "crab",
+    "rat",
     "crusher",
     "frog",
     "big_frog",
@@ -57754,6 +57994,7 @@ const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/ent
 const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 // Enemy imports
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const ratEnemy_1 = __webpack_require__(/*! ../entity/enemy/ratEnemy */ "./src/entity/enemy/ratEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
@@ -57828,6 +58069,7 @@ exports.enemyClassToId = new Map([
     [kingEnemy_1.KingEnemy, 21],
     [boltcasterEnemy_1.BoltcasterEnemy, 22],
     [earthWizard_1.EarthWizardEnemy, 23],
+    [ratEnemy_1.RatEnemy, 24],
 ]);
 class Environment {
     constructor(type) {
@@ -58417,6 +58659,7 @@ const environmentData = {
         props: [],
         enemies: [
             { class: crabEnemy_1.CrabEnemy, weight: 1.0, minDepth: 0 },
+            { class: ratEnemy_1.RatEnemy, weight: 1.5, minDepth: 0 },
         ],
     },
 };
@@ -58761,7 +59004,8 @@ const enemyMinimumDepth = {
     15: 2,
     16: 2,
     17: 2,
-    18: 3, // WardenEnemy
+    18: 3,
+    19: 0, // RatEnemy
 };
 /*
 interface enemySpawnPoolData {
@@ -59949,6 +60193,7 @@ exports.LevelImageGenerator = LevelImageGenerator;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LevelParameterGenerator = exports.enemyClasses = void 0;
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const ratEnemy_1 = __webpack_require__(/*! ../entity/enemy/ratEnemy */ "./src/entity/enemy/ratEnemy.ts");
 const frogEnemy_1 = __webpack_require__(/*! ../entity/enemy/frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const skullEnemy_1 = __webpack_require__(/*! ../entity/enemy/skullEnemy */ "./src/entity/enemy/skullEnemy.ts");
@@ -59983,6 +60228,7 @@ exports.enemyClasses = {
     15: armoredSkullEnemy_1.ArmoredSkullEnemy,
     16: mummyEnemy_1.MummyEnemy,
     17: spiderEnemy_1.SpiderEnemy,
+    18: ratEnemy_1.RatEnemy,
 };
 class LevelParameterGenerator {
     /**
@@ -70807,6 +71053,7 @@ const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usab
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
+const ratEnemy_1 = __webpack_require__(/*! ../entity/enemy/ratEnemy */ "./src/entity/enemy/ratEnemy.ts");
 const zombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const bigSkullEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigSkullEnemy */ "./src/entity/enemy/bigSkullEnemy.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
@@ -70867,6 +71114,7 @@ const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent *
 var EnemyType;
 (function (EnemyType) {
     EnemyType["crab"] = "crab";
+    EnemyType["rat"] = "rat";
     EnemyType["frog"] = "frog";
     EnemyType["zombie"] = "zombie";
     EnemyType["skull"] = "skull";
@@ -70911,6 +71159,7 @@ var EnemyType;
  */
 exports.EnemyTypeMap = {
     [EnemyType.crab]: crabEnemy_1.CrabEnemy,
+    [EnemyType.rat]: ratEnemy_1.RatEnemy,
     [EnemyType.frog]: frogEnemy_1.FrogEnemy,
     [EnemyType.zombie]: zombieEnemy_1.ZombieEnemy,
     [EnemyType.skull]: skullEnemy_1.SkullEnemy,

@@ -54,6 +54,7 @@ import { BishopEnemy } from "../../entity/enemy/bishopEnemy";
 import { BoltcasterEnemy } from "../../entity/enemy/boltcasterEnemy";
 import { ChargeEnemy } from "../../entity/enemy/chargeEnemy";
 import { CrabEnemy } from "../../entity/enemy/crabEnemy";
+import { RatEnemy } from "../../entity/enemy/ratEnemy";
 import { CrusherEnemy } from "../../entity/enemy/crusherEnemy";
 import { FrogEnemy } from "../../entity/enemy/frogEnemy";
 import { BigFrogEnemy } from "../../entity/enemy/bigFrogEnemy";
@@ -292,6 +293,7 @@ export function populateTestRoom(room: Room, game: Game, clearFirst = false): vo
     [BoltcasterEnemy, "boltcaster"],
     [ChargeEnemy, "charge"],
     [CrabEnemy, "crab"],
+    [RatEnemy, "rat"],
     [CrusherEnemy, "crusher"],
     [FrogEnemy, "frog"],
     [BigFrogEnemy, "big_frog"],

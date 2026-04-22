@@ -1,4 +1,5 @@
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
+import { RatEnemy } from "../entity/enemy/ratEnemy";
 import { FrogEnemy } from "../entity/enemy/frogEnemy";
 import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
 import { SkullEnemy } from "../entity/enemy/skullEnemy";
@@ -35,6 +36,7 @@ export const enemyClasses = {
   15: ArmoredSkullEnemy,
   16: MummyEnemy,
   17: SpiderEnemy,
+  18: RatEnemy,
 };
 
 export interface LevelParameters {

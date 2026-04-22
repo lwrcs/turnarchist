@@ -26,6 +26,7 @@ import { TallSucculent } from "../entity/object/tallSucculent";
 
 // Enemy imports
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
+import { RatEnemy } from "../entity/enemy/ratEnemy";
 import { FrogEnemy } from "../entity/enemy/frogEnemy";
 import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
 import { SkullEnemy } from "../entity/enemy/skullEnemy";
@@ -108,6 +109,7 @@ export const enemyClassToId: Map<typeof Enemy, number> = new Map<
   [KingEnemy, 21],
   [BoltcasterEnemy, 22],
   [EarthWizardEnemy, 23],
+  [RatEnemy, 24],
 ]);
 
 export class Environment {
@@ -788,6 +790,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     props: [],
     enemies: [
       { class: CrabEnemy, weight: 1.0, minDepth: 0 },
+      { class: RatEnemy, weight: 1.5, minDepth: 0 },
     ],
   },
 };

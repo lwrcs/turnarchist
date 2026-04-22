@@ -52,6 +52,7 @@ import { BishopEnemy } from "../../../entity/enemy/bishopEnemy";
 import { BoltcasterEnemy } from "../../../entity/enemy/boltcasterEnemy";
 import { ChargeEnemy } from "../../../entity/enemy/chargeEnemy";
 import { CrabEnemy } from "../../../entity/enemy/crabEnemy";
+import { RatEnemy } from "../../../entity/enemy/ratEnemy";
 import { CrusherEnemy } from "../../../entity/enemy/crusherEnemy";
 import { FrogEnemy } from "../../../entity/enemy/frogEnemy";
 import { BigFrogEnemy } from "../../../entity/enemy/bigFrogEnemy";
@@ -141,6 +142,7 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof BoltcasterEnemy) return "boltcaster";
   if (e instanceof ChargeEnemy) return "charge";
   if (e instanceof CrabEnemy) return "crab";
+  if (e instanceof RatEnemy) return "rat";
   if (e instanceof CrusherEnemy) return "crusher";
   if (e instanceof FrogEnemy) return "frog";
   if (e instanceof BigFrogEnemy) return "big_frog";
@@ -538,6 +540,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("boltcaster", BoltcasterEnemy);
   registerBasic("charge", ChargeEnemy);
   registerBasic("crab", CrabEnemy);
+  registerBasic("rat", RatEnemy);
   registerBasic("crusher", CrusherEnemy);
   registerBasic("frog", FrogEnemy);
   registerBasic("big_frog", BigFrogEnemy);

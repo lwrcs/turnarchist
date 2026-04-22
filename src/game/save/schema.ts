@@ -659,6 +659,7 @@ export type EnemyKind =
   | "boltcaster"
   | "charge"
   | "crab"
+  | "rat"
   | "crusher"
   | "frog"
   | "big_frog"

@@ -43,6 +43,7 @@ import { Spear } from "../item/weapon/spear";
 import { Drawable } from "../drawable/drawable";
 import { Player, PlayerDirection } from "../player/player";
 import { CrabEnemy } from "../entity/enemy/crabEnemy";
+import { RatEnemy } from "../entity/enemy/ratEnemy";
 import { ZombieEnemy } from "../entity/enemy/zombieEnemy";
 import { BigSkullEnemy } from "../entity/enemy/bigSkullEnemy";
 import { Random } from "../utility/random";
@@ -118,6 +119,7 @@ import { TallSucculent } from "../entity/object/tallSucculent";
  */
 export enum EnemyType {
   crab = "crab",
+  rat = "rat",
   frog = "frog",
   zombie = "zombie",
   skull = "skull",
@@ -163,6 +165,7 @@ export enum EnemyType {
  */
 export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.crab]: CrabEnemy,
+  [EnemyType.rat]: RatEnemy,
   [EnemyType.frog]: FrogEnemy,
   [EnemyType.zombie]: ZombieEnemy,
   [EnemyType.skull]: SkullEnemy,

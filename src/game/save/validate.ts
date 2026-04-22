@@ -121,6 +121,7 @@ const ENEMY_KINDS = [
   "boltcaster",
   "charge",
   "crab",
+  "rat",
   "crusher",
   "frog",
   "big_frog",

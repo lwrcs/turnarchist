@@ -202,6 +202,35 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
     ],
   },
 
+  RatEnemy: {
+    typeName: "RatEnemy",
+    displayName: "Rat",
+    description:
+      "A scurrying pest that moves every other turn. Small but relentless — it will close the gap faster than it looks.",
+    sprites: [
+      {
+        label: "Idle",
+        tileX: 15,
+        tileY: 4,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+      },
+      {
+        label: "Armed",
+        tileX: 15,
+        tileY: 4,
+        w: 1,
+        h: 2,
+        hp: 1,
+        maxHp: 1,
+        rumbling: true,
+        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+      },
+    ],
+  },
+
   FrogEnemy: {
     typeName: "FrogEnemy",
     displayName: "Frog",
