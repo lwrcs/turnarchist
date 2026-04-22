@@ -229,6 +229,7 @@ export class WardenEnemy extends Enemy {
           this.ticks++;
           if (this.ticks % 2 === 1) {
             this.rumbling = true;
+            this.unconscious = true;
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
@@ -297,20 +298,8 @@ export class WardenEnemy extends Enemy {
             this.rumbling = false;
           } else {
             this.rumbling = true;
-            /*
-            if (
-              (this.target.x === this.targetPlayer.x &&
-                this.target.y === this.targetPlayer.y) ||
-              Utils.distance(
-                this.targetPlayer.x,
-                this.targetPlayer.y,
-                this.x,
-                this.y,
-              ) <= 2
-            )
-              */ {
-              this.makeHitWarnings();
-            }
+            this.unconscious = false;
+            this.makeHitWarnings();
           }
         }
 

@@ -159,6 +159,7 @@ export class CrusherEnemy extends Enemy {
           this.ticks++;
           if (this.ticks % 2 === 1) {
             this.rumbling = true;
+            this.unconscious = true;
             let oldX = this.x;
             let oldY = this.y;
             let disablePositions = Array<astar.Position>();
@@ -214,10 +215,9 @@ export class CrusherEnemy extends Enemy {
               //if (crushed) this.makeHitWarnings();
             }
 
-            this.makeHitWarning();
-
             this.rumbling = false;
           } else {
+            this.unconscious = false;
             this.rumbling = true;
             /*
             if (
@@ -276,7 +276,6 @@ export class CrusherEnemy extends Enemy {
           }
         }
       }
-      this.makeHitWarning();
     }
   };
 

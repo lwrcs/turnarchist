@@ -1,13 +1,12 @@
 import { Direction, Game } from "../../game";
 import { Room } from "../../room/room";
 import { astar } from "../../utility/astarclass";
-import { HitWarning, HitWarningDirection } from "../../drawable/hitWarning";
+import { HitWarning } from "../../drawable/hitWarning";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { Coin } from "../../item/coin";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
-import { Utils } from "../../utility/utils";
 import { DownLadder } from "../../tile/downLadder";
 import { Door } from "../../tile/door";
 import { GameConstants } from "../../game/gameConstants";
@@ -389,134 +388,44 @@ export class BigFrogEnemy extends Enemy {
     }
   };
 
+  makeBigHitWarnings = () => {
+    this.makeHitWarnings();
+  };
+
   makeHitWarnings = () => {
-    if (this.unconscious || !(this.seenPlayer) || (this.ticks % 2 === 1)) return;
-    const cullFactor = 0.25;
-    const player: Player = this.getPlayer();
-    const orthogonal = this.orthogonalAttack;
-    const diagonal = this.diagonalAttack;
-    const forwardOnly = this.forwardOnlyAttack;
-    const direction = this.direction;
-    const orthoRange = this.attackRange;
-    const diagRange = this.diagonalAttackRange;
+    if (this.unconscious || !this.seenPlayer || this.ticks % 2 === 1) return;
 
-    const generateOffsets = (
-      isOrthogonal: boolean,
-      range: number,
-    ): number[][] => {
-      const baseOffsets = isOrthogonal
-        ? [
-            [-2, 0],
-            [2, 0],
-            [0, -2],
-            [0, 2],
-          ]
-        : [
-            [-1, -1],
-            [1, 1],
-            [1, -1],
-            [-1, 1],
-          ];
-      return baseOffsets.flatMap(([dx, dy]) =>
-        Array.from({ length: range }, (_, i) => [(i + 1) * dx, (i + 1) * dy]),
+    // Explicit target list: range-2 orthogonal from each face + range-1 corner diagonals.
+    // Diagonal offsets applied per body tile produce range-1 orthogonal hits on interior
+    // edges (e.g. top-left + (1,-1) lands on top-right's above cell), so we enumerate
+    // the 12 valid targets directly instead of using the offset-based approach.
+    const targets = [
+      // Left face (x - 2)
+      { tx: this.x - 2, ty: this.y },
+      { tx: this.x - 2, ty: this.y + 1 },
+      // Right face (x + 3)
+      { tx: this.x + 3, ty: this.y },
+      { tx: this.x + 3, ty: this.y + 1 },
+      // Top face (y - 2)
+      { tx: this.x,     ty: this.y - 2 },
+      { tx: this.x + 1, ty: this.y - 2 },
+      // Bottom face (y + 3)
+      { tx: this.x,     ty: this.y + 3 },
+      { tx: this.x + 1, ty: this.y + 3 },
+      // Corner diagonals
+      { tx: this.x - 1, ty: this.y - 1 },
+      { tx: this.x + 2, ty: this.y - 1 },
+      { tx: this.x - 1, ty: this.y + 2 },
+      { tx: this.x + 2, ty: this.y + 2 },
+    ];
+
+    for (const { tx, ty } of targets) {
+      if (!this.isWithinRoomBounds(tx, ty)) continue;
+      if (this.occupiesTile(tx, ty, this.z ?? 0)) continue;
+      this.room.hitwarnings.push(
+        new HitWarning(this.game, tx, ty, this.x, this.y, true, false, this),
       );
-    };
-
-    const directionOffsets = {
-      [Direction.LEFT]: [-1, 0],
-      [Direction.RIGHT]: [1, 0],
-      [Direction.UP]: [0, -1],
-      [Direction.DOWN]: [0, 1],
-    };
-
-    let offsets: number[][] = [];
-    if (forwardOnly) {
-      const [dx, dy] = directionOffsets[direction];
-      offsets = Array.from({ length: orthoRange }, (_, i) => [
-        (i + 1) * dx,
-        (i + 1) * dy,
-      ]);
-    } else {
-      if (orthogonal) offsets.push(...generateOffsets(true, orthoRange));
-      if (diagonal) offsets.push(...generateOffsets(false, diagRange));
     }
-
-    const warningCoordinates = offsets
-      .map(([dx, dy]) => ({
-        x: dx,
-        y: dy,
-        distance: Utils.distance(dx, dy, player.x - this.x, player.y - this.y),
-      }))
-      .sort((a, b) => a.distance - b.distance);
-
-    const keepCount = Math.ceil(warningCoordinates.length * (1 - cullFactor));
-    const culledWarnings = warningCoordinates.slice(0, keepCount);
-
-    culledWarnings.forEach(({ x, y }) => {
-      const positions = [
-        { x: this.x, y: this.y },
-        { x: this.x + 1, y: this.y },
-        { x: this.x, y: this.y + 1 },
-        { x: this.x + 1, y: this.y + 1 },
-      ];
-      for (const position of positions) {
-        const targetX = position.x + x;
-        const targetY = position.y + y;
-        if (this.isWithinRoomBounds(targetX, targetY)) {
-          const hitWarning = new HitWarning(
-            this.game,
-            targetX,
-            targetY,
-            position.x,
-            position.y,
-            true,
-            false,
-            this,
-          );
-
-          const dir = hitWarning.getPointerDir();
-          const ox = position.x - this.x; // 0 or 1
-          const oy = position.y - this.y; // 0 or 1
-
-          let allowed: HitWarningDirection[] = [];
-          if (ox === 1 && oy === 1) {
-            // bottom-right tile: allow only south/east/southeast
-            allowed = [
-              HitWarningDirection.South,
-              HitWarningDirection.East,
-              HitWarningDirection.SouthEast,
-            ];
-          } else if (ox === 1 && oy === 0) {
-            // top-right tile: allow north/east/northeast
-            allowed = [
-              HitWarningDirection.North,
-              HitWarningDirection.East,
-              HitWarningDirection.NorthEast,
-            ];
-          } else if (ox === 0 && oy === 1) {
-            // bottom-left tile: allow south/west/southwest
-            allowed = [
-              HitWarningDirection.South,
-              HitWarningDirection.West,
-              HitWarningDirection.SouthWest,
-            ];
-          } else {
-            // top-left tile: allow north/west/northwest
-            allowed = [
-              HitWarningDirection.North,
-              HitWarningDirection.West,
-              HitWarningDirection.NorthWest,
-            ];
-          }
-
-          if (allowed.includes(dir)) {
-            this.room.hitwarnings.push(hitWarning);
-          }
-
-          //this.hitWarnings.push(hitWarning);
-        }
-      }
-    });
   };
 
   drawTopLayer = (delta: number) => {
