@@ -47,6 +47,7 @@ export class Inventory {
   items: Array<Item | null>;
   rows = 5;
   cols = 5;
+  quickbarCols = 5;
   selX = 0;
   selY = 0;
   game: Game;
@@ -99,6 +100,10 @@ export class Inventory {
 
   // Fixed number of usable inventory slots, independent of grid dimensions.
   static readonly INVENTORY_CAPACITY = 25;
+
+  static computeQuickbarCols(screenW: number): number {
+    return Math.max(4, Math.min(10, Math.round(screenW / 3) + 1));
+  }
 
   static computeCols(screenW: number): number {
     if (GameConstants.INVENTORY_LOCK_COLS) return 5;
@@ -153,6 +158,11 @@ export class Inventory {
     this.overlayCanvas = null;
   }
 
+  reflowQuickbarCols(newCols: number): void {
+    if (newCols === this.quickbarCols) return;
+    this.quickbarCols = newCols;
+  }
+
   constructor(game: Game, player: Player) {
     this.globalId = IdGenerator.generate("INV");
     this.game = game;
@@ -162,6 +172,9 @@ export class Inventory {
     this.cols = Inventory.computeCols(LevelConstants.SCREEN_W);
     this._expansionSlots = this._expansion * Inventory.EXPANSION_SLOTS_PER_LEVEL;
     this.rows = Math.ceil(this.totalCapacity() / this.cols);
+    this.quickbarCols = GameConstants.QUICKBAR_DYNAMIC_WIDTH
+      ? Inventory.computeQuickbarCols(LevelConstants.SCREEN_W)
+      : this.cols;
 
     this.buttonX =
       (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
@@ -468,33 +481,32 @@ export class Inventory {
       const b = 2;
       const g = -2;
 
-      const oldSelX = this.selX;
-      const oldSelY = this.selY;
-
-      let candidateX = Math.max(
-        0,
-        Math.min(
-          Math.floor((x - bounds.startX) / (s + 2 * b + g)),
-          this.cols - 1,
-        ),
-      );
-      let candidateY = this.isOpen
-        ? Math.max(
-            0,
-            Math.min(
-              Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-              this.rows - 1,
-            ),
-          )
-        : 0;
-
-      // Phantom cells behave like outside the inventory: no selection, no highlight.
-      if (!this.isValidSlot(candidateX + candidateY * this.cols)) {
-        this._mouseOverPhantom = true;
+      if (this.isOpen) {
+        // Full inventory: candidate is a grid (col, row).
+        const candidateX = Math.max(
+          0,
+          Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), this.cols - 1),
+        );
+        const candidateY = Math.max(
+          0,
+          Math.min(Math.floor((y - bounds.startY) / (s + 2 * b + g)), this.rows - 1),
+        );
+        if (!this.isValidSlot(candidateX + candidateY * this.cols)) {
+          this._mouseOverPhantom = true;
+        } else {
+          this._mouseOverPhantom = false;
+          this.selX = candidateX;
+          this.selY = candidateY;
+        }
       } else {
+        // Quickbar: candidate is a flat index (0..quickbarCols-1); convert to inventory grid.
+        const qIdx = Math.max(
+          0,
+          Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), this.quickbarCols - 1),
+        );
         this._mouseOverPhantom = false;
-        this.selX = candidateX;
-        this.selY = candidateY;
+        this.selX = qIdx % this.cols;
+        this.selY = Math.floor(qIdx / this.cols);
       }
     } else {
       this._mouseOverPhantom = false;
@@ -953,7 +965,7 @@ export class Inventory {
     const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
-    const quickbarWidth = this.cols * (s + 2 * b + g) - g;
+    const quickbarWidth = this.quickbarCols * (s + 2 * b + g) - g;
     const quickbarRightEdge = quickbarStartX + quickbarWidth;
     // Position coin slightly to the right of the quickbar
     let coinX = (quickbarRightEdge - 5) / GameConstants.TILESIZE - 1;
@@ -1037,7 +1049,7 @@ export class Inventory {
     const g = -2; // gap
     const hg = 1; // + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
-    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const width = Math.floor(this.quickbarCols * (s + 2 * b + g) - g);
     const height = Math.floor(s + 2 * b);
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
     const startY = Math.floor(GameConstants.HEIGHT - height - 2);
@@ -1062,12 +1074,16 @@ export class Inventory {
     }
 
     // Draw individual item slots
-    for (let xIdx = 0; xIdx < this.cols; xIdx++) {
+    // Flat index of currently selected slot; quickbar slot N = inventory flat index N.
+    const selFlatIdx = this.selX + this.selY * this.cols;
+    const selOnQuickbar = selFlatIdx < this.quickbarCols;
+
+    for (let xIdx = 0; xIdx < this.quickbarCols; xIdx++) {
       // Skip drawing normal background and icon if this is the selected slot
       const idx = xIdx;
 
       // Draw slot background
-      if (xIdx !== this.selX) {
+      if (!selOnQuickbar || xIdx !== selFlatIdx) {
         Game.ctx.fillStyle = FILL_COLOR;
         Game.ctx.fillRect(
           Math.floor(startX + xIdx * (s + 2 * b + g) + b),
@@ -1121,20 +1137,10 @@ export class Inventory {
     }
 
     // Draw selection box; use active state to control emphasis
-    if (true) {
-      const selStartX = Math.floor(startX + this.selX * (s + 2 * b + g));
+    if (selOnQuickbar) {
+      const selStartX = Math.floor(startX + selFlatIdx * (s + 2 * b + g));
       const selStartY = Math.floor(startY);
       const hg2 = isActive ? hg : 0;
-      /*
-      // Outer selection box (dark)
-      Game.ctx.fillStyle = OUTLINE_COLOR;
-      Game.ctx.fillRect(
-        selStartX - hg,
-        selStartY - hg,
-        s + 2 * b + 2 * hg,
-        s + 2 * b + 2 * hg,
-      );
-      */
 
       // Inner selection box (light grey)
       Game.ctx.fillStyle = FILL_COLOR;
@@ -1149,49 +1155,37 @@ export class Inventory {
       const clearSize = isActive ? s : s - 2;
       const selOffset = isActive ? 0 : 1;
       Game.ctx.clearRect(
-        Math.floor(startX + this.selX * (s + 2 * b + g) + b + selOffset),
-        Math.floor(startY + b + selOffset),
+        Math.floor(selStartX + b + selOffset),
+        Math.floor(selStartY + b + selOffset),
         Math.floor(clearSize),
         Math.floor(clearSize),
       );
 
       // Draw equip animation for selected slot with highlight
-      const idx = this.selX;
       Game.ctx.fillStyle = EQUIP_COLOR;
       Game.ctx.globalAlpha = 0.3;
-      const yOff = (s + 2 * hg2) * (1 - this.equipAnimAmount[idx]);
+      const yOff = (s + 2 * hg2) * (1 - this.equipAnimAmount[selFlatIdx]);
       Game.ctx.fillRect(
-        Math.round(startX + this.selX * (s + 2 * b + g) + b - hg2),
-        Math.round(startY + b + yOff - hg2),
+        Math.round(selStartX + b - hg2),
+        Math.round(selStartY + b + yOff - hg2),
         Math.round(s + 2 * hg2),
         Math.round(s + 2 * hg2 - yOff),
       );
       Game.ctx.globalAlpha = 1;
 
-      /*
-      Game.ctx.clearRect(
-        Math.floor(startX + this.selX * (s + 2 * b + g) + b),
-        Math.floor(startY + b),
-        Math.floor(s),
-        Math.floor(s),
-      );
-      */
-      this.drawUsingItem(delta, startX, startY, s, b, g);
+      this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
 
       // Redraw the selected item
-      if (idx < this.items.length && this.items[idx] !== null) {
+      if (selFlatIdx < this.items.length && this.items[selFlatIdx] !== null) {
         const drawX =
           selStartX + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
         const drawY =
           selStartY + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE;
-        const drawXScaled = drawX / GameConstants.TILESIZE;
-        const drawYScaled = drawY / GameConstants.TILESIZE;
-
-        this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
+        this.items[selFlatIdx]?.drawIcon(delta, drawX / GameConstants.TILESIZE, drawY / GameConstants.TILESIZE);
       }
-      this.drawUsingItem(delta, startX, startY, s, b, g);
+      this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
     }
-    this.drawUsingItem(delta, startX, startY, s, b, g);
+    this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
   };
 
   drawUsingItem = (
@@ -1201,12 +1195,14 @@ export class Inventory {
     s: number,
     b: number,
     g: number,
+    contextCols: number = this.cols,
   ) => {
     // Highlight the usingItem's slot if in using state and it's different from current selection
     Game.ctx.globalCompositeOperation = "source-over";
     if (this.usingItem && this.usingItemIndex !== null) {
-      const usingX = this.usingItemIndex % this.cols;
-      const usingY = Math.floor(this.usingItemIndex / this.cols);
+      if (this.usingItemIndex >= contextCols) return; // item not visible in this context
+      const usingX = this.usingItemIndex % contextCols;
+      const usingY = Math.floor(this.usingItemIndex / contextCols);
       const highlightStartX = startX + usingX * (s + 2 * b + g);
       const highlightStartY = startY + usingY * (s + 2 * b + g);
 
@@ -1593,7 +1589,8 @@ export class Inventory {
     const g = -2; // gap
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
-    const width = this.cols * (s + 2 * b + g) - g;
+    const boundsColCount = this.isOpen ? this.cols : this.quickbarCols;
+    const width = boundsColCount * (s + 2 * b + g) - g;
 
     let startX: number;
     let startY: number;
@@ -1630,7 +1627,7 @@ export class Inventory {
     const s = 18;
     const b = 2; // border
     const g = -2; // gap
-    const width = this.cols * (s + 2 * b + g) - g;
+    const width = this.quickbarCols * (s + 2 * b + g) - g;
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
     const startY = Math.round(GameConstants.HEIGHT - (s + 2 * b) - 5);
     const quickbarHeight = s + 2 * b;
@@ -1673,8 +1670,8 @@ export class Inventory {
     const g = -2;
     const stride = s + 2 * b + g;
     const col = Math.floor((x - bounds.startX) / stride);
-    if (col < 0 || col >= this.cols) return null;
-    const idx = col; // quickbar is row 0
+    if (col < 0 || col >= this.quickbarCols) return null;
+    const idx = col; // quickbar slot = flat inventory index
     return idx >= 0 && idx < this.items.length ? idx : null;
   };
 
@@ -1724,18 +1721,18 @@ export class Inventory {
     const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
-    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const width = Math.floor(this.quickbarCols * (s + 2 * b + g) - g);
     return Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
   };
 
   getQuickbarSlotRect = (
     slotIndex: number,
   ): { x: number; y: number; w: number; h: number } | null => {
-    if (slotIndex < 0 || slotIndex >= this.cols) return null;
+    if (slotIndex < 0 || slotIndex >= this.quickbarCols) return null;
     const s = 18; // size of box
     const b = 2; // border
     const g = -2; // gap
-    const width = Math.floor(this.cols * (s + 2 * b + g) - g);
+    const width = Math.floor(this.quickbarCols * (s + 2 * b + g) - g);
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
     const height = s + 2 * b;
     const startY = Math.floor(GameConstants.HEIGHT - height - 2);

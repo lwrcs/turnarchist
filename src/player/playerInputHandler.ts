@@ -430,17 +430,17 @@ export class PlayerInputHandler {
     // Only handle while in-game
     if (this.player.game.levelState !== LevelState.IN_LEVEL) return;
     if (this.player.skillsMenu?.open) return;
-    const inv = this.player.inventory;
 
     // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
     const step = deltaY > 0 ? 1 : -1;
 
-    // Wrap-around across quickbar columns
-    const cols = this.player.inventory.cols;
-    let next = (this.player.inventory.selX + step) % cols;
-    if (next < 0) next += cols;
-    this.player.inventory.selX = next;
-    this.player.inventory.selY = 0;
+    // Wrap-around across quickbar slots (flat indices 0..quickbarCols-1).
+    const inv = this.player.inventory;
+    const qCols = inv.quickbarCols;
+    const flatIdx = inv.selX + inv.selY * inv.cols;
+    let nextFlat = (flatIdx + step + qCols) % qCols;
+    inv.selX = nextFlat % inv.cols;
+    inv.selY = Math.floor(nextFlat / inv.cols);
 
     // Treat wheel as keyboard-like input so selection highlights while inventory is open
     this.setMostRecentInput("keyboard");

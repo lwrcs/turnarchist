@@ -4592,6 +4592,9 @@ export class Game {
       if (inv) {
         const newCols = Inventory.computeCols(LevelConstants.SCREEN_W);
         inv.reflowCols(newCols);
+        if (GameConstants.QUICKBAR_DYNAMIC_WIDTH) {
+          inv.reflowQuickbarCols(Inventory.computeQuickbarCols(LevelConstants.SCREEN_W));
+        }
       }
     }
 

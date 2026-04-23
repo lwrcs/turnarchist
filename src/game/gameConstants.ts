@@ -70,6 +70,7 @@ export class GameConstants {
   static DEVELOPER_MODE = false;
   static INVENTORY_SNAP_COLS = false;
   static INVENTORY_LOCK_COLS = true;
+  static QUICKBAR_DYNAMIC_WIDTH = true;
   /**
    * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)
    * where close/kill flows may not reliably fire unload-style events.
