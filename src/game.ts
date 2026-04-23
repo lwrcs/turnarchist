@@ -38,6 +38,7 @@ import { LockType } from "./tile/lockable";
 import { IdGenerator } from "./globalStateManager/IdGenerator";
 import { ReplayManager } from "./game/replayManager";
 import { PlayerAction } from "./player/playerAction";
+import { Inventory } from "./inventory/inventory";
 import { EnvType, getEnvTypeName } from "./constants/environmentTypes";
 import { Wall } from "./tile/wall";
 import { Floor } from "./tile/floor";
@@ -946,9 +947,13 @@ export class Game {
       this.alertGhosts = [];
       this.pointers = new Map();
       this.chatTextBox.setEnterCallback(() => {
-        if (this.chatTextBox.text.length > 0) {
-          this.chat.push(new ChatMessage(this.chatTextBox.text));
+        const text = this.chatTextBox.text;
+        if (text.length > 0) {
+          if (!GameConstants.DEVELOPER_MODE || !this.handleDevCommand(text)) {
+            this.chat.push(new ChatMessage(text));
+          }
           this.chatTextBox.clear();
+          this.chatOpen = false;
         } else {
           this.chatOpen = false;
         }
@@ -1792,21 +1797,6 @@ export class Game {
           this.chatTextBox.handleKeyPress(key);
           return;
 
-        case "1":
-          LevelGenerator.ANIMATION_CONSTANT = 1;
-          return;
-        case "2":
-          LevelGenerator.ANIMATION_CONSTANT = 2;
-          return;
-        case "3":
-          LevelGenerator.ANIMATION_CONSTANT = 5;
-          return;
-        case "4":
-          LevelGenerator.ANIMATION_CONSTANT = 10000;
-          return;
-        case "0":
-          LevelGenerator.ANIMATION_CONSTANT = 0;
-          return;
       }
 
       // Forward all player input
@@ -4596,6 +4586,15 @@ export class Game {
       this.lastPointerWidth = newPointerWidth;
     }
 
+    // Reflow inventory cols to match new screen width.
+    if (this.localPlayerID !== undefined && this.players?.[this.localPlayerID]) {
+      const inv = this.players[this.localPlayerID].inventory;
+      if (inv) {
+        const newCols = Inventory.computeCols(LevelConstants.SCREEN_W);
+        inv.reflowCols(newCols);
+      }
+    }
+
     // If photo mode is active, lock canvas back to photo dimensions after scale computation.
     if (this.photoMode) {
       this.applyPhotoModeResize();
@@ -5538,6 +5537,39 @@ export class Game {
     // Cleanup fully faded pointers
     for (const id of toDelete) this.pointers.delete(id);
   };
+
+  private handleDevCommand(text: string): boolean {
+    if (!text.startsWith("/")) return false;
+    const parts = text.slice(1).trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const GAMMA_STEP = 0.25;
+    const GAMMA_MIN = 0.25;
+    const GAMMA_MAX = 8;
+    const clampGamma = (v: number) => Math.max(GAMMA_MIN, Math.min(GAMMA_MAX, Math.round(v / GAMMA_STEP) * GAMMA_STEP));
+    switch (cmd) {
+      case "anim": {
+        const presets: Record<string, number> = { "0": 0, "1": 1, "2": 2, "3": 5, "4": 10000 };
+        const val = presets[parts[1]];
+        if (val !== undefined) {
+          LevelGenerator.ANIMATION_CONSTANT = val;
+          this.pushMessage(`Animation constant set to ${val}`);
+        }
+        return true;
+      }
+      case "gamma": {
+        const v = parseFloat(parts[1]);
+        if (!isNaN(v)) { GameConstants.SHADE_GAMMA = clampGamma(v); this.pushMessage(`Tile shade gamma: ${GameConstants.SHADE_GAMMA.toFixed(2)}`); }
+        return true;
+      }
+      case "gammasprites": {
+        const v = parseFloat(parts[1]);
+        if (!isNaN(v)) { GameConstants.SHADE_GAMMA_SPRITES = clampGamma(v); this.pushMessage(`Sprite shade gamma: ${GameConstants.SHADE_GAMMA_SPRITES.toFixed(2)}`); }
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
 
   private setupInitialPointers = () => {
     // Only for normal mode

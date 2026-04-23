@@ -1156,13 +1156,13 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     // Inventory: restore layout + set slots by index (supported kinds only).
     p.inventory.isOpen = ps.inventory.isOpen;
     p.inventory.cols = ps.inventory.cols;
-    p.inventory.rows = ps.inventory.rows;
+    // Setting expansion triggers the setter, which updates _expansionSlots and rows.
     p.inventory.expansion = ps.inventory.expansion;
     p.inventory.selX = ps.inventory.selX;
-    p.inventory.selY = ps.inventory.selY;
+    p.inventory.selY = Math.min(ps.inventory.selY, p.inventory.rows - 1);
     p.inventory.coins = ps.inventory.coins;
 
-    const total = (ps.inventory.rows + ps.inventory.expansion) * ps.inventory.cols;
+    const total = p.inventory.rows * ps.inventory.cols;
     p.inventory.items = new Array(total).fill(null);
     p.inventory.equipAnimAmount = new Array(total).fill(0);
 

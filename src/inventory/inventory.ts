@@ -27,6 +27,7 @@ import { ChestPlate } from "../item/chestPlate";
 import { statsTracker } from "../game/stats";
 import { computeXpCrystalXp } from "../game/skillBalance";
 import { XPPopup } from "../particle/xpPopup";
+import { LevelConstants } from "../level/levelConstants";
 
 // Inventory overlay transition timings (no size scaling; fade only).
 const INVENTORY_FADE_IN_MS = 160;
@@ -63,6 +64,10 @@ export class Inventory {
   equipAnimAmount: Array<number>;
   weapon: Weapon | null = null;
   private _expansion: number = GameConstants.DEVELOPER_MODE ? 3 : 0;
+  // Fixed slot count from expansion upgrades, independent of cols.
+  // Each expansion level grants EXPANSION_SLOTS_PER_LEVEL extra slots.
+  private _expansionSlots: number = 0;
+  private static readonly EXPANSION_SLOTS_PER_LEVEL = 5;
   grabbedItem: Item | null = null;
   private _mouseDownStartX: number | null = null;
   private _mouseDownStartY: number | null = null;
@@ -82,6 +87,7 @@ export class Inventory {
   private usingItem: Usable | null = null;
   private usingItemIndex: number | null = null;
   mostRecentInput: "mouse" | "keyboard" = "keyboard";
+  private _mouseOverPhantom: boolean = false;
   // Track initial press position so mobile can start dragging on movement threshold (not long-press).
   private dragStartMouseX: number | null = null;
   private dragStartMouseY: number | null = null;
@@ -91,10 +97,71 @@ export class Inventory {
   private buttonX: number;
   private initializedItems: boolean = false;
 
+  // Fixed number of usable inventory slots, independent of grid dimensions.
+  static readonly INVENTORY_CAPACITY = 25;
+
+  static computeCols(screenW: number): number {
+    if (GameConstants.INVENTORY_LOCK_COLS) return 5;
+    const continuous = Math.round(screenW / 3) + 1;
+    if (GameConstants.INVENTORY_SNAP_COLS) {
+      const snaps = [4, 6, 8];
+      return snaps.reduce((best, v) =>
+        Math.abs(v - continuous) < Math.abs(best - continuous) ? v : best
+      );
+    }
+    return Math.max(5, Math.min(9, continuous));
+  }
+
+  totalCapacity(): number {
+    return Inventory.INVENTORY_CAPACITY + this._expansionSlots;
+  }
+
+  // A slot is valid if its index falls within the fixed total capacity.
+  // Phantom slots occupy the remainder at the end of the last row (bottom-right).
+  isValidSlot(idx: number): boolean {
+    return idx < this.totalCapacity();
+  }
+
+  lastValidSlot(): number {
+    return this.totalCapacity() - 1;
+  }
+
+  reflowCols(newCols: number): void {
+    if (newCols === this.cols) return;
+
+    const capacity = this.totalCapacity();
+    const oldItems = this.items.slice();
+    const oldEquipAnim = this.equipAnimAmount.slice();
+
+    this.cols = newCols;
+    this.rows = Math.ceil(capacity / this.cols);
+
+    const newTotal = this.rows * this.cols;
+    this.items = new Array<Item | null>(newTotal).fill(null);
+    this.equipAnimAmount = new Array<number>(newTotal).fill(0);
+
+    // Flat-index preservation: item at position N in reading order stays at
+    // position N. This gives correct text-reflow wrapping and roundtrips
+    // perfectly — no overflow or scrambling.
+    for (let i = 0; i < capacity && i < oldItems.length; i++) {
+      this.items[i] = oldItems[i] ?? null;
+      this.equipAnimAmount[i] = oldEquipAnim[i] ?? 0;
+    }
+
+    this.selX = Math.min(this.selX, this.cols - 1);
+    this.selY = Math.min(this.selY, this.rows - 1);
+    this.overlayCanvas = null;
+  }
+
   constructor(game: Game, player: Player) {
     this.globalId = IdGenerator.generate("INV");
     this.game = game;
     this.player = player;
+
+    // Set grid dimensions before initializing the items array.
+    this.cols = Inventory.computeCols(LevelConstants.SCREEN_W);
+    this._expansionSlots = this._expansion * Inventory.EXPANSION_SLOTS_PER_LEVEL;
+    this.rows = Math.ceil(this.totalCapacity() / this.cols);
 
     this.buttonX =
       (Math.round(GameConstants.WIDTH / 2) + 3) / GameConstants.TILESIZE;
@@ -116,12 +183,8 @@ export class Inventory {
 
     Input.holdCallback = () => this.onHoldDetected();
 
-    this.items = new Array<Item | null>(
-      (this.rows + this._expansion) * this.cols,
-    ).fill(null);
-    this.equipAnimAmount = new Array<number>(
-      (this.rows + this._expansion) * this.cols,
-    ).fill(0);
+    this.items = new Array<Item | null>(this.rows * this.cols).fill(null);
+    this.equipAnimAmount = new Array<number>(this.rows * this.cols).fill(0);
     let a = (i: Item | null) => {
       if (i === null) return;
       if (i instanceof Equippable) {
@@ -245,27 +308,41 @@ export class Inventory {
     return this.overlayCanvasCtx;
   };
 
+  private clampSelToValid() {
+    const idx = this.selX + this.selY * this.cols;
+    if (!this.isValidSlot(idx)) {
+      const lastValid = this.lastValidSlot();
+      this.selX = lastValid % this.cols;
+      this.selY = Math.floor(lastValid / this.cols);
+    }
+    this._mouseOverPhantom = false;
+  }
+
   left = () => {
     if (this.selX > 0) {
       this.selX--;
+      this.clampSelToValid();
     }
   };
 
   right = () => {
     if (this.selX < this.cols - 1) {
       this.selX++;
+      this.clampSelToValid();
     }
   };
 
   up = () => {
     if (this.selY > 0) {
       this.selY--;
+      this.clampSelToValid();
     }
   };
 
   down = () => {
-    if (this.selY < this.rows + this._expansion - 1) {
+    if (this.selY < this.rows - 1) {
       this.selY++;
+      this.clampSelToValid();
     }
   };
 
@@ -394,26 +471,33 @@ export class Inventory {
       const oldSelX = this.selX;
       const oldSelY = this.selY;
 
-      this.selX = Math.max(
+      let candidateX = Math.max(
         0,
         Math.min(
           Math.floor((x - bounds.startX) / (s + 2 * b + g)),
           this.cols - 1,
         ),
       );
-      this.selY = this.isOpen
+      let candidateY = this.isOpen
         ? Math.max(
             0,
             Math.min(
               Math.floor((y - bounds.startY) / (s + 2 * b + g)),
-              this.rows + this._expansion - 1,
+              this.rows - 1,
             ),
           )
         : 0;
 
-      if (oldSelX !== this.selX || oldSelY !== this.selY) {
-        // Optional: Handle selection change
+      // Phantom cells behave like outside the inventory: no selection, no highlight.
+      if (!this.isValidSlot(candidateX + candidateY * this.cols)) {
+        this._mouseOverPhantom = true;
+      } else {
+        this._mouseOverPhantom = false;
+        this.selX = candidateX;
+        this.selY = candidateY;
       }
+    } else {
+      this._mouseOverPhantom = false;
     }
 
     // Mobile: initiate dragging by moving past a threshold after touching a slot.
@@ -640,10 +724,10 @@ export class Inventory {
   };
 
   isFull = (): boolean => {
-    return (
-      this.items.filter((i) => i !== null).length >=
-      (this.rows + this._expansion) * this.cols
-    );
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.isValidSlot(i) && this.items[i] === null) return false;
+    }
+    return true;
   };
 
   addItem = (item: Item | null, stackCount: number | null = null): boolean => {
@@ -673,6 +757,7 @@ export class Inventory {
         item.stackCount = stackCount;
       }
       for (let i = 0; i < this.items.length; i++) {
+        if (!this.isValidSlot(i)) continue;
         if (
           this.items[i] !== null &&
           this.items[i]!.constructor === item.constructor
@@ -688,6 +773,7 @@ export class Inventory {
       .every((it) => it !== null);
     if (!this.isFull()) {
       for (let i = 0; i < this.items.length; i++) {
+        if (!this.isValidSlot(i)) continue;
         if (this.items[i] === null) {
           this.items[i] = item;
           // If quickbar was already full before this insertion and we're past startup,
@@ -925,7 +1011,7 @@ export class Inventory {
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
     const ob = 1; // outer border
     const width = this.cols * (s + 2 * b + g) - g;
-    const height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
+    const height = (this.rows) * (s + 2 * b + g) - g;
 
     const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
     const startY = this.isOpen
@@ -1164,7 +1250,7 @@ export class Inventory {
     const b = 2; // border
     const g = -2; // gap
     const hg = 1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5); // highlighted growth
-    const invRows = Math.floor(this.rows + this._expansion);
+    const invRows = Math.floor(this.rows);
     const ob = 1; // outer border
     const width = Math.floor(this.cols * (s + 2 * b + g) - g);
     const height = Math.floor(invRows * (s + 2 * b + g) - g);
@@ -1210,20 +1296,15 @@ export class Inventory {
       const hg = Math.floor(
         1 + Math.round(0.5 * Math.sin(Date.now() * 0.01) + 0.5),
       ); // highlighted growth
-      const invRows = this.rows + this._expansion;
+      const invRows = this.rows;
       const ob = 1; // outer border
       const width = Math.floor(this.cols * (s + 2 * b + g) - g);
       const height = Math.floor(invRows * (s + 2 * b + g) - g);
 
-      // Draw main inventory background (similar to drawQuickbar)
-      Game.ctx.fillStyle = FULL_OUTLINE;
-      const mainBgX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width) - ob;
-      const mainBgY =
-        Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height) - ob;
-      Game.ctx.fillRect(mainBgX, mainBgY, width + 2 * ob, height + 2 * ob);
-
-      // Draw highlighted background for selected item only if mouse is in bounds
-      if (isInBounds || this.mostRecentInput === "keyboard") {
+      // Draw selection highlight first so per-slot white backgrounds render on top of it,
+      // leaving only the hg-pixel growth visible as the highlight border.
+      if ((isInBounds && !this._mouseOverPhantom) || this.mostRecentInput === "keyboard") {
+        Game.ctx.fillStyle = FULL_OUTLINE;
         const highlightX =
           Math.round(
             0.5 * GameConstants.WIDTH -
@@ -1249,30 +1330,46 @@ export class Inventory {
         );
       }
 
-      // Draw individual inventory slots (similar to drawQuickbar, but for all rows)
+      // Pass 1: white outer border for every valid slot, so all whites sit behind
+      // all slot outlines (phantom cells get nothing).
+      Game.ctx.fillStyle = FULL_OUTLINE;
       for (let xIdx = 0; xIdx < this.cols; xIdx++) {
-        for (let yIdx = 0; yIdx < this.rows + this._expansion; yIdx++) {
-          // Draw slot outline
+        for (let yIdx = 0; yIdx < this.rows; yIdx++) {
+          const idx = xIdx + yIdx * this.cols;
+          if (!this.isValidSlot(idx)) continue;
           const slotX = Math.round(
             0.5 * GameConstants.WIDTH - 0.5 * width + xIdx * (s + 2 * b + g),
           );
           const slotY = Math.round(
             0.5 * GameConstants.HEIGHT - 0.5 * height + yIdx * (s + 2 * b + g),
           );
+          Game.ctx.fillRect(slotX - ob, slotY - ob, s + 2 * b + 2 * ob, s + 2 * b + 2 * ob);
+        }
+      }
+
+      // Pass 2: slot outlines, fills, equip animations, and item icons.
+      for (let xIdx = 0; xIdx < this.cols; xIdx++) {
+        for (let yIdx = 0; yIdx < this.rows; yIdx++) {
+          const idx = xIdx + yIdx * this.cols;
+          if (!this.isValidSlot(idx)) continue;
+
+          const slotX = Math.round(
+            0.5 * GameConstants.WIDTH - 0.5 * width + xIdx * (s + 2 * b + g),
+          );
+          const slotY = Math.round(
+            0.5 * GameConstants.HEIGHT - 0.5 * height + yIdx * (s + 2 * b + g),
+          );
+
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(slotX, slotY, s + 2 * b, s + 2 * b);
 
-          // Draw slot background
           Game.ctx.fillStyle = FILL_COLOR;
           Game.ctx.fillRect(slotX + b, slotY + b, s, s);
 
-          // Draw equip animation (unique to full inventory view)
-          const idx = xIdx + yIdx * this.cols;
           Game.ctx.fillStyle = EQUIP_COLOR;
           const yOff = Math.round(s * (1 - this.equipAnimAmount[idx]));
           Game.ctx.fillRect(slotX + b, slotY + b + yOff, s, s - yOff);
 
-          // Draw item icon if exists
           if (idx < this.items.length && this.items[idx] !== null) {
             const drawX = Math.round(
               0.5 * GameConstants.WIDTH -
@@ -1290,10 +1387,7 @@ export class Inventory {
                 Math.floor(0.5 * s) -
                 0.5 * GameConstants.TILESIZE,
             );
-            const drawXScaled = drawX / GameConstants.TILESIZE;
-            const drawYScaled = drawY / GameConstants.TILESIZE;
-
-            this.items[idx]?.drawIcon(delta, drawXScaled, drawYScaled);
+            this.items[idx]?.drawIcon(delta, drawX / GameConstants.TILESIZE, drawY / GameConstants.TILESIZE);
           }
         }
       }
@@ -1302,6 +1396,7 @@ export class Inventory {
       {
         this.items.forEach((item, idx) => {
           if (item === null) return;
+          if (!this.isValidSlot(idx)) return;
           const x = idx % this.cols;
           const y = Math.floor(idx / this.cols);
 
@@ -1329,7 +1424,7 @@ export class Inventory {
         });
 
         // Draw selection box and related elements only if mouse is in bounds
-        if (isInBounds || this.mostRecentInput === "keyboard") {
+        if ((isInBounds && !this._mouseOverPhantom) || this.mostRecentInput === "keyboard") {
           // Draw selection box
           Game.ctx.fillStyle = OUTLINE_COLOR;
           Game.ctx.fillRect(
@@ -1506,7 +1601,7 @@ export class Inventory {
 
     if (this.isOpen) {
       // Full inventory bounds
-      height = (this.rows + this._expansion) * (s + 2 * b + g) - g;
+      height = (this.rows) * (s + 2 * b + g) - g;
       startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
       startY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height);
     } else {
@@ -1564,8 +1659,9 @@ export class Inventory {
     const col = Math.floor((x - bounds.startX) / stride);
     const row = Math.floor((y - bounds.startY) / stride);
     if (col < 0 || col >= this.cols) return null;
-    if (row < 0 || row >= this.rows + this._expansion) return null;
+    if (row < 0 || row >= this.rows) return null;
     const idx = col + row * this.cols;
+    if (!this.isValidSlot(idx)) return null;
     return idx >= 0 && idx < this.items.length ? idx : null;
   };
 
@@ -1743,7 +1839,7 @@ export class Inventory {
     const invBounds = this.isPointInInventoryBounds(x, y);
     const quickbarBounds = this.isPointInQuickbarBounds(x, y);
     const isValidDropZone = this.isOpen
-      ? invBounds.inBounds
+      ? invBounds.inBounds && !this._mouseOverPhantom
       : quickbarBounds.inBounds;
 
     if (isValidDropZone) {
@@ -1807,19 +1903,18 @@ export class Inventory {
 
   set expansion(value: number) {
     if (value !== this._expansion) {
-      const oldTotalSlots = (this.rows + this._expansion) * this.cols;
+      const oldTotal = this.rows * this.cols;
       this._expansion = value;
-      const newTotalSlots = (this.rows + this._expansion) * this.cols;
+      this._expansionSlots = value * Inventory.EXPANSION_SLOTS_PER_LEVEL;
+      this.rows = Math.ceil(this.totalCapacity() / this.cols);
+      const newTotal = this.rows * this.cols;
 
-      // Resize items array
-      if (newTotalSlots > oldTotalSlots) {
-        this.items.push(...Array(newTotalSlots - oldTotalSlots).fill(null));
-        this.equipAnimAmount.push(
-          ...Array(newTotalSlots - oldTotalSlots).fill(0),
-        );
-      } else if (newTotalSlots < oldTotalSlots) {
-        this.items.length = newTotalSlots;
-        this.equipAnimAmount.length = newTotalSlots;
+      if (newTotal > oldTotal) {
+        this.items.push(...Array(newTotal - oldTotal).fill(null));
+        this.equipAnimAmount.push(...Array(newTotal - oldTotal).fill(0));
+      } else if (newTotal < oldTotal) {
+        this.items.length = newTotal;
+        this.equipAnimAmount.length = newTotal;
       }
     }
   }

@@ -27,6 +27,7 @@ export enum InputEnum {
   NUMBER_7,
   NUMBER_8,
   NUMBER_9,
+  NUMBER_0,
   MINUS,
   EQUALS,
   ESCAPE,
@@ -133,6 +134,7 @@ export const Input = {
   NUMBER_7: "Digit7",
   NUMBER_8: "Digit8",
   NUMBER_9: "Digit9",
+  NUMBER_0: "Digit0",
   COMMA: "Comma",
   PERIOD: "Period",
   MINUS: "Minus",
@@ -219,6 +221,9 @@ export const Input = {
       case Input.NUMBER_8:
       case Input.NUMBER_9:
         Input.numKeyListener(parseInt(event.code.slice(-1)));
+        break;
+      case Input.NUMBER_0:
+        Input.numKeyListener(10);
         break;
       case Input.EQUALS:
         Input.equalsListener();

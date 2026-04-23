@@ -68,6 +68,8 @@ import { BluePotion } from "../item/usable/bluePotion";
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.2"; //"v0.6.3";
   static DEVELOPER_MODE = false;
+  static INVENTORY_SNAP_COLS = false;
+  static INVENTORY_LOCK_COLS = true;
   /**
    * Periodic autosave interval. This is a fallback for platforms (notably iOS Safari / standalone)
    * where close/kill flows may not reliably fire unload-style events.

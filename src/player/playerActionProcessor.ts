@@ -54,15 +54,14 @@ export class PlayerActionProcessor {
         this.player.inventory.drop();
         break;
 
-      case "InventorySelect":
-        // Map quickbar selection 0..4 to selX and trigger use
-        this.player.inventory.selX = Math.max(
-          0,
-          Math.min(action.index, this.player.inventory.cols - 1),
-        );
-        this.player.inventory.selY = 0;
-        this.player.inventory.spaceQuickbar();
+      case "InventorySelect": {
+        const inv = this.player.inventory;
+        const idx = Math.max(0, Math.min(action.index, inv.totalCapacity() - 1));
+        inv.selX = idx % inv.cols;
+        inv.selY = Math.floor(idx / inv.cols);
+        inv.spaceQuickbar();
         break;
+      }
       case "InventoryMove": {
         const from = Math.max(
           0,
