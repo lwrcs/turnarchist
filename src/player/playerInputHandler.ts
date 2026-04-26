@@ -616,7 +616,10 @@ export class PlayerInputHandler {
             ? player.getRoom()
             : player.game.room;
 
-          items.push({
+          const playerTileFree = !itemRoom?.entities.some(
+            (e) => !e.dead && e.x === player.x && e.y === player.y,
+          );
+          if (playerTileFree) items.push({
             label: "Place",
             targetName,
             onClick: () => {
@@ -1010,6 +1013,60 @@ export class PlayerInputHandler {
                   : dy < 0 ? Direction.UP
                   : Direction.DOWN,
                 );
+                room.entities.push(placed);
+                room.updateLighting();
+                if (candle.stackCount > 1) {
+                  candle.stackCount--;
+                } else {
+                  if (candle.equipped) candle.toggleEquip();
+                  inv.removeItem(candle);
+                }
+              },
+            });
+          }
+        }
+      }
+    }
+
+    // Floor placement: right-clicking a floor tile on or orthogonal to the player
+    if (room && t.x !== undefined && t.y !== undefined) {
+      const dist = Math.abs(t.x - player.x) + Math.abs(t.y - player.y);
+      const tile = room.getTile(t.x, t.y);
+      const isFloor = tile && !tile.isSolid();
+      if (isFloor && dist <= 1) {
+        const tileHasEntity = room.entities.some(
+          (e) => !e.dead && e.x === t.x && e.y === t.y,
+        );
+        if (!tileHasEntity) {
+          const torchIdx = inv.items.findIndex((it) => it instanceof Torch);
+          const candleIdx = inv.items.findIndex((it) => it instanceof Candle);
+
+          if (torchIdx !== -1) {
+            items.push({
+              label: "Place torch",
+              onClick: () => {
+                const torch = inv.items[torchIdx] as Torch;
+                const placed = new PlacedTorch(room, player.game, t.x, t.y, torch.fuel);
+                placed.applyFloorPlacement();
+                room.entities.push(placed);
+                room.updateLighting();
+                if (torch.stackCount > 1) {
+                  torch.stackCount--;
+                } else {
+                  if (torch.equipped) torch.toggleEquip();
+                  inv.removeItem(torch);
+                }
+              },
+            });
+          }
+
+          if (candleIdx !== -1) {
+            items.push({
+              label: "Place candle",
+              onClick: () => {
+                const candle = inv.items[candleIdx] as Candle;
+                const placed = new PlacedCandle(room, player.game, t.x, t.y, candle.fuel);
+                placed.applyFloorPlacement();
                 room.entities.push(placed);
                 room.updateLighting();
                 if (candle.stackCount > 1) {
