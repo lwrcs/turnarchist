@@ -67,6 +67,13 @@ export class TombStone extends Entity {
     return EntityType.PROP;
   }
 
+  clone(): Entity {
+    const c = super.clone() as TombStone;
+    c.skinType = this.skinType;
+    c.tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
+    return c;
+  }
+
   uniqueKillBehavior = () => {
     if (this.cloned) return;
     Sound.delayPlay(Sound.breakRock, 50);
@@ -108,7 +115,7 @@ export class TombStone extends Entity {
     Game.ctx.save();
     Game.ctx.globalAlpha = this.alpha;
     //if (!this.dead || !this.cloned) {{}
-    const tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
+    const tileX = this.cloned ? this.tileX : (this.health <= 1 ? 13 + this.skinType : 11 + this.skinType);
     Game.drawObj(
       tileX,
       this.tileY,

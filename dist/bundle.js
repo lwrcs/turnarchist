@@ -25301,7 +25301,7 @@ class TombStone extends entity_1.Entity {
             game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = this.alpha;
             //if (!this.dead || !this.cloned) {{}
-            const tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
+            const tileX = this.cloned ? this.tileX : (this.health <= 1 ? 13 + this.skinType : 11 + this.skinType);
             game_1.Game.drawObj(tileX, this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.room.shadeColor, this.shadeAmount());
             game_1.Game.ctx.restore();
         };
@@ -25340,6 +25340,12 @@ class TombStone extends entity_1.Entity {
     }
     get type() {
         return entity_2.EntityType.PROP;
+    }
+    clone() {
+        const c = super.clone();
+        c.skinType = this.skinType;
+        c.tileX = this.health <= 1 ? 13 + this.skinType : 11 + this.skinType;
+        return c;
     }
 }
 exports.TombStone = TombStone;
