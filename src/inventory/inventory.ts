@@ -1196,11 +1196,12 @@ export class Inventory {
     b: number,
     g: number,
     contextCols: number = this.cols,
+    contextRows: number = 1,
   ) => {
     // Highlight the usingItem's slot if in using state and it's different from current selection
     Game.ctx.globalCompositeOperation = "source-over";
     if (this.usingItem && this.usingItemIndex !== null) {
-      if (this.usingItemIndex >= contextCols) return; // item not visible in this context
+      if (this.usingItemIndex >= contextCols * contextRows) return; // item not visible in this context
       const usingX = this.usingItemIndex % contextCols;
       const usingY = Math.floor(this.usingItemIndex / contextCols);
       const highlightStartX = startX + usingX * (s + 2 * b + g);
@@ -1562,7 +1563,7 @@ export class Inventory {
         }
       }
       // Overlay-only highlights + dragged item.
-      this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
+      this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g, this.cols, this.rows);
 
       // Finish offscreen render and composite to the main canvas with a single alpha.
       Game.ctx.restore();

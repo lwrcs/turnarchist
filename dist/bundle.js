@@ -51775,11 +51775,11 @@ class Inventory {
             }
             this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
         };
-        this.drawUsingItem = (delta, startX, startY, s, b, g, contextCols = this.cols) => {
+        this.drawUsingItem = (delta, startX, startY, s, b, g, contextCols = this.cols, contextRows = 1) => {
             // Highlight the usingItem's slot if in using state and it's different from current selection
             game_1.Game.ctx.globalCompositeOperation = "source-over";
             if (this.usingItem && this.usingItemIndex !== null) {
-                if (this.usingItemIndex >= contextCols)
+                if (this.usingItemIndex >= contextCols * contextRows)
                     return; // item not visible in this context
                 const usingX = this.usingItemIndex % contextCols;
                 const usingY = Math.floor(this.usingItemIndex / contextCols);
@@ -52040,7 +52040,7 @@ class Inventory {
                     }
                 }
                 // Overlay-only highlights + dragged item.
-                this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g);
+                this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g, this.cols, this.rows);
                 // Finish offscreen render and composite to the main canvas with a single alpha.
                 game_1.Game.ctx.restore();
                 game_1.Game.ctx = prevCtx;
