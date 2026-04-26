@@ -4124,6 +4124,10 @@ export class Game {
           item,
         };
       }
+      if (kind === "placed_torch")
+        return { ...base, kind: "placed_torch", fuel: 500 };
+      if (kind === "placed_candle")
+        return { ...base, kind: "placed_candle", fuel: 100 };
 
       return {
         ...base,

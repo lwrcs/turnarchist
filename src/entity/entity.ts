@@ -202,6 +202,7 @@ export class Entity extends Drawable {
   bloomAlpha: number = 1;
   softBloomAlpha: number = 1;
   bloomSize: number = 1;
+  bloomOffsetX: number = 0;
   bloomOffsetY: number = 0;
   target: { x: number; y: number };
   moving: boolean;
@@ -413,6 +414,7 @@ export class Entity extends Drawable {
       bloomAlpha: 0,
       softBloomAlpha: original.softBloomAlpha,
       bloomSize: original.bloomSize,
+      bloomOffsetX: original.bloomOffsetX,
       bloomOffsetY: original.bloomOffsetY,
       dyingFrame: 30,
       // Preserve "pushed" easing state so if an entity is pushed and dies from damage
@@ -1260,14 +1262,30 @@ export class Entity extends Drawable {
         }
       }
 
-      // If no valid candidate tiles found, fall back to origin if it's valid
-      if (
-        candidates.length === 0 &&
-        this.room.roomArray[coordX] &&
-        this.room.roomArray[coordX][coordY] &&
-        !this.room.roomArray[coordX][coordY].isSolid()
-      ) {
-        candidates.push({ x: coordX, y: coordY });
+      // If all footprint tiles are solid, BFS outward to find the nearest open tile
+      if (candidates.length === 0) {
+        const visited = new Set<string>();
+        const queue: Array<{ x: number; y: number; dist: number }> = [
+          { x: coordX, y: coordY, dist: 0 },
+        ];
+        visited.add(`${coordX},${coordY}`);
+        const MAX_DIST = 8;
+        outer: while (queue.length > 0) {
+          const { x, y, dist } = queue.shift()!;
+          if (this.room.roomArray[x]?.[y] && !this.room.roomArray[x][y].isSolid()) {
+            candidates.push({ x, y });
+            break outer;
+          }
+          if (dist < MAX_DIST) {
+            for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+              const key = `${nx},${ny}`;
+              if (!visited.has(key) && this.room.roomArray[nx]?.[ny] !== undefined) {
+                visited.add(key);
+                queue.push({ x: nx, y: ny, dist: dist + 1 });
+              }
+            }
+          }
+        }
       }
 
       const used = new Set<string>();

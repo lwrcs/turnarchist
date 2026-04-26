@@ -180,6 +180,8 @@ const ENEMY_KINDS = [
   "rock_resource",
   "cave_rock_resource",
   "obsidian_resource",
+  "placed_torch",
+  "placed_candle",
 ] as const satisfies readonly EnemyKind[];
 
 const ITEM_KINDS = [
@@ -1866,6 +1868,26 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
       skipNextTurns,
       buffed,
       buffedBefore,
+    });
+  }
+
+  if (kind === "placed_torch" || kind === "placed_candle") {
+    const fuelU = get(v, "fuel");
+    if (!isNumber(fuelU))
+      return err({ kind: "InvalidSchema", message: "fuel must be number", path: `${path}.fuel` });
+    const wallMountedU = get(v, "wallMounted");
+    return ok({
+      kind,
+      gid: gidR.value,
+      roomGid: roomGidR.value,
+      x,
+      y,
+      direction: dirR.value,
+      health,
+      maxHealth,
+      dead,
+      fuel: fuelU,
+      wallMounted: typeof wallMountedU === "boolean" ? wallMountedU : undefined,
     });
   }
 

@@ -63,6 +63,7 @@ export class Item extends Drawable {
   protected animT: number = 0;
   protected animStartDistance: number = null;
   groundedNoAnimate: boolean = false;
+  forceAnimateToInventory: boolean = false;
   player: Player;
   // Constructor for the Item class
   constructor(level: Room, x: number, y: number, z: number = 0) {
@@ -116,6 +117,7 @@ export class Item extends Drawable {
 
   get animateToInventory() {
     if (this.groundedNoAnimate) return false;
+    if (this.forceAnimateToInventory) return true;
     return GameConstants.AUTO_PICKUP_ITEMS.includes(
       this.constructor as new (...args: any[]) => Item,
     );

@@ -3599,7 +3599,8 @@ export class Room {
 
         this.bloomOffscreenCtx.fillRect(
           (e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-            GameConstants.TILESIZE,
+            GameConstants.TILESIZE +
+            e.bloomOffsetX,
           (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
             GameConstants.TILESIZE +
             e.bloomOffsetY,

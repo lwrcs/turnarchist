@@ -11,6 +11,12 @@ import { Equippable } from "../item/equippable";
 import { Usable } from "../item/usable/usable";
 import { Weapon } from "../item/weapon/weapon";
 import { XPCounter } from "../gui/xpCounter";
+import { Wall } from "../tile/wall";
+import { WallTorch } from "../tile/wallTorch";
+import { Torch } from "../item/light/torch";
+import { Candle } from "../item/light/candle";
+import { PlacedTorch } from "../entity/object/placedTorch";
+import { PlacedCandle } from "../entity/object/placedCandle";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -604,6 +610,96 @@ export class PlayerInputHandler {
 
         const examine = formatExamine(item.examineText?.() ?? "");
 
+        // Torch / candle: "Place" and "Place on wall"
+        if (item instanceof Torch || item instanceof Candle) {
+          const itemRoom = player.getRoom
+            ? player.getRoom()
+            : player.game.room;
+
+          items.push({
+            label: "Place",
+            targetName,
+            onClick: () => {
+              if (!itemRoom) return;
+              const fuel = (item as Torch).fuel;
+              let placed: PlacedTorch | PlacedCandle;
+              if (item instanceof Torch) {
+                placed = new PlacedTorch(itemRoom, player.game, player.x, player.y, fuel);
+              } else {
+                placed = new PlacedCandle(itemRoom, player.game, player.x, player.y, fuel);
+              }
+              placed.applyFloorPlacement();
+              itemRoom.entities.push(placed);
+              itemRoom.updateLighting();
+              if (item.stackCount > 1) {
+                item.stackCount--;
+              } else {
+                if (item.equipped) item.toggleEquip();
+                inv.removeItem(item);
+              }
+            },
+          });
+          const adjacent: Array<{ x: number; y: number; dir: Direction }> = [
+            { x: player.x - 1, y: player.y, dir: Direction.LEFT },
+            { x: player.x + 1, y: player.y, dir: Direction.RIGHT },
+            { x: player.x, y: player.y - 1, dir: Direction.UP },
+            { x: player.x, y: player.y + 1, dir: Direction.DOWN },
+          ];
+          const freeWalls = adjacent.filter(({ x, y }) => {
+            if (!itemRoom) return false;
+            const tile = itemRoom.getTile(x, y);
+            if (!(tile instanceof Wall || tile instanceof WallTorch))
+              return false;
+            return !itemRoom.entities.some(
+              (e) => !e.dead && e.x === x && e.y === y,
+            );
+          });
+
+          if (freeWalls.length > 0) {
+            items.push({
+              label: "Place on wall",
+              targetName,
+              onClick: () => {
+                if (!itemRoom) return;
+                const preferred = freeWalls.find(
+                  (w) => w.dir === player.direction,
+                );
+                const target =
+                  preferred ??
+                  freeWalls[Math.floor(Math.random() * freeWalls.length)];
+                const fuel = (item as Torch).fuel;
+                let placed: PlacedTorch | PlacedCandle;
+                if (item instanceof Torch) {
+                  placed = new PlacedTorch(
+                    itemRoom,
+                    player.game,
+                    target.x,
+                    target.y,
+                    fuel,
+                  );
+                } else {
+                  placed = new PlacedCandle(
+                    itemRoom,
+                    player.game,
+                    target.x,
+                    target.y,
+                    fuel,
+                  );
+                }
+                placed.applyWallDirection(target.dir);
+                itemRoom.entities.push(placed);
+                itemRoom.updateLighting();
+                if (item.stackCount > 1) {
+                  item.stackCount--;
+                } else {
+                  if (item.equipped) item.toggleEquip();
+                  inv.removeItem(item);
+                }
+              },
+            });
+          }
+        }
+
         // Drop goes near the bottom. "Examine" is always right before "Cancel".
         items.push({
           label: "Drop",
@@ -845,6 +941,86 @@ export class PlayerInputHandler {
               player.game.pushMessage(ex);
             },
           });
+        }
+      }
+    }
+
+    // Wall placement: right-clicking a wall adjacent to the player while holding
+    // a torch or candle offers to place it on the player's floor tile.
+    if (room && t.x !== undefined && t.y !== undefined) {
+      const tile = room.getTile(t.x, t.y);
+      const isWall = tile instanceof Wall || tile instanceof WallTorch;
+      if (isWall && player.canPickupAt(t.x, t.y)) {
+        const tileHasEntity = room.entities.some(
+          (e) => !e.dead && e.x === t.x && e.y === t.y,
+        );
+        if (!tileHasEntity) {
+          const torchIdx = inv.items.findIndex((it) => it instanceof Torch);
+          const candleIdx = inv.items.findIndex((it) => it instanceof Candle);
+
+          if (torchIdx !== -1) {
+            items.push({
+              label: "Place torch",
+              onClick: () => {
+                const torch = inv.items[torchIdx] as Torch;
+                const placed = new PlacedTorch(
+                  room,
+                  player.game,
+                  t.x,
+                  t.y,
+                  torch.fuel,
+                );
+                const dx = t.x - player.x;
+                const dy = t.y - player.y;
+                placed.applyWallDirection(
+                  dx < 0 ? Direction.LEFT
+                  : dx > 0 ? Direction.RIGHT
+                  : dy < 0 ? Direction.UP
+                  : Direction.DOWN,
+                );
+                room.entities.push(placed);
+                room.updateLighting();
+                if (torch.stackCount > 1) {
+                  torch.stackCount--;
+                } else {
+                  if (torch.equipped) torch.toggleEquip();
+                  inv.removeItem(torch);
+                }
+              },
+            });
+          }
+
+          if (candleIdx !== -1) {
+            items.push({
+              label: "Place candle",
+              onClick: () => {
+                const candle = inv.items[candleIdx] as Candle;
+                const placed = new PlacedCandle(
+                  room,
+                  player.game,
+                  t.x,
+                  t.y,
+                  candle.fuel,
+                );
+                const dx = t.x - player.x;
+                const dy = t.y - player.y;
+                placed.applyWallDirection(
+                  dx < 0 ? Direction.LEFT
+                  : dx > 0 ? Direction.RIGHT
+                  : dy < 0 ? Direction.UP
+                  : Direction.DOWN,
+                );
+                room.entities.push(placed);
+                room.updateLighting();
+                if (candle.stackCount > 1) {
+                  candle.stackCount--;
+                } else {
+                  if (candle.equipped) candle.toggleEquip();
+                  inv.removeItem(candle);
+                }
+              },
+            });
+          }
         }
       }
     }

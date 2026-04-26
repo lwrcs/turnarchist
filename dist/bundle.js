@@ -9577,7 +9577,7 @@ module.exports = __webpack_require__.p + "assets/font.87527e9249dc5d78475e.png";
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/fxset.ff9eae9e39cfb5f243a3.png";
+module.exports = __webpack_require__.p + "assets/fxset.316c4c9ba8ef430d3d54.png";
 
 /***/ }),
 
@@ -9610,7 +9610,7 @@ module.exports = __webpack_require__.p + "assets/mobset.8c75bd9ce9500d7407b1.png
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/objset.e7b4711bbcdec26369ac.png";
+module.exports = __webpack_require__.p + "assets/objset.2f8e4a23161f8dc3dcf2.png";
 
 /***/ }),
 
@@ -20973,6 +20973,7 @@ class Entity extends drawable_1.Drawable {
         this.bloomAlpha = 1;
         this.softBloomAlpha = 1;
         this.bloomSize = 1;
+        this.bloomOffsetX = 0;
         this.bloomOffsetY = 0;
         this.opaque = false;
         this.opacity = 0;
@@ -21597,12 +21598,30 @@ class Entity extends drawable_1.Drawable {
                         }
                     }
                 }
-                // If no valid candidate tiles found, fall back to origin if it's valid
-                if (candidates.length === 0 &&
-                    this.room.roomArray[coordX] &&
-                    this.room.roomArray[coordX][coordY] &&
-                    !this.room.roomArray[coordX][coordY].isSolid()) {
-                    candidates.push({ x: coordX, y: coordY });
+                // If all footprint tiles are solid, BFS outward to find the nearest open tile
+                if (candidates.length === 0) {
+                    const visited = new Set();
+                    const queue = [
+                        { x: coordX, y: coordY, dist: 0 },
+                    ];
+                    visited.add(`${coordX},${coordY}`);
+                    const MAX_DIST = 8;
+                    outer: while (queue.length > 0) {
+                        const { x, y, dist } = queue.shift();
+                        if (this.room.roomArray[x]?.[y] && !this.room.roomArray[x][y].isSolid()) {
+                            candidates.push({ x, y });
+                            break outer;
+                        }
+                        if (dist < MAX_DIST) {
+                            for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+                                const key = `${nx},${ny}`;
+                                if (!visited.has(key) && this.room.roomArray[nx]?.[ny] !== undefined) {
+                                    visited.add(key);
+                                    queue.push({ x: nx, y: ny, dist: dist + 1 });
+                                }
+                            }
+                        }
+                    }
                 }
                 const used = new Set();
                 // Choose a random starting tile among candidates, then place subsequent drops on the next tiles
@@ -22524,6 +22543,7 @@ class Entity extends drawable_1.Drawable {
             bloomAlpha: 0,
             softBloomAlpha: original.softBloomAlpha,
             bloomSize: original.bloomSize,
+            bloomOffsetX: original.bloomOffsetX,
             bloomOffsetY: original.bloomOffsetY,
             dyingFrame: 30,
             // Preserve "pushed" easing state so if an entity is pushed and dies from damage
@@ -24278,6 +24298,425 @@ class PawnStatue extends entity_1.Entity {
     }
 }
 exports.PawnStatue = PawnStatue;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/placedCandle.ts":
+/*!*******************************************!*\
+  !*** ./src/entity/object/placedCandle.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlacedCandle = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const levelConstants_1 = __webpack_require__(/*! ../../level/levelConstants */ "./src/level/levelConstants.ts");
+const candle_1 = __webpack_require__(/*! ../../item/light/candle */ "./src/item/light/candle.ts");
+class PlacedCandle extends entity_1.Entity {
+    constructor(room, game, x, y, fuel = 100) {
+        super(room, game, x, y);
+        this.wallMounted = true;
+        this.dropLoot = () => {
+            if (this.lootDropped)
+                return;
+            this.lootDropped = true;
+            const drop = this.drops[0];
+            if (!drop)
+                return;
+            drop.level = this.room;
+            drop.z = this.z ?? 0;
+            const localPlayer = this.game?.players?.[this.game.localPlayerID];
+            if (localPlayer?.inventory?.canPickup(drop)) {
+                drop.x = this.x;
+                drop.y = this.y;
+                drop.forceAnimateToInventory = true;
+                this.room.items.push(drop);
+                drop.onDrop();
+                drop.autoPickup();
+            }
+            else {
+                const visited = new Set();
+                const queue = [
+                    { x: this.x, y: this.y, dist: 0 },
+                ];
+                visited.add(`${this.x},${this.y}`);
+                let dropX = this.x;
+                let dropY = this.y;
+                outer: while (queue.length > 0) {
+                    const { x, y, dist } = queue.shift();
+                    if (this.room.roomArray[x]?.[y] &&
+                        !this.room.roomArray[x][y].isSolid()) {
+                        dropX = x;
+                        dropY = y;
+                        break outer;
+                    }
+                    if (dist < 8) {
+                        for (const [nx, ny] of [
+                            [x - 1, y],
+                            [x + 1, y],
+                            [x, y - 1],
+                            [x, y + 1],
+                        ]) {
+                            const key = `${nx},${ny}`;
+                            if (!visited.has(key) &&
+                                this.room.roomArray[nx]?.[ny] !== undefined) {
+                                visited.add(key);
+                                queue.push({ x: nx, y: ny, dist: dist + 1 });
+                            }
+                        }
+                    }
+                }
+                drop.x = dropX;
+                drop.y = dropY;
+                this.room.items.push(drop);
+                drop.onDrop();
+            }
+        };
+        this.examineText = () => "A candle fixed to the wall. Hit it to pick it back up.";
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.frame += 0.3 * delta;
+            if (this.frame >= 12)
+                this.frame = 0;
+            this.updateDrawXY(delta);
+            const baseX = this.x - this.drawX;
+            const baseY = this.y - this.drawYOffset - this.drawY;
+            // Per-direction sprite and fire fine-tuning
+            let spriteX;
+            let spriteY;
+            let fireOffX;
+            let fireOffY;
+            let torchYOffset = 0;
+            if (this.direction === game_1.Direction.LEFT) {
+                spriteX = 1;
+                spriteY = 11;
+                fireOffX = -4 / 16;
+                fireOffY = 5 / 16;
+                torchYOffset = -3 / 16;
+            }
+            else if (this.direction === game_1.Direction.RIGHT) {
+                spriteX = 2;
+                spriteY = 11;
+                fireOffX = 5 / 16;
+                fireOffY = 5 / 16;
+                torchYOffset = -3 / 16;
+            }
+            else if (this.direction === game_1.Direction.DOWN) {
+                spriteX = 0;
+                spriteY = 11;
+                fireOffX = 0;
+                fireOffY = -3 / 16;
+                torchYOffset = 3 / 16;
+            }
+            else {
+                spriteX = 0;
+                spriteY = 11;
+                fireOffX = 0;
+                fireOffY = 13 / 16;
+                torchYOffset = -13 / 16;
+            }
+            // Wall-direction offset: shifts the whole visual toward the room interior
+            let drawOffX = 0;
+            let drawOffY = 0;
+            if (this.wallMounted) {
+                if (this.direction === game_1.Direction.LEFT)
+                    drawOffX = 1;
+                else if (this.direction === game_1.Direction.RIGHT)
+                    drawOffX = -1;
+                else if (this.direction === game_1.Direction.UP)
+                    drawOffY = 1;
+                else
+                    drawOffY = -1;
+            }
+            else {
+                drawOffY = 0.5;
+            }
+            game_1.Game.drawObj(spriteX, spriteY, 1, 2, baseX + drawOffX, baseY + torchYOffset + drawOffY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawFX(Math.floor(this.frame), 34, //62 sprites wip
+            1, 2, baseX + fireOffX + drawOffX, baseY - fireOffY + drawOffY, 1, 2);
+            if (this.direction === game_1.Direction.DOWN) {
+                game_1.Game.drawTile(28, 0, 1, 1, baseX + drawOffX, baseY + 1 + drawOffY + torchYOffset, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.health = 1;
+        this.name = "placed_candle";
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.hasBloom = true;
+        this.bloomColor = "#FFDD88";
+        this.bloomAlpha = 0.7;
+        this.softBloomAlpha = 0;
+        this.hasHitParticles = false;
+        this.shadowOpacity = 0.5;
+        const drop = new candle_1.Candle(room, x, y);
+        drop.fuel = Math.max(1, Math.min(fuel, drop.fuelCap));
+        drop.stackCount = 1;
+        this.drops = [drop];
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 3, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 1.2);
+        this.addLightSource(this.lightSource);
+    }
+    applyFloorPlacement() {
+        this.wallMounted = false;
+        this.direction = game_1.Direction.UP;
+        this.lightSource.x = this.x + 0.5;
+        this.lightSource.y = this.y + 0.5;
+        this.bloomOffsetX = 0;
+        this.bloomOffsetY = 0.5; //GameConstants.TILESIZE;
+    }
+    applyWallDirection(direction) {
+        this.direction = direction;
+        //const half = GameConstants.TILESIZE;
+        if (direction === game_1.Direction.LEFT) {
+            this.lightSource.x = this.x + 1.0;
+            this.lightSource.y = this.y + 0.5;
+            this.bloomOffsetX = 16;
+            this.bloomOffsetY = 0;
+        }
+        else if (direction === game_1.Direction.RIGHT) {
+            this.lightSource.x = this.x;
+            this.lightSource.y = this.y + 0.5;
+            this.bloomOffsetX = -16;
+            this.bloomOffsetY = 0;
+        }
+        else if (direction === game_1.Direction.UP) {
+            this.lightSource.x = this.x + 0.5;
+            this.lightSource.y = this.y + 1.0;
+            this.bloomOffsetX = 0;
+            this.bloomOffsetY = 0;
+        }
+        else {
+            this.lightSource.x = this.x + 0.5;
+            this.lightSource.y = this.y;
+            this.bloomOffsetX = 0;
+            this.bloomOffsetY = -16;
+        }
+    }
+    get type() {
+        return entity_1.EntityType.PROP;
+    }
+}
+exports.PlacedCandle = PlacedCandle;
+
+
+/***/ }),
+
+/***/ "./src/entity/object/placedTorch.ts":
+/*!******************************************!*\
+  !*** ./src/entity/object/placedTorch.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlacedTorch = void 0;
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const lightSource_1 = __webpack_require__(/*! ../../lighting/lightSource */ "./src/lighting/lightSource.ts");
+const levelConstants_1 = __webpack_require__(/*! ../../level/levelConstants */ "./src/level/levelConstants.ts");
+const torch_1 = __webpack_require__(/*! ../../item/light/torch */ "./src/item/light/torch.ts");
+class PlacedTorch extends entity_1.Entity {
+    constructor(room, game, x, y, fuel = 500) {
+        super(room, game, x, y);
+        this.wallMounted = true;
+        this.dropLoot = () => {
+            if (this.lootDropped)
+                return;
+            this.lootDropped = true;
+            const drop = this.drops[0];
+            if (!drop)
+                return;
+            drop.level = this.room;
+            drop.z = this.z ?? 0;
+            const localPlayer = this.game?.players?.[this.game.localPlayerID];
+            if (localPlayer?.inventory?.canPickup(drop)) {
+                drop.x = this.x;
+                drop.y = this.y;
+                drop.forceAnimateToInventory = true;
+                this.room.items.push(drop);
+                drop.onDrop();
+                drop.autoPickup();
+            }
+            else {
+                const visited = new Set();
+                const queue = [
+                    { x: this.x, y: this.y, dist: 0 },
+                ];
+                visited.add(`${this.x},${this.y}`);
+                let dropX = this.x;
+                let dropY = this.y;
+                outer: while (queue.length > 0) {
+                    const { x, y, dist } = queue.shift();
+                    if (this.room.roomArray[x]?.[y] &&
+                        !this.room.roomArray[x][y].isSolid()) {
+                        dropX = x;
+                        dropY = y;
+                        break outer;
+                    }
+                    if (dist < 8) {
+                        for (const [nx, ny] of [
+                            [x - 1, y],
+                            [x + 1, y],
+                            [x, y - 1],
+                            [x, y + 1],
+                        ]) {
+                            const key = `${nx},${ny}`;
+                            if (!visited.has(key) &&
+                                this.room.roomArray[nx]?.[ny] !== undefined) {
+                                visited.add(key);
+                                queue.push({ x: nx, y: ny, dist: dist + 1 });
+                            }
+                        }
+                    }
+                }
+                drop.x = dropX;
+                drop.y = dropY;
+                this.room.items.push(drop);
+                drop.onDrop();
+            }
+        };
+        this.examineText = () => "A torch fixed to the wall. Hit it to pick it back up.";
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.frame += 0.3 * delta;
+            if (this.frame >= 12)
+                this.frame = 0;
+            this.updateDrawXY(delta);
+            const baseX = this.x - this.drawX;
+            const baseY = this.y - this.drawYOffset - this.drawY;
+            // Per-direction sprite and fire fine-tuning
+            let spriteX;
+            let spriteY;
+            let fireOffX;
+            let fireOffY;
+            let torchYOffset = 0;
+            if (this.direction === game_1.Direction.LEFT) {
+                spriteX = 1;
+                spriteY = 9;
+                fireOffX = -4 / 16;
+                fireOffY = 5 / 16;
+                torchYOffset = -3 / 16;
+            }
+            else if (this.direction === game_1.Direction.RIGHT) {
+                spriteX = 2;
+                spriteY = 9;
+                fireOffX = 5 / 16;
+                fireOffY = 5 / 16;
+                torchYOffset = -3 / 16;
+            }
+            else if (this.direction === game_1.Direction.DOWN) {
+                spriteX = 0;
+                spriteY = 9;
+                fireOffX = 0;
+                fireOffY = -3 / 16;
+                torchYOffset = 3 / 16;
+            }
+            else {
+                spriteX = 0;
+                spriteY = 9;
+                fireOffX = 0;
+                fireOffY = 13 / 16;
+                torchYOffset = -13 / 16;
+            }
+            // Wall-direction offset: shifts the whole visual toward the room interior
+            let drawOffX = 0;
+            let drawOffY = 0;
+            if (this.wallMounted) {
+                if (this.direction === game_1.Direction.LEFT)
+                    drawOffX = 1;
+                else if (this.direction === game_1.Direction.RIGHT)
+                    drawOffX = -1;
+                else if (this.direction === game_1.Direction.UP)
+                    drawOffY = 1;
+                else
+                    drawOffY = -1;
+            }
+            else {
+                drawOffY = 0.5;
+            }
+            game_1.Game.drawObj(spriteX, spriteY, 1, 2, baseX + drawOffX, baseY + torchYOffset + drawOffY, 1, 2, this.room.shadeColor, this.shadeAmount());
+            game_1.Game.drawFX(Math.floor(this.frame), 34, 1, 2, baseX + fireOffX + drawOffX, baseY - fireOffY + drawOffY, 1, 2);
+            if (this.direction === game_1.Direction.DOWN) {
+                game_1.Game.drawTile(28, 0, 1, 1, baseX + drawOffX, baseY + 1 + drawOffY + torchYOffset, 1, 1, this.room.shadeColor, this.shadeAmount());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.health = 1;
+        this.name = "placed_torch";
+        this.hasShadow = true;
+        this.chainPushable = false;
+        this.hasBloom = true;
+        this.bloomColor = "#FFA500";
+        this.bloomAlpha = 0.5;
+        this.softBloomAlpha = 0;
+        this.hasHitParticles = false;
+        this.shadowOpacity = 0.5;
+        const drop = new torch_1.Torch(room, x, y);
+        drop.fuel = Math.max(1, Math.min(fuel, drop.fuelCap));
+        drop.stackCount = 1;
+        this.drops = [drop];
+        this.lightSource = new lightSource_1.LightSource(this.x + 0.5, this.y + 0.5, 5, levelConstants_1.LevelConstants.TORCH_LIGHT_COLOR, 2.5);
+        this.addLightSource(this.lightSource);
+    }
+    applyFloorPlacement() {
+        this.wallMounted = false;
+        this.direction = game_1.Direction.UP;
+        this.lightSource.x = this.x + 0.5;
+        this.lightSource.y = this.y + 0.5;
+        this.bloomOffsetX = 0;
+        this.bloomOffsetY = 0.5; //GameConstants.TILESIZE;
+    }
+    applyWallDirection(direction) {
+        this.direction = direction;
+        //const half = GameConstants.TILESIZE;
+        if (direction === game_1.Direction.LEFT) {
+            this.lightSource.x = this.x + 1.0;
+            this.lightSource.y = this.y + 0.5;
+            this.bloomOffsetX = 16;
+            this.bloomOffsetY = 0;
+        }
+        else if (direction === game_1.Direction.RIGHT) {
+            this.lightSource.x = this.x;
+            this.lightSource.y = this.y + 0.5;
+            this.bloomOffsetX = -16;
+            this.bloomOffsetY = 0;
+        }
+        else if (direction === game_1.Direction.UP) {
+            this.lightSource.x = this.x + 0.5;
+            this.lightSource.y = this.y + 1.0;
+            this.bloomOffsetX = 0;
+            this.bloomOffsetY = 0; //half;
+        }
+        else {
+            this.lightSource.x = this.x + 0.5;
+            this.lightSource.y = this.y;
+            this.bloomOffsetX = 0;
+            this.bloomOffsetY = -16;
+        }
+    }
+    get type() {
+        return entity_1.EntityType.PROP;
+    }
+}
+exports.PlacedTorch = PlacedTorch;
 
 
 /***/ }),
@@ -30879,6 +31318,10 @@ class Game {
                     item,
                 };
             }
+            if (kind === "placed_torch")
+                return { ...base, kind: "placed_torch", fuel: 500 };
+            if (kind === "placed_candle")
+                return { ...base, kind: "placed_candle", fuel: 100 };
             return {
                 ...base,
                 kind,
@@ -40000,6 +40443,8 @@ exports.enemyRegistryV2 = new registry_1.Registry();
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getEnemyKindV2 = exports.registerBuiltinEnemyCodecsV2 = void 0;
+const placedTorch_1 = __webpack_require__(/*! ../../../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
+const placedCandle_1 = __webpack_require__(/*! ../../../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 const barrel_1 = __webpack_require__(/*! ../../../entity/object/barrel */ "./src/entity/object/barrel.ts");
 const bomb_1 = __webpack_require__(/*! ../../../entity/object/bomb */ "./src/entity/object/bomb.ts");
 const block_1 = __webpack_require__(/*! ../../../entity/object/block */ "./src/entity/object/block.ts");
@@ -40250,6 +40695,10 @@ const entityToKind = (e) => {
         return "cave_rock_resource";
     if (e instanceof obsidianResource_1.ObsidianResource)
         return "obsidian_resource";
+    if (e instanceof placedTorch_1.PlacedTorch)
+        return "placed_torch";
+    if (e instanceof placedCandle_1.PlacedCandle)
+        return "placed_candle";
     return null;
 };
 const registerBuiltinEnemyCodecsV2 = () => {
@@ -40665,6 +41114,89 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("rock_resource", rockResource_1.Rock);
     registerBasic("cave_rock_resource", caveRockResource_1.CaveRock);
     registerBasic("obsidian_resource", obsidianResource_1.ObsidianResource);
+    // Placeable light entities — custom codecs to preserve fuel value
+    register("placed_torch", {
+        save: (value) => {
+            if (!(value instanceof placedTorch_1.PlacedTorch))
+                throw new Error("placed_torch codec received wrong entity");
+            const drop = value.drops[0];
+            const fuel = drop && "fuel" in drop ? drop.fuel : 500;
+            return {
+                kind: "placed_torch",
+                gid: value.globalId,
+                roomGid: value.room.globalId,
+                x: value.x,
+                y: value.y,
+                direction: (0, mappers_1.directionToDirectionKind)(value.direction),
+                health: value.health,
+                maxHealth: value.maxHealth,
+                dead: value.dead,
+                fuel,
+                wallMounted: value.wallMounted,
+            };
+        },
+        spawn: (value, room, ctx) => {
+            if (value.kind !== "placed_torch")
+                throw new Error("placed_torch codec spawn received wrong kind");
+            const fuel = "fuel" in value && typeof value.fuel === "number"
+                ? value.fuel
+                : 500;
+            const e = new placedTorch_1.PlacedTorch(room, ctx.game, value.x, value.y, fuel);
+            e.dead = value.dead;
+            e.health = value.health;
+            e.maxHealth = value.maxHealth;
+            const wallMounted = value.wallMounted !== false;
+            if (wallMounted) {
+                e.applyWallDirection((0, mappers_1.directionKindToDirection)(value.direction));
+            }
+            else {
+                e.applyFloorPlacement();
+            }
+            e.globalId = value.gid;
+            return e;
+        },
+    });
+    register("placed_candle", {
+        save: (value) => {
+            if (!(value instanceof placedCandle_1.PlacedCandle))
+                throw new Error("placed_candle codec received wrong entity");
+            const drop = value.drops[0];
+            const fuel = drop && "fuel" in drop ? drop.fuel : 100;
+            return {
+                kind: "placed_candle",
+                gid: value.globalId,
+                roomGid: value.room.globalId,
+                x: value.x,
+                y: value.y,
+                direction: (0, mappers_1.directionToDirectionKind)(value.direction),
+                health: value.health,
+                maxHealth: value.maxHealth,
+                dead: value.dead,
+                fuel,
+                wallMounted: value.wallMounted,
+            };
+        },
+        spawn: (value, room, ctx) => {
+            if (value.kind !== "placed_candle")
+                throw new Error("placed_candle codec spawn received wrong kind");
+            const fuel = "fuel" in value && typeof value.fuel === "number"
+                ? value.fuel
+                : 100;
+            const e = new placedCandle_1.PlacedCandle(room, ctx.game, value.x, value.y, fuel);
+            e.dead = value.dead;
+            e.health = value.health;
+            e.maxHealth = value.maxHealth;
+            const wallMounted = value.wallMounted !== false;
+            if (wallMounted) {
+                e.applyWallDirection((0, mappers_1.directionKindToDirection)(value.direction));
+            }
+            else {
+                e.applyFloorPlacement();
+            }
+            e.globalId = value.gid;
+            return e;
+        },
+    });
 };
 exports.registerBuiltinEnemyCodecsV2 = registerBuiltinEnemyCodecsV2;
 const getEnemyKindV2 = (e) => entityToKind(e);
@@ -43308,6 +43840,8 @@ const ENEMY_KINDS = [
     "rock_resource",
     "cave_rock_resource",
     "obsidian_resource",
+    "placed_torch",
+    "placed_candle",
 ];
 const ITEM_KINDS = [
     ...schema_1.ITEM_KIND_VALUES_V2,
@@ -44925,6 +45459,25 @@ const validateEnemySaveV2 = (v, path) => {
             skipNextTurns,
             buffed,
             buffedBefore,
+        });
+    }
+    if (kind === "placed_torch" || kind === "placed_candle") {
+        const fuelU = get(v, "fuel");
+        if (!isNumber(fuelU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "fuel must be number", path: `${path}.fuel` });
+        const wallMountedU = get(v, "wallMounted");
+        return (0, errors_1.ok)({
+            kind,
+            gid: gidR.value,
+            roomGid: roomGidR.value,
+            x,
+            y,
+            direction: dirR.value,
+            health,
+            maxHealth,
+            dead,
+            fuel: fuelU,
+            wallMounted: typeof wallMountedU === "boolean" ? wallMountedU : undefined,
         });
     }
     // Basic enemy kinds
@@ -52973,6 +53526,7 @@ class Item extends drawable_1.Drawable {
         this.animT = 0;
         this.animStartDistance = null;
         this.groundedNoAnimate = false;
+        this.forceAnimateToInventory = false;
         this.hoverText = () => {
             return this.name;
         };
@@ -53341,6 +53895,8 @@ class Item extends drawable_1.Drawable {
     get animateToInventory() {
         if (this.groundedNoAnimate)
             return false;
+        if (this.forceAnimateToInventory)
+            return true;
         return gameConstants_1.GameConstants.AUTO_PICKUP_ITEMS.includes(this.constructor);
     }
     destroy() {
@@ -67177,6 +67733,12 @@ const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const equippable_1 = __webpack_require__(/*! ../item/equippable */ "./src/item/equippable.ts");
 const usable_1 = __webpack_require__(/*! ../item/usable/usable */ "./src/item/usable/usable.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
+const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
+const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
+const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
+const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.mouseHoldInitialDirection = null;
@@ -67752,6 +68314,85 @@ class PlayerInputHandler {
                     },
                 });
                 const examine = formatExamine(item.examineText?.() ?? "");
+                // Torch / candle: "Place" and "Place on wall"
+                if (item instanceof torch_1.Torch || item instanceof candle_1.Candle) {
+                    const itemRoom = player.getRoom
+                        ? player.getRoom()
+                        : player.game.room;
+                    items.push({
+                        label: "Place",
+                        targetName,
+                        onClick: () => {
+                            if (!itemRoom)
+                                return;
+                            const fuel = item.fuel;
+                            let placed;
+                            if (item instanceof torch_1.Torch) {
+                                placed = new placedTorch_1.PlacedTorch(itemRoom, player.game, player.x, player.y, fuel);
+                            }
+                            else {
+                                placed = new placedCandle_1.PlacedCandle(itemRoom, player.game, player.x, player.y, fuel);
+                            }
+                            placed.applyFloorPlacement();
+                            itemRoom.entities.push(placed);
+                            itemRoom.updateLighting();
+                            if (item.stackCount > 1) {
+                                item.stackCount--;
+                            }
+                            else {
+                                if (item.equipped)
+                                    item.toggleEquip();
+                                inv.removeItem(item);
+                            }
+                        },
+                    });
+                    const adjacent = [
+                        { x: player.x - 1, y: player.y, dir: game_1.Direction.LEFT },
+                        { x: player.x + 1, y: player.y, dir: game_1.Direction.RIGHT },
+                        { x: player.x, y: player.y - 1, dir: game_1.Direction.UP },
+                        { x: player.x, y: player.y + 1, dir: game_1.Direction.DOWN },
+                    ];
+                    const freeWalls = adjacent.filter(({ x, y }) => {
+                        if (!itemRoom)
+                            return false;
+                        const tile = itemRoom.getTile(x, y);
+                        if (!(tile instanceof wall_1.Wall || tile instanceof wallTorch_1.WallTorch))
+                            return false;
+                        return !itemRoom.entities.some((e) => !e.dead && e.x === x && e.y === y);
+                    });
+                    if (freeWalls.length > 0) {
+                        items.push({
+                            label: "Place on wall",
+                            targetName,
+                            onClick: () => {
+                                if (!itemRoom)
+                                    return;
+                                const preferred = freeWalls.find((w) => w.dir === player.direction);
+                                const target = preferred ??
+                                    freeWalls[Math.floor(Math.random() * freeWalls.length)];
+                                const fuel = item.fuel;
+                                let placed;
+                                if (item instanceof torch_1.Torch) {
+                                    placed = new placedTorch_1.PlacedTorch(itemRoom, player.game, target.x, target.y, fuel);
+                                }
+                                else {
+                                    placed = new placedCandle_1.PlacedCandle(itemRoom, player.game, target.x, target.y, fuel);
+                                }
+                                placed.applyWallDirection(target.dir);
+                                itemRoom.entities.push(placed);
+                                itemRoom.updateLighting();
+                                if (item.stackCount > 1) {
+                                    item.stackCount--;
+                                }
+                                else {
+                                    if (item.equipped)
+                                        item.toggleEquip();
+                                    inv.removeItem(item);
+                                }
+                            },
+                        });
+                    }
+                }
                 // Drop goes near the bottom. "Examine" is always right before "Cancel".
                 items.push({
                     label: "Drop",
@@ -67980,6 +68621,69 @@ class PlayerInputHandler {
                             player.game.pushMessage(ex);
                         },
                     });
+                }
+            }
+        }
+        // Wall placement: right-clicking a wall adjacent to the player while holding
+        // a torch or candle offers to place it on the player's floor tile.
+        if (room && t.x !== undefined && t.y !== undefined) {
+            const tile = room.getTile(t.x, t.y);
+            const isWall = tile instanceof wall_1.Wall || tile instanceof wallTorch_1.WallTorch;
+            if (isWall && player.canPickupAt(t.x, t.y)) {
+                const tileHasEntity = room.entities.some((e) => !e.dead && e.x === t.x && e.y === t.y);
+                if (!tileHasEntity) {
+                    const torchIdx = inv.items.findIndex((it) => it instanceof torch_1.Torch);
+                    const candleIdx = inv.items.findIndex((it) => it instanceof candle_1.Candle);
+                    if (torchIdx !== -1) {
+                        items.push({
+                            label: "Place torch",
+                            onClick: () => {
+                                const torch = inv.items[torchIdx];
+                                const placed = new placedTorch_1.PlacedTorch(room, player.game, t.x, t.y, torch.fuel);
+                                const dx = t.x - player.x;
+                                const dy = t.y - player.y;
+                                placed.applyWallDirection(dx < 0 ? game_1.Direction.LEFT
+                                    : dx > 0 ? game_1.Direction.RIGHT
+                                        : dy < 0 ? game_1.Direction.UP
+                                            : game_1.Direction.DOWN);
+                                room.entities.push(placed);
+                                room.updateLighting();
+                                if (torch.stackCount > 1) {
+                                    torch.stackCount--;
+                                }
+                                else {
+                                    if (torch.equipped)
+                                        torch.toggleEquip();
+                                    inv.removeItem(torch);
+                                }
+                            },
+                        });
+                    }
+                    if (candleIdx !== -1) {
+                        items.push({
+                            label: "Place candle",
+                            onClick: () => {
+                                const candle = inv.items[candleIdx];
+                                const placed = new placedCandle_1.PlacedCandle(room, player.game, t.x, t.y, candle.fuel);
+                                const dx = t.x - player.x;
+                                const dy = t.y - player.y;
+                                placed.applyWallDirection(dx < 0 ? game_1.Direction.LEFT
+                                    : dx > 0 ? game_1.Direction.RIGHT
+                                        : dy < 0 ? game_1.Direction.UP
+                                            : game_1.Direction.DOWN);
+                                room.entities.push(placed);
+                                room.updateLighting();
+                                if (candle.stackCount > 1) {
+                                    candle.stackCount--;
+                                }
+                                else {
+                                    if (candle.equipped)
+                                        candle.toggleEquip();
+                                    inv.removeItem(candle);
+                                }
+                            },
+                        });
+                    }
                 }
             }
         }
@@ -73484,7 +74188,8 @@ class Room {
                     this.bloomOffscreenCtx.globalAlpha = 1 * (1 - eVis) * e.softBloomAlpha;
                     this.bloomOffscreenCtx.fillStyle = e.bloomColor;
                     this.bloomOffscreenCtx.fillRect((e.x - e.drawX - this.roomX + offsetX + 0.5 - e.bloomSize / 2) *
-                        gameConstants_1.GameConstants.TILESIZE, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
+                        gameConstants_1.GameConstants.TILESIZE +
+                        e.bloomOffsetX, (e.y - e.drawY - this.roomY - 0.5 + offsetY + 0.5 - e.bloomSize / 2) *
                         gameConstants_1.GameConstants.TILESIZE +
                         e.bloomOffsetY, gameConstants_1.GameConstants.TILESIZE * e.bloomSize, gameConstants_1.GameConstants.TILESIZE * e.bloomSize);
                 }
@@ -77431,6 +78136,7 @@ const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
@@ -78137,7 +78843,7 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.populateShop = (room, rand) => {
-            this.addTorches(room, 2, rand);
+            this.addPlacedTorches(room, 2, rand);
             const { x, y } = room.getRoomCenter();
             vendingMachine_1.VendingMachine.add(room, room.game, x - 2, y - 1, new shotgun_1.Shotgun(room, 0, 0));
             vendingMachine_1.VendingMachine.add(room, room.game, x + 2, y - 1, new heart_1.Heart(room, 0, 0));
@@ -78163,7 +78869,7 @@ class Populator {
                     numTorches = 0;
                 }
             }
-            this.addTorches(room, numTorches * factor, random_1.Random.rand);
+            this.addPlacedTorches(room, numTorches * factor, random_1.Random.rand);
         };
         this.addWindowsByArea = (room) => {
             // Only place windows in castle-themed rooms
@@ -78891,6 +79597,87 @@ class Populator {
             const x = t.x;
             const y = t.y;
             room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y, true);
+        }
+    }
+    addDoorPlacedTorches(room, x, y, doorDir) {
+        if (doorDir !== game_2.Direction.UP && doorDir !== game_2.Direction.DOWN)
+            return;
+        if (!x || !y)
+            return;
+        room.calculateWallInfo();
+        const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
+        const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
+        const leftOpen = leftWallInfo?.isLeftWall === false;
+        const rightOpen = rightWallInfo?.isRightWall === false;
+        const dir = doorDir === game_2.Direction.DOWN ? game_2.Direction.DOWN : game_2.Direction.UP;
+        if (leftOpen && room.roomArray[x - 1]?.[y] instanceof wall_1.Wall) {
+            const t = new placedTorch_1.PlacedTorch(room, room.game, x - 1, y);
+            t.applyWallDirection(dir);
+            room.entities.push(t);
+        }
+        if (rightOpen && room.roomArray[x + 1]?.[y] instanceof wall_1.Wall) {
+            const t = new placedTorch_1.PlacedTorch(room, room.game, x + 1, y);
+            t.applyWallDirection(dir);
+            room.entities.push(t);
+        }
+    }
+    addPlacedTorches(room, numTorches, rand, placeX, placeY) {
+        if (room.level.environment.type === environmentTypes_1.EnvType.FOREST &&
+            room.type !== room_1.RoomType.DOWNLADDER)
+            return;
+        const rx = room.roomX, ry = room.roomY;
+        const rw = room.width, rh = room.height;
+        const detectDir = (x, y) => {
+            // Only treat a neighbour as "room interior" when it is within the room
+            // bounds — tiles outside the room rectangle may be Air/floor and would
+            // otherwise make a south-wall tile read as Direction.UP.
+            const belowInRoom = y + 1 < ry + rh;
+            const aboveInRoom = y - 1 >= ry;
+            const rightInRoom = x + 1 < rx + rw;
+            const leftInRoom = x - 1 >= rx;
+            const below = belowInRoom ? room.roomArray[x]?.[y + 1] : undefined;
+            const above = aboveInRoom ? room.roomArray[x]?.[y - 1] : undefined;
+            const right = rightInRoom ? room.roomArray[x + 1]?.[y] : undefined;
+            const left = leftInRoom ? room.roomArray[x - 1]?.[y] : undefined;
+            if (below !== undefined && !(below instanceof wall_1.Wall))
+                return game_2.Direction.UP;
+            if (above !== undefined && !(above instanceof wall_1.Wall))
+                return game_2.Direction.DOWN;
+            if (right !== undefined && !(right instanceof wall_1.Wall))
+                return game_2.Direction.LEFT;
+            if (left !== undefined && !(left instanceof wall_1.Wall))
+                return game_2.Direction.RIGHT;
+            return null;
+        };
+        const place = (x, y, dir) => {
+            const t = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+            t.applyWallDirection(dir);
+            room.entities.push(t);
+        };
+        if (placeX !== undefined && placeY !== undefined) {
+            if (!(room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall))
+                return;
+            const dir = detectDir(placeX, placeY);
+            if (dir !== null)
+                place(placeX, placeY, dir);
+            return;
+        }
+        const candidates = [];
+        for (let xx = room.roomX; xx < room.roomX + room.width; xx++) {
+            for (let yy = room.roomY; yy < room.roomY + room.height; yy++) {
+                if (!(room.roomArray[xx]?.[yy] instanceof wall_1.Wall))
+                    continue;
+                const dir = detectDir(xx, yy);
+                if (dir !== null)
+                    candidates.push({ x: xx, y: yy, dir });
+            }
+        }
+        for (let i = 0; i < numTorches; i++) {
+            if (candidates.length === 0)
+                break;
+            const idx = game_1.Game.rand(0, candidates.length - 1, rand);
+            const { x, y, dir } = candidates.splice(idx, 1)[0];
+            place(x, y, dir);
         }
     }
     // Windows: analogous helpers to torches
@@ -80071,7 +80858,7 @@ class Populator {
             high: [1, 1, 2, 2, 3, 3, 4],
         };
         const randTorches = game_1.Game.randTable(torchPatterns[intensity], random_1.Random.rand);
-        this.addTorches(room, randTorches, random_1.Random.rand);
+        this.addPlacedTorches(room, randTorches, random_1.Random.rand);
     }
     // Windows: random and by-area helpers mirroring torches
     addRandomWindows(room, intensity = "medium") {
@@ -80111,7 +80898,7 @@ class Populator {
             case room_1.RoomType.BOSS:
                 const bossDoor = room.getBossDoor();
                 if (bossDoor) {
-                    this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+                    this.addDoorPlacedTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
                 }
                 this.addTorchesByArea(room);
                 this.addSpikeTraps(room, game_1.Game.randTable([0, 0, 0, 1, 1, 2, 5], rand), rand);
@@ -80233,7 +81020,7 @@ class Populator {
                 this.addRandomTorches(room, "medium");
                 break;
             case room_1.RoomType.DOWNLADDER:
-                this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
+                this.addPlacedTorches(room, 1, rand, room.roomX + 3, room.roomY);
                 break;
             case room_1.RoomType.ROPEHOLE:
                 this.addRandomTorches(room, "medium");
@@ -80242,7 +81029,7 @@ class Populator {
                 this.addRandomTorches(room, "medium");
                 break;
             case room_1.RoomType.SHOP:
-                this.addTorches(room, 2, rand);
+                this.addPlacedTorches(room, 2, rand);
                 break;
             case room_1.RoomType.GRASS:
                 if (factor % 4 === 0)

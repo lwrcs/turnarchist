@@ -25,6 +25,7 @@ import { DownladderMaker } from "../entity/downladderMaker";
 import { Enemy } from "../entity/enemy/enemy";
 import { Direction } from "../game";
 import { WallTorch } from "../tile/wallTorch";
+import { PlacedTorch } from "../entity/object/placedTorch";
 import { Wall } from "../tile/wall";
 import { SpikeTrap } from "../tile/spiketrap";
 import { Chasm } from "../tile/chasm";
@@ -1449,6 +1450,98 @@ export class Populator {
       const x = t.x;
       const y = t.y;
       room.roomArray[x][y] = new WallTorch(room, x, y, true);
+    }
+  }
+
+  private addDoorPlacedTorches(room: Room, x: number, y: number, doorDir: Direction) {
+    if (doorDir !== Direction.UP && doorDir !== Direction.DOWN) return;
+    if (!x || !y) return;
+
+    room.calculateWallInfo();
+    const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
+    const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
+    const leftOpen = leftWallInfo?.isLeftWall === false;
+    const rightOpen = rightWallInfo?.isRightWall === false;
+    const dir = doorDir === Direction.DOWN ? Direction.DOWN : Direction.UP;
+
+    if (leftOpen && room.roomArray[x - 1]?.[y] instanceof Wall) {
+      const t = new PlacedTorch(room, room.game, x - 1, y);
+      t.applyWallDirection(dir);
+      room.entities.push(t);
+    }
+    if (rightOpen && room.roomArray[x + 1]?.[y] instanceof Wall) {
+      const t = new PlacedTorch(room, room.game, x + 1, y);
+      t.applyWallDirection(dir);
+      room.entities.push(t);
+    }
+  }
+
+  private addPlacedTorches(
+    room: Room,
+    numTorches: number,
+    rand: () => number,
+    placeX?: number,
+    placeY?: number,
+  ) {
+    if (
+      room.level.environment.type === EnvType.FOREST &&
+      room.type !== RoomType.DOWNLADDER
+    )
+      return;
+
+    type WallCandidate = { x: number; y: number; dir: Direction };
+
+    const rx = room.roomX, ry = room.roomY;
+    const rw = room.width, rh = room.height;
+
+    const detectDir = (x: number, y: number): Direction | null => {
+      // Only treat a neighbour as "room interior" when it is within the room
+      // bounds — tiles outside the room rectangle may be Air/floor and would
+      // otherwise make a south-wall tile read as Direction.UP.
+      const belowInRoom = y + 1 < ry + rh;
+      const aboveInRoom = y - 1 >= ry;
+      const rightInRoom = x + 1 < rx + rw;
+      const leftInRoom  = x - 1 >= rx;
+
+      const below = belowInRoom ? room.roomArray[x]?.[y + 1] : undefined;
+      const above = aboveInRoom ? room.roomArray[x]?.[y - 1] : undefined;
+      const right = rightInRoom ? room.roomArray[x + 1]?.[y] : undefined;
+      const left  = leftInRoom  ? room.roomArray[x - 1]?.[y] : undefined;
+
+      if (below !== undefined && !(below instanceof Wall)) return Direction.UP;
+      if (above !== undefined && !(above instanceof Wall)) return Direction.DOWN;
+      if (right !== undefined && !(right instanceof Wall)) return Direction.LEFT;
+      if (left  !== undefined && !(left  instanceof Wall)) return Direction.RIGHT;
+      return null;
+    };
+
+    const place = (x: number, y: number, dir: Direction) => {
+      const t = new PlacedTorch(room, room.game, x, y);
+      t.applyWallDirection(dir);
+      room.entities.push(t);
+    };
+
+    if (placeX !== undefined && placeY !== undefined) {
+      if (!(room.roomArray[placeX]?.[placeY] instanceof Wall)) return;
+      const dir = detectDir(placeX, placeY);
+      if (dir !== null) place(placeX, placeY, dir);
+      return;
+    }
+
+    const candidates: WallCandidate[] = [];
+    for (let xx = room.roomX; xx < room.roomX + room.width; xx++) {
+      for (let yy = room.roomY; yy < room.roomY + room.height; yy++) {
+        if (!(room.roomArray[xx]?.[yy] instanceof Wall)) continue;
+        const dir = detectDir(xx, yy);
+        if (dir !== null) candidates.push({ x: xx, y: yy, dir });
+      }
+    }
+
+    for (let i = 0; i < numTorches; i++) {
+      if (candidates.length === 0) break;
+      const idx = Game.rand(0, candidates.length - 1, rand);
+      const { x, y, dir } = candidates.splice(idx, 1)[0];
+      place(x, y, dir);
     }
   }
 
@@ -3263,7 +3356,7 @@ export class Populator {
   };
 
   populateShop = (room: Room, rand: () => number) => {
-    this.addTorches(room, 2, rand);
+    this.addPlacedTorches(room, 2, rand);
     const { x, y } = room.getRoomCenter();
     VendingMachine.add(room, room.game, x - 2, y - 1, new Shotgun(room, 0, 0));
     VendingMachine.add(room, room.game, x + 2, y - 1, new Heart(room, 0, 0));
@@ -3285,7 +3378,7 @@ export class Populator {
       high: [1, 1, 2, 2, 3, 3, 4],
     };
     const randTorches = Game.randTable(torchPatterns[intensity], Random.rand);
-    this.addTorches(room, randTorches, Random.rand);
+    this.addPlacedTorches(room, randTorches, Random.rand);
   }
 
   // Windows: random and by-area helpers mirroring torches
@@ -3324,7 +3417,7 @@ export class Populator {
         numTorches = 0;
       }
     }
-    this.addTorches(room, numTorches * factor, Random.rand);
+    this.addPlacedTorches(room, numTorches * factor, Random.rand);
   };
 
   private addWindowsByArea = (room: Room) => {
@@ -3382,7 +3475,7 @@ export class Populator {
       case RoomType.BOSS:
         const bossDoor = room.getBossDoor();
         if (bossDoor) {
-          this.addDoorTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+          this.addDoorPlacedTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
         }
         this.addTorchesByArea(room);
         this.addSpikeTraps(
@@ -3529,7 +3622,7 @@ export class Populator {
         break;
 
       case RoomType.DOWNLADDER:
-        this.addTorches(room, 1, rand, room.roomX + 3, room.roomY);
+        this.addPlacedTorches(room, 1, rand, room.roomX + 3, room.roomY);
         break;
 
       case RoomType.ROPEHOLE:
@@ -3541,7 +3634,7 @@ export class Populator {
         break;
 
       case RoomType.SHOP:
-        this.addTorches(room, 2, rand);
+        this.addPlacedTorches(room, 2, rand);
         break;
 
       case RoomType.GRASS:

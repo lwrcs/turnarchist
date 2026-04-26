@@ -1,4 +1,6 @@
 import type { Entity } from "../../../entity/entity";
+import { PlacedTorch } from "../../../entity/object/placedTorch";
+import { PlacedCandle } from "../../../entity/object/placedCandle";
 import { Barrel } from "../../../entity/object/barrel";
 import { Bomb } from "../../../entity/object/bomb";
 import { Block } from "../../../entity/object/block";
@@ -180,6 +182,8 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof Rock) return "rock_resource";
   if (e instanceof CaveRock) return "cave_rock_resource";
   if (e instanceof ObsidianResource) return "obsidian_resource";
+  if (e instanceof PlacedTorch) return "placed_torch";
+  if (e instanceof PlacedCandle) return "placed_candle";
   return null;
 };
 
@@ -193,7 +197,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
 
   type EntityCtor<T extends Entity> = new (room: Room, game: Game, x: number, y: number) => T;
 
-  type BasicEnemyKind = Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard">;
+  type BasicEnemyKind = Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard" | "placed_torch" | "placed_candle">;
 
   const saveBasic = (kind: BasicEnemyKind, value: Entity): BasicEnemySaveV2 => {
     const isEnemy = value instanceof Enemy;
@@ -580,6 +584,85 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("rock_resource", Rock);
   registerBasic("cave_rock_resource", CaveRock);
   registerBasic("obsidian_resource", ObsidianResource);
+
+  // Placeable light entities — custom codecs to preserve fuel value
+  register("placed_torch", {
+    save: (value) => {
+      if (!(value instanceof PlacedTorch)) throw new Error("placed_torch codec received wrong entity");
+      const drop = value.drops[0];
+      const fuel = drop && "fuel" in drop ? (drop as { fuel: number }).fuel : 500;
+      return {
+        kind: "placed_torch",
+        gid: value.globalId,
+        roomGid: value.room.globalId,
+        x: value.x,
+        y: value.y,
+        direction: directionToDirectionKind(value.direction),
+        health: value.health,
+        maxHealth: value.maxHealth,
+        dead: value.dead,
+        fuel,
+        wallMounted: value.wallMounted,
+      };
+    },
+    spawn: (value, room, ctx) => {
+      if (value.kind !== "placed_torch") throw new Error("placed_torch codec spawn received wrong kind");
+      const fuel = "fuel" in value && typeof (value as { fuel?: unknown }).fuel === "number"
+        ? (value as { fuel: number }).fuel
+        : 500;
+      const e = new PlacedTorch(room, ctx.game, value.x, value.y, fuel);
+      e.dead = value.dead;
+      e.health = value.health;
+      e.maxHealth = value.maxHealth;
+      const wallMounted = (value as { wallMounted?: unknown }).wallMounted !== false;
+      if (wallMounted) {
+        e.applyWallDirection(directionKindToDirection(value.direction));
+      } else {
+        e.applyFloorPlacement();
+      }
+      e.globalId = value.gid;
+      return e;
+    },
+  });
+
+  register("placed_candle", {
+    save: (value) => {
+      if (!(value instanceof PlacedCandle)) throw new Error("placed_candle codec received wrong entity");
+      const drop = value.drops[0];
+      const fuel = drop && "fuel" in drop ? (drop as { fuel: number }).fuel : 100;
+      return {
+        kind: "placed_candle",
+        gid: value.globalId,
+        roomGid: value.room.globalId,
+        x: value.x,
+        y: value.y,
+        direction: directionToDirectionKind(value.direction),
+        health: value.health,
+        maxHealth: value.maxHealth,
+        dead: value.dead,
+        fuel,
+        wallMounted: value.wallMounted,
+      };
+    },
+    spawn: (value, room, ctx) => {
+      if (value.kind !== "placed_candle") throw new Error("placed_candle codec spawn received wrong kind");
+      const fuel = "fuel" in value && typeof (value as { fuel?: unknown }).fuel === "number"
+        ? (value as { fuel: number }).fuel
+        : 100;
+      const e = new PlacedCandle(room, ctx.game, value.x, value.y, fuel);
+      e.dead = value.dead;
+      e.health = value.health;
+      e.maxHealth = value.maxHealth;
+      const wallMounted = (value as { wallMounted?: unknown }).wallMounted !== false;
+      if (wallMounted) {
+        e.applyWallDirection(directionKindToDirection(value.direction));
+      } else {
+        e.applyFloorPlacement();
+      }
+      e.globalId = value.gid;
+      return e;
+    },
+  });
 };
 
 export const getEnemyKindV2 = (e: Entity): EnemyKind | null => entityToKind(e);

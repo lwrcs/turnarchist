@@ -319,12 +319,26 @@ export type WindowTileSaveV2 = BaseTileSaveV2 & {
  * The schema types define only the common envelope here;
  * specific kinds can extend via unions incrementally.
  */
+export type PlacedTorchSaveV2 = EnemySaveEnvelopeV2 & {
+  kind: "placed_torch";
+  fuel: number;
+  wallMounted?: boolean;
+};
+
+export type PlacedCandleSaveV2 = EnemySaveEnvelopeV2 & {
+  kind: "placed_candle";
+  fuel: number;
+  wallMounted?: boolean;
+};
+
 export type EnemySaveV2 = EnemySaveEnvelopeV2 & (
   | BasicEnemySaveV2
   | ChestEnemySaveV2
   | VendingMachineEnemySaveV2
   | SpawnerEnemySaveV2
   | WizardEnemySaveV2
+  | PlacedTorchSaveV2
+  | PlacedCandleSaveV2
 );
 
 export type EnemySaveEnvelopeV2 = {
@@ -340,7 +354,7 @@ export type EnemySaveEnvelopeV2 = {
 };
 
 export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
-  kind: Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard">;
+  kind: Exclude<EnemyKind, "chest" | "vending_machine" | "spawner" | "wizard" | "placed_torch" | "placed_candle">;
   /**
    * "Awake" state: many enemies render sleep Zs and skip their active behavior until `seenPlayer` becomes true.
    * Optional for backward-compat with early V2 saves.
@@ -719,7 +733,10 @@ export type EnemyKind =
   | "garnet_resource"
   | "rock_resource"
   | "cave_rock_resource"
-  | "obsidian_resource";
+  | "obsidian_resource"
+  // Placeable light entities
+  | "placed_torch"
+  | "placed_candle";
 
 export const ITEM_KIND_VALUES_V2 = [
   // Resources/consumables/etc (envelope only)
