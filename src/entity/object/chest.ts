@@ -177,6 +177,10 @@ export class Chest extends Entity {
       } else {
         this.opening = false;
       }
+    } else if (this.health < 3) {
+      // Chest is open but not animating (e.g. loaded from save where tileX/tileY weren't persisted).
+      this.tileX = 6;
+      this.tileY = 2;
     }
 
     if (!this.dead) {
