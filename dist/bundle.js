@@ -78831,7 +78831,8 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
-            spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2));
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+            spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2), spawnTable);
             room.removeDoorObstructions();
         };
         this.populatePuzzle = (room, rand) => {
@@ -80847,7 +80848,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
+                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -81735,7 +81736,7 @@ class Populator {
             const pos = room.getRandomEmptyPosition(tiles);
             if (!pos)
                 return;
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth)).filter((t) => t !== 7);
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
             const boss = spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
             if (boss)
                 boss.isBossEnemy = true;

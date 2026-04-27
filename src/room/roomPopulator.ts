@@ -2760,7 +2760,7 @@ export class Populator {
         const { x, y } = position;
 
         const spawnTable = this.getEnemyPoolForDepth(
-          Math.max(0, room.depth),
+          Math.max(0, room.depth - 1),
         ).filter((t) => t !== 7);
 
         lastSpawner = Spawner.add(room, room.game, x, y, spawnTable);
@@ -3149,11 +3149,15 @@ export class Populator {
   };
 
   populateSpawner = (room: Room, rand: () => number) => {
+    const spawnTable = this.getEnemyPoolForDepth(
+      Math.max(0, room.depth - 1),
+    ).filter((t) => t !== 7);
     Spawner.add(
       room,
       room.game,
       Math.floor(room.roomX + room.width / 2),
       Math.floor(room.roomY + room.height / 2),
+      spawnTable,
     );
     room.removeDoorObstructions();
   };
@@ -4311,7 +4315,7 @@ export class Populator {
       const pos = room.getRandomEmptyPosition(tiles);
       if (!pos) return;
       const spawnTable = this.getEnemyPoolForDepth(
-        Math.max(0, room.depth),
+        Math.max(0, room.depth - 1),
       ).filter((t) => t !== 7);
       const boss = Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
       if (boss) boss.isBossEnemy = true;
