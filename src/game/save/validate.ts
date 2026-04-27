@@ -839,6 +839,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     const doorIdU = get(v, "doorId");
     const depthU = get(v, "depth");
     const showPathU = get(v, "showPath");
+    const linkedRopeGidU = get(v, "linkedRopeGid");
     if (!isNumber(doorIdU))
       return err({ kind: "InvalidSchema", message: "doorId must be number", path: `${path}.doorId` });
     if (!(depthU === null || isNumber(depthU)))
@@ -846,6 +847,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     if (!isBoolean(showPathU))
       return err({ kind: "InvalidSchema", message: "showPath must be boolean", path: `${path}.showPath` });
     const depth: number | null = depthU === null ? null : (depthU as number);
+    const linkedRopeGid = typeof linkedRopeGidU === "string" ? linkedRopeGidU : undefined;
     return ok({
       kind: "key",
       gid: gidR.value,
@@ -859,6 +861,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       doorId: doorIdU,
       depth,
       showPath: showPathU,
+      linkedRopeGid,
     });
   }
 
@@ -1559,6 +1562,8 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
       const isRope = get(v, "isRope");
       if (!isBoolean(isRope))
         return err({ kind: "InvalidSchema", message: "isRope must be boolean", path: `${path}.isRope` });
+      const returnToRootU = get(v, "returnToRoot");
+      const returnToRoot = isBoolean(returnToRootU) ? returnToRootU : false;
       const linkedRoomGidU = get(v, "linkedRoomGid");
       let linkedRoomGid: Gid | undefined = undefined;
       if (linkedRoomGidU !== undefined) {
@@ -1567,7 +1572,7 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         linkedRoomGid = lg.value;
       }
       const upLockU = get(v, "lock");
-      let upLock: { lockType: LockKind; keyId?: number } | undefined = undefined;
+      let upLock: { lockType: LockKind; keyId?: number; lockedMessage?: string } | undefined = undefined;
       if (upLockU !== undefined) {
         if (!isRecord(upLockU)) {
           return err({ kind: "InvalidSchema", message: "lock must be object", path: `${path}.lock` });
@@ -1576,9 +1581,11 @@ const validateTileSaveV2 = (v: unknown, path: string): Result<TileSaveV2> => {
         if (isErr(lockTypeR)) return err(lockTypeR.error);
         const keyIdU = get(upLockU, "keyId");
         const keyId = isNumber(keyIdU) ? keyIdU : undefined;
-        upLock = { lockType: lockTypeR.value, keyId };
+        const lockedMessageU = get(upLockU, "lockedMessage");
+        const lockedMessage = typeof lockedMessageU === "string" ? lockedMessageU : undefined;
+        upLock = { lockType: lockTypeR.value, keyId, lockedMessage };
       }
-      return ok({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid, lock: upLock });
+      return ok({ kind: "up_ladder", gid, x, y, isRope, returnToRoot, linkedRoomGid, lock: upLock });
     }
     case "spike_trap": {
       const triggered = get(v, "triggered");

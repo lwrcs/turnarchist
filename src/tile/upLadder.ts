@@ -67,6 +67,14 @@ export class UpLadder extends Passageway {
 
     // Check if locked
     if (this.lockable.isLocked()) {
+      // returnToRoot rope locks are story locks: can only be removed by picking
+      // up the linked key (via onPickupCallback → removeLock). Skip the standard
+      // canUnlock path so dev mode or key-in-inventory cannot bypass this lock.
+      if (this.returnToRoot) {
+        const msg = this.lockable.lockedMessage ?? "It's locked.";
+        this.game.pushMessage(msg);
+        return;
+      }
       if (this.lockable.canUnlock(player)) {
         this.lockable.unlock(player);
       }

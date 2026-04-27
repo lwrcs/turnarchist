@@ -18,6 +18,8 @@ export class Key extends Usable {
   animateFrame: number;
   /** Optional callback invoked after a successful pickup (key already in inventory). */
   onPickupCallback?: (player: Player) => void;
+  /** GID of the UpLadder this key auto-unlocks on pickup (castle exit room rope). */
+  linkedRopeGid?: string;
   private _cachedColorId: number;
   private _cachedColorName: string;
   private _cachedColorHex: string;

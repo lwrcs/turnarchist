@@ -26,6 +26,7 @@ import type { Tile } from "../../tile/tile";
 import type { Entity } from "../../entity/entity";
 import type { Item } from "../../item/item";
 import { Player } from "../../player/player";
+import { Key } from "../../item/key";
 import { Weapon } from "../../item/weapon/weapon";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
@@ -525,6 +526,20 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       return null;
     };
 
+    const findBestUpLadder = (preferReturnToRoot: boolean): UpLadder | null => {
+      let fallback: UpLadder | null = null;
+      for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+          const t = room.roomArray[x]?.[y];
+          if (t instanceof UpLadder) {
+            if (t.returnToRoot === preferReturnToRoot) return t;
+            if (!fallback) fallback = t;
+          }
+        }
+      }
+      return fallback;
+    };
+
     // Apply tile deltas (in-room mutations).
     for (const ts of rd.tiles) {
       let effectiveTs: typeof ts = ts;
@@ -604,12 +619,29 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         // Prefer matching an existing ladder (by sidepath flag + keyId when present) anywhere in the loaded world.
         const nearest = findNearestDownLadder(ts.isSidePath, ts.lock?.keyId);
         if (nearest) {
-          applyRoom = nearest.room;
+          // Physically relocate to the saved position so the tile fingerprint stays consistent.
+          if (room.isPositionInRoom(ts.x, ts.y) &&
+              (nearest.tile.x !== ts.x || nearest.tile.y !== ts.y || nearest.room !== room)) {
+            nearest.room.roomArray[nearest.tile.x][nearest.tile.y] =
+              new Floor(nearest.room, nearest.tile.x, nearest.tile.y);
+            nearest.tile.room = room;
+            nearest.tile.x = ts.x;
+            nearest.tile.y = ts.y;
+            room.roomArray[ts.x][ts.y] = nearest.tile;
+          }
+          applyRoom = nearest.tile.room;
           t = nearest.tile;
           effectiveTs = { ...ts, x: nearest.tile.x, y: nearest.tile.y };
         } else {
         const found = findFirstDownLadder();
         if (found) {
+          if (room.isPositionInRoom(ts.x, ts.y) &&
+              (found.x !== ts.x || found.y !== ts.y)) {
+            room.roomArray[found.x][found.y] = new Floor(room, found.x, found.y);
+            found.x = ts.x;
+            found.y = ts.y;
+            room.roomArray[ts.x][ts.y] = found;
+          }
           t = found;
           effectiveTs = { ...ts, x: found.x, y: found.y };
         } else {
@@ -726,7 +758,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         if (t instanceof UpLadder) {
           // ok
         } else {
-        const found = findFirstUpLadder();
+        const found = findBestUpLadder(ts.returnToRoot === true);
         if (found) {
           // Move the UpLadder from wherever generation placed it to the saved position.
           // Generation may place it at a non-deterministic position due to cave population.
@@ -766,6 +798,22 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
           t = ul;
           effectiveTs = { ...ts, x: place.x, y: place.y };
         }
+        }
+      }
+      // When two UpLadders exist in the same room (e.g. castle exit room has entrance rope +
+      // returnToRoot rope), the locate logic above may have matched the wrong one by position.
+      // If the matched tile has the wrong returnToRoot, scan for a better-matching one.
+      if (ts.kind === "up_ladder" && t instanceof UpLadder && t.returnToRoot !== (ts.returnToRoot === true)) {
+        const wantRTR = ts.returnToRoot === true;
+        outerRTR: for (let x = applyRoom.roomX - 1; x < applyRoom.roomX + applyRoom.width + 1; x++) {
+          for (let y = applyRoom.roomY - 1; y < applyRoom.roomY + applyRoom.height + 1; y++) {
+            const candidate = applyRoom.roomArray[x]?.[y];
+            if (candidate instanceof UpLadder && candidate !== t && candidate.returnToRoot === wantRTR) {
+              t = candidate;
+              effectiveTs = { ...effectiveTs, x: candidate.x, y: candidate.y };
+              break outerRTR;
+            }
+          }
         }
       }
 
@@ -1124,6 +1172,19 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
           const linkedRoom = game.roomsById.get(ts.linkedRoomGid);
           if (linkedRoom) ul.linkedRoom = linkedRoom;
         }
+      }
+    }
+  }
+
+  // Reinstall castle-exit-room key→rope unlock callbacks for keys not yet picked up.
+  for (const item of itemsByGid.values()) {
+    if (item instanceof Key && item.linkedRopeGid && !item.pickedUp) {
+      const rope = upByGid.get(item.linkedRopeGid);
+      if (rope) {
+        item.onPickupCallback = () => {
+          rope.lockable.removeLock();
+          rope.lockable.removeLockIcon();
+        };
       }
     }
   }

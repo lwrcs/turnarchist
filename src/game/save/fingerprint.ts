@@ -152,11 +152,11 @@ function tileFP(tile: any): TileFP | null {
       break;
     case "DownLadder":
       stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth}`;
-      if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType}`;
+      if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID}`;
       break;
     case "UpLadder":
-      stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},depth=${tile.depth}`;
-      if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType}`;
+      stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth}`;
+      if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID},lockMsg=${tile.lockable.lockedMessage ?? ""}`;
       break;
     case "FountainTile":
       stateStr += `,subTileX=${tile.subTileX},subTileY=${tile.subTileY}`;
@@ -242,7 +242,7 @@ function itemFP(item: Item): ItemFP {
     stateStr += `,cbState=${item.state}`;
   }
   if (item instanceof Key) {
-    stateStr += `,keyDoor=${item.doorID},keyDepth=${item.depth}`;
+    stateStr += `,keyDoor=${item.doorID},keyDepth=${item.depth},keyRope=${item.linkedRopeGid ?? ""}`;
   }
   if (item instanceof Light) {
     stateStr += `,fuel=${item.fuel}`;

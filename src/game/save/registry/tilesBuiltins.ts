@@ -279,9 +279,13 @@ export const registerBuiltinTileCodecsV2 = (): void => {
         }
         const lockType = tile.lockable.getLockType();
         const lockKind = lockTypeToLockKind(lockType);
-        const lock: { lockType: LockKind; keyId?: number } | undefined =
+        const lock: { lockType: LockKind; keyId?: number; lockedMessage?: string } | undefined =
           lockKind !== "none"
-            ? { lockType: lockKind, keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined }
+            ? {
+                lockType: lockKind,
+                keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined,
+                lockedMessage: tile.lockable.lockedMessage ?? undefined,
+              }
             : undefined;
         return {
           kind: "up_ladder",
@@ -289,6 +293,7 @@ export const registerBuiltinTileCodecsV2 = (): void => {
           x: tile.x,
           y: tile.y,
           isRope: tile.isRope === true,
+          returnToRoot: tile.returnToRoot === true,
           linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
           lock,
         };
@@ -296,20 +301,52 @@ export const registerBuiltinTileCodecsV2 = (): void => {
       apply: (value: TileSaveV2, room, ctx: LoadContext): void => {
         if (value.kind !== "up_ladder") return;
         let t = room.roomArray[value.x]?.[value.y];
+        // If the tile at the saved position is an UpLadder but has the wrong returnToRoot
+        // (two UpLadders in the same room swapped positions), prefer the correct one.
+        if (t instanceof UpLadder && t.returnToRoot !== (value.returnToRoot === true)) {
+          const wantRTR = value.returnToRoot === true;
+          outerRTR: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+            for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+              if (x === value.x && y === value.y) continue;
+              const candidate = room.roomArray[x]?.[y];
+              if (candidate instanceof UpLadder && candidate.returnToRoot === wantRTR) {
+                t = candidate;
+                break outerRTR;
+              }
+            }
+          }
+        }
         if (!(t instanceof UpLadder)) {
           // Generation placed the UpLadder at a different position (non-deterministic
           // relocation during cave population). Scan the room for it and move it.
+          // Prefer an UpLadder with matching returnToRoot when multiple exist.
+          const wantRTR = value.returnToRoot === true;
           let found: UpLadder | null = null;
           let foundX = 0;
           let foundY = 0;
-          outer: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+          // First pass: prefer returnToRoot-matching
+          outerPref: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
             for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
               const candidate = room.roomArray[x]?.[y];
-              if (candidate instanceof UpLadder) {
+              if (candidate instanceof UpLadder && candidate.returnToRoot === wantRTR) {
                 found = candidate;
                 foundX = x;
                 foundY = y;
-                break outer;
+                break outerPref;
+              }
+            }
+          }
+          // Second pass: any UpLadder as fallback
+          if (!found) {
+            outerAny: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+              for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                const candidate = room.roomArray[x]?.[y];
+                if (candidate instanceof UpLadder) {
+                  found = candidate;
+                  foundX = x;
+                  foundY = y;
+                  break outerAny;
+                }
               }
             }
           }
@@ -327,19 +364,25 @@ export const registerBuiltinTileCodecsV2 = (): void => {
         }
         const ladder = t as UpLadder;
         ladder.isRope = value.isRope;
+        ladder.returnToRoot = value.returnToRoot === true;
         // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
         ladder.isSidePath = value.isRope === true;
-        // Restore lockable state
-        if (value.lock) {
+        // Always rebuild lockable from saved state (including the unlocked/no-lock case).
+        // sidePathManager may re-lock the rope during level regeneration; the save wins.
+        {
           const lockType: LockType =
-            value.lock.lockType === "locked"
-              ? LockType.LOCKED
-              : value.lock.lockType === "guarded"
-                ? LockType.GUARDED
-                : value.lock.lockType === "tunnel"
-                  ? LockType.TUNNEL
-                  : LockType.NONE;
-          ladder.lockable = new Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: true });
+            value.lock === undefined
+              ? LockType.NONE
+              : value.lock.lockType === "locked"
+                ? LockType.LOCKED
+                : value.lock.lockType === "guarded"
+                  ? LockType.GUARDED
+                  : value.lock.lockType === "tunnel"
+                    ? LockType.TUNNEL
+                    : LockType.NONE;
+          const keyID = value.lock?.keyId;
+          ladder.lockable = new Lockable(ctx.game, { lockType, keyID, isTopDoor: true });
+          if (value.lock?.lockedMessage) ladder.lockable.lockedMessage = value.lock.lockedMessage;
         }
         // linkedRoom linking happens in post-pass by gid
       },

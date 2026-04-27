@@ -358,6 +358,7 @@ export class SidePathManager {
       ropeUp.lockable.keyID = ropeKeyID;
       ropeUp.lockable.lock();
       ropeUp.lockable.lockedMessage = "Grab the key first!";
+      key.linkedRopeGid = ropeUp.globalId;
       key.onPickupCallback = () => {
         ropeUp.lockable.removeLock();
         ropeUp.lockable.removeLockIcon();

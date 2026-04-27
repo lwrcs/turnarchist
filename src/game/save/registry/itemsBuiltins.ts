@@ -510,6 +510,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
         doorId: value.doorID,
         depth: value.depth === undefined ? null : value.depth,
         showPath: value.showPath === true,
+        linkedRopeGid: value.linkedRopeGid,
       };
     },
     spawn: (value, room, _ctx) => {
@@ -521,6 +522,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
         k.stackCount = value.stackCount;
         k.pickedUp = value.pickedUp;
         k.globalId = value.gid;
+        k.linkedRopeGid = value.linkedRopeGid;
         return k;
       }
       throw new Error("key codec spawn received non-key save");

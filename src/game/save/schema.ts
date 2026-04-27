@@ -282,8 +282,9 @@ export type UpLadderTileSaveV2 = BaseTileSaveV2 & {
   kind: "up_ladder";
   gid?: Gid;
   isRope: boolean;
+  returnToRoot: boolean;
   linkedRoomGid?: Gid;
-  lock?: { lockType: LockKind; keyId?: number };
+  lock?: { lockType: LockKind; keyId?: number; lockedMessage?: string };
 };
 
 export type SpikeTrapTileSaveV2 = BaseTileSaveV2 & {
@@ -555,6 +556,8 @@ export type KeyItemSaveV2 = ItemSaveEnvelopeV2 & {
   depth: number | null;
   /** UI-only: whether the key is currently showing its path guide. */
   showPath: boolean;
+  /** GID of the UpLadder (castle exit rope) this key auto-unlocks on pickup. */
+  linkedRopeGid?: string;
 };
 
 export type EnemySpawnAnimationProjectileSaveV2 = {

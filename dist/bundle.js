@@ -38821,12 +38821,12 @@ function tileFP(tile) {
         case "DownLadder":
             stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth}`;
             if (tile.lockable)
-                stateStr += `,lockType=${tile.lockable.lockType}`;
+                stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID}`;
             break;
         case "UpLadder":
-            stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},depth=${tile.depth}`;
+            stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth}`;
             if (tile.lockable)
-                stateStr += `,lockType=${tile.lockable.lockType}`;
+                stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID},lockMsg=${tile.lockable.lockedMessage ?? ""}`;
             break;
         case "FountainTile":
             stateStr += `,subTileX=${tile.subTileX},subTileY=${tile.subTileY}`;
@@ -38904,7 +38904,7 @@ function itemFP(item) {
         stateStr += `,cbState=${item.state}`;
     }
     if (item instanceof key_1.Key) {
-        stateStr += `,keyDoor=${item.doorID},keyDepth=${item.depth}`;
+        stateStr += `,keyDoor=${item.doorID},keyDepth=${item.depth},keyRope=${item.linkedRopeGid ?? ""}`;
     }
     if (item instanceof light_1.Light) {
         stateStr += `,fuel=${item.fuel}`;
@@ -39114,6 +39114,7 @@ const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/up
 const lockable_1 = __webpack_require__(/*! ../../tile/lockable */ "./src/tile/lockable.ts");
 const floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts");
 const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/player.ts");
+const key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
 const weapon_1 = __webpack_require__(/*! ../../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
@@ -39542,6 +39543,21 @@ const loadSaveV2 = async (game, save) => {
                 }
                 return null;
             };
+            const findBestUpLadder = (preferReturnToRoot) => {
+                let fallback = null;
+                for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                    for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                        const t = room.roomArray[x]?.[y];
+                        if (t instanceof upLadder_1.UpLadder) {
+                            if (t.returnToRoot === preferReturnToRoot)
+                                return t;
+                            if (!fallback)
+                                fallback = t;
+                        }
+                    }
+                }
+                return fallback;
+            };
             // Apply tile deltas (in-room mutations).
             for (const ts of rd.tiles) {
                 let effectiveTs = ts;
@@ -39617,13 +39633,30 @@ const loadSaveV2 = async (game, save) => {
                         // Prefer matching an existing ladder (by sidepath flag + keyId when present) anywhere in the loaded world.
                         const nearest = findNearestDownLadder(ts.isSidePath, ts.lock?.keyId);
                         if (nearest) {
-                            applyRoom = nearest.room;
+                            // Physically relocate to the saved position so the tile fingerprint stays consistent.
+                            if (room.isPositionInRoom(ts.x, ts.y) &&
+                                (nearest.tile.x !== ts.x || nearest.tile.y !== ts.y || nearest.room !== room)) {
+                                nearest.room.roomArray[nearest.tile.x][nearest.tile.y] =
+                                    new floor_1.Floor(nearest.room, nearest.tile.x, nearest.tile.y);
+                                nearest.tile.room = room;
+                                nearest.tile.x = ts.x;
+                                nearest.tile.y = ts.y;
+                                room.roomArray[ts.x][ts.y] = nearest.tile;
+                            }
+                            applyRoom = nearest.tile.room;
                             t = nearest.tile;
                             effectiveTs = { ...ts, x: nearest.tile.x, y: nearest.tile.y };
                         }
                         else {
                             const found = findFirstDownLadder();
                             if (found) {
+                                if (room.isPositionInRoom(ts.x, ts.y) &&
+                                    (found.x !== ts.x || found.y !== ts.y)) {
+                                    room.roomArray[found.x][found.y] = new floor_1.Floor(room, found.x, found.y);
+                                    found.x = ts.x;
+                                    found.y = ts.y;
+                                    room.roomArray[ts.x][ts.y] = found;
+                                }
                                 t = found;
                                 effectiveTs = { ...ts, x: found.x, y: found.y };
                             }
@@ -39727,7 +39760,7 @@ const loadSaveV2 = async (game, save) => {
                         // ok
                     }
                     else {
-                        const found = findFirstUpLadder();
+                        const found = findBestUpLadder(ts.returnToRoot === true);
                         if (found) {
                             // Move the UpLadder from wherever generation placed it to the saved position.
                             // Generation may place it at a non-deterministic position due to cave population.
@@ -39770,6 +39803,22 @@ const loadSaveV2 = async (game, save) => {
                             applyRoom = room;
                             t = ul;
                             effectiveTs = { ...ts, x: place.x, y: place.y };
+                        }
+                    }
+                }
+                // When two UpLadders exist in the same room (e.g. castle exit room has entrance rope +
+                // returnToRoot rope), the locate logic above may have matched the wrong one by position.
+                // If the matched tile has the wrong returnToRoot, scan for a better-matching one.
+                if (ts.kind === "up_ladder" && t instanceof upLadder_1.UpLadder && t.returnToRoot !== (ts.returnToRoot === true)) {
+                    const wantRTR = ts.returnToRoot === true;
+                    outerRTR: for (let x = applyRoom.roomX - 1; x < applyRoom.roomX + applyRoom.width + 1; x++) {
+                        for (let y = applyRoom.roomY - 1; y < applyRoom.roomY + applyRoom.height + 1; y++) {
+                            const candidate = applyRoom.roomArray[x]?.[y];
+                            if (candidate instanceof upLadder_1.UpLadder && candidate !== t && candidate.returnToRoot === wantRTR) {
+                                t = candidate;
+                                effectiveTs = { ...effectiveTs, x: candidate.x, y: candidate.y };
+                                break outerRTR;
+                            }
                         }
                     }
                 }
@@ -40076,6 +40125,18 @@ const loadSaveV2 = async (game, save) => {
                         if (linkedRoom)
                             ul.linkedRoom = linkedRoom;
                     }
+                }
+            }
+        }
+        // Reinstall castle-exit-room key→rope unlock callbacks for keys not yet picked up.
+        for (const item of itemsByGid.values()) {
+            if (item instanceof key_1.Key && item.linkedRopeGid && !item.pickedUp) {
+                const rope = upByGid.get(item.linkedRopeGid);
+                if (rope) {
+                    item.onPickupCallback = () => {
+                        rope.lockable.removeLock();
+                        rope.lockable.removeLockIcon();
+                    };
                 }
             }
         }
@@ -41786,6 +41847,7 @@ const registerBuiltinItemCodecsV2 = () => {
                 doorId: value.doorID,
                 depth: value.depth === undefined ? null : value.depth,
                 showPath: value.showPath === true,
+                linkedRopeGid: value.linkedRopeGid,
             };
         },
         spawn: (value, room, _ctx) => {
@@ -41797,6 +41859,7 @@ const registerBuiltinItemCodecsV2 = () => {
                 k.stackCount = value.stackCount;
                 k.pickedUp = value.pickedUp;
                 k.globalId = value.gid;
+                k.linkedRopeGid = value.linkedRopeGid;
                 return k;
             }
             throw new Error("key codec spawn received non-key save");
@@ -42562,7 +42625,11 @@ const registerBuiltinTileCodecsV2 = () => {
                 const lockType = tile.lockable.getLockType();
                 const lockKind = lockTypeToLockKind(lockType);
                 const lock = lockKind !== "none"
-                    ? { lockType: lockKind, keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined }
+                    ? {
+                        lockType: lockKind,
+                        keyId: tile.lockable.keyID !== 0 ? tile.lockable.keyID : undefined,
+                        lockedMessage: tile.lockable.lockedMessage ?? undefined,
+                    }
                     : undefined;
                 return {
                     kind: "up_ladder",
@@ -42570,6 +42637,7 @@ const registerBuiltinTileCodecsV2 = () => {
                     x: tile.x,
                     y: tile.y,
                     isRope: tile.isRope === true,
+                    returnToRoot: tile.returnToRoot === true,
                     linkedRoomGid: tile.linkedRoom ? tile.linkedRoom.globalId : undefined,
                     lock,
                 };
@@ -42578,20 +42646,53 @@ const registerBuiltinTileCodecsV2 = () => {
                 if (value.kind !== "up_ladder")
                     return;
                 let t = room.roomArray[value.x]?.[value.y];
+                // If the tile at the saved position is an UpLadder but has the wrong returnToRoot
+                // (two UpLadders in the same room swapped positions), prefer the correct one.
+                if (t instanceof upLadder_1.UpLadder && t.returnToRoot !== (value.returnToRoot === true)) {
+                    const wantRTR = value.returnToRoot === true;
+                    outerRTR: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                        for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                            if (x === value.x && y === value.y)
+                                continue;
+                            const candidate = room.roomArray[x]?.[y];
+                            if (candidate instanceof upLadder_1.UpLadder && candidate.returnToRoot === wantRTR) {
+                                t = candidate;
+                                break outerRTR;
+                            }
+                        }
+                    }
+                }
                 if (!(t instanceof upLadder_1.UpLadder)) {
                     // Generation placed the UpLadder at a different position (non-deterministic
                     // relocation during cave population). Scan the room for it and move it.
+                    // Prefer an UpLadder with matching returnToRoot when multiple exist.
+                    const wantRTR = value.returnToRoot === true;
                     let found = null;
                     let foundX = 0;
                     let foundY = 0;
-                    outer: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                    // First pass: prefer returnToRoot-matching
+                    outerPref: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
                         for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
                             const candidate = room.roomArray[x]?.[y];
-                            if (candidate instanceof upLadder_1.UpLadder) {
+                            if (candidate instanceof upLadder_1.UpLadder && candidate.returnToRoot === wantRTR) {
                                 found = candidate;
                                 foundX = x;
                                 foundY = y;
-                                break outer;
+                                break outerPref;
+                            }
+                        }
+                    }
+                    // Second pass: any UpLadder as fallback
+                    if (!found) {
+                        outerAny: for (let x = room.roomX - 1; x < room.roomX + room.width + 1; x++) {
+                            for (let y = room.roomY - 1; y < room.roomY + room.height + 1; y++) {
+                                const candidate = room.roomArray[x]?.[y];
+                                if (candidate instanceof upLadder_1.UpLadder) {
+                                    found = candidate;
+                                    foundX = x;
+                                    foundY = y;
+                                    break outerAny;
+                                }
                             }
                         }
                     }
@@ -42607,18 +42708,25 @@ const registerBuiltinTileCodecsV2 = () => {
                 }
                 const ladder = t;
                 ladder.isRope = value.isRope;
+                ladder.returnToRoot = value.returnToRoot === true;
                 // Rope-up ladders are sidepath ladders; keep this consistent for linkage logic.
                 ladder.isSidePath = value.isRope === true;
-                // Restore lockable state
-                if (value.lock) {
-                    const lockType = value.lock.lockType === "locked"
-                        ? lockable_1.LockType.LOCKED
-                        : value.lock.lockType === "guarded"
-                            ? lockable_1.LockType.GUARDED
-                            : value.lock.lockType === "tunnel"
-                                ? lockable_1.LockType.TUNNEL
-                                : lockable_1.LockType.NONE;
-                    ladder.lockable = new lockable_2.Lockable(ctx.game, { lockType, keyID: value.lock.keyId, isTopDoor: true });
+                // Always rebuild lockable from saved state (including the unlocked/no-lock case).
+                // sidePathManager may re-lock the rope during level regeneration; the save wins.
+                {
+                    const lockType = value.lock === undefined
+                        ? lockable_1.LockType.NONE
+                        : value.lock.lockType === "locked"
+                            ? lockable_1.LockType.LOCKED
+                            : value.lock.lockType === "guarded"
+                                ? lockable_1.LockType.GUARDED
+                                : value.lock.lockType === "tunnel"
+                                    ? lockable_1.LockType.TUNNEL
+                                    : lockable_1.LockType.NONE;
+                    const keyID = value.lock?.keyId;
+                    ladder.lockable = new lockable_2.Lockable(ctx.game, { lockType, keyID, isTopDoor: true });
+                    if (value.lock?.lockedMessage)
+                        ladder.lockable.lockedMessage = value.lock.lockedMessage;
                 }
                 // linkedRoom linking happens in post-pass by gid
             },
@@ -44458,6 +44566,7 @@ const validateItemSaveV2 = (v, path) => {
         const doorIdU = get(v, "doorId");
         const depthU = get(v, "depth");
         const showPathU = get(v, "showPath");
+        const linkedRopeGidU = get(v, "linkedRopeGid");
         if (!isNumber(doorIdU))
             return (0, errors_1.err)({ kind: "InvalidSchema", message: "doorId must be number", path: `${path}.doorId` });
         if (!(depthU === null || isNumber(depthU)))
@@ -44465,6 +44574,7 @@ const validateItemSaveV2 = (v, path) => {
         if (!isBoolean(showPathU))
             return (0, errors_1.err)({ kind: "InvalidSchema", message: "showPath must be boolean", path: `${path}.showPath` });
         const depth = depthU === null ? null : depthU;
+        const linkedRopeGid = typeof linkedRopeGidU === "string" ? linkedRopeGidU : undefined;
         return (0, errors_1.ok)({
             kind: "key",
             gid: gidR.value,
@@ -44478,6 +44588,7 @@ const validateItemSaveV2 = (v, path) => {
             doorId: doorIdU,
             depth,
             showPath: showPathU,
+            linkedRopeGid,
         });
     }
     if (isLightItemKind(kindR.value)) {
@@ -45160,6 +45271,8 @@ const validateTileSaveV2 = (v, path) => {
             const isRope = get(v, "isRope");
             if (!isBoolean(isRope))
                 return (0, errors_1.err)({ kind: "InvalidSchema", message: "isRope must be boolean", path: `${path}.isRope` });
+            const returnToRootU = get(v, "returnToRoot");
+            const returnToRoot = isBoolean(returnToRootU) ? returnToRootU : false;
             const linkedRoomGidU = get(v, "linkedRoomGid");
             let linkedRoomGid = undefined;
             if (linkedRoomGidU !== undefined) {
@@ -45179,9 +45292,11 @@ const validateTileSaveV2 = (v, path) => {
                     return (0, errors_1.err)(lockTypeR.error);
                 const keyIdU = get(upLockU, "keyId");
                 const keyId = isNumber(keyIdU) ? keyIdU : undefined;
-                upLock = { lockType: lockTypeR.value, keyId };
+                const lockedMessageU = get(upLockU, "lockedMessage");
+                const lockedMessage = typeof lockedMessageU === "string" ? lockedMessageU : undefined;
+                upLock = { lockType: lockTypeR.value, keyId, lockedMessage };
             }
-            return (0, errors_1.ok)({ kind: "up_ladder", gid, x, y, isRope, linkedRoomGid, lock: upLock });
+            return (0, errors_1.ok)({ kind: "up_ladder", gid, x, y, isRope, returnToRoot, linkedRoomGid, lock: upLock });
         }
         case "spike_trap": {
             const triggered = get(v, "triggered");
@@ -64325,6 +64440,7 @@ class SidePathManager {
             ropeUp.lockable.keyID = ropeKeyID;
             ropeUp.lockable.lock();
             ropeUp.lockable.lockedMessage = "Grab the key first!";
+            key.linkedRopeGid = ropeUp.globalId;
             key.onPickupCallback = () => {
                 ropeUp.lockable.removeLock();
                 ropeUp.lockable.removeLockIcon();
@@ -84147,6 +84263,14 @@ class UpLadder extends passageway_1.Passageway {
             }
             // Check if locked
             if (this.lockable.isLocked()) {
+                // returnToRoot rope locks are story locks: can only be removed by picking
+                // up the linked key (via onPickupCallback → removeLock). Skip the standard
+                // canUnlock path so dev mode or key-in-inventory cannot bypass this lock.
+                if (this.returnToRoot) {
+                    const msg = this.lockable.lockedMessage ?? "It's locked.";
+                    this.game.pushMessage(msg);
+                    return;
+                }
                 if (this.lockable.canUnlock(player)) {
                     this.lockable.unlock(player);
                 }
