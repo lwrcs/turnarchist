@@ -13,6 +13,7 @@ export class LevelConstants {
   static readonly HEALTH_BAR_FADEIN = 100;
   static readonly HEALTH_BAR_FADEOUT = 350;
   static readonly HEALTH_BAR_TOTALTIME = 2000;
+  static readonly HEALTH_BAR_HOVER_DELAY = 400; // ms before hover shows health bar on desktop
 
   static readonly SHADED_TILE_CUTOFF = 1;
   static readonly MIN_VISIBILITY = 0; // visibility level of places you've already seen

@@ -10201,17 +10201,42 @@ const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./s
 class HealthBar {
     constructor() {
         this.isHovered = false;
+        this.hoverStartTime = 0; // when hover began; 0 = no pending delay
+        this.lastHandledTap = -1; // tapCount of the last tap that triggered hover
         this.hurt = () => {
             this.hurtTimer = Date.now();
         };
-        this.hover = () => {
-            if (!this.isHovered) {
+        /**
+         * Call each frame while the cursor is over this entity.
+         * @param immediate - skip the hover delay (mobile tap)
+         * @param tapId     - pass Input.tapCount when immediate=true so each tap fires exactly once
+         */
+        this.hover = (immediate = false, tapId) => {
+            if (immediate) {
+                // Only trigger once per distinct tap, even if tapFired spans multiple frames
+                if (tapId !== undefined && tapId === this.lastHandledTap)
+                    return;
                 this.hoverTimer = Date.now();
                 this.isHovered = true;
+                this.hoverStartTime = 0;
+                if (tapId !== undefined)
+                    this.lastHandledTap = tapId;
+                return;
+            }
+            if (!this.isHovered) {
+                this.isHovered = true;
+                this.hoverStartTime = Date.now();
+            }
+            else if (this.hoverStartTime > 0) {
+                if (Date.now() - this.hoverStartTime >= levelConstants_1.LevelConstants.HEALTH_BAR_HOVER_DELAY) {
+                    this.hoverTimer = Date.now();
+                    this.hoverStartTime = 0;
+                }
             }
         };
         this.clearHover = () => {
             this.isHovered = false;
+            this.hoverStartTime = 0;
         };
         this.draw = (delta, hearts, maxHearts, x, y, flashing, opts) => {
             const activeTimer = Math.max(this.hurtTimer, this.hoverTimer);
@@ -20966,6 +20991,7 @@ const eventBus_1 = __webpack_require__(/*! ../event/eventBus */ "./src/event/eve
 const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const dropTable_1 = __webpack_require__(/*! ../item/dropTable */ "./src/item/dropTable.ts");
 const weapon_1 = __webpack_require__(/*! ../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
 const enemyShield_1 = __webpack_require__(/*! ../projectile/enemyShield */ "./src/projectile/enemyShield.ts");
@@ -22048,6 +22074,28 @@ class Entity extends drawable_1.Drawable {
         this.tickHealthBarHover = () => {
             if (!this.isEnemy)
                 return;
+            if (gameConstants_1.GameConstants.isMobile) {
+                // Mobile: only trigger on a confirmed clean tap (released without swipe/drag/long-press).
+                // tickHealthBarHover runs before swipe classification, so we can't check Input.swiped here.
+                // tapFired is set at touchend after the swipe check, so it's safe to use.
+                if (!input_1.Input.tapFired)
+                    return;
+                const player = this.game?.players?.[this.game.localPlayerID];
+                if (!player)
+                    return;
+                const tile = player.mouseToTile();
+                const tileAbove = player.mouseToTile(gameConstants_1.GameConstants.TILESIZE / 2);
+                const over = (typeof tile.x === "number" &&
+                    typeof tile.y === "number" &&
+                    this.pointIn(tile.x, tile.y)) ||
+                    (typeof tileAbove.x === "number" &&
+                        typeof tileAbove.y === "number" &&
+                        this.pointIn(tileAbove.x, tileAbove.y));
+                if (over)
+                    this.healthBar.hover(true, input_1.Input.tapCount);
+                // Don't clearHover on mobile — let the timer expire naturally after the tap
+                return;
+            }
             const cursor = mouseCursor_1.MouseCursor.getInstance();
             if (!cursor.isCursorVisible() || cursor.isKeyboardActive()) {
                 this.healthBar.clearHover();
@@ -22065,7 +22113,7 @@ class Entity extends drawable_1.Drawable {
                     typeof tileAbove.y === "number" &&
                     this.pointIn(tileAbove.x, tileAbove.y));
             if (over) {
-                this.healthBar.hover();
+                this.healthBar.hover(); // desktop: 400ms delay before showing
             }
             else {
                 this.healthBar.clearHover();
@@ -38218,6 +38266,7 @@ exports.Input = {
             clientY: exports.Input.currentY,
         });
         exports.Input.swiped = false;
+        exports.Input.tapFired = false;
         // Allow UI systems to prep (e.g. inventory drag candidate) without committing an action yet.
         // Default tap actions are processed on touch end.
         exports.Input.touchStartListener(exports.Input.mouseX, exports.Input.mouseY);
@@ -38371,6 +38420,8 @@ exports.Input = {
         // If the long press already opened a context menu, don't also perform the default action.
         if (shouldTap) {
             exports.Input.tapListener();
+            exports.Input.tapFired = true;
+            exports.Input.tapCount++;
         }
         exports.Input.isTapHold = false;
         exports.Input.tapStartTime = null;
@@ -38404,7 +38455,13 @@ exports.Input = {
     lastSwipeTime: 0,
     lastSwipeDirection: null,
     swipeHoldActive: false,
-    swipeHoldRepeating: false, // Track if we're in repeat mode yet
+    swipeHoldRepeating: false,
+    // True for one or more frames after a confirmed clean tap (no swipe, no drag, no long-press).
+    // Reset on the next touchstart. Used by systems that should only fire on tap release.
+    tapFired: false,
+    // Increments on every confirmed tap. Lets per-entity logic fire exactly once per tap
+    // even though tapFired stays true across multiple render frames.
+    tapCount: 0,
 };
 window.addEventListener("keyup", function (event) {
     exports.Input.onKeyup(event);
@@ -60450,6 +60507,7 @@ LevelConstants.ROOM_COUNT = 50;
 LevelConstants.HEALTH_BAR_FADEIN = 100;
 LevelConstants.HEALTH_BAR_FADEOUT = 350;
 LevelConstants.HEALTH_BAR_TOTALTIME = 2000;
+LevelConstants.HEALTH_BAR_HOVER_DELAY = 400; // ms before hover shows health bar on desktop
 LevelConstants.SHADED_TILE_CUTOFF = 1;
 LevelConstants.MIN_VISIBILITY = 0; // visibility level of places you've already seen
 LevelConstants.LIGHTING_ANGLE_STEP = 2; // how many degrees between each ray, previously 5

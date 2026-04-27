@@ -19,6 +19,7 @@ import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
 import { Shadow } from "../drawable/shadow";
 import { MouseCursor } from "../gui/mouseCursor";
+import { Input } from "../game/input";
 
 import { DropTable } from "../item/dropTable";
 import { Weapon } from "../item/weapon/weapon";
@@ -1707,6 +1708,28 @@ export class Entity extends Drawable {
    */
   protected tickHealthBarHover = (): void => {
     if (!this.isEnemy) return;
+
+    if (GameConstants.isMobile) {
+      // Mobile: only trigger on a confirmed clean tap (released without swipe/drag/long-press).
+      // tickHealthBarHover runs before swipe classification, so we can't check Input.swiped here.
+      // tapFired is set at touchend after the swipe check, so it's safe to use.
+      if (!Input.tapFired) return;
+      const player = this.game?.players?.[this.game.localPlayerID];
+      if (!player) return;
+      const tile = player.mouseToTile();
+      const tileAbove = player.mouseToTile(GameConstants.TILESIZE / 2);
+      const over =
+        (typeof tile.x === "number" &&
+          typeof tile.y === "number" &&
+          this.pointIn(tile.x, tile.y)) ||
+        (typeof tileAbove.x === "number" &&
+          typeof tileAbove.y === "number" &&
+          this.pointIn(tileAbove.x, tileAbove.y));
+      if (over) this.healthBar.hover(true, Input.tapCount);
+      // Don't clearHover on mobile — let the timer expire naturally after the tap
+      return;
+    }
+
     const cursor = MouseCursor.getInstance();
     if (!cursor.isCursorVisible() || cursor.isKeyboardActive()) {
       this.healthBar.clearHover();
@@ -1724,7 +1747,7 @@ export class Entity extends Drawable {
         typeof tileAbove.y === "number" &&
         this.pointIn(tileAbove.x, tileAbove.y));
     if (over) {
-      this.healthBar.hover();
+      this.healthBar.hover(); // desktop: 400ms delay before showing
     } else {
       this.healthBar.clearHover();
     }

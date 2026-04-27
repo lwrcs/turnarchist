@@ -475,6 +475,7 @@ export const Input = {
     } as MouseEvent);
 
     Input.swiped = false;
+    Input.tapFired = false;
 
     // Allow UI systems to prep (e.g. inventory drag candidate) without committing an action yet.
     // Default tap actions are processed on touch end.
@@ -643,6 +644,8 @@ export const Input = {
     // If the long press already opened a context menu, don't also perform the default action.
     if (shouldTap) {
       Input.tapListener();
+      Input.tapFired = true;
+      Input.tapCount++;
     }
     Input.isTapHold = false;
     Input.tapStartTime = null;
@@ -688,6 +691,13 @@ export const Input = {
   lastSwipeDirection: null as Direction | null,
   swipeHoldActive: false,
   swipeHoldRepeating: false, // Track if we're in repeat mode yet
+
+  // True for one or more frames after a confirmed clean tap (no swipe, no drag, no long-press).
+  // Reset on the next touchstart. Used by systems that should only fire on tap release.
+  tapFired: false,
+  // Increments on every confirmed tap. Lets per-entity logic fire exactly once per tap
+  // even though tapFired stays true across multiple render frames.
+  tapCount: 0,
 };
 window.addEventListener(
   "keyup",

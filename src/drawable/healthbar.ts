@@ -7,6 +7,8 @@ export class HealthBar {
   hoverTimer: number;
   shouldDraw: boolean;
   private isHovered: boolean = false;
+  private hoverStartTime: number = 0; // when hover began; 0 = no pending delay
+  private lastHandledTap: number = -1; // tapCount of the last tap that triggered hover
 
   constructor() {
     this.hurtTimer = 0;
@@ -17,15 +19,35 @@ export class HealthBar {
     this.hurtTimer = Date.now();
   };
 
-  hover = () => {
-    if (!this.isHovered) {
+  /**
+   * Call each frame while the cursor is over this entity.
+   * @param immediate - skip the hover delay (mobile tap)
+   * @param tapId     - pass Input.tapCount when immediate=true so each tap fires exactly once
+   */
+  hover = (immediate: boolean = false, tapId?: number) => {
+    if (immediate) {
+      // Only trigger once per distinct tap, even if tapFired spans multiple frames
+      if (tapId !== undefined && tapId === this.lastHandledTap) return;
       this.hoverTimer = Date.now();
       this.isHovered = true;
+      this.hoverStartTime = 0;
+      if (tapId !== undefined) this.lastHandledTap = tapId;
+      return;
+    }
+    if (!this.isHovered) {
+      this.isHovered = true;
+      this.hoverStartTime = Date.now();
+    } else if (this.hoverStartTime > 0) {
+      if (Date.now() - this.hoverStartTime >= LevelConstants.HEALTH_BAR_HOVER_DELAY) {
+        this.hoverTimer = Date.now();
+        this.hoverStartTime = 0;
+      }
     }
   };
 
   clearHover = () => {
     this.isHovered = false;
+    this.hoverStartTime = 0;
   };
 
   draw = (
