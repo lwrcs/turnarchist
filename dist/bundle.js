@@ -28187,6 +28187,7 @@ class Game {
             }
             if (command === "profiledraw") {
                 this._drawProfileEnabled = !this._drawProfileEnabled;
+                Game._drawHelperProfileEnabled = this._drawProfileEnabled;
                 this.pushMessage(`Draw profiling is now ${this._drawProfileEnabled ? "ON" : "OFF"}`);
                 return;
             }
@@ -28199,6 +28200,7 @@ class Game {
                 // Ensure profiling is enabled so we capture subsequent frames.
                 if (!this._drawProfileEnabled) {
                     this._drawProfileEnabled = true;
+                    Game._drawHelperProfileEnabled = true;
                     this.pushMessage("Draw profiling enabled. Run 'logdraw' again in ~1s.");
                 }
                 const frame = this._lastDrawProfileFrame;
@@ -29690,6 +29692,7 @@ class Game {
                 this._drawProfileFrameId += 1;
                 this._drawProfileRoomsThisFrame.clear();
                 this._drawProfileGame.clear();
+                Game._drawHelperCounters.clear();
             }
             const tTotal = this.drawProfileStart("Game.draw.total");
             try {
@@ -29702,6 +29705,9 @@ class Game {
                 Game.ctx.save(); // Save the current canvas state
                 // Reset transformations to ensure the black background covers the entire canvas
                 Game.ctx.setTransform(1, 0, 0, 1, 0, 0);
+                // Set globally — drawHelper relies on this being false and skips its per-call save/restore
+                Game.ctx.imageSmoothingEnabled = false;
+                Game.ctx.imageSmoothingQuality = "low";
                 Game.ctx.globalAlpha = 1;
                 Game.ctx.globalCompositeOperation = "source-over";
                 Game.ctx.fillStyle = this.getBackgroundFillStyle();
@@ -30941,6 +30947,15 @@ class Game {
             return undefined;
         return performance.now();
     }
+    static _dhRecord(name, dt) {
+        const prev = Game._drawHelperCounters.get(name);
+        if (prev) {
+            prev.calls++;
+            prev.totalMs += dt;
+        }
+        else
+            Game._drawHelperCounters.set(name, { calls: 1, totalMs: dt });
+    }
     drawProfileEnd(name, start) {
         if (start === undefined)
             return;
@@ -31005,6 +31020,16 @@ class Game {
             avgMs: c.calls > 0 ? c.totalMs / c.calls : 0,
         }));
         totalRows.sort((a, b) => b.totalMs - a.totalMs);
+        // Pull in drawHelper static counters (collected from the static drawHelper method)
+        for (const [name, c] of Game._drawHelperCounters) {
+            const prev = this._drawProfileGame.get(name);
+            if (prev) {
+                prev.calls += c.calls;
+                prev.totalMs += c.totalMs;
+            }
+            else
+                this._drawProfileGame.set(name, { calls: c.calls, totalMs: c.totalMs });
+        }
         const gameRows = Array.from(this._drawProfileGame.entries()).map(([name, c]) => ({
             name,
             calls: c.calls,
@@ -31658,6 +31683,9 @@ Game.PHOTO_W = 960;
 Game.PHOTO_H = 540;
 Game.inputReceived = false;
 Game.text_canvas_order = [];
+// Static counters for drawHelper (static method can't access instance profiling directly)
+Game._drawHelperProfileEnabled = false;
+Game._drawHelperCounters = new Map();
 Game.letters = "abcdefghijklmnopqrstuvwxyz1234567890,.!?:'()[]%-/+";
 Game.letter_widths = [
     4, 4, 4, 4, 3, 3, 4, 4, 1, 4, 4, 3, 5, 5, 4, 4, 4, 4, 4, 3, 4, 5, 5, 5, 5,
@@ -31800,11 +31828,8 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  * @param fadeDir Optional directional fade mask (left/right/up/down)
  */
 Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
-    Game.ctx.save(); // Save current canvas state so we can safely modify it
-    // Critical: disable smoothing on the *destination* context that performs the scaling drawImage().
-    // This ensures squish scaling stays pixel-crisp (nearest-neighbor).
-    Game.ctx.imageSmoothingEnabled = false;
-    Game.ctx.imageSmoothingQuality = "low";
+    const _prof = Game._drawHelperProfileEnabled;
+    const _t0 = _prof ? performance.now() : 0;
     // Snap to nearest shading increment
     const shadeLevel = entity
         ? gameConstants_1.GameConstants.ENTITY_SHADE_LEVELS
@@ -31847,6 +31872,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         if (colorOverlayDesaturate)
             key += `,colovDesat=1`;
     }
+    const _isHit = !!Game.shade_canvases[key];
+    const _tBuild = _prof && !_isHit ? performance.now() : 0;
     if (!Game.shade_canvases[key]) {
         // First time for this shaded sprite: render it into an offscreen canvas and cache it
         Game.shade_canvases[key] = document.createElement("canvas");
@@ -31943,6 +31970,7 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         }
         // 5) Optional colored outline behind the sprite
         if (outlineColor && outlineOpacity > 0) {
+            const _tOutline = _prof ? performance.now() : 0;
             const ringOuter = 1 + Math.max(0, Math.floor(outlineOffset)); // outer radius in px
             const oPad = ringOuter; // padding on each side
             const oW = baseW + 2 * oPad;
@@ -31987,6 +32015,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             // Align top-left: shaded sprite started at dx,dy = outlinePad
             shCtx.drawImage(outlineCanvas, dx - oPad, dy - oPad);
             shCtx.globalCompositeOperation = "source-over";
+            if (_prof)
+                Game._dhRecord("drawHelper.build.outline", performance.now() - _tOutline);
         }
         // Evict oldest cached shade canvases if we exceed cap (simple FIFO).
         try {
@@ -31999,8 +32029,11 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             }
         }
         catch { }
+        if (_prof)
+            Game._dhRecord("drawHelper.build", performance.now() - _tBuild);
     }
     // Blit the pre-shaded sprite to the main canvas at the destination position/size
+    const _tBlit = _prof ? performance.now() : 0;
     Game.ctx.drawImage(Game.shade_canvases[key], Math.round(dX * gameConstants_1.GameConstants.TILESIZE) -
         (outlineColor && outlineOpacity > 0
             ? 1 + Math.max(0, Math.floor(outlineOffset))
@@ -32014,6 +32047,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         (outlineColor && outlineOpacity > 0
             ? 2 + 2 * Math.max(0, Math.floor(outlineOffset))
             : 0));
+    if (_prof)
+        Game._dhRecord("drawHelper.blit", performance.now() - _tBlit);
     // Optional: lightweight cache stats logging (helps diagnose cache growth / memory pressure)
     if (gameConstants_1.GameConstants.DEBUG_LOG_CANVAS_CACHE_STATS) {
         // Throttle: log at most ~once per 5 seconds.
@@ -32032,7 +32067,11 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             catch { }
         }
     }
-    Game.ctx.restore(); // Restore the canvas to the previous state
+    if (_prof) {
+        const dt = performance.now() - _t0;
+        Game._dhRecord("drawHelper.total", dt);
+        Game._dhRecord(_isHit ? "drawHelper.cacheHit" : "drawHelper.cacheMiss", dt);
+    }
 };
 /**
  * Draw a tile from the main tileset. Convenience wrapper around drawHelper.
