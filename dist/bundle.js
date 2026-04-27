@@ -79744,6 +79744,24 @@ class Populator {
                 this.addCaveOrePocket(room, p, perPocketScale);
             }
         }
+        // Guarantee at least 3 gold ore per cave room.
+        const MIN_GOLD = 3;
+        const goldPlaced = room.entities.filter((e) => e instanceof goldResource_1.GoldResource).length;
+        const goldShortfall = MIN_GOLD - goldPlaced;
+        if (goldShortfall > 0) {
+            const wallAdjacentTiles = room.getEmptyTiles().filter((t) => {
+                return (room.roomArray[t.x]?.[t.y - 1]?.isSolid() ||
+                    room.roomArray[t.x]?.[t.y + 1]?.isSolid() ||
+                    room.roomArray[t.x - 1]?.[t.y]?.isSolid() ||
+                    room.roomArray[t.x + 1]?.[t.y]?.isSolid());
+            });
+            const pool = wallAdjacentTiles.length > 0 ? wallAdjacentTiles : room.getEmptyTiles();
+            for (let i = 0; i < goldShortfall && pool.length > 0; i++) {
+                const idx = Math.floor(random_1.Random.rand() * pool.length);
+                const { x, y } = pool.splice(idx, 1)[0];
+                goldResource_1.GoldResource.add(room, room.game, x, y);
+            }
+        }
         // ADD: Enemies after props, based on remaining space
         this.addRandomEnemies(room);
     }
