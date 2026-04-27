@@ -30829,25 +30829,31 @@ class Game {
             // Centralize chat pushes behind the Game instance.
             this.pushMessage(payload.message);
         });
+        const pendingLevelUps = new Map();
         eventBus_1.globalEventBus.on("SKILL_LEVEL_UP", (payload) => {
-            const player = this.players?.[this.localPlayerID];
-            if (!player)
-                return;
-            const room = player.getRoom?.() ?? this.room;
-            if (!room)
-                return;
-            // First-time prompt: point at the Skills button in the top-left UI.
-            try {
-                this.maybeShowOpenSkillsPointer();
+            const existing = pendingLevelUps.get(payload.skill);
+            if (existing) {
+                clearTimeout(existing.timer);
+                existing.level = Math.max(existing.level, payload.level);
             }
-            catch { }
-            const text = `${skills_1.SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
-            room.particles.push(new floatingTextPopup_1.FloatingTextPopup({
-                room,
-                anchor: player,
-                text,
-                color: "yellow",
-            }));
+            const entry = existing ?? { level: payload.level, timer: undefined };
+            entry.timer = setTimeout(() => {
+                pendingLevelUps.delete(payload.skill);
+                const player = this.players?.[this.localPlayerID];
+                if (!player)
+                    return;
+                const room = player.getRoom?.() ?? this.room;
+                if (!room)
+                    return;
+                try {
+                    this.maybeShowOpenSkillsPointer();
+                }
+                catch { }
+                const text = `${skills_1.SKILL_DISPLAY_NAME[payload.skill]} level ${entry.level}!`;
+                room.particles.push(new floatingTextPopup_1.FloatingTextPopup({ room, anchor: player, text, color: "yellow" }));
+            }, 100);
+            if (!existing)
+                pendingLevelUps.set(payload.skill, entry);
         });
         // Add focus/blur event listeners
         //window.addEventListener("blur", this.handleWindowBlur);
@@ -46971,12 +46977,10 @@ class StatsTracker {
         this.stats.skillsXp[skill] = nextXp;
         this.recomputeTotals();
         if (nextLevel > prevLevel) {
-            for (let lvl = prevLevel + 1; lvl <= nextLevel; lvl++) {
-                eventBus_1.globalEventBus.emit(events_1.EVENTS.SKILL_LEVEL_UP, {
-                    skill,
-                    level: lvl,
-                });
-            }
+            eventBus_1.globalEventBus.emit(events_1.EVENTS.SKILL_LEVEL_UP, {
+                skill,
+                level: nextLevel,
+            });
         }
     }
     /**
@@ -51010,7 +51014,7 @@ let EQUIP_COLOR = "#85a8e6";
 let FULL_OUTLINE = "white";
 class Inventory {
     static computeQuickbarCols(screenW) {
-        return Math.max(4, Math.min(10, Math.round(screenW / 3) + 1));
+        return Math.max(5, Math.min(10, Math.round(screenW / 3) + 1));
     }
     static computeCols(screenW) {
         if (gameConstants_1.GameConstants.INVENTORY_LOCK_COLS)

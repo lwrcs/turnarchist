@@ -143,12 +143,10 @@ export class StatsTracker {
     this.recomputeTotals();
 
     if (nextLevel > prevLevel) {
-      for (let lvl = prevLevel + 1; lvl <= nextLevel; lvl++) {
-        globalEventBus.emit(EVENTS.SKILL_LEVEL_UP, {
-          skill,
-          level: lvl,
-        } satisfies EventPayloads[typeof EVENTS.SKILL_LEVEL_UP]);
-      }
+      globalEventBus.emit(EVENTS.SKILL_LEVEL_UP, {
+        skill,
+        level: nextLevel,
+      } satisfies EventPayloads[typeof EVENTS.SKILL_LEVEL_UP]);
     }
   }
 

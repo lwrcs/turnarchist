@@ -102,7 +102,7 @@ export class Inventory {
   static readonly INVENTORY_CAPACITY = 25;
 
   static computeQuickbarCols(screenW: number): number {
-    return Math.max(4, Math.min(10, Math.round(screenW / 3) + 1));
+    return Math.max(5, Math.min(10, Math.round(screenW / 3) + 1));
   }
 
   static computeCols(screenW: number): number {

@@ -1220,26 +1220,25 @@ export class Game {
     );
 
     type SkillLevelUpEventPayload = { skill: Skill; level: number };
+    const pendingLevelUps = new Map<Skill, { level: number; timer: ReturnType<typeof setTimeout> }>();
     globalEventBus.on<SkillLevelUpEventPayload>("SKILL_LEVEL_UP", (payload) => {
-      const player = this.players?.[this.localPlayerID];
-      if (!player) return;
-      const room = player.getRoom?.() ?? this.room;
-      if (!room) return;
-
-      // First-time prompt: point at the Skills button in the top-left UI.
-      try {
-        this.maybeShowOpenSkillsPointer();
-      } catch {}
-
-      const text = `${SKILL_DISPLAY_NAME[payload.skill]} level ${payload.level}!`;
-      room.particles.push(
-        new FloatingTextPopup({
-          room,
-          anchor: player,
-          text,
-          color: "yellow",
-        }),
-      );
+      const existing = pendingLevelUps.get(payload.skill);
+      if (existing) {
+        clearTimeout(existing.timer);
+        existing.level = Math.max(existing.level, payload.level);
+      }
+      const entry = existing ?? { level: payload.level, timer: undefined as any };
+      entry.timer = setTimeout(() => {
+        pendingLevelUps.delete(payload.skill);
+        const player = this.players?.[this.localPlayerID];
+        if (!player) return;
+        const room = player.getRoom?.() ?? this.room;
+        if (!room) return;
+        try { this.maybeShowOpenSkillsPointer(); } catch {}
+        const text = `${SKILL_DISPLAY_NAME[payload.skill]} level ${entry.level}!`;
+        room.particles.push(new FloatingTextPopup({ room, anchor: player, text, color: "yellow" }));
+      }, 100);
+      if (!existing) pendingLevelUps.set(payload.skill, entry);
     });
 
     // Add focus/blur event listeners
