@@ -111,7 +111,7 @@ export class MummyEnemy extends Enemy {
           }
 
           // Find a path to the target player using localized grid
-          const moves = this.searchPathLocalized(
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
           );

@@ -262,7 +262,7 @@ export class BigFrogEnemy extends Enemy {
               return;
             }
             // Build localized path only if we didn't jump over
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               targetPosition,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: false },

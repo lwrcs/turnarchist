@@ -172,7 +172,7 @@ export class PawnEnemy extends Enemy {
             }
 
             // Build grid like rookEnemy and use A* with orthogonal-only movement
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               this.targetPlayer,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: true },

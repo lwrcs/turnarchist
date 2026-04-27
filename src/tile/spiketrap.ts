@@ -9,6 +9,7 @@ import { Barrel } from "../entity/object/barrel";
 import { HitWarning } from "../drawable/hitWarning";
 
 export class SpikeTrap extends Tile {
+  override readonly hasTickEnd: boolean = true;
   on: boolean;
   tickCount: number;
   frame: number;

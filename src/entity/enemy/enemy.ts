@@ -65,6 +65,13 @@ export abstract class Enemy extends Entity {
   buffed: boolean;
   buffedBefore: boolean;
   baseDamage: number;
+  protected _pathCache: {
+    moves: any[];
+    targetX: number;
+    targetY: number;
+    fromX: number;
+    fromY: number;
+  } | null = null;
 
   constructor(room: Room, game: Game, x: number, y: number) {
     super(room, game, x, y);
@@ -389,11 +396,9 @@ export abstract class Enemy extends Entity {
               }
             }
           }
-          // Use localized pathfinding grid for performance
-          let moves = this.searchPathLocalized(
-            this.targetPlayer,
-            disablePositions,
-          );
+
+          // Use cached pathfinding: skips A* when player hasn't moved and next step is clear.
+          let moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
 
           // If there are moves available
           if (moves.length > 0) {
@@ -520,6 +525,62 @@ export abstract class Enemy extends Entity {
     }
   };
 
+  // Cached variant of searchPathLocalized. Reuses the A* path across turns by tracking
+  // whether the enemy moved since the last compute. Three cases:
+  //   - Stayed in place (attacked, blocked): fromX/Y matches current pos → reuse same path
+  //   - Moved to moves[0]: advance path by one step
+  //   - Moved elsewhere (knockback): cache miss, run fresh A*
+  protected searchPathLocalizedCached(
+    target: { x: number; y: number },
+    disablePositions: Array<astar.Position>,
+    options?: Parameters<Enemy["searchPathLocalized"]>[2],
+  ): any[] {
+    const cache = this._pathCache;
+
+    if (cache !== null && cache.targetX === target.x && cache.targetY === target.y) {
+      let candidate: any[] | null = null;
+
+      if (cache.fromX === this.x && cache.fromY === this.y) {
+        // Stayed in place since last compute (attacked, blocked) — reuse same path.
+        candidate = cache.moves;
+      } else if (
+        cache.moves.length >= 1 &&
+        cache.moves[0].pos.x === this.x &&
+        cache.moves[0].pos.y === this.y
+      ) {
+        // Moved to moves[0] — advance path.
+        candidate = cache.moves.slice(1);
+      }
+      // else: moved somewhere unexpected (knockback) → cache miss
+
+      if (candidate !== null) {
+        if (candidate.length === 0) {
+          this._pathCache = null;
+          return [];
+        }
+        const next = candidate[0];
+        if (!disablePositions.some((p) => p.x === next.pos.x && p.y === next.pos.y)) {
+          this._pathCache = {
+            moves: candidate,
+            targetX: target.x,
+            targetY: target.y,
+            fromX: this.x,
+            fromY: this.y,
+          };
+          return candidate;
+        }
+      }
+    }
+
+    // Cache miss — run A*.
+    const moves = this.searchPathLocalized(target, disablePositions, options);
+    this._pathCache =
+      moves.length > 0
+        ? { moves, targetX: target.x, targetY: target.y, fromX: this.x, fromY: this.y }
+        : null;
+    return moves;
+  }
+
   // Build a localized search grid around enemy and target and run A*
   protected searchPathLocalized(
     target: { x: number; y: number },
@@ -560,6 +621,20 @@ export abstract class Enemy extends Entity {
     right = Math.min(this.room.roomX + this.room.width - 1, right);
     top = Math.max(this.room.roomY, top);
     bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+
+    // Hard cap: prevent O(n²) A* when enemy and player are very far apart in large rooms.
+    // Clip the grid symmetrically toward the midpoint so both ends remain reachable.
+    const MAX_PATH_DIM = 36;
+    if (right - left + 1 > MAX_PATH_DIM) {
+      const excess = right - left + 1 - MAX_PATH_DIM;
+      left += Math.floor(excess / 2);
+      right = left + MAX_PATH_DIM - 1;
+    }
+    if (bottom - top + 1 > MAX_PATH_DIM) {
+      const excess = bottom - top + 1 - MAX_PATH_DIM;
+      top += Math.floor(excess / 2);
+      bottom = top + MAX_PATH_DIM - 1;
+    }
 
     const w = right - left + 1;
     const h = bottom - top + 1;

@@ -82,6 +82,8 @@ export class Entity extends Drawable {
   drawX: number;
   drawY: number;
   dead: boolean;
+  /** True for static props that never need per-turn ticking (no behavior, no light source). */
+  passive: boolean;
   game: Game;
   health: number;
   maxHealth: number;
@@ -314,6 +316,7 @@ export class Entity extends Drawable {
     this.dyingFrame = 30;
     this.alpha = 1;
     this.dead = false;
+    this.passive = false;
     this.hasBloom = false;
     this.bloomColor = "#FFFFFF";
     this.moving = false;

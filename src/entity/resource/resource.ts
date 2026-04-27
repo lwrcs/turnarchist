@@ -52,6 +52,7 @@ export class Resource extends Entity {
     this.health = 1;
     this.chainPushable = false;
     this.name = "resource";
+    this.passive = true;
     this.imageParticleX = 6;
     this.imageParticleY = 24;
   }

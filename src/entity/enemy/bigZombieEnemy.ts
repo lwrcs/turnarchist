@@ -131,8 +131,8 @@ export class BigZombieEnemy extends Enemy {
             }
           }
 
-          // Localized pathfinding for performance
-          const moves = this.searchPathLocalized(
+          // Localized pathfinding with caching for performance
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
           );

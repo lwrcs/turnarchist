@@ -376,7 +376,7 @@ export class SpiderEnemy extends Enemy {
             // First, try to use A* first/second step and extend to length 2 if possible
             let finalX = this.x;
             let finalY = this.y;
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               targetPosition,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: false },

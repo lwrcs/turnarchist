@@ -133,7 +133,7 @@ export class BigKnightEnemy extends Enemy {
             }
 
             // Localized A* pathfinding like BigZombieEnemy
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               this.targetPlayer,
               disablePositions,
             );

@@ -10835,7 +10835,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -11069,7 +11069,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -11534,7 +11534,7 @@ class BeetleEnemy extends enemy_1.Enemy {
                             // First, try to use A* first/second step and extend up to length 3 if possible
                             let finalX = this.x;
                             let finalY = this.y;
-                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
+                            const moves = this.searchPathLocalizedCached(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             if (moves.length > 0) {
                                 let step = moves[0];
                                 const candidate2 = moves[1];
@@ -12063,7 +12063,7 @@ class BigFrogEnemy extends enemy_1.Enemy {
                                 return;
                             }
                             // Build localized path only if we didn't jump over
-                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
+                            const moves = this.searchPathLocalizedCached(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             console.log(moves); //DON'T REMOVE THIS
                             if (moves[1]) {
                                 const wouldHit = (player, moveX, moveY) => {
@@ -12385,7 +12385,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                 }
                             }
                             // Localized A* pathfinding like BigZombieEnemy
-                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                            const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                             if (moves.length > 0) {
                                 const moveX = moves[0].pos.x;
                                 const moveY = moves[0].pos.y;
@@ -12680,7 +12680,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -13213,8 +13213,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        // Localized pathfinding for performance
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        // Localized pathfinding with caching for performance
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -13528,7 +13528,7 @@ class BishopEnemy extends enemy_1.Enemy {
                         disablePositions.push({ x: this.x - 1, y: this.y });
                         disablePositions.push({ x: this.x, y: this.y + 1 });
                         disablePositions.push({ x: this.x, y: this.y - 1 });
-                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true, allowOmni: true });
+                        let moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { diagonals: true, allowOmni: true });
                         moves = moves.filter((move) => {
                             const dx = Math.abs(move.pos.x - this.x);
                             const dy = Math.abs(move.pos.y - this.y);
@@ -14032,7 +14032,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                     }
                     else {
                         // Default fallback: pursue player normally
-                        const moves = this.searchPathLocalized(player, disablePositions);
+                        const moves = this.searchPathLocalizedCached(player, disablePositions);
                         if (moves && moves.length > 0) {
                             const moveX = moves[0].pos.x;
                             const moveY = moves[0].pos.y;
@@ -14484,7 +14484,7 @@ class CrabEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
+                            const moves = this.searchPathLocalizedCached(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -14780,7 +14780,7 @@ class CrusherEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true });
+                            const moves = this.searchPathLocalizedCached(this.target, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 this.tryMove(moves[0].pos.x, moves[0].pos.y);
                                 this.setDrawXY(oldX, oldY);
@@ -15196,6 +15196,7 @@ class Enemy extends entity_1.Entity {
         super(room, game, x, y);
         this.justHurt = false;
         this.hurtThisTurn = false;
+        this._pathCache = null;
         this.hit = () => {
             return this.damage;
         };
@@ -15438,8 +15439,8 @@ class Enemy extends entity_1.Entity {
                                 }
                             }
                         }
-                        // Use localized pathfinding grid for performance
-                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        // Use cached pathfinding: skips A* when player hasn't moved and next step is clear.
+                        let moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -15870,6 +15871,52 @@ class Enemy extends entity_1.Entity {
     get damage() {
         return this.buffed ? 2 * this.baseDamage : this.baseDamage;
     }
+    // Cached variant of searchPathLocalized. Reuses the A* path across turns by tracking
+    // whether the enemy moved since the last compute. Three cases:
+    //   - Stayed in place (attacked, blocked): fromX/Y matches current pos → reuse same path
+    //   - Moved to moves[0]: advance path by one step
+    //   - Moved elsewhere (knockback): cache miss, run fresh A*
+    searchPathLocalizedCached(target, disablePositions, options) {
+        const cache = this._pathCache;
+        if (cache !== null && cache.targetX === target.x && cache.targetY === target.y) {
+            let candidate = null;
+            if (cache.fromX === this.x && cache.fromY === this.y) {
+                // Stayed in place since last compute (attacked, blocked) — reuse same path.
+                candidate = cache.moves;
+            }
+            else if (cache.moves.length >= 1 &&
+                cache.moves[0].pos.x === this.x &&
+                cache.moves[0].pos.y === this.y) {
+                // Moved to moves[0] — advance path.
+                candidate = cache.moves.slice(1);
+            }
+            // else: moved somewhere unexpected (knockback) → cache miss
+            if (candidate !== null) {
+                if (candidate.length === 0) {
+                    this._pathCache = null;
+                    return [];
+                }
+                const next = candidate[0];
+                if (!disablePositions.some((p) => p.x === next.pos.x && p.y === next.pos.y)) {
+                    this._pathCache = {
+                        moves: candidate,
+                        targetX: target.x,
+                        targetY: target.y,
+                        fromX: this.x,
+                        fromY: this.y,
+                    };
+                    return candidate;
+                }
+            }
+        }
+        // Cache miss — run A*.
+        const moves = this.searchPathLocalized(target, disablePositions, options);
+        this._pathCache =
+            moves.length > 0
+                ? { moves, targetX: target.x, targetY: target.y, fromX: this.x, fromY: this.y }
+                : null;
+        return moves;
+    }
     // Build a localized search grid around enemy and target and run A*
     searchPathLocalized(target, disablePositions, options) {
         const pad = 3; // extra wiggle room
@@ -15895,6 +15942,19 @@ class Enemy extends entity_1.Entity {
         right = Math.min(this.room.roomX + this.room.width - 1, right);
         top = Math.max(this.room.roomY, top);
         bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
+        // Hard cap: prevent O(n²) A* when enemy and player are very far apart in large rooms.
+        // Clip the grid symmetrically toward the midpoint so both ends remain reachable.
+        const MAX_PATH_DIM = 36;
+        if (right - left + 1 > MAX_PATH_DIM) {
+            const excess = right - left + 1 - MAX_PATH_DIM;
+            left += Math.floor(excess / 2);
+            right = left + MAX_PATH_DIM - 1;
+        }
+        if (bottom - top + 1 > MAX_PATH_DIM) {
+            const excess = bottom - top + 1 - MAX_PATH_DIM;
+            top += Math.floor(excess / 2);
+            bottom = top + MAX_PATH_DIM - 1;
+        }
         const w = right - left + 1;
         const h = bottom - top + 1;
         const selfW = this.w ?? 1;
@@ -16204,7 +16264,7 @@ class ExalterEnemy extends enemy_1.Enemy {
                         }
                     }
                     // Localized A* toward the target enemy
-                    const moves = this.searchPathLocalized({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
+                    const moves = this.searchPathLocalizedCached({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
                     if (moves.length > 0) {
                         const oldX = this.x;
                         const oldY = this.y;
@@ -16702,7 +16762,7 @@ class FrogEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
+                            const moves = this.searchPathLocalizedCached(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             //console.log(moves); //DON'T REMOVE THIS
                             if (moves[1]) {
                                 let hitPlayer = false;
@@ -17123,7 +17183,7 @@ class KingEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        let moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true, diagonalsOnly: false });
+                        let moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { diagonals: true, diagonalsOnly: false });
                         if (this.justHurt) {
                             this.retreat(oldX, oldY);
                         }
@@ -17317,7 +17377,7 @@ class KnightEnemy extends enemy_1.Enemy {
                                     }
                                 }
                             }
-                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
+                            const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -17523,7 +17583,7 @@ class MummyEnemy extends enemy_1.Enemy {
                             }
                         }
                         // Find a path to the target player using localized grid
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -17758,7 +17818,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                         }
                     }
                     // Localized A* toward the target enemy
-                    const moves = this.searchPathLocalized({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
+                    const moves = this.searchPathLocalizedCached({ x: targetEnemy.x, y: targetEnemy.y }, disablePositions);
                     if (moves.length > 0) {
                         const oldX = this.x;
                         const oldY = this.y;
@@ -18163,7 +18223,7 @@ class PawnEnemy extends enemy_1.Enemy {
                                 return;
                             }
                             // Build grid like rookEnemy and use A* with orthogonal-only movement
-                            const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true, allowOmni: true });
+                            const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
                                 const moveX = moves[0].pos.x;
                                 const moveY = moves[0].pos.y;
@@ -18330,7 +18390,7 @@ class QueenEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { diagonals: true });
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { diagonals: true });
                         if (this.justHurt) {
                             this.retreat(oldX, oldY);
                         }
@@ -18511,7 +18571,7 @@ class RatEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
+                            const moves = this.searchPathLocalizedCached(this.target, disablePositions, { useLastPlayerPos: true, allowOmni: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -18722,7 +18782,7 @@ class RookEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, { useLastPlayerPos: true });
                         if (this.justHurt) {
                             //this.retreat(oldX, oldY);
                             //this.stun();
@@ -18924,7 +18984,7 @@ class SkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
@@ -19804,7 +19864,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                             // First, try to use A* first/second step and extend to length 2 if possible
                             let finalX = this.x;
                             let finalY = this.y;
-                            const moves = this.searchPathLocalized(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
+                            const moves = this.searchPathLocalizedCached(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
                             if (moves.length > 0) {
                                 let step = moves[0];
                                 const candidate2 = moves[1];
@@ -20227,7 +20287,7 @@ class WardenEnemy extends enemy_1.Enemy {
                                     ? this.targetPlayer
                                     : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                                         .darkest;
-                            const moves = this.searchPathLocalized(this.target, disablePositions, { useLastPlayerPos: true });
+                            const moves = this.searchPathLocalizedCached(this.target, disablePositions, { useLastPlayerPos: true });
                             if (moves.length > 0) {
                                 let hitPlayer = false;
                                 for (const i in this.game.players) {
@@ -20710,7 +20770,7 @@ class ZombieEnemy extends enemy_1.Enemy {
                             }
                         }
                         // Find a path to the target player (localized)
-                        const moves = this.searchPathLocalized(this.targetPlayer, disablePositions);
+                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
@@ -22486,6 +22546,7 @@ class Entity extends drawable_1.Drawable {
         this.dyingFrame = 30;
         this.alpha = 1;
         this.dead = false;
+        this.passive = false;
         this.hasBloom = false;
         this.bloomColor = "#FFFFFF";
         this.moving = false;
@@ -26239,6 +26300,7 @@ class Resource extends entity_1.Entity {
         this.health = 1;
         this.chainPushable = false;
         this.name = "resource";
+        this.passive = true;
         this.imageParticleX = 6;
         this.imageParticleY = 24;
     }
@@ -28096,19 +28158,31 @@ class Game {
                     return;
                 }
                 const toRows = (m) => Object.entries(m)
-                    .map(([name, v]) => ({ name, calls: v.calls, totalMs: v.totalMs }))
+                    .map(([name, v]) => ({
+                    name,
+                    calls: v.calls,
+                    totalMs: +v.totalMs.toFixed(3),
+                    avgMs: +(v.totalMs / v.calls).toFixed(3),
+                }))
                     .sort((a, b) => b.totalMs - a.totalMs);
-                console.groupCollapsed(`[logtick] room=${frame.roomGID} depth=${frame.depth} t=${new Date(frame.capturedAt).toISOString()}`);
-                console.log("[logtick] sections(ms)", frame.ms);
+                const fmt = (n) => n.toFixed(3) + "ms";
+                console.groupCollapsed(`[logtick] room=${frame.roomGID} depth=${frame.depth} TOTAL=${fmt(frame.totalMs)} t=${new Date(frame.capturedAt).toISOString()}`);
+                console.log(`[logtick] SUMMARY  total=${fmt(frame.totalMs)}  enemies=${frame.simulatedEnemies}/${frame.totalEnemies} simulated`);
+                // Section timings sorted by cost
+                const sections = Object.entries(frame.ms)
+                    .map(([k, v]) => ({ section: k, ms: +v.toFixed(3), pct: +((v / frame.totalMs) * 100).toFixed(1) }))
+                    .sort((a, b) => b.ms - a.ms);
+                console.log("[logtick] section times (sorted by cost)");
+                console.table(sections);
                 console.log("[logtick] counts", frame.counts);
-                console.log("[logtick] enemy ticks (sorted by totalMs)");
+                console.log("[logtick] enemy ticks by type (sorted by totalMs)");
                 console.table(toRows(frame.enemyTicksByType).slice(0, 25));
                 console.log("[logtick] non-enemy entity ticks (sorted by totalMs)");
                 console.table(toRows(frame.nonEnemyTicksByType).slice(0, 25));
                 console.log("[logtick] projectile processing (sorted by totalMs)");
                 console.table(toRows(frame.projectileProcessByType).slice(0, 25));
                 console.groupEnd();
-                this.pushMessage("Logged tick profile to console.");
+                this.pushMessage(`Tick profile logged. Total: ${fmt(frame.totalMs)}, enemies: ${frame.simulatedEnemies}/${frame.totalEnemies}`);
                 return;
             }
             if (command === "profiledraw") {
@@ -72914,16 +72988,21 @@ class Room {
                 typeof performance.now === "function"
                 ? performance.now()
                 : Date.now();
+            const tTurnStart = nowMs();
             const prof = this.game.tickProfileEnabled
                 ? {
                     capturedAt: Date.now(),
                     roomGID: this.globalId,
                     depth: this.depth,
+                    totalMs: 0,
+                    simulatedEnemies: 0,
+                    totalEnemies: 0,
                     counts: {},
                     ms: {},
                     enemyTicksByType: {},
                     nonEnemyTicksByType: {},
                     projectileProcessByType: {},
+                    behaviorBreakdown: {},
                 }
                 : null;
             const addMs = (key, deltaMs) => {
@@ -72946,14 +73025,25 @@ class Room {
             };
             const activeZ = this.playerTicked?.z ?? this.getActiveZ();
             // take computer turn
+            // Lighting only needs to recompute when something that actually affects shadows moves:
+            // opaque entities (blocks/trees — never move in practice) or light-source-carrying
+            // entities (shielded enemies). Regular enemies are non-opaque and carry no light.
+            let lightingDirty = false;
             const tEntities = nowMs();
             for (const e of this.entities) {
                 if (e.z !== activeZ)
                     continue;
+                if (e.passive)
+                    continue; // static props never need per-turn ticking
                 if (e instanceof enemy_1.Enemy) {
+                    if (prof)
+                        prof.totalEnemies++;
                     if (!this.shouldSimulateEnemy(e))
                         continue;
+                    if (prof)
+                        prof.simulatedEnemies++;
                 }
+                const bx = e.x, by = e.y;
                 if (prof) {
                     const t0 = nowMs();
                     e.tick();
@@ -72966,6 +73056,8 @@ class Room {
                 }
                 else
                     e.tick();
+                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded))
+                    lightingDirty = true;
                 addCount("entityTick");
             }
             addMs("entities.tick", nowMs() - tEntities);
@@ -73034,7 +73126,9 @@ class Room {
             const tTiles = nowMs();
             for (let x = this.roomX; x < this.roomX + this.width; x++) {
                 for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    this.roomArray[x][y].tickEnd();
+                    const tile = this.roomArray[x][y];
+                    if (tile.hasTickEnd)
+                        tile.tickEnd();
                 }
             }
             addMs("tiles.tickEnd", nowMs() - tTiles);
@@ -73045,13 +73139,21 @@ class Room {
             this.checkForNoEnemies();
             //console.log(this.entities.filter((e) => e instanceof Enemy).length);
             this.turn = TurnState.playerTurn;
-            this.updateLighting();
+            const tLighting = nowMs();
+            // Only recompute lighting if ENEMIES_BLOCK_LIGHT (enemy positions cast shadows)
+            // and at least one entity actually moved this turn. Static-torch/glowshroom
+            // light sources are fixed, so if nothing moved the result would be identical.
+            if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT && lightingDirty) {
+                this.updateLighting();
+            }
+            addMs("updateLighting", nowMs() - tLighting);
             for (const e of this.entities) {
                 if ((e.z ?? 0) !== activeZ)
                     continue;
                 e.shouldSeeThrough();
             }
             if (prof) {
+                prof.totalMs = nowMs() - tTurnStart;
                 this.game.lastTickProfileFrame = prof;
             }
         };
@@ -82877,6 +82979,7 @@ const tile_1 = __webpack_require__(/*! ./tile */ "./src/tile/tile.ts");
 class Button extends tile_1.Tile {
     constructor(room, x, y, linkedDoor) {
         super(room, x, y);
+        this.hasTickEnd = true;
         this.press = () => {
             this.pressed = true;
             this.linkedDoor.opened = true;
@@ -84197,6 +84300,7 @@ const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/dr
 class SpikeTrap extends tile_1.Tile {
     constructor(room, x, y, tickCount) {
         super(room, x, y);
+        this.hasTickEnd = true;
         this.tick = () => {
             this.tickCount++;
             if (this.tickCount >= 4)
@@ -84342,6 +84446,7 @@ class Tile extends drawable_1.Drawable {
         };
         this.onCollide = (player) => { };
         this.onCollideEnemy = (enemy) => { };
+        this.hasTickEnd = false;
         this.tick = () => { };
         this.tickEnd = () => { };
         this.draw = (delta) => { };

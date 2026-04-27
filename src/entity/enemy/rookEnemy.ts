@@ -85,7 +85,7 @@ export class RookEnemy extends Enemy {
               }
             }
           }
-          const moves = this.searchPathLocalized(
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
             { useLastPlayerPos: true },

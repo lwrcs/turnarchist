@@ -459,7 +459,7 @@ export class BoltcasterEnemy extends Enemy {
           this.makeHitWarnings();
         } else {
           // Default fallback: pursue player normally
-          const moves = this.searchPathLocalized(player, disablePositions);
+          const moves = this.searchPathLocalizedCached(player, disablePositions);
           if (moves && moves.length > 0) {
             const moveX = moves[0].pos.x;
             const moveY = moves[0].pos.y;

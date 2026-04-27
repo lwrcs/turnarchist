@@ -117,7 +117,7 @@ export class OccultistEnemy extends Enemy {
         }
 
         // Localized A* toward the target enemy
-        const moves = this.searchPathLocalized(
+        const moves = this.searchPathLocalizedCached(
           { x: targetEnemy.x, y: targetEnemy.y },
           disablePositions,
         );

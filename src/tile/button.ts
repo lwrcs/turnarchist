@@ -7,6 +7,7 @@ import { Entity } from "../entity/entity";
 import { Enemy } from "../entity/enemy/enemy";
 
 export class Button extends Tile {
+  override readonly hasTickEnd: boolean = true;
   // all are in grid units
   w: number;
   h: number;

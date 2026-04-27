@@ -413,7 +413,7 @@ export class BeetleEnemy extends Enemy {
             // First, try to use A* first/second step and extend up to length 3 if possible
             let finalX = this.x;
             let finalY = this.y;
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               targetPosition,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: false },

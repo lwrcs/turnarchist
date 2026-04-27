@@ -94,7 +94,7 @@ export class KingEnemy extends Enemy {
             }
           }
 
-          let moves = this.searchPathLocalized(
+          let moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
             { diagonals: true, diagonalsOnly: false },

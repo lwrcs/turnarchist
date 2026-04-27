@@ -94,7 +94,7 @@ export class QueenEnemy extends Enemy {
               }
             }
           }
-          const moves = this.searchPathLocalized(
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
             { diagonals: true },

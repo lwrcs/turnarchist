@@ -129,7 +129,7 @@ export class FrogEnemy extends Enemy {
                 }
               }
             }
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               targetPosition,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: false },

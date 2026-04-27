@@ -75,7 +75,7 @@ export class ArmoredzombieEnemy extends Enemy {
             }
           }
 
-          const moves = this.searchPathLocalized(
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
           );

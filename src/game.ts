@@ -514,11 +514,15 @@ type TickProfileFrame = {
   capturedAt: number;
   roomGID: string;
   depth: number;
+  totalMs: number;
+  simulatedEnemies: number;
+  totalEnemies: number;
   ms: Record<string, number>;
   counts: Record<string, number>;
   enemyTicksByType: Record<string, TickProfileCounter>;
   nonEnemyTicksByType: Record<string, TickProfileCounter>;
   projectileProcessByType: Record<string, TickProfileCounter>;
+  behaviorBreakdown: Record<string, TickProfileCounter>;
 };
 
 export class Game {
@@ -2526,23 +2530,35 @@ export class Game {
       }
       const toRows = (m: Record<string, TickProfileCounter>) =>
         Object.entries(m)
-          .map(([name, v]) => ({ name, calls: v.calls, totalMs: v.totalMs }))
+          .map(([name, v]) => ({
+            name,
+            calls: v.calls,
+            totalMs: +v.totalMs.toFixed(3),
+            avgMs: +(v.totalMs / v.calls).toFixed(3),
+          }))
           .sort((a, b) => b.totalMs - a.totalMs);
+      const fmt = (n: number) => n.toFixed(3) + "ms";
       console.groupCollapsed(
-        `[logtick] room=${frame.roomGID} depth=${frame.depth} t=${new Date(
-          frame.capturedAt,
-        ).toISOString()}`,
+        `[logtick] room=${frame.roomGID} depth=${frame.depth} TOTAL=${fmt(frame.totalMs)} t=${new Date(frame.capturedAt).toISOString()}`,
       );
-      console.log("[logtick] sections(ms)", frame.ms);
+      console.log(
+        `[logtick] SUMMARY  total=${fmt(frame.totalMs)}  enemies=${frame.simulatedEnemies}/${frame.totalEnemies} simulated`,
+      );
+      // Section timings sorted by cost
+      const sections = Object.entries(frame.ms)
+        .map(([k, v]) => ({ section: k, ms: +v.toFixed(3), pct: +((v / frame.totalMs) * 100).toFixed(1) }))
+        .sort((a, b) => b.ms - a.ms);
+      console.log("[logtick] section times (sorted by cost)");
+      console.table(sections);
       console.log("[logtick] counts", frame.counts);
-      console.log("[logtick] enemy ticks (sorted by totalMs)");
+      console.log("[logtick] enemy ticks by type (sorted by totalMs)");
       console.table(toRows(frame.enemyTicksByType).slice(0, 25));
       console.log("[logtick] non-enemy entity ticks (sorted by totalMs)");
       console.table(toRows(frame.nonEnemyTicksByType).slice(0, 25));
       console.log("[logtick] projectile processing (sorted by totalMs)");
       console.table(toRows(frame.projectileProcessByType).slice(0, 25));
       console.groupEnd();
-      this.pushMessage("Logged tick profile to console.");
+      this.pushMessage(`Tick profile logged. Total: ${fmt(frame.totalMs)}, enemies: ${frame.simulatedEnemies}/${frame.totalEnemies}`);
       return;
     }
 

@@ -1674,25 +1674,21 @@ export class Room {
         ? performance.now()
         : Date.now();
 
+    const tTurnStart = nowMs();
     const prof = this.game.tickProfileEnabled
       ? {
           capturedAt: Date.now(),
           roomGID: this.globalId,
           depth: this.depth,
+          totalMs: 0,
+          simulatedEnemies: 0,
+          totalEnemies: 0,
           counts: {} as Record<string, number>,
           ms: {} as Record<string, number>,
-          enemyTicksByType: {} as Record<
-            string,
-            { calls: number; totalMs: number }
-          >,
-          nonEnemyTicksByType: {} as Record<
-            string,
-            { calls: number; totalMs: number }
-          >,
-          projectileProcessByType: {} as Record<
-            string,
-            { calls: number; totalMs: number }
-          >,
+          enemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
+          nonEnemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
+          projectileProcessByType: {} as Record<string, { calls: number; totalMs: number }>,
+          behaviorBreakdown: {} as Record<string, { calls: number; totalMs: number }>,
         }
       : null;
 
@@ -1718,12 +1714,20 @@ export class Room {
 
     const activeZ = this.playerTicked?.z ?? this.getActiveZ();
     // take computer turn
+    // Lighting only needs to recompute when something that actually affects shadows moves:
+    // opaque entities (blocks/trees — never move in practice) or light-source-carrying
+    // entities (shielded enemies). Regular enemies are non-opaque and carry no light.
+    let lightingDirty = false;
     const tEntities = nowMs();
     for (const e of this.entities) {
       if (e.z !== activeZ) continue;
+      if (e.passive) continue; // static props never need per-turn ticking
       if (e instanceof Enemy) {
+        if (prof) prof.totalEnemies++;
         if (!this.shouldSimulateEnemy(e)) continue;
+        if (prof) prof.simulatedEnemies++;
       }
+      const bx = e.x, by = e.y;
       if (prof) {
         const t0 = nowMs();
         e.tick();
@@ -1732,6 +1736,7 @@ export class Room {
         if (e instanceof Enemy) addTypeMs(prof.enemyTicksByType, name, dt);
         else addTypeMs(prof.nonEnemyTicksByType, name, dt);
       } else e.tick();
+      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded)) lightingDirty = true;
       addCount("entityTick");
     }
     addMs("entities.tick", nowMs() - tEntities);
@@ -1803,7 +1808,8 @@ export class Room {
     const tTiles = nowMs();
     for (let x = this.roomX; x < this.roomX + this.width; x++) {
       for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        this.roomArray[x][y].tickEnd();
+        const tile = this.roomArray[x][y];
+        if (tile.hasTickEnd) tile.tickEnd();
       }
     }
     addMs("tiles.tickEnd", nowMs() - tTiles);
@@ -1819,13 +1825,22 @@ export class Room {
     //console.log(this.entities.filter((e) => e instanceof Enemy).length);
 
     this.turn = TurnState.playerTurn;
-    this.updateLighting();
+    const tLighting = nowMs();
+    // Only recompute lighting if ENEMIES_BLOCK_LIGHT (enemy positions cast shadows)
+    // and at least one entity actually moved this turn. Static-torch/glowshroom
+    // light sources are fixed, so if nothing moved the result would be identical.
+    if (GameConstants.ENEMIES_BLOCK_LIGHT && lightingDirty) {
+      this.updateLighting();
+    }
+    addMs("updateLighting", nowMs() - tLighting);
+
     for (const e of this.entities) {
       if ((e.z ?? 0) !== activeZ) continue;
       e.shouldSeeThrough();
     }
 
     if (prof) {
+      prof.totalMs = nowMs() - tTurnStart;
       this.game.lastTickProfileFrame = prof;
     }
   };

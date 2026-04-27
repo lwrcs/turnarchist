@@ -88,7 +88,7 @@ export class RatEnemy extends Enemy {
                 ? this.targetPlayer
                 : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
                     .darkest;
-            const moves = this.searchPathLocalized(
+            const moves = this.searchPathLocalizedCached(
               this.target as any,
               disablePositions,
               { useLastPlayerPos: true, allowOmni: true },

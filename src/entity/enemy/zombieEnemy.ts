@@ -99,7 +99,7 @@ export class ZombieEnemy extends Enemy {
           }
 
           // Find a path to the target player (localized)
-          const moves = this.searchPathLocalized(
+          const moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
           );

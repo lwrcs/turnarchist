@@ -142,7 +142,7 @@ export class BishopEnemy extends Enemy {
           disablePositions.push({ x: this.x - 1, y: this.y } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y + 1 } as astar.Position);
           disablePositions.push({ x: this.x, y: this.y - 1 } as astar.Position);
-          let moves = this.searchPathLocalized(
+          let moves = this.searchPathLocalizedCached(
             this.targetPlayer,
             disablePositions,
             { diagonals: true, allowOmni: true },

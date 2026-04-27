@@ -87,6 +87,7 @@ export abstract class Tile extends Drawable {
   };
   onCollide = (player: Player) => {};
   onCollideEnemy = (enemy: Entity) => {};
+  readonly hasTickEnd: boolean = false;
   tick = () => {};
   tickEnd = () => {};
 
