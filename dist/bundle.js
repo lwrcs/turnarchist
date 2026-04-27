@@ -58941,7 +58941,6 @@ const glowBugEnemy_1 = __webpack_require__(/*! ../entity/enemy/glowBugEnemy */ "
 const tree_1 = __webpack_require__(/*! ../entity/object/tree */ "./src/entity/object/tree.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
 const decoBlock_1 = __webpack_require__(/*! ../entity/object/decoBlock */ "./src/entity/object/decoBlock.ts");
-const furnace_1 = __webpack_require__(/*! ../entity/object/furnace */ "./src/entity/object/furnace.ts");
 const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 // Enemy imports
 const crabEnemy_1 = __webpack_require__(/*! ../entity/enemy/crabEnemy */ "./src/entity/enemy/crabEnemy.ts");
@@ -59055,7 +59054,6 @@ const environmentData = {
             { class: sprout_1.Sprout, weight: 0.025 },
             { class: chest_1.Chest, weight: 0.025 },
             { class: decoBlock_1.DecoBlock, weight: 0.05 },
-            { class: furnace_1.Furnace, weight: 0.05 },
         ],
         enemies: [
             // Early game enemies (depth 0+)
@@ -59514,7 +59512,6 @@ const environmentData = {
             { class: sprout_1.Sprout, weight: 0.025 },
             { class: chest_1.Chest, weight: 0.025 },
             { class: darkPillar_1.DarkPillar, weight: 0.05 },
-            { class: furnace_1.Furnace, weight: 0.05 },
         ],
         enemies: [
             // Early game enemies (depth 0+)
@@ -60360,6 +60357,8 @@ exports.LevelGenerator = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
+const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
+const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const levelParametersGenerator_1 = __webpack_require__(/*! ./levelParametersGenerator */ "./src/level/levelParametersGenerator.ts");
 const level_1 = __webpack_require__(/*! ./level */ "./src/level/level.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
@@ -60591,6 +60590,24 @@ class LevelGenerator {
             // Only call linkExitToStart for main paths
             if (newLevel.exitRoom) {
                 newLevel.exitRoom.linkExitToStart();
+                // Place corner torches in the top wall after the tunnel door is settled.
+                const er = newLevel.exitRoom;
+                const topY = er.roomY;
+                const midX = er.roomX + Math.floor(er.width / 2);
+                const cornerScans = [
+                    [er.roomX + 1, midX, 1],
+                    [er.roomX + er.width - 2, midX, -1],
+                ];
+                for (const [start, end, step] of cornerScans) {
+                    for (let x = start; step > 0 ? x <= end : x >= end; x += step) {
+                        if (er.roomArray[x]?.[topY] instanceof wall_1.Wall) {
+                            const torch = new placedTorch_1.PlacedTorch(er, er.game, x, topY);
+                            torch.applyWallDirection(game_1.Direction.UP);
+                            er.entities.push(torch);
+                            break;
+                        }
+                    }
+                }
             }
             // Update the current floor first level ID if it's not a cave
             if (!isSidePath)
@@ -72585,6 +72602,15 @@ class Room {
                 //console.log("door not added");
             }
             room.roomArray[d.x][d.y] = d;
+            // Evict any wall-mounted entity (e.g. PlacedTorch) occupying this tile.
+            for (const e of room.entities) {
+                if (e.name === "placed_torch" && e.x === d.x && e.y === d.y) {
+                    if (e.lightSource) {
+                        room.lightSources = room.lightSources.filter(ls => ls !== e.lightSource);
+                    }
+                }
+            }
+            room.entities = room.entities.filter(e => !(e.name === "placed_torch" && e.x === d.x && e.y === d.y));
             return d;
         };
         //used for spawn commands, implement elsewhere later
@@ -78334,6 +78360,7 @@ const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weap
 const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light/torch.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const insideLevelDoor_1 = __webpack_require__(/*! ../tile/insideLevelDoor */ "./src/tile/insideLevelDoor.ts");
+const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const button_1 = __webpack_require__(/*! ../tile/button */ "./src/tile/button.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 // (keep single import)
@@ -78541,6 +78568,23 @@ class Populator {
                             up.isSidePath = true;
                             up.returnToRoot = true;
                             exitRoom.roomArray[pos.x][pos.y] = up;
+                        }
+                    }
+                    // Place torches at the leftmost and rightmost Wall tile in the top wall row.
+                    const topY = exitRoom.roomY;
+                    const midX = exitRoom.roomX + Math.floor(exitRoom.width / 2);
+                    const cornerScans = [
+                        [exitRoom.roomX + 1, midX, 1],
+                        [exitRoom.roomX + exitRoom.width - 2, midX, -1],
+                    ];
+                    for (const [start, end, step] of cornerScans) {
+                        for (let x = start; step > 0 ? x <= end : x >= end; x += step) {
+                            if (exitRoom.roomArray[x]?.[topY] instanceof wall_1.Wall) {
+                                const torch = new placedTorch_1.PlacedTorch(exitRoom, exitRoom.game, x, topY);
+                                torch.applyWallDirection(game_2.Direction.UP);
+                                exitRoom.entities.push(torch);
+                                break;
+                            }
                         }
                     }
                 }
@@ -79034,6 +79078,8 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.addTorchesByArea = (room) => {
+            if (room.envType === environmentTypes_1.EnvType.SEWER)
+                return;
             const factor = room.envType === environmentTypes_1.EnvType.TUTORIAL ? 2 : 1;
             let numTorches = Math.max(1, Math.floor(Math.sqrt(room.roomArea) / 3) -
                 Math.floor(Math.sqrt(room.depth)));
@@ -79246,6 +79292,80 @@ class Populator {
         }
         return this.level.getFurthestFromLadder("down");
     }
+    /** Returns a set of "x,y" strings covering every tile adjacent to a PlacedTorch in the room. */
+    torchAdjacentSet(room) {
+        const s = new Set();
+        for (const e of room.entities) {
+            if (e.name !== "placed_torch")
+                continue;
+            const tx = e.x, ty = e.y;
+            s.add(`${tx},${ty}`);
+            s.add(`${tx + 1},${ty}`);
+            s.add(`${tx - 1},${ty}`);
+            s.add(`${tx},${ty + 1}`);
+            s.add(`${tx},${ty - 1}`);
+        }
+        return s;
+    }
+    addFloorTorches(room, rand) {
+        // No floor torches in sewer (damp/dark aesthetic) or any env that skips wall torches
+        if (room.envType === environmentTypes_1.EnvType.SEWER)
+            return;
+        // Mirror the room-type exclusions that also skip wall torches
+        const noTorchTypes = new Set([
+            room_1.RoomType.SHOP,
+            room_1.RoomType.SPIKECORRIDOR,
+            room_1.RoomType.TUTORIAL,
+            room_1.RoomType.GEMCAVE,
+            room_1.RoomType.ROPECAVE,
+            room_1.RoomType.ROPEUP,
+            room_1.RoomType.CORRIDOR,
+            room_1.RoomType.MAZE,
+            room_1.RoomType.PUZZLE,
+            room_1.RoomType.KEYROOM,
+            room_1.RoomType.CHESSBOARD,
+            room_1.RoomType.FOUNTAIN,
+            room_1.RoomType.COFFIN,
+            room_1.RoomType.GRAVEYARD,
+            room_1.RoomType.FOREST,
+        ]);
+        if (noTorchTypes.has(room.type))
+            return;
+        // CAVE/BIGCAVE only get wall torches in castle envs
+        if ((room.type === room_1.RoomType.CAVE || room.type === room_1.RoomType.BIGCAVE) &&
+            room.envType !== environmentTypes_1.EnvType.CASTLE &&
+            this.level.environment.type !== environmentTypes_1.EnvType.CASTLE)
+            return;
+        // Start rooms with an upladder back (depth != 0) skip wall torches
+        if (room.type === room_1.RoomType.START && room.depth !== 0)
+            return;
+        const k = 0.01 / Math.log(5);
+        const cap = 0.05;
+        const forbidden = this.torchAdjacentSet(room);
+        for (const e of room.entities)
+            forbidden.add(`${e.x},${e.y}`);
+        for (let x = room.roomX + 1; x < room.roomX + room.width - 1; x++) {
+            for (let y = room.roomY + 1; y < room.roomY + room.height - 1; y++) {
+                if (forbidden.has(`${x},${y}`))
+                    continue;
+                const tile = room.roomArray[x]?.[y];
+                if (!tile || tile.isSolid())
+                    continue;
+                const dist = Math.min(x - room.roomX, room.roomX + room.width - 1 - x, y - room.roomY, room.roomY + room.height - 1 - y);
+                const p = dist <= 1 ? 0 : Math.min(cap, k * Math.log(dist));
+                if (p <= 0 || rand() >= p)
+                    continue;
+                const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+                torch.applyFloorPlacement();
+                room.entities.push(torch);
+                forbidden.add(`${x},${y}`);
+                forbidden.add(`${x + 1},${y}`);
+                forbidden.add(`${x - 1},${y}`);
+                forbidden.add(`${x},${y + 1}`);
+                forbidden.add(`${x},${y - 1}`);
+            }
+        }
+    }
     addProps(room, numProps, envType) {
         const envData = envType
             ? environment_1.environmentData[envType]
@@ -79254,7 +79374,8 @@ class Populator {
         const props = peaceful
             ? envData.props.filter((p) => p.class !== tombStone_1.TombStone)
             : envData.props;
-        let tiles = room.getEmptyTiles();
+        const torchForbidden = this.torchAdjacentSet(room);
+        let tiles = room.getEmptyTiles().filter(t => !torchForbidden.has(`${t.x},${t.y}`));
         for (let i = 0; i < numProps; i++) {
             if (tiles.length === 0)
                 break;
@@ -79307,7 +79428,8 @@ class Populator {
         const propBlobFieldCache = new Map();
         // Note: clusterer debug data is accessible via `clusterer.getLastDebugReport()`.
         // Convert clustered single-tile seeds into valid placements for larger footprints
-        let tiles = room.getEmptyTiles();
+        const torchForbidden = this.torchAdjacentSet(room);
+        let tiles = room.getEmptyTiles().filter(t => !torchForbidden.has(`${t.x},${t.y}`));
         for (const seed of positions) {
             if (tiles.length === 0)
                 break;
@@ -79821,13 +79943,13 @@ class Populator {
             const above = aboveInRoom ? room.roomArray[x]?.[y - 1] : undefined;
             const right = rightInRoom ? room.roomArray[x + 1]?.[y] : undefined;
             const left = leftInRoom ? room.roomArray[x - 1]?.[y] : undefined;
-            if (below !== undefined && !(below instanceof wall_1.Wall))
+            if (below !== undefined && !(below instanceof wall_1.Wall) && !(below instanceof door_1.Door))
                 return game_2.Direction.UP;
-            if (above !== undefined && !(above instanceof wall_1.Wall))
+            if (above !== undefined && !(above instanceof wall_1.Wall) && !(above instanceof door_1.Door))
                 return game_2.Direction.DOWN;
-            if (right !== undefined && !(right instanceof wall_1.Wall))
+            if (right !== undefined && !(right instanceof wall_1.Wall) && !(right instanceof door_1.Door))
                 return game_2.Direction.LEFT;
-            if (left !== undefined && !(left instanceof wall_1.Wall))
+            if (left !== undefined && !(left instanceof wall_1.Wall) && !(left instanceof door_1.Door))
                 return game_2.Direction.RIGHT;
             return null;
         };
@@ -79836,12 +79958,22 @@ class Populator {
             t.applyWallDirection(dir);
             room.entities.push(t);
         };
+        const dirTarget = (x, y, d) => ({
+            x: d === game_2.Direction.LEFT ? x + 1 : d === game_2.Direction.RIGHT ? x - 1 : x,
+            y: d === game_2.Direction.UP ? y + 1 : d === game_2.Direction.DOWN ? y - 1 : y,
+        });
+        const hasVM = (x, y) => room.entities.some(e => e instanceof vendingMachine_1.VendingMachine && e.x === x && e.y === y);
         if (placeX !== undefined && placeY !== undefined) {
             if (!(room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall))
                 return;
+            if (hasVM(placeX, placeY))
+                return;
             const dir = detectDir(placeX, placeY);
-            if (dir !== null)
-                place(placeX, placeY, dir);
+            if (dir !== null) {
+                const tgt = dirTarget(placeX, placeY, dir);
+                if (!hasVM(tgt.x, tgt.y))
+                    place(placeX, placeY, dir);
+            }
             return;
         }
         const candidates = [];
@@ -79849,9 +79981,15 @@ class Populator {
             for (let yy = room.roomY; yy < room.roomY + room.height; yy++) {
                 if (!(room.roomArray[xx]?.[yy] instanceof wall_1.Wall))
                     continue;
+                if (hasVM(xx, yy))
+                    continue;
                 const dir = detectDir(xx, yy);
-                if (dir !== null)
-                    candidates.push({ x: xx, y: yy, dir });
+                if (dir === null)
+                    continue;
+                const tgt = dirTarget(xx, yy, dir);
+                if (hasVM(tgt.x, tgt.y))
+                    continue;
+                candidates.push({ x: xx, y: yy, dir });
             }
         }
         for (let i = 0; i < numTorches; i++) {
@@ -81226,6 +81364,7 @@ class Populator {
                 // No environmental features for other room types
                 break;
         }
+        this.addFloorTorches(room, rand);
         // === Z DEBUG MODE: build a simple upper floor layer over inner walls and add z-only stairs ===
         if (gameConstants_1.GameConstants.Z_DEBUG_MODE) {
             try {
@@ -81762,7 +81901,7 @@ class Populator {
      * Places a VendingMachine in an empty wall.
      */
     placeVendingMachineInWall(room, item) {
-        const emptyWalls = room.getEmptyWall();
+        const emptyWalls = room.getEmptyWall().filter(w => !room.entities.some(e => e instanceof placedTorch_1.PlacedTorch && e.x === w.x && e.y === w.y));
         if (emptyWalls.length === 0)
             return;
         // Select a random empty wall

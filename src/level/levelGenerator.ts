@@ -1,9 +1,11 @@
-import { ChatMessage, Game } from "../game";
+import { ChatMessage, Game, Direction } from "../game";
 import { Room, RoomType } from "../room/room";
 import { Door } from "../tile/door";
 import { LevelConstants } from "./levelConstants";
 import { Random } from "../utility/random";
 import { DownLadder } from "../tile/downLadder";
+import { Wall } from "../tile/wall";
+import { PlacedTorch } from "../entity/object/placedTorch";
 import {
   LevelParameterGenerator,
   LevelParameters,
@@ -391,6 +393,25 @@ export class LevelGenerator {
     // Only call linkExitToStart for main paths
     if (newLevel.exitRoom) {
       newLevel.exitRoom.linkExitToStart();
+
+      // Place corner torches in the top wall after the tunnel door is settled.
+      const er = newLevel.exitRoom;
+      const topY = er.roomY;
+      const midX = er.roomX + Math.floor(er.width / 2);
+      const cornerScans: Array<[number, number, number]> = [
+        [er.roomX + 1, midX, 1],
+        [er.roomX + er.width - 2, midX, -1],
+      ];
+      for (const [start, end, step] of cornerScans) {
+        for (let x = start; step > 0 ? x <= end : x >= end; x += step) {
+          if (er.roomArray[x]?.[topY] instanceof Wall) {
+            const torch = new PlacedTorch(er, er.game, x, topY);
+            torch.applyWallDirection(Direction.UP);
+            er.entities.push(torch);
+            break;
+          }
+        }
+      }
     }
 
     // Update the current floor first level ID if it's not a cave

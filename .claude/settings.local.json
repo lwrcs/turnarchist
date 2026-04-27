@@ -3,7 +3,8 @@
     "allow": [
       "Bash(xargs grep *)",
       "Bash(cat)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npx tsc *)"
     ]
   }
 }

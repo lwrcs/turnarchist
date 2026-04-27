@@ -901,6 +901,17 @@ export class Room {
       //console.log("door not added");
     }
     room.roomArray[d.x][d.y] = d;
+    // Evict any wall-mounted entity (e.g. PlacedTorch) occupying this tile.
+    for (const e of room.entities) {
+      if (e.name === "placed_torch" && e.x === d.x && e.y === d.y) {
+        if ((e as any).lightSource) {
+          room.lightSources = room.lightSources.filter(ls => ls !== (e as any).lightSource);
+        }
+      }
+    }
+    room.entities = room.entities.filter(
+      e => !(e.name === "placed_torch" && e.x === d.x && e.y === d.y),
+    );
 
     return d;
   };

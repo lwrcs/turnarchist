@@ -216,7 +216,6 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Sprout, weight: 0.025 },
       { class: Chest, weight: 0.025 },
       { class: DecoBlock, weight: 0.05 },
-      { class: Furnace, weight: 0.05 },
     ],
     enemies: [
       // Early game enemies (depth 0+)
@@ -690,7 +689,6 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Sprout, weight: 0.025 },
       { class: Chest, weight: 0.025 },
       { class: DarkPillar, weight: 0.05 },
-      { class: Furnace, weight: 0.05 },
     ],
     enemies: [
       // Early game enemies (depth 0+)
