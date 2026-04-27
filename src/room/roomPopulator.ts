@@ -2589,8 +2589,11 @@ export class Populator {
     );
     this.level.game.encounteredEnemies.push(...newEnemiesToAdd);
 
-    // Get current enemy pool
-    const enemyPoolIds = this.level.game.encounteredEnemies.slice();
+    // Get current enemy pool — intersect with availableEnemies so cross-environment
+    // enemies accumulated in encounteredEnemies don't leak into the wrong biome
+    const enemyPoolIds = this.level.game.encounteredEnemies.filter((id) =>
+      availableEnemies.includes(id),
+    );
 
     // Limit variety if setting is enabled
     const numberOfTypes = limitEnemyTypes
