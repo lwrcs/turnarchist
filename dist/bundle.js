@@ -58990,6 +58990,7 @@ const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/enti
 const bigZombieEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigZombieEnemy */ "./src/entity/enemy/bigZombieEnemy.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const bigWizardEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigWizardEnemy */ "./src/entity/enemy/bigWizardEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
@@ -59157,7 +59158,7 @@ const environmentData = {
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 1 },
             { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 },
             // Mid depth cave enemies
-            { class: chargeEnemy_1.ChargeEnemy, weight: 1.0, minDepth: 2 },
+            { class: ratEnemy_1.RatEnemy, weight: 1.2, minDepth: 0 },
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.6, minDepth: 1 },
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.5, minDepth: 1 },
             { class: beetleEnemy_1.BeetleEnemy, weight: 0.5, minDepth: 1 },
@@ -59176,7 +59177,7 @@ const environmentData = {
             //{ class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
             { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
             { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
-            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: bigWizardEnemy_1.BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
@@ -80675,8 +80676,9 @@ class Populator {
                 }
             }
             // Occultist logic - now based on room area and probability
-            if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
-                room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH) {
+            if (room.envType !== environmentTypes_1.EnvType.CAVE &&
+                (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+                    room.depth > gameplaySettings_1.GameplaySettings.OCCULTIST_MIN_DEPTH)) {
                 this.addOccultists(room, random_1.Random.rand);
             }
         }

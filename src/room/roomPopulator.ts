@@ -2510,8 +2510,9 @@ export class Populator {
 
       // Occultist logic - now based on room area and probability
       if (
-        GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
-        room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH
+        room.envType !== EnvType.CAVE &&
+        (GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true ||
+          room.depth > GameplaySettings.OCCULTIST_MIN_DEPTH)
       ) {
         this.addOccultists(room, Random.rand);
       }

@@ -69,6 +69,7 @@ import { Spawner } from "../entity/enemy/spawner";
 import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
+import { BigWizardEnemy } from "../entity/enemy/bigWizardEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
 import { Room } from "../room/room";
 import { Game } from "../game";
@@ -318,7 +319,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: SkullEnemy, weight: 0.8, minDepth: 0 }, // Ancient cave remains
 
       // Mid depth cave enemies
-      { class: ChargeEnemy, weight: 1.0, minDepth: 2 }, // Charging creatures
+      { class: RatEnemy, weight: 1.2, minDepth: 0 },
       { class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
       { class: EnergyWizardEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
       { class: BeetleEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
@@ -338,7 +339,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       //{ class: BigSkullEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
       { class: BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
       { class: Spawner, depth: 0, weight: 0.35 },
-      { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
       { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
     ],
   },
