@@ -6223,6 +6223,7 @@ export class Game {
     colorOverlay?: string,
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
+    dottedOutline: boolean = false,
   ) => {
     const _prof = Game._drawHelperProfileEnabled;
     const _t0 = _prof ? performance.now() : 0;
@@ -6278,6 +6279,8 @@ export class Game {
       key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
     if (outlineColor && outlineOpacity > 0 && outlineManhattan)
       key += `,outlineStyle=manhattan`;
+    if (outlineColor && outlineOpacity > 0 && dottedOutline)
+      key += `,dottedOutline=1`;
     if (colorOverlay && colorOverlayOpacity > 0) {
       const ovLevels = Math.max(shadeLevel, 12);
       const ovOpacity =
@@ -6489,6 +6492,23 @@ export class Game {
         oCtx.globalCompositeOperation = "source-over";
         oCtx.globalAlpha = 1;
 
+        // Optional dotted pattern: erase pixels not matching the pattern
+        // Pattern: row0=1010101, row1=0000000, row2=1010101, row3=0000000
+        if (dottedOutline) {
+          oCtx.globalCompositeOperation = "destination-out";
+          oCtx.fillStyle = "rgba(0,0,0,1)";
+          for (let py = 0; py < oH; py++) {
+            if (py % 2 === 1) {
+              oCtx.fillRect(0, py, oW, 1);
+            } else {
+              for (let px = 1; px < oW; px += 2) {
+                oCtx.fillRect(px, py, 1, 1);
+              }
+            }
+          }
+          oCtx.globalCompositeOperation = "source-over";
+        }
+
         // Place the outline behind the shaded sprite in the precomposited canvas
         shCtx.globalCompositeOperation = "destination-over";
         // Align top-left: shaded sprite started at dx,dy = outlinePad
@@ -6656,6 +6676,7 @@ export class Game {
     colorOverlay?: string,
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
+    dottedOutline: boolean = false,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -6678,6 +6699,7 @@ export class Game {
       colorOverlay,
       colorOverlayOpacity,
       colorOverlayDesaturate,
+      dottedOutline,
     );
   };
 
@@ -6752,6 +6774,7 @@ export class Game {
     colorOverlay?: string,
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
+    dottedOutline: boolean = false,
   ) => {
     Game.drawHelper(
       Game.fxset,
@@ -6774,6 +6797,7 @@ export class Game {
       colorOverlay,
       colorOverlayOpacity,
       colorOverlayDesaturate,
+      dottedOutline,
     );
   };
 

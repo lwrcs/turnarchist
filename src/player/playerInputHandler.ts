@@ -1,7 +1,9 @@
 import { Input, InputEnum } from "../game/input";
 import type { Player } from "./player";
 import { Direction, LevelState } from "../game";
+import { GameplaySettings } from "../game/gameplaySettings";
 import { MouseCursor } from "../gui/mouseCursor";
+import { Entity } from "../entity/entity";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { GameConstants } from "../game/gameConstants";
 import { MuteButton } from "../gui/muteButton";
@@ -23,6 +25,7 @@ export class PlayerInputHandler {
   mostRecentInput: string;
   mostRecentMoveInput: string;
   moveStartTime: number;
+  keyboardTarget: Entity | null = null;
   private mouseHoldInitialDirection: Direction | null = null;
   private bestiaryTouchMoveHandler: ((x: number, y: number) => void) | null =
     null;
@@ -54,6 +57,7 @@ export class PlayerInputHandler {
     Input.downSwipeListener = () => this.handleInput(InputEnum.DOWN);
     Input.commaListener = () => this.handleInput(InputEnum.COMMA);
     Input.periodListener = () => this.handleInput(InputEnum.PERIOD);
+    Input.enterListener = () => this.handleInput(InputEnum.ENTER);
     Input.tapListener = () => this.handleTap();
     Input.mouseMoveListener = () => this.handleInput(InputEnum.MOUSE_MOVE);
     Input.mouseRightClickListeners.push((x: number, y: number) =>
@@ -169,18 +173,29 @@ export class PlayerInputHandler {
 
     // Context menu is modal while open.
     if (this.player.contextMenu?.open) {
+      const cm = this.player.contextMenu;
       switch (input) {
         case InputEnum.ESCAPE:
-          this.player.contextMenu.close();
+          this.clearKeyboardTarget();
+          return;
+        case InputEnum.UP:
+          cm.navigate(-1);
+          return;
+        case InputEnum.DOWN:
+          cm.navigate(1);
+          return;
+        case InputEnum.ENTER:
+        case InputEnum.SPACE:
+          cm.executeKeyboardSelected();
           return;
         case InputEnum.LEFT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
-          this.player.contextMenu.handleMouseDown(x, y, 0);
+          cm.handleMouseDown(x, y, 0);
           return;
         }
         case InputEnum.RIGHT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
-          this.player.contextMenu.handleMouseDown(x, y, 2);
+          cm.handleMouseDown(x, y, 2);
           return;
         }
         default:
@@ -335,17 +350,47 @@ export class PlayerInputHandler {
           player.inventory.isOpen ||
           player.game.levelState === LevelState.IN_LEVEL
         ) {
-          this.setMostRecentInput("keyboard");
-          this.player.actionProcessor.process({ type: "InventoryUse" });
+          if (player.menu?.open || player.skillsMenu?.open || player.bestiary?.isOpen) break;
+
+          this.validateKeyboardTarget();
+          if (this.keyboardTarget) {
+            this.openKeyboardContextMenuForEntity(this.keyboardTarget);
+          }
         }
         break;
       case InputEnum.COMMA:
         this.setMostRecentInput("keyboard");
-        this.player.actionProcessor.process({ type: "InventoryLeft" });
+        if (GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
+          this.validateKeyboardTarget();
+          if (!this.keyboardTarget) {
+            // First press: pick nearest enemy
+            const nearest = this.getSortedEnemies();
+            this.keyboardTarget = nearest[0] ?? null;
+          } else {
+            // Cycle left (decreasing x) in position-sorted list
+            const list = this.getEnemiesByPosition();
+            if (list.length === 0) break;
+            const idx = list.indexOf(this.keyboardTarget);
+            this.keyboardTarget = list[(idx <= 0 ? list.length : idx) - 1];
+          }
+        }
         break;
       case InputEnum.PERIOD:
         this.setMostRecentInput("keyboard");
-        this.player.actionProcessor.process({ type: "InventoryRight" });
+        if (GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
+          this.validateKeyboardTarget();
+          if (!this.keyboardTarget) {
+            // First press: pick nearest enemy
+            const nearest = this.getSortedEnemies();
+            this.keyboardTarget = nearest[0] ?? null;
+          } else {
+            // Cycle right (increasing x) in position-sorted list
+            const list = this.getEnemiesByPosition();
+            if (list.length === 0) break;
+            const idx = list.indexOf(this.keyboardTarget);
+            this.keyboardTarget = list[(idx + 1) % list.length];
+          }
+        }
         break;
       case InputEnum.LEFT_CLICK:
         // Speed up camera animation on click
@@ -423,6 +468,10 @@ export class PlayerInputHandler {
         this.player.game.decreaseScale();
         break;
       case InputEnum.ESCAPE:
+        if (this.keyboardTarget || this.player.contextMenu?.open) {
+          this.clearKeyboardTarget();
+          break;
+        }
         if (this.player.skillsMenu?.open) {
           this.player.skillsMenu.close();
         } else {
@@ -462,8 +511,54 @@ export class PlayerInputHandler {
     });
   };
 
-  private handleMouseRightClickAt(x: number, y: number) {
-    this.setMostRecentInput("mouse");
+  private getSortedEnemies(): Entity[] {
+    const px = this.player.x;
+    const py = this.player.y;
+    const room = this.player.getRoom?.() ?? this.player.game.room;
+    if (!room) return [];
+    return room.entities
+      .filter((e) => e.isEnemy && !e.dead)
+      .sort((a, b) => {
+        const da = (a.x - px) ** 2 + (a.y - py) ** 2;
+        const db = (b.x - px) ** 2 + (b.y - py) ** 2;
+        return da - db;
+      });
+  }
+
+  private getEnemiesByPosition(): Entity[] {
+    const room = this.player.getRoom?.() ?? this.player.game.room;
+    if (!room) return [];
+    return room.entities
+      .filter((e) => e.isEnemy && !e.dead)
+      .sort((a, b) => a.x !== b.x ? a.x - b.x : a.y - b.y);
+  }
+
+  private validateKeyboardTarget() {
+    const t = this.keyboardTarget;
+    if (!t) return;
+    const room = this.player.getRoom?.() ?? this.player.game.room;
+    if (t.dead || !room?.entities.includes(t)) {
+      this.keyboardTarget = null;
+    }
+  }
+
+  clearKeyboardTarget = () => {
+    this.keyboardTarget = null;
+    this.player.contextMenu?.close();
+  };
+
+  private openKeyboardContextMenuForEntity(entity: Entity) {
+    const px = Math.round(
+      (entity.x - this.player.x) * GameConstants.TILESIZE + GameConstants.WIDTH / 2,
+    );
+    const py = Math.round(
+      (entity.y - this.player.y) * GameConstants.TILESIZE + GameConstants.HEIGHT / 2,
+    );
+    this.handleMouseRightClickAt(px, py, entity);
+  }
+
+  private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity) {
+    if (!targetEntity) this.setMostRecentInput("mouse");
     const player = this.player;
     const menu = player.contextMenu;
     if (!menu) return;
@@ -474,32 +569,41 @@ export class PlayerInputHandler {
       return;
     }
 
-    // If an overlay UI is open, do not populate context menu from the background/world.
-    // For now:
-    // - Menu / Skills / Bestiary => Cancel only
-    // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
-    if (
-      player.menu?.open ||
-      player.skillsMenu?.open ||
-      player.bestiary?.isOpen
-    ) {
-      menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
-      return;
-    }
-
-    if (player.inventory?.isOpen) {
-      const inv = player.inventory;
-      const inInvButton = inv.isPointInInventoryButton(x, y);
-      const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
-      const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
-      if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+    if (!targetEntity) {
+      // If an overlay UI is open, do not populate context menu from the background/world.
+      // For now:
+      // - Menu / Skills / Bestiary => Cancel only
+      // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
+      if (
+        player.menu?.open ||
+        player.skillsMenu?.open ||
+        player.bestiary?.isOpen
+      ) {
         menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
         return;
+      }
+
+      if (player.inventory?.isOpen) {
+        const inv = player.inventory;
+        const inInvButton = inv.isPointInInventoryButton(x, y);
+        const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+        const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+        if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+          menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
+          return;
+        }
       }
     }
 
     // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
-    player.frozenMouseAngleRad = this.mouseAngle();
+    if (targetEntity) {
+      player.frozenMouseAngleRad = Math.atan2(
+        targetEntity.y - player.y,
+        targetEntity.x - player.x,
+      );
+    } else {
+      player.frozenMouseAngleRad = this.mouseAngle();
+    }
 
     const items: Array<{
       label: string;
@@ -735,7 +839,7 @@ export class PlayerInputHandler {
 
     // Entities in the level (enemies + props/resources/etc).
     // Use the general cursor hit-test so non-enemy entities can be examined too.
-    const entity = player.getEntityUnderCursorForExamine();
+    const entity = targetEntity ?? player.getEntityUnderCursorForExamine();
     if (entity) {
       const targetName = getTargetName(entity);
 
@@ -1082,8 +1186,10 @@ export class PlayerInputHandler {
       }
     }
 
-    items.push({ label: "Cancel", onClick: () => {} });
-    menu.openAt(x, y, items);
+    items.push({ label: "Cancel", onClick: () => {
+      if (targetEntity) this.clearKeyboardTarget();
+    }});
+    menu.openAt(x, y, items, !!targetEntity);
   }
 
   handleMouseDown(x: number, y: number, button: number) {

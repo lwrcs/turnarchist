@@ -25,6 +25,8 @@ export class ContextMenu {
   private xPx: number = 0;
   private yPx: number = 0;
   private items: ContextMenuItem[] = [];
+  keyboardIndex: number = -1;
+  private isKeyboardTriggered: boolean = false;
 
   // Cached layout
   private widthPx: number = 0;
@@ -41,16 +43,39 @@ export class ContextMenu {
     return t.length > 0 ? `${it.label} ${t}` : it.label;
   };
 
-  openAt = (xPx: number, yPx: number, items: ContextMenuItem[]) => {
+  openAt = (xPx: number, yPx: number, items: ContextMenuItem[], fromKeyboard?: boolean) => {
     this.items = items;
     this.open = true;
     this.xPx = Math.round(xPx);
     this.yPx = Math.round(yPx);
+    this.isKeyboardTriggered = fromKeyboard ?? false;
+    this.keyboardIndex = fromKeyboard ? 0 : -1;
     this.recomputeLayoutAndClamp();
   };
 
   close = () => {
     this.open = false;
+    this.keyboardIndex = -1;
+    this.isKeyboardTriggered = false;
+  };
+
+  navigate = (delta: 1 | -1) => {
+    if (!this.open || this.items.length === 0) return;
+    if (this.keyboardIndex === -1) this.keyboardIndex = delta > 0 ? 0 : this.items.length - 1;
+    else this.keyboardIndex = (this.keyboardIndex + delta + this.items.length) % this.items.length;
+  };
+
+  executeKeyboardSelected = (): boolean => {
+    if (!this.open || this.keyboardIndex < 0) return false;
+    const item = this.items[this.keyboardIndex];
+    if (!item) return false;
+    if (item.enabled === false) {
+      item.onDisabledClick?.();
+      return false;
+    }
+    this.close();
+    item.onClick();
+    return true;
   };
 
   private recomputeLayoutAndClamp = () => {
@@ -138,10 +163,12 @@ export class ContextMenu {
 
     // RuneScape-style: menu only persists while cursor stays near it (desktop only).
     // (On mobile there is no persistent cursor, so do not auto-close here.)
+    // Keyboard-triggered menus are not auto-closed by mouse position.
     const mx = Input.mouseX;
     const my = Input.mouseY;
     if (
       !GameConstants.isMobile &&
+      !this.isKeyboardTriggered &&
       mx !== undefined &&
       my !== undefined &&
       !this.isPointInMenuWithMargin(mx, my, this.closeMarginPx)
@@ -161,8 +188,9 @@ export class ContextMenu {
     Game.ctx.lineWidth = 1;
     Game.ctx.strokeRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
 
+    // In keyboard mode don't show mouse hover — keyboard selection takes full control.
     const hovered =
-      mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
+      !this.isKeyboardTriggered && mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
         ? this.getHoveredIndex(mx, my)
         : null;
 
@@ -173,9 +201,14 @@ export class ContextMenu {
       const rowTop = this.yPx + this.padY + i * this.rowH;
       const enabled = item.enabled !== false;
 
+      const isKeyboardSelected = this.keyboardIndex === i;
       if (hovered === i) {
         Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
         Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
+      } else if (isKeyboardSelected) {
+        const grow = 2;
+        Game.ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+        Game.ctx.fillRect(this.xPx + 1 - grow, rowTop - grow, this.widthPx - 2 + grow * 2, this.rowH + grow * 2);
       }
 
       const textY = rowTop + Math.floor((this.rowH - Game.letter_height) / 2);

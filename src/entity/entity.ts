@@ -460,7 +460,13 @@ export class Entity extends Drawable {
     return this._imageParticleTiles;
   }
 
+  isKeyboardTarget = (): boolean => {
+    const localPlayer = this.game.players[this.game.localPlayerID];
+    return localPlayer?.inputHandler?.keyboardTarget === this;
+  };
+
   outlineColor = (): string => {
+    if (this.isKeyboardTarget()) return "yellow";
     let color = "black";
     if (this.shielded) color = GameConstants.OUTLINE_SHIELD_COLOR;
     if (this.buffed) color = GameConstants.OUTLINE_BUFF_COLOR;
@@ -469,11 +475,18 @@ export class Entity extends Drawable {
   };
 
   outlineOpacity = (): number => {
+    if (this.isKeyboardTarget()) return Entity.keyboardTargetPulseOpacity();
     let opacity = 0;
     if (this.shielded) opacity = 0.25;
     if (this.buffed) opacity = 0.25;
     if (this.shielded && this.buffed) opacity = 0.5;
     return opacity;
+  };
+
+  static keyboardTargetPulseOpacity = (): number => {
+    const steps = 16;
+    const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
+    return Math.round(raw * steps) / steps;
   };
 
   applyShield = (shieldHealth: number = 1, loading: boolean = false) => {
@@ -770,7 +783,15 @@ export class Entity extends Drawable {
     outlineOpacity: number = 0,
     outlineOffset: number = 0,
     outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
+    dottedOutline: boolean = false,
   ): void {
+    if (this.isKeyboardTarget()) {
+      outlineColor = "yellow";
+      outlineOpacity = Entity.keyboardTargetPulseOpacity();
+    }
     const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
     Game.drawMob(
       sX,
@@ -788,6 +809,10 @@ export class Entity extends Drawable {
       outlineOpacity,
       outlineOffset,
       outlineManhattan,
+      colorOverlay,
+      colorOverlayOpacity,
+      colorOverlayDesaturate,
+      dottedOutline,
     );
   }
 
@@ -1413,9 +1438,13 @@ export class Entity extends Drawable {
 
     if (count === 0) return 0;
     const softVis = sum / count;
+    let shade: number;
     if (this.shadeMultiplier > 1)
-      return GameConstants.applyShadeForSprites(Math.min(1, softVis));
-    return GameConstants.applyShadeForSprites(softVis);
+      shade = GameConstants.applyShadeForSprites(Math.min(1, softVis));
+    else
+      shade = GameConstants.applyShadeForSprites(softVis);
+    if (this.isKeyboardTarget()) shade *= 0.5;
+    return shade;
   };
 
   updateShadeColor = (delta: number) => {

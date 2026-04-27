@@ -21102,7 +21102,13 @@ class Entity extends drawable_1.Drawable {
         this.hoverText = () => {
             return this.name;
         };
+        this.isKeyboardTarget = () => {
+            const localPlayer = this.game.players[this.game.localPlayerID];
+            return localPlayer?.inputHandler?.keyboardTarget === this;
+        };
         this.outlineColor = () => {
+            if (this.isKeyboardTarget())
+                return "yellow";
             let color = "black";
             if (this.shielded)
                 color = gameConstants_1.GameConstants.OUTLINE_SHIELD_COLOR;
@@ -21113,6 +21119,8 @@ class Entity extends drawable_1.Drawable {
             return color;
         };
         this.outlineOpacity = () => {
+            if (this.isKeyboardTarget())
+                return Entity.keyboardTargetPulseOpacity();
             let opacity = 0;
             if (this.shielded)
                 opacity = 0.25;
@@ -21814,9 +21822,14 @@ class Entity extends drawable_1.Drawable {
             if (count === 0)
                 return 0;
             const softVis = sum / count;
+            let shade;
             if (this.shadeMultiplier > 1)
-                return gameConstants_1.GameConstants.applyShadeForSprites(Math.min(1, softVis));
-            return gameConstants_1.GameConstants.applyShadeForSprites(softVis);
+                shade = gameConstants_1.GameConstants.applyShadeForSprites(Math.min(1, softVis));
+            else
+                shade = gameConstants_1.GameConstants.applyShadeForSprites(softVis);
+            if (this.isKeyboardTarget())
+                shade *= 0.5;
+            return shade;
         };
         this.updateShadeColor = (delta) => {
             if (this.shadeMultiplier > 1)
@@ -22691,9 +22704,13 @@ class Entity extends drawable_1.Drawable {
      * Wrapper around `Game.drawMob` that applies the "crushed into wall" render transform
      * when this entity died via `crush()` (clone-only).
      */
-    drawMobWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false) {
+    drawMobWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false, dottedOutline = false) {
+        if (this.isKeyboardTarget()) {
+            outlineColor = "yellow";
+            outlineOpacity = Entity.keyboardTargetPulseOpacity();
+        }
         const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
-        game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan);
+        game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
     }
     /**
      * Wrapper around `Game.drawObj` that applies the "crushed into wall" render transform
@@ -22721,6 +22738,11 @@ exports.Entity = Entity;
 // Crush animation decay factor per ~60fps tick (higher = slower squish).
 // Applied as `pow(factor, delta)` so it's stable across frame rates.
 Entity.CRUSH_DECAY_60FPS = 0.985;
+Entity.keyboardTargetPulseOpacity = () => {
+    const steps = 16;
+    const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
+    return Math.round(raw * steps) / steps;
+};
 /**
  * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
  * Useful for bestiary pages without instantiating enemies.
@@ -31875,7 +31897,7 @@ Game.fillTextOutline = (text, x, y, outlineColor, fillColor) => {
  * @param entity If true, uses entity shade quantization levels
  * @param fadeDir Optional directional fade mask (left/right/up/down)
  */
-Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
+Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, entity = false, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false, dottedOutline = false) => {
     const _prof = Game._drawHelperProfileEnabled;
     const _t0 = _prof ? performance.now() : 0;
     // Snap to nearest shading increment
@@ -31912,6 +31934,8 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
         key += `,outlineOffset=${Math.max(0, Math.floor(outlineOffset))}`;
     if (outlineColor && outlineOpacity > 0 && outlineManhattan)
         key += `,outlineStyle=manhattan`;
+    if (outlineColor && outlineOpacity > 0 && dottedOutline)
+        key += `,dottedOutline=1`;
     if (colorOverlay && colorOverlayOpacity > 0) {
         const ovLevels = Math.max(shadeLevel, 12);
         const ovOpacity = Math.round(colorOverlayOpacity * ovLevels) / Math.max(ovLevels, 1);
@@ -32058,6 +32082,23 @@ Game.drawHelper = (set, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", sh
             oCtx.fillRect(0, 0, oW, oH);
             oCtx.globalCompositeOperation = "source-over";
             oCtx.globalAlpha = 1;
+            // Optional dotted pattern: erase pixels not matching the pattern
+            // Pattern: row0=1010101, row1=0000000, row2=1010101, row3=0000000
+            if (dottedOutline) {
+                oCtx.globalCompositeOperation = "destination-out";
+                oCtx.fillStyle = "rgba(0,0,0,1)";
+                for (let py = 0; py < oH; py++) {
+                    if (py % 2 === 1) {
+                        oCtx.fillRect(0, py, oW, 1);
+                    }
+                    else {
+                        for (let px = 1; px < oW; px += 2) {
+                            oCtx.fillRect(px, py, 1, 1);
+                        }
+                    }
+                }
+                oCtx.globalCompositeOperation = "source-over";
+            }
             // Place the outline behind the shaded sprite in the precomposited canvas
             shCtx.globalCompositeOperation = "destination-over";
             // Align top-left: shaded sprite started at dx,dy = outlinePad
@@ -32139,8 +32180,8 @@ Game.drawObj = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpaci
  * Draw a mob (enemies, player parts) from the mob sheet. Convenience wrapper.
  * Uses entity=true so mobs use entity shade quantization.
  */
-Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
-    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate);
+Game.drawMob = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false, dottedOutline = false) => {
+    Game.drawHelper(Game.mobset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
 };
 /**
  * Draw an item from the item sheet. Convenience wrapper.
@@ -32153,8 +32194,8 @@ Game.drawItem = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpac
  * Draw an FX frame from the FX sheet. Convenience wrapper.
  * Uses entity=true so FX uses entity shade quantization.
  */
-Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false) => {
-    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate);
+Game.drawFX = (sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false, dottedOutline = false) => {
+    Game.drawHelper(Game.fxset, sX, sY, sW, sH, dX, dY, dW, dH, shadeColor, shadeOpacity, true, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
 };
 exports.game = new Game();
 exports.gs = new gameState_1.GameState();
@@ -37738,6 +37779,7 @@ GameplaySettings.CASTLE_USE_PNG_LEVEL = true;
 GameplaySettings.TUTORIAL_ENABLED = false;
 GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
 GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
+GameplaySettings.KEYBOARD_TARGETING_ENABLED = false;
 // === UI ===
 /**
  * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
@@ -37866,6 +37908,7 @@ var InputEnum;
     InputEnum[InputEnum["EQUALS"] = 25] = "EQUALS";
     InputEnum[InputEnum["ESCAPE"] = 26] = "ESCAPE";
     InputEnum[InputEnum["F"] = 27] = "F";
+    InputEnum[InputEnum["ENTER"] = 28] = "ENTER";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -37906,6 +37949,7 @@ exports.Input = {
     minusListener: function () { },
     escapeListener: function () { },
     fListener: function () { },
+    enterListener: function () { },
     wheelListener: function (deltaY) { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
@@ -37967,6 +38011,7 @@ exports.Input = {
     EQUALS: "Equal",
     ESCAPE: "Escape",
     F: "KeyF",
+    ENTER: "Enter",
     rawMouseX: 0,
     rawMouseY: 0,
     // Returns the CSS-to-logical-pixel ratio for the game canvas.
@@ -38059,6 +38104,9 @@ exports.Input = {
                 break;
             case exports.Input.F:
                 exports.Input.fListener();
+                break;
+            case exports.Input.ENTER:
+                exports.Input.enterListener();
                 break;
         }
     },
@@ -47615,6 +47663,8 @@ class ContextMenu {
         this.xPx = 0;
         this.yPx = 0;
         this.items = [];
+        this.keyboardIndex = -1;
+        this.isKeyboardTriggered = false;
         // Cached layout
         this.widthPx = 0;
         this.heightPx = 0;
@@ -47628,15 +47678,41 @@ class ContextMenu {
             const t = typeof it.targetName === "string" ? it.targetName.trim() : "";
             return t.length > 0 ? `${it.label} ${t}` : it.label;
         };
-        this.openAt = (xPx, yPx, items) => {
+        this.openAt = (xPx, yPx, items, fromKeyboard) => {
             this.items = items;
             this.open = true;
             this.xPx = Math.round(xPx);
             this.yPx = Math.round(yPx);
+            this.isKeyboardTriggered = fromKeyboard ?? false;
+            this.keyboardIndex = fromKeyboard ? 0 : -1;
             this.recomputeLayoutAndClamp();
         };
         this.close = () => {
             this.open = false;
+            this.keyboardIndex = -1;
+            this.isKeyboardTriggered = false;
+        };
+        this.navigate = (delta) => {
+            if (!this.open || this.items.length === 0)
+                return;
+            if (this.keyboardIndex === -1)
+                this.keyboardIndex = delta > 0 ? 0 : this.items.length - 1;
+            else
+                this.keyboardIndex = (this.keyboardIndex + delta + this.items.length) % this.items.length;
+        };
+        this.executeKeyboardSelected = () => {
+            if (!this.open || this.keyboardIndex < 0)
+                return false;
+            const item = this.items[this.keyboardIndex];
+            if (!item)
+                return false;
+            if (item.enabled === false) {
+                item.onDisabledClick?.();
+                return false;
+            }
+            this.close();
+            item.onClick();
+            return true;
         };
         this.recomputeLayoutAndClamp = () => {
             const labels = this.items.map((it) => this.getDisplayLabel(it));
@@ -47716,9 +47792,11 @@ class ContextMenu {
                 return;
             // RuneScape-style: menu only persists while cursor stays near it (desktop only).
             // (On mobile there is no persistent cursor, so do not auto-close here.)
+            // Keyboard-triggered menus are not auto-closed by mouse position.
             const mx = input_1.Input.mouseX;
             const my = input_1.Input.mouseY;
             if (!gameConstants_1.GameConstants.isMobile &&
+                !this.isKeyboardTriggered &&
                 mx !== undefined &&
                 my !== undefined &&
                 !this.isPointInMenuWithMargin(mx, my, this.closeMarginPx)) {
@@ -47734,7 +47812,8 @@ class ContextMenu {
             game_1.Game.ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
             game_1.Game.ctx.lineWidth = 1;
             game_1.Game.ctx.strokeRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
-            const hovered = mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
+            // In keyboard mode don't show mouse hover — keyboard selection takes full control.
+            const hovered = !this.isKeyboardTriggered && mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
                 ? this.getHoveredIndex(mx, my)
                 : null;
             // Items
@@ -47743,9 +47822,15 @@ class ContextMenu {
                 const rowX = this.xPx + this.padX;
                 const rowTop = this.yPx + this.padY + i * this.rowH;
                 const enabled = item.enabled !== false;
+                const isKeyboardSelected = this.keyboardIndex === i;
                 if (hovered === i) {
                     game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
                     game_1.Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
+                }
+                else if (isKeyboardSelected) {
+                    const grow = 2;
+                    game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+                    game_1.Game.ctx.fillRect(this.xPx + 1 - grow, rowTop - grow, this.widthPx - 2 + grow * 2, this.rowH + grow * 2);
                 }
                 const textY = rowTop + Math.floor((this.rowH - game_1.Game.letter_height) / 2);
                 game_1.Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
@@ -68044,6 +68129,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerInputHandler = void 0;
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
@@ -68061,6 +68147,7 @@ const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ ".
 const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 class PlayerInputHandler {
     constructor(player) {
+        this.keyboardTarget = null;
         this.mouseHoldInitialDirection = null;
         this.bestiaryTouchMoveHandler = null;
         this.bestiaryTouchEndHandler = null;
@@ -68072,6 +68159,10 @@ class PlayerInputHandler {
                 type: "InventorySelect",
                 index: num - 1,
             });
+        };
+        this.clearKeyboardTarget = () => {
+            this.keyboardTarget = null;
+            this.player.contextMenu?.close();
         };
         this.ignoreDirectionInput = () => {
             return (this.player.inventory.isOpen ||
@@ -68142,6 +68233,7 @@ class PlayerInputHandler {
         input_1.Input.downSwipeListener = () => this.handleInput(input_1.InputEnum.DOWN);
         input_1.Input.commaListener = () => this.handleInput(input_1.InputEnum.COMMA);
         input_1.Input.periodListener = () => this.handleInput(input_1.InputEnum.PERIOD);
+        input_1.Input.enterListener = () => this.handleInput(input_1.InputEnum.ENTER);
         input_1.Input.tapListener = () => this.handleTap();
         input_1.Input.mouseMoveListener = () => this.handleInput(input_1.InputEnum.MOUSE_MOVE);
         input_1.Input.mouseRightClickListeners.push((x, y) => this.handleMouseRightClickAt(x, y));
@@ -68243,18 +68335,29 @@ class PlayerInputHandler {
         }
         // Context menu is modal while open.
         if (this.player.contextMenu?.open) {
+            const cm = this.player.contextMenu;
             switch (input) {
                 case input_1.InputEnum.ESCAPE:
-                    this.player.contextMenu.close();
+                    this.clearKeyboardTarget();
+                    return;
+                case input_1.InputEnum.UP:
+                    cm.navigate(-1);
+                    return;
+                case input_1.InputEnum.DOWN:
+                    cm.navigate(1);
+                    return;
+                case input_1.InputEnum.ENTER:
+                case input_1.InputEnum.SPACE:
+                    cm.executeKeyboardSelected();
                     return;
                 case input_1.InputEnum.LEFT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
-                    this.player.contextMenu.handleMouseDown(x, y, 0);
+                    cm.handleMouseDown(x, y, 0);
                     return;
                 }
                 case input_1.InputEnum.RIGHT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
-                    this.player.contextMenu.handleMouseDown(x, y, 2);
+                    cm.handleMouseDown(x, y, 2);
                     return;
                 }
                 default:
@@ -68399,17 +68502,51 @@ class PlayerInputHandler {
                 }
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
-                    this.setMostRecentInput("keyboard");
-                    this.player.actionProcessor.process({ type: "InventoryUse" });
+                    if (player.menu?.open || player.skillsMenu?.open || player.bestiary?.isOpen)
+                        break;
+                    this.validateKeyboardTarget();
+                    if (this.keyboardTarget) {
+                        this.openKeyboardContextMenuForEntity(this.keyboardTarget);
+                    }
                 }
                 break;
             case input_1.InputEnum.COMMA:
                 this.setMostRecentInput("keyboard");
-                this.player.actionProcessor.process({ type: "InventoryLeft" });
+                if (gameplaySettings_1.GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
+                    this.validateKeyboardTarget();
+                    if (!this.keyboardTarget) {
+                        // First press: pick nearest enemy
+                        const nearest = this.getSortedEnemies();
+                        this.keyboardTarget = nearest[0] ?? null;
+                    }
+                    else {
+                        // Cycle left (decreasing x) in position-sorted list
+                        const list = this.getEnemiesByPosition();
+                        if (list.length === 0)
+                            break;
+                        const idx = list.indexOf(this.keyboardTarget);
+                        this.keyboardTarget = list[(idx <= 0 ? list.length : idx) - 1];
+                    }
+                }
                 break;
             case input_1.InputEnum.PERIOD:
                 this.setMostRecentInput("keyboard");
-                this.player.actionProcessor.process({ type: "InventoryRight" });
+                if (gameplaySettings_1.GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
+                    this.validateKeyboardTarget();
+                    if (!this.keyboardTarget) {
+                        // First press: pick nearest enemy
+                        const nearest = this.getSortedEnemies();
+                        this.keyboardTarget = nearest[0] ?? null;
+                    }
+                    else {
+                        // Cycle right (increasing x) in position-sorted list
+                        const list = this.getEnemiesByPosition();
+                        if (list.length === 0)
+                            break;
+                        const idx = list.indexOf(this.keyboardTarget);
+                        this.keyboardTarget = list[(idx + 1) % list.length];
+                    }
+                }
                 break;
             case input_1.InputEnum.LEFT_CLICK:
                 // Speed up camera animation on click
@@ -68476,6 +68613,10 @@ class PlayerInputHandler {
                 this.player.game.decreaseScale();
                 break;
             case input_1.InputEnum.ESCAPE:
+                if (this.keyboardTarget || this.player.contextMenu?.open) {
+                    this.clearKeyboardTarget();
+                    break;
+                }
                 if (this.player.skillsMenu?.open) {
                     this.player.skillsMenu.close();
                 }
@@ -68504,8 +68645,45 @@ class PlayerInputHandler {
         this.setMostRecentInput("keyboard");
         inv.mostRecentInput = "keyboard";
     }
-    handleMouseRightClickAt(x, y) {
-        this.setMostRecentInput("mouse");
+    getSortedEnemies() {
+        const px = this.player.x;
+        const py = this.player.y;
+        const room = this.player.getRoom?.() ?? this.player.game.room;
+        if (!room)
+            return [];
+        return room.entities
+            .filter((e) => e.isEnemy && !e.dead)
+            .sort((a, b) => {
+            const da = (a.x - px) ** 2 + (a.y - py) ** 2;
+            const db = (b.x - px) ** 2 + (b.y - py) ** 2;
+            return da - db;
+        });
+    }
+    getEnemiesByPosition() {
+        const room = this.player.getRoom?.() ?? this.player.game.room;
+        if (!room)
+            return [];
+        return room.entities
+            .filter((e) => e.isEnemy && !e.dead)
+            .sort((a, b) => a.x !== b.x ? a.x - b.x : a.y - b.y);
+    }
+    validateKeyboardTarget() {
+        const t = this.keyboardTarget;
+        if (!t)
+            return;
+        const room = this.player.getRoom?.() ?? this.player.game.room;
+        if (t.dead || !room?.entities.includes(t)) {
+            this.keyboardTarget = null;
+        }
+    }
+    openKeyboardContextMenuForEntity(entity) {
+        const px = Math.round((entity.x - this.player.x) * gameConstants_1.GameConstants.TILESIZE + gameConstants_1.GameConstants.WIDTH / 2);
+        const py = Math.round((entity.y - this.player.y) * gameConstants_1.GameConstants.TILESIZE + gameConstants_1.GameConstants.HEIGHT / 2);
+        this.handleMouseRightClickAt(px, py, entity);
+    }
+    handleMouseRightClickAt(x, y, targetEntity) {
+        if (!targetEntity)
+            this.setMostRecentInput("mouse");
         const player = this.player;
         const menu = player.contextMenu;
         if (!menu)
@@ -68515,28 +68693,35 @@ class PlayerInputHandler {
             menu.handleMouseDown(x, y, 2);
             return;
         }
-        // If an overlay UI is open, do not populate context menu from the background/world.
-        // For now:
-        // - Menu / Skills / Bestiary => Cancel only
-        // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
-        if (player.menu?.open ||
-            player.skillsMenu?.open ||
-            player.bestiary?.isOpen) {
-            menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
-            return;
-        }
-        if (player.inventory?.isOpen) {
-            const inv = player.inventory;
-            const inInvButton = inv.isPointInInventoryButton(x, y);
-            const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
-            const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
-            if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+        if (!targetEntity) {
+            // If an overlay UI is open, do not populate context menu from the background/world.
+            // For now:
+            // - Menu / Skills / Bestiary => Cancel only
+            // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
+            if (player.menu?.open ||
+                player.skillsMenu?.open ||
+                player.bestiary?.isOpen) {
                 menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
                 return;
             }
+            if (player.inventory?.isOpen) {
+                const inv = player.inventory;
+                const inInvButton = inv.isPointInInventoryButton(x, y);
+                const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
+                const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
+                if (!inInvButton && !inQuickbar && !inInventoryPanel) {
+                    menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
+                    return;
+                }
+            }
         }
         // Freeze current mouse angle so the player keeps the same diagonal pose while the menu is open.
-        player.frozenMouseAngleRad = this.mouseAngle();
+        if (targetEntity) {
+            player.frozenMouseAngleRad = Math.atan2(targetEntity.y - player.y, targetEntity.x - player.x);
+        }
+        else {
+            player.frozenMouseAngleRad = this.mouseAngle();
+        }
         const items = [];
         const formatExamine = (text) => {
             // Keep examine as a single chat line.
@@ -68743,7 +68928,7 @@ class PlayerInputHandler {
         const t = player.mouseToTile();
         // Entities in the level (enemies + props/resources/etc).
         // Use the general cursor hit-test so non-enemy entities can be examined too.
-        const entity = player.getEntityUnderCursorForExamine();
+        const entity = targetEntity ?? player.getEntityUnderCursorForExamine();
         if (entity) {
             const targetName = getTargetName(entity);
             // Enemies: Attack + Examine
@@ -69062,8 +69247,11 @@ class PlayerInputHandler {
                 }
             }
         }
-        items.push({ label: "Cancel", onClick: () => { } });
-        menu.openAt(x, y, items);
+        items.push({ label: "Cancel", onClick: () => {
+                if (targetEntity)
+                    this.clearKeyboardTarget();
+            } });
+        menu.openAt(x, y, items, !!targetEntity);
     }
     handleMouseDown(x, y, button) {
         if (button !== 0)
@@ -70485,6 +70673,7 @@ class PlayerRenderer {
             if (!gameConstants_1.GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
                 this.player.map.draw(delta);
             this.drawTileCursor(delta);
+            this.drawTargetIndicator(delta);
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
             // Overlay ordering (top-most last):
@@ -70659,6 +70848,19 @@ class PlayerRenderer {
             let tileY = 5;
             game_1.Game.drawFX(tileX + Math.floor(hitWarning_1.HitWarning.frame), tileY, 1, 1, this.player.tileCursor.x + this.player.drawX, this.player.tileCursor.y + this.player.drawY, 1, 1);
             game_1.Game.ctx.restore(); // Restore the canvas state
+        };
+        this.drawTargetIndicator = (_delta) => {
+            const target = this.player.inputHandler.keyboardTarget;
+            if (!target || target.dead)
+                return;
+            if (this.player.contextMenu?.open)
+                return;
+            // Convert world tile coords to screen tile coords (same as tileCursor)
+            const offsetX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2) / gameConstants_1.GameConstants.TILESIZE;
+            const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
+            const screenX = (target.x - this.player.x) + offsetX - 0.5 + this.player.drawX + target.drawX;
+            const screenY = (target.y - this.player.y) + offsetY - 0.5 + this.player.drawY + target.drawY;
+            game_1.Game.drawFX(24 + Math.floor(hitWarning_1.HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));

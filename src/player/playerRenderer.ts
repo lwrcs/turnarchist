@@ -1082,6 +1082,7 @@ export class PlayerRenderer {
     if (!GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
       this.player.map.draw(delta);
     this.drawTileCursor(delta);
+    this.drawTargetIndicator(delta);
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
@@ -1336,6 +1337,29 @@ export class PlayerRenderer {
     );
 
     Game.ctx.restore(); // Restore the canvas state
+  };
+
+  drawTargetIndicator = (_delta: number) => {
+    const target = this.player.inputHandler.keyboardTarget;
+    if (!target || target.dead) return;
+    if (this.player.contextMenu?.open) return;
+
+    // Convert world tile coords to screen tile coords (same as tileCursor)
+    const offsetX = Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;
+    const offsetY = Math.floor(GameConstants.HEIGHT / 2) / GameConstants.TILESIZE;
+    const screenX = (target.x - this.player.x) + offsetX - 0.5 + this.player.drawX + target.drawX;
+    const screenY = (target.y - this.player.y) + offsetY - 0.5 + this.player.drawY + target.drawY;
+
+    Game.drawFX(
+      24 + Math.floor(HitWarning.frame),
+      5,
+      1,
+      1,
+      screenX,
+      screenY,
+      1,
+      1,
+    );
   };
 
   jump = (delta: number) => {
