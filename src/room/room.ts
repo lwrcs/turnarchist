@@ -1126,7 +1126,7 @@ export class Room {
     for (let i = 0; i < numSpawners; i++) {
       const { x, y } = this.getRandomEmptyPosition(tiles);
       let spawnTable = this.level.populator
-        .getEnemyPoolForDepth(Math.max(0, this.depth - 1))
+        .getEnvEnemyPoolForDepth(this.envType, Math.max(0, this.depth - 1))
         .filter((t) => t !== 7);
       const spawner = Spawner.add(this, this.game, x, y, spawnTable);
       return spawner;

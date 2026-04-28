@@ -2620,6 +2620,25 @@ export class Populator {
   }
 
   /**
+   * Returns only the enemy IDs valid for a specific environment + depth.
+   * Used by spawners so they stay thematically consistent with the room they're in.
+   */
+  public getEnvEnemyPoolForDepth(env: EnvType, depth: number): number[] {
+    const isNumber = (v: unknown): v is number => typeof v === "number";
+    if (GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true) {
+      return this.getEnemyPoolForDepth(depth);
+    }
+    const envEnemies = environmentData[env]?.enemies ?? environmentData[this.level.environment.type].enemies;
+    return envEnemies
+      .map((enemy) => ({
+        id: enemyClassToId.get(enemy.class),
+        minDepth: enemy.minDepth ?? 0,
+      }))
+      .filter((e) => isNumber(e.id) && e.minDepth <= depth)
+      .map((e) => e.id as number);
+  }
+
+  /**
    * Calculate number of enemy types for depth
    */
   private getNumberOfEnemyTypes(depth: number): number {
@@ -2784,7 +2803,8 @@ export class Populator {
         if (position === null) break;
         const { x, y } = position;
 
-        const spawnTable = this.getEnemyPoolForDepth(
+        const spawnTable = this.getEnvEnemyPoolForDepth(
+          room.envType,
           Math.max(0, room.depth - 1),
         ).filter((t) => t !== 7);
 
@@ -2804,7 +2824,8 @@ export class Populator {
         if (position === null) break;
         const { x, y } = position;
 
-        const spawnTable = this.getEnemyPoolForDepth(
+        const spawnTable = this.getEnvEnemyPoolForDepth(
+          room.envType,
           Math.max(0, room.depth - 1),
         ).filter((t) => t !== 7);
 
