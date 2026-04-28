@@ -15968,17 +15968,33 @@ class Enemy extends entity_1.Entity {
         top = Math.max(this.room.roomY, top);
         bottom = Math.min(this.room.roomY + this.room.height - 1, bottom);
         // Hard cap: prevent O(n²) A* when enemy and player are very far apart in large rooms.
-        // Clip the grid symmetrically toward the midpoint so both ends remain reachable.
         const MAX_PATH_DIM = 36;
         if (right - left + 1 > MAX_PATH_DIM) {
             const excess = right - left + 1 - MAX_PATH_DIM;
             left += Math.floor(excess / 2);
             right = left + MAX_PATH_DIM - 1;
+            // Snap so the enemy's start is always inside the grid (negative localStart.x breaks A*).
+            if (this.x < left) {
+                right -= left - this.x;
+                left = this.x;
+            }
+            else if (this.x > right) {
+                left += this.x - right;
+                right = this.x;
+            }
         }
         if (bottom - top + 1 > MAX_PATH_DIM) {
             const excess = bottom - top + 1 - MAX_PATH_DIM;
             top += Math.floor(excess / 2);
             bottom = top + MAX_PATH_DIM - 1;
+            if (this.y < top) {
+                bottom -= top - this.y;
+                top = this.y;
+            }
+            else if (this.y > bottom) {
+                top += this.y - bottom;
+                bottom = this.y;
+            }
         }
         const w = right - left + 1;
         const h = bottom - top + 1;
