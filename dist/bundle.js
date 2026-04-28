@@ -8,9 +8,16 @@
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+/*! Axios v1.13.2 Copyright (c) 2025 Matt Zabriskie and contributors */
 
 
+/**
+ * Create a bound version of a function with a specified `this` context
+ *
+ * @param {Function} fn - The function to bind
+ * @param {*} thisArg - The value to be passed as the `this` parameter
+ * @returns {Function} A new function that will call the original function with the specified `this` context
+ */
 function bind(fn, thisArg) {
   return function wrap() {
     return fn.apply(thisArg, arguments);
@@ -1263,7 +1270,7 @@ class InterceptorManager {
    *
    * @param {Number} id The ID that was returned by `use`
    *
-   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   * @returns {void}
    */
   eject(id) {
     if (this.handlers[id]) {
@@ -2229,27 +2236,38 @@ var cookies = platform.hasStandardBrowserEnv ?
 
   // Standard browser envs support document.cookie
   {
-    write(name, value, expires, path, domain, secure) {
-      const cookie = [name + '=' + encodeURIComponent(value)];
+    write(name, value, expires, path, domain, secure, sameSite) {
+      if (typeof document === 'undefined') return;
 
-      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+      const cookie = [`${name}=${encodeURIComponent(value)}`];
 
-      utils$1.isString(path) && cookie.push('path=' + path);
-
-      utils$1.isString(domain) && cookie.push('domain=' + domain);
-
-      secure === true && cookie.push('secure');
+      if (utils$1.isNumber(expires)) {
+        cookie.push(`expires=${new Date(expires).toUTCString()}`);
+      }
+      if (utils$1.isString(path)) {
+        cookie.push(`path=${path}`);
+      }
+      if (utils$1.isString(domain)) {
+        cookie.push(`domain=${domain}`);
+      }
+      if (secure === true) {
+        cookie.push('secure');
+      }
+      if (utils$1.isString(sameSite)) {
+        cookie.push(`SameSite=${sameSite}`);
+      }
 
       document.cookie = cookie.join('; ');
     },
 
     read(name) {
-      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
-      return (match ? decodeURIComponent(match[3]) : null);
+      if (typeof document === 'undefined') return null;
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[1]) : null;
     },
 
     remove(name) {
-      this.write(name, '', Date.now() - 86400000);
+      this.write(name, '', Date.now() - 86400000, '/');
     }
   }
 
@@ -2338,11 +2356,11 @@ function mergeConfig(config1, config2) {
   }
 
   // eslint-disable-next-line consistent-return
-  function mergeDeepProperties(a, b, prop , caseless) {
+  function mergeDeepProperties(a, b, prop, caseless) {
     if (!utils$1.isUndefined(b)) {
-      return getMergedValue(a, b, prop , caseless);
+      return getMergedValue(a, b, prop, caseless);
     } else if (!utils$1.isUndefined(a)) {
-      return getMergedValue(undefined, a, prop , caseless);
+      return getMergedValue(undefined, a, prop, caseless);
     }
   }
 
@@ -2400,7 +2418,7 @@ function mergeConfig(config1, config2) {
     socketPath: defaultToConfig2,
     responseEncoding: defaultToConfig2,
     validateStatus: mergeDirectKeys,
-    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+    headers: (a, b, prop) => mergeDeepProperties(headersToObject(a), headersToObject(b), prop, true)
   };
 
   utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
@@ -3040,7 +3058,7 @@ const factory = (env) => {
 const seedCache = new Map();
 
 const getFetch = (config) => {
-  let env = config ? config.env : {};
+  let env = (config && config.env) || {};
   const {fetch, Request, Response} = env;
   const seeds = [
     Request, Response, fetch
@@ -3063,6 +3081,15 @@ const getFetch = (config) => {
 
 getFetch();
 
+/**
+ * Known adapters mapping.
+ * Provides environment-specific adapters for Axios:
+ * - `http` for Node.js
+ * - `xhr` for browsers
+ * - `fetch` for fetch API-based requests
+ * 
+ * @type {Object<string, Function|Object>}
+ */
 const knownAdapters = {
   http: httpAdapter,
   xhr: xhrAdapter,
@@ -3071,71 +3098,107 @@ const knownAdapters = {
   }
 };
 
+// Assign adapter names for easier debugging and identification
 utils$1.forEach(knownAdapters, (fn, value) => {
   if (fn) {
     try {
-      Object.defineProperty(fn, 'name', {value});
+      Object.defineProperty(fn, 'name', { value });
     } catch (e) {
       // eslint-disable-next-line no-empty
     }
-    Object.defineProperty(fn, 'adapterName', {value});
+    Object.defineProperty(fn, 'adapterName', { value });
   }
 });
 
+/**
+ * Render a rejection reason string for unknown or unsupported adapters
+ * 
+ * @param {string} reason
+ * @returns {string}
+ */
 const renderReason = (reason) => `- ${reason}`;
 
+/**
+ * Check if the adapter is resolved (function, null, or false)
+ * 
+ * @param {Function|null|false} adapter
+ * @returns {boolean}
+ */
 const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
 
-var adapters = {
-  getAdapter: (adapters, config) => {
-    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+/**
+ * Get the first suitable adapter from the provided list.
+ * Tries each adapter in order until a supported one is found.
+ * Throws an AxiosError if no adapter is suitable.
+ * 
+ * @param {Array<string|Function>|string|Function} adapters - Adapter(s) by name or function.
+ * @param {Object} config - Axios request configuration
+ * @throws {AxiosError} If no suitable adapter is available
+ * @returns {Function} The resolved adapter function
+ */
+function getAdapter(adapters, config) {
+  adapters = utils$1.isArray(adapters) ? adapters : [adapters];
 
-    const {length} = adapters;
-    let nameOrAdapter;
-    let adapter;
+  const { length } = adapters;
+  let nameOrAdapter;
+  let adapter;
 
-    const rejectedReasons = {};
+  const rejectedReasons = {};
 
-    for (let i = 0; i < length; i++) {
-      nameOrAdapter = adapters[i];
-      let id;
+  for (let i = 0; i < length; i++) {
+    nameOrAdapter = adapters[i];
+    let id;
 
-      adapter = nameOrAdapter;
+    adapter = nameOrAdapter;
 
-      if (!isResolvedHandle(nameOrAdapter)) {
-        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+    if (!isResolvedHandle(nameOrAdapter)) {
+      adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
 
-        if (adapter === undefined) {
-          throw new AxiosError(`Unknown adapter '${id}'`);
-        }
+      if (adapter === undefined) {
+        throw new AxiosError(`Unknown adapter '${id}'`);
       }
-
-      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
-        break;
-      }
-
-      rejectedReasons[id || '#' + i] = adapter;
     }
 
-    if (!adapter) {
+    if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+      break;
+    }
 
-      const reasons = Object.entries(rejectedReasons)
-        .map(([id, state]) => `adapter ${id} ` +
-          (state === false ? 'is not supported by the environment' : 'is not available in the build')
-        );
+    rejectedReasons[id || '#' + i] = adapter;
+  }
 
-      let s = length ?
-        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
-        'as no adapter specified';
-
-      throw new AxiosError(
-        `There is no suitable adapter to dispatch the request ` + s,
-        'ERR_NOT_SUPPORT'
+  if (!adapter) {
+    const reasons = Object.entries(rejectedReasons)
+      .map(([id, state]) => `adapter ${id} ` +
+        (state === false ? 'is not supported by the environment' : 'is not available in the build')
       );
-    }
 
-    return adapter;
-  },
+    let s = length ?
+      (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+      'as no adapter specified';
+
+    throw new AxiosError(
+      `There is no suitable adapter to dispatch the request ` + s,
+      'ERR_NOT_SUPPORT'
+    );
+  }
+
+  return adapter;
+}
+
+/**
+ * Exports Axios adapters and utility to resolve an adapter
+ */
+var adapters = {
+  /**
+   * Resolve an adapter from a list of adapter names or functions.
+   * @type {Function}
+   */
+  getAdapter,
+
+  /**
+   * Exposes all known adapters
+   * @type {Object<string, Function|Object>}
+   */
   adapters: knownAdapters
 };
 
@@ -3212,7 +3275,7 @@ function dispatchRequest(config) {
   });
 }
 
-const VERSION = "1.12.2";
+const VERSION = "1.13.2";
 
 const validators$1 = {};
 
@@ -3771,6 +3834,12 @@ const HttpStatusCode = {
   LoopDetected: 508,
   NotExtended: 510,
   NetworkAuthenticationRequired: 511,
+  WebServerIsDown: 521,
+  ConnectionTimedOut: 522,
+  OriginIsUnreachable: 523,
+  TimeoutOccurred: 524,
+  SslHandshakeFailed: 525,
+  InvalidSslCertificate: 526,
 };
 
 Object.entries(HttpStatusCode).forEach(([key, value]) => {
@@ -20300,6 +20369,12 @@ class WardenEnemy extends enemy_1.Enemy {
                 if (!this.seenPlayer)
                     this.lookForPlayer();
                 else if (this.seenPlayer) {
+                    for (const crusher of this.crushers) {
+                        if (!crusher.dead && !crusher.seenPlayer) {
+                            crusher.seenPlayer = true;
+                            crusher.targetPlayer = this.targetPlayer;
+                        }
+                    }
                     if (this.room.playerTicked === this.targetPlayer) {
                         this.alertTicks = Math.max(0, this.alertTicks - 1);
                         this.ticks++;
@@ -21413,8 +21488,7 @@ class Entity extends drawable_1.Drawable {
                         this.drawX += 1 * (closestTile.x - entity.x);
                         this.drawY += 1 * (closestTile.y - entity.y);
                     }
-                    const distanceToPlayer = utils_1.Utils.distance(this.x, this.y, this.game.players[this.game.localPlayerID].x, this.game.players[this.game.localPlayerID].y);
-                    this.game.shakeScreen(10 * this.drawX * (1 / distanceToPlayer), 10 * this.drawY * (1 / distanceToPlayer), true);
+                    this.game.shakeScreenFalloff(this.x, this.y, 10 * this.drawX, 10 * this.drawY, true);
                     flag = this.canCrushOthers ? false : true;
                 }
                 return flag;
@@ -21461,8 +21535,10 @@ class Entity extends drawable_1.Drawable {
         };
         this.bigEnemyShake = () => {
             if (this.w > 1 || this.h > 1) {
+                const sx = this.x;
+                const sy = this.y;
                 setTimeout(() => {
-                    this.game.shakeScreen(0 * this.drawX, 5);
+                    this.game.shakeScreenFalloff(sx, sy, 0, 5);
                 }, 300);
             }
         };
@@ -29552,6 +29628,18 @@ class Game {
                 this.screenShakeCutoff = Date.now();
             }
         };
+        this.shakeScreenFalloff = (sourceX, sourceY, shakeX, shakeY, clamp = false) => {
+            const localPlayer = this.players?.[this.localPlayerID];
+            if (!localPlayer)
+                return;
+            const dx = sourceX - localPlayer.x;
+            const dy = sourceY - localPlayer.y;
+            const distSq = Math.max(1, dx * dx + dy * dy); // clamp to 1 so factor ≤ 1
+            const factor = 1 / distSq;
+            if (factor < Game.SHAKE_MIN_FALLOFF_FACTOR)
+                return;
+            this.shakeScreen(shakeX * factor, shakeY * factor, clamp);
+        };
         this.drawRooms = (delta, skipLocalPlayer = false, zLayer = this.players?.[this.localPlayerID]?.z ?? 0) => {
             const tTotal = this.drawProfileStart("Game.drawRooms.total");
             try {
@@ -31804,6 +31892,12 @@ Game.getDebugTransparent1x1 = () => {
     Game._debugTransparent1x1 = c;
     return c;
 };
+/**
+ * Shake with inverse-square distance falloff from a world-space source position.
+ * Factor = 1 at distance 1 (adjacent), drops off quickly.
+ * Below MIN_FALLOFF_FACTOR the shake is suppressed entirely.
+ */
+Game.SHAKE_MIN_FALLOFF_FACTOR = 0.1;
 Game.measureText = (text) => {
     if (typeof text !== "string") {
         return { width: 0, height: Game.letter_height };
@@ -37803,6 +37897,7 @@ GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
 GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
 GameplaySettings.KEYBOARD_TARGETING_ENABLED = false;
 GameplaySettings.CROSSBOW_TARGETING_ENABLED = true;
+GameplaySettings.SPELLBOOK_TARGETING_ENABLED = true;
 // === UI ===
 /**
  * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
@@ -58211,9 +58306,62 @@ const playerFireball_1 = __webpack_require__(/*! ../../projectile/playerFireball
 const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class Spellbook extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.targetingMaxRange = 4;
+        this.toggleEquip = () => {
+            if (gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+                if (this.cooldown > 0) {
+                    this.level.game.pushMessage("Not enough mana.");
+                    return;
+                }
+                this.wielder?.rangedTargeting?.start(this);
+                return;
+            }
+            super.toggleEquip();
+        };
+        this.fireAtTarget = (player, tx, ty) => {
+            if (this.cooldown > 0)
+                return false;
+            const room = player.getRoom();
+            if (!room)
+                return false;
+            const z = player.z ?? 0;
+            const splash = [
+                { x: tx, y: ty },
+                { x: tx, y: ty - 1 },
+                { x: tx, y: ty + 1 },
+                { x: tx - 1, y: ty },
+                { x: tx + 1, y: ty },
+            ].filter((p) => !room.isSolidAt(p.x, p.y, z));
+            let hit = false;
+            for (const p of splash) {
+                room.projectiles.push(new playerFireball_1.PlayerFireball(player, p.x, p.y));
+                for (const e of room.entities) {
+                    if (e.pointIn(p.x, p.y) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
+                        e.hurt(player, this.damage + player.magicDamageBonus);
+                        hit = true;
+                    }
+                }
+            }
+            if (splash.length > 0) {
+                player.setHitXY(tx, ty);
+                room.tick(player);
+                this.hitSound();
+                this.shakeScreen(tx, ty);
+                sound_1.Sound.playMagic();
+                this.degrade();
+                this.cooldown = this.cooldownMax + 1;
+                for (const item of player.inventory.items) {
+                    if (item instanceof Spellbook)
+                        item.cooldown = item.cooldownMax + 1;
+                }
+                player.syncManaFromSpellbookCooldowns();
+            }
+            return splash.length > 0;
+        };
         this.getTargets = () => {
             this.targets = [];
             const room = this.wielder?.getRoom
@@ -58251,6 +58399,8 @@ class Spellbook extends weapon_1.Weapon {
             inventory.addItem(new spellbookPage_1.SpellbookPage(this.level, inventoryX, inventoryY, numFragments));
         };
         this.weaponMove = (newX, newY) => {
+            if (gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED)
+                return true;
             //if (!this.checkForCollidables(newX, newY)) return true;
             // If we're on cooldown, treat as "out of mana" (mana bar is synced to cooldown).
             if (this.cooldown > 0) {
@@ -76978,7 +77128,7 @@ class Room {
         for (let i = 0; i < numSpawners; i++) {
             const { x, y } = this.getRandomEmptyPosition(tiles);
             let spawnTable = this.level.populator
-                .getEnemyPoolForDepth(Math.max(0, this.depth - 1))
+                .getEnvEnemyPoolForDepth(this.envType, Math.max(0, this.depth - 1))
                 .filter((t) => t !== 7);
             const spawner = spawner_1.Spawner.add(this, this.game, x, y, spawnTable);
             return spawner;
@@ -81498,6 +81648,24 @@ class Populator {
         return this.generateEnemyPoolIds(depth);
     }
     /**
+     * Returns only the enemy IDs valid for a specific environment + depth.
+     * Used by spawners so they stay thematically consistent with the room they're in.
+     */
+    getEnvEnemyPoolForDepth(env, depth) {
+        const isNumber = (v) => typeof v === "number";
+        if (gameplaySettings_1.GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true) {
+            return this.getEnemyPoolForDepth(depth);
+        }
+        const envEnemies = environment_1.environmentData[env]?.enemies ?? environment_1.environmentData[this.level.environment.type].enemies;
+        return envEnemies
+            .map((enemy) => ({
+            id: environment_1.enemyClassToId.get(enemy.class),
+            minDepth: enemy.minDepth ?? 0,
+        }))
+            .filter((e) => isNumber(e.id) && e.minDepth <= depth)
+            .map((e) => e.id);
+    }
+    /**
      * Calculate number of enemy types for depth
      */
     getNumberOfEnemyTypes(depth) {
@@ -81609,7 +81777,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -81623,7 +81791,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }

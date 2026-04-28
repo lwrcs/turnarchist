@@ -27,6 +27,7 @@ export class GameplaySettings {
 
   static KEYBOARD_TARGETING_ENABLED = false;
   static CROSSBOW_TARGETING_ENABLED = true;
+  static SPELLBOOK_TARGETING_ENABLED = true;
 
   // === UI ===
   /**

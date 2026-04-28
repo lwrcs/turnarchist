@@ -7,9 +7,13 @@ import type { Entity } from "../../entity/entity";
 import { Utils } from "../../utility/utils";
 import { Direction } from "../../game";
 import { SpellbookPage } from "../usable/spellbookPage";
-export class Spellbook extends Weapon {
+import { GameplaySettings } from "../../game/gameplaySettings";
+import type { RangedWeapon } from "./rangedTargetingSystem";
+import type { Player } from "../../player/player";
+export class Spellbook extends Weapon implements RangedWeapon {
   targets: Entity[];
   isTargeting: boolean;
+  targetingMaxRange = 4;
   static itemName = "spellbook";
   static examineText = "A spellbook. Arcane pages and dangerous ideas.";
   constructor(level: Room, x: number, y: number) {
@@ -28,6 +32,60 @@ export class Spellbook extends Weapon {
     this.manaCost = 0;
     this.cooldownMax = 10;
   }
+
+  toggleEquip = () => {
+    if (GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+      if (this.cooldown > 0) {
+        this.level.game.pushMessage("Not enough mana.");
+        return;
+      }
+      (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+      return;
+    }
+    super.toggleEquip();
+  };
+
+  fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
+    if (this.cooldown > 0) return false;
+    const room = player.getRoom();
+    if (!room) return false;
+    const z = (player as any).z ?? 0;
+
+    const splash = [
+      { x: tx,     y: ty     },
+      { x: tx,     y: ty - 1 },
+      { x: tx,     y: ty + 1 },
+      { x: tx - 1, y: ty     },
+      { x: tx + 1, y: ty     },
+    ].filter((p) => !room.isSolidAt(p.x, p.y, z));
+
+    let hit = false;
+    for (const p of splash) {
+      room.projectiles.push(new PlayerFireball(player, p.x, p.y));
+      for (const e of room.entities) {
+        if (e.pointIn(p.x, p.y) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
+          e.hurt(player, this.damage + player.magicDamageBonus);
+          hit = true;
+        }
+      }
+    }
+
+    if (splash.length > 0) {
+      player.setHitXY(tx, ty);
+      room.tick(player);
+      this.hitSound();
+      this.shakeScreen(tx, ty);
+      Sound.playMagic();
+      this.degrade();
+      this.cooldown = this.cooldownMax + 1;
+      for (const item of player.inventory.items) {
+        if (item instanceof Spellbook) item.cooldown = item.cooldownMax + 1;
+      }
+      player.syncManaFromSpellbookCooldowns();
+    }
+
+    return splash.length > 0;
+  };
 
   getTargets = () => {
     this.targets = [];
@@ -77,6 +135,7 @@ export class Spellbook extends Weapon {
   };
 
   weaponMove = (newX: number, newY: number): boolean => {
+    if (GameplaySettings.SPELLBOOK_TARGETING_ENABLED) return true;
     //if (!this.checkForCollidables(newX, newY)) return true;
     // If we're on cooldown, treat as "out of mana" (mana bar is synced to cooldown).
     if (this.cooldown > 0) {
