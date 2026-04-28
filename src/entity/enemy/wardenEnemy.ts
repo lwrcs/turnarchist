@@ -224,6 +224,12 @@ export class WardenEnemy extends Enemy {
       if (this.handleSkipTurns()) return;
       if (!this.seenPlayer) this.lookForPlayer();
       else if (this.seenPlayer) {
+        for (const crusher of this.crushers) {
+          if (!crusher.dead && !crusher.seenPlayer) {
+            crusher.seenPlayer = true;
+            crusher.targetPlayer = this.targetPlayer;
+          }
+        }
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
