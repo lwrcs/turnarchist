@@ -942,15 +942,11 @@ export class Entity extends Drawable {
           this.drawX += 1 * (closestTile.x - entity.x);
           this.drawY += 1 * (closestTile.y - entity.y);
         }
-        const distanceToPlayer = Utils.distance(
+        this.game.shakeScreenFalloff(
           this.x,
           this.y,
-          this.game.players[this.game.localPlayerID].x,
-          this.game.players[this.game.localPlayerID].y,
-        );
-        this.game.shakeScreen(
-          10 * this.drawX * (1 / distanceToPlayer),
-          10 * this.drawY * (1 / distanceToPlayer),
+          10 * this.drawX,
+          10 * this.drawY,
           true,
         );
 
@@ -1005,8 +1001,10 @@ export class Entity extends Drawable {
 
   bigEnemyShake = () => {
     if (this.w > 1 || this.h > 1) {
+      const sx = this.x;
+      const sy = this.y;
       setTimeout(() => {
-        this.game.shakeScreen(0 * this.drawX, 5);
+        this.game.shakeScreenFalloff(sx, sy, 0, 5);
       }, 300);
     }
   };

@@ -4657,6 +4657,23 @@ export class Game {
     }
   };
 
+  /**
+   * Shake with inverse-square distance falloff from a world-space source position.
+   * Factor = 1 at distance 1 (adjacent), drops off quickly.
+   * Below MIN_FALLOFF_FACTOR the shake is suppressed entirely.
+   */
+  private static readonly SHAKE_MIN_FALLOFF_FACTOR = 0.1;
+  shakeScreenFalloff = (sourceX: number, sourceY: number, shakeX: number, shakeY: number, clamp: boolean = false) => {
+    const localPlayer = this.players?.[this.localPlayerID];
+    if (!localPlayer) return;
+    const dx = sourceX - localPlayer.x;
+    const dy = sourceY - localPlayer.y;
+    const distSq = Math.max(1, dx * dx + dy * dy); // clamp to 1 so factor ≤ 1
+    const factor = 1 / distSq;
+    if (factor < Game.SHAKE_MIN_FALLOFF_FACTOR) return;
+    this.shakeScreen(shakeX * factor, shakeY * factor, clamp);
+  };
+
   drawRooms = (
     delta: number,
     skipLocalPlayer: boolean = false,
