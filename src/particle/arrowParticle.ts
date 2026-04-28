@@ -1,5 +1,6 @@
 import { Particle } from "./particle";
 import { Game } from "../game";
+import { GameConstants } from "../game/gameConstants";
 import { Room } from "../room/room";
 
 export class ArrowParticle extends Particle {
@@ -7,7 +8,7 @@ export class ArrowParticle extends Particle {
   startY: number;
   endX: number;
   endY: number;
-  t: number;
+  frame: number;
   speed: number;
   room: Room;
 
@@ -27,65 +28,47 @@ export class ArrowParticle extends Particle {
     this.x = startX;
     this.y = startY;
     this.dead = false;
-    this.t = 0; // 0..1 progression
-    this.speed = 2; // tiles per frame (scaled by delta)
+    this.frame = 0; // animation frame counter, incremented by delta each draw
+    this.speed = 0.25; // tiles per game-frame (at 60 fps) — controls travel duration
   }
-
-  private renderRect = (
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    color: string,
-  ) => {
-    const scale = (Game as any).ctx ? 1 : 1; // guard for server-side
-    const ctx = (Game as any).ctx;
-    if (!ctx) return;
-
-    const tilesize = (Game as any).TILESIZE || 16;
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = color;
-    // Centered rectangle
-    const px = Math.round((x - width / 2) * tilesize);
-    const py = Math.round((y - height / 2) * tilesize);
-    const pw = Math.max(1, Math.round(width * tilesize));
-    const ph = Math.max(1, Math.round(height * tilesize));
-    ctx.fillRect(px, py, pw, ph);
-    ctx.restore();
-  };
 
   draw = (delta: number) => {
     if (this.dead) return;
 
-    // advance t based on approximate speed; clamp to [0,1]
     const dx = this.endX - this.startX;
     const dy = this.endY - this.startY;
-    const dist = Math.max(1, Math.abs(dx) + Math.abs(dy));
-    // normalize to travel in about (dist / speed) frames
-    this.t += (this.speed * (delta || 1)) / dist;
-    if (this.t >= 1) this.t = 1;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
 
-    // interpolate position
-    this.x = this.startX + this.t * dx;
-    this.y = this.startY + this.t * dy;
+    // frame accumulates real-time units (like all other particle animations)
+    this.frame += delta;
+    const totalFrames = dist / this.speed;
+    const t = Math.min(1, this.frame / totalFrames);
 
-    // when arrived, trigger a mild screen shake and mark dead; room will clean up
-    if (this.t >= 1) {
-      // Shake in travel direction with small magnitude
-      const sx = Math.sign(dx);
-      const sy = Math.sign(dy);
-      // Use small magnitude consistent with other calls (e.g., weapons often scale by 5/10)
-      this.room.game.shakeScreen(sx * 5, sy * 5);
+    this.x = this.startX + t * dx;
+    this.y = this.startY + t * dy;
+    this.drawableY = this.y;
+
+    if (t >= 1) {
+      this.room.game.shakeScreen(Math.sign(dx) * 5, Math.sign(dy) * 5);
       this.dead = true;
     }
 
-    // Draw as a longer rectangle aligned to travel axis
-    const horizontal = Math.abs(dx) >= Math.abs(dy);
-    const length = 1; // tiles
-    const thickness = 0.25; // tiles
-    const w = horizontal ? length : thickness;
-    const h = horizontal ? thickness : length;
-    this.renderRect(this.x, this.y, w, h, "white");
+    const ctx = (Game as any).ctx as CanvasRenderingContext2D;
+    if (!ctx) return;
+    const tilesize = GameConstants.TILESIZE;
+
+    const angle = Math.atan2(dy, dx);
+    const length = Math.round(1 * tilesize);
+    const thickness = Math.max(1, Math.round(0.25 * tilesize));
+    const px = Math.round(this.x * tilesize);
+    const py = Math.round(this.y * tilesize);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    ctx.fillStyle = "white";
+    ctx.fillRect(-Math.round(length / 2), -Math.round(thickness / 2), length, thickness);
+    ctx.restore();
   };
 }

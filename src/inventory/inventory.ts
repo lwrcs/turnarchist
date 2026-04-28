@@ -1186,6 +1186,21 @@ export class Inventory {
       this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
     }
     this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
+
+    // Yellow outline around the active ranged-weapon slot (e.g. crossbow in targeting mode)
+    const rangedWeapon = this.player.rangedTargeting?.active
+      ? this.player.rangedTargeting.getWeapon()
+      : null;
+    if (rangedWeapon != null) {
+      const rIdx = this.items.indexOf(rangedWeapon as any);
+      if (rIdx >= 0 && rIdx < this.quickbarCols) {
+        const slotX = Math.floor(startX + rIdx * (s + 2 * b + g));
+        Game.ctx.strokeStyle = "yellow";
+        Game.ctx.lineWidth = 2;
+        Game.ctx.strokeRect(slotX, startY, s + 2 * b, s + 2 * b);
+        Game.ctx.lineWidth = 1;
+      }
+    }
   };
 
   drawUsingItem = (
@@ -1564,6 +1579,24 @@ export class Inventory {
       }
       // Overlay-only highlights + dragged item.
       this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g, this.cols, this.rows);
+
+      // Yellow outline for active ranged-weapon slot in full inventory view.
+      const rangedWeapon = this.player.rangedTargeting?.active
+        ? this.player.rangedTargeting.getWeapon()
+        : null;
+      if (rangedWeapon != null) {
+        const rIdx = this.items.indexOf(rangedWeapon as any);
+        if (rIdx >= 0 && rIdx < this.cols * this.rows) {
+          const rx = rIdx % this.cols;
+          const ry = Math.floor(rIdx / this.cols);
+          const slotX = (mainBgX + 1) + rx * (s + 2 * b + g);
+          const slotY = (mainBgY + 1) + ry * (s + 2 * b + g);
+          Game.ctx.strokeStyle = "yellow";
+          Game.ctx.lineWidth = 2;
+          Game.ctx.strokeRect(slotX, slotY, s + 2 * b, s + 2 * b);
+          Game.ctx.lineWidth = 1;
+        }
+      }
 
       // Finish offscreen render and composite to the main canvas with a single alpha.
       Game.ctx.restore();

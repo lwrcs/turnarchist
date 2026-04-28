@@ -237,9 +237,14 @@ export class PlayerRenderer {
     const tileX = divingHelmet
       ? this.divingHelmetTileX
       : 1 + Math.floor(this.frame);
+    const targetingAngle = player.rangedTargeting?.active
+      ? player.rangedTargeting.getAngleRad()
+      : null;
     const renderDirection = this.uiPoseFrozen
       ? this.frozenPoseDirection
-      : player.direction;
+      : targetingAngle !== null
+        ? this.directionFromAngle(targetingAngle)
+        : player.direction;
     const tileY = divingHelmet
       ? this.divingHelmetTileY + renderDirection * 2
       : 8 + renderDirection * 2;
@@ -266,11 +271,13 @@ export class PlayerRenderer {
       // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
       const angleRad = this.uiPoseFrozen
         ? this.frozenPoseAngleRad
-        : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
-          ? player.frozenMouseAngleRad
-          : player.inputHandler.mostRecentMoveInput === "mouse"
-            ? player.inputHandler.mouseAngle()
-            : null;
+        : targetingAngle !== null
+          ? targetingAngle
+          : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
+            ? player.frozenMouseAngleRad
+            : player.inputHandler.mostRecentMoveInput === "mouse"
+              ? player.inputHandler.mouseAngle()
+              : null;
 
       const angleDeg = angleRad === null ? null : (angleRad * 180) / Math.PI;
       const isDiagonal =
@@ -1083,6 +1090,7 @@ export class PlayerRenderer {
       this.player.map.draw(delta);
     this.drawTileCursor(delta);
     this.drawTargetIndicator(delta);
+    this.drawRangedTargetCursor(delta);
     this.player.setCursorIcon();
 
     //this.drawInventoryButton(delta);
@@ -1360,6 +1368,60 @@ export class PlayerRenderer {
       1,
       1,
     );
+  };
+
+  private directionFromAngle = (rad: number): Direction => {
+    const deg = (rad * 180) / Math.PI;
+    if (deg > -45 && deg <= 45) return Direction.RIGHT;
+    if (deg > 45 && deg <= 135) return Direction.DOWN;
+    if (deg > -135 && deg <= -45) return Direction.UP;
+    return Direction.LEFT;
+  };
+
+  drawRangedTargetCursor = (_delta: number) => {
+    const rt = this.player.rangedTargeting;
+    if (!rt?.active) return;
+    if (this.player.inventory?.isOpen) return;
+    if (this.player.menu?.open) return;
+    if (this.player.skillsMenu?.open) return;
+    if (this.player.bestiary?.isOpen) return;
+    if (this.player.inputHandler.isMouseOverUI()) return;
+
+    const offsetX = Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;
+    const offsetY = Math.floor(GameConstants.HEIGHT / 2) / GameConstants.TILESIZE;
+    const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
+    const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
+
+    // Tile cursor (same FX sprite used for keyboard target indicator)
+    Game.drawFX(
+      24 + Math.floor(HitWarning.frame),
+      5,
+      1,
+      1,
+      screenX,
+      screenY,
+      1,
+      1,
+    );
+
+    // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
+    // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).
+    const ts = GameConstants.TILESIZE;
+    const now = Date.now();
+    const bobPeriod = GameConstants.POINTER_BOB_PERIOD_MS;
+    const bobT = Math.sin(((now % bobPeriod) / bobPeriod) * Math.PI * 2);
+    const bob = Math.round(bobT * 2); // 2 px bob
+    const apx = Math.round((screenX + 0.5) * ts); // horizontal center of tile
+    const apy = Math.round((screenY - 1) * ts) - 1 - bob; // apex 1 tile above target, bobs upward
+    const sz = GameConstants.POINTER_ARROW_SIZE; // 4 rows → 7 px wide base
+    Game.ctx.save();
+    Game.ctx.fillStyle = "yellow";
+    Game.ctx.globalAlpha = 0.9;
+    for (let i = 0; i < sz; i++) {
+      const w = 1 + 2 * i;
+      Game.ctx.fillRect(apx - (w - 1) / 2, apy - i, w, 1);
+    }
+    Game.ctx.restore();
   };
 
   jump = (delta: number) => {

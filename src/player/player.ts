@@ -43,6 +43,7 @@ import { Random } from "../utility/random";
 import { AnchorOptions, OxygenLine } from "./oxygenLine";
 import { SkillsMenu } from "../gui/skillsMenu";
 import { XPCounter } from "../gui/xpCounter";
+import { RangedTargetingSystem } from "../item/weapon/rangedTargetingSystem";
 
 export enum PlayerDirection {
   DOWN,
@@ -126,6 +127,7 @@ export class Player extends Drawable {
   inputHandler: PlayerInputHandler;
   actionProcessor: PlayerActionProcessor;
   movement: PlayerMovement;
+  rangedTargeting: RangedTargetingSystem;
 
   cooldownRemaining: number;
   // Death screen pagination state
@@ -228,6 +230,7 @@ export class Player extends Drawable {
     this.inputHandler = new PlayerInputHandler(this);
     this.actionProcessor = new PlayerActionProcessor(this);
     this.movement = new PlayerMovement(this);
+    this.rangedTargeting = new RangedTargetingSystem(this);
     this.renderer = new PlayerRenderer(this);
     this.oxygenLine = new OxygenLine(this);
 

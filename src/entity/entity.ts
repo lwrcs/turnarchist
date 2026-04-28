@@ -465,8 +465,13 @@ export class Entity extends Drawable {
     return localPlayer?.inputHandler?.keyboardTarget === this;
   };
 
+  isRangedTarget = (): boolean => {
+    const localPlayer = this.game.players[this.game.localPlayerID];
+    return localPlayer?.rangedTargeting?.isTargetTile(this.x, this.y) ?? false;
+  };
+
   outlineColor = (): string => {
-    if (this.isKeyboardTarget()) return "yellow";
+    if (this.isKeyboardTarget() || this.isRangedTarget()) return "yellow";
     let color = "black";
     if (this.shielded) color = GameConstants.OUTLINE_SHIELD_COLOR;
     if (this.buffed) color = GameConstants.OUTLINE_BUFF_COLOR;
@@ -475,7 +480,7 @@ export class Entity extends Drawable {
   };
 
   outlineOpacity = (): number => {
-    if (this.isKeyboardTarget()) return Entity.keyboardTargetPulseOpacity();
+    if (this.isKeyboardTarget() || this.isRangedTarget()) return Entity.targetPulseOpacity();
     let opacity = 0;
     if (this.shielded) opacity = 0.25;
     if (this.buffed) opacity = 0.25;
@@ -483,7 +488,7 @@ export class Entity extends Drawable {
     return opacity;
   };
 
-  static keyboardTargetPulseOpacity = (): number => {
+  static targetPulseOpacity = (): number => {
     const steps = 16;
     const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
     return Math.round(raw * steps) / steps;
@@ -788,9 +793,9 @@ export class Entity extends Drawable {
     colorOverlayDesaturate: boolean = false,
     dottedOutline: boolean = false,
   ): void {
-    if (this.isKeyboardTarget()) {
+    if (this.isKeyboardTarget() || this.isRangedTarget()) {
       outlineColor = "yellow";
-      outlineOpacity = Entity.keyboardTargetPulseOpacity();
+      outlineOpacity = Entity.targetPulseOpacity();
     }
     const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
     Game.drawMob(
@@ -1443,7 +1448,7 @@ export class Entity extends Drawable {
       shade = GameConstants.applyShadeForSprites(Math.min(1, softVis));
     else
       shade = GameConstants.applyShadeForSprites(softVis);
-    if (this.isKeyboardTarget()) shade *= 0.5;
+    if (this.isKeyboardTarget() || this.isRangedTarget()) shade *= 0.5;
     return shade;
   };
 

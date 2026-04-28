@@ -21106,8 +21106,12 @@ class Entity extends drawable_1.Drawable {
             const localPlayer = this.game.players[this.game.localPlayerID];
             return localPlayer?.inputHandler?.keyboardTarget === this;
         };
+        this.isRangedTarget = () => {
+            const localPlayer = this.game.players[this.game.localPlayerID];
+            return localPlayer?.rangedTargeting?.isTargetTile(this.x, this.y) ?? false;
+        };
         this.outlineColor = () => {
-            if (this.isKeyboardTarget())
+            if (this.isKeyboardTarget() || this.isRangedTarget())
                 return "yellow";
             let color = "black";
             if (this.shielded)
@@ -21119,8 +21123,8 @@ class Entity extends drawable_1.Drawable {
             return color;
         };
         this.outlineOpacity = () => {
-            if (this.isKeyboardTarget())
-                return Entity.keyboardTargetPulseOpacity();
+            if (this.isKeyboardTarget() || this.isRangedTarget())
+                return Entity.targetPulseOpacity();
             let opacity = 0;
             if (this.shielded)
                 opacity = 0.25;
@@ -21827,7 +21831,7 @@ class Entity extends drawable_1.Drawable {
                 shade = gameConstants_1.GameConstants.applyShadeForSprites(Math.min(1, softVis));
             else
                 shade = gameConstants_1.GameConstants.applyShadeForSprites(softVis);
-            if (this.isKeyboardTarget())
+            if (this.isKeyboardTarget() || this.isRangedTarget())
                 shade *= 0.5;
             return shade;
         };
@@ -22705,9 +22709,9 @@ class Entity extends drawable_1.Drawable {
      * when this entity died via `crush()` (clone-only).
      */
     drawMobWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir, outlineColor, outlineOpacity = 0, outlineOffset = 0, outlineManhattan = false, colorOverlay, colorOverlayOpacity = 0, colorOverlayDesaturate = false, dottedOutline = false) {
-        if (this.isKeyboardTarget()) {
+        if (this.isKeyboardTarget() || this.isRangedTarget()) {
             outlineColor = "yellow";
-            outlineOpacity = Entity.keyboardTargetPulseOpacity();
+            outlineOpacity = Entity.targetPulseOpacity();
         }
         const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
         game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
@@ -22738,7 +22742,7 @@ exports.Entity = Entity;
 // Crush animation decay factor per ~60fps tick (higher = slower squish).
 // Applied as `pow(factor, delta)` so it's stable across frame rates.
 Entity.CRUSH_DECAY_60FPS = 0.985;
-Entity.keyboardTargetPulseOpacity = () => {
+Entity.targetPulseOpacity = () => {
     const steps = 16;
     const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
     return Math.round(raw * steps) / steps;
@@ -34814,6 +34818,7 @@ const garnetRing_1 = __webpack_require__(/*! ../item/jewelry/garnetRing */ "./sr
 const woodenShield_1 = __webpack_require__(/*! ../item/woodenShield */ "./src/item/woodenShield.ts");
 const quarterStaff_1 = __webpack_require__(/*! ../item/weapon/quarterStaff */ "./src/item/weapon/quarterStaff.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
+const crossbow_1 = __webpack_require__(/*! ../item/weapon/crossbow */ "./src/item/weapon/crossbow.ts");
 const glowStick_1 = __webpack_require__(/*! ../item/light/glowStick */ "./src/item/light/glowStick.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const berries_1 = __webpack_require__(/*! ../item/usable/berries */ "./src/item/usable/berries.ts");
@@ -35262,6 +35267,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     orangegem_1.OrangeGem,
     redgem_1.RedGem,
     garnetRing_1.GarnetRing,
+    crossbow_1.Crossbow,
     crossbowBolt_1.CrossbowBolt,
     spear_1.Spear,
     pickaxe_1.Pickaxe,
@@ -37780,6 +37786,7 @@ GameplaySettings.TUTORIAL_ENABLED = false;
 GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE = 30;
 GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
 GameplaySettings.KEYBOARD_TARGETING_ENABLED = false;
+GameplaySettings.CROSSBOW_TARGETING_ENABLED = true;
 // === UI ===
 /**
  * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
@@ -52159,6 +52166,20 @@ class Inventory {
                 this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
             }
             this.drawUsingItem(delta, startX, startY, s, b, g, this.quickbarCols);
+            // Yellow outline around the active ranged-weapon slot (e.g. crossbow in targeting mode)
+            const rangedWeapon = this.player.rangedTargeting?.active
+                ? this.player.rangedTargeting.getWeapon()
+                : null;
+            if (rangedWeapon != null) {
+                const rIdx = this.items.indexOf(rangedWeapon);
+                if (rIdx >= 0 && rIdx < this.quickbarCols) {
+                    const slotX = Math.floor(startX + rIdx * (s + 2 * b + g));
+                    game_1.Game.ctx.strokeStyle = "yellow";
+                    game_1.Game.ctx.lineWidth = 2;
+                    game_1.Game.ctx.strokeRect(slotX, startY, s + 2 * b, s + 2 * b);
+                    game_1.Game.ctx.lineWidth = 1;
+                }
+            }
         };
         this.drawUsingItem = (delta, startX, startY, s, b, g, contextCols = this.cols, contextRows = 1) => {
             // Highlight the usingItem's slot if in using state and it's different from current selection
@@ -52426,6 +52447,23 @@ class Inventory {
                 }
                 // Overlay-only highlights + dragged item.
                 this.drawUsingItem(delta, mainBgX + 1, mainBgY + 1, s, b, g, this.cols, this.rows);
+                // Yellow outline for active ranged-weapon slot in full inventory view.
+                const rangedWeapon = this.player.rangedTargeting?.active
+                    ? this.player.rangedTargeting.getWeapon()
+                    : null;
+                if (rangedWeapon != null) {
+                    const rIdx = this.items.indexOf(rangedWeapon);
+                    if (rIdx >= 0 && rIdx < this.cols * this.rows) {
+                        const rx = rIdx % this.cols;
+                        const ry = Math.floor(rIdx / this.cols);
+                        const slotX = (mainBgX + 1) + rx * (s + 2 * b + g);
+                        const slotY = (mainBgY + 1) + ry * (s + 2 * b + g);
+                        game_1.Game.ctx.strokeStyle = "yellow";
+                        game_1.Game.ctx.lineWidth = 2;
+                        game_1.Game.ctx.strokeRect(slotX, slotY, s + 2 * b, s + 2 * b);
+                        game_1.Game.ctx.lineWidth = 1;
+                    }
+                }
                 // Finish offscreen render and composite to the main canvas with a single alpha.
                 game_1.Game.ctx.restore();
                 game_1.Game.ctx = prevCtx;
@@ -56705,7 +56743,6 @@ class Crossbow extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.toggleEquip = () => {
-            // Skill requirement gate (crossbow has a custom state-machine equip flow).
             if (this.wielder && this.requiredSkill) {
                 const lvl = stats_1.statsTracker.getSkillLevel(this.requiredSkill);
                 if (lvl < this.requiredLevel) {
@@ -56713,6 +56750,23 @@ class Crossbow extends weapon_1.Weapon {
                     return;
                 }
             }
+            if (gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+                if (this.state === CrossbowState.EMPTY) {
+                    this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
+                }
+                else if (this.state === CrossbowState.LOADED) {
+                    this.cock();
+                    this.wielder?.rangedTargeting?.start(this);
+                }
+                else if (this.state === CrossbowState.COCKED) {
+                    this.wielder?.rangedTargeting?.start(this);
+                }
+                else if (this.cooldown > 0) {
+                    this.level.game.pushMessage("Cooldown: " + this.cooldown);
+                }
+                return;
+            }
+            // Legacy equip behavior
             if (!this.broken &&
                 this.cooldown <= 0 &&
                 this.state === CrossbowState.COCKED) {
@@ -56731,7 +56785,6 @@ class Crossbow extends weapon_1.Weapon {
             }
             else if (this.state === CrossbowState.EMPTY) {
                 this.tileX = 23;
-                //this.equipped = false;
                 this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
             }
             else if (this.state === CrossbowState.LOADED) {
@@ -56757,12 +56810,17 @@ class Crossbow extends weapon_1.Weapon {
             if (this.state === CrossbowState.LOADED) {
                 this.state = CrossbowState.COCKED;
                 this.tileX = 25;
-                this.level.game.pushMessage("You cock the crossbow back and equip it.");
                 this.disabled = false;
-                if (!this.equipped && this.wielder?.inventory?.weapon) {
-                    this.previousWeapon = this.wielder.inventory.weapon;
+                if (gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+                    this.level.game.pushMessage("You cock the crossbow.");
                 }
-                this.equipped = true;
+                else {
+                    this.level.game.pushMessage("You cock the crossbow back and equip it.");
+                    if (!this.equipped && this.wielder?.inventory?.weapon) {
+                        this.previousWeapon = this.wielder.inventory.weapon;
+                    }
+                    this.equipped = true;
+                }
             }
         };
         this.fire = () => {
@@ -56770,12 +56828,14 @@ class Crossbow extends weapon_1.Weapon {
                 this.state === CrossbowState.FIRING) {
                 this.state = CrossbowState.EMPTY;
                 this.tileX = 23;
-                this.equipped = false;
-                this.wielder.inventory.weapon = null;
-                this.wielder.inventory.weapon = this.previousWeapon;
-                this.previousWeapon.equipped = true;
-                this.previousWeapon = null;
                 this.disabled = true;
+                if (!gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+                    this.equipped = false;
+                    this.wielder.inventory.weapon = null;
+                    this.wielder.inventory.weapon = this.previousWeapon;
+                    this.previousWeapon.equipped = true;
+                    this.previousWeapon = null;
+                }
                 const bolt = this.wielder.inventory.hasItem(crossbowBolt_1.CrossbowBolt);
                 if (bolt !== null) {
                     bolt.stackCount--;
@@ -56786,8 +56846,43 @@ class Crossbow extends weapon_1.Weapon {
                 }
             }
         };
+        /** Fire to the exact target tile selected by the ranged targeting system. Returns true if bolt was launched. */
+        this.fireAtTarget = (player, tx, ty) => {
+            if (this.state !== CrossbowState.COCKED)
+                return false;
+            const room = player.getRoom();
+            if (!room)
+                return false;
+            const fromX = player.x;
+            const fromY = player.y;
+            const dx = tx - fromX;
+            const dy = ty - fromY;
+            if (dx === 0 && dy === 0)
+                return false;
+            const z = player.z ?? 0;
+            // The targeting system already validated LOS; just check what is at the target tile.
+            const entitiesAtTarget = room.entities.filter((e) => e.pointIn(tx, ty) && (e?.z ?? 0) === z);
+            const hitTarget = entitiesAtTarget.find((e) => e.destroyable && !e.pushable) ?? null;
+            this.state = CrossbowState.FIRING;
+            if (hitTarget) {
+                const savedWielder = this.wielder;
+                if (!this.wielder)
+                    this.wielder = player;
+                this.attack(hitTarget, this.damage + player.damageBonus);
+                this.wielder = savedWielder;
+                this.hitSound();
+            }
+            player.setHitXY(tx, ty);
+            room.particles.push(new arrowParticle_1.ArrowParticle(room, fromX + 0.5, fromY, tx + 0.5, ty));
+            room.tick(player);
+            this.game.shakeScreen(Math.sign(dx) * 5, Math.sign(dy) * 5);
+            this.fire();
+            return true;
+        };
+        // Legacy weaponMove kept for non-targeting mode
         this.weaponMove = (newX, newY) => {
-            // Must be cocked to fire
+            if (gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED)
+                return true;
             if (this.state !== CrossbowState.COCKED)
                 return true;
             const room = this.wielder?.getRoom
@@ -56797,7 +56892,6 @@ class Crossbow extends weapon_1.Weapon {
                 return true;
             const dx = Math.sign(newX - this.wielder.x);
             const dy = Math.sign(newY - this.wielder.y);
-            // Only allow cardinal directions
             const cardinal = (dx === 0) !== (dy === 0);
             if (!cardinal)
                 return true;
@@ -56816,9 +56910,6 @@ class Crossbow extends weapon_1.Weapon {
                     break;
                 const z = this.wielder?.z ?? 0;
                 const entitiesHere = room.entities.filter((e) => e.pointIn(cx, cy) && (e?.z ?? 0) === z);
-                // Distance-sensitive targeting:
-                // - At step 1, any destroyable (non-pushable) is a valid target
-                // - Beyond step 1, only enemies are valid targets
                 const target = entitiesHere.find((e) => {
                     if (!e.destroyable || e.pushable)
                         return false;
@@ -56832,9 +56923,6 @@ class Crossbow extends weapon_1.Weapon {
                     hitY = cy;
                     break;
                 }
-                // Blocking rules:
-                // - Pushables or non-destroyables always block
-                // - Non-enemy destroyables block when step > 1
                 const blocked = entitiesHere.some((e) => {
                     if (e.pushable || !e.destroyable)
                         return true;
@@ -56845,20 +56933,15 @@ class Crossbow extends weapon_1.Weapon {
                 if (blocked)
                     break;
             }
-            // No enemy found in line-of-sight: allow movement (no attack)
             if (!hitTarget)
                 return true;
-            // Begin firing sequence at the enemy only
             this.state = CrossbowState.FIRING;
             this.attack(hitTarget, this.damage + this.wielder.damageBonus);
             this.hitSound();
             this.wielder.setHitXY(hitX, hitY);
-            // Arrow visual: small square traveling from player to impact
             room.particles.push(new arrowParticle_1.ArrowParticle(room, this.wielder.x + 0.5, this.wielder.y, hitX + 0.5, hitY));
             room.tick(this.wielder);
-            // Shake in shot direction with magnitude 1
             this.game.shakeScreen(dx * 5, dy * 5);
-            // Consume the bolt and unequip appropriately
             this.fire();
             return false;
         };
@@ -57263,6 +57346,130 @@ class QuarterStaff extends weapon_1.Weapon {
 exports.QuarterStaff = QuarterStaff;
 QuarterStaff.itemName = "quarterstaff";
 QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/rangedTargetingSystem.ts":
+/*!**************************************************!*\
+  !*** ./src/item/weapon/rangedTargetingSystem.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RangedTargetingSystem = void 0;
+class RangedTargetingSystem {
+    constructor(player) {
+        this.active = false;
+        this.targetX = 0;
+        this.targetY = 0;
+        this.weapon = null;
+        this.player = player;
+    }
+    start(weapon) {
+        this.active = true;
+        this.weapon = weapon;
+        this.targetX = this.player.x;
+        this.targetY = this.player.y;
+    }
+    stop() {
+        this.active = false;
+        this.weapon = null;
+    }
+    hasLineOfSight(tx, ty) {
+        const room = this.player.getRoom();
+        if (!room)
+            return false;
+        const z = this.player.z ?? 0;
+        const dx = tx - this.player.x;
+        const dy = ty - this.player.y;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        if (steps === 0)
+            return true;
+        for (let i = 1; i <= steps; i++) {
+            const cx = Math.round(this.player.x + (dx * i) / steps);
+            const cy = Math.round(this.player.y + (dy * i) / steps);
+            if (cx === tx && cy === ty)
+                break;
+            if (room.isSolidAt(cx, cy, z))
+                return false;
+        }
+        return true;
+    }
+    moveTarget(dx, dy) {
+        if (!this.active)
+            return;
+        const nx = this.targetX + dx;
+        const ny = this.targetY + dy;
+        const room = this.player.getRoom();
+        if (!room)
+            return;
+        if (room.tileInside(nx, ny) && !room.isSolidAt(nx, ny, this.player.z ?? 0) && this.hasLineOfSight(nx, ny)) {
+            this.targetX = nx;
+            this.targetY = ny;
+        }
+    }
+    syncToMouse() {
+        if (!this.active)
+            return;
+        const tile = this.player.mouseToTile();
+        if (tile.x === undefined || tile.y === undefined)
+            return;
+        const room = this.player.getRoom();
+        if (!room)
+            return;
+        const z = this.player.z ?? 0;
+        // Walk from player toward mouse tile, stop at last non-solid tile in LOS
+        const dx = tile.x - this.player.x;
+        const dy = tile.y - this.player.y;
+        const steps = Math.max(Math.abs(dx), Math.abs(dy));
+        if (steps === 0) {
+            this.targetX = this.player.x;
+            this.targetY = this.player.y;
+            return;
+        }
+        let lastX = this.player.x;
+        let lastY = this.player.y;
+        for (let i = 1; i <= steps; i++) {
+            const cx = Math.round(this.player.x + (dx * i) / steps);
+            const cy = Math.round(this.player.y + (dy * i) / steps);
+            if (!room.tileInside(cx, cy) || room.isSolidAt(cx, cy, z))
+                break;
+            lastX = cx;
+            lastY = cy;
+        }
+        this.targetX = lastX;
+        this.targetY = lastY;
+    }
+    fire() {
+        if (!this.active || !this.weapon) {
+            this.stop();
+            return false;
+        }
+        const fired = this.weapon.fireAtTarget(this.player, this.targetX, this.targetY);
+        this.stop();
+        return fired;
+    }
+    /** Angle in radians from player toward current target. Returns null if on player tile. */
+    getAngleRad() {
+        const dx = this.targetX - this.player.x;
+        const dy = this.targetY - this.player.y;
+        if (dx === 0 && dy === 0)
+            return null;
+        return Math.atan2(dy, dx);
+    }
+    /** True if (x, y) is the current target tile. */
+    isTargetTile(x, y) {
+        return this.active && this.targetX === x && this.targetY === y;
+    }
+    /** The weapon currently being aimed, or null. */
+    getWeapon() {
+        return this.weapon;
+    }
+}
+exports.RangedTargetingSystem = RangedTargetingSystem;
 
 
 /***/ }),
@@ -64905,56 +65112,43 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ArrowParticle = void 0;
 const particle_1 = __webpack_require__(/*! ./particle */ "./src/particle/particle.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 class ArrowParticle extends particle_1.Particle {
     constructor(room, startX, startY, endX, endY) {
         super();
-        this.renderRect = (x, y, width, height, color) => {
-            const scale = game_1.Game.ctx ? 1 : 1; // guard for server-side
-            const ctx = game_1.Game.ctx;
-            if (!ctx)
-                return;
-            const tilesize = game_1.Game.TILESIZE || 16;
-            ctx.save();
-            ctx.imageSmoothingEnabled = false;
-            ctx.fillStyle = color;
-            // Centered rectangle
-            const px = Math.round((x - width / 2) * tilesize);
-            const py = Math.round((y - height / 2) * tilesize);
-            const pw = Math.max(1, Math.round(width * tilesize));
-            const ph = Math.max(1, Math.round(height * tilesize));
-            ctx.fillRect(px, py, pw, ph);
-            ctx.restore();
-        };
         this.draw = (delta) => {
             if (this.dead)
                 return;
-            // advance t based on approximate speed; clamp to [0,1]
             const dx = this.endX - this.startX;
             const dy = this.endY - this.startY;
-            const dist = Math.max(1, Math.abs(dx) + Math.abs(dy));
-            // normalize to travel in about (dist / speed) frames
-            this.t += (this.speed * (delta || 1)) / dist;
-            if (this.t >= 1)
-                this.t = 1;
-            // interpolate position
-            this.x = this.startX + this.t * dx;
-            this.y = this.startY + this.t * dy;
-            // when arrived, trigger a mild screen shake and mark dead; room will clean up
-            if (this.t >= 1) {
-                // Shake in travel direction with small magnitude
-                const sx = Math.sign(dx);
-                const sy = Math.sign(dy);
-                // Use small magnitude consistent with other calls (e.g., weapons often scale by 5/10)
-                this.room.game.shakeScreen(sx * 5, sy * 5);
+            const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+            // frame accumulates real-time units (like all other particle animations)
+            this.frame += delta;
+            const totalFrames = dist / this.speed;
+            const t = Math.min(1, this.frame / totalFrames);
+            this.x = this.startX + t * dx;
+            this.y = this.startY + t * dy;
+            this.drawableY = this.y;
+            if (t >= 1) {
+                this.room.game.shakeScreen(Math.sign(dx) * 5, Math.sign(dy) * 5);
                 this.dead = true;
             }
-            // Draw as a longer rectangle aligned to travel axis
-            const horizontal = Math.abs(dx) >= Math.abs(dy);
-            const length = 1; // tiles
-            const thickness = 0.25; // tiles
-            const w = horizontal ? length : thickness;
-            const h = horizontal ? thickness : length;
-            this.renderRect(this.x, this.y, w, h, "white");
+            const ctx = game_1.Game.ctx;
+            if (!ctx)
+                return;
+            const tilesize = gameConstants_1.GameConstants.TILESIZE;
+            const angle = Math.atan2(dy, dx);
+            const length = Math.round(1 * tilesize);
+            const thickness = Math.max(1, Math.round(0.25 * tilesize));
+            const px = Math.round(this.x * tilesize);
+            const py = Math.round(this.y * tilesize);
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.translate(px, py);
+            ctx.rotate(angle);
+            ctx.fillStyle = "white";
+            ctx.fillRect(-Math.round(length / 2), -Math.round(thickness / 2), length, thickness);
+            ctx.restore();
         };
         this.room = room;
         this.startX = startX;
@@ -64964,8 +65158,8 @@ class ArrowParticle extends particle_1.Particle {
         this.x = startX;
         this.y = startY;
         this.dead = false;
-        this.t = 0; // 0..1 progression
-        this.speed = 2; // tiles per frame (scaled by delta)
+        this.frame = 0; // animation frame counter, incremented by delta each draw
+        this.speed = 0.25; // tiles per game-frame (at 60 fps) — controls travel duration
     }
 }
 exports.ArrowParticle = ArrowParticle;
@@ -66658,6 +66852,7 @@ const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/ran
 const oxygenLine_1 = __webpack_require__(/*! ./oxygenLine */ "./src/player/oxygenLine.ts");
 const skillsMenu_1 = __webpack_require__(/*! ../gui/skillsMenu */ "./src/gui/skillsMenu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
+const rangedTargetingSystem_1 = __webpack_require__(/*! ../item/weapon/rangedTargetingSystem */ "./src/item/weapon/rangedTargetingSystem.ts");
 var PlayerDirection;
 (function (PlayerDirection) {
     PlayerDirection[PlayerDirection["DOWN"] = 0] = "DOWN";
@@ -67998,6 +68193,7 @@ class Player extends drawable_1.Drawable {
         this.inputHandler = new playerInputHandler_1.PlayerInputHandler(this);
         this.actionProcessor = new playerActionProcessor_1.PlayerActionProcessor(this);
         this.movement = new playerMovement_1.PlayerMovement(this);
+        this.rangedTargeting = new rangedTargetingSystem_1.RangedTargetingSystem(this);
         this.renderer = new playerRenderer_1.PlayerRenderer(this);
         this.oxygenLine = new oxygenLine_1.OxygenLine(this);
         this.bestiary = new bestiary_1.Bestiary(this.game, this);
@@ -68163,6 +68359,21 @@ class PlayerInputHandler {
         this.clearKeyboardTarget = () => {
             this.keyboardTarget = null;
             this.player.contextMenu?.close();
+            this.player.rangedTargeting?.stop();
+        };
+        this.isMouseOverUI = () => {
+            const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+            const player = this.player;
+            const inv = player.inventory;
+            if (!inv)
+                return false;
+            return (inv.isPointInQuickbarBounds(x, y).inBounds ||
+                inv.isPointInInventoryButton(x, y) ||
+                (player.bestiary?.isPointInBestiaryButton(x, y) ?? false) ||
+                menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
+                (player.menu?.open ?? false) ||
+                (player.skillsMenu?.isPointInBounds(x, y) ?? false) ||
+                xpCounter_1.XPCounter.isPointInBounds(x, y));
         };
         this.ignoreDirectionInput = () => {
             return (this.player.inventory.isOpen ||
@@ -68329,6 +68540,46 @@ class PlayerInputHandler {
                     this.player.bestiary.handleMouseDown(x, y);
                     return;
                 }
+                default:
+                    return;
+            }
+        }
+        // Ranged targeting is modal while active.
+        if (this.player.rangedTargeting?.active) {
+            const rt = this.player.rangedTargeting;
+            const invOpen = this.player.inventory?.isOpen;
+            switch (input) {
+                case input_1.InputEnum.UP:
+                    rt.moveTarget(0, -1);
+                    return;
+                case input_1.InputEnum.DOWN:
+                    rt.moveTarget(0, 1);
+                    return;
+                case input_1.InputEnum.LEFT:
+                    rt.moveTarget(-1, 0);
+                    return;
+                case input_1.InputEnum.RIGHT:
+                    rt.moveTarget(1, 0);
+                    return;
+                case input_1.InputEnum.SPACE:
+                case input_1.InputEnum.ENTER:
+                    // Don't fire or close inventory when inventory is open — swallow silently.
+                    if (!invOpen)
+                        rt.fire();
+                    return;
+                case input_1.InputEnum.ESCAPE:
+                    rt.stop();
+                    return;
+                case input_1.InputEnum.MOUSE_MOVE:
+                    rt.syncToMouse();
+                    return;
+                case input_1.InputEnum.LEFT_CLICK:
+                    // If inventory is open let the click fall through to close it normally.
+                    if (!invOpen) {
+                        rt.fire();
+                        return;
+                    }
+                    break;
                 default:
                     return;
             }
@@ -69258,6 +69509,13 @@ class PlayerInputHandler {
             return; // Only handle left mouse button
         const player = this.player;
         const skillsMenu = player.skillsMenu;
+        // Ranged targeting: left click fires, but only when the inventory is closed and not hovering UI.
+        // If the inventory is open, let the click fall through so it closes normally.
+        if (player.rangedTargeting?.active && !player.inventory?.isOpen && !this.isMouseOverUI()) {
+            player.rangedTargeting.fire();
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         // Context menu consumes clicks while open (click outside closes).
         if (player.contextMenu?.open) {
             player.contextMenu.handleMouseDown(x, y, 0);
@@ -70061,9 +70319,14 @@ class PlayerRenderer {
             const tileX = divingHelmet
                 ? this.divingHelmetTileX
                 : 1 + Math.floor(this.frame);
+            const targetingAngle = player.rangedTargeting?.active
+                ? player.rangedTargeting.getAngleRad()
+                : null;
             const renderDirection = this.uiPoseFrozen
                 ? this.frozenPoseDirection
-                : player.direction;
+                : targetingAngle !== null
+                    ? this.directionFromAngle(targetingAngle)
+                    : player.direction;
             const tileY = divingHelmet
                 ? this.divingHelmetTileY + renderDirection * 2
                 : 8 + renderDirection * 2;
@@ -70076,11 +70339,13 @@ class PlayerRenderer {
                 // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
                 const angleRad = this.uiPoseFrozen
                     ? this.frozenPoseAngleRad
-                    : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
-                        ? player.frozenMouseAngleRad
-                        : player.inputHandler.mostRecentMoveInput === "mouse"
-                            ? player.inputHandler.mouseAngle()
-                            : null;
+                    : targetingAngle !== null
+                        ? targetingAngle
+                        : player.contextMenu?.open && typeof player.frozenMouseAngleRad === "number"
+                            ? player.frozenMouseAngleRad
+                            : player.inputHandler.mostRecentMoveInput === "mouse"
+                                ? player.inputHandler.mouseAngle()
+                                : null;
                 const angleDeg = angleRad === null ? null : (angleRad * 180) / Math.PI;
                 const isDiagonal = angleDeg !== null &&
                     ((angleDeg > 30 && angleDeg < 60) ||
@@ -70674,6 +70939,7 @@ class PlayerRenderer {
                 this.player.map.draw(delta);
             this.drawTileCursor(delta);
             this.drawTargetIndicator(delta);
+            this.drawRangedTargetCursor(delta);
             this.player.setCursorIcon();
             //this.drawInventoryButton(delta);
             // Overlay ordering (top-most last):
@@ -70861,6 +71127,55 @@ class PlayerRenderer {
             const screenX = (target.x - this.player.x) + offsetX - 0.5 + this.player.drawX + target.drawX;
             const screenY = (target.y - this.player.y) + offsetY - 0.5 + this.player.drawY + target.drawY;
             game_1.Game.drawFX(24 + Math.floor(hitWarning_1.HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
+        };
+        this.directionFromAngle = (rad) => {
+            const deg = (rad * 180) / Math.PI;
+            if (deg > -45 && deg <= 45)
+                return game_1.Direction.RIGHT;
+            if (deg > 45 && deg <= 135)
+                return game_1.Direction.DOWN;
+            if (deg > -135 && deg <= -45)
+                return game_1.Direction.UP;
+            return game_1.Direction.LEFT;
+        };
+        this.drawRangedTargetCursor = (_delta) => {
+            const rt = this.player.rangedTargeting;
+            if (!rt?.active)
+                return;
+            if (this.player.inventory?.isOpen)
+                return;
+            if (this.player.menu?.open)
+                return;
+            if (this.player.skillsMenu?.open)
+                return;
+            if (this.player.bestiary?.isOpen)
+                return;
+            if (this.player.inputHandler.isMouseOverUI())
+                return;
+            const offsetX = Math.floor(gameConstants_1.GameConstants.WIDTH / 2) / gameConstants_1.GameConstants.TILESIZE;
+            const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
+            const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
+            const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
+            // Tile cursor (same FX sprite used for keyboard target indicator)
+            game_1.Game.drawFX(24 + Math.floor(hitWarning_1.HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
+            // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
+            // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).
+            const ts = gameConstants_1.GameConstants.TILESIZE;
+            const now = Date.now();
+            const bobPeriod = gameConstants_1.GameConstants.POINTER_BOB_PERIOD_MS;
+            const bobT = Math.sin(((now % bobPeriod) / bobPeriod) * Math.PI * 2);
+            const bob = Math.round(bobT * 2); // 2 px bob
+            const apx = Math.round((screenX + 0.5) * ts); // horizontal center of tile
+            const apy = Math.round((screenY - 1) * ts) - 1 - bob; // apex 1 tile above target, bobs upward
+            const sz = gameConstants_1.GameConstants.POINTER_ARROW_SIZE; // 4 rows → 7 px wide base
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.fillStyle = "yellow";
+            game_1.Game.ctx.globalAlpha = 0.9;
+            for (let i = 0; i < sz; i++) {
+                const w = 1 + 2 * i;
+                game_1.Game.ctx.fillRect(apx - (w - 1) / 2, apy - i, w, 1);
+            }
+            game_1.Game.ctx.restore();
         };
         this.jump = (delta) => {
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
@@ -74532,6 +74847,14 @@ class Room {
                     let smoothFactor = !gameConstants_1.GameConstants.SMOOTH_LIGHTING ? 0 : 1;
                     let computedAlpha = alpha ** factor * smoothFactor;
                     computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
+                    const localPlayer = this.game?.players?.[this.game?.localPlayerID];
+                    if (localPlayer?.rangedTargeting?.isTargetTile(x, y) &&
+                        !localPlayer?.inventory?.isOpen &&
+                        !localPlayer?.menu?.open &&
+                        !localPlayer?.skillsMenu?.open &&
+                        !localPlayer?.bestiary?.isOpen) {
+                        computedAlpha *= 0.5;
+                    }
                     let fillX = x;
                     let fillY = y;
                     let fillWidth = 1;
@@ -84733,7 +85056,16 @@ class Tile extends drawable_1.Drawable {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
             const v = this.room.softVis[this.x + offsetX][this.y + offsetY];
-            return gameConstants_1.GameConstants.applyShadeForTiles(v);
+            let shade = gameConstants_1.GameConstants.applyShadeForTiles(v);
+            const localPlayer = this.room.game?.players?.[this.room.game?.localPlayerID];
+            if (localPlayer?.rangedTargeting?.isTargetTile(this.x + offsetX, this.y + offsetY) &&
+                !localPlayer?.inventory?.isOpen &&
+                !localPlayer?.menu?.open &&
+                !localPlayer?.skillsMenu?.open &&
+                !localPlayer?.bestiary?.isOpen) {
+                shade *= 0.5;
+            }
+            return shade;
         };
         this.isSolid = () => {
             return false;

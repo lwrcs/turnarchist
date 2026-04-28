@@ -26,6 +26,7 @@ export class GameplaySettings {
   static readonly OXYGEN_LINE_MAX_LENGTH = 25;
 
   static KEYBOARD_TARGETING_ENABLED = false;
+  static CROSSBOW_TARGETING_ENABLED = true;
 
   // === UI ===
   /**

@@ -1,11 +1,12 @@
 import { Weapon } from "./weapon";
 import { Room } from "../../room/room";
-import { GenericParticle } from "../../particle/genericParticle";
 import { ArrowParticle } from "../../particle/arrowParticle";
 import { GameplaySettings } from "../../game/gameplaySettings";
 import { CrossbowBolt } from "./crossbowBolt";
 import { SKILL_DISPLAY_NAME } from "../../game/skills";
 import { statsTracker } from "../../game/stats";
+import type { Player } from "../../player/player";
+import type { RangedWeapon } from "./rangedTargetingSystem";
 
 enum CrossbowState {
   EMPTY,
@@ -14,7 +15,7 @@ enum CrossbowState {
   FIRING,
 }
 
-export class Crossbow extends Weapon {
+export class Crossbow extends Weapon implements RangedWeapon {
   static itemName = "crossbow";
   static examineText = "A crossbow. Point, load, and regret.";
   state: CrossbowState;
@@ -32,7 +33,6 @@ export class Crossbow extends Weapon {
   }
 
   toggleEquip = () => {
-    // Skill requirement gate (crossbow has a custom state-machine equip flow).
     if (this.wielder && this.requiredSkill) {
       const lvl = statsTracker.getSkillLevel(this.requiredSkill);
       if (lvl < this.requiredLevel) {
@@ -43,6 +43,21 @@ export class Crossbow extends Weapon {
       }
     }
 
+    if (GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+      if (this.state === CrossbowState.EMPTY) {
+        this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
+      } else if (this.state === CrossbowState.LOADED) {
+        this.cock();
+        (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+      } else if (this.state === CrossbowState.COCKED) {
+        (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+      } else if (this.cooldown > 0) {
+        this.level.game.pushMessage("Cooldown: " + this.cooldown);
+      }
+      return;
+    }
+
+    // Legacy equip behavior
     if (
       !this.broken &&
       this.cooldown <= 0 &&
@@ -64,8 +79,6 @@ export class Crossbow extends Weapon {
         this.wielder?.stall();
     } else if (this.state === CrossbowState.EMPTY) {
       this.tileX = 23;
-      //this.equipped = false;
-
       this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
     } else if (this.state === CrossbowState.LOADED) {
       this.cock();
@@ -89,13 +102,17 @@ export class Crossbow extends Weapon {
     if (this.state === CrossbowState.LOADED) {
       this.state = CrossbowState.COCKED;
       this.tileX = 25;
-      this.level.game.pushMessage("You cock the crossbow back and equip it.");
       this.disabled = false;
-      if (!this.equipped && this.wielder?.inventory?.weapon) {
-        this.previousWeapon = this.wielder.inventory.weapon;
-      }
 
-      this.equipped = true;
+      if (GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+        this.level.game.pushMessage("You cock the crossbow.");
+      } else {
+        this.level.game.pushMessage("You cock the crossbow back and equip it.");
+        if (!this.equipped && this.wielder?.inventory?.weapon) {
+          this.previousWeapon = this.wielder.inventory.weapon;
+        }
+        this.equipped = true;
+      }
     }
   };
 
@@ -106,13 +123,16 @@ export class Crossbow extends Weapon {
     ) {
       this.state = CrossbowState.EMPTY;
       this.tileX = 23;
-      this.equipped = false;
-      this.wielder.inventory.weapon = null;
-      this.wielder.inventory.weapon = this.previousWeapon;
-      this.previousWeapon.equipped = true;
-
-      this.previousWeapon = null;
       this.disabled = true;
+
+      if (!GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+        this.equipped = false;
+        this.wielder.inventory.weapon = null;
+        this.wielder.inventory.weapon = this.previousWeapon;
+        this.previousWeapon.equipped = true;
+        this.previousWeapon = null;
+      }
+
       const bolt = this.wielder.inventory.hasItem(CrossbowBolt);
       if (bolt !== null) {
         bolt.stackCount--;
@@ -124,8 +144,61 @@ export class Crossbow extends Weapon {
     }
   };
 
+  /** Fire to the exact target tile selected by the ranged targeting system. Returns true if bolt was launched. */
+  fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
+    if (this.state !== CrossbowState.COCKED) return false;
+
+    const room = player.getRoom();
+    if (!room) return false;
+
+    const fromX = player.x;
+    const fromY = player.y;
+    const dx = tx - fromX;
+    const dy = ty - fromY;
+    if (dx === 0 && dy === 0) return false;
+
+    const z = (player as any).z ?? 0;
+
+    // The targeting system already validated LOS; just check what is at the target tile.
+    const entitiesAtTarget = room.entities.filter(
+      (e: any) => e.pointIn(tx, ty) && (e?.z ?? 0) === z,
+    );
+    const hitTarget = entitiesAtTarget.find(
+      (e: any) => e.destroyable && !e.pushable,
+    ) ?? null;
+
+    this.state = CrossbowState.FIRING;
+
+    if (hitTarget) {
+      const savedWielder = this.wielder;
+      if (!this.wielder) this.wielder = player;
+      this.attack(hitTarget, this.damage + player.damageBonus);
+      this.wielder = savedWielder;
+      this.hitSound();
+    }
+
+    player.setHitXY(tx, ty);
+
+    room.particles.push(
+      new ArrowParticle(
+        room,
+        fromX + 0.5,
+        fromY,
+        tx + 0.5,
+        ty,
+      ),
+    );
+
+    room.tick(player);
+    this.game.shakeScreen(Math.sign(dx) * 5, Math.sign(dy) * 5);
+    this.fire();
+
+    return true;
+  };
+
+  // Legacy weaponMove kept for non-targeting mode
   weaponMove = (newX: number, newY: number): boolean => {
-    // Must be cocked to fire
+    if (GameplaySettings.CROSSBOW_TARGETING_ENABLED) return true;
     if (this.state !== CrossbowState.COCKED) return true;
 
     const room = (this.wielder as any)?.getRoom
@@ -136,7 +209,6 @@ export class Crossbow extends Weapon {
     const dx = Math.sign(newX - this.wielder.x);
     const dy = Math.sign(newY - this.wielder.y);
 
-    // Only allow cardinal directions
     const cardinal = (dx === 0) !== (dy === 0);
     if (!cardinal) return true;
 
@@ -160,9 +232,6 @@ export class Crossbow extends Weapon {
         (e: any) => e.pointIn(cx, cy) && (e?.z ?? 0) === z,
       );
 
-      // Distance-sensitive targeting:
-      // - At step 1, any destroyable (non-pushable) is a valid target
-      // - Beyond step 1, only enemies are valid targets
       const target = entitiesHere.find((e: any) => {
         if (!e.destroyable || e.pushable) return false;
         if (step === 1) return true;
@@ -175,9 +244,6 @@ export class Crossbow extends Weapon {
         break;
       }
 
-      // Blocking rules:
-      // - Pushables or non-destroyables always block
-      // - Non-enemy destroyables block when step > 1
       const blocked = entitiesHere.some((e: any) => {
         if (e.pushable || !e.destroyable) return true;
         if (step > 1 && e.destroyable && !e.isEnemy) return true;
@@ -186,17 +252,13 @@ export class Crossbow extends Weapon {
       if (blocked) break;
     }
 
-    // No enemy found in line-of-sight: allow movement (no attack)
     if (!hitTarget) return true;
 
-    // Begin firing sequence at the enemy only
     this.state = CrossbowState.FIRING;
     this.attack(hitTarget, this.damage + this.wielder.damageBonus);
-
     this.hitSound();
     this.wielder.setHitXY(hitX, hitY);
 
-    // Arrow visual: small square traveling from player to impact
     room.particles.push(
       new ArrowParticle(
         room,
@@ -208,10 +270,7 @@ export class Crossbow extends Weapon {
     );
 
     room.tick(this.wielder);
-    // Shake in shot direction with magnitude 1
     this.game.shakeScreen(dx * 5, dy * 5);
-
-    // Consume the bolt and unequip appropriately
     this.fire();
     return false;
   };

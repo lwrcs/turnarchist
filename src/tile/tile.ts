@@ -73,7 +73,18 @@ export abstract class Tile extends Drawable {
   ) => {
     if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
     const v = this.room.softVis[this.x + offsetX][this.y + offsetY];
-    return GameConstants.applyShadeForTiles(v);
+    let shade = GameConstants.applyShadeForTiles(v);
+    const localPlayer = (this.room as any).game?.players?.[(this.room as any).game?.localPlayerID];
+    if (
+      localPlayer?.rangedTargeting?.isTargetTile(this.x + offsetX, this.y + offsetY) &&
+      !localPlayer?.inventory?.isOpen &&
+      !localPlayer?.menu?.open &&
+      !localPlayer?.skillsMenu?.open &&
+      !localPlayer?.bestiary?.isOpen
+    ) {
+      shade *= 0.5;
+    }
+    return shade;
   };
 
   isSolid = (): boolean => {

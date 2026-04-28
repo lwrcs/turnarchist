@@ -171,6 +171,43 @@ export class PlayerInputHandler {
       }
     }
 
+    // Ranged targeting is modal while active.
+    if (this.player.rangedTargeting?.active) {
+      const rt = this.player.rangedTargeting;
+      const invOpen = this.player.inventory?.isOpen;
+      switch (input) {
+        case InputEnum.UP:
+          rt.moveTarget(0, -1);
+          return;
+        case InputEnum.DOWN:
+          rt.moveTarget(0, 1);
+          return;
+        case InputEnum.LEFT:
+          rt.moveTarget(-1, 0);
+          return;
+        case InputEnum.RIGHT:
+          rt.moveTarget(1, 0);
+          return;
+        case InputEnum.SPACE:
+        case InputEnum.ENTER:
+          // Don't fire or close inventory when inventory is open — swallow silently.
+          if (!invOpen) rt.fire();
+          return;
+        case InputEnum.ESCAPE:
+          rt.stop();
+          return;
+        case InputEnum.MOUSE_MOVE:
+          rt.syncToMouse();
+          return;
+        case InputEnum.LEFT_CLICK:
+          // If inventory is open let the click fall through to close it normally.
+          if (!invOpen) { rt.fire(); return; }
+          break;
+        default:
+          return;
+      }
+    }
+
     // Context menu is modal while open.
     if (this.player.contextMenu?.open) {
       const cm = this.player.contextMenu;
@@ -545,6 +582,7 @@ export class PlayerInputHandler {
   clearKeyboardTarget = () => {
     this.keyboardTarget = null;
     this.player.contextMenu?.close();
+    this.player.rangedTargeting?.stop();
   };
 
   private openKeyboardContextMenuForEntity(entity: Entity) {
@@ -1192,11 +1230,35 @@ export class PlayerInputHandler {
     menu.openAt(x, y, items, !!targetEntity);
   }
 
+  isMouseOverUI = (): boolean => {
+    const { x, y } = MouseCursor.getInstance().getPosition();
+    const player = this.player;
+    const inv = player.inventory;
+    if (!inv) return false;
+    return (
+      inv.isPointInQuickbarBounds(x, y).inBounds ||
+      inv.isPointInInventoryButton(x, y) ||
+      (player.bestiary?.isPointInBestiaryButton(x, y) ?? false) ||
+      Menu.isPointInOpenMenuButtonBounds(x, y) ||
+      (player.menu?.open ?? false) ||
+      (player.skillsMenu?.isPointInBounds(x, y) ?? false) ||
+      XPCounter.isPointInBounds(x, y)
+    );
+  };
+
   handleMouseDown(x: number, y: number, button: number) {
     if (button !== 0) return; // Only handle left mouse button
 
     const player = this.player;
     const skillsMenu = player.skillsMenu;
+
+    // Ranged targeting: left click fires, but only when the inventory is closed and not hovering UI.
+    // If the inventory is open, let the click fall through so it closes normally.
+    if (player.rangedTargeting?.active && !player.inventory?.isOpen && !this.isMouseOverUI()) {
+      player.rangedTargeting.fire();
+      Input.mouseDownHandled = true;
+      return;
+    }
 
     // Context menu consumes clicks while open (click outside closes).
     if (player.contextMenu?.open) {

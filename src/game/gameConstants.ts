@@ -580,6 +580,7 @@ export class GameConstants {
     OrangeGem,
     RedGem,
     GarnetRing,
+    Crossbow,
     CrossbowBolt,
     Spear,
     Pickaxe,
