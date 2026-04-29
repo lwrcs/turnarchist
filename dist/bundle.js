@@ -34910,6 +34910,7 @@ const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
+const spellbookPage_1 = __webpack_require__(/*! ../item/usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const bluegem_1 = __webpack_require__(/*! ../item/resource/bluegem */ "./src/item/resource/bluegem.ts");
 const redgem_1 = __webpack_require__(/*! ../item/resource/redgem */ "./src/item/resource/redgem.ts");
 const greengem_1 = __webpack_require__(/*! ../item/resource/greengem */ "./src/item/resource/greengem.ts");
@@ -34939,6 +34940,7 @@ const chestPlate_1 = __webpack_require__(/*! ../item/chestPlate */ "./src/item/c
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 const weaponCurse_1 = __webpack_require__(/*! ../item/usable/weaponCurse */ "./src/item/usable/weaponCurse.ts");
 const bluePotion_1 = __webpack_require__(/*! ../item/usable/bluePotion */ "./src/item/usable/bluePotion.ts");
+const scroll_1 = __webpack_require__(/*! ../item/usable/scroll */ "./src/item/usable/scroll.ts");
 class GameConstants {
     static get SHADE_ENABLED() {
         return GameConstants.SMOOTH_LIGHTING;
@@ -35400,6 +35402,13 @@ GameConstants.STARTING_DEV_INVENTORY = [
     dualdagger_1.DualDagger,
     weaponCurse_1.WeaponCurse,
     bluePotion_1.BluePotion,
+    spellbookPage_1.SpellbookPage,
+    spellbookPage_1.SpellbookPage,
+    spellbookPage_1.SpellbookPage,
+    scroll_1.WaveScroll,
+    scroll_1.CrossScroll,
+    scroll_1.PointScroll,
+    scroll_1.PlusScroll,
     /*
     Coal,
     Coal,
@@ -39466,6 +39475,7 @@ const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/enti
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const bigWizardFireball_1 = __webpack_require__(/*! ../../projectile/bigWizardFireball */ "./src/projectile/bigWizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
+const playerFireball_1 = __webpack_require__(/*! ../../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
 const equippable_1 = __webpack_require__(/*! ../../item/equippable */ "./src/item/equippable.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
@@ -40352,6 +40362,23 @@ const loadSaveV2 = async (game, save) => {
                     proj.state = ps.state;
                     if (ps.delay !== undefined)
                         proj.delay = ps.delay;
+                    const gidRes = reserveAndAssignGid(proj, ps.gid, preReservedGids, assignedByGid, assignedGidByObj);
+                    if (!gidRes.ok)
+                        return gidRes;
+                    room.projectiles.push(proj);
+                }
+                if (ps.kind === "player_fireball") {
+                    const parentId = ps.parentGid;
+                    const parent = game.players[parentId] ?? game.offlinePlayers[parentId];
+                    if (!parent) {
+                        // Parent player not found; skip restoring this projectile.
+                        continue;
+                    }
+                    const proj = new playerFireball_1.PlayerFireball(parent, ps.x, ps.y);
+                    proj.dead = ps.dead;
+                    proj.frame = ps.frame;
+                    proj.offsetFrame = ps.offsetFrame;
+                    proj.delay = ps.delay;
                     const gidRes = reserveAndAssignGid(proj, ps.gid, preReservedGids, assignedByGid, assignedGidByObj);
                     if (!gidRes.ok)
                         return gidRes;
@@ -41710,6 +41737,8 @@ const shoulderPlates_1 = __webpack_require__(/*! ../../../item/shoulderPlates */
 const chestPlate_1 = __webpack_require__(/*! ../../../item/chestPlate */ "./src/item/chestPlate.ts");
 const crossbowBolt_1 = __webpack_require__(/*! ../../../item/weapon/crossbowBolt */ "./src/item/weapon/crossbowBolt.ts");
 const godStone_1 = __webpack_require__(/*! ../../../item/godStone */ "./src/item/godStone.ts");
+const scroll_1 = __webpack_require__(/*! ../../../item/usable/scroll */ "./src/item/usable/scroll.ts");
+const spell_1 = __webpack_require__(/*! ../../../item/weapon/spell */ "./src/item/weapon/spell.ts");
 const items_1 = __webpack_require__(/*! ./items */ "./src/game/save/registry/items.ts");
 const itemToKind = (item) => {
     if (item instanceof coin_1.Coin)
@@ -41748,6 +41777,8 @@ const itemToKind = (item) => {
         return "weapon_blood";
     if (item instanceof weaponCurse_1.WeaponCurse)
         return "weapon_curse";
+    if (item instanceof scroll_1.Scroll)
+        return "scroll";
     if (item instanceof spellbook_1.Spellbook)
         return "spellbook";
     if (item instanceof spellbookPage_1.SpellbookPage)
@@ -41881,9 +41912,10 @@ const isWeaponItemSaveV2 = (v) => {
         v.kind === "crossbow" ||
         v.kind === "shotgun" ||
         v.kind === "slingshot" ||
-        v.kind === "spellbook" ||
         v.kind === "pickaxe");
 };
+const isSpellbookItemSaveV2 = (v) => v.kind === "spellbook";
+const isScrollItemSaveV2 = (v) => v.kind === "scroll";
 const isShieldItemSaveV2 = (v) => {
     return v.kind === "occult_shield" || v.kind === "wooden_shield";
 };
@@ -42579,14 +42611,85 @@ const registerBuiltinItemCodecsV2 = () => {
         save: (v) => {
             if (!(v instanceof spellbook_1.Spellbook))
                 throw new Error("spellbook codec received non-Spellbook");
-            return saveBaseWeapon("spellbook", v);
+            const roomGid = v.level ? v.level.globalId : undefined;
+            return {
+                kind: "spellbook",
+                gid: v.globalId,
+                x: v.x,
+                y: v.y,
+                roomGid,
+                stackCount: v.stackCount,
+                pickedUp: v.pickedUp,
+                equipped: v.equipped,
+                durability: v.durability,
+                durabilityMax: v.durabilityMax,
+                broken: v.broken,
+                cooldown: v.cooldown,
+                cooldownMax: v.cooldownMax,
+                status: weaponStatusToSave(v),
+                spellIds: v.spells.map((s) => s.id),
+                activeSpellId: v.activeSpell.id,
+            };
         },
         spawn: (value, room, _ctx) => {
-            if (!isWeaponItemSaveV2(value) || value.kind !== "spellbook")
+            if (!isSpellbookItemSaveV2(value))
                 throw new Error("spellbook codec spawn received non-spellbook save");
             const w = new spellbook_1.Spellbook(room, value.x, value.y);
-            applyWeaponSave(w, value);
+            w.durability = value.durability;
+            w.durabilityMax = value.durabilityMax;
+            w.broken = value.broken;
+            w.cooldown = value.cooldown;
+            w.cooldownMax = value.cooldownMax;
+            w.status = { ...value.status };
+            if (value.equipped !== undefined)
+                w.equipped = value.equipped;
+            w.stackCount = value.stackCount;
+            w.pickedUp = value.pickedUp;
+            w.globalId = value.gid;
+            // Restore inscribed spells
+            w.spells = [];
+            for (const id of value.spellIds) {
+                const spell = (0, spell_1.spellById)(id);
+                if (spell)
+                    w.spells.push(spell);
+            }
+            if (w.spells.length === 0) {
+                // Fallback: ensure at least the default spell
+                w.spells = [new spell_1.PlusSpell()];
+            }
+            const active = (0, spell_1.spellById)(value.activeSpellId);
+            w.activeSpell = active ?? w.spells[0];
+            w.pendingSpell = null;
             return w;
+        },
+    });
+    register("scroll", {
+        save: (v) => {
+            if (!(v instanceof scroll_1.Scroll))
+                throw new Error("scroll codec received non-Scroll");
+            const roomGid = v.level ? v.level.globalId : undefined;
+            return {
+                kind: "scroll",
+                gid: v.globalId,
+                x: v.x,
+                y: v.y,
+                roomGid,
+                stackCount: v.stackCount,
+                pickedUp: v.pickedUp,
+                spellId: v.spell.id,
+            };
+        },
+        spawn: (value, room, _ctx) => {
+            if (!isScrollItemSaveV2(value))
+                throw new Error("scroll codec spawn received non-scroll save");
+            const spell = (0, spell_1.spellById)(value.spellId);
+            if (!spell)
+                throw new Error(`scroll codec: unknown spellId=${value.spellId}`);
+            const it = new scroll_1.Scroll(room, value.x, value.y, spell);
+            it.stackCount = value.stackCount;
+            it.pickedUp = value.pickedUp;
+            it.globalId = value.gid;
+            return it;
         },
     });
     register("pickaxe", {
@@ -43745,6 +43848,8 @@ exports.ITEM_KIND_VALUES_V2 = [
     "crossbow_bolt",
     // dev items
     "god_stone",
+    // scrolls
+    "scroll",
 ];
 
 
@@ -44333,7 +44438,6 @@ const WEAPON_ITEM_KINDS = [
     "crossbow",
     "shotgun",
     "slingshot",
-    "spellbook",
     "pickaxe",
 ];
 const isWeaponItemKind = (k) => {
@@ -44349,7 +44453,7 @@ const isShieldItemKind = (k) => {
             return true;
     return false;
 };
-const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation"];
+const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation", "player_fireball"];
 const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"];
 const asEnvKind = (v, path) => isOneOf(v, ENV_KINDS)
     ? (0, errors_1.ok)(v)
@@ -44998,6 +45102,84 @@ const validateItemSaveV2 = (v, path) => {
             durability: durabilityU,
             durabilityMax: durabilityMaxU,
             broken: brokenU,
+        });
+    }
+    if (kindR.value === "scroll") {
+        const spellIdU = get(v, "spellId");
+        if (!isString(spellIdU) || spellIdU.length === 0)
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "spellId must be a non-empty string", path: `${path}.spellId` });
+        return (0, errors_1.ok)({
+            kind: "scroll",
+            gid: gidR.value,
+            x,
+            y,
+            roomGid,
+            stackCount,
+            pickedUp,
+            groundedNoAnimate,
+            spellId: spellIdU,
+        });
+    }
+    if (kindR.value === "spellbook") {
+        const durabilityU = get(v, "durability");
+        const durabilityMaxU = get(v, "durabilityMax");
+        const brokenU = get(v, "broken");
+        const cooldownU = get(v, "cooldown");
+        const cooldownMaxU = get(v, "cooldownMax");
+        const statusU = get(v, "status");
+        const spellIdsU = get(v, "spellIds");
+        const activeSpellIdU = get(v, "activeSpellId");
+        if (!isNumber(durabilityU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "durability must be number", path: `${path}.durability` });
+        if (!isNumber(durabilityMaxU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "durabilityMax must be number", path: `${path}.durabilityMax` });
+        if (!isBoolean(brokenU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "broken must be boolean", path: `${path}.broken` });
+        if (!isNumber(cooldownU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "cooldown must be number", path: `${path}.cooldown` });
+        if (!isNumber(cooldownMaxU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "cooldownMax must be number", path: `${path}.cooldownMax` });
+        if (!isRecord(statusU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "status must be object", path: `${path}.status` });
+        const poisonU = get(statusU, "poison");
+        const bloodU = get(statusU, "blood");
+        const curseU = get(statusU, "curse");
+        if (!isBoolean(poisonU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "status.poison must be boolean", path: `${path}.status.poison` });
+        if (!isBoolean(bloodU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "status.blood must be boolean", path: `${path}.status.blood` });
+        if (!isBoolean(curseU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "status.curse must be boolean", path: `${path}.status.curse` });
+        // spellIds is optional for backward-compat with pre-spell saves
+        let spellIds = [];
+        if (spellIdsU !== undefined) {
+            if (!Array.isArray(spellIdsU))
+                return (0, errors_1.err)({ kind: "InvalidSchema", message: "spellIds must be an array", path: `${path}.spellIds` });
+            for (let i = 0; i < spellIdsU.length; i++) {
+                if (!isString(spellIdsU[i]))
+                    return (0, errors_1.err)({ kind: "InvalidSchema", message: "spellIds entries must be strings", path: `${path}.spellIds[${i}]` });
+                spellIds.push(spellIdsU[i]);
+            }
+        }
+        const activeSpellId = isString(activeSpellIdU) ? activeSpellIdU : "plus";
+        return (0, errors_1.ok)({
+            kind: "spellbook",
+            gid: gidR.value,
+            x,
+            y,
+            roomGid,
+            stackCount,
+            pickedUp,
+            equipped,
+            groundedNoAnimate,
+            durability: durabilityU,
+            durabilityMax: durabilityMaxU,
+            broken: brokenU,
+            cooldown: cooldownU,
+            cooldownMax: cooldownMaxU,
+            status: { poison: poisonU, blood: bloodU, curse: curseU },
+            spellIds,
+            activeSpellId,
         });
     }
     if (isWeaponItemKind(kindR.value)) {
@@ -46185,6 +46367,35 @@ const validateProjectileSaveV2 = (v, path) => {
             enemy: er.value,
         });
     }
+    if (kindR.value === "player_fireball") {
+        const deadU = get(v, "dead");
+        if (!isBoolean(deadU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
+        const parentGidR = asGid(get(v, "parentGid"), `${path}.parentGid`);
+        if (isErr(parentGidR))
+            return (0, errors_1.err)(parentGidR.error);
+        const frameU = get(v, "frame");
+        if (!isNumber(frameU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "frame must be number", path: `${path}.frame` });
+        const offsetFrameU = get(v, "offsetFrame");
+        if (!isNumber(offsetFrameU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "offsetFrame must be number", path: `${path}.offsetFrame` });
+        const delayU = get(v, "delay");
+        if (!isNumber(delayU))
+            return (0, errors_1.err)({ kind: "InvalidSchema", message: "delay must be number", path: `${path}.delay` });
+        return (0, errors_1.ok)({
+            kind: "player_fireball",
+            gid: gidR.value,
+            roomGid: roomGidR.value,
+            x,
+            y,
+            dead: deadU,
+            parentGid: parentGidR.value,
+            frame: frameU,
+            offsetFrame: offsetFrameU,
+            delay: delayU,
+        });
+    }
     return (0, errors_1.err)({ kind: "InvalidSchema", message: "Unhandled projectile kind", path: `${path}.kind` });
 };
 const validateHitWarningSaveV2 = (v, path) => {
@@ -46234,6 +46445,7 @@ const enemies_1 = __webpack_require__(/*! ./registry/enemies */ "./src/game/save
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
 const bigWizardFireball_1 = __webpack_require__(/*! ../../projectile/bigWizardFireball */ "./src/projectile/bigWizardFireball.ts");
 const enemySpawnAnimation_1 = __webpack_require__(/*! ../../projectile/enemySpawnAnimation */ "./src/projectile/enemySpawnAnimation.ts");
+const playerFireball_1 = __webpack_require__(/*! ../../projectile/playerFireball */ "./src/projectile/playerFireball.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
 const GEN_VERSION = "levelgen-v1";
@@ -46508,6 +46720,38 @@ const collectPersistedProjectiles = (game, room, nowMs) => {
                 state: p.state,
                 delay: typeof p.delay === "number" ? p.delay : undefined,
             });
+        }
+        if (p instanceof playerFireball_1.PlayerFireball) {
+            // Find the parent player's id key from game.players / offlinePlayers.
+            let parentGid = null;
+            for (const [id, pl] of Object.entries(game.players)) {
+                if (pl === p.parent) {
+                    parentGid = id;
+                    break;
+                }
+            }
+            if (parentGid === null) {
+                for (const [id, pl] of Object.entries(game.offlinePlayers)) {
+                    if (pl === p.parent) {
+                        parentGid = id;
+                        break;
+                    }
+                }
+            }
+            if (parentGid !== null) {
+                out.push({
+                    kind: "player_fireball",
+                    gid: p.globalId,
+                    roomGid: room.globalId,
+                    x: p.x,
+                    y: p.y,
+                    dead: p.dead,
+                    parentGid,
+                    frame: p.frame,
+                    offsetFrame: p.offsetFrame,
+                    delay: p.delay,
+                });
+            }
         }
         if (p instanceof enemySpawnAnimation_1.EnemySpawnAnimation) {
             const enemySave = tryEncodeEnemy(game, p.enemy, nowMs);
@@ -56464,6 +56708,77 @@ Hourglass.itemName = "hourglass";
 
 /***/ }),
 
+/***/ "./src/item/usable/scroll.ts":
+/*!***********************************!*\
+  !*** ./src/item/usable/scroll.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PlusScroll = exports.PointScroll = exports.CrossScroll = exports.WaveScroll = exports.Scroll = void 0;
+const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.ts");
+const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const spell_1 = __webpack_require__(/*! ../weapon/spell */ "./src/item/weapon/spell.ts");
+class Scroll extends usable_1.Usable {
+    constructor(level, x, y, spell) {
+        super(level, x, y);
+        this.onUse = (player) => {
+            const book = player.inventory.items.find((i) => i instanceof spellbook_1.Spellbook);
+            if (!book) {
+                player.game.pushMessage("You have no spellbook to inscribe this scroll into.");
+                return;
+            }
+            const alreadyKnown = book.spells.some((s) => s.id === this.spell.id);
+            if (alreadyKnown) {
+                player.game.pushMessage(`Your spellbook already contains the ${this.spell.name} spell.`);
+                player.inventory.removeItem(this);
+                return;
+            }
+            book.addSpell(this.spell);
+            player.game.pushMessage(`You study the scroll and inscribe its knowledge into your spellbook.`);
+            player.inventory.removeItem(this);
+        };
+        this.spell = spell;
+        this.name = `Scroll of ${spell.name}`;
+        this.tileX = 26;
+        this.tileY = 2;
+        this.canUseOnOther = false;
+        this.description = `A scroll containing the ${spell.name} spell pattern.`;
+    }
+}
+exports.Scroll = Scroll;
+Scroll.itemName = "scroll";
+Scroll.examineText = "A rolled scroll inscribed with arcane patterns.";
+class WaveScroll extends Scroll {
+    constructor(level, x, y) {
+        super(level, x, y, new spell_1.WaveSpell());
+    }
+}
+exports.WaveScroll = WaveScroll;
+class CrossScroll extends Scroll {
+    constructor(level, x, y) {
+        super(level, x, y, new spell_1.CrossSpell());
+    }
+}
+exports.CrossScroll = CrossScroll;
+class PointScroll extends Scroll {
+    constructor(level, x, y) {
+        super(level, x, y, new spell_1.PointSpell());
+    }
+}
+exports.PointScroll = PointScroll;
+class PlusScroll extends Scroll {
+    constructor(level, x, y) {
+        super(level, x, y, new spell_1.PlusSpell());
+    }
+}
+exports.PlusScroll = PlusScroll;
+
+
+/***/ }),
+
 /***/ "./src/item/usable/shroomLight.ts":
 /*!****************************************!*\
   !*** ./src/item/usable/shroomLight.ts ***!
@@ -58290,6 +58605,123 @@ Spear.examineText = "A long spear. Keeps trouble at arm's length.";
 
 /***/ }),
 
+/***/ "./src/item/weapon/spell.ts":
+/*!**********************************!*\
+  !*** ./src/item/weapon/spell.ts ***!
+  \**********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.spellById = exports.SPELL_REGISTRY = exports.WaveSpell = exports.PointSpell = exports.CrossSpell = exports.PlusSpell = exports.Spell = void 0;
+class Spell {
+}
+exports.Spell = Spell;
+class PlusSpell extends Spell {
+    constructor() {
+        super(...arguments);
+        this.id = "plus";
+        this.name = "Plus";
+    }
+    getPattern() {
+        return {
+            offsets: [
+                { dx: 0, dy: 0 },
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 1, dy: 0 },
+            ],
+            delays: [0, 0, 0, 0, 0],
+        };
+    }
+}
+exports.PlusSpell = PlusSpell;
+class CrossSpell extends Spell {
+    constructor() {
+        super(...arguments);
+        this.id = "cross";
+        this.name = "Cross";
+    }
+    getPattern() {
+        return {
+            offsets: [
+                { dx: 0, dy: 0 },
+                { dx: -1, dy: -1 },
+                { dx: 1, dy: -1 },
+                { dx: -1, dy: 1 },
+                { dx: 1, dy: 1 },
+            ],
+            delays: [0, 0, 0, 0, 0],
+        };
+    }
+}
+exports.CrossSpell = CrossSpell;
+class PointSpell extends Spell {
+    constructor() {
+        super(...arguments);
+        this.id = "point";
+        this.name = "Point";
+    }
+    getPattern() {
+        return {
+            offsets: [{ dx: 0, dy: 0 }],
+            delays: [0],
+        };
+    }
+}
+exports.PointSpell = PointSpell;
+class WaveSpell extends Spell {
+    constructor() {
+        super(...arguments);
+        this.id = "wave";
+        this.name = "Wave";
+    }
+    getPattern() {
+        const offsets = [];
+        const delays = [];
+        // Center: delay 0
+        offsets.push({ dx: 0, dy: 0 });
+        delays.push(0);
+        // Inner 3×3 ring (8 tiles): delay 1
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0)
+                    continue;
+                offsets.push({ dx, dy });
+                delays.push(1);
+            }
+        }
+        // Outer 5×5 ring without corners (12 tiles): delay 2
+        // Corners would be (±2,±2); exclude those.
+        const outerRing = [
+            { dx: -1, dy: -2 }, { dx: 0, dy: -2 }, { dx: 1, dy: -2 },
+            { dx: -2, dy: -1 }, { dx: 2, dy: -1 },
+            { dx: -2, dy: 0 }, { dx: 2, dy: 0 },
+            { dx: -2, dy: 1 }, { dx: 2, dy: 1 },
+            { dx: -1, dy: 2 }, { dx: 0, dy: 2 }, { dx: 1, dy: 2 },
+        ];
+        for (const o of outerRing) {
+            offsets.push(o);
+            delays.push(2);
+        }
+        return { offsets, delays };
+    }
+}
+exports.WaveSpell = WaveSpell;
+exports.SPELL_REGISTRY = {
+    plus: new PlusSpell(),
+    cross: new CrossSpell(),
+    point: new PointSpell(),
+    wave: new WaveSpell(),
+};
+const spellById = (id) => exports.SPELL_REGISTRY[id] ?? null;
+exports.spellById = spellById;
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/spellbook.ts":
 /*!**************************************!*\
   !*** ./src/item/weapon/spellbook.ts ***!
@@ -58307,10 +58739,17 @@ const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/ut
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const spellbookPage_1 = __webpack_require__(/*! ../usable/spellbookPage */ "./src/item/usable/spellbookPage.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const spell_1 = __webpack_require__(/*! ./spell */ "./src/item/weapon/spell.ts");
+const spellBeam_1 = __webpack_require__(/*! ../../projectile/spellBeam */ "./src/projectile/spellBeam.ts");
 class Spellbook extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.targetingMaxRange = 4;
+        this.addSpell = (spell) => {
+            if (this.spells.some((s) => s.id === spell.id))
+                return;
+            this.spells.push(spell);
+        };
         this.toggleEquip = () => {
             if (gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
                 if (this.cooldown > 0) {
@@ -58329,38 +58768,43 @@ class Spellbook extends weapon_1.Weapon {
             if (!room)
                 return false;
             const z = player.z ?? 0;
-            const splash = [
-                { x: tx, y: ty },
-                { x: tx, y: ty - 1 },
-                { x: tx, y: ty + 1 },
-                { x: tx - 1, y: ty },
-                { x: tx + 1, y: ty },
-            ].filter((p) => !room.isSolidAt(p.x, p.y, z));
-            let hit = false;
-            for (const p of splash) {
-                room.projectiles.push(new playerFireball_1.PlayerFireball(player, p.x, p.y));
-                for (const e of room.entities) {
-                    if (e.pointIn(p.x, p.y) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
-                        e.hurt(player, this.damage + player.magicDamageBonus);
-                        hit = true;
+            const spell = this.pendingSpell ?? this.activeSpell;
+            this.pendingSpell = null;
+            const damage = this.damage + player.magicDamageBonus;
+            // Set cooldown immediately so the UI reflects "casting" and prevents double-fire.
+            this.cooldown = this.cooldownMax + 1;
+            for (const item of player.inventory.items) {
+                if (item instanceof Spellbook)
+                    item.cooldown = item.cooldownMax + 1;
+            }
+            player.syncManaFromSpellbookCooldowns();
+            // SpellBeam animates to the target; actual damage + turn advance fires on arrival.
+            const beam = new spellBeam_1.SpellBeam(room, player, tx, ty, () => {
+                const { offsets, delays } = spell.getPattern();
+                let anyFired = false;
+                for (let i = 0; i < offsets.length; i++) {
+                    const px = tx + offsets[i].dx;
+                    const py = ty + offsets[i].dy;
+                    if (room.isSolidAt(px, py, z))
+                        continue;
+                    room.projectiles.push(new playerFireball_1.PlayerFireball(player, px, py, delays[i]));
+                    for (const e of room.entities) {
+                        if (e.pointIn(px, py) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
+                            e.hurt(player, damage);
+                        }
                     }
+                    anyFired = true;
                 }
-            }
-            if (splash.length > 0) {
-                player.setHitXY(tx, ty);
-                room.tick(player);
-                this.hitSound();
-                this.shakeScreen(tx, ty);
-                sound_1.Sound.playMagic();
-                this.degrade();
-                this.cooldown = this.cooldownMax + 1;
-                for (const item of player.inventory.items) {
-                    if (item instanceof Spellbook)
-                        item.cooldown = item.cooldownMax + 1;
+                if (anyFired) {
+                    player.setHitXY(tx, ty);
+                    room.tick(player);
+                    this.hitSound();
+                    sound_1.Sound.playMagic();
+                    this.degrade();
                 }
-                player.syncManaFromSpellbookCooldowns();
-            }
-            return splash.length > 0;
+            });
+            room.projectiles.push(beam);
+            return true;
         };
         this.getTargets = () => {
             this.targets = [];
@@ -58514,6 +58958,9 @@ class Spellbook extends weapon_1.Weapon {
         // Spellbook uses cooldown; player "mana" UI is derived from this cooldown.
         this.manaCost = 0;
         this.cooldownMax = 10;
+        this.spells = [new spell_1.PlusSpell()];
+        this.activeSpell = this.spells[0];
+        this.pendingSpell = null;
     }
 }
 exports.Spellbook = Spellbook;
@@ -68507,6 +68954,7 @@ const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light
 const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/light/candle.ts");
 const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
@@ -69110,6 +69558,8 @@ class PlayerInputHandler {
             menu.handleMouseDown(x, y, 2);
             return;
         }
+        // Cancel any active ranged targeting (crossbow, spellbook) when opening the context menu.
+        player.rangedTargeting?.stop();
         if (!targetEntity) {
             // If an overlay UI is open, do not populate context menu from the background/world.
             // For now:
@@ -69210,6 +69660,9 @@ class PlayerInputHandler {
             if (item) {
                 const targetName = getTargetName(item);
                 const primaryLabel = (() => {
+                    if (item instanceof spellbook_1.Spellbook && gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+                        return "Use";
+                    }
                     if (item instanceof equippable_1.Equippable) {
                         return item.equipped ? "Unequip" : "Equip";
                     }
@@ -69236,6 +69689,28 @@ class PlayerInputHandler {
                     },
                 });
                 const examine = formatExamine(item.examineText?.() ?? "");
+                // Spellbook: Configure and Cast options per spell
+                if (item instanceof spellbook_1.Spellbook && gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+                    for (const spell of item.spells) {
+                        const isActive = item.activeSpell === spell;
+                        items.push({
+                            label: isActive ? "Configured" : "Configure",
+                            targetName: spell.name,
+                            enabled: !isActive,
+                            onClick: () => { item.activeSpell = spell; },
+                        });
+                    }
+                    for (const spell of item.spells) {
+                        items.push({
+                            label: "Cast",
+                            targetName: spell.name,
+                            onClick: () => {
+                                item.pendingSpell = spell;
+                                player.rangedTargeting?.start(item);
+                            },
+                        });
+                    }
+                }
                 // Torch / candle: "Place" and "Place on wall"
                 if (item instanceof torch_1.Torch || item instanceof candle_1.Candle) {
                     const itemRoom = player.getRoom
@@ -72244,8 +72719,9 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const lighting_1 = __webpack_require__(/*! ../lighting/lighting */ "./src/lighting/lighting.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
 class PlayerFireball extends projectile_1.Projectile {
-    constructor(parent, x, y) {
+    constructor(parent, x, y, spellDelay = 0) {
         super(parent, x, y);
+        this.shookOnImpact = false;
         this.drawTopLayer = (delta) => {
             if (this.dead)
                 return;
@@ -72254,15 +72730,19 @@ class PlayerFireball extends projectile_1.Projectile {
             if (this.offsetFrame >= 0) {
                 this.frame += 0.25 * delta;
             }
+            if (!this.shookOnImpact && this.offsetFrame >= 0) {
+                this.shookOnImpact = true;
+                this.parent.game.shakeScreen(0, -4);
+            }
             if (this.frame > 17)
                 this.dead = true;
             game_1.Game.drawFX(Math.floor(this.frame), 6, 1, 2, this.x, this.y - 1, 1, 2);
         };
         this.state = 0;
         this.frame = 6;
+        this.delay = spellDelay;
         this.offsetFrame =
-            -utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y) * 50;
-        this.delay = 0;
+            -utils_1.Utils.distance(this.parent.x, this.parent.y, this.x, this.y) * 50 - spellDelay * 120;
         lighting_1.Lighting.momentaryLight(this.parent.game.rooms[this.parent.levelID], this.x + 0.5, this.y + 0.5, 0.5, [255, 100, 0], 250, 10, 1);
     }
 }
@@ -72308,6 +72788,175 @@ class Projectile extends drawable_1.Drawable {
     setTarget(x, y, x2, y2) { }
 }
 exports.Projectile = Projectile;
+
+
+/***/ }),
+
+/***/ "./src/projectile/spellBeam.ts":
+/*!*************************************!*\
+  !*** ./src/projectile/spellBeam.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SpellBeam = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/beamEffect.ts");
+/**
+ * SpellBeam — a physics beam that reveals itself from player → target
+ * before firing the deferred spell callback.
+ *
+ * Built on BeamEffect's rope physics. Uses the same "cyan" color as the
+ * old non-targeting spellbook beams. The reveal front gets a white tip
+ * gradient that eases in both alpha and width.
+ *
+ * Animation:
+ *  - Ease-in (t²) reveal: starts slow, accelerates to full speed.
+ *  - Tip gradient spans 1/5 of the currently-revealed arc length.
+ *  - Tip width = 2.5× base, grading back via s² ease.
+ *  - player.busyAnimating = true for the full duration.
+ */
+class SpellBeam extends beamEffect_1.BeamEffect {
+    constructor(room, player, tx, ty, onComplete) {
+        super(player.x, player.y - 0.5, tx, ty, player);
+        this.elapsed = 0;
+        this.fired = false;
+        // Override draw: accumulate elapsed and advance physics only (no drawing yet).
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            this.elapsed += delta;
+            this.drawableY = this.y - 0.01;
+            // skipDrawing=true, simulate=true — run physics, no pixels.
+            this.render(0, 0, 0, 0, this.color, SpellBeam.BASE_WIDTH, delta, this.compositeOperation, true, true);
+        };
+        // Override drawTopLayer: custom reveal + fade rendering on top of everything.
+        this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
+            const pts = this.points;
+            if (!pts || pts.length < 2)
+                return;
+            // Fire callback when beam is 2/3 revealed (fireballs spawn before beam fully arrives).
+            if (!this.fired) {
+                const last = pts.length - 1;
+                const revealCount = this.elapsed < SpellBeam.TOTAL_DURATION
+                    ? Math.floor((this.elapsed / SpellBeam.TOTAL_DURATION) ** 2 * last)
+                    : last;
+                if (revealCount >= Math.floor((2 / 3) * last))
+                    this.fire();
+            }
+            const ctx = game_1.Game.ctx;
+            if (!ctx)
+                return;
+            const BASE = SpellBeam.BASE_WIDTH;
+            const TIP = BASE * SpellBeam.TIP_MULT;
+            const last = pts.length - 1;
+            if (this.elapsed < SpellBeam.TOTAL_DURATION) {
+                // — Reveal phase —
+                const t = this.elapsed / SpellBeam.TOTAL_DURATION;
+                const revealCount = Math.floor(t * t * last);
+                if (revealCount < 1)
+                    return;
+                const gradSegments = Math.max(1, Math.round(revealCount * SpellBeam.GRADIENT_FRAC));
+                const gradStart = revealCount - gradSegments;
+                ctx.save();
+                ctx.globalCompositeOperation = this.compositeOperation;
+                if (gradStart > 0) {
+                    this.drawSegments(ctx, pts, 0, gradStart, "rgba(0,255,255,0.5)", BASE);
+                }
+                for (let i = gradStart; i < revealCount; i++) {
+                    const s = (i - gradStart + 1) / gradSegments;
+                    const sc = s * s;
+                    const alpha = 0.25 + 0.75 * sc;
+                    const w = BASE + (TIP - BASE) * sc;
+                    const color = `rgba(200,235,255,${alpha.toFixed(3)})`;
+                    this.drawSegmentLine(ctx, pts[i].x, pts[i].y, pts[i + 1]?.x ?? pts[i].x, pts[i + 1]?.y ?? pts[i].y, color, w);
+                }
+                ctx.restore();
+            }
+            else {
+                // — Fade phase: dissolve from player end → target end —
+                const fadeProg = Math.min(1, (this.elapsed - SpellBeam.TOTAL_DURATION) / SpellBeam.FADE_DURATION);
+                if (fadeProg >= 1) {
+                    this.dead = true;
+                    return;
+                }
+                // Ease-out: erode from the player (start) side toward the target.
+                const erodeCount = Math.floor(fadeProg * fadeProg * last);
+                const globalAlpha = 1 - fadeProg;
+                ctx.save();
+                ctx.globalCompositeOperation = this.compositeOperation;
+                ctx.globalAlpha = globalAlpha;
+                this.drawSegments(ctx, pts, erodeCount, last, "rgba(0,255,255,0.5)", BASE);
+                ctx.restore();
+            }
+        };
+        this.player = player;
+        this.onComplete = onComplete;
+        this.color = "cyan";
+        this.compositeOperation = "source-over";
+        this.drawOnTop = true;
+        // Tight, responsive physics — low gravity and turbulence so the beam
+        // stays mostly straight while still feeling alive.
+        this.gravity = 0;
+        this.turbulence = 0.08;
+        this.angleChange = 0.002;
+        this.damping = 0.85;
+        this.springStiffness = 0.15;
+        this.springDamping = 0.2;
+        this.motionInfluence = 0.5;
+        this.iterations = 3;
+        this.segments = 30;
+        player.busyAnimating = true;
+    }
+    fire() {
+        this.fired = true;
+        setTimeout(() => {
+            this.player.busyAnimating = false;
+            if (!this.player.dead)
+                this.onComplete();
+        }, 0);
+    }
+    /**
+     * Draw a range of segments from the simulated points using the same
+     * pixel-fill approach as BeamEffect.render().
+     */
+    drawSegments(ctx, pts, from, to, color, lineWidth) {
+        for (let i = from; i < to && i < pts.length - 1; i++) {
+            this.drawSegmentLine(ctx, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, lineWidth);
+        }
+    }
+    /**
+     * Draw a single line between two pixel-space points using the pixel-fill
+     * technique from BeamEffect (integer fillRect cells).
+     */
+    drawSegmentLine(ctx, x1, y1, x2, y2, color, lineWidth) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const steps = Math.max(1, Math.max(Math.abs(dx), Math.abs(dy)));
+        const xi = dx / steps;
+        const yi = dy / steps;
+        const lw = Math.max(1, Math.round(lineWidth));
+        ctx.fillStyle = color;
+        for (let s = 0; s <= steps; s++) {
+            ctx.fillRect(Math.round(x1 + s * xi), Math.round(y1 + s * yi), lw, lw);
+        }
+    }
+}
+exports.SpellBeam = SpellBeam;
+/** Total animation duration in 60-fps frames. */
+SpellBeam.TOTAL_DURATION = 18;
+/** Fade-out duration in 60-fps frames (after reveal completes). */
+SpellBeam.FADE_DURATION = 12;
+/** Base pixel width of the beam body. */
+SpellBeam.BASE_WIDTH = 2;
+/** Tip is this many times wider than the base. */
+SpellBeam.TIP_MULT = 2.5;
+/** Gradient covers this fraction of the currently-revealed arc. */
+SpellBeam.GRADIENT_FRAC = 0.8;
 
 
 /***/ }),

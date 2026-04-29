@@ -10,10 +10,16 @@ import { SpellbookPage } from "../usable/spellbookPage";
 import { GameplaySettings } from "../../game/gameplaySettings";
 import type { RangedWeapon } from "./rangedTargetingSystem";
 import type { Player } from "../../player/player";
+import { PlusSpell, type Spell } from "./spell";
+import { SpellBeam } from "../../projectile/spellBeam";
+
 export class Spellbook extends Weapon implements RangedWeapon {
   targets: Entity[];
   isTargeting: boolean;
   targetingMaxRange = 4;
+  spells: Spell[];
+  activeSpell: Spell;
+  pendingSpell: Spell | null;
   static itemName = "spellbook";
   static examineText = "A spellbook. Arcane pages and dangerous ideas.";
   constructor(level: Room, x: number, y: number) {
@@ -31,7 +37,15 @@ export class Spellbook extends Weapon implements RangedWeapon {
     // Spellbook uses cooldown; player "mana" UI is derived from this cooldown.
     this.manaCost = 0;
     this.cooldownMax = 10;
+    this.spells = [new PlusSpell()];
+    this.activeSpell = this.spells[0];
+    this.pendingSpell = null;
   }
+
+  addSpell = (spell: Spell): void => {
+    if (this.spells.some((s) => s.id === spell.id)) return;
+    this.spells.push(spell);
+  };
 
   toggleEquip = () => {
     if (GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
@@ -51,40 +65,44 @@ export class Spellbook extends Weapon implements RangedWeapon {
     if (!room) return false;
     const z = (player as any).z ?? 0;
 
-    const splash = [
-      { x: tx,     y: ty     },
-      { x: tx,     y: ty - 1 },
-      { x: tx,     y: ty + 1 },
-      { x: tx - 1, y: ty     },
-      { x: tx + 1, y: ty     },
-    ].filter((p) => !room.isSolidAt(p.x, p.y, z));
+    const spell = this.pendingSpell ?? this.activeSpell;
+    this.pendingSpell = null;
+    const damage = this.damage + player.magicDamageBonus;
 
-    let hit = false;
-    for (const p of splash) {
-      room.projectiles.push(new PlayerFireball(player, p.x, p.y));
-      for (const e of room.entities) {
-        if (e.pointIn(p.x, p.y) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
-          e.hurt(player, this.damage + player.magicDamageBonus);
-          hit = true;
+    // Set cooldown immediately so the UI reflects "casting" and prevents double-fire.
+    this.cooldown = this.cooldownMax + 1;
+    for (const item of player.inventory.items) {
+      if (item instanceof Spellbook) item.cooldown = item.cooldownMax + 1;
+    }
+    player.syncManaFromSpellbookCooldowns();
+
+    // SpellBeam animates to the target; actual damage + turn advance fires on arrival.
+    const beam = new SpellBeam(room, player, tx, ty, () => {
+      const { offsets, delays } = spell.getPattern();
+      let anyFired = false;
+      for (let i = 0; i < offsets.length; i++) {
+        const px = tx + offsets[i].dx;
+        const py = ty + offsets[i].dy;
+        if (room.isSolidAt(px, py, z)) continue;
+        room.projectiles.push(new PlayerFireball(player, px, py, delays[i]));
+        for (const e of room.entities) {
+          if (e.pointIn(px, py) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
+            e.hurt(player, damage);
+          }
         }
+        anyFired = true;
       }
-    }
-
-    if (splash.length > 0) {
-      player.setHitXY(tx, ty);
-      room.tick(player);
-      this.hitSound();
-      this.shakeScreen(tx, ty);
-      Sound.playMagic();
-      this.degrade();
-      this.cooldown = this.cooldownMax + 1;
-      for (const item of player.inventory.items) {
-        if (item instanceof Spellbook) item.cooldown = item.cooldownMax + 1;
+      if (anyFired) {
+        player.setHitXY(tx, ty);
+        room.tick(player);
+        this.hitSound();
+        Sound.playMagic();
+        this.degrade();
       }
-      player.syncManaFromSpellbookCooldowns();
-    }
+    });
+    room.projectiles.push(beam);
 
-    return splash.length > 0;
+    return true;
   };
 
   getTargets = () => {

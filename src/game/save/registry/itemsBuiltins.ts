@@ -66,6 +66,8 @@ import { ShoulderPlates } from "../../../item/shoulderPlates";
 import { ChestPlate } from "../../../item/chestPlate";
 import { CrossbowBolt } from "../../../item/weapon/crossbowBolt";
 import { GodStone } from "../../../item/godStone";
+import { Scroll } from "../../../item/usable/scroll";
+import { PlusSpell, spellById } from "../../../item/weapon/spell";
 
 import type { LoadContext, SaveContext } from "../context";
 import type {
@@ -77,7 +79,9 @@ import type {
   ItemSaveV2,
   KeyItemSaveV2,
   LightItemSaveV2,
+  ScrollItemSaveV2,
   ShieldItemSaveV2,
+  SpellbookItemSaveV2,
   WeaponItemSaveV2,
   WeaponStatusSaveV2,
 } from "../schema";
@@ -102,6 +106,7 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof WeaponPoison) return "weapon_poison";
   if (item instanceof WeaponBlood) return "weapon_blood";
   if (item instanceof WeaponCurse) return "weapon_curse";
+  if (item instanceof Scroll) return "scroll";
   if (item instanceof Spellbook) return "spellbook";
   if (item instanceof SpellbookPage) return "spellbook_page";
   if (item instanceof WeaponFragments) return "weapon_fragments";
@@ -188,10 +193,15 @@ const isWeaponItemSaveV2 = (v: ItemSaveV2): v is WeaponItemSaveV2 => {
     v.kind === "crossbow" ||
     v.kind === "shotgun" ||
     v.kind === "slingshot" ||
-    v.kind === "spellbook" ||
     v.kind === "pickaxe"
   );
 };
+
+const isSpellbookItemSaveV2 = (v: ItemSaveV2): v is SpellbookItemSaveV2 =>
+  v.kind === "spellbook";
+
+const isScrollItemSaveV2 = (v: ItemSaveV2): v is ScrollItemSaveV2 =>
+  v.kind === "scroll";
 
 const isShieldItemSaveV2 = (v: ItemSaveV2): v is ShieldItemSaveV2 => {
   return v.kind === "occult_shield" || v.kind === "wooden_shield";
@@ -880,16 +890,84 @@ export const registerBuiltinItemCodecsV2 = (): void => {
     },
   });
   register("spellbook", {
-    save: (v) => {
+    save: (v): SpellbookItemSaveV2 => {
       if (!(v instanceof Spellbook)) throw new Error("spellbook codec received non-Spellbook");
-      return saveBaseWeapon("spellbook", v);
+      const roomGid = v.level ? v.level.globalId : undefined;
+      return {
+        kind: "spellbook",
+        gid: v.globalId,
+        x: v.x,
+        y: v.y,
+        roomGid,
+        stackCount: v.stackCount,
+        pickedUp: v.pickedUp,
+        equipped: v.equipped,
+        durability: v.durability,
+        durabilityMax: v.durabilityMax,
+        broken: v.broken,
+        cooldown: v.cooldown,
+        cooldownMax: v.cooldownMax,
+        status: weaponStatusToSave(v),
+        spellIds: v.spells.map((s) => s.id),
+        activeSpellId: v.activeSpell.id,
+      };
     },
     spawn: (value, room, _ctx) => {
-      if (!isWeaponItemSaveV2(value) || value.kind !== "spellbook")
+      if (!isSpellbookItemSaveV2(value))
         throw new Error("spellbook codec spawn received non-spellbook save");
       const w = new Spellbook(room, value.x, value.y);
-      applyWeaponSave(w, value);
+      w.durability = value.durability;
+      w.durabilityMax = value.durabilityMax;
+      w.broken = value.broken;
+      w.cooldown = value.cooldown;
+      w.cooldownMax = value.cooldownMax;
+      w.status = { ...value.status };
+      if (value.equipped !== undefined) w.equipped = value.equipped;
+      w.stackCount = value.stackCount;
+      w.pickedUp = value.pickedUp;
+      w.globalId = value.gid;
+      // Restore inscribed spells
+      w.spells = [];
+      for (const id of value.spellIds) {
+        const spell = spellById(id);
+        if (spell) w.spells.push(spell);
+      }
+      if (w.spells.length === 0) {
+        // Fallback: ensure at least the default spell
+        w.spells = [new PlusSpell()];
+      }
+      const active = spellById(value.activeSpellId);
+      w.activeSpell = active ?? w.spells[0];
+      w.pendingSpell = null;
       return w;
+    },
+  });
+
+  register("scroll", {
+    save: (v): ScrollItemSaveV2 => {
+      if (!(v instanceof Scroll)) throw new Error("scroll codec received non-Scroll");
+      const roomGid = v.level ? v.level.globalId : undefined;
+      return {
+        kind: "scroll",
+        gid: v.globalId,
+        x: v.x,
+        y: v.y,
+        roomGid,
+        stackCount: v.stackCount,
+        pickedUp: v.pickedUp,
+        spellId: v.spell.id,
+      };
+    },
+    spawn: (value, room, _ctx) => {
+      if (!isScrollItemSaveV2(value))
+        throw new Error("scroll codec spawn received non-scroll save");
+      const spell = spellById(value.spellId);
+      if (!spell) throw new Error(`scroll codec: unknown spellId=${value.spellId}`);
+      const it = new Scroll(room, value.x, value.y, spell);
+      it.stackCount = value.stackCount;
+      it.pickedUp = value.pickedUp;
+      it.globalId = value.gid;
+      return it;
     },
   });
   register("pickaxe", {

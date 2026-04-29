@@ -64,6 +64,7 @@ import { ChestPlate } from "../item/chestPlate";
 import { IronBar } from "../item/resource/ironBar";
 import { WeaponCurse } from "../item/usable/weaponCurse";
 import { BluePotion } from "../item/usable/bluePotion";
+import { WaveScroll, CrossScroll, PointScroll, PlusScroll } from "../item/usable/scroll";
 
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.2"; //"v0.6.3";
@@ -603,6 +604,13 @@ export class GameConstants {
     DualDagger,
     WeaponCurse,
     BluePotion,
+    SpellbookPage,
+    SpellbookPage,
+    SpellbookPage,
+    WaveScroll,
+    CrossScroll,
+    PointScroll,
+    PlusScroll,
     /*
     Coal,
     Coal,

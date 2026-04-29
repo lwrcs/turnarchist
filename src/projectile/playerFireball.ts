@@ -11,14 +11,15 @@ export class PlayerFireball extends Projectile {
   delay: number;
   parent: Player;
   offsetFrame: number;
+  private shookOnImpact: boolean = false;
 
-  constructor(parent: Player, x: number, y: number) {
+  constructor(parent: Player, x: number, y: number, spellDelay: number = 0) {
     super(parent, x, y);
     this.state = 0;
     this.frame = 6;
+    this.delay = spellDelay;
     this.offsetFrame =
-      -Utils.distance(this.parent.x, this.parent.y, this.x, this.y) * 50;
-    this.delay = 0;
+      -Utils.distance(this.parent.x, this.parent.y, this.x, this.y) * 50 - spellDelay * 120;
     Lighting.momentaryLight(
       this.parent.game.rooms[this.parent.levelID],
       this.x + 0.5,
@@ -35,6 +36,11 @@ export class PlayerFireball extends Projectile {
     if (this.offsetFrame < 0) this.offsetFrame += 10 * delta;
     if (this.offsetFrame >= 0) {
       this.frame += 0.25 * delta;
+    }
+
+    if (!this.shookOnImpact && this.offsetFrame >= 0) {
+      this.shookOnImpact = true;
+      this.parent.game.shakeScreen(0, -4);
     }
 
     if (this.frame > 17) this.dead = true;

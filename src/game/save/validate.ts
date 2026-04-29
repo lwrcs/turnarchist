@@ -218,7 +218,6 @@ const WEAPON_ITEM_KINDS = [
   "crossbow",
   "shotgun",
   "slingshot",
-  "spellbook",
   "pickaxe",
 ] as const satisfies readonly WeaponItemKind[];
 
@@ -233,7 +232,7 @@ const isShieldItemKind = (k: ItemKind): k is ShieldItemKind => {
   return false;
 };
 
-const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation"] as const satisfies readonly ProjectileKind[];
+const PROJECTILE_KINDS = ["wizard_fireball", "big_wizard_fireball", "enemy_spawn_animation", "player_fireball"] as const satisfies readonly ProjectileKind[];
 
 const WIZARD_TYPE_KINDS = ["energy", "fire", "earth", "big"] as const satisfies readonly WizardTypeKind[];
 
@@ -933,6 +932,86 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       durability: durabilityU,
       durabilityMax: durabilityMaxU,
       broken: brokenU,
+    });
+  }
+
+  if (kindR.value === "scroll") {
+    const spellIdU = get(v, "spellId");
+    if (!isString(spellIdU) || spellIdU.length === 0)
+      return err({ kind: "InvalidSchema", message: "spellId must be a non-empty string", path: `${path}.spellId` });
+    return ok({
+      kind: "scroll",
+      gid: gidR.value,
+      x,
+      y,
+      roomGid,
+      stackCount,
+      pickedUp,
+      groundedNoAnimate,
+      spellId: spellIdU,
+    });
+  }
+
+  if (kindR.value === "spellbook") {
+    const durabilityU = get(v, "durability");
+    const durabilityMaxU = get(v, "durabilityMax");
+    const brokenU = get(v, "broken");
+    const cooldownU = get(v, "cooldown");
+    const cooldownMaxU = get(v, "cooldownMax");
+    const statusU = get(v, "status");
+    const spellIdsU = get(v, "spellIds");
+    const activeSpellIdU = get(v, "activeSpellId");
+    if (!isNumber(durabilityU))
+      return err({ kind: "InvalidSchema", message: "durability must be number", path: `${path}.durability` });
+    if (!isNumber(durabilityMaxU))
+      return err({ kind: "InvalidSchema", message: "durabilityMax must be number", path: `${path}.durabilityMax` });
+    if (!isBoolean(brokenU))
+      return err({ kind: "InvalidSchema", message: "broken must be boolean", path: `${path}.broken` });
+    if (!isNumber(cooldownU))
+      return err({ kind: "InvalidSchema", message: "cooldown must be number", path: `${path}.cooldown` });
+    if (!isNumber(cooldownMaxU))
+      return err({ kind: "InvalidSchema", message: "cooldownMax must be number", path: `${path}.cooldownMax` });
+    if (!isRecord(statusU))
+      return err({ kind: "InvalidSchema", message: "status must be object", path: `${path}.status` });
+    const poisonU = get(statusU, "poison");
+    const bloodU = get(statusU, "blood");
+    const curseU = get(statusU, "curse");
+    if (!isBoolean(poisonU))
+      return err({ kind: "InvalidSchema", message: "status.poison must be boolean", path: `${path}.status.poison` });
+    if (!isBoolean(bloodU))
+      return err({ kind: "InvalidSchema", message: "status.blood must be boolean", path: `${path}.status.blood` });
+    if (!isBoolean(curseU))
+      return err({ kind: "InvalidSchema", message: "status.curse must be boolean", path: `${path}.status.curse` });
+    // spellIds is optional for backward-compat with pre-spell saves
+    let spellIds: string[] = [];
+    if (spellIdsU !== undefined) {
+      if (!Array.isArray(spellIdsU))
+        return err({ kind: "InvalidSchema", message: "spellIds must be an array", path: `${path}.spellIds` });
+      for (let i = 0; i < spellIdsU.length; i++) {
+        if (!isString(spellIdsU[i]))
+          return err({ kind: "InvalidSchema", message: "spellIds entries must be strings", path: `${path}.spellIds[${i}]` });
+        spellIds.push(spellIdsU[i]);
+      }
+    }
+    const activeSpellId = isString(activeSpellIdU) ? activeSpellIdU : "plus";
+    return ok({
+      kind: "spellbook",
+      gid: gidR.value,
+      x,
+      y,
+      roomGid,
+      stackCount,
+      pickedUp,
+      equipped,
+      groundedNoAnimate,
+      durability: durabilityU,
+      durabilityMax: durabilityMaxU,
+      broken: brokenU,
+      cooldown: cooldownU,
+      cooldownMax: cooldownMaxU,
+      status: { poison: poisonU, blood: bloodU, curse: curseU },
+      spellIds,
+      activeSpellId,
     });
   }
 
@@ -2137,6 +2216,35 @@ const validateProjectileSaveV2 = (v: unknown, path: string): Result<ProjectileSa
       y,
       dead: deadU,
       enemy: er.value,
+    });
+  }
+
+  if (kindR.value === "player_fireball") {
+    const deadU = get(v, "dead");
+    if (!isBoolean(deadU))
+      return err({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
+    const parentGidR = asGid(get(v, "parentGid"), `${path}.parentGid`);
+    if (isErr(parentGidR)) return err(parentGidR.error);
+    const frameU = get(v, "frame");
+    if (!isNumber(frameU))
+      return err({ kind: "InvalidSchema", message: "frame must be number", path: `${path}.frame` });
+    const offsetFrameU = get(v, "offsetFrame");
+    if (!isNumber(offsetFrameU))
+      return err({ kind: "InvalidSchema", message: "offsetFrame must be number", path: `${path}.offsetFrame` });
+    const delayU = get(v, "delay");
+    if (!isNumber(delayU))
+      return err({ kind: "InvalidSchema", message: "delay must be number", path: `${path}.delay` });
+    return ok({
+      kind: "player_fireball",
+      gid: gidR.value,
+      roomGid: roomGidR.value,
+      x,
+      y,
+      dead: deadU,
+      parentGid: parentGidR.value,
+      frame: frameU,
+      offsetFrame: offsetFrameU,
+      delay: delayU,
     });
   }
 

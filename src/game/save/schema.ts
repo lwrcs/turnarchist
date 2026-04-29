@@ -424,6 +424,8 @@ export type ItemSaveV2 =
   | DivingHelmetItemSaveV2
   | HourglassItemSaveV2
   | WeaponItemSaveV2
+  | SpellbookItemSaveV2
+  | ScrollItemSaveV2
   | ShieldItemSaveV2
   | KeyItemSaveV2;
 
@@ -448,6 +450,8 @@ export type StackableItemSaveV2 = ItemSaveEnvelopeV2 & {
     | "glow_stick"
     | "glow_bugs"
     | "glowshrooms"
+    | "spellbook"
+    | "scroll"
     | WeaponItemKind
     | ShieldItemKind
     | DivingHelmetItemSaveV2["kind"]
@@ -465,6 +469,8 @@ export type EquipmentItemSaveV2 = ItemSaveEnvelopeV2 & {
     | "glow_stick"
     | "glow_bugs"
     | "glowshrooms"
+    | "spellbook"
+    | "scroll"
     | WeaponItemKind
     | ShieldItemKind
     | DivingHelmetItemSaveV2["kind"]
@@ -510,7 +516,6 @@ export type WeaponItemKind =
   | "crossbow"
   | "shotgun"
   | "slingshot"
-  | "spellbook"
   | "pickaxe";
 
 export type BaseWeaponItemSaveV2 = ItemSaveEnvelopeV2 & {
@@ -538,6 +543,27 @@ export type CrossbowWeaponItemSaveV2 = ItemSaveEnvelopeV2 & {
 };
 
 export type WeaponItemSaveV2 = BaseWeaponItemSaveV2 | CrossbowWeaponItemSaveV2;
+
+export type SpellbookItemSaveV2 = ItemSaveEnvelopeV2 & {
+  kind: "spellbook";
+  equipped?: boolean;
+  durability: number;
+  durabilityMax: number;
+  broken: boolean;
+  cooldown: number;
+  cooldownMax: number;
+  status: WeaponStatusSaveV2;
+  /** Ordered list of inscribed spell IDs. */
+  spellIds: string[];
+  /** ID of the currently configured spell. */
+  activeSpellId: string;
+};
+
+export type ScrollItemSaveV2 = ItemSaveEnvelopeV2 & {
+  kind: "scroll";
+  /** The spell inscribed on this scroll. */
+  spellId: string;
+};
 
 export type ShieldItemKind = "occult_shield" | "wooden_shield";
 
@@ -594,10 +620,25 @@ export type BigWizardFireballProjectileSaveV2 = {
   delay?: number;
 };
 
+export type PlayerFireballProjectileSaveV2 = {
+  kind: "player_fireball";
+  gid: Gid;
+  roomGid: Gid;
+  x: number;
+  y: number;
+  dead: boolean;
+  /** The player's id key (from game.players). Used to look up parent on load. */
+  parentGid: Gid;
+  frame: number;
+  offsetFrame: number;
+  delay: number;
+};
+
 export type ProjectileSaveV2 =
   | WizardFireballProjectileSaveV2
   | BigWizardFireballProjectileSaveV2
-  | EnemySpawnAnimationProjectileSaveV2;
+  | EnemySpawnAnimationProjectileSaveV2
+  | PlayerFireballProjectileSaveV2;
 
 export type HitWarningSaveV2 = {
   x: number;
@@ -816,10 +857,12 @@ export const ITEM_KIND_VALUES_V2 = [
   "crossbow_bolt",
   // dev items
   "god_stone",
+  // scrolls
+  "scroll",
 ] as const;
 
 export type ItemKind = (typeof ITEM_KIND_VALUES_V2)[number];
 
-export type ProjectileKind = "wizard_fireball" | "big_wizard_fireball" | "enemy_spawn_animation";
+export type ProjectileKind = "wizard_fireball" | "big_wizard_fireball" | "enemy_spawn_animation" | "player_fireball";
 
 

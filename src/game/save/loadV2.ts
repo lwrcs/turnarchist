@@ -36,6 +36,7 @@ import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
 import { BigWizardFireball } from "../../projectile/bigWizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
+import { PlayerFireball } from "../../projectile/playerFireball";
 import { Equippable } from "../../item/equippable";
 import { GameplaySettings } from "../gameplaySettings";
 import { GameConstants } from "../gameConstants";
@@ -1048,6 +1049,28 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         proj.dead = ps.dead;
         proj.state = ps.state;
         if (ps.delay !== undefined) proj.delay = ps.delay;
+        const gidRes = reserveAndAssignGid(
+          proj,
+          ps.gid,
+          preReservedGids,
+          assignedByGid,
+          assignedGidByObj,
+        );
+        if (!gidRes.ok) return gidRes;
+        room.projectiles.push(proj);
+      }
+      if (ps.kind === "player_fireball") {
+        const parentId = ps.parentGid;
+        const parent = game.players[parentId] ?? game.offlinePlayers[parentId];
+        if (!parent) {
+          // Parent player not found; skip restoring this projectile.
+          continue;
+        }
+        const proj = new PlayerFireball(parent, ps.x, ps.y);
+        proj.dead = ps.dead;
+        proj.frame = ps.frame;
+        proj.offsetFrame = ps.offsetFrame;
+        proj.delay = ps.delay;
         const gidRes = reserveAndAssignGid(
           proj,
           ps.gid,

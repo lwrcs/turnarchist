@@ -19,6 +19,7 @@ import { Torch } from "../item/light/torch";
 import { Candle } from "../item/light/candle";
 import { PlacedTorch } from "../entity/object/placedTorch";
 import { PlacedCandle } from "../entity/object/placedCandle";
+import { Spellbook } from "../item/weapon/spellbook";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -607,6 +608,9 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Cancel any active ranged targeting (crossbow, spellbook) when opening the context menu.
+    (player as any).rangedTargeting?.stop();
+
     if (!targetEntity) {
       // If an overlay UI is open, do not populate context menu from the background/world.
       // For now:
@@ -725,6 +729,9 @@ export class PlayerInputHandler {
       if (item) {
         const targetName = getTargetName(item);
         const primaryLabel = (() => {
+          if (item instanceof Spellbook && GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+            return "Use";
+          }
           if (item instanceof Equippable) {
             return item.equipped ? "Unequip" : "Equip";
           }
@@ -751,6 +758,29 @@ export class PlayerInputHandler {
         });
 
         const examine = formatExamine(item.examineText?.() ?? "");
+
+        // Spellbook: Configure and Cast options per spell
+        if (item instanceof Spellbook && GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+          for (const spell of item.spells) {
+            const isActive = item.activeSpell === spell;
+            items.push({
+              label: isActive ? "Configured" : "Configure",
+              targetName: spell.name,
+              enabled: !isActive,
+              onClick: () => { item.activeSpell = spell; },
+            });
+          }
+          for (const spell of item.spells) {
+            items.push({
+              label: "Cast",
+              targetName: spell.name,
+              onClick: () => {
+                item.pendingSpell = spell;
+                (player as any).rangedTargeting?.start(item);
+              },
+            });
+          }
+        }
 
         // Torch / candle: "Place" and "Place on wall"
         if (item instanceof Torch || item instanceof Candle) {

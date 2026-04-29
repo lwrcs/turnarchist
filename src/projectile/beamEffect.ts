@@ -72,7 +72,7 @@ export class BeamEffect extends Projectile {
   // Range: 0.001-0.1, recommended: 0.1
   private static readonly SPRING_DAMPING = 0.1;
 
-  private points: Point[];
+  protected points: Point[];
   private prevStartX: number;
   private prevStartY: number;
   private prevEndX: number;

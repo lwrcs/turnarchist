@@ -36,6 +36,7 @@ import type { Entity } from "../../entity/entity";
 import { WizardFireball } from "../../projectile/wizardFireball";
 import { BigWizardFireball } from "../../projectile/bigWizardFireball";
 import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
+import { PlayerFireball } from "../../projectile/playerFireball";
 import { GameplaySettings } from "../gameplaySettings";
 import { GameConstants } from "../gameConstants";
 
@@ -321,6 +322,32 @@ const collectPersistedProjectiles = (game: Game, room: Room, nowMs: number): Roo
         state: p.state,
         delay: typeof p.delay === "number" ? p.delay : undefined,
       });
+    }
+    if (p instanceof PlayerFireball) {
+      // Find the parent player's id key from game.players / offlinePlayers.
+      let parentGid: string | null = null;
+      for (const [id, pl] of Object.entries(game.players)) {
+        if (pl === p.parent) { parentGid = id; break; }
+      }
+      if (parentGid === null) {
+        for (const [id, pl] of Object.entries(game.offlinePlayers)) {
+          if (pl === p.parent) { parentGid = id; break; }
+        }
+      }
+      if (parentGid !== null) {
+        out.push({
+          kind: "player_fireball",
+          gid: p.globalId,
+          roomGid: room.globalId,
+          x: p.x,
+          y: p.y,
+          dead: p.dead,
+          parentGid,
+          frame: p.frame,
+          offsetFrame: p.offsetFrame,
+          delay: p.delay,
+        });
+      }
     }
     if (p instanceof EnemySpawnAnimation) {
       const enemySave = tryEncodeEnemy(game, p.enemy, nowMs);
