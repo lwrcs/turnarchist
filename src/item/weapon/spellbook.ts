@@ -49,11 +49,16 @@ export class Spellbook extends Weapon implements RangedWeapon {
 
   toggleEquip = () => {
     if (GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+      const rt = (this.wielder as unknown as Player)?.rangedTargeting;
+      if (rt?.active) {
+        rt.stop();
+        return;
+      }
       if (this.cooldown > 0) {
         this.level.game.pushMessage("Not enough mana.");
         return;
       }
-      (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+      rt?.start(this);
       return;
     }
     super.toggleEquip();

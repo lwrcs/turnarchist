@@ -11,6 +11,8 @@ export class RangedTargetingSystem {
   active: boolean = false;
   targetX: number = 0;
   targetY: number = 0;
+  /** True once the player has explicitly aimed at a world tile since targeting started. */
+  hasAimed: boolean = false;
   private weapon: RangedWeapon | null = null;
   private player: Player;
 
@@ -21,12 +23,14 @@ export class RangedTargetingSystem {
   start(weapon: RangedWeapon): void {
     this.active = true;
     this.weapon = weapon;
+    this.hasAimed = false;
     this.targetX = this.player.x;
     this.targetY = this.player.y;
   }
 
   stop(): void {
     this.active = false;
+    this.hasAimed = false;
     this.weapon = null;
   }
 

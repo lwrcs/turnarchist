@@ -229,7 +229,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
   type WeaponKind = WeaponItemSaveV2["kind"];
   type ShieldKind = ShieldItemSaveV2["kind"];
   type SpecialKind = DivingHelmetItemSaveV2["kind"] | HourglassItemSaveV2["kind"];
-  type GenericItemKind = Exclude<ItemKind, "key" | LightKind | WeaponKind | ShieldKind | SpecialKind>;
+  type GenericItemKind = Exclude<ItemKind, "key" | "scroll" | LightKind | WeaponKind | ShieldKind | SpecialKind>;
   const genericSave = (
     kind: GenericItemKind,
     item: Item,

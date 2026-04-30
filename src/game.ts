@@ -4025,6 +4025,22 @@ export class Game {
             durabilityMax: 100,
             broken: false,
           };
+        case "spellbook": {
+          const status = { poison: false, blood: false, curse: false } as const;
+          return {
+            ...base,
+            kind: "spellbook",
+            durability: 100,
+            durabilityMax: 100,
+            broken: false,
+            cooldown: 0,
+            cooldownMax: 10,
+            status,
+            equipped: false,
+            spellIds: ["plus"],
+            activeSpellId: "plus",
+          };
+        }
         case "dagger":
         case "sword":
         case "spear":
@@ -4035,7 +4051,6 @@ export class Game {
         case "scythe":
         case "shotgun":
         case "slingshot":
-        case "spellbook":
         case "pickaxe": {
           const status = { poison: false, blood: false, curse: false } as const;
           return {
@@ -4074,6 +4089,8 @@ export class Game {
             health: 100,
             rechargeTurnCounter: 0,
           };
+        case "scroll":
+          return { ...base, kind: "scroll", spellId: "plus" };
         default:
           return { ...base, kind };
       }

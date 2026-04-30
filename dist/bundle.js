@@ -31487,6 +31487,22 @@ class Game {
                         durabilityMax: 100,
                         broken: false,
                     };
+                case "spellbook": {
+                    const status = { poison: false, blood: false, curse: false };
+                    return {
+                        ...base,
+                        kind: "spellbook",
+                        durability: 100,
+                        durabilityMax: 100,
+                        broken: false,
+                        cooldown: 0,
+                        cooldownMax: 10,
+                        status,
+                        equipped: false,
+                        spellIds: ["plus"],
+                        activeSpellId: "plus",
+                    };
+                }
                 case "dagger":
                 case "sword":
                 case "spear":
@@ -31497,7 +31513,6 @@ class Game {
                 case "scythe":
                 case "shotgun":
                 case "slingshot":
-                case "spellbook":
                 case "pickaxe": {
                     const status = { poison: false, blood: false, curse: false };
                     return {
@@ -31536,6 +31551,8 @@ class Game {
                         health: 100,
                         rechargeTurnCounter: 0,
                     };
+                case "scroll":
+                    return { ...base, kind: "scroll", spellId: "plus" };
                 default:
                     return { ...base, kind };
             }
@@ -57791,17 +57808,21 @@ class RangedTargetingSystem {
         this.active = false;
         this.targetX = 0;
         this.targetY = 0;
+        /** True once the player has explicitly aimed at a world tile since targeting started. */
+        this.hasAimed = false;
         this.weapon = null;
         this.player = player;
     }
     start(weapon) {
         this.active = true;
         this.weapon = weapon;
+        this.hasAimed = false;
         this.targetX = this.player.x;
         this.targetY = this.player.y;
     }
     stop() {
         this.active = false;
+        this.hasAimed = false;
         this.weapon = null;
     }
     hasLineOfSight(tx, ty) {
@@ -58752,11 +58773,16 @@ class Spellbook extends weapon_1.Weapon {
         };
         this.toggleEquip = () => {
             if (gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
+                const rt = this.wielder?.rangedTargeting;
+                if (rt?.active) {
+                    rt.stop();
+                    return;
+                }
                 if (this.cooldown > 0) {
                     this.level.game.pushMessage("Not enough mana.");
                     return;
                 }
-                this.wielder?.rangedTargeting?.start(this);
+                rt?.start(this);
                 return;
             }
             super.toggleEquip();
@@ -68959,6 +68985,8 @@ class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
         this.mouseHoldInitialDirection = null;
+        this.mobileAimTileX = null;
+        this.mobileAimTileY = null;
         this.bestiaryTouchMoveHandler = null;
         this.bestiaryTouchEndHandler = null;
         this.handleNumKey = (num) => {
@@ -68972,6 +69000,8 @@ class PlayerInputHandler {
         };
         this.clearKeyboardTarget = () => {
             this.keyboardTarget = null;
+            this.mobileAimTileX = null;
+            this.mobileAimTileY = null;
             this.player.contextMenu?.close();
             this.player.rangedTargeting?.stop();
         };
@@ -69164,16 +69194,20 @@ class PlayerInputHandler {
             const invOpen = this.player.inventory?.isOpen;
             switch (input) {
                 case input_1.InputEnum.UP:
-                    rt.moveTarget(0, -1);
+                    if (!gameConstants_1.GameConstants.isMobile)
+                        rt.moveTarget(0, -1);
                     return;
                 case input_1.InputEnum.DOWN:
-                    rt.moveTarget(0, 1);
+                    if (!gameConstants_1.GameConstants.isMobile)
+                        rt.moveTarget(0, 1);
                     return;
                 case input_1.InputEnum.LEFT:
-                    rt.moveTarget(-1, 0);
+                    if (!gameConstants_1.GameConstants.isMobile)
+                        rt.moveTarget(-1, 0);
                     return;
                 case input_1.InputEnum.RIGHT:
-                    rt.moveTarget(1, 0);
+                    if (!gameConstants_1.GameConstants.isMobile)
+                        rt.moveTarget(1, 0);
                     return;
                 case input_1.InputEnum.SPACE:
                 case input_1.InputEnum.ENTER:
@@ -69183,6 +69217,8 @@ class PlayerInputHandler {
                     return;
                 case input_1.InputEnum.ESCAPE:
                     rt.stop();
+                    this.mobileAimTileX = null;
+                    this.mobileAimTileY = null;
                     return;
                 case input_1.InputEnum.MOUSE_MOVE:
                     rt.syncToMouse();
@@ -70152,11 +70188,18 @@ class PlayerInputHandler {
         const skillsMenu = player.skillsMenu;
         // Ranged targeting: left click fires, but only when the inventory is closed and not hovering UI.
         // If the inventory is open, let the click fall through so it closes normally.
+        // On mobile, defer entirely to handleTap so tap-to-aim then tap-to-fire works correctly.
         if (player.rangedTargeting?.active && !player.inventory?.isOpen && !this.isMouseOverUI()) {
+            if (gameConstants_1.GameConstants.isMobile) {
+                // Don't set mouseDownHandled — let handleTap own the tap action.
+                console.log("[SpellMouseDown] mobile targeting active — deferring to handleTap");
+                return;
+            }
             player.rangedTargeting.fire();
             input_1.Input.mouseDownHandled = true;
             return;
         }
+        console.log("[SpellMouseDown] targeting:", !!player.rangedTargeting?.active, "invOpen:", !!player.inventory?.isOpen, "overUI:", this.isMouseOverUI(), "isMobile:", gameConstants_1.GameConstants.isMobile);
         // Context menu consumes clicks while open (click outside closes).
         if (player.contextMenu?.open) {
             player.contextMenu.handleMouseDown(x, y, 0);
@@ -70492,11 +70535,14 @@ class PlayerInputHandler {
             }
             return;
         }
+        let uiHandled = false;
         if (!this.player.inventory.isOpen &&
             this.player.inventory.isPointInInventoryButton(x, y)) {
             this.player.inventory.open();
+            uiHandled = true;
         }
         else if (this.player.inventory.isOpen) {
+            uiHandled = true;
             if (isInInventory) {
                 this.handleInput(input_1.InputEnum.LEFT_CLICK);
             }
@@ -70505,7 +70551,37 @@ class PlayerInputHandler {
             }
         }
         else if (isInQuickbar) {
-            this.handleInput(input_1.InputEnum.LEFT_CLICK);
+            uiHandled = true;
+            // On mobile, inventory.touchEnd already calls itemUse() for quickbar items.
+            // Don't also dispatch LEFT_CLICK — when targeting just activated that would instantly fire.
+            if (!this.player.game.isMobile) {
+                this.handleInput(input_1.InputEnum.LEFT_CLICK);
+            }
+        }
+        // World tap while targeting active.
+        console.log("[SpellTap] uiHandled:", uiHandled, "targeting active:", !!this.player.rangedTargeting?.active, "isMobile:", this.player.game.isMobile, "mouseDownHandled was:", input_1.Input.mouseDownHandled);
+        if (!uiHandled && this.player.rangedTargeting?.active) {
+            const rt = this.player.rangedTargeting;
+            if (this.player.game.isMobile) {
+                rt.syncToMouse();
+                const newX = rt.targetX;
+                const newY = rt.targetY;
+                const sameTile = newX === this.mobileAimTileX && newY === this.mobileAimTileY;
+                console.log("[SpellTap] mobile targeting: lastAimTile:", this.mobileAimTileX, this.mobileAimTileY, "-> newTile:", newX, newY, "sameTile:", sameTile);
+                if (sameTile && this.mobileAimTileX !== null) {
+                    this.mobileAimTileX = null;
+                    this.mobileAimTileY = null;
+                    rt.fire();
+                }
+                else {
+                    this.mobileAimTileX = newX;
+                    this.mobileAimTileY = newY;
+                }
+            }
+            else {
+                rt.syncToMouse();
+                rt.fire();
+            }
         }
     }
     handleKeyboardKey(key) {
