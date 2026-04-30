@@ -406,6 +406,7 @@ export class Entity extends Drawable {
       direction: original.direction,
       drawX: original.drawX,
       drawY: original.drawY,
+      wallMounted: (original as any).wallMounted,
       z: original.z ?? 0,
       alpha: original.alpha,
       shadeColor: original.shadeColor,

@@ -22805,6 +22805,7 @@ class Entity extends drawable_1.Drawable {
             direction: original.direction,
             drawX: original.drawX,
             drawY: original.drawY,
+            wallMounted: original.wallMounted,
             z: original.z ?? 0,
             alpha: original.alpha,
             shadeColor: original.shadeColor,
@@ -24622,10 +24623,16 @@ class PlacedCandle extends entity_1.Entity {
             if (localPlayer?.inventory?.canPickup(drop)) {
                 drop.x = this.x;
                 drop.y = this.y;
-                drop.forceAnimateToInventory = true;
+                const onSameTile = !this.wallMounted && localPlayer.x === this.x && localPlayer.y === this.y;
+                drop.forceAnimateToInventory = !onSameTile;
                 this.room.items.push(drop);
                 drop.onDrop();
-                drop.autoPickup();
+                if (onSameTile) {
+                    drop.onPickup(localPlayer);
+                }
+                else {
+                    drop.autoPickup();
+                }
             }
             else {
                 const visited = new Set();
@@ -24739,6 +24746,7 @@ class PlacedCandle extends entity_1.Entity {
             this.drawableY = this.y;
         };
         this.health = 1;
+        this.hasDamageNumbers = false;
         this.name = "placed_candle";
         this.hasShadow = true;
         this.chainPushable = false;
@@ -24832,10 +24840,16 @@ class PlacedTorch extends entity_1.Entity {
             if (localPlayer?.inventory?.canPickup(drop)) {
                 drop.x = this.x;
                 drop.y = this.y;
-                drop.forceAnimateToInventory = true;
+                const onSameTile = !this.wallMounted && localPlayer.x === this.x && localPlayer.y === this.y;
+                drop.forceAnimateToInventory = !onSameTile;
                 this.room.items.push(drop);
                 drop.onDrop();
-                drop.autoPickup();
+                if (onSameTile) {
+                    drop.onPickup(localPlayer);
+                }
+                else {
+                    drop.autoPickup();
+                }
             }
             else {
                 const visited = new Set();
@@ -24948,6 +24962,7 @@ class PlacedTorch extends entity_1.Entity {
             this.drawableY = this.y;
         };
         this.health = 1;
+        this.hasDamageNumbers = false;
         this.name = "placed_torch";
         this.hasShadow = true;
         this.chainPushable = false;
@@ -70671,6 +70686,90 @@ class PlayerInputHandler {
             }
         }
     }
+    placeLight() {
+        const player = this.player;
+        const inv = player.inventory;
+        const room = player.getRoom ? player.getRoom() : player.game.rooms[player.levelID];
+        if (!room)
+            return;
+        const dir = player.direction;
+        // Tile the player is facing.
+        const dx = dir === game_1.Direction.LEFT ? -1 : dir === game_1.Direction.RIGHT ? 1 : 0;
+        const dy = dir === game_1.Direction.UP ? -1 : dir === game_1.Direction.DOWN ? 1 : 0;
+        const facedTile = room.roomArray[player.x + dx]?.[player.y + dy];
+        const isFacedWall = facedTile instanceof wall_1.Wall || facedTile instanceof wallTorch_1.WallTorch;
+        let placedX;
+        let placedY;
+        let wallDir = null;
+        if (isFacedWall) {
+            // Place on the wall tile the player is facing.
+            placedX = player.x + dx;
+            placedY = player.y + dy;
+            wallDir = dir;
+        }
+        else {
+            // Look for any orthogonally adjacent wall.
+            const candidates = [
+                { wx: player.x - 1, wy: player.y, dir: game_1.Direction.LEFT },
+                { wx: player.x + 1, wy: player.y, dir: game_1.Direction.RIGHT },
+                { wx: player.x, wy: player.y - 1, dir: game_1.Direction.UP },
+                { wx: player.x, wy: player.y + 1, dir: game_1.Direction.DOWN },
+            ];
+            const wallCandidate = candidates.find(({ wx, wy }) => {
+                const t = room.roomArray[wx]?.[wy];
+                return t instanceof wall_1.Wall || t instanceof wallTorch_1.WallTorch;
+            });
+            if (wallCandidate) {
+                placedX = wallCandidate.wx;
+                placedY = wallCandidate.wy;
+                wallDir = wallCandidate.dir;
+            }
+            else {
+                // No adjacent wall — place on floor at player's position.
+                placedX = player.x;
+                placedY = player.y;
+            }
+        }
+        // If a placed light already occupies the target tile, pick it up instead.
+        const existingLight = room.entities.find((e) => !e.dead && e.x === placedX && e.y === placedY &&
+            (e instanceof placedTorch_1.PlacedTorch || e instanceof placedCandle_1.PlacedCandle));
+        if (existingLight) {
+            existingLight.hurt(player, existingLight.health);
+            return;
+        }
+        // Prefer candle; fall back to torch.
+        const candleIdx = inv.items.findIndex((it) => it instanceof candle_1.Candle);
+        const torchIdx = inv.items.findIndex((it) => it instanceof torch_1.Torch);
+        const lightIdx = candleIdx !== -1 ? candleIdx : torchIdx;
+        if (lightIdx === -1)
+            return;
+        const light = inv.items[lightIdx];
+        const isCandle = light instanceof candle_1.Candle;
+        const fuel = light.fuel;
+        // Don't place on a tile occupied by something else.
+        const occupied = room.entities.some((e) => !e.dead && e.x === placedX && e.y === placedY);
+        if (occupied)
+            return;
+        const placed = isCandle
+            ? new placedCandle_1.PlacedCandle(room, player.game, placedX, placedY, fuel)
+            : new placedTorch_1.PlacedTorch(room, player.game, placedX, placedY, fuel);
+        if (wallDir !== null) {
+            placed.applyWallDirection(wallDir);
+        }
+        else {
+            placed.applyFloorPlacement();
+        }
+        room.entities.push(placed);
+        room.updateLighting();
+        if (light.stackCount > 1) {
+            light.stackCount--;
+        }
+        else {
+            if (light.equipped)
+                light.toggleEquip();
+            inv.removeItem(light);
+        }
+    }
     handleKeyboardKey(key) {
         switch (key.toUpperCase()) {
             case "A":
@@ -70697,6 +70796,9 @@ class PlayerInputHandler {
                 break;
             case "Q":
                 this.handleInput(input_1.InputEnum.Q);
+                break;
+            case "L":
+                this.placeLight();
                 break;
             // Possibly add number keys for inventory here too
             default:

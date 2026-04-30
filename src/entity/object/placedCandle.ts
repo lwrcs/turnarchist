@@ -19,6 +19,7 @@ export class PlacedCandle extends Entity {
   ) {
     super(room, game, x, y);
     this.health = 1;
+    this.hasDamageNumbers = false;
     this.name = "placed_candle";
     this.hasShadow = true;
     this.chainPushable = false;
@@ -90,10 +91,15 @@ export class PlacedCandle extends Entity {
     if (localPlayer?.inventory?.canPickup(drop)) {
       drop.x = this.x;
       drop.y = this.y;
-      drop.forceAnimateToInventory = true;
+      const onSameTile = !this.wallMounted && localPlayer.x === this.x && localPlayer.y === this.y;
+      drop.forceAnimateToInventory = !onSameTile;
       this.room.items.push(drop);
       drop.onDrop();
-      drop.autoPickup();
+      if (onSameTile) {
+        drop.onPickup(localPlayer);
+      } else {
+        drop.autoPickup();
+      }
     } else {
       const visited = new Set<string>();
       const queue: Array<{ x: number; y: number; dist: number }> = [

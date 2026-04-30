@@ -1778,6 +1778,96 @@ export class PlayerInputHandler {
     }
   }
 
+  placeLight() {
+    const player = this.player;
+    const inv = player.inventory;
+    const room = player.getRoom ? player.getRoom() : player.game.rooms[player.levelID];
+    if (!room) return;
+
+    const dir = player.direction;
+    // Tile the player is facing.
+    const dx = dir === Direction.LEFT ? -1 : dir === Direction.RIGHT ? 1 : 0;
+    const dy = dir === Direction.UP   ? -1 : dir === Direction.DOWN  ? 1 : 0;
+    const facedTile = room.roomArray[player.x + dx]?.[player.y + dy];
+    const isFacedWall = facedTile instanceof Wall || facedTile instanceof WallTorch;
+
+    let placedX: number;
+    let placedY: number;
+    let wallDir: Direction | null = null;
+
+    if (isFacedWall) {
+      // Place on the wall tile the player is facing.
+      placedX = player.x + dx;
+      placedY = player.y + dy;
+      wallDir = dir;
+    } else {
+      // Look for any orthogonally adjacent wall.
+      const candidates: { wx: number; wy: number; dir: Direction }[] = [
+        { wx: player.x - 1, wy: player.y, dir: Direction.LEFT },
+        { wx: player.x + 1, wy: player.y, dir: Direction.RIGHT },
+        { wx: player.x,     wy: player.y - 1, dir: Direction.UP },
+        { wx: player.x,     wy: player.y + 1, dir: Direction.DOWN },
+      ];
+      const wallCandidate = candidates.find(({ wx, wy }) => {
+        const t = room.roomArray[wx]?.[wy];
+        return t instanceof Wall || t instanceof WallTorch;
+      });
+      if (wallCandidate) {
+        placedX = wallCandidate.wx;
+        placedY = wallCandidate.wy;
+        wallDir = wallCandidate.dir;
+      } else {
+        // No adjacent wall — place on floor at player's position.
+        placedX = player.x;
+        placedY = player.y;
+      }
+    }
+
+    // If a placed light already occupies the target tile, pick it up instead.
+    const existingLight = room.entities.find(
+      (e) => !e.dead && e.x === placedX && e.y === placedY &&
+        (e instanceof PlacedTorch || e instanceof PlacedCandle),
+    );
+    if (existingLight) {
+      existingLight.hurt(player, existingLight.health);
+      return;
+    }
+
+    // Prefer candle; fall back to torch.
+    const candleIdx = inv.items.findIndex((it) => it instanceof Candle);
+    const torchIdx = inv.items.findIndex((it) => it instanceof Torch);
+    const lightIdx = candleIdx !== -1 ? candleIdx : torchIdx;
+    if (lightIdx === -1) return;
+
+    const light = inv.items[lightIdx] as Candle | Torch;
+    const isCandle = light instanceof Candle;
+    const fuel = light.fuel;
+
+    // Don't place on a tile occupied by something else.
+    const occupied = room.entities.some((e) => !e.dead && e.x === placedX && e.y === placedY);
+    if (occupied) return;
+
+    const placed = isCandle
+      ? new PlacedCandle(room, player.game, placedX, placedY, fuel)
+      : new PlacedTorch(room, player.game, placedX, placedY, fuel);
+
+    if (wallDir !== null) {
+      placed.applyWallDirection(wallDir);
+    } else {
+      placed.applyFloorPlacement();
+    }
+
+    room.entities.push(placed);
+    room.updateLighting();
+
+    if (light.stackCount > 1) {
+      light.stackCount--;
+    } else {
+      if ((light as any).equipped) (light as any).toggleEquip();
+      inv.removeItem(light);
+    }
+  }
+
   handleKeyboardKey(key: string) {
     switch (key.toUpperCase()) {
       case "A":
@@ -1804,6 +1894,9 @@ export class PlayerInputHandler {
         break;
       case "Q":
         this.handleInput(InputEnum.Q);
+        break;
+      case "L":
+        this.placeLight();
         break;
       // Possibly add number keys for inventory here too
       default:
