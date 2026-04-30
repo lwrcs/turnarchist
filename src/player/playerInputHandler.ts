@@ -957,6 +957,21 @@ export class PlayerInputHandler {
             weapon.weaponMove(input.x, input.y);
           },
         });
+
+        const typeName = entity.constructor?.name;
+        if (typeName && player.bestiary) {
+          const hasBestiaryEntry = player.bestiary.entries.some(
+            (e) => e.typeName === typeName,
+          );
+          if (hasBestiaryEntry) {
+            items.push({
+              label: "View in Bestiary",
+              onClick: () => {
+                player.bestiary.openToEnemy(typeName);
+              },
+            });
+          }
+        }
       } else {
         // Non-enemy entities: choose a primary action.
         // Push can take precedence over Hit when the push-chain is actually possible.

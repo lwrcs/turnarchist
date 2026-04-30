@@ -16,22 +16,36 @@ export type BestiaryEnemySprite = {
   /**
    * Optional Bestiary-only effect previews (e.g. wizard fireballs) rendered near the sprite.
    */
-  effects?: Array<{
-    kind: "wizardFireball";
-    /**
-     * 0 = charging orb, 1 = marker/telegraph, 2 = explosion.
-     * Matches `WizardFireball.draw()` branches.
-     */
-    state: 0 | 1 | 2;
-    /**
-     * Determines which FX row to use (matches `WizardFireball.tileY` selection).
-     */
-    variant: "energy" | "fire" | "earth";
-    /**
-     * Target tile offsets relative to the sprite's feet-tile anchor.
-     */
-    offsets: Array<{ x: number; y: number }>;
-  }>;
+  effects?: Array<
+    | {
+        kind: "wizardFireball";
+        /**
+         * 0 = charging orb, 1 = marker/telegraph, 2 = explosion.
+         * Matches `WizardFireball.draw()` branches.
+         */
+        state: 0 | 1 | 2;
+        /**
+         * Determines which FX row to use (matches `WizardFireball.tileY` selection).
+         */
+        variant: "energy" | "fire" | "earth";
+        /**
+         * Target tile offsets relative to the sprite's feet-tile anchor.
+         */
+        offsets: Array<{ x: number; y: number }>;
+      }
+    | {
+        kind: "bigWizardFireball";
+        /**
+         * 0 = charging orb, 1 = marker/telegraph, 2 = explosion.
+         * Matches `BigWizardFireball.draw()` branches.
+         */
+        state: 0 | 1 | 2;
+        /**
+         * Target tile offsets (top-left of each 2×2 fireball) relative to sprite anchor.
+         */
+        offsets: Array<{ x: number; y: number }>;
+      }
+  >;
   /**
    * Some enemies use multi-tile art but still behave like a 1-tile enemy for warnings.
    * When true, hitwarnings are anchored on the *left* foot tile (instead of centered),
@@ -130,6 +144,19 @@ const WIZARD_CARDINAL_2: Array<{ x: number; y: number }> = [
   { x: 0, y: 2 },
 ];
 
+// Offsets for the 2×2 BigWizard: right/up/down groups shifted +1 in x to account for
+// the wizard's 2-tile width; far ends pushed one tile further outward; all one tile up.
+const BIG_WIZARD_CARDINAL: Array<{ x: number; y: number }> = [
+  { x: -2, y: -1 },
+  { x: -4, y: -1 }, // left (near, far)
+  { x: 2, y: -1 },
+  { x: 4, y: -1 }, // right (near, far)
+  { x: 0, y: -3 },
+  { x: 0, y: -5 }, // up (near, far)
+  { x: 0, y: 1 },
+  { x: 0, y: 3 }, // down (near, far)
+];
+
 // NOTE: EarthWizard uses `attemptProjectilePlacement(..., clearPath=true)` which relies on
 // `Entity.isPathClear()`. That path-clear logic only works for cardinal or perfect diagonal
 // rays (it steps by sign(dx), sign(dy)), so offsets like (-2,-1) will never be "clear".
@@ -212,19 +239,21 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         label: "Idle",
         tileX: 15,
         tileY: 4,
-        w: 1,
+        w: 2,
         h: 2,
         hp: 1,
         maxHp: 1,
+        offsetX: 0,
       },
       {
         label: "Armed",
         tileX: 15,
         tileY: 4,
-        w: 1,
+        w: 2,
         h: 2,
         hp: 1,
         maxHp: 1,
+        offsetX: 0,
         rumbling: true,
         hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
       },
@@ -1320,6 +1349,83 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
       "A reaper idol that spawns enemies over time. If you don't destroy it, the room will snowball.",
     sprites: [
       { label: "Idle", tileX: 6, tileY: 4, w: 1, h: 2, hp: 4, maxHp: 4 },
+    ],
+  },
+
+  BigWizardEnemy: {
+    typeName: "BigWizardEnemy",
+    displayName: "Big Wizard",
+    description:
+      "A colossal caster that fires huge explosions covering four cardinal lanes simultaneously. Keep moving — standing still in any open lane is a death sentence.",
+    sprites: [
+      {
+        label: "Idle",
+        tileX: 37,
+        tileY: 1,
+        w: 2,
+        h: 3,
+        hp: 2,
+        maxHp: 2,
+        hitWarningsWide: true,
+        //offsetY: -0.5,
+      },
+      {
+        label: "Turn 1: Cast (orb)",
+        tileX: 37,
+        tileY: 1,
+        w: 2,
+        h: 3,
+        hp: 2,
+        maxHp: 2,
+        hitWarningsWide: true,
+        //offsetY: -0.5,
+        effects: [
+          {
+            kind: "bigWizardFireball",
+            state: 0,
+            offsets: BIG_WIZARD_CARDINAL,
+          },
+        ],
+      },
+      {
+        label: "Turn 2: Overlap (warn + cast)",
+        tileX: 37,
+        tileY: 1,
+        w: 2,
+        h: 3,
+        hp: 2,
+        maxHp: 2,
+        hitWarningsWide: true,
+        //offsetY: -0.5,
+        effects: [
+          {
+            kind: "bigWizardFireball",
+            state: 1,
+            offsets: BIG_WIZARD_CARDINAL,
+          },
+        ],
+        hitWarnings: BIG_WIZARD_CARDINAL.map((o) =>
+          hw(o, SHOW_FULL, { sourceOffset: ORIGIN }),
+        ),
+      },
+      {
+        label: "Turn 3: Explosion",
+        tileX: 37,
+        tileY: 1,
+        w: 2,
+        h: 3,
+        hp: 2,
+        maxHp: 2,
+        hitWarningsWide: true,
+        //offsetY: -0.5,
+        effects: [
+          {
+            kind: "bigWizardFireball",
+            state: 2,
+            offsets: BIG_WIZARD_CARDINAL,
+          },
+        ],
+      },
     ],
   },
 

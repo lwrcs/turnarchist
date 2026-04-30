@@ -32652,6 +32652,17 @@ class Bestiary {
         /**
          * Toggles the logbook window's open state.
          */
+        /**
+         * Opens the bestiary and navigates to the entry for the given enemy type name
+         * (e.g. "CrabEnemy"). If the entry doesn't exist yet, the bestiary opens at the
+         * current page instead.
+         */
+        this.openToEnemy = (typeName) => {
+            const idx = this.entries.findIndex((e) => e.typeName === typeName);
+            if (idx !== -1)
+                this.activeEntryIndex = idx;
+            this.open();
+        };
         this.toggleOpen = () => {
             this.isOpen ? this.close() : this.open();
         };
@@ -33610,39 +33621,69 @@ class Bestiary {
                 ? args.xBase
                 : args.xBase + (args.drawW - 1) / 2;
             for (const fx of effects) {
-                if (fx.kind !== "wizardFireball")
-                    continue;
-                // Mirror `WizardFireball.tileY` selection.
-                const tileY = fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
-                // Determine which offsets should render behind the mob.
-                // Mirror WizardFireball's own draw offsets:
-                // - state 0: y + 0
-                // - state 1: y - 0.2
-                // - state 2: y - 1
-                const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
-                const offsets = fx.offsets
-                    .filter((o) => {
-                    const yDraw = o.y + stateYOffset;
-                    return layer === "behind" ? yDraw < 0 : yDraw >= 0;
-                })
-                    // stable: higher tiles first
-                    .slice()
-                    .sort((a, b) => a.y - b.y);
-                for (const o of offsets) {
-                    const x = baseX + o.x;
-                    // Nudge down slightly to match the in-game perceived placement.
-                    const y = baseY + o.y + 0.5;
-                    if (fx.state === 0) {
-                        const frame = Math.floor(this.previewAnimT * 0.25) % 4;
-                        game_1.Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
+                if (fx.kind === "wizardFireball") {
+                    // Mirror `WizardFireball.tileY` selection.
+                    const tileY = fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
+                    // Determine which offsets should render behind the mob.
+                    // Mirror WizardFireball's own draw offsets:
+                    // - state 0: y + 0
+                    // - state 1: y - 0.2
+                    // - state 2: y - 1
+                    const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
+                    const offsets = fx.offsets
+                        .filter((o) => {
+                        const yDraw = o.y + stateYOffset;
+                        return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+                    })
+                        // stable: higher tiles first
+                        .slice()
+                        .sort((a, b) => a.y - b.y);
+                    for (const o of offsets) {
+                        const x = baseX + o.x;
+                        // Nudge down slightly to match the in-game perceived placement.
+                        const y = baseY + o.y + 0.5;
+                        if (fx.state === 0) {
+                            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                            game_1.Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
+                        }
+                        else if (fx.state === 1) {
+                            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                            game_1.Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
+                        }
+                        else {
+                            const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+                            game_1.Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+                        }
                     }
-                    else if (fx.state === 1) {
-                        const frame = Math.floor(this.previewAnimT * 0.25) % 4;
-                        game_1.Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
-                    }
-                    else {
-                        const frame = Math.floor(this.previewAnimT * 0.3) % 18;
-                        game_1.Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+                }
+                else if (fx.kind === "bigWizardFireball") {
+                    // Mirror BigWizardFireball draw offsets:
+                    // - state 0 (orb): y + 0
+                    // - state 1 (telegraph): y + 0
+                    // - state 2 (explosion): y - 2
+                    const stateYOffset = fx.state === 2 ? -2 : 0;
+                    const offsets = fx.offsets
+                        .filter((o) => {
+                        const yDraw = o.y + stateYOffset;
+                        return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+                    })
+                        .slice()
+                        .sort((a, b) => a.y - b.y);
+                    for (const o of offsets) {
+                        const x = baseX + o.x;
+                        const y = baseY + o.y + 0.5;
+                        if (fx.state === 0) {
+                            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                            game_1.Game.drawFX(19 + frame * 2, 18, 2, 2, x, y, 2, 2);
+                        }
+                        else if (fx.state === 1) {
+                            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+                            game_1.Game.drawFX(11 + frame * 2, 18, 2, 2, x, y, 2, 2);
+                        }
+                        else {
+                            const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+                            game_1.Game.drawFX(frame * 2, 56, 2, 4, x, y - 2, 2, 4);
+                        }
                     }
                 }
             }
@@ -33815,6 +33856,18 @@ const WIZARD_CARDINAL_2 = [
     { x: 0, y: 1 },
     { x: 0, y: 2 },
 ];
+// Offsets for the 2×2 BigWizard: right/up/down groups shifted +1 in x to account for
+// the wizard's 2-tile width; far ends pushed one tile further outward; all one tile up.
+const BIG_WIZARD_CARDINAL = [
+    { x: -2, y: -1 },
+    { x: -4, y: -1 },
+    { x: 2, y: -1 },
+    { x: 4, y: -1 },
+    { x: 0, y: -3 },
+    { x: 0, y: -5 },
+    { x: 0, y: 1 },
+    { x: 0, y: 3 }, // down (near, far)
+];
 // NOTE: EarthWizard uses `attemptProjectilePlacement(..., clearPath=true)` which relies on
 // `Entity.isPathClear()`. That path-clear logic only works for cardinal or perfect diagonal
 // rays (it steps by sign(dx), sign(dy)), so offsets like (-2,-1) will never be "clear".
@@ -33884,19 +33937,21 @@ exports.BESTIARY_ENEMIES = {
                 label: "Idle",
                 tileX: 15,
                 tileY: 4,
-                w: 1,
+                w: 2,
                 h: 2,
                 hp: 1,
                 maxHp: 1,
+                offsetX: 0,
             },
             {
                 label: "Armed",
                 tileX: 15,
                 tileY: 4,
-                w: 1,
+                w: 2,
                 h: 2,
                 hp: 1,
                 maxHp: 1,
+                offsetX: 0,
                 rumbling: true,
                 hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
             },
@@ -34904,6 +34959,79 @@ exports.BESTIARY_ENEMIES = {
         description: "A reaper idol that spawns enemies over time. If you don't destroy it, the room will snowball.",
         sprites: [
             { label: "Idle", tileX: 6, tileY: 4, w: 1, h: 2, hp: 4, maxHp: 4 },
+        ],
+    },
+    BigWizardEnemy: {
+        typeName: "BigWizardEnemy",
+        displayName: "Big Wizard",
+        description: "A colossal caster that fires huge explosions covering four cardinal lanes simultaneously. Keep moving — standing still in any open lane is a death sentence.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 37,
+                tileY: 1,
+                w: 2,
+                h: 3,
+                hp: 2,
+                maxHp: 2,
+                hitWarningsWide: true,
+                //offsetY: -0.5,
+            },
+            {
+                label: "Turn 1: Cast (orb)",
+                tileX: 37,
+                tileY: 1,
+                w: 2,
+                h: 3,
+                hp: 2,
+                maxHp: 2,
+                hitWarningsWide: true,
+                //offsetY: -0.5,
+                effects: [
+                    {
+                        kind: "bigWizardFireball",
+                        state: 0,
+                        offsets: BIG_WIZARD_CARDINAL,
+                    },
+                ],
+            },
+            {
+                label: "Turn 2: Overlap (warn + cast)",
+                tileX: 37,
+                tileY: 1,
+                w: 2,
+                h: 3,
+                hp: 2,
+                maxHp: 2,
+                hitWarningsWide: true,
+                //offsetY: -0.5,
+                effects: [
+                    {
+                        kind: "bigWizardFireball",
+                        state: 1,
+                        offsets: BIG_WIZARD_CARDINAL,
+                    },
+                ],
+                hitWarnings: BIG_WIZARD_CARDINAL.map((o) => hw(o, SHOW_FULL, { sourceOffset: ORIGIN })),
+            },
+            {
+                label: "Turn 3: Explosion",
+                tileX: 37,
+                tileY: 1,
+                w: 2,
+                h: 3,
+                hp: 2,
+                maxHp: 2,
+                hitWarningsWide: true,
+                //offsetY: -0.5,
+                effects: [
+                    {
+                        kind: "bigWizardFireball",
+                        state: 2,
+                        offsets: BIG_WIZARD_CARDINAL,
+                    },
+                ],
+            },
         ],
     },
     GlowBugEnemy: {
@@ -42064,7 +42192,7 @@ const registerBuiltinItemCodecsV2 = () => {
             stackCount: item.stackCount,
             pickedUp: item.pickedUp,
             equipped,
-            groundedNoAnimate: item.groundedNoAnimate || undefined,
+            groundedNoAnimate: (item.groundedNoAnimate || undefined),
         };
     };
     const GENERIC_ITEM_KINDS = [
@@ -70000,6 +70128,18 @@ class PlayerInputHandler {
                         weapon.weaponMove(input.x, input.y);
                     },
                 });
+                const typeName = entity.constructor?.name;
+                if (typeName && player.bestiary) {
+                    const hasBestiaryEntry = player.bestiary.entries.some((e) => e.typeName === typeName);
+                    if (hasBestiaryEntry) {
+                        items.push({
+                            label: "View in Bestiary",
+                            onClick: () => {
+                                player.bestiary.openToEnemy(typeName);
+                            },
+                        });
+                    }
+                }
             }
             else {
                 // Non-enemy entities: choose a primary action.

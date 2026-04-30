@@ -29,12 +29,19 @@ interface BestiaryEntry {
     h: number;
     hp?: number;
     maxHp?: number;
-    effects?: Array<{
-      kind: "wizardFireball";
-      state: 0 | 1 | 2;
-      variant: "energy" | "fire" | "earth";
-      offsets: Array<{ x: number; y: number }>;
-    }>;
+    effects?: Array<
+      | {
+          kind: "wizardFireball";
+          state: 0 | 1 | 2;
+          variant: "energy" | "fire" | "earth";
+          offsets: Array<{ x: number; y: number }>;
+        }
+      | {
+          kind: "bigWizardFireball";
+          state: 0 | 1 | 2;
+          offsets: Array<{ x: number; y: number }>;
+        }
+    >;
     sheet?: "mob" | "obj";
     offsetX?: number;
     offsetY?: number;
@@ -365,6 +372,17 @@ export class Bestiary {
   /**
    * Toggles the logbook window's open state.
    */
+  /**
+   * Opens the bestiary and navigates to the entry for the given enemy type name
+   * (e.g. "CrabEnemy"). If the entry doesn't exist yet, the bestiary opens at the
+   * current page instead.
+   */
+  openToEnemy = (typeName: string) => {
+    const idx = this.entries.findIndex((e) => e.typeName === typeName);
+    if (idx !== -1) this.activeEntryIndex = idx;
+    this.open();
+  };
+
   toggleOpen = () => {
     this.isOpen ? this.close() : this.open();
   };
@@ -1472,42 +1490,72 @@ export class Bestiary {
         : args.xBase + (args.drawW - 1) / 2;
 
     for (const fx of effects) {
-      if (fx.kind !== "wizardFireball") continue;
+      if (fx.kind === "wizardFireball") {
+        // Mirror `WizardFireball.tileY` selection.
+        const tileY =
+          fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
 
-      // Mirror `WizardFireball.tileY` selection.
-      const tileY =
-        fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
+        // Determine which offsets should render behind the mob.
+        // Mirror WizardFireball's own draw offsets:
+        // - state 0: y + 0
+        // - state 1: y - 0.2
+        // - state 2: y - 1
+        const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
 
-      // Determine which offsets should render behind the mob.
-      // Mirror WizardFireball's own draw offsets:
-      // - state 0: y + 0
-      // - state 1: y - 0.2
-      // - state 2: y - 1
-      const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
+        const offsets = fx.offsets
+          .filter((o) => {
+            const yDraw = o.y + stateYOffset;
+            return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+          })
+          // stable: higher tiles first
+          .slice()
+          .sort((a, b) => a.y - b.y);
 
-      const offsets = fx.offsets
-        .filter((o) => {
-          const yDraw = o.y + stateYOffset;
-          return layer === "behind" ? yDraw < 0 : yDraw >= 0;
-        })
-        // stable: higher tiles first
-        .slice()
-        .sort((a, b) => a.y - b.y);
+        for (const o of offsets) {
+          const x = baseX + o.x;
+          // Nudge down slightly to match the in-game perceived placement.
+          const y = baseY + o.y + 0.5;
 
-      for (const o of offsets) {
-        const x = baseX + o.x;
-        // Nudge down slightly to match the in-game perceived placement.
-        const y = baseY + o.y + 0.5;
+          if (fx.state === 0) {
+            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+            Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
+          } else if (fx.state === 1) {
+            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+            Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
+          } else {
+            const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+            Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+          }
+        }
+      } else if (fx.kind === "bigWizardFireball") {
+        // Mirror BigWizardFireball draw offsets:
+        // - state 0 (orb): y + 0
+        // - state 1 (telegraph): y + 0
+        // - state 2 (explosion): y - 2
+        const stateYOffset = fx.state === 2 ? -2 : 0;
 
-        if (fx.state === 0) {
-          const frame = Math.floor(this.previewAnimT * 0.25) % 4;
-          Game.drawFX(22 + frame, tileY, 1, 1, x, y, 1, 1);
-        } else if (fx.state === 1) {
-          const frame = Math.floor(this.previewAnimT * 0.25) % 4;
-          Game.drawFX(18 + frame, tileY, 1, 1, x, y - 0.2, 1, 1);
-        } else {
-          const frame = Math.floor(this.previewAnimT * 0.3) % 18;
-          Game.drawFX(frame, 6, 1, 2, x, y - 1, 1, 2);
+        const offsets = fx.offsets
+          .filter((o) => {
+            const yDraw = o.y + stateYOffset;
+            return layer === "behind" ? yDraw < 0 : yDraw >= 0;
+          })
+          .slice()
+          .sort((a, b) => a.y - b.y);
+
+        for (const o of offsets) {
+          const x = baseX + o.x;
+          const y = baseY + o.y + 0.5;
+
+          if (fx.state === 0) {
+            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+            Game.drawFX(19 + frame * 2, 18, 2, 2, x, y, 2, 2);
+          } else if (fx.state === 1) {
+            const frame = Math.floor(this.previewAnimT * 0.25) % 4;
+            Game.drawFX(11 + frame * 2, 18, 2, 2, x, y, 2, 2);
+          } else {
+            const frame = Math.floor(this.previewAnimT * 0.3) % 18;
+            Game.drawFX(frame * 2, 56, 2, 4, x, y - 2, 2, 4);
+          }
         }
       }
     }
