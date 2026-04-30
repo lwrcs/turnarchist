@@ -21,6 +21,7 @@ import {
 import { DoorDir } from "./tile/door";
 import { LevelImageGenerator } from "./level/levelImageGenerator";
 import { Enemy } from "./entity/enemy/enemy";
+import { Spawner } from "./entity/enemy/spawner";
 import { TutorialListener } from "./game/tutorialListener";
 import { MouseCursor } from "./gui/mouseCursor";
 import { PostProcessor } from "./gui/postProcess";
@@ -3734,7 +3735,28 @@ export class Game {
         break;
       default:
         if (command.startsWith("spawn ")) {
-          this.room.addNewEnemy(command.slice(6) as EnemyType);
+          const spawnArg = command.slice(6).trim();
+          const spawnParts = spawnArg.split(/\s+/);
+          if (spawnParts[0] === "spawner" && spawnParts[1]) {
+            const enemyName = spawnParts[1].toLowerCase();
+            const spawnTypeId = Spawner.spawnTypeByName[enemyName];
+            if (spawnTypeId === undefined) {
+              this.pushMessage(
+                `Unknown spawner enemy type "${spawnParts[1]}". Valid: ${Object.keys(Spawner.spawnTypeByName).join(", ")}`,
+              );
+              break;
+            }
+            const tiles = this.room.getEmptyTiles();
+            if (!tiles || tiles.length === 0) {
+              this.pushMessage("No empty tiles to place spawner.");
+              break;
+            }
+            const pos = this.room.getRandomEmptyPosition(tiles);
+            if (!pos) break;
+            this.room.entities.push(new Spawner(this.room, this, pos.x, pos.y, [spawnTypeId]));
+            break;
+          }
+          this.room.addNewEnemy(spawnArg as EnemyType);
         } else if (command.startsWith("kill ")) {
           const rest = command.slice(5).trim();
           const enemyName = rest.split(/\s+/)[0];

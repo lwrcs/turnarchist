@@ -120,7 +120,28 @@ export class ArmoredSkullEnemy extends Enemy {
 
       this.ticks++;
       if (!this.seenPlayer) {
+        // Preserve alertTicks set by handleEnemyCase (hit-while-sleeping = 2) so that
+        // handleSeenPlayer inside lookForPlayer doesn't overwrite it to 1.
+        const alertTicksBeforeWake = this.alertTicks;
         this.lookForPlayer();
+        if (this.seenPlayer && this.targetPlayer) {
+          // Re-compute facing using integer coordinates to avoid facePlayer's diagonal
+          // no-op (which occurs when |dx|==|dy| due to the +0.5 center offset and causes
+          // the skeleton to keep its pre-sleep direction when the player is one tile to
+          // the right at the same row).
+          const idx = this.targetPlayer.x - this.x;
+          const idy = this.targetPlayer.y - this.y;
+          if (Math.abs(idx) > Math.abs(idy)) {
+            this.direction = idx > 0 ? Direction.RIGHT : Direction.LEFT;
+          } else if (Math.abs(idy) > Math.abs(idx)) {
+            this.direction = idy > 0 ? Direction.DOWN : Direction.UP;
+          }
+          // Restore alertTicks if handleSeenPlayer lowered a value that was set higher
+          // by handleEnemyCase (e.g. 2 when the skeleton was hit while sleeping).
+          if (alertTicksBeforeWake > this.alertTicks) {
+            this.alertTicks = alertTicksBeforeWake;
+          }
+        }
       } else if (this.seenPlayer) {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
@@ -162,23 +183,29 @@ export class ArmoredSkullEnemy extends Enemy {
 
             if (oldDir == this.direction) {
               let hitPlayer = false;
-              for (const i in this.game.players) {
-                if (
-                  this.game.rooms[this.game.players[i].levelID] === this.room &&
-                  this.game.players[i].x === moveX &&
-                  this.game.players[i].y === moveY
-                ) {
-                  if (!this.shouldSkipAttack()) {
-                    this.game.players[i].hurt(this.hit(), this.name, {
-                      source: { x: this.x, y: this.y },
-                    });
-                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                    if (
-                      this.game.players[i] ===
-                      this.game.players[this.game.localPlayerID]
-                    )
-                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+              // When alertTicks > 0 the skeleton just woke from sleep this turn
+              // (hit while sleeping sets alertTicks=2; after the first decrement it
+              // is still 1). Allow movement but skip the attack so the player always
+              // gets one unharmed turn after waking an armored skeleton.
+              if (this.alertTicks === 0) {
+                for (const i in this.game.players) {
+                  if (
+                    this.game.rooms[this.game.players[i].levelID] === this.room &&
+                    this.game.players[i].x === moveX &&
+                    this.game.players[i].y === moveY
+                  ) {
+                    if (!this.shouldSkipAttack()) {
+                      this.game.players[i].hurt(this.hit(), this.name, {
+                        source: { x: this.x, y: this.y },
+                      });
+                      this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                      this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                      if (
+                        this.game.players[i] ===
+                        this.game.players[this.game.localPlayerID]
+                      )
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    }
                   }
                 }
               }

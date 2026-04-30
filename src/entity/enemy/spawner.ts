@@ -48,6 +48,33 @@ export class Spawner extends Enemy {
   static tileY: number = 4;
   static examineText = "A reaper. It spits out trouble if left alone.";
 
+  /** Maps enemy name strings (as used in /spawn) to spawner enemy-type IDs. */
+  static readonly spawnTypeByName: Record<string, number> = {
+    pawn: 18,
+    crab: 1,
+    frog: 2,
+    zombie: 3,
+    skull: 4,
+    energywizard: 5,
+    charge: 6,
+    rook: 7,
+    bishop: 8,
+    armoredzombie: 9,
+    bigskull: 10,
+    queen: 11,
+    knight: 12,
+    bigknight: 13,
+    firewizard: 14,
+    armoredskull: 15,
+    mummy: 16,
+    spider: 17,
+    bigfrog: 19,
+    beetle: 20,
+    king: 21,
+    boltcaster: 22,
+    earthwizard: 23,
+  };
+
   constructor(
     room: Room,
     game: Game,

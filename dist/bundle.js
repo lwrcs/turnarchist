@@ -10908,7 +10908,29 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                 }
                 this.ticks++;
                 if (!this.seenPlayer) {
+                    // Preserve alertTicks set by handleEnemyCase (hit-while-sleeping = 2) so that
+                    // handleSeenPlayer inside lookForPlayer doesn't overwrite it to 1.
+                    const alertTicksBeforeWake = this.alertTicks;
                     this.lookForPlayer();
+                    if (this.seenPlayer && this.targetPlayer) {
+                        // Re-compute facing using integer coordinates to avoid facePlayer's diagonal
+                        // no-op (which occurs when |dx|==|dy| due to the +0.5 center offset and causes
+                        // the skeleton to keep its pre-sleep direction when the player is one tile to
+                        // the right at the same row).
+                        const idx = this.targetPlayer.x - this.x;
+                        const idy = this.targetPlayer.y - this.y;
+                        if (Math.abs(idx) > Math.abs(idy)) {
+                            this.direction = idx > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+                        }
+                        else if (Math.abs(idy) > Math.abs(idx)) {
+                            this.direction = idy > 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+                        }
+                        // Restore alertTicks if handleSeenPlayer lowered a value that was set higher
+                        // by handleEnemyCase (e.g. 2 when the skeleton was hit while sleeping).
+                        if (alertTicksBeforeWake > this.alertTicks) {
+                            this.alertTicks = alertTicksBeforeWake;
+                        }
+                    }
                 }
                 else if (this.seenPlayer) {
                     if (this.room.playerTicked === this.targetPlayer) {
@@ -10946,19 +10968,25 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                 this.direction = game_1.Direction.UP;
                             if (oldDir == this.direction) {
                                 let hitPlayer = false;
-                                for (const i in this.game.players) {
-                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
-                                        this.game.players[i].x === moveX &&
-                                        this.game.players[i].y === moveY) {
-                                        if (!this.shouldSkipAttack()) {
-                                            this.game.players[i].hurt(this.hit(), this.name, {
-                                                source: { x: this.x, y: this.y },
-                                            });
-                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                            if (this.game.players[i] ===
-                                                this.game.players[this.game.localPlayerID])
-                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                // When alertTicks > 0 the skeleton just woke from sleep this turn
+                                // (hit while sleeping sets alertTicks=2; after the first decrement it
+                                // is still 1). Allow movement but skip the attack so the player always
+                                // gets one unharmed turn after waking an armored skeleton.
+                                if (this.alertTicks === 0) {
+                                    for (const i in this.game.players) {
+                                        if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                                            this.game.players[i].x === moveX &&
+                                            this.game.players[i].y === moveY) {
+                                            if (!this.shouldSkipAttack()) {
+                                                this.game.players[i].hurt(this.hit(), this.name, {
+                                                    source: { x: this.x, y: this.y },
+                                                });
+                                                this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                                this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                                if (this.game.players[i] ===
+                                                    this.game.players[this.game.localPlayerID])
+                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            }
                                         }
                                     }
                                 }
@@ -15308,8 +15336,10 @@ class Enemy extends entity_1.Entity {
                 if (distance <= gameplaySettings_1.GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
                     e instanceof Enemy &&
                     !e.seenPlayer &&
-                    // Do not alert freshly spawned enemies that are skipping their next turn
-                    e.ticks >= 1) {
+                    // Do not alert freshly spawned enemies until they've had a full active (non-skip) tick.
+                    // Spawner-placed enemies spend their first tick in a skipNextTurns pass (ticks becomes 1);
+                    // requiring ticks >= 2 ensures they get a genuine wake-up turn before being chain-alerted.
+                    e.ticks >= 2) {
                     e.handleSeenPlayer(p[1], false);
                     e.alertTicks = 2;
                 }
@@ -19690,6 +19720,32 @@ exports.Spawner = Spawner;
 Spawner.tileX = 6;
 Spawner.tileY = 4;
 Spawner.examineText = "A reaper. It spits out trouble if left alone.";
+/** Maps enemy name strings (as used in /spawn) to spawner enemy-type IDs. */
+Spawner.spawnTypeByName = {
+    pawn: 18,
+    crab: 1,
+    frog: 2,
+    zombie: 3,
+    skull: 4,
+    energywizard: 5,
+    charge: 6,
+    rook: 7,
+    bishop: 8,
+    armoredzombie: 9,
+    bigskull: 10,
+    queen: 11,
+    knight: 12,
+    bigknight: 13,
+    firewizard: 14,
+    armoredskull: 15,
+    mummy: 16,
+    spider: 17,
+    bigfrog: 19,
+    beetle: 20,
+    king: 21,
+    boltcaster: 22,
+    earthwizard: 23,
+};
 
 
 /***/ }),
@@ -26836,6 +26892,7 @@ const textbox_1 = __webpack_require__(/*! ./game/textbox */ "./src/game/textbox.
 const gameState_1 = __webpack_require__(/*! ./game/gameState */ "./src/game/gameState.ts");
 const levelImageGenerator_1 = __webpack_require__(/*! ./level/levelImageGenerator */ "./src/level/levelImageGenerator.ts");
 const enemy_1 = __webpack_require__(/*! ./entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
+const spawner_1 = __webpack_require__(/*! ./entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const postProcess_1 = __webpack_require__(/*! ./gui/postProcess */ "./src/gui/postProcess.ts");
 const eventBus_1 = __webpack_require__(/*! ./event/eventBus */ "./src/event/eventBus.ts");
@@ -29362,7 +29419,27 @@ class Game {
                     break;
                 default:
                     if (command.startsWith("spawn ")) {
-                        this.room.addNewEnemy(command.slice(6));
+                        const spawnArg = command.slice(6).trim();
+                        const spawnParts = spawnArg.split(/\s+/);
+                        if (spawnParts[0] === "spawner" && spawnParts[1]) {
+                            const enemyName = spawnParts[1].toLowerCase();
+                            const spawnTypeId = spawner_1.Spawner.spawnTypeByName[enemyName];
+                            if (spawnTypeId === undefined) {
+                                this.pushMessage(`Unknown spawner enemy type "${spawnParts[1]}". Valid: ${Object.keys(spawner_1.Spawner.spawnTypeByName).join(", ")}`);
+                                break;
+                            }
+                            const tiles = this.room.getEmptyTiles();
+                            if (!tiles || tiles.length === 0) {
+                                this.pushMessage("No empty tiles to place spawner.");
+                                break;
+                            }
+                            const pos = this.room.getRandomEmptyPosition(tiles);
+                            if (!pos)
+                                break;
+                            this.room.entities.push(new spawner_1.Spawner(this.room, this, pos.x, pos.y, [spawnTypeId]));
+                            break;
+                        }
+                        this.room.addNewEnemy(spawnArg);
                     }
                     else if (command.startsWith("kill ")) {
                         const rest = command.slice(5).trim();

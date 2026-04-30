@@ -141,8 +141,10 @@ export abstract class Enemy extends Entity {
         distance <= GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE &&
         e instanceof Enemy &&
         !e.seenPlayer &&
-        // Do not alert freshly spawned enemies that are skipping their next turn
-        e.ticks >= 1
+        // Do not alert freshly spawned enemies until they've had a full active (non-skip) tick.
+        // Spawner-placed enemies spend their first tick in a skipNextTurns pass (ticks becomes 1);
+        // requiring ticks >= 2 ensures they get a genuine wake-up turn before being chain-alerted.
+        e.ticks >= 2
       ) {
         e.handleSeenPlayer(p[1], false);
         e.alertTicks = 2;
