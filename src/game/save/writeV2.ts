@@ -130,14 +130,15 @@ export const createSaveV2 = (game: Game, nowMs: number = Date.now()): Result<Sav
   const mainPathPlan: MainPathGenPlanV2[] = game.levels
     .filter((l) => l && typeof l.depth === "number" && l.depth <= game.level.depth)
     .map((l): MainPathGenPlanV2 => {
+      const env = l.environment?.type ? envTypeToEnvKind(l.environment.type) : undefined;
       if (
         l.genSource === "png" &&
         typeof l.pngUrl === "string" &&
         l.pngUrl.length > 0
       ) {
-        return { depth: l.depth, kind: "png", pngUrl: l.pngUrl };
+        return { depth: l.depth, kind: "png", pngUrl: l.pngUrl, env };
       }
-      return { depth: l.depth, kind: "procedural" };
+      return { depth: l.depth, kind: "procedural", env };
     })
     .sort((a, b) => a.depth - b.depth);
 

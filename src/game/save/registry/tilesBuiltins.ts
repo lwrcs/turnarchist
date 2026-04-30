@@ -132,13 +132,12 @@ export const registerBuiltinTileCodecsV2 = (): void => {
         }
         const lockType = tile.lockable.getLockType();
         const lockKind = lockTypeToLockKind(lockType);
-        // IMPORTANT: even when unlocked, sidepath ladders must retain their stable keyId so load can
-        // re-associate the correct ladder deterministically (avoid matching the wrong ladder and then
-        // deleting the real one during de-duplication).
+        // IMPORTANT: even when unlocked, retain the stable keyId so load can restore it faithfully.
+        // Sidepath ladders need it for deterministic re-association; non-sidepath ladders need it so
+        // that a previously-locked ladder (now unlocked) round-trips with keyID intact.
         const lock: { lockType: LockKind; keyId: number } | undefined = (() => {
           if (lockKind !== "none") return { lockType: lockKind, keyId: tile.lockable.keyID };
-          if (tile.isSidePath && tile.lockable.keyID !== 0)
-            return { lockType: "none", keyId: tile.lockable.keyID };
+          if (tile.lockable.keyID !== 0) return { lockType: "none", keyId: tile.lockable.keyID };
           return undefined;
         })();
         const opts = tile.opts;

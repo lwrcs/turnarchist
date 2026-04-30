@@ -151,11 +151,11 @@ function tileFP(tile: any): TileFP | null {
       stateStr += `,on=${tile.on},tickCount=${tile.tickCount}`;
       break;
     case "DownLadder":
-      stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth}`;
+      stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth},environment=${tile.environment},skin=${tile.skin}`;
       if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID}`;
       break;
     case "UpLadder":
-      stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth}`;
+      stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth},skin=${tile.skin}`;
       if (tile.lockable) stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID},lockMsg=${tile.lockable.lockedMessage ?? ""}`;
       break;
     case "FountainTile":

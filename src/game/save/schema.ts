@@ -65,6 +65,8 @@ export type MainPathGenPlanV2 = {
   depth: number;
   kind: "png" | "procedural";
   pngUrl?: string;
+  /** Environment for this specific depth. Added after initial V2; absent in older saves. */
+  env?: EnvKind;
 };
 
 export type SidepathSpecV2 = {

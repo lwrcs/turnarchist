@@ -39187,12 +39187,12 @@ function tileFP(tile) {
             stateStr += `,on=${tile.on},tickCount=${tile.tickCount}`;
             break;
         case "DownLadder":
-            stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth}`;
+            stateStr += `,isSidePath=${tile.isSidePath},depth=${tile.depth},environment=${tile.environment},skin=${tile.skin}`;
             if (tile.lockable)
                 stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID}`;
             break;
         case "UpLadder":
-            stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth}`;
+            stateStr += `,isRope=${tile.isRope},isSidePath=${tile.isSidePath},returnToRoot=${tile.returnToRoot ?? false},depth=${tile.depth},skin=${tile.skin}`;
             if (tile.lockable)
                 stateStr += `,lockType=${tile.lockable.lockType},locked=${tile.lockable.isLocked()},keyID=${tile.lockable.keyID},lockMsg=${tile.lockable.lockedMessage ?? ""}`;
             break;
@@ -39707,7 +39707,6 @@ const loadSaveV2 = async (game, save) => {
         // Recreate generator and deterministic inputs.
         game.levelgen = new levelGenerator_1.LevelGenerator();
         game.levelgen.setSeed(save.worldSpec.seed);
-        game.levelgen.setMainPathEnvOverride((0, mappers_1.envKindToEnvType)(save.worldSpec.env));
         // Generate main path depths 0..depth WITH population.
         // We need the full tile geometry (floors/walls/doors/ladder placement) to exist exactly as in gameplay;
         // we'll overwrite dynamic deltas (entities/items/projectiles) afterward.
@@ -39731,8 +39730,18 @@ const loadSaveV2 = async (game, save) => {
                     loopiness: gameplaySettings_1.GameplaySettings.MAIN_PATH_LOOPINESS,
                 }
                 : undefined;
-            await game.levelgen.generate(game, depth, false, () => { }, (0, mappers_1.envKindToEnvType)(save.worldSpec.env), false, undefined, mainPathOpts, genOverride);
+            // Use the per-depth env saved in the plan. For older saves without planEntry.env,
+            // fall back to the natural depth-based transition (matches original generation logic).
+            const depthEnv = planEntry?.env
+                ? (0, mappers_1.envKindToEnvType)(planEntry.env)
+                : depth > 2
+                    ? environmentTypes_1.EnvType.DARK_DUNGEON
+                    : environmentTypes_1.EnvType.DUNGEON;
+            game.levelgen.setMainPathEnvOverride(depthEnv);
+            await game.levelgen.generate(game, depth, false, () => { }, depthEnv, false, undefined, mainPathOpts, genOverride);
         }
+        // Clear the per-depth override so subsequent sidepath generation isn't affected.
+        game.levelgen.setMainPathEnvOverride(undefined);
         // Switch to the active depth.
         const activeLevel = game.levels[save.worldSpec.depth];
         if (!activeLevel) {
@@ -42952,13 +42961,13 @@ const registerBuiltinTileCodecsV2 = () => {
                 }
                 const lockType = tile.lockable.getLockType();
                 const lockKind = lockTypeToLockKind(lockType);
-                // IMPORTANT: even when unlocked, sidepath ladders must retain their stable keyId so load can
-                // re-associate the correct ladder deterministically (avoid matching the wrong ladder and then
-                // deleting the real one during de-duplication).
+                // IMPORTANT: even when unlocked, retain the stable keyId so load can restore it faithfully.
+                // Sidepath ladders need it for deterministic re-association; non-sidepath ladders need it so
+                // that a previously-locked ladder (now unlocked) round-trips with keyID intact.
                 const lock = (() => {
                     if (lockKind !== "none")
                         return { lockType: lockKind, keyId: tile.lockable.keyID };
-                    if (tile.isSidePath && tile.lockable.keyID !== 0)
+                    if (tile.lockable.keyID !== 0)
                         return { lockType: "none", keyId: tile.lockable.keyID };
                     return undefined;
                 })();
@@ -46559,12 +46568,13 @@ const createSaveV2 = (game, nowMs = Date.now()) => {
     const mainPathPlan = game.levels
         .filter((l) => l && typeof l.depth === "number" && l.depth <= game.level.depth)
         .map((l) => {
+        const env = l.environment?.type ? (0, mappers_1.envTypeToEnvKind)(l.environment.type) : undefined;
         if (l.genSource === "png" &&
             typeof l.pngUrl === "string" &&
             l.pngUrl.length > 0) {
-            return { depth: l.depth, kind: "png", pngUrl: l.pngUrl };
+            return { depth: l.depth, kind: "png", pngUrl: l.pngUrl, env };
         }
-        return { depth: l.depth, kind: "procedural" };
+        return { depth: l.depth, kind: "procedural", env };
     })
         .sort((a, b) => a.depth - b.depth);
     const worldSpec = {

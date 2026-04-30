@@ -273,7 +273,6 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   // Recreate generator and deterministic inputs.
   game.levelgen = new LevelGenerator();
   game.levelgen.setSeed(save.worldSpec.seed);
-  game.levelgen.setMainPathEnvOverride(envKindToEnvType(save.worldSpec.env));
 
   // Generate main path depths 0..depth WITH population.
   // We need the full tile geometry (floors/walls/doors/ladder placement) to exist exactly as in gameplay;
@@ -302,18 +301,29 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
           }
         : undefined;
 
+    // Use the per-depth env saved in the plan. For older saves without planEntry.env,
+    // fall back to the natural depth-based transition (matches original generation logic).
+    const depthEnv = planEntry?.env
+      ? envKindToEnvType(planEntry.env)
+      : depth > 2
+        ? EnvType.DARK_DUNGEON
+        : EnvType.DUNGEON;
+    game.levelgen.setMainPathEnvOverride(depthEnv);
+
     await game.levelgen.generate(
       game,
       depth,
       false,
       () => {},
-      envKindToEnvType(save.worldSpec.env),
+      depthEnv,
       false,
       undefined,
       mainPathOpts,
       genOverride,
     );
   }
+  // Clear the per-depth override so subsequent sidepath generation isn't affected.
+  game.levelgen.setMainPathEnvOverride(undefined);
 
   // Switch to the active depth.
   const activeLevel = game.levels[save.worldSpec.depth];
