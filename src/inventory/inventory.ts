@@ -381,6 +381,13 @@ export class Inventory {
     if (index < 0 || index >= this.items.length) return;
     const item = this.items[index];
 
+    // If ranged targeting is active and the player clicks a different item, cancel targeting.
+    const rt = this.player.rangedTargeting;
+    if (rt?.active && item !== (rt.getWeapon() as unknown as Item)) {
+      rt.stop();
+      // Don't return — let the click on the new item proceed.
+    }
+
     if (this.usingItem) {
       // Attempt to use 'usingItem' on the currently selected item
       if (item === null) {
@@ -1781,7 +1788,7 @@ export class Inventory {
   handleMouseDown = (x: number, y: number, button: number) => {
     if (
       this.player.menu.open ||
-      this.player.bestiary?.isOpen ||
+      this.player.isAnyBookOpen ||
       this.player.contextMenu?.open
     )
       return;
@@ -1856,7 +1863,7 @@ export class Inventory {
 
     if (
       this.player.menu.open ||
-      this.player.bestiary?.isOpen ||
+      this.player.isAnyBookOpen ||
       this.player.contextMenu?.open
     ) {
       // If a context menu is open, cancel any drag to avoid losing items.

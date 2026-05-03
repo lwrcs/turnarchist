@@ -209,7 +209,7 @@ export class PlayerRenderer {
     const anyOverlayOpen =
       Boolean(player.menu?.open) ||
       Boolean(player.skillsMenu?.open) ||
-      Boolean(player.bestiary?.isOpen) ||
+      player.isAnyBookOpen ||
       Boolean(player.inventory?.isOpen) ||
       Boolean(player.contextMenu?.open);
 
@@ -839,19 +839,19 @@ export class PlayerRenderer {
       const drawFor =
         GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
         !this.player.menu.open &&
-        !this.player.bestiary?.isOpen &&
+        !this.player.isAnyBookOpen &&
         !inventoryOpen &&
         !quickbarOpen &&
         !this.player.openVendingMachine
           ? "inGame"
           : GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
               !this.player.menu.open &&
-              !this.player.bestiary?.isOpen &&
+              !this.player.isAnyBookOpen &&
               ((inventoryOpen && inInventoryBounds) || quickbarOpen)
             ? "inventory"
             : GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
                 !this.player.menu.open &&
-                !this.player.bestiary?.isOpen &&
+                !this.player.isAnyBookOpen &&
                 inVendingMachine
               ? "vendingMachine"
               : "none";
@@ -879,6 +879,7 @@ export class PlayerRenderer {
 
       // Draw bestiary last so it renders above inventory/quickbar.
       if (this.player.bestiary) this.player.bestiary.draw(delta);
+      if (this.player.spellbookReader) this.player.spellbookReader.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();
@@ -1086,7 +1087,7 @@ export class PlayerRenderer {
     );
     if (this.hurting) this.drawHurt(delta);
 
-    if (!GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
+    if (!GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.isAnyBookOpen)
       this.player.map.draw(delta);
     this.drawTileCursor(delta);
     this.drawTargetIndicator(delta);
@@ -1384,7 +1385,7 @@ export class PlayerRenderer {
     if (this.player.inventory?.isOpen) return;
     if (this.player.menu?.open) return;
     if (this.player.skillsMenu?.open) return;
-    if (this.player.bestiary?.isOpen) return;
+    if (this.player.isAnyBookOpen) return;
     if (this.player.inputHandler.isMouseOverUI()) return;
 
     const offsetX = Math.floor(GameConstants.WIDTH / 2) / GameConstants.TILESIZE;

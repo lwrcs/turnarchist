@@ -5,7 +5,9 @@
       "Bash(cat)",
       "Read(//tmp/**)",
       "Bash(npx tsc *)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(grep:*)",
+      "Bash(npx webpack:*)"
     ]
   }
 }

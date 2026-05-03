@@ -1,4 +1,5 @@
 import type { Player } from "../../player/player";
+import { Direction } from "../../game";
 
 export interface RangedWeapon {
   /** Fire toward the given world tile. Returns true if a projectile was launched. */
@@ -98,6 +99,15 @@ export class RangedTargetingSystem {
       return false;
     }
     const fired = this.weapon.fireAtTarget(this.player, this.targetX, this.targetY);
+    if (fired) {
+      const dx = this.targetX - this.player.x;
+      const dy = this.targetY - this.player.y;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        this.player.direction = dx >= 0 ? Direction.RIGHT : Direction.LEFT;
+      } else {
+        this.player.direction = dy >= 0 ? Direction.DOWN : Direction.UP;
+      }
+    }
     this.stop();
     return fired;
   }

@@ -26,6 +26,7 @@ import { LightSource } from "../lighting/lightSource";
 
 import { Menu } from "../gui/menu";
 import { Bestiary } from "../game/bestiary";
+import { SpellbookReader } from "../gui/spellbookReader";
 import { ContextMenu } from "../gui/contextMenu";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
@@ -152,6 +153,10 @@ export class Player extends Drawable {
   // TODO: remove entirely once no callers depend on it.
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
+  spellbookReader: SpellbookReader = null;
+  get isAnyBookOpen(): boolean {
+    return Boolean(this.bestiary?.isOpen) || Boolean(this.spellbookReader?.isOpen);
+  }
   contextMenu: ContextMenu = new ContextMenu();
   /**
    * When the context menu opens, we snapshot the current mouse angle so the player
@@ -235,6 +240,7 @@ export class Player extends Drawable {
     this.oxygenLine = new OxygenLine(this);
 
     this.bestiary = new Bestiary(this.game, this);
+    this.spellbookReader = new SpellbookReader();
 
     this.cooldownRemaining = 0;
     this.deathScreenPageIndex = 0;
@@ -751,12 +757,12 @@ export class Player extends Drawable {
       return inMenuButton || inCloseButton ? "hand" : "arrow";
     }
 
-    // If the bestiary is open, prevent world interactions behind it from affecting the cursor.
+    // If any book UI is open, prevent world interactions behind it from affecting the cursor.
     // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
-    if (this.bestiary?.isOpen) {
+    if (this.isAnyBookOpen) {
       const { x, y } = mousePos;
-      const inBestiaryButton = this.bestiary.isPointInBestiaryButton(x, y);
-      const inControls = this.bestiary.isPointInBestiaryControls(x, y);
+      const inBestiaryButton = this.bestiary?.isOpen && this.bestiary.isPointInBestiaryButton(x, y);
+      const inControls = this.bestiary?.isPointInBestiaryControls(x, y) || this.spellbookReader?.isPointInBookControls(x, y);
       return inBestiaryButton || inControls ? "hand" : "arrow";
     }
 

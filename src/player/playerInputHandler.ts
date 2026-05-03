@@ -34,6 +34,10 @@ export class PlayerInputHandler {
     null;
   private bestiaryTouchEndHandler: ((x: number, y: number) => void) | null =
     null;
+  private spellbookReaderTouchMoveHandler: ((x: number, y: number) => void) | null =
+    null;
+  private spellbookReaderTouchEndHandler: ((x: number, y: number) => void) | null =
+    null;
 
   constructor(player: Player) {
     this.player = player;
@@ -71,9 +75,11 @@ export class PlayerInputHandler {
     Input.touchStartListeners.push((x: number, y: number) => {
       const inventory = this.player.inventory;
       const bestiary = this.player.bestiary;
+      const spellbookReader = this.player.spellbookReader;
       const skillsMenu = this.player.skillsMenu;
       // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
       if (bestiary && bestiary.handleTouchStart(x, y)) return true;
+      if (spellbookReader && spellbookReader.handleTouchStart(x, y)) return true;
       return (
         inventory.isPointInInventoryButton(x, y) ||
         inventory.isPointInQuickbarBounds(x, y).inBounds ||
@@ -83,7 +89,8 @@ export class PlayerInputHandler {
         XPCounter.isPointInBounds(x, y) ||
         (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
         (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
-        (bestiary ? bestiary.isPointInBookBounds(x, y) : false)
+        (bestiary ? bestiary.isPointInBookBounds(x, y) : false) ||
+        (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false)
       );
     });
 
@@ -111,6 +118,31 @@ export class PlayerInputHandler {
     };
     Input.touchMoveListeners.push(this.bestiaryTouchMoveHandler);
     Input.touchEndListeners.push(this.bestiaryTouchEndHandler);
+
+    // SpellbookReader drag-follow (mobile): mirror bestiary pattern.
+    if (this.spellbookReaderTouchMoveHandler) {
+      Input.touchMoveListeners = Input.touchMoveListeners.filter(
+        (fn) => fn !== this.spellbookReaderTouchMoveHandler,
+      );
+    }
+    if (this.spellbookReaderTouchEndHandler) {
+      Input.touchEndListeners = Input.touchEndListeners.filter(
+        (fn) => fn !== this.spellbookReaderTouchEndHandler,
+      );
+    }
+    this.spellbookReaderTouchMoveHandler = (x: number, y: number) => {
+      const reader = this.player.spellbookReader;
+      if (!reader?.isOpen) return;
+      reader.handleTouchMove(x, y);
+    };
+    this.spellbookReaderTouchEndHandler = (x: number, y: number) => {
+      const reader = this.player.spellbookReader;
+      if (!reader?.isOpen) return;
+      reader.handleTouchEnd(x, y);
+    };
+    Input.touchMoveListeners.push(this.spellbookReaderTouchMoveHandler);
+    Input.touchEndListeners.push(this.spellbookReaderTouchEndHandler);
+
     Input.mouseDownListeners.push((x: number, y: number, button: number) =>
       this.handleMouseDown(x, y, button),
     );
@@ -167,6 +199,28 @@ export class PlayerInputHandler {
         case InputEnum.LEFT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
           this.player.bestiary.handleMouseDown(x, y);
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
+    // SpellbookReader takes over input while open.
+    if (this.player.spellbookReader?.isOpen) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.spellbookReader.handleInput("escape");
+          return;
+        case InputEnum.LEFT:
+          this.player.spellbookReader.handleInput("left");
+          return;
+        case InputEnum.RIGHT:
+          this.player.spellbookReader.handleInput("right");
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.spellbookReader.handleMouseDown(x, y);
           return;
         }
         default:
@@ -392,7 +446,7 @@ export class PlayerInputHandler {
           player.inventory.isOpen ||
           player.game.levelState === LevelState.IN_LEVEL
         ) {
-          if (player.menu?.open || player.skillsMenu?.open || player.bestiary?.isOpen) break;
+          if (player.menu?.open || player.skillsMenu?.open || player.isAnyBookOpen) break;
 
           this.validateKeyboardTarget();
           if (this.keyboardTarget) {
@@ -625,7 +679,7 @@ export class PlayerInputHandler {
       if (
         player.menu?.open ||
         player.skillsMenu?.open ||
-        player.bestiary?.isOpen
+        player.isAnyBookOpen
       ) {
         menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
         return;
@@ -653,13 +707,7 @@ export class PlayerInputHandler {
       player.frozenMouseAngleRad = this.mouseAngle();
     }
 
-    const items: Array<{
-      label: string;
-      targetName?: string;
-      onClick: () => void;
-      enabled?: boolean;
-      onDisabledClick?: () => void;
-    }> = [];
+    const items: Array<import("../gui/contextMenu").ContextMenuItem> = [];
 
     const formatExamine = (text: string): string => {
       // Keep examine as a single chat line.
@@ -765,27 +813,37 @@ export class PlayerInputHandler {
 
         const examine = formatExamine(item.examineText?.() ?? "");
 
-        // Spellbook: Configure and Cast options per spell
+        // Spellbook: Configure and Cast submenus
         if (item instanceof Spellbook && GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
-          for (const spell of item.spells) {
-            const isActive = item.activeSpell === spell;
-            items.push({
-              label: isActive ? "Configured" : "Configure",
-              targetName: spell.name,
-              enabled: !isActive,
-              onClick: () => { item.activeSpell = spell; },
-            });
-          }
-          for (const spell of item.spells) {
-            items.push({
-              label: "Cast",
-              targetName: spell.name,
+          items.push({
+            label: "Configure",
+            submenu: item.spells.map((spell) => {
+              const isActive = item.activeSpell === spell;
+              return {
+                label: spell.name,
+                enabled: !isActive,
+                targetName: isActive ? "(active)" : undefined,
+                onClick: () => { item.activeSpell = spell; },
+              };
+            }),
+            onClick: () => {},
+          });
+          items.push({
+            label: "Cast",
+            submenu: item.spells.map((spell) => ({
+              label: spell.name,
               onClick: () => {
                 item.pendingSpell = spell;
                 (player as any).rangedTargeting?.start(item);
               },
-            });
-          }
+            })),
+            onClick: () => {},
+          });
+          items.push({
+            label: "Read",
+            targetName,
+            onClick: () => { player.spellbookReader?.openBook(item); },
+          });
         }
 
         // Torch / candle: "Place" and "Place on wall"
@@ -1395,6 +1453,12 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (player.spellbookReader?.isOpen) {
+      player.spellbookReader.handleMouseDown(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     if (skillsMenu?.open) {
       skillsMenu.handleClick(x, y);
       Input.mouseDownHandled = true;
@@ -1538,6 +1602,11 @@ export class PlayerInputHandler {
 
     if (player.bestiary?.isOpen) {
       player.bestiary.handleMouseDown(x, y);
+      return;
+    }
+
+    if (player.spellbookReader?.isOpen) {
+      player.spellbookReader.handleMouseDown(x, y);
       return;
     }
 
@@ -1696,6 +1765,11 @@ export class PlayerInputHandler {
 
     if (bestiary?.isOpen) {
       bestiary.handleMouseDown(x, y);
+      return;
+    }
+
+    if (this.player.spellbookReader?.isOpen) {
+      this.player.spellbookReader.handleMouseDown(x, y);
       return;
     }
 

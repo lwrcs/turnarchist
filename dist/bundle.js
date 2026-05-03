@@ -32447,372 +32447,37 @@ const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entit
 const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
-class Bestiary {
+const bookRenderer_1 = __webpack_require__(/*! ../gui/bookRenderer */ "./src/gui/bookRenderer.ts");
+class Bestiary extends bookRenderer_1.BookRenderer {
     constructor(game, player) {
-        this.isOpen = false;
-        this.openTime = Date.now();
+        super();
         this.entryViewStartTime = Date.now();
-        // Inventory-style open button positioning (stored in tile coordinates)
         this.buttonX = 0.25;
         this.buttonY = 0;
-        this.activeEntryIndex = 0;
-        /**
-         * In compact mode, each entry is split into two pages:
-         * 0 = info (name/description), 1 = sprite preview.
-         */
-        this.activeEntrySubpage = 0;
-        this.compactMode = false;
-        /**
-         * When enabled (default), if an entry has multiple sprites (idle/armed/HP states),
-         * the bestiary cycles through them instead of rendering them all side-by-side.
-         */
         this.cycleEntrySprites = true;
         this.entrySpriteCycleMs = 1200;
-        this.previewAnimT = 0;
-        /**
-         * When enabled (default), automatic state cycling is disabled and a button is shown
-         * on the sprite page to manually advance through states.
-         */
         this.manualStateCycling = true;
         this.activeSpriteStateIndex = 0;
-        this.theme = "parchment";
-        /**
-         * Margin in UI pixels. Shrinks on small screens (pixels are scarce),
-         * but stays comfortable on larger screens.
-         */
-        this.marginPx = () => {
-            // ~4% of width, clamped.
-            const m = Math.round(gameConstants_1.GameConstants.WIDTH * 0.04);
-            return Math.max(6, Math.min(16, m));
-        };
-        /**
-         * Inner padding between the book cover and the page panel(s).
-         * Shrinks on small screens to reclaim content space.
-         */
-        this.innerPadPx = () => {
-            // ~3% of width, clamped.
-            const p = Math.round(gameConstants_1.GameConstants.WIDTH * 0.03);
-            return Math.max(4, Math.min(12, p));
-        };
-        /**
-         * Inner content inset within a page panel (text/sprites away from the border).
-         */
-        this.pageInsetPx = () => {
-            // ~2.5% of width, clamped.
-            const i = Math.round(gameConstants_1.GameConstants.WIDTH * 0.025);
-            return Math.max(4, Math.min(10, i));
-        };
-        this.getTheme = () => {
-            const THEMES = {
-                parchment: {
-                    backdrop: "rgba(0, 0, 0, 0.8)",
-                    coverFill: "rgba(235, 225, 200, 1)",
-                    coverStroke: "rgba(120, 100, 80, 1)",
-                    spineStroke: "rgba(160, 140, 120, 1)",
-                    pageFill: "rgba(245, 238, 220, 1)",
-                    pageStroke: "rgba(200, 185, 160, 1)",
-                    spritePanelFill: "rgba(235, 225, 200, 1)",
-                    spritePanelStroke: "rgba(120, 100, 80, 1)",
-                    text: "rgba(40, 35, 30, 1)",
-                    accentText: "rgba(60, 50, 40, 1)",
-                    closeFill: "rgba(220, 60, 60, 1)",
-                    closeText: "rgba(255, 255, 255, 1)",
-                },
-                slate: {
-                    backdrop: "rgba(0, 0, 0, 0.85)",
-                    coverFill: "rgba(165, 170, 178, 1)",
-                    coverStroke: "rgba(78, 82, 90, 1)",
-                    spineStroke: "rgba(105, 110, 118, 1)",
-                    pageFill: "rgba(195, 198, 205, 1)",
-                    pageStroke: "rgba(120, 125, 135, 1)",
-                    spritePanelFill: "rgba(150, 154, 162, 1)",
-                    spritePanelStroke: "rgba(78, 82, 90, 1)",
-                    text: "rgba(30, 32, 36, 1)",
-                    accentText: "rgba(45, 48, 54, 1)",
-                    closeFill: "rgba(200, 70, 70, 1)",
-                    closeText: "rgba(255, 255, 255, 1)",
-                },
-                // Darker than "slate" but still readable (not pitch-black).
-                midnight: {
-                    backdrop: "rgba(0, 0, 0, 0.92)",
-                    coverFill: "rgba(75, 78, 86, 1)",
-                    coverStroke: "rgba(28, 30, 36, 1)",
-                    spineStroke: "rgba(45, 48, 56, 1)",
-                    pageFill: "rgba(100, 104, 114, 1)",
-                    pageStroke: "rgba(55, 58, 66, 1)",
-                    // Enemy preview panel should be darker than the surrounding page.
-                    spritePanelFill: "rgba(78, 82, 92, 1)",
-                    spritePanelStroke: "rgba(28, 30, 36, 1)",
-                    // Use light text for readability on dark pages.
-                    text: "rgba(245, 246, 248, 1)",
-                    accentText: "rgba(220, 222, 226, 1)",
-                    closeFill: "rgba(185, 60, 60, 1)",
-                    closeText: "rgba(255, 255, 255, 1)",
-                },
-                // Deep wood / mahogany: darker than midnight with warm reds/browns.
-                mahogany: {
-                    backdrop: "rgba(0, 0, 0, 0.92)",
-                    coverFill: "rgba(70, 28, 24, 1)",
-                    coverStroke: "rgba(24, 10, 10, 1)",
-                    spineStroke: "rgba(40, 16, 14, 1)",
-                    pageFill: "rgba(92, 38, 30, 1)",
-                    pageStroke: "rgba(40, 16, 14, 1)",
-                    // Enemy preview panel should be darker than the surrounding page.
-                    spritePanelFill: "rgba(62, 24, 20, 1)",
-                    spritePanelStroke: "rgba(24, 10, 10, 1)",
-                    text: "rgba(248, 240, 236, 1)",
-                    accentText: "rgba(230, 214, 206, 1)",
-                    closeFill: "rgba(190, 58, 58, 1)",
-                    closeText: "rgba(255, 255, 255, 1)",
-                },
-                // Wild card: dark "arcane" purple theme.
-                arcana: {
-                    backdrop: "rgba(0, 0, 0, 0.9)",
-                    coverFill: "rgba(118, 104, 146, 1)",
-                    coverStroke: "rgba(44, 34, 66, 1)",
-                    spineStroke: "rgba(68, 54, 96, 1)",
-                    pageFill: "rgba(150, 136, 178, 1)",
-                    pageStroke: "rgba(78, 62, 110, 1)",
-                    spritePanelFill: "rgba(110, 96, 140, 1)",
-                    spritePanelStroke: "rgba(44, 34, 66, 1)",
-                    text: "rgba(18, 12, 28, 1)",
-                    accentText: "rgba(34, 20, 52, 1)",
-                    closeFill: "rgba(196, 70, 110, 1)",
-                    closeText: "rgba(255, 255, 255, 1)",
-                },
-            };
-            return THEMES[this.theme];
-        };
-        this.activeCycledSpriteIndex = (len) => {
-            if (len <= 0)
-                return 0;
-            const t = Math.max(0, Date.now() - this.entryViewStartTime);
-            return Math.floor(t / this.entrySpriteCycleMs) % len;
-        };
-        this.setActiveEntryIndex = (nextIndex) => {
-            if (this.entries.length <= 0) {
-                this.activeEntryIndex = 0;
-                this.entryViewStartTime = Date.now();
-                return;
-            }
-            const clamped = ((nextIndex % this.entries.length) + this.entries.length) %
-                this.entries.length;
-            if (clamped !== this.activeEntryIndex) {
-                this.activeEntryIndex = clamped;
-                // Reset sprite cycling so the viewed enemy starts at its first state.
-                this.entryViewStartTime = Date.now();
-                this.activeSpriteStateIndex = 0;
-            }
-        };
-        // UI hitboxes (pixels)
-        this.leftArrowRect = null;
-        this.rightArrowRect = null;
-        this.closeRect = null;
         this.prevStateRect = null;
         this.nextStateRect = null;
-        // Slide transition for swipe/page navigation (mobile-friendly).
-        this.pageTransition = null;
-        // Fade the bestiary in/out on open/close.
-        this.openFade = null;
-        // Offscreen buffer for the bestiary overlay (so open/close fade applies uniformly).
-        this.overlayCanvas = null;
-        this.overlayCanvasCtx = null;
-        // Touch drag-follow (mobile): track finger and slide pages with it.
-        this.touchDrag = null;
-        /**
-         * Opens the logbook window.
-         */
-        this.open = () => {
-            this.isOpen = true;
-            this.openTime = Date.now();
-            this.previewAnimT = 0;
-            this.entryViewStartTime = Date.now();
-            this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
-            // Ensure layout mode reflects the current screen size at the moment of opening.
-            this.handleResize();
-        };
-        /**
-         * Closes the logbook window.
-         */
-        this.close = () => {
-            if (!this.isOpen)
-                return;
-            // Keep drawing while we fade out; we'll set `isOpen=false` once opacity hits 0.
-            this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
-            // Stop any in-progress gestures/animations so the close feels immediate.
-            this.touchDrag = null;
-            this.pageTransition = null;
-        };
+        // ── Public Bestiary-specific API ──────────────────────────────────────────
         this.entryUp = () => {
-            this.setActiveEntryIndex(this.activeEntryIndex - 1);
+            this.setActiveEntryIndex(this.currentPage - 1);
         };
         this.entryDown = () => {
-            this.setActiveEntryIndex(this.activeEntryIndex + 1);
+            this.setActiveEntryIndex(this.currentPage + 1);
         };
-        /**
-         * Toggles the logbook window's open state.
-         */
-        /**
-         * Opens the bestiary and navigates to the entry for the given enemy type name
-         * (e.g. "CrabEnemy"). If the entry doesn't exist yet, the bestiary opens at the
-         * current page instead.
-         */
         this.openToEnemy = (typeName) => {
             const idx = this.entries.findIndex((e) => e.typeName === typeName);
             if (idx !== -1)
-                this.activeEntryIndex = idx;
+                this.currentPage = idx;
             this.open();
-        };
-        this.toggleOpen = () => {
-            this.isOpen ? this.close() : this.open();
-        };
-        this.openAlpha = () => {
-            if (!this.isOpen)
-                return 0;
-            if (!this.openFade)
-                return 1;
-            const now = Date.now();
-            const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
-            const t = Math.max(0, Math.min(1, tRaw));
-            // Ease-out quadratic (matches page slide feel).
-            const ease = t * (2 - t);
-            if (this.openFade.kind === "opening") {
-                if (t >= 1)
-                    this.openFade = null;
-                return ease;
-            }
-            // closing
-            const a = 1 - ease;
-            if (t >= 1) {
-                this.openFade = null;
-                this.isOpen = false;
-                // Ensure hitboxes are cleared when fully closed.
-                this.leftArrowRect = null;
-                this.rightArrowRect = null;
-                this.closeRect = null;
-                this.prevStateRect = null;
-                this.nextStateRect = null;
-            }
-            return a;
-        };
-        this.ensureOverlayCanvasCtx = () => {
-            // Bestiary rendering is browser-only; guard for safety.
-            if (typeof document === "undefined")
-                return null;
-            if (!this.overlayCanvas) {
-                this.overlayCanvas = document.createElement("canvas");
-                this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
-            }
-            if (!this.overlayCanvas || !this.overlayCanvasCtx)
-                return null;
-            if (this.overlayCanvas.width !== gameConstants_1.GameConstants.WIDTH ||
-                this.overlayCanvas.height !== gameConstants_1.GameConstants.HEIGHT) {
-                this.overlayCanvas.width = gameConstants_1.GameConstants.WIDTH;
-                this.overlayCanvas.height = gameConstants_1.GameConstants.HEIGHT;
-            }
-            return this.overlayCanvasCtx;
-        };
-        this.computeBookRect = () => {
-            const margin = this.marginPx();
-            const w = Math.min(gameConstants_1.GameConstants.WIDTH - margin * 2, 420);
-            const h = Math.min(gameConstants_1.GameConstants.HEIGHT - margin * 2, 260);
-            const x = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * w);
-            const y = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * h);
-            return { x, y, w, h };
-        };
-        this.isPointInBookBounds = (x, y) => {
-            if (!this.isOpen)
-                return false;
-            const r = this.computeBookRect();
-            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-        };
-        this.handleTouchStart = (x, y) => {
-            if (!this.isOpen)
-                return false;
-            if (!this.isPointInBookBounds(x, y))
-                return false;
-            // Do not begin a drag until we've moved enough; this just arms it.
-            this.touchDrag = {
-                active: false,
-                startX: x,
-                startY: y,
-                x,
-                y,
-                offsetPx: 0,
-                dir: 1,
-                toEntryIndex: this.activeEntryIndex,
-                toSubpage: this.activeEntrySubpage,
-            };
-            return true;
-        };
-        this.handleTouchMove = (x, y) => {
-            if (!this.isOpen)
-                return;
-            if (!this.touchDrag)
-                return;
-            if (this.pageTransition)
-                return;
-            const r = this.computeBookRect();
-            const dx = x - this.touchDrag.startX;
-            const dy = y - this.touchDrag.startY;
-            // Only start horizontal drags; ignore tiny jitter.
-            const START_PX = 14; // align with Input's drag threshold
-            if (!this.touchDrag.active) {
-                if (dx * dx + dy * dy < START_PX * START_PX)
-                    return;
-                if (Math.abs(dx) < Math.abs(dy))
-                    return;
-                this.touchDrag.active = true;
-            }
-            const clamped = Math.max(-r.w, Math.min(r.w, dx));
-            const dir = clamped < 0 ? 1 : -1;
-            const next = this.computeNextPage(dir);
-            this.touchDrag.x = x;
-            this.touchDrag.y = y;
-            this.touchDrag.offsetPx = clamped;
-            this.touchDrag.dir = dir;
-            this.touchDrag.toEntryIndex = next.entryIndex;
-            this.touchDrag.toSubpage = next.subpage;
-        };
-        this.handleTouchEnd = (_x, _y) => {
-            if (!this.isOpen)
-                return;
-            if (!this.touchDrag)
-                return;
-            const r = this.computeBookRect();
-            const drag = this.touchDrag;
-            this.touchDrag = null;
-            if (!drag.active)
-                return;
-            const commitThreshold = r.w * 0.22;
-            const commit = Math.abs(drag.offsetPx) >= commitThreshold;
-            if (commit) {
-                this.startPageTransition({
-                    dir: drag.dir,
-                    toEntryIndex: drag.toEntryIndex,
-                    toSubpage: drag.toSubpage,
-                    startOffsetPx: drag.offsetPx,
-                    mode: "commit",
-                });
-            }
-            else {
-                // Snap back smoothly.
-                this.startPageTransition({
-                    dir: drag.dir,
-                    // Keep rendering the candidate page while snapping back, so chrome doesn't pop.
-                    toEntryIndex: drag.toEntryIndex,
-                    toSubpage: drag.toSubpage,
-                    startOffsetPx: drag.offsetPx,
-                    mode: "cancel",
-                });
-            }
         };
         this.isPointInBestiaryButton = (x, y) => {
             const r = this.getBestiaryButtonRect();
             return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
         };
         this.getBestiaryButtonRect = () => {
-            // Mirror `drawBestiaryButton()` positioning logic.
             let bx = 0.25;
             let by = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
             if (gameConstants_1.GameConstants.WIDTH < 145)
@@ -32824,28 +32489,30 @@ class Bestiary {
             return { x, y, w, h };
         };
         this.drawBestiaryButton = (delta) => {
-            // Mirror inventory button's bottom-corner positioning logic, but on the left.
-            // `delta` is unused, but kept for parity with other UI draw methods.
             delta;
             game_1.Game.ctx.save();
             const r = this.getBestiaryButtonRect();
             this.buttonX = r.x / gameConstants_1.GameConstants.TILESIZE;
             this.buttonY = r.y / gameConstants_1.GameConstants.TILESIZE;
-            // Draw like the inventory button, but +1 tileX on fxset (one to the right).
             game_1.Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
             game_1.Game.ctx.restore();
         };
-        /**
-         * Adds a new entry to the logbook.
-         * @param enemyTypeName The enemy class name (e.g. "CrabEnemy")
-         */
         this.addEntry = (enemyTypeName) => {
             this.seenEnemyTypeNames.add(enemyTypeName);
             this.ensureEntry(enemyTypeName);
             (0, bestiaryPersistence_1.saveSeenEnemyTypes)(this.seenEnemyTypeNames);
         };
+        this.isPointInBestiaryControls = (x, y) => {
+            if (this.isPointInBookControls(x, y))
+                return true;
+            if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect))
+                return true;
+            if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect))
+                return true;
+            return false;
+        };
+        // ── Private Bestiary helpers ───────────────────────────────────────────────
         this.ensureEntry = (enemyTypeName) => {
-            // Already exists?
             if (this.entries.some((e) => e.typeName === enemyTypeName))
                 return;
             const reg = bestiaryEnemyRegistry_1.BESTIARY_ENEMIES[enemyTypeName];
@@ -32879,8 +32546,6 @@ class Bestiary {
             const cls = this.enemyNameToClass.get(enemyTypeName);
             if (!cls)
                 return;
-            // WARNING: many enemies set tileX/tileY/description in their constructor.
-            // For now we rely on the prototype fields present for common enemies, falling back to defaults.
             const proto = cls.prototype;
             this.entries.push({
                 typeName: enemyTypeName,
@@ -32900,568 +32565,25 @@ class Bestiary {
                 ],
             });
         };
-        this.pageLeft = () => {
-            if (this.entries.length <= 0)
-                return;
-            if (this.pageTransition)
-                return;
-            if (this.touchDrag?.active)
-                return;
-            const subpageMode = this.isCompactMode() && !gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
-            if (subpageMode) {
-                // Linear navigation across (entry, subpage).
-                const totalPages = this.entries.length * 2;
-                const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
-                const next = (current - 1 + totalPages) % totalPages;
-                const nextEntry = Math.floor(next / 2);
-                const nextSub = (next % 2);
-                this.startPageTransition({
-                    dir: -1,
-                    toEntryIndex: nextEntry,
-                    toSubpage: nextSub,
-                });
+        this.activeCycledSpriteIndex = (len) => {
+            if (len <= 0)
+                return 0;
+            const t = Math.max(0, Date.now() - this.entryViewStartTime);
+            return Math.floor(t / this.entrySpriteCycleMs) % len;
+        };
+        this.setActiveEntryIndex = (nextIndex) => {
+            if (this.entries.length <= 0) {
+                this.currentPage = 0;
+                this.entryViewStartTime = Date.now();
                 return;
             }
-            const nextEntry = (((this.activeEntryIndex - 1) % this.entries.length) +
-                this.entries.length) %
+            const clamped = ((nextIndex % this.entries.length) + this.entries.length) %
                 this.entries.length;
-            this.startPageTransition({
-                dir: -1,
-                toEntryIndex: nextEntry,
-                toSubpage: 0,
-            });
-        };
-        this.pageRight = () => {
-            if (this.entries.length <= 0)
-                return;
-            if (this.pageTransition)
-                return;
-            if (this.touchDrag?.active)
-                return;
-            const subpageMode = this.isCompactMode() && !gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
-            if (subpageMode) {
-                const totalPages = this.entries.length * 2;
-                const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
-                const next = (current + 1) % totalPages;
-                const nextEntry = Math.floor(next / 2);
-                const nextSub = (next % 2);
-                this.startPageTransition({
-                    dir: 1,
-                    toEntryIndex: nextEntry,
-                    toSubpage: nextSub,
-                });
-                return;
+            if (clamped !== this.currentPage) {
+                this.currentPage = clamped;
+                this.entryViewStartTime = Date.now();
+                this.activeSpriteStateIndex = 0;
             }
-            const nextEntry = (this.activeEntryIndex + 1) % this.entries.length;
-            this.startPageTransition({ dir: 1, toEntryIndex: nextEntry, toSubpage: 0 });
-        };
-        this.startPageTransition = (args) => {
-            // If animation would be meaningless, just snap.
-            if (this.entries.length <= 1) {
-                this.activeEntrySubpage = args.toSubpage;
-                this.setActiveEntryIndex(args.toEntryIndex);
-                return;
-            }
-            const r = this.computeBookRect();
-            const mode = args.mode ?? "commit";
-            const startOffsetPx = args.startOffsetPx ?? 0;
-            const endOffsetPx = mode === "commit" ? -args.dir * r.w : 0;
-            this.pageTransition = {
-                startMs: Date.now(),
-                durationMs: 180,
-                mode,
-                dir: args.dir,
-                fromEntryIndex: this.activeEntryIndex,
-                toEntryIndex: args.toEntryIndex,
-                fromSubpage: this.activeEntrySubpage,
-                toSubpage: args.toSubpage,
-                startOffsetPx,
-                endOffsetPx,
-            };
-        };
-        this.pageAlphaForOffset = (offsetPx, bookW) => {
-            const visibleFraction = 1 - Math.abs(offsetPx) / Math.max(1, bookW);
-            // Full opacity once the page is ~75% on-screen.
-            const a = visibleFraction / 0.75;
-            return Math.max(0, Math.min(1, a));
-        };
-        this.computeNextPage = (dir) => {
-            const compactMode = this.isCompactMode();
-            const stackedMode = compactMode && gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
-            const subpageMode = compactMode && !stackedMode;
-            if (!subpageMode) {
-                const nextEntry = (((this.activeEntryIndex + dir) % this.entries.length) +
-                    this.entries.length) %
-                    this.entries.length;
-                return { entryIndex: nextEntry, subpage: 0 };
-            }
-            const totalPages = this.entries.length * 2;
-            const current = this.activeEntryIndex * 2 + this.activeEntrySubpage;
-            const next = (current + dir + totalPages) % totalPages;
-            return { entryIndex: Math.floor(next / 2), subpage: (next % 2) };
-        };
-        this.handleInput = (input) => {
-            if (!this.isOpen)
-                return;
-            if (this.openFade?.kind === "closing")
-                return;
-            if (input === "escape") {
-                this.close();
-                return;
-            }
-            if (input === "left")
-                this.pageLeft();
-            if (input === "right")
-                this.pageRight();
-        };
-        this.handleMouseDown = (x, y) => {
-            if (!this.isOpen)
-                return;
-            if (this.openFade?.kind === "closing")
-                return;
-            // Avoid dispatching clicks during the slide animation (hitboxes are ambiguous).
-            if (this.pageTransition)
-                return;
-            if (this.touchDrag?.active)
-                return;
-            // Allow the inventory-style button to close the bestiary.
-            if (this.isPointInBestiaryButton(x, y)) {
-                this.close();
-                return;
-            }
-            if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
-                this.close();
-                return;
-            }
-            if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect)) {
-                this.advanceSpriteState(-1);
-                return;
-            }
-            if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect)) {
-                this.advanceSpriteState(1);
-                return;
-            }
-            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect)) {
-                this.pageLeft();
-                return;
-            }
-            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect)) {
-                this.pageRight();
-                return;
-            }
-        };
-        /**
-         * True if the given point is hovering an actual bestiary UI control (close / arrows / state-cycle).
-         * Used for cursor icon selection so the rest of the book doesn't show the UI pointer.
-         */
-        this.isPointInBestiaryControls = (x, y) => {
-            if (!this.isOpen)
-                return false;
-            if (this.openFade?.kind === "closing")
-                return false;
-            if (this.closeRect && this.pointInRect(x, y, this.closeRect))
-                return true;
-            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect))
-                return true;
-            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect))
-                return true;
-            if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect))
-                return true;
-            if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect))
-                return true;
-            return false;
-        };
-        this.pointInRect = (x, y, r) => {
-            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-        };
-        /**
-         * Draws the logbook interface.
-         * @param delta The time delta since the last frame.
-         */
-        this.draw = (delta) => {
-            if (!this.isOpen)
-                return;
-            const a = this.openAlpha();
-            if (a <= 0) {
-                return;
-            }
-            const offCtx = this.ensureOverlayCanvasCtx();
-            if (!offCtx || !this.overlayCanvas)
-                return;
-            // Render bestiary to offscreen at full opacity, then composite once with `a`.
-            offCtx.save();
-            offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-            offCtx.imageSmoothingEnabled = false;
-            const prevCtx = game_1.Game.ctx;
-            game_1.Game.ctx = offCtx;
-            game_1.Game.ctx.save();
-            hitWarning_1.HitWarning.updatePreviewFrame(delta);
-            this.previewAnimT += delta;
-            const theme = this.getTheme();
-            // Backdrop
-            game_1.Game.ctx.fillStyle = theme.backdrop;
-            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
-            // Book rect
-            const { x: bookX, y: bookY, w: bookW, h: bookH } = this.computeBookRect();
-            const compactMode = this.isCompactMode();
-            const stackedMode = compactMode && gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
-            const subpageMode = compactMode && !stackedMode;
-            if (this.touchDrag?.active) {
-                // Disable hitboxes during drag-follow (tap should not fire on release).
-                this.leftArrowRect = null;
-                this.rightArrowRect = null;
-                this.closeRect = null;
-                this.prevStateRect = null;
-                this.nextStateRect = null;
-                const dir = this.touchDrag.dir;
-                const outgoingOffset = this.touchDrag.offsetPx;
-                const incomingOffset = outgoingOffset + dir * bookW;
-                const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
-                const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
-                this.drawBookAt({
-                    theme,
-                    bookX,
-                    bookY,
-                    bookW,
-                    bookH,
-                    compactMode,
-                    stackedMode,
-                    subpageMode,
-                    entryIndex: this.activeEntryIndex,
-                    subpage: this.activeEntrySubpage,
-                    xOffsetPx: outgoingOffset,
-                    alpha: outgoingAlpha,
-                    enableHitboxes: false,
-                    drawChrome: true,
-                });
-                this.drawBookAt({
-                    theme,
-                    bookX,
-                    bookY,
-                    bookW,
-                    bookH,
-                    compactMode,
-                    stackedMode,
-                    subpageMode,
-                    entryIndex: this.touchDrag.toEntryIndex,
-                    subpage: this.touchDrag.toSubpage,
-                    xOffsetPx: incomingOffset,
-                    alpha: incomingAlpha,
-                    enableHitboxes: false,
-                    drawChrome: true,
-                });
-            }
-            else if (this.pageTransition) {
-                // Disable hitboxes during animation.
-                this.leftArrowRect = null;
-                this.rightArrowRect = null;
-                this.closeRect = null;
-                this.prevStateRect = null;
-                this.nextStateRect = null;
-                const now = Date.now();
-                const tRaw = (now - this.pageTransition.startMs) / this.pageTransition.durationMs;
-                const t = Math.max(0, Math.min(1, tRaw));
-                // Ease-out quadratic.
-                const ease = t * (2 - t);
-                const outgoingOffset = this.pageTransition.startOffsetPx +
-                    (this.pageTransition.endOffsetPx - this.pageTransition.startOffsetPx) *
-                        ease;
-                const incomingOffset = outgoingOffset + this.pageTransition.dir * bookW;
-                const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
-                const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
-                this.drawBookAt({
-                    theme,
-                    bookX,
-                    bookY,
-                    bookW,
-                    bookH,
-                    compactMode,
-                    stackedMode,
-                    subpageMode,
-                    entryIndex: this.pageTransition.fromEntryIndex,
-                    subpage: this.pageTransition.fromSubpage,
-                    xOffsetPx: outgoingOffset,
-                    alpha: outgoingAlpha,
-                    enableHitboxes: false,
-                    drawChrome: true,
-                });
-                this.drawBookAt({
-                    theme,
-                    bookX,
-                    bookY,
-                    bookW,
-                    bookH,
-                    compactMode,
-                    stackedMode,
-                    subpageMode,
-                    entryIndex: this.pageTransition.toEntryIndex,
-                    subpage: this.pageTransition.toSubpage,
-                    xOffsetPx: incomingOffset,
-                    alpha: incomingAlpha,
-                    enableHitboxes: false,
-                    drawChrome: true,
-                });
-                if (t >= 1) {
-                    const done = this.pageTransition;
-                    this.pageTransition = null;
-                    if (done.mode === "commit") {
-                        this.activeEntrySubpage = subpageMode ? done.toSubpage : 0;
-                        this.setActiveEntryIndex(done.toEntryIndex);
-                    }
-                }
-            }
-            else {
-                const effectiveSubpage = subpageMode ? this.activeEntrySubpage : 0;
-                this.activeEntrySubpage = effectiveSubpage;
-                this.drawBookAt({
-                    theme,
-                    bookX,
-                    bookY,
-                    bookW,
-                    bookH,
-                    compactMode,
-                    stackedMode,
-                    subpageMode,
-                    entryIndex: this.activeEntryIndex,
-                    subpage: effectiveSubpage,
-                    xOffsetPx: 0,
-                    alpha: 1,
-                    enableHitboxes: true,
-                    drawChrome: true,
-                });
-            }
-            game_1.Game.ctx.restore();
-            game_1.Game.ctx = prevCtx;
-            offCtx.restore();
-            prevCtx.save();
-            prevCtx.globalAlpha = prevCtx.globalAlpha * a;
-            prevCtx.drawImage(this.overlayCanvas, 0, 0);
-            prevCtx.restore();
-        };
-        this.drawBookAt = (args) => {
-            game_1.Game.ctx.save();
-            const baseAlpha = game_1.Game.ctx.globalAlpha;
-            game_1.Game.ctx.globalAlpha = baseAlpha * Math.max(0, Math.min(1, args.alpha));
-            const theme = args.theme;
-            const bookX = args.bookX + Math.round(args.xOffsetPx);
-            const bookY = args.bookY;
-            const bookW = args.bookW;
-            const bookH = args.bookH;
-            // Cover/border
-            game_1.Game.ctx.fillStyle = theme.coverFill;
-            game_1.Game.ctx.fillRect(bookX, bookY, bookW, bookH);
-            game_1.Game.ctx.strokeStyle = theme.coverStroke;
-            game_1.Game.ctx.lineWidth = 2;
-            game_1.Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
-            // Spine (only in two-page mode)
-            const spineX = Math.round(bookX + bookW / 2);
-            if (!args.compactMode) {
-                game_1.Game.ctx.strokeStyle = theme.spineStroke;
-                game_1.Game.ctx.lineWidth = 2;
-                game_1.Game.ctx.beginPath();
-                game_1.Game.ctx.moveTo(spineX, bookY + 8);
-                game_1.Game.ctx.lineTo(spineX, bookY + bookH - 8);
-                game_1.Game.ctx.stroke();
-            }
-            // Page panels
-            const pad = this.innerPadPx();
-            const pageW = args.compactMode
-                ? bookW - pad * 2
-                : Math.floor(bookW / 2) - pad * 2;
-            const pageH = bookH - pad * 2 - 22; // reserve bottom row for arrows
-            const leftX = bookX + pad;
-            const rightX = spineX + pad;
-            const pageY = bookY + pad;
-            game_1.Game.ctx.fillStyle = theme.pageFill;
-            game_1.Game.ctx.fillRect(leftX, pageY, pageW, pageH);
-            game_1.Game.ctx.strokeStyle = theme.pageStroke;
-            game_1.Game.ctx.lineWidth = 1;
-            game_1.Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
-            if (!args.compactMode) {
-                game_1.Game.ctx.fillRect(rightX, pageY, pageW, pageH);
-                game_1.Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
-            }
-            // Close button (top-right corner of book) - smaller, tucked into the corner.
-            const closeSize = 13;
-            const closePad = 2;
-            const closeX = bookX + bookW - closeSize - closePad;
-            const closeY = bookY + closePad;
-            if (args.drawChrome && args.enableHitboxes) {
-                this.closeRect = { x: closeX, y: closeY, w: closeSize, h: closeSize };
-            }
-            else if (args.drawChrome) {
-                this.closeRect = null;
-            }
-            const entry = this.entries[args.entryIndex] ?? null;
-            if (!entry) {
-                game_1.Game.ctx.fillStyle = theme.text;
-                game_1.Game.fillText("No entries", leftX + 6, pageY + 6);
-            }
-            else {
-                const inset = this.pageInsetPx();
-                if (args.stackedMode) {
-                    const contentX = leftX + inset;
-                    const contentY = pageY + inset;
-                    const contentW = pageW - inset * 2;
-                    const contentH = pageH - inset * 2;
-                    const gap = 6;
-                    const minInfoH = 44;
-                    const minSpriteH = 68;
-                    let infoH = Math.floor(contentH * 0.42);
-                    infoH = Math.max(minInfoH, Math.min(infoH, Math.max(minInfoH, contentH - minSpriteH - gap)));
-                    // Info region (clipped so text can't spill into sprite region)
-                    game_1.Game.ctx.save();
-                    game_1.Game.ctx.beginPath();
-                    game_1.Game.ctx.rect(contentX, contentY, contentW, infoH);
-                    game_1.Game.ctx.clip();
-                    game_1.Game.ctx.fillStyle = theme.text;
-                    game_1.Game.fillText(entry.displayName, contentX, contentY);
-                    this.drawWrappedText(entry.description || "???", contentX, contentY + 14, contentW);
-                    game_1.Game.ctx.restore();
-                    // Sprite region
-                    const spriteY = contentY + infoH + gap;
-                    const spriteH = Math.max(0, contentY + contentH - spriteY);
-                    const spriteRect = { x: contentX, y: spriteY, w: contentW, h: spriteH };
-                    game_1.Game.ctx.fillStyle = theme.spritePanelFill;
-                    game_1.Game.ctx.strokeStyle = theme.spritePanelStroke;
-                    game_1.Game.ctx.lineWidth = 1;
-                    game_1.Game.ctx.fillRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
-                    game_1.Game.ctx.strokeRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
-                    this.drawSpritesWithHitWarnings(entry.sprites ?? [], spriteRect);
-                    this.drawStateCycleButton({
-                        theme,
-                        compactMode: args.compactMode,
-                        leftX,
-                        rightX,
-                        pageY,
-                        pageW,
-                        pageH,
-                        inset,
-                        entry,
-                        spriteRect,
-                    });
-                }
-                else {
-                    if (!args.compactMode || args.subpage === 0) {
-                        // Info page
-                        game_1.Game.ctx.fillStyle = theme.text;
-                        game_1.Game.fillText(entry.displayName, leftX + inset, pageY + inset);
-                        this.drawWrappedText(entry.description || "???", leftX + inset, pageY + inset + 14, pageW - inset * 2);
-                    }
-                    if (!args.compactMode || args.subpage === 1) {
-                        // Sprite page (right page in wide mode, single page in compact mode)
-                        game_1.Game.ctx.fillStyle = theme.spritePanelFill;
-                        game_1.Game.ctx.strokeStyle = theme.spritePanelStroke;
-                        game_1.Game.ctx.lineWidth = 1;
-                        const rightInnerX = (args.compactMode ? leftX : rightX) + inset;
-                        const rightInnerY = pageY + inset;
-                        const rightInnerW = pageW - inset * 2;
-                        const rightInnerH = pageH - inset * 2;
-                        game_1.Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
-                        game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
-                        this.drawSpritesWithHitWarnings(entry.sprites ?? [], {
-                            x: rightInnerX,
-                            y: rightInnerY,
-                            w: rightInnerW,
-                            h: rightInnerH,
-                        });
-                        this.drawStateCycleButton({
-                            theme,
-                            compactMode: args.compactMode,
-                            leftX,
-                            rightX,
-                            pageY,
-                            pageW,
-                            pageH,
-                            inset,
-                            entry,
-                        });
-                    }
-                }
-            }
-            // Page turn arrows + indicator
-            if (args.drawChrome) {
-                const arrowY = bookY + bookH - 20;
-                const arrowW = 28;
-                const arrowH = 14;
-                const leftRect = {
-                    x: spineX - arrowW - 18,
-                    y: arrowY,
-                    w: arrowW,
-                    h: arrowH,
-                };
-                const rightRect = {
-                    x: spineX + 18,
-                    y: arrowY,
-                    w: arrowW,
-                    h: arrowH,
-                };
-                if (this.entries.length > 1) {
-                    if (args.enableHitboxes) {
-                        this.leftArrowRect = leftRect;
-                        this.rightArrowRect = rightRect;
-                    }
-                    this.drawArrow(leftRect, "left");
-                    this.drawArrow(rightRect, "right");
-                }
-                else {
-                    if (args.enableHitboxes) {
-                        this.leftArrowRect = null;
-                        this.rightArrowRect = null;
-                    }
-                }
-                if (this.entries.length > 0) {
-                    const indicator = `${args.entryIndex + 1}/${this.entries.length}`;
-                    const iw = game_1.Game.measureText(indicator).width;
-                    game_1.Game.ctx.fillStyle = theme.accentText;
-                    game_1.Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
-                    if (args.subpageMode) {
-                        const sub = args.subpage === 0 ? "Info" : "Sprite";
-                        game_1.Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
-                    }
-                }
-                // Close button should draw on top of everything else in the bestiary.
-                game_1.Game.ctx.fillStyle = theme.closeFill;
-                game_1.Game.ctx.fillRect(closeX, closeY, closeSize, closeSize);
-                game_1.Game.ctx.fillStyle = theme.closeText;
-                const xw = game_1.Game.measureText("X").width;
-                const xh = game_1.Game.letter_height;
-                const xt = Math.round(closeX + (closeSize - xw) / 2);
-                const yt = Math.round(closeY + (closeSize - xh) / 2);
-                game_1.Game.fillText("X", xt, yt);
-            }
-            game_1.Game.ctx.restore();
-        };
-        /**
-         * Recompute layout mode based on current scaled canvas width.
-         * Call this from `Game.onResize()` so the Bestiary flips immediately as the screen changes.
-         */
-        this.handleResize = () => {
-            const nextCompact = this.computeCompactMode();
-            if (nextCompact === this.compactMode)
-                return;
-            this.compactMode = nextCompact;
-            // If we just switched to wide mode, ensure we're on the info page (since sprites will
-            // render on the right page again).
-            if (!this.compactMode)
-                this.activeEntrySubpage = 0;
-            // In stacked compact layout we never want to "stick" on the sprite-only subpage.
-            if (this.compactMode && gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW) {
-                this.activeEntrySubpage = 0;
-            }
-        };
-        this.isCompactMode = () => {
-            return this.compactMode;
-        };
-        this.computeCompactMode = () => {
-            // Decide compact mode in *screen pixels* (CSS px), so this doesn't get stuck
-            // when the user changes scale. `GameConstants.WIDTH` is unscaled canvas px.
-            const canvasScreenW = gameConstants_1.GameConstants.WIDTH;
-            const marginScreenPx = this.marginPx();
-            const maxBookScreenPx = 420;
-            const bookScreenPx = Math.min(canvasScreenW - marginScreenPx * 2, maxBookScreenPx);
-            // Threshold is in screen px: below this, two-page layout becomes unusably tight.
-            return bookScreenPx < 250;
         };
         this.drawSpritesWithHitWarnings = (sprites, rect) => {
             const theme = this.getTheme();
@@ -33471,7 +32593,6 @@ class Bestiary {
                 game_1.Game.fillText("No sprite", rect.x + 6, rect.y + 6);
                 return;
             }
-            // Default behavior: show one state at a time (manual by default; otherwise auto-cycle).
             if (count > 1) {
                 if (this.manualStateCycling) {
                     const idx = ((this.activeSpriteStateIndex % count) + count) % count;
@@ -33496,14 +32617,12 @@ class Bestiary {
                 const row = Math.floor(i / cols);
                 const cellX = rect.x + col * cellW;
                 const cellY = rect.y + row * cellH;
-                // Label
                 game_1.Game.ctx.fillStyle = theme.text;
                 const label = s.label ?? "";
                 const lw = game_1.Game.measureText(label).width;
                 if (label.length > 0) {
                     game_1.Game.fillText(label, cellX + cellW / 2 - lw / 2, cellY + 2);
                 }
-                // Sprite draw area (pixels)
                 const areaY = cellY + labelH;
                 const areaHpx = cellH - labelH - cellPad;
                 const drawW = s.w;
@@ -33512,7 +32631,6 @@ class Bestiary {
                 const centerY = areaY + areaHpx / 2;
                 const drawX = centerX / gameConstants_1.GameConstants.TILESIZE - drawW / 2;
                 const drawY = centerY / gameConstants_1.GameConstants.TILESIZE - drawH / 2;
-                // Match crab-style rumble (2-frame: base vs +1px) when requested.
                 const rumbleTiles = s.rumbling && Math.floor(Date.now() / 170) % 2 === 1
                     ? 1 / gameConstants_1.GameConstants.TILESIZE
                     : 0;
@@ -33529,8 +32647,6 @@ class Bestiary {
                 const h = s.h ?? 1;
                 const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
                 const tx = s.tileX + frameIndex * stride * w;
-                // Bestiary-only effect previews (e.g. wizard fireballs).
-                // Draw effects that are above the enemy first so they appear behind the mob sprite.
                 this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "behind");
                 if (s.sheet === "obj") {
                     game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
@@ -33552,15 +32668,9 @@ class Bestiary {
                         shadeAmount: 0,
                     });
                 }
-                // Draw remaining effects on top of the mob sprite.
                 this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "front");
-                // Optional HP bar preview (uses existing heart-bar visuals).
-                // Draw it anchored to the sprite (right above), not in the text/label row.
                 if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
-                    // HealthBar visuals are centered around (x + 0.5). So pass (desiredCenter - 0.5).
                     const hbX = xBase + (drawW - 1) / 2;
-                    // Place the bar just above the sprite's top edge.
-                    // `HealthBar.drawStatic` draws at (y - 1.25), so `yBase + 1` -> `yBase - 0.25`.
                     const hbY = yBase + 1;
                     healthbar_1.HealthBar.drawStatic({
                         hearts: s.hp,
@@ -33570,13 +32680,6 @@ class Bestiary {
                         flashing: true,
                     });
                 }
-                // Hitwarnings (anchor should not include rumble)
-                //
-                // NOTE: `hitWarningsWide` is intentionally NOT "draw twice". It's a coordinate-space
-                // tweak for authoring: for wide sprites (w>1), anchor hitwarnings on the *left* foot
-                // tile so registry authors can place per-tile warnings with integer offsets:
-                // - left tile: x = 0
-                // - right tile: x = 1 (for w=2)
                 const anchorY = yBase + (drawH - 1);
                 const anchorX = s.hitWarningsWide && drawW > 1 ? xBase : xBase + (drawW - 1) / 2;
                 for (const hw of s.hitWarnings ?? []) {
@@ -33587,22 +32690,10 @@ class Bestiary {
                     const dir = this.resolveHitWarningDir(hw, anchorX, anchorY);
                     if (dir !== null) {
                         if (show.redArrow) {
-                            hitWarning_1.HitWarning.drawPreviewArrow({
-                                targetX: tx2,
-                                targetY: ty2,
-                                dir,
-                                variant: "red",
-                                alpha,
-                            });
+                            hitWarning_1.HitWarning.drawPreviewArrow({ targetX: tx2, targetY: ty2, dir, variant: "red", alpha });
                         }
                         if (show.whiteArrow) {
-                            hitWarning_1.HitWarning.drawPreviewArrow({
-                                targetX: tx2,
-                                targetY: ty2,
-                                dir,
-                                variant: "white",
-                                alpha,
-                            });
+                            hitWarning_1.HitWarning.drawPreviewArrow({ targetX: tx2, targetY: ty2, dir, variant: "white", alpha });
                         }
                     }
                     if (show.redX) {
@@ -33615,32 +32706,23 @@ class Bestiary {
             const effects = sprite.effects;
             if (!effects || effects.length === 0)
                 return;
-            // Feet-tile anchor for placing effects (matches hitwarning anchor approach).
             const baseY = args.yBase + (args.drawH - 1);
             const baseX = sprite.hitWarningsWide && args.drawW > 1
                 ? args.xBase
                 : args.xBase + (args.drawW - 1) / 2;
             for (const fx of effects) {
                 if (fx.kind === "wizardFireball") {
-                    // Mirror `WizardFireball.tileY` selection.
                     const tileY = fx.variant === "energy" ? 7 : fx.variant === "fire" ? 8 : 10;
-                    // Determine which offsets should render behind the mob.
-                    // Mirror WizardFireball's own draw offsets:
-                    // - state 0: y + 0
-                    // - state 1: y - 0.2
-                    // - state 2: y - 1
                     const stateYOffset = fx.state === 2 ? -1 : fx.state === 1 ? -0.2 : 0;
                     const offsets = fx.offsets
                         .filter((o) => {
                         const yDraw = o.y + stateYOffset;
                         return layer === "behind" ? yDraw < 0 : yDraw >= 0;
                     })
-                        // stable: higher tiles first
                         .slice()
                         .sort((a, b) => a.y - b.y);
                     for (const o of offsets) {
                         const x = baseX + o.x;
-                        // Nudge down slightly to match the in-game perceived placement.
                         const y = baseY + o.y + 0.5;
                         if (fx.state === 0) {
                             const frame = Math.floor(this.previewAnimT * 0.25) % 4;
@@ -33657,10 +32739,6 @@ class Bestiary {
                     }
                 }
                 else if (fx.kind === "bigWizardFireball") {
-                    // Mirror BigWizardFireball draw offsets:
-                    // - state 0 (orb): y + 0
-                    // - state 1 (telegraph): y + 0
-                    // - state 2 (explosion): y - 2
                     const stateYOffset = fx.state === 2 ? -2 : 0;
                     const offsets = fx.offsets
                         .filter((o) => {
@@ -33689,35 +32767,29 @@ class Bestiary {
             }
         };
         this.advanceSpriteState = (dir) => {
-            const entry = this.entries[this.activeEntryIndex];
+            const entry = this.entries[this.currentPage];
             const count = entry?.sprites?.length ?? 0;
             if (count <= 1)
                 return;
             this.activeSpriteStateIndex =
                 (((this.activeSpriteStateIndex + dir) % count) + count) % count;
         };
-        this.drawStateCycleButton = (args) => {
-            const count = args.entry.sprites?.length ?? 0;
+        this.drawStateCycleButton = (theme, entry, spriteRect) => {
+            const count = entry.sprites?.length ?? 0;
             const shouldShow = this.manualStateCycling && count > 1;
             if (!shouldShow) {
                 this.prevStateRect = null;
                 this.nextStateRect = null;
                 return;
             }
-            // Render as simple left/right arrows (no box/text), centered on the sprite page.
             const arrowW = 22;
             const arrowH = 12;
             const gap = 14;
-            // Place at the bottom of the sprite region/page, centered.
-            const centerX = args.spriteRect?.x !== undefined
-                ? args.spriteRect.x + args.spriteRect.w / 2
-                : (args.compactMode ? args.leftX : args.rightX) + args.pageW / 2;
+            const centerX = spriteRect.x + spriteRect.w / 2;
             const totalW = arrowW * 2 + gap;
             const leftX = Math.round(centerX - totalW / 2);
             const rightX = leftX + arrowW + gap;
-            const y = Math.round(args.spriteRect?.y !== undefined
-                ? args.spriteRect.y + args.spriteRect.h - arrowH - 6
-                : args.pageY + args.pageH - arrowH - 4);
+            const y = Math.round(spriteRect.y + spriteRect.h - arrowH - 6);
             this.prevStateRect = { x: leftX, y, w: arrowW, h: arrowH };
             this.nextStateRect = { x: rightX, y, w: arrowW, h: arrowH };
             this.drawArrow(this.prevStateRect, "left");
@@ -33744,77 +32816,87 @@ class Bestiary {
             const sourceY = anchorY + hw.sourceOffset.y;
             const targetX = anchorX + hw.targetOffset.x;
             const targetY = anchorY + hw.targetOffset.y;
-            return hitWarning_1.HitWarning.computePointerDir({
-                targetX,
-                targetY,
-                sourceX,
-                sourceY,
-            });
-        };
-        this.drawArrow = (rect, dir) => {
-            // Draw a fixed 1x1 tile sprite, centered within the clickable rect.
-            const tile = gameConstants_1.GameConstants.TILESIZE;
-            const cx = rect.x + rect.w / 2;
-            const cy = rect.y + rect.h / 2;
-            const dX = (cx - tile / 2) / tile;
-            const dY = (cy - tile / 2) / tile;
-            if (dir === "left") {
-                game_1.Game.drawFX(15, 1, 1, 1, dX, dY, 1, 1);
-            }
-            else {
-                game_1.Game.drawFX(16, 1, 1, 1, dX, dY, 1, 1);
-            }
-        };
-        this.drawWrappedText = (text, x, y, maxWidth) => {
-            const words = text.split(/\s+/);
-            let line = "";
-            let yy = y;
-            const lineH = game_1.Game.letter_height + 4;
-            for (const w of words) {
-                const test = line.length === 0 ? w : `${line} ${w}`;
-                if (game_1.Game.measureText(test).width > maxWidth && line.length > 0) {
-                    game_1.Game.fillText(line, x, yy);
-                    yy += lineH;
-                    line = w;
-                }
-                else {
-                    line = test;
-                }
-            }
-            if (line.length > 0)
-                game_1.Game.fillText(line, x, yy);
+            return hitWarning_1.HitWarning.computePointerDir({ targetX, targetY, sourceX, sourceY });
         };
         this.game = game;
         this.player = player;
         this.entries = [];
-        this.activeEntryIndex = 0;
-        // Build registry from environment enemy mapping.
+        this.currentPage = 0;
         this.enemyNameToClass = new Map();
         for (const [enemyClass] of environment_1.enemyClassToId.entries()) {
             this.enemyNameToClass.set(enemyClass.name, enemyClass);
         }
         this.seenEnemyTypeNames = new Set((0, bestiaryPersistence_1.loadSeenEnemyTypes)());
-        // Always include crab as the first entry.
         this.ensureEntry("CrabEnemy");
-        // In developer mode, show all enemies regardless of "seen" status.
         if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
             for (const typeName of Object.keys(bestiaryEnemyRegistry_1.BESTIARY_ENEMIES)) {
                 this.ensureEntry(typeName);
             }
         }
-        // Load persisted entries.
         for (const enemyTypeName of this.seenEnemyTypeNames) {
             this.ensureEntry(enemyTypeName);
         }
-        // Track newly encountered enemies for persistence/bestiary population.
         eventBus_1.globalEventBus.on(events_1.EVENTS.ENEMY_SEEN_PLAYER, (data) => {
             const enemyTypeName = data?.enemyType;
             if (typeof enemyTypeName !== "string")
                 return;
             this.addEntry(enemyTypeName);
         });
-        // Initialize layout state based on current canvas size.
         this.handleResize();
+    }
+    // ── BookRenderer abstract implementations ─────────────────────────────────
+    getPageCount() {
+        return this.entries.length;
+    }
+    drawLeftPage(pageIndex, x, y, _w, _h, theme) {
+        const entry = this.entries[pageIndex];
+        if (!entry)
+            return;
+        game_1.Game.ctx.fillStyle = theme.text;
+        game_1.Game.fillText(entry.displayName, x, y);
+        this.drawWrappedText(entry.description || "???", x, y + 14, _w);
+    }
+    drawRightPage(pageIndex, x, y, w, h, theme) {
+        const entry = this.entries[pageIndex];
+        if (!entry)
+            return;
+        this.drawSpritesWithHitWarnings(entry.sprites ?? [], { x, y, w, h });
+        this.drawStateCycleButton(theme, entry, { x, y, w, h });
+    }
+    // ── Protected hook overrides ───────────────────────────────────────────────
+    onBeforeDraw(delta) {
+        hitWarning_1.HitWarning.updatePreviewFrame(delta);
+    }
+    onPageChanged(newPage) {
+        this.setActiveEntryIndex(newPage);
+    }
+    onHitboxesClear() {
+        this.prevStateRect = null;
+        this.nextStateRect = null;
+    }
+    handleExtraClick(x, y) {
+        if (this.isPointInBestiaryButton(x, y)) {
+            this.close();
+            return true;
+        }
+        if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect)) {
+            this.advanceSpriteState(-1);
+            return true;
+        }
+        if (this.nextStateRect && this.pointInRect(x, y, this.nextStateRect)) {
+            this.advanceSpriteState(1);
+            return true;
+        }
+        return false;
+    }
+    stackedModeEnabled() {
+        return gameplaySettings_1.GameplaySettings.BESTIARY_STACK_PANELS_ON_NARROW;
+    }
+    subpageLabel(subpage) {
+        return subpage === 0 ? "Info" : "Sprite";
+    }
+    onOpen() {
+        this.entryViewStartTime = Date.now();
     }
 }
 exports.Bestiary = Bestiary;
@@ -48247,6 +47329,766 @@ IdGenerator._registry = new Set();
 
 /***/ }),
 
+/***/ "./src/gui/bookRenderer.ts":
+/*!*********************************!*\
+  !*** ./src/gui/bookRenderer.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BookRenderer = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+class BookRenderer {
+    constructor() {
+        this.isOpen = false;
+        this.openTime = Date.now();
+        this.currentPage = 0;
+        this.activeSubpage = 0;
+        this.previewAnimT = 0;
+        this.compactMode = false;
+        this.theme = "parchment";
+        this.marginPx = () => {
+            const m = Math.round(gameConstants_1.GameConstants.WIDTH * 0.04);
+            return Math.max(6, Math.min(16, m));
+        };
+        this.innerPadPx = () => {
+            const p = Math.round(gameConstants_1.GameConstants.WIDTH * 0.03);
+            return Math.max(4, Math.min(12, p));
+        };
+        this.pageInsetPx = () => {
+            const i = Math.round(gameConstants_1.GameConstants.WIDTH * 0.025);
+            return Math.max(4, Math.min(10, i));
+        };
+        this.getTheme = () => {
+            const THEMES = {
+                parchment: {
+                    backdrop: "rgba(0, 0, 0, 0.8)",
+                    coverFill: "rgba(235, 225, 200, 1)",
+                    coverStroke: "rgba(120, 100, 80, 1)",
+                    spineStroke: "rgba(160, 140, 120, 1)",
+                    pageFill: "rgba(245, 238, 220, 1)",
+                    pageStroke: "rgba(200, 185, 160, 1)",
+                    spritePanelFill: "rgba(235, 225, 200, 1)",
+                    spritePanelStroke: "rgba(120, 100, 80, 1)",
+                    text: "rgba(40, 35, 30, 1)",
+                    accentText: "rgba(60, 50, 40, 1)",
+                    closeFill: "rgba(220, 60, 60, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                slate: {
+                    backdrop: "rgba(0, 0, 0, 0.85)",
+                    coverFill: "rgba(165, 170, 178, 1)",
+                    coverStroke: "rgba(78, 82, 90, 1)",
+                    spineStroke: "rgba(105, 110, 118, 1)",
+                    pageFill: "rgba(195, 198, 205, 1)",
+                    pageStroke: "rgba(120, 125, 135, 1)",
+                    spritePanelFill: "rgba(150, 154, 162, 1)",
+                    spritePanelStroke: "rgba(78, 82, 90, 1)",
+                    text: "rgba(30, 32, 36, 1)",
+                    accentText: "rgba(45, 48, 54, 1)",
+                    closeFill: "rgba(200, 70, 70, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                midnight: {
+                    backdrop: "rgba(0, 0, 0, 0.92)",
+                    coverFill: "rgba(75, 78, 86, 1)",
+                    coverStroke: "rgba(28, 30, 36, 1)",
+                    spineStroke: "rgba(45, 48, 56, 1)",
+                    pageFill: "rgba(100, 104, 114, 1)",
+                    pageStroke: "rgba(55, 58, 66, 1)",
+                    spritePanelFill: "rgba(78, 82, 92, 1)",
+                    spritePanelStroke: "rgba(28, 30, 36, 1)",
+                    text: "rgba(245, 246, 248, 1)",
+                    accentText: "rgba(220, 222, 226, 1)",
+                    closeFill: "rgba(185, 60, 60, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                mahogany: {
+                    backdrop: "rgba(0, 0, 0, 0.92)",
+                    coverFill: "rgba(70, 28, 24, 1)",
+                    coverStroke: "rgba(24, 10, 10, 1)",
+                    spineStroke: "rgba(40, 16, 14, 1)",
+                    pageFill: "rgba(92, 38, 30, 1)",
+                    pageStroke: "rgba(40, 16, 14, 1)",
+                    spritePanelFill: "rgba(62, 24, 20, 1)",
+                    spritePanelStroke: "rgba(24, 10, 10, 1)",
+                    text: "rgba(248, 240, 236, 1)",
+                    accentText: "rgba(230, 214, 206, 1)",
+                    closeFill: "rgba(190, 58, 58, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+                arcana: {
+                    backdrop: "rgba(0, 0, 0, 0.9)",
+                    coverFill: "rgba(118, 104, 146, 1)",
+                    coverStroke: "rgba(44, 34, 66, 1)",
+                    spineStroke: "rgba(68, 54, 96, 1)",
+                    pageFill: "rgba(150, 136, 178, 1)",
+                    pageStroke: "rgba(78, 62, 110, 1)",
+                    spritePanelFill: "rgba(110, 96, 140, 1)",
+                    spritePanelStroke: "rgba(44, 34, 66, 1)",
+                    text: "rgba(18, 12, 28, 1)",
+                    accentText: "rgba(34, 20, 52, 1)",
+                    closeFill: "rgba(196, 70, 110, 1)",
+                    closeText: "rgba(255, 255, 255, 1)",
+                },
+            };
+            return THEMES[this.theme];
+        };
+        this.leftArrowRect = null;
+        this.rightArrowRect = null;
+        this.closeRect = null;
+        this.pageTransition = null;
+        this.openFade = null;
+        this.overlayCanvas = null;
+        this.overlayCanvasCtx = null;
+        this.touchDrag = null;
+        // ── Concrete public API ───────────────────────────────────────────────────
+        this.open = () => {
+            this.isOpen = true;
+            this.openTime = Date.now();
+            this.previewAnimT = 0;
+            this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
+            this.handleResize();
+            this.onOpen();
+        };
+        this.close = () => {
+            if (!this.isOpen)
+                return;
+            this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
+            this.touchDrag = null;
+            this.pageTransition = null;
+        };
+        this.toggleOpen = () => {
+            this.isOpen ? this.close() : this.open();
+        };
+        this.isPointInBookBounds = (x, y) => {
+            if (!this.isOpen)
+                return false;
+            const r = this.computeBookRect();
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        };
+        this.isPointInBookControls = (x, y) => {
+            if (!this.isOpen)
+                return false;
+            if (this.openFade?.kind === "closing")
+                return false;
+            if (this.closeRect && this.pointInRect(x, y, this.closeRect))
+                return true;
+            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect))
+                return true;
+            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect))
+                return true;
+            return false;
+        };
+        this.handleTouchStart = (x, y) => {
+            if (!this.isOpen)
+                return false;
+            if (!this.isPointInBookBounds(x, y))
+                return false;
+            this.touchDrag = {
+                active: false,
+                startX: x,
+                startY: y,
+                x,
+                y,
+                offsetPx: 0,
+                dir: 1,
+                toPage: this.currentPage,
+                toSubpage: this.activeSubpage,
+            };
+            return true;
+        };
+        this.handleTouchMove = (x, y) => {
+            if (!this.isOpen)
+                return;
+            if (!this.touchDrag)
+                return;
+            if (this.pageTransition)
+                return;
+            const r = this.computeBookRect();
+            const dx = x - this.touchDrag.startX;
+            const dy = y - this.touchDrag.startY;
+            const START_PX = 14;
+            if (!this.touchDrag.active) {
+                if (dx * dx + dy * dy < START_PX * START_PX)
+                    return;
+                if (Math.abs(dx) < Math.abs(dy))
+                    return;
+                this.touchDrag.active = true;
+            }
+            const clamped = Math.max(-r.w, Math.min(r.w, dx));
+            const dir = clamped < 0 ? 1 : -1;
+            const next = this.computeNextPage(dir);
+            this.touchDrag.x = x;
+            this.touchDrag.y = y;
+            this.touchDrag.offsetPx = clamped;
+            this.touchDrag.dir = dir;
+            this.touchDrag.toPage = next.pageIndex;
+            this.touchDrag.toSubpage = next.subpage;
+        };
+        this.handleTouchEnd = (_x, _y) => {
+            if (!this.isOpen)
+                return;
+            if (!this.touchDrag)
+                return;
+            const r = this.computeBookRect();
+            const drag = this.touchDrag;
+            this.touchDrag = null;
+            if (!drag.active)
+                return;
+            const commitThreshold = r.w * 0.22;
+            const commit = Math.abs(drag.offsetPx) >= commitThreshold;
+            if (commit) {
+                this.startPageTransition({
+                    dir: drag.dir,
+                    toPage: drag.toPage,
+                    toSubpage: drag.toSubpage,
+                    startOffsetPx: drag.offsetPx,
+                    mode: "commit",
+                });
+            }
+            else {
+                this.startPageTransition({
+                    dir: drag.dir,
+                    toPage: drag.toPage,
+                    toSubpage: drag.toSubpage,
+                    startOffsetPx: drag.offsetPx,
+                    mode: "cancel",
+                });
+            }
+        };
+        this.handleInput = (input) => {
+            if (!this.isOpen)
+                return;
+            if (this.openFade?.kind === "closing")
+                return;
+            if (input === "escape") {
+                this.close();
+                return;
+            }
+            if (input === "left")
+                this.pageLeft();
+            if (input === "right")
+                this.pageRight();
+        };
+        this.handleMouseDown = (x, y) => {
+            if (!this.isOpen)
+                return;
+            if (this.openFade?.kind === "closing")
+                return;
+            if (this.pageTransition)
+                return;
+            if (this.touchDrag?.active)
+                return;
+            if (this.handleExtraClick(x, y))
+                return;
+            if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
+                this.close();
+                return;
+            }
+            if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect)) {
+                this.pageLeft();
+                return;
+            }
+            if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect)) {
+                this.pageRight();
+                return;
+            }
+        };
+        this.handleResize = () => {
+            const nextCompact = this.computeCompactMode();
+            if (nextCompact === this.compactMode)
+                return;
+            this.compactMode = nextCompact;
+            if (!this.compactMode)
+                this.activeSubpage = 0;
+            if (this.compactMode && this.stackedModeEnabled()) {
+                this.activeSubpage = 0;
+            }
+        };
+        this.pageLeft = () => {
+            if (this.getPageCount() <= 0)
+                return;
+            if (this.pageTransition)
+                return;
+            if (this.touchDrag?.active)
+                return;
+            const subpageMode = this.isCompactMode() && !this.stackedModeEnabled();
+            if (subpageMode) {
+                const totalPages = this.getPageCount() * 2;
+                const current = this.currentPage * 2 + this.activeSubpage;
+                const next = (current - 1 + totalPages) % totalPages;
+                const nextEntry = Math.floor(next / 2);
+                const nextSub = (next % 2);
+                this.startPageTransition({ dir: -1, toPage: nextEntry, toSubpage: nextSub });
+                return;
+            }
+            const nextEntry = (((this.currentPage - 1) % this.getPageCount()) + this.getPageCount()) %
+                this.getPageCount();
+            this.startPageTransition({ dir: -1, toPage: nextEntry, toSubpage: 0 });
+        };
+        this.pageRight = () => {
+            if (this.getPageCount() <= 0)
+                return;
+            if (this.pageTransition)
+                return;
+            if (this.touchDrag?.active)
+                return;
+            const subpageMode = this.isCompactMode() && !this.stackedModeEnabled();
+            if (subpageMode) {
+                const totalPages = this.getPageCount() * 2;
+                const current = this.currentPage * 2 + this.activeSubpage;
+                const next = (current + 1) % totalPages;
+                const nextEntry = Math.floor(next / 2);
+                const nextSub = (next % 2);
+                this.startPageTransition({ dir: 1, toPage: nextEntry, toSubpage: nextSub });
+                return;
+            }
+            const nextEntry = (this.currentPage + 1) % this.getPageCount();
+            this.startPageTransition({ dir: 1, toPage: nextEntry, toSubpage: 0 });
+        };
+        this.draw = (delta) => {
+            if (!this.isOpen)
+                return;
+            const a = this.openAlpha();
+            if (a <= 0)
+                return;
+            const offCtx = this.ensureOverlayCanvasCtx();
+            if (!offCtx || !this.overlayCanvas)
+                return;
+            offCtx.save();
+            offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+            offCtx.imageSmoothingEnabled = false;
+            const prevCtx = game_1.Game.ctx;
+            game_1.Game.ctx = offCtx;
+            game_1.Game.ctx.save();
+            this.onBeforeDraw(delta);
+            this.previewAnimT += delta;
+            const theme = this.getTheme();
+            game_1.Game.ctx.fillStyle = theme.backdrop;
+            game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            const { x: bookX, y: bookY, w: bookW, h: bookH } = this.computeBookRect();
+            const compactMode = this.isCompactMode();
+            const stackedMode = compactMode && this.stackedModeEnabled();
+            const subpageMode = compactMode && !stackedMode;
+            if (this.touchDrag?.active) {
+                this.leftArrowRect = null;
+                this.rightArrowRect = null;
+                this.closeRect = null;
+                this.onHitboxesClear();
+                const dir = this.touchDrag.dir;
+                const outgoingOffset = this.touchDrag.offsetPx;
+                const incomingOffset = outgoingOffset + dir * bookW;
+                const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
+                const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
+                this.drawBookAt({
+                    theme, bookX, bookY, bookW, bookH,
+                    compactMode, stackedMode, subpageMode,
+                    entryIndex: this.currentPage,
+                    subpage: this.activeSubpage,
+                    xOffsetPx: outgoingOffset,
+                    alpha: outgoingAlpha,
+                    enableHitboxes: false,
+                    drawChrome: true,
+                });
+                this.drawBookAt({
+                    theme, bookX, bookY, bookW, bookH,
+                    compactMode, stackedMode, subpageMode,
+                    entryIndex: this.touchDrag.toPage,
+                    subpage: this.touchDrag.toSubpage,
+                    xOffsetPx: incomingOffset,
+                    alpha: incomingAlpha,
+                    enableHitboxes: false,
+                    drawChrome: true,
+                });
+            }
+            else if (this.pageTransition) {
+                this.leftArrowRect = null;
+                this.rightArrowRect = null;
+                this.closeRect = null;
+                this.onHitboxesClear();
+                const now = Date.now();
+                const tRaw = (now - this.pageTransition.startMs) / this.pageTransition.durationMs;
+                const t = Math.max(0, Math.min(1, tRaw));
+                const ease = t * (2 - t);
+                const outgoingOffset = this.pageTransition.startOffsetPx +
+                    (this.pageTransition.endOffsetPx - this.pageTransition.startOffsetPx) * ease;
+                const incomingOffset = outgoingOffset + this.pageTransition.dir * bookW;
+                const outgoingAlpha = this.pageAlphaForOffset(outgoingOffset, bookW);
+                const incomingAlpha = this.pageAlphaForOffset(incomingOffset, bookW);
+                this.drawBookAt({
+                    theme, bookX, bookY, bookW, bookH,
+                    compactMode, stackedMode, subpageMode,
+                    entryIndex: this.pageTransition.fromPage,
+                    subpage: this.pageTransition.fromSubpage,
+                    xOffsetPx: outgoingOffset,
+                    alpha: outgoingAlpha,
+                    enableHitboxes: false,
+                    drawChrome: true,
+                });
+                this.drawBookAt({
+                    theme, bookX, bookY, bookW, bookH,
+                    compactMode, stackedMode, subpageMode,
+                    entryIndex: this.pageTransition.toPage,
+                    subpage: this.pageTransition.toSubpage,
+                    xOffsetPx: incomingOffset,
+                    alpha: incomingAlpha,
+                    enableHitboxes: false,
+                    drawChrome: true,
+                });
+                if (t >= 1) {
+                    const done = this.pageTransition;
+                    this.pageTransition = null;
+                    if (done.mode === "commit") {
+                        this.activeSubpage = subpageMode ? done.toSubpage : 0;
+                        this.onPageChanged(done.toPage);
+                    }
+                }
+            }
+            else {
+                const effectiveSubpage = subpageMode ? this.activeSubpage : 0;
+                this.activeSubpage = effectiveSubpage;
+                this.drawBookAt({
+                    theme, bookX, bookY, bookW, bookH,
+                    compactMode, stackedMode, subpageMode,
+                    entryIndex: this.currentPage,
+                    subpage: effectiveSubpage,
+                    xOffsetPx: 0,
+                    alpha: 1,
+                    enableHitboxes: true,
+                    drawChrome: true,
+                });
+            }
+            game_1.Game.ctx.restore();
+            game_1.Game.ctx = prevCtx;
+            offCtx.restore();
+            prevCtx.save();
+            prevCtx.globalAlpha = prevCtx.globalAlpha * a;
+            prevCtx.drawImage(this.overlayCanvas, 0, 0);
+            prevCtx.restore();
+        };
+        // ── Private helpers ───────────────────────────────────────────────────────
+        this.openAlpha = () => {
+            if (!this.isOpen)
+                return 0;
+            if (!this.openFade)
+                return 1;
+            const now = Date.now();
+            const tRaw = (now - this.openFade.startMs) / this.openFade.durationMs;
+            const t = Math.max(0, Math.min(1, tRaw));
+            const ease = t * (2 - t);
+            if (this.openFade.kind === "opening") {
+                if (t >= 1)
+                    this.openFade = null;
+                return ease;
+            }
+            const a = 1 - ease;
+            if (t >= 1) {
+                this.openFade = null;
+                this.isOpen = false;
+                this.leftArrowRect = null;
+                this.rightArrowRect = null;
+                this.closeRect = null;
+                this.onHitboxesClear();
+            }
+            return a;
+        };
+        this.ensureOverlayCanvasCtx = () => {
+            if (typeof document === "undefined")
+                return null;
+            if (!this.overlayCanvas) {
+                this.overlayCanvas = document.createElement("canvas");
+                this.overlayCanvasCtx = this.overlayCanvas.getContext("2d");
+            }
+            if (!this.overlayCanvas || !this.overlayCanvasCtx)
+                return null;
+            if (this.overlayCanvas.width !== gameConstants_1.GameConstants.WIDTH ||
+                this.overlayCanvas.height !== gameConstants_1.GameConstants.HEIGHT) {
+                this.overlayCanvas.width = gameConstants_1.GameConstants.WIDTH;
+                this.overlayCanvas.height = gameConstants_1.GameConstants.HEIGHT;
+            }
+            return this.overlayCanvasCtx;
+        };
+        this.computeBookRect = () => {
+            const margin = this.marginPx();
+            const w = Math.min(gameConstants_1.GameConstants.WIDTH - margin * 2, 420);
+            const h = Math.min(gameConstants_1.GameConstants.HEIGHT - margin * 2, 260);
+            const x = Math.round(0.5 * gameConstants_1.GameConstants.WIDTH - 0.5 * w);
+            const y = Math.round(0.5 * gameConstants_1.GameConstants.HEIGHT - 0.5 * h);
+            return { x, y, w, h };
+        };
+        this.startPageTransition = (args) => {
+            if (this.getPageCount() <= 1) {
+                this.activeSubpage = args.toSubpage;
+                this.onPageChanged(args.toPage);
+                return;
+            }
+            const r = this.computeBookRect();
+            const mode = args.mode ?? "commit";
+            const startOffsetPx = args.startOffsetPx ?? 0;
+            const endOffsetPx = mode === "commit" ? -args.dir * r.w : 0;
+            this.pageTransition = {
+                startMs: Date.now(),
+                durationMs: 180,
+                mode,
+                dir: args.dir,
+                fromPage: this.currentPage,
+                toPage: args.toPage,
+                fromSubpage: this.activeSubpage,
+                toSubpage: args.toSubpage,
+                startOffsetPx,
+                endOffsetPx,
+            };
+        };
+        this.pageAlphaForOffset = (offsetPx, bookW) => {
+            const visibleFraction = 1 - Math.abs(offsetPx) / Math.max(1, bookW);
+            const a = visibleFraction / 0.75;
+            return Math.max(0, Math.min(1, a));
+        };
+        this.computeNextPage = (dir) => {
+            const compactMode = this.isCompactMode();
+            const stackedMode = compactMode && this.stackedModeEnabled();
+            const subpageMode = compactMode && !stackedMode;
+            if (!subpageMode) {
+                const nextEntry = (((this.currentPage + dir) % this.getPageCount()) + this.getPageCount()) %
+                    this.getPageCount();
+                return { pageIndex: nextEntry, subpage: 0 };
+            }
+            const totalPages = this.getPageCount() * 2;
+            const current = this.currentPage * 2 + this.activeSubpage;
+            const next = (current + dir + totalPages) % totalPages;
+            return { pageIndex: Math.floor(next / 2), subpage: (next % 2) };
+        };
+        this.isCompactMode = () => this.compactMode;
+        this.computeCompactMode = () => {
+            const canvasScreenW = gameConstants_1.GameConstants.WIDTH;
+            const marginScreenPx = this.marginPx();
+            const maxBookScreenPx = 420;
+            const bookScreenPx = Math.min(canvasScreenW - marginScreenPx * 2, maxBookScreenPx);
+            return bookScreenPx < 250;
+        };
+        this.drawBookAt = (args) => {
+            game_1.Game.ctx.save();
+            const baseAlpha = game_1.Game.ctx.globalAlpha;
+            game_1.Game.ctx.globalAlpha = baseAlpha * Math.max(0, Math.min(1, args.alpha));
+            const theme = args.theme;
+            const bookX = args.bookX + Math.round(args.xOffsetPx);
+            const bookY = args.bookY;
+            const bookW = args.bookW;
+            const bookH = args.bookH;
+            // Cover/border
+            game_1.Game.ctx.fillStyle = theme.coverFill;
+            game_1.Game.ctx.fillRect(bookX, bookY, bookW, bookH);
+            game_1.Game.ctx.strokeStyle = theme.coverStroke;
+            game_1.Game.ctx.lineWidth = 2;
+            game_1.Game.ctx.strokeRect(bookX, bookY, bookW, bookH);
+            // Spine
+            const spineX = Math.round(bookX + bookW / 2);
+            if (!args.compactMode) {
+                game_1.Game.ctx.strokeStyle = theme.spineStroke;
+                game_1.Game.ctx.lineWidth = 2;
+                game_1.Game.ctx.beginPath();
+                game_1.Game.ctx.moveTo(spineX, bookY + 8);
+                game_1.Game.ctx.lineTo(spineX, bookY + bookH - 8);
+                game_1.Game.ctx.stroke();
+            }
+            // Page panels
+            const pad = this.innerPadPx();
+            const pageW = args.compactMode
+                ? bookW - pad * 2
+                : Math.floor(bookW / 2) - pad * 2;
+            const pageH = bookH - pad * 2 - 22; // reserve bottom row for arrows
+            const leftX = bookX + pad;
+            const rightX = spineX + pad;
+            const pageY = bookY + pad;
+            game_1.Game.ctx.fillStyle = theme.pageFill;
+            game_1.Game.ctx.fillRect(leftX, pageY, pageW, pageH);
+            game_1.Game.ctx.strokeStyle = theme.pageStroke;
+            game_1.Game.ctx.lineWidth = 1;
+            game_1.Game.ctx.strokeRect(leftX, pageY, pageW, pageH);
+            if (!args.compactMode) {
+                game_1.Game.ctx.fillRect(rightX, pageY, pageW, pageH);
+                game_1.Game.ctx.strokeRect(rightX, pageY, pageW, pageH);
+            }
+            // Close button
+            const closeSize = 13;
+            const closePad = 2;
+            const closeX = bookX + bookW - closeSize - closePad;
+            const closeY = bookY + closePad;
+            if (args.drawChrome && args.enableHitboxes) {
+                this.closeRect = { x: closeX, y: closeY, w: closeSize, h: closeSize };
+            }
+            else if (args.drawChrome) {
+                this.closeRect = null;
+            }
+            const pageCount = this.getPageCount();
+            if (pageCount === 0) {
+                game_1.Game.ctx.fillStyle = theme.text;
+                game_1.Game.fillText("No entries", leftX + 6, pageY + 6);
+            }
+            else {
+                const inset = this.pageInsetPx();
+                if (args.stackedMode) {
+                    const contentX = leftX + inset;
+                    const contentY = pageY + inset;
+                    const contentW = pageW - inset * 2;
+                    const contentH = pageH - inset * 2;
+                    const gap = 6;
+                    const minInfoH = 44;
+                    const minSpriteH = 68;
+                    let infoH = Math.floor(contentH * 0.42);
+                    infoH = Math.max(minInfoH, Math.min(infoH, Math.max(minInfoH, contentH - minSpriteH - gap)));
+                    // Info region (clipped so text can't spill into sprite region)
+                    game_1.Game.ctx.save();
+                    game_1.Game.ctx.beginPath();
+                    game_1.Game.ctx.rect(contentX, contentY, contentW, infoH);
+                    game_1.Game.ctx.clip();
+                    this.drawLeftPage(args.entryIndex, contentX, contentY, contentW, infoH, theme);
+                    game_1.Game.ctx.restore();
+                    // Sprite region
+                    const spriteY = contentY + infoH + gap;
+                    const spriteH = Math.max(0, contentY + contentH - spriteY);
+                    const spriteRect = { x: contentX, y: spriteY, w: contentW, h: spriteH };
+                    game_1.Game.ctx.fillStyle = theme.spritePanelFill;
+                    game_1.Game.ctx.strokeStyle = theme.spritePanelStroke;
+                    game_1.Game.ctx.lineWidth = 1;
+                    game_1.Game.ctx.fillRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
+                    game_1.Game.ctx.strokeRect(spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h);
+                    this.drawRightPage(args.entryIndex, spriteRect.x, spriteRect.y, spriteRect.w, spriteRect.h, theme);
+                }
+                else {
+                    if (!args.compactMode || args.subpage === 0) {
+                        this.drawLeftPage(args.entryIndex, leftX + inset, pageY + inset, pageW - inset * 2, pageH - inset * 2, theme);
+                    }
+                    if (!args.compactMode || args.subpage === 1) {
+                        const rightInnerX = (args.compactMode ? leftX : rightX) + inset;
+                        const rightInnerY = pageY + inset;
+                        const rightInnerW = pageW - inset * 2;
+                        const rightInnerH = pageH - inset * 2;
+                        game_1.Game.ctx.fillStyle = theme.spritePanelFill;
+                        game_1.Game.ctx.strokeStyle = theme.spritePanelStroke;
+                        game_1.Game.ctx.lineWidth = 1;
+                        game_1.Game.ctx.fillRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+                        game_1.Game.ctx.strokeRect(rightInnerX, rightInnerY, rightInnerW, rightInnerH);
+                        this.drawRightPage(args.entryIndex, rightInnerX, rightInnerY, rightInnerW, rightInnerH, theme);
+                    }
+                }
+            }
+            // Page turn arrows + indicator
+            if (args.drawChrome) {
+                const arrowY = bookY + bookH - 20;
+                const arrowW = 28;
+                const arrowH = 14;
+                const leftRect = { x: spineX - arrowW - 18, y: arrowY, w: arrowW, h: arrowH };
+                const rightRect = { x: spineX + 18, y: arrowY, w: arrowW, h: arrowH };
+                if (pageCount > 1) {
+                    if (args.enableHitboxes) {
+                        this.leftArrowRect = leftRect;
+                        this.rightArrowRect = rightRect;
+                    }
+                    this.drawArrow(leftRect, "left");
+                    this.drawArrow(rightRect, "right");
+                }
+                else {
+                    if (args.enableHitboxes) {
+                        this.leftArrowRect = null;
+                        this.rightArrowRect = null;
+                    }
+                }
+                if (pageCount > 0) {
+                    const indicator = `${args.entryIndex + 1}/${pageCount}`;
+                    const iw = game_1.Game.measureText(indicator).width;
+                    game_1.Game.ctx.fillStyle = theme.accentText;
+                    game_1.Game.fillText(indicator, spineX - iw / 2, arrowY + 2);
+                    if (args.subpageMode) {
+                        const sub = this.subpageLabel(args.subpage);
+                        game_1.Game.fillText(` ${sub}`, spineX + iw / 2, arrowY + 2);
+                    }
+                }
+                // Close button draw
+                game_1.Game.ctx.fillStyle = theme.closeFill;
+                game_1.Game.ctx.fillRect(closeX, closeY, closeSize, closeSize);
+                game_1.Game.ctx.fillStyle = theme.closeText;
+                const xw = game_1.Game.measureText("X").width;
+                const xh = game_1.Game.letter_height;
+                const xt = Math.round(closeX + (closeSize - xw) / 2);
+                const yt = Math.round(closeY + (closeSize - xh) / 2);
+                game_1.Game.fillText("X", xt, yt);
+            }
+            game_1.Game.ctx.restore();
+        };
+        // ── Shared utilities (protected so subclasses can use in draw methods) ────
+        this.pointInRect = (x, y, r) => {
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        };
+        this.drawArrow = (rect, dir) => {
+            const tile = gameConstants_1.GameConstants.TILESIZE;
+            const cx = rect.x + rect.w / 2;
+            const cy = rect.y + rect.h / 2;
+            const dX = (cx - tile / 2) / tile;
+            const dY = (cy - tile / 2) / tile;
+            if (dir === "left") {
+                game_1.Game.drawFX(15, 1, 1, 1, dX, dY, 1, 1);
+            }
+            else {
+                game_1.Game.drawFX(16, 1, 1, 1, dX, dY, 1, 1);
+            }
+        };
+        this.drawWrappedText = (text, x, y, maxWidth) => {
+            const words = text.split(/\s+/);
+            let line = "";
+            let yy = y;
+            const lineH = game_1.Game.letter_height + 4;
+            for (const w of words) {
+                const test = line.length === 0 ? w : `${line} ${w}`;
+                if (game_1.Game.measureText(test).width > maxWidth && line.length > 0) {
+                    game_1.Game.fillText(line, x, yy);
+                    yy += lineH;
+                    line = w;
+                }
+                else {
+                    line = test;
+                }
+            }
+            if (line.length > 0)
+                game_1.Game.fillText(line, x, yy);
+        };
+    }
+    // ── Protected hooks (no-op defaults; subclasses override as needed) ───────
+    /** Called once per draw frame before the book is rendered. */
+    onBeforeDraw(_delta) { }
+    /** Called when the active page changes (page transition committed). */
+    onPageChanged(newPage) {
+        this.currentPage = newPage;
+    }
+    /** Called when all hitbox rects are cleared (close fade complete, or animation started). */
+    onHitboxesClear() { }
+    /**
+     * Called from handleMouseDown after the drag/transition guards pass.
+     * Return true to consume the click (prevents close/arrow handling).
+     */
+    handleExtraClick(_x, _y) {
+        return false;
+    }
+    /** Whether stacked layout (left + right panels stacked vertically) should be used in compact mode. */
+    stackedModeEnabled() {
+        return false;
+    }
+    /** Label shown next to the page indicator in compact subpage mode. */
+    subpageLabel(subpage) {
+        return subpage === 0 ? "Info" : "View";
+    }
+    /** Called at the end of open() so subclasses can reset per-open state. */
+    onOpen() { }
+}
+exports.BookRenderer = BookRenderer;
+
+
+/***/ }),
+
 /***/ "./src/gui/contextMenu.ts":
 /*!********************************!*\
   !*** ./src/gui/contextMenu.ts ***!
@@ -48261,10 +48103,12 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 /**
- * Simple RuneScape-style context menu:
+ * Simple RuneScape-style context menu with optional one-level submenus:
  * - Opens at the click location, extending down/right.
  * - Clamps on-screen if it would overflow.
  * - Clicking outside closes it.
+ * - Items with `submenu` show a ▸ indicator; hovering (desktop) or tapping
+ *   (mobile) them opens the submenu to the right at the same row height.
  */
 class ContextMenu {
     constructor() {
@@ -48283,6 +48127,13 @@ class ContextMenu {
         this.closeMarginPx = 10;
         this.targetNameColor = "rgb(255, 210, 74)";
         this.targetNameDisabledColor = "rgba(255, 210, 74, 0.65)";
+        this.submenuArrow = ">";
+        // Submenu state
+        this.activeSubmenuIndex = null;
+        this.subXPx = 0;
+        this.subYPx = 0;
+        this.subWidthPx = 0;
+        this.subHeightPx = 0;
         this.getDisplayLabel = (it) => {
             const t = typeof it.targetName === "string" ? it.targetName.trim() : "";
             return t.length > 0 ? `${it.label} ${t}` : it.label;
@@ -48294,12 +48145,14 @@ class ContextMenu {
             this.yPx = Math.round(yPx);
             this.isKeyboardTriggered = fromKeyboard ?? false;
             this.keyboardIndex = fromKeyboard ? 0 : -1;
+            this.activeSubmenuIndex = null;
             this.recomputeLayoutAndClamp();
         };
         this.close = () => {
             this.open = false;
             this.keyboardIndex = -1;
             this.isKeyboardTriggered = false;
+            this.activeSubmenuIndex = null;
         };
         this.navigate = (delta) => {
             if (!this.open || this.items.length === 0)
@@ -48319,16 +48172,25 @@ class ContextMenu {
                 item.onDisabledClick?.();
                 return false;
             }
+            if (item.submenu) {
+                // Open submenu on keyboard confirm
+                this.activeSubmenuIndex = this.keyboardIndex;
+                this.recomputeSubmenuLayout(this.keyboardIndex);
+                return true;
+            }
             this.close();
             item.onClick();
             return true;
         };
         this.recomputeLayoutAndClamp = () => {
-            const labels = this.items.map((it) => this.getDisplayLabel(it));
+            const arrowW = game_1.Game.measureText(` ${this.submenuArrow}`).width;
+            const labels = this.items.map((it) => {
+                const base = this.getDisplayLabel(it);
+                return it.submenu ? base + ` ${this.submenuArrow}` : base;
+            });
             const maxW = Math.max(1, ...labels.map((s) => game_1.Game.measureText(s).width));
             this.widthPx = this.padX * 2 + maxW;
             this.heightPx = this.padY * 2 + this.items.length * this.rowH;
-            // Clamp to screen (canvas pixels).
             const margin = 2;
             if (this.xPx + this.widthPx > gameConstants_1.GameConstants.WIDTH - margin) {
                 this.xPx = gameConstants_1.GameConstants.WIDTH - margin - this.widthPx;
@@ -48341,6 +48203,34 @@ class ContextMenu {
             if (this.yPx < margin)
                 this.yPx = margin;
         };
+        this.recomputeSubmenuLayout = (parentIndex) => {
+            const sub = this.items[parentIndex]?.submenu;
+            if (!sub || sub.length === 0)
+                return;
+            const labels = sub.map((it) => this.getDisplayLabel(it));
+            const maxW = Math.max(1, ...labels.map((s) => game_1.Game.measureText(s).width));
+            this.subWidthPx = this.padX * 2 + maxW;
+            this.subHeightPx = this.padY * 2 + sub.length * this.rowH;
+            // Default: open to the right of the main menu, aligned to the parent row top
+            const rowTopY = this.yPx + this.padY + parentIndex * this.rowH;
+            let sx = this.xPx + this.widthPx + 2;
+            let sy = rowTopY;
+            // Clamp on screen
+            const margin = 2;
+            if (sx + this.subWidthPx > gameConstants_1.GameConstants.WIDTH - margin) {
+                // Open to the left instead
+                sx = this.xPx - this.subWidthPx - 2;
+            }
+            if (sy + this.subHeightPx > gameConstants_1.GameConstants.HEIGHT - margin) {
+                sy = gameConstants_1.GameConstants.HEIGHT - margin - this.subHeightPx;
+            }
+            if (sx < margin)
+                sx = margin;
+            if (sy < margin)
+                sy = margin;
+            this.subXPx = sx;
+            this.subYPx = sy;
+        };
         this.isPointInMenu = (x, y) => {
             if (!this.open)
                 return false;
@@ -48349,18 +48239,55 @@ class ContextMenu {
                 y >= this.yPx &&
                 y <= this.yPx + this.heightPx);
         };
-        this.isPointInMenuWithMargin = (x, y, marginPx) => {
+        this.isPointInSubmenu = (x, y) => {
+            if (!this.open || this.activeSubmenuIndex === null)
+                return false;
+            return (x >= this.subXPx &&
+                x <= this.subXPx + this.subWidthPx &&
+                y >= this.subYPx &&
+                y <= this.subYPx + this.subHeightPx);
+        };
+        this.isPointInEitherMenu = (x, y, marginPx) => {
             if (!this.open)
                 return false;
-            return (x >= this.xPx - marginPx &&
+            const inMain = x >= this.xPx - marginPx &&
                 x <= this.xPx + this.widthPx + marginPx &&
                 y >= this.yPx - marginPx &&
-                y <= this.yPx + this.heightPx + marginPx);
+                y <= this.yPx + this.heightPx + marginPx;
+            if (inMain)
+                return true;
+            if (this.activeSubmenuIndex === null)
+                return false;
+            return (x >= this.subXPx - marginPx &&
+                x <= this.subXPx + this.subWidthPx + marginPx &&
+                y >= this.subYPx - marginPx &&
+                y <= this.subYPx + this.subHeightPx + marginPx);
         };
         this.handleMouseDown = (x, y, button) => {
             if (!this.open)
                 return false;
-            // Right click inside menu just consumes for now.
+            // Click in submenu
+            if (this.isPointInSubmenu(x, y)) {
+                if (button !== 0)
+                    return true;
+                const idx = this.getHoveredIndexIn(x, y, this.subXPx, this.subYPx, this.subHeightPx);
+                const sub = this.activeSubmenuIndex !== null ? this.items[this.activeSubmenuIndex]?.submenu : null;
+                const subItem = sub && idx !== null ? sub[idx] : null;
+                if (!subItem)
+                    return true;
+                if (subItem.enabled === false) {
+                    subItem.onDisabledClick?.();
+                    return true;
+                }
+                try {
+                    subItem.onClick();
+                }
+                finally {
+                    this.close();
+                }
+                return true;
+            }
+            // Click outside both menus
             if (!this.isPointInMenu(x, y)) {
                 this.close();
                 return true;
@@ -48374,24 +48301,38 @@ class ContextMenu {
             const enabled = item.enabled !== false;
             if (!enabled) {
                 item.onDisabledClick?.();
-                // Disabled actions do not close the menu.
+                return true;
+            }
+            // Item has submenu: toggle it open (or switch to new one)
+            if (item.submenu) {
+                if (this.activeSubmenuIndex === idx) {
+                    // Second tap on the same parent closes the submenu
+                    this.activeSubmenuIndex = null;
+                }
+                else {
+                    this.activeSubmenuIndex = idx;
+                    this.recomputeSubmenuLayout(idx);
+                }
                 return true;
             }
             try {
                 item.onClick();
             }
             finally {
-                // Always close after any selection (RuneScape-like).
                 this.close();
             }
             return true;
         };
         this.getHoveredIndex = (x, y) => {
-            const localY = y - (this.yPx + this.padY);
+            return this.getHoveredIndexIn(x, y, this.xPx, this.yPx, this.heightPx);
+        };
+        this.getHoveredIndexIn = (x, y, menuX, menuY, menuH) => {
+            const localY = y - (menuY + this.padY);
             if (localY < 0)
                 return null;
             const idx = Math.floor(localY / this.rowH);
-            if (idx < 0 || idx >= this.items.length)
+            const totalRows = Math.round((menuH - this.padY * 2) / this.rowH);
+            if (idx < 0 || idx >= totalRows)
                 return null;
             return idx;
         };
@@ -48399,47 +48340,77 @@ class ContextMenu {
             delta;
             if (!this.open)
                 return;
-            // RuneScape-style: menu only persists while cursor stays near it (desktop only).
-            // (On mobile there is no persistent cursor, so do not auto-close here.)
-            // Keyboard-triggered menus are not auto-closed by mouse position.
             const mx = input_1.Input.mouseX;
             const my = input_1.Input.mouseY;
+            // Auto-close when mouse drifts away (desktop only, non-keyboard triggered).
             if (!gameConstants_1.GameConstants.isMobile &&
                 !this.isKeyboardTriggered &&
                 mx !== undefined &&
                 my !== undefined &&
-                !this.isPointInMenuWithMargin(mx, my, this.closeMarginPx)) {
+                !this.isPointInEitherMenu(mx, my, this.closeMarginPx)) {
                 this.close();
                 return;
             }
+            // Auto-open submenu on hover (desktop only).
+            if (!gameConstants_1.GameConstants.isMobile && mx !== undefined && my !== undefined) {
+                if (this.isPointInMenu(mx, my)) {
+                    const hIdx = this.getHoveredIndex(mx, my);
+                    if (hIdx !== null && this.items[hIdx]?.submenu) {
+                        if (this.activeSubmenuIndex !== hIdx) {
+                            this.activeSubmenuIndex = hIdx;
+                            this.recomputeSubmenuLayout(hIdx);
+                        }
+                    }
+                    else if (hIdx !== null && !this.items[hIdx]?.submenu) {
+                        // Hovering a non-submenu row closes submenu only if mouse isn't in the submenu.
+                        if (!this.isPointInSubmenu(mx, my)) {
+                            this.activeSubmenuIndex = null;
+                        }
+                    }
+                }
+            }
             game_1.Game.ctx.save();
-            // Background + border
+            // Draw main menu panel
+            this.drawPanel(this.xPx, this.yPx, this.widthPx, this.heightPx, this.items, mx, my, 
+            /* isMain */ true);
+            // Draw submenu panel
+            if (this.activeSubmenuIndex !== null) {
+                const sub = this.items[this.activeSubmenuIndex]?.submenu;
+                if (sub && sub.length > 0) {
+                    this.drawPanel(this.subXPx, this.subYPx, this.subWidthPx, this.subHeightPx, sub, mx, my, 
+                    /* isMain */ false);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.drawPanel = (px, py, pw, ph, items, mx, my, isMain) => {
+            game_1.Game.ctx.save();
             game_1.Game.ctx.globalAlpha = 0.95;
             game_1.Game.ctx.fillStyle = "rgba(12, 16, 22, 0.95)";
-            game_1.Game.ctx.fillRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
+            game_1.Game.ctx.fillRect(px, py, pw, ph);
             game_1.Game.ctx.globalAlpha = 1;
             game_1.Game.ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
             game_1.Game.ctx.lineWidth = 1;
-            game_1.Game.ctx.strokeRect(this.xPx, this.yPx, this.widthPx, this.heightPx);
-            // In keyboard mode don't show mouse hover — keyboard selection takes full control.
-            const hovered = !this.isKeyboardTriggered && mx !== undefined && my !== undefined && this.isPointInMenu(mx, my)
-                ? this.getHoveredIndex(mx, my)
+            game_1.Game.ctx.strokeRect(px, py, pw, ph);
+            const inThisPanel = isMain ? this.isPointInMenu(mx, my) : this.isPointInSubmenu(mx, my);
+            const hovered = inThisPanel
+                ? this.getHoveredIndexIn(mx, my, px, py, ph)
                 : null;
-            // Items
-            for (let i = 0; i < this.items.length; i++) {
-                const item = this.items[i];
-                const rowX = this.xPx + this.padX;
-                const rowTop = this.yPx + this.padY + i * this.rowH;
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                const rowX = px + this.padX;
+                const rowTop = py + this.padY + i * this.rowH;
                 const enabled = item.enabled !== false;
-                const isKeyboardSelected = this.keyboardIndex === i;
-                if (hovered === i) {
+                const isParentOfOpenSubmenu = isMain && this.activeSubmenuIndex === i;
+                const isKeyboardSelected = isMain && this.keyboardIndex === i;
+                if (hovered === i || isParentOfOpenSubmenu) {
                     game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-                    game_1.Game.ctx.fillRect(this.xPx + 1, rowTop, this.widthPx - 2, this.rowH);
+                    game_1.Game.ctx.fillRect(px + 1, rowTop, pw - 2, this.rowH);
                 }
                 else if (isKeyboardSelected) {
                     const grow = 2;
                     game_1.Game.ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-                    game_1.Game.ctx.fillRect(this.xPx + 1 - grow, rowTop - grow, this.widthPx - 2 + grow * 2, this.rowH + grow * 2);
+                    game_1.Game.ctx.fillRect(px + 1 - grow, rowTop - grow, pw - 2 + grow * 2, this.rowH + grow * 2);
                 }
                 const textY = rowTop + Math.floor((this.rowH - game_1.Game.letter_height) / 2);
                 game_1.Game.ctx.fillStyle = enabled ? "white" : "rgba(200, 200, 200, 0.55)";
@@ -48447,10 +48418,15 @@ class ContextMenu {
                 const t = typeof item.targetName === "string" ? item.targetName.trim() : "";
                 if (t.length > 0) {
                     const prefixW = game_1.Game.measureText(`${item.label} `).width;
-                    game_1.Game.ctx.fillStyle = enabled
-                        ? this.targetNameColor
-                        : this.targetNameDisabledColor;
+                    game_1.Game.ctx.fillStyle = enabled ? this.targetNameColor : this.targetNameDisabledColor;
                     game_1.Game.fillText(t, rowX + prefixW, textY);
+                }
+                // Submenu arrow indicator on the right edge
+                if (item.submenu) {
+                    const arrowStr = this.submenuArrow;
+                    const arrowW = game_1.Game.measureText(arrowStr).width;
+                    game_1.Game.ctx.fillStyle = enabled ? "rgba(200, 200, 200, 0.7)" : "rgba(200, 200, 200, 0.3)";
+                    game_1.Game.fillText(arrowStr, px + pw - this.padX - arrowW, textY);
                 }
             }
             game_1.Game.ctx.restore();
@@ -50814,6 +50790,125 @@ exports.SkillsMenu = SkillsMenu;
 
 /***/ }),
 
+/***/ "./src/gui/spellbookReader.ts":
+/*!************************************!*\
+  !*** ./src/gui/spellbookReader.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SpellbookReader = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const bookRenderer_1 = __webpack_require__(/*! ./bookRenderer */ "./src/gui/bookRenderer.ts");
+class SpellbookReader extends bookRenderer_1.BookRenderer {
+    constructor() {
+        super();
+        this.spellbook = null;
+        this.theme = "arcana";
+        this.handleResize();
+    }
+    /** Open the reader for a specific spellbook item. */
+    openBook(spellbook) {
+        this.spellbook = spellbook;
+        this.currentPage = 0;
+        this.activeSubpage = 0;
+        this.open();
+    }
+    // ── BookRenderer abstract implementations ─────────────────────────────────
+    getPageCount() {
+        return this.spellbook?.spells.length ?? 0;
+    }
+    drawLeftPage(pageIndex, x, y, w, _h, theme) {
+        if (!this.spellbook)
+            return;
+        const spell = this.spellbook.spells[pageIndex];
+        if (!spell)
+            return;
+        game_1.Game.ctx.fillStyle = theme.accentText;
+        game_1.Game.fillText(spell.name, x, y);
+        const pattern = spell.getPattern();
+        game_1.Game.ctx.fillStyle = theme.text;
+        this.drawWrappedText(this.describeSpell(pattern), x, y + 14, w);
+    }
+    drawRightPage(pageIndex, x, y, w, h, _theme) {
+        if (!this.spellbook)
+            return;
+        const spell = this.spellbook.spells[pageIndex];
+        if (!spell)
+            return;
+        this.drawSpellPatternGrid(spell.getPattern(), x, y, w, h);
+    }
+    // ── Protected hook overrides ───────────────────────────────────────────────
+    stackedModeEnabled() {
+        return true;
+    }
+    subpageLabel(subpage) {
+        return subpage === 0 ? "Info" : "Pattern";
+    }
+    // ── Private helpers ───────────────────────────────────────────────────────
+    describeSpell(pattern) {
+        const { offsets, delays } = pattern;
+        const maxDelay = delays.length > 0 ? Math.max(...delays) : 0;
+        if (maxDelay === 0) {
+            return `Strikes ${offsets.length} tile${offsets.length !== 1 ? "s" : ""} simultaneously.`;
+        }
+        const waves = maxDelay + 1;
+        return `Strikes in ${waves} waves, hitting ${offsets.length} tile${offsets.length !== 1 ? "s" : ""} total.`;
+    }
+    drawSpellPatternGrid(pattern, rx, ry, rw, rh) {
+        const GRID_SIZE = 7;
+        // PlayerFireball: frame starts at 6, ends at 17 (inclusive), rate 0.25/delta
+        // Duration to play all 12 frames: (17 - 6) / 0.25 = 44 delta units
+        const FIREBALL_START_FRAME = 6;
+        const FIREBALL_END_FRAME = 17;
+        const FIREBALL_RATE = 0.25;
+        const EXPLOSION_DURATION = (FIREBALL_END_FRAME - FIREBALL_START_FRAME) / FIREBALL_RATE; // 44
+        // Delay between waves: PlayerFireball offsetFrame = spellDelay * 120, drains at 10/delta → 12 delta units per delay step
+        const DELAY_UNIT = 12;
+        const maxDelay = pattern.delays.length > 0 ? Math.max(...pattern.delays) : 0;
+        const CYCLE = maxDelay * DELAY_UNIT + EXPLOSION_DURATION + 20; // 20 blank frames gap
+        const TILE = gameConstants_1.GameConstants.TILESIZE;
+        const tileDrawSize = Math.min(rw / GRID_SIZE, rh / GRID_SIZE);
+        const originX = rx + (rw - GRID_SIZE * tileDrawSize) / 2;
+        const originY = ry + (rh - GRID_SIZE * tileDrawSize) / 2;
+        const CENTER = 3;
+        const destW = tileDrawSize / TILE;
+        const destH = tileDrawSize / TILE;
+        // Solid grey grid background
+        game_1.Game.ctx.fillStyle = "rgba(90, 90, 100, 1)";
+        game_1.Game.ctx.fillRect(originX, originY, GRID_SIZE * tileDrawSize, GRID_SIZE * tileDrawSize);
+        // Highlight center tile
+        game_1.Game.ctx.fillStyle = "rgba(255, 240, 100, 0.18)";
+        game_1.Game.ctx.fillRect(originX + CENTER * tileDrawSize, originY + CENTER * tileDrawSize, tileDrawSize, tileDrawSize);
+        // Draw looping explosion animations at each pattern offset.
+        // Mirror PlayerFireball exactly: frame starts at FIREBALL_START_FRAME, drawn at (x, y-1) with size 1×2.
+        const cycleT = this.previewAnimT % CYCLE;
+        const { offsets, delays } = pattern;
+        for (let i = 0; i < offsets.length; i++) {
+            const { dx, dy } = offsets[i];
+            const delay = delays[i] ?? 0;
+            const tileStart = delay * DELAY_UNIT;
+            const localT = cycleT - tileStart;
+            if (localT >= 0 && localT < EXPLOSION_DURATION) {
+                const frame = FIREBALL_START_FRAME + Math.floor(localT * FIREBALL_RATE);
+                const col = CENTER + dx;
+                const row = CENTER + dy;
+                const destX = (originX + col * tileDrawSize) / TILE;
+                const destY = (originY + row * tileDrawSize) / TILE;
+                // PlayerFireball draws at (this.x, this.y - 1) with drawW=1, drawH=2
+                game_1.Game.drawFX(frame, 6, 1, 2, destX, destY - destH, destW, destH * 2);
+            }
+        }
+    }
+}
+exports.SpellbookReader = SpellbookReader;
+
+
+/***/ }),
+
 /***/ "./src/gui/waterOverlay.ts":
 /*!*********************************!*\
   !*** ./src/gui/waterOverlay.ts ***!
@@ -52105,6 +52200,12 @@ class Inventory {
             if (index < 0 || index >= this.items.length)
                 return;
             const item = this.items[index];
+            // If ranged targeting is active and the player clicks a different item, cancel targeting.
+            const rt = this.player.rangedTargeting;
+            if (rt?.active && item !== rt.getWeapon()) {
+                rt.stop();
+                // Don't return — let the click on the new item proceed.
+            }
             if (this.usingItem) {
                 // Attempt to use 'usingItem' on the currently selected item
                 if (item === null) {
@@ -53224,7 +53325,7 @@ class Inventory {
         };
         this.handleMouseDown = (x, y, button) => {
             if (this.player.menu.open ||
-                this.player.bestiary?.isOpen ||
+                this.player.isAnyBookOpen ||
                 this.player.contextMenu?.open)
                 return;
             // Ignore if not left click
@@ -53292,7 +53393,7 @@ class Inventory {
             this.dragStartMouseX = null;
             this.dragStartMouseY = null;
             if (this.player.menu.open ||
-                this.player.bestiary?.isOpen ||
+                this.player.isAnyBookOpen ||
                 this.player.contextMenu?.open) {
                 // If a context menu is open, cancel any drag to avoid losing items.
                 this.cancelDragAndRestore();
@@ -58027,12 +58128,13 @@ QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
 /*!**************************************************!*\
   !*** ./src/item/weapon/rangedTargetingSystem.ts ***!
   \**************************************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RangedTargetingSystem = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 class RangedTargetingSystem {
     constructor(player) {
         this.active = false;
@@ -58126,6 +58228,16 @@ class RangedTargetingSystem {
             return false;
         }
         const fired = this.weapon.fireAtTarget(this.player, this.targetX, this.targetY);
+        if (fired) {
+            const dx = this.targetX - this.player.x;
+            const dy = this.targetY - this.player.y;
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                this.player.direction = dx >= 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT;
+            }
+            else {
+                this.player.direction = dy >= 0 ? game_1.Direction.DOWN : game_1.Direction.UP;
+            }
+        }
         this.stop();
         return fired;
     }
@@ -67705,6 +67817,7 @@ const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/e
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const bestiary_1 = __webpack_require__(/*! ../game/bestiary */ "./src/game/bestiary.ts");
+const spellbookReader_1 = __webpack_require__(/*! ../gui/spellbookReader */ "./src/gui/spellbookReader.ts");
 const contextMenu_1 = __webpack_require__(/*! ../gui/contextMenu */ "./src/gui/contextMenu.ts");
 const playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 const playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
@@ -67735,6 +67848,9 @@ var DrawDirection;
     DrawDirection[DrawDirection["Y"] = 1] = "Y";
 })(DrawDirection || (DrawDirection = {}));
 class Player extends drawable_1.Drawable {
+    get isAnyBookOpen() {
+        return Boolean(this.bestiary?.isOpen) || Boolean(this.spellbookReader?.isOpen);
+    }
     constructor(game, x, y, isLocalPlayer, z = 0) {
         super();
         this.pushMoveInputLockActive = false;
@@ -67751,6 +67867,7 @@ class Player extends drawable_1.Drawable {
         // TODO: remove entirely once no callers depend on it.
         this.seenEnemies = new Set();
         this.bestiary = null;
+        this.spellbookReader = null;
         this.contextMenu = new contextMenu_1.ContextMenu();
         /**
          * When the context menu opens, we snapshot the current mouse angle so the player
@@ -68144,12 +68261,12 @@ class Player extends drawable_1.Drawable {
                 const inCloseButton = this.menu.isPointInCloseButton(x, y);
                 return inMenuButton || inCloseButton ? "hand" : "arrow";
             }
-            // If the bestiary is open, prevent world interactions behind it from affecting the cursor.
+            // If any book UI is open, prevent world interactions behind it from affecting the cursor.
             // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
-            if (this.bestiary?.isOpen) {
+            if (this.isAnyBookOpen) {
                 const { x, y } = mousePos;
-                const inBestiaryButton = this.bestiary.isPointInBestiaryButton(x, y);
-                const inControls = this.bestiary.isPointInBestiaryControls(x, y);
+                const inBestiaryButton = this.bestiary?.isOpen && this.bestiary.isPointInBestiaryButton(x, y);
+                const inControls = this.bestiary?.isPointInBestiaryControls(x, y) || this.spellbookReader?.isPointInBookControls(x, y);
                 return inBestiaryButton || inControls ? "hand" : "arrow";
             }
             // If the inventory is open, prevent world interactions *behind the inventory UI* from
@@ -69066,6 +69183,7 @@ class Player extends drawable_1.Drawable {
         this.renderer = new playerRenderer_1.PlayerRenderer(this);
         this.oxygenLine = new oxygenLine_1.OxygenLine(this);
         this.bestiary = new bestiary_1.Bestiary(this.game, this);
+        this.spellbookReader = new spellbookReader_1.SpellbookReader();
         this.cooldownRemaining = 0;
         this.deathScreenPageIndex = 0;
         this.deathScreenPageCount = 1;
@@ -69219,6 +69337,8 @@ class PlayerInputHandler {
         this.mobileAimTileY = null;
         this.bestiaryTouchMoveHandler = null;
         this.bestiaryTouchEndHandler = null;
+        this.spellbookReaderTouchMoveHandler = null;
+        this.spellbookReaderTouchEndHandler = null;
         this.handleNumKey = (num) => {
             if (this.player.menu.open)
                 return;
@@ -69327,9 +69447,12 @@ class PlayerInputHandler {
         input_1.Input.touchStartListeners.push((x, y) => {
             const inventory = this.player.inventory;
             const bestiary = this.player.bestiary;
+            const spellbookReader = this.player.spellbookReader;
             const skillsMenu = this.player.skillsMenu;
             // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
             if (bestiary && bestiary.handleTouchStart(x, y))
+                return true;
+            if (spellbookReader && spellbookReader.handleTouchStart(x, y))
                 return true;
             return (inventory.isPointInInventoryButton(x, y) ||
                 inventory.isPointInQuickbarBounds(x, y).inBounds ||
@@ -69339,7 +69462,8 @@ class PlayerInputHandler {
                 xpCounter_1.XPCounter.isPointInBounds(x, y) ||
                 (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
                 (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
-                (bestiary ? bestiary.isPointInBookBounds(x, y) : false));
+                (bestiary ? bestiary.isPointInBookBounds(x, y) : false) ||
+                (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false));
         });
         // Bestiary drag-follow (mobile): track touch movement while the bestiary is open.
         // Use stable handler references so re-running setup can de-dupe correctly.
@@ -69363,6 +69487,27 @@ class PlayerInputHandler {
         };
         input_1.Input.touchMoveListeners.push(this.bestiaryTouchMoveHandler);
         input_1.Input.touchEndListeners.push(this.bestiaryTouchEndHandler);
+        // SpellbookReader drag-follow (mobile): mirror bestiary pattern.
+        if (this.spellbookReaderTouchMoveHandler) {
+            input_1.Input.touchMoveListeners = input_1.Input.touchMoveListeners.filter((fn) => fn !== this.spellbookReaderTouchMoveHandler);
+        }
+        if (this.spellbookReaderTouchEndHandler) {
+            input_1.Input.touchEndListeners = input_1.Input.touchEndListeners.filter((fn) => fn !== this.spellbookReaderTouchEndHandler);
+        }
+        this.spellbookReaderTouchMoveHandler = (x, y) => {
+            const reader = this.player.spellbookReader;
+            if (!reader?.isOpen)
+                return;
+            reader.handleTouchMove(x, y);
+        };
+        this.spellbookReaderTouchEndHandler = (x, y) => {
+            const reader = this.player.spellbookReader;
+            if (!reader?.isOpen)
+                return;
+            reader.handleTouchEnd(x, y);
+        };
+        input_1.Input.touchMoveListeners.push(this.spellbookReaderTouchMoveHandler);
+        input_1.Input.touchEndListeners.push(this.spellbookReaderTouchEndHandler);
         input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.numKeyListener = (num) => this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
@@ -69412,6 +69557,27 @@ class PlayerInputHandler {
                 case input_1.InputEnum.LEFT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                     this.player.bestiary.handleMouseDown(x, y);
+                    return;
+                }
+                default:
+                    return;
+            }
+        }
+        // SpellbookReader takes over input while open.
+        if (this.player.spellbookReader?.isOpen) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.spellbookReader.handleInput("escape");
+                    return;
+                case input_1.InputEnum.LEFT:
+                    this.player.spellbookReader.handleInput("left");
+                    return;
+                case input_1.InputEnum.RIGHT:
+                    this.player.spellbookReader.handleInput("right");
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.spellbookReader.handleMouseDown(x, y);
                     return;
                 }
                 default:
@@ -69633,7 +69799,7 @@ class PlayerInputHandler {
                 }
                 if (player.inventory.isOpen ||
                     player.game.levelState === game_1.LevelState.IN_LEVEL) {
-                    if (player.menu?.open || player.skillsMenu?.open || player.bestiary?.isOpen)
+                    if (player.menu?.open || player.skillsMenu?.open || player.isAnyBookOpen)
                         break;
                     this.validateKeyboardTarget();
                     if (this.keyboardTarget) {
@@ -69833,7 +69999,7 @@ class PlayerInputHandler {
             // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
             if (player.menu?.open ||
                 player.skillsMenu?.open ||
-                player.bestiary?.isOpen) {
+                player.isAnyBookOpen) {
                 menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
                 return;
             }
@@ -69955,27 +70121,37 @@ class PlayerInputHandler {
                     },
                 });
                 const examine = formatExamine(item.examineText?.() ?? "");
-                // Spellbook: Configure and Cast options per spell
+                // Spellbook: Configure and Cast submenus
                 if (item instanceof spellbook_1.Spellbook && gameplaySettings_1.GameplaySettings.SPELLBOOK_TARGETING_ENABLED) {
-                    for (const spell of item.spells) {
-                        const isActive = item.activeSpell === spell;
-                        items.push({
-                            label: isActive ? "Configured" : "Configure",
-                            targetName: spell.name,
-                            enabled: !isActive,
-                            onClick: () => { item.activeSpell = spell; },
-                        });
-                    }
-                    for (const spell of item.spells) {
-                        items.push({
-                            label: "Cast",
-                            targetName: spell.name,
+                    items.push({
+                        label: "Configure",
+                        submenu: item.spells.map((spell) => {
+                            const isActive = item.activeSpell === spell;
+                            return {
+                                label: spell.name,
+                                enabled: !isActive,
+                                targetName: isActive ? "(active)" : undefined,
+                                onClick: () => { item.activeSpell = spell; },
+                            };
+                        }),
+                        onClick: () => { },
+                    });
+                    items.push({
+                        label: "Cast",
+                        submenu: item.spells.map((spell) => ({
+                            label: spell.name,
                             onClick: () => {
                                 item.pendingSpell = spell;
                                 player.rangedTargeting?.start(item);
                             },
-                        });
-                    }
+                        })),
+                        onClick: () => { },
+                    });
+                    items.push({
+                        label: "Read",
+                        targetName,
+                        onClick: () => { player.spellbookReader?.openBook(item); },
+                    });
                 }
                 // Torch / candle: "Place" and "Place on wall"
                 if (item instanceof torch_1.Torch || item instanceof candle_1.Candle) {
@@ -70507,6 +70683,11 @@ class PlayerInputHandler {
             input_1.Input.mouseDownHandled = true;
             return;
         }
+        if (player.spellbookReader?.isOpen) {
+            player.spellbookReader.handleMouseDown(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         if (skillsMenu?.open) {
             skillsMenu.handleClick(x, y);
             input_1.Input.mouseDownHandled = true;
@@ -70627,6 +70808,10 @@ class PlayerInputHandler {
             player.bestiary.handleMouseDown(x, y);
             return;
         }
+        if (player.spellbookReader?.isOpen) {
+            player.spellbookReader.handleMouseDown(x, y);
+            return;
+        }
         // Skills menu is modal-ish while open.
         if (player.skillsMenu?.open) {
             player.skillsMenu.handleClick(x, y);
@@ -70744,6 +70929,10 @@ class PlayerInputHandler {
         }
         if (bestiary?.isOpen) {
             bestiary.handleMouseDown(x, y);
+            return;
+        }
+        if (this.player.spellbookReader?.isOpen) {
+            this.player.spellbookReader.handleMouseDown(x, y);
             return;
         }
         if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
@@ -71340,7 +71529,7 @@ class PlayerRenderer {
             const player = this.player;
             const anyOverlayOpen = Boolean(player.menu?.open) ||
                 Boolean(player.skillsMenu?.open) ||
-                Boolean(player.bestiary?.isOpen) ||
+                player.isAnyBookOpen ||
                 Boolean(player.inventory?.isOpen) ||
                 Boolean(player.contextMenu?.open);
             // Snapshot pose once when an overlay opens; release when all overlays close.
@@ -71800,19 +71989,19 @@ class PlayerRenderer {
                 const inInventoryBounds = this.player.inventory.isPointInInventoryBounds(mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y).inBounds;
                 const drawFor = gameConstants_1.GameConstants.IN_GAME_HOVER_TEXT_ENABLED &&
                     !this.player.menu.open &&
-                    !this.player.bestiary?.isOpen &&
+                    !this.player.isAnyBookOpen &&
                     !inventoryOpen &&
                     !quickbarOpen &&
                     !this.player.openVendingMachine
                     ? "inGame"
                     : gameConstants_1.GameConstants.INVENTORY_HOVER_TEXT_ENABLED &&
                         !this.player.menu.open &&
-                        !this.player.bestiary?.isOpen &&
+                        !this.player.isAnyBookOpen &&
                         ((inventoryOpen && inInventoryBounds) || quickbarOpen)
                         ? "inventory"
                         : gameConstants_1.GameConstants.VENDING_MACHINE_HOVER_TEXT_ENABLED &&
                             !this.player.menu.open &&
-                            !this.player.bestiary?.isOpen &&
+                            !this.player.isAnyBookOpen &&
                             inVendingMachine
                             ? "vendingMachine"
                             : "none";
@@ -71826,6 +72015,8 @@ class PlayerRenderer {
                 // Draw bestiary last so it renders above inventory/quickbar.
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
+                if (this.player.spellbookReader)
+                    this.player.spellbookReader.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
@@ -71981,7 +72172,7 @@ class PlayerRenderer {
             postProcess_1.PostProcessor.draw(delta, this.player?.getRoom()?.underwater ?? false, cameraOrigin);
             if (this.hurting)
                 this.drawHurt(delta);
-            if (!gameConstants_1.GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.bestiary?.isOpen)
+            if (!gameConstants_1.GameConstants.CLEAN_MODE && this.player.mapToggled === true && !this.player.isAnyBookOpen)
                 this.player.map.draw(delta);
             this.drawTileCursor(delta);
             this.drawTargetIndicator(delta);
@@ -72194,7 +72385,7 @@ class PlayerRenderer {
                 return;
             if (this.player.skillsMenu?.open)
                 return;
-            if (this.player.bestiary?.isOpen)
+            if (this.player.isAnyBookOpen)
                 return;
             if (this.player.inputHandler.isMouseOverUI())
                 return;
