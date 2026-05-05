@@ -56063,6 +56063,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const shadow_1 = __webpack_require__(/*! ../drawable/shadow */ "./src/drawable/shadow.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
+const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 const keyColor_1 = __webpack_require__(/*! ../utility/keyColor */ "./src/utility/keyColor.ts");
 class Key extends usable_1.Usable {
     constructor(level, x, y) {
@@ -56261,6 +56262,9 @@ class Key extends usable_1.Usable {
                     for (const d of r.doors) {
                         const nextRoom = d?.linkedDoor?.room;
                         if (nextRoom && nextRoom !== r) {
+                            // Don't route through tunnel doors that are still locked
+                            if (d.type === door_1.DoorType.TUNNELDOOR && d.locked)
+                                continue;
                             out.push({ room: nextRoom, via: { x: d.x, y: d.y } });
                         }
                     }

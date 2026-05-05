@@ -6,6 +6,7 @@ import { Game } from "../game";
 import { Shadow } from "../drawable/shadow";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
+import { DoorType } from "../tile/door";
 import { getKeyColorForId } from "../utility/keyColor";
 
 export class Key extends Usable {
@@ -282,6 +283,8 @@ export class Key extends Usable {
         for (const d of r.doors) {
           const nextRoom = d?.linkedDoor?.room;
           if (nextRoom && nextRoom !== r) {
+            // Don't route through tunnel doors that are still locked
+            if (d.type === DoorType.TUNNELDOOR && d.locked) continue;
             out.push({ room: nextRoom, via: { x: d.x, y: d.y } });
           }
         }
