@@ -1,11 +1,16 @@
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
 import { BookRenderer, BookTheme } from "./bookRenderer";
-import { Spellbook } from "../item/weapon/spellbook";
+import { spellById } from "../item/weapon/spell";
 import type { SpellPattern } from "../item/weapon/spell";
+import type { Player } from "../player/player";
 
 export class SpellbookReader extends BookRenderer {
-  private spellbook: Spellbook | null = null;
+  private player: Player | null = null;
+  private _shakeAmountY: number = 0;
+  private _shakeFrame: number = 0;
+  private _shakeActive: boolean = false;
+  private _shakeScheduledAt: number = -1; // previewAnimT value to trigger shake
 
   constructor() {
     super();
@@ -13,9 +18,9 @@ export class SpellbookReader extends BookRenderer {
     this.handleResize();
   }
 
-  /** Open the reader for a specific spellbook item. */
-  openBook(spellbook: Spellbook): void {
-    this.spellbook = spellbook;
+  /** Open the reader showing the player's known spells. */
+  openForPlayer(player: Player): void {
+    this.player = player;
     this.currentPage = 0;
     this.activeSubpage = 0;
     this.open();
@@ -24,7 +29,7 @@ export class SpellbookReader extends BookRenderer {
   // ── BookRenderer abstract implementations ─────────────────────────────────
 
   getPageCount(): number {
-    return this.spellbook?.spells.length ?? 0;
+    return this.player?.knownSpells.length ?? 0;
   }
 
   drawLeftPage(
@@ -35,8 +40,9 @@ export class SpellbookReader extends BookRenderer {
     _h: number,
     theme: BookTheme,
   ): void {
-    if (!this.spellbook) return;
-    const spell = this.spellbook.spells[pageIndex];
+    if (!this.player) return;
+    const id = this.player.knownSpells[pageIndex];
+    const spell = id ? spellById(id) : null;
     if (!spell) return;
 
     Game.ctx.fillStyle = theme.accentText;
@@ -55,16 +61,40 @@ export class SpellbookReader extends BookRenderer {
     h: number,
     _theme: BookTheme,
   ): void {
-    if (!this.spellbook) return;
-    const spell = this.spellbook.spells[pageIndex];
+    if (!this.player) return;
+    const id = this.player.knownSpells[pageIndex];
+    const spell = id ? spellById(id) : null;
     if (!spell) return;
     this.drawSpellPatternGrid(spell.getPattern(), x, y, w, h);
   }
 
   // ── Protected hook overrides ───────────────────────────────────────────────
 
+  protected onBeforeDraw(delta: number): void {
+    // Tick shake
+    if (this._shakeActive) {
+      this._shakeAmountY *= 0.8 ** delta;
+      this._shakeFrame += 0.15 * delta;
+      if (Math.abs(this._shakeAmountY) < 0.5) {
+        this._shakeAmountY = 0; this._shakeFrame = 0; this._shakeActive = false;
+      }
+    }
+    // Fire scheduled shake
+    if (this._shakeScheduledAt >= 0 && this.previewAnimT >= this._shakeScheduledAt) {
+      this._shakeAmountY = 5;
+      this._shakeFrame = Math.PI / 2;
+      this._shakeActive = true;
+      this._shakeScheduledAt = -1;
+    }
+  }
+
   protected stackedModeEnabled(): boolean {
     return true;
+  }
+
+  protected getShakeOffset(): { x: number; y: number } {
+    const y = this._shakeActive ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY) : 0;
+    return { x: 0, y };
   }
 
   protected subpageLabel(subpage: 0 | 1): string {
@@ -91,44 +121,63 @@ export class SpellbookReader extends BookRenderer {
     rh: number,
   ): void {
     const GRID_SIZE = 7;
-    // PlayerFireball: frame starts at 6, ends at 17 (inclusive), rate 0.25/delta
-    // Duration to play all 12 frames: (17 - 6) / 0.25 = 44 delta units
     const FIREBALL_START_FRAME = 6;
     const FIREBALL_END_FRAME = 17;
     const FIREBALL_RATE = 0.25;
     const EXPLOSION_DURATION = (FIREBALL_END_FRAME - FIREBALL_START_FRAME) / FIREBALL_RATE; // 44
-    // Delay between waves: PlayerFireball offsetFrame = spellDelay * 120, drains at 10/delta → 12 delta units per delay step
     const DELAY_UNIT = 12;
     const maxDelay = pattern.delays.length > 0 ? Math.max(...pattern.delays) : 0;
-    const CYCLE = maxDelay * DELAY_UNIT + EXPLOSION_DURATION + 20; // 20 blank frames gap
+    const CYCLE = maxDelay * DELAY_UNIT + EXPLOSION_DURATION + 20;
     const TILE = GameConstants.TILESIZE;
 
-    const tileDrawSize = Math.min(rw / GRID_SIZE, rh / GRID_SIZE);
-    const originX = rx + (rw - GRID_SIZE * tileDrawSize) / 2;
-    const originY = ry + (rh - GRID_SIZE * tileDrawSize) / 2;
+    const maxTileDrawSize = Math.min(rw / GRID_SIZE, rh / GRID_SIZE);
+    const scale = Math.max(1, Math.floor(maxTileDrawSize / TILE));
+    const tileDrawSize = scale * TILE;
+    const originX = Math.round(rx + (rw - GRID_SIZE * tileDrawSize) / 2);
+    const originY = Math.round(ry + (rh - GRID_SIZE * tileDrawSize) / 2);
     const CENTER = 3;
+    const destW = scale;
+    const destH = scale;
 
-    const destW = tileDrawSize / TILE;
-    const destH = tileDrawSize / TILE;
+    const cycleT = this.previewAnimT % CYCLE;
 
-    // Solid grey grid background
-    Game.ctx.fillStyle = "rgba(90, 90, 100, 1)";
+    // Schedule shake at the midpoint of the first explosion wave
+    const firstExplosionMid = FIREBALL_START_FRAME / FIREBALL_RATE + EXPLOSION_DURATION * 0.5;
+    const cycleBase = this.previewAnimT - cycleT;
+    const shakeTarget = cycleBase + firstExplosionMid;
+    if (cycleT < firstExplosionMid && this._shakeScheduledAt < cycleBase) {
+      this._shakeScheduledAt = shakeTarget;
+    }
+
+    // Reset to known state; clip to panel
+    Game.ctx.save();
+    Game.ctx.globalCompositeOperation = "source-over";
+    Game.ctx.globalAlpha = 1;
+    Game.ctx.beginPath();
+    Game.ctx.rect(rx, ry, rw, rh);
+    Game.ctx.clip();
+
+    // Border ring (static, no shake)
+    Game.ctx.fillStyle = "rgba(70, 70, 80, 1)";
     Game.ctx.fillRect(originX, originY, GRID_SIZE * tileDrawSize, GRID_SIZE * tileDrawSize);
 
-    // Highlight center tile
-    Game.ctx.fillStyle = "rgba(255, 240, 100, 0.18)";
-    Game.ctx.fillRect(
-      originX + CENTER * tileDrawSize,
-      originY + CENTER * tileDrawSize,
-      tileDrawSize,
-      tileDrawSize,
-    );
+    // Checkerboard (1-tile inset, static)
+    for (let col = 1; col < GRID_SIZE - 1; col++) {
+      for (let row = 1; row < GRID_SIZE - 1; row++) {
+        Game.ctx.fillStyle = (col + row) % 2 === 0
+          ? "rgba(85, 85, 95, 1)"
+          : "rgba(100, 100, 110, 1)";
+        Game.ctx.fillRect(
+          originX + col * tileDrawSize,
+          originY + row * tileDrawSize,
+          tileDrawSize,
+          tileDrawSize,
+        );
+      }
+    }
 
-    // Draw looping explosion animations at each pattern offset.
-    // Mirror PlayerFireball exactly: frame starts at FIREBALL_START_FRAME, drawn at (x, y-1) with size 1×2.
-    const cycleT = this.previewAnimT % CYCLE;
+    // Draw looping explosion animations
     const { offsets, delays } = pattern;
-
     for (let i = 0; i < offsets.length; i++) {
       const { dx, dy } = offsets[i];
       const delay = delays[i] ?? 0;
@@ -140,9 +189,10 @@ export class SpellbookReader extends BookRenderer {
         const row = CENTER + dy;
         const destX = (originX + col * tileDrawSize) / TILE;
         const destY = (originY + row * tileDrawSize) / TILE;
-        // PlayerFireball draws at (this.x, this.y - 1) with drawW=1, drawH=2
         Game.drawFX(frame, 6, 1, 2, destX, destY - destH, destW, destH * 2);
       }
     }
+
+    Game.ctx.restore(); // end clip/state reset
   }
 }

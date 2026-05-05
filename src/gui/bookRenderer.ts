@@ -121,6 +121,13 @@ export abstract class BookRenderer {
   private leftArrowRect: { x: number; y: number; w: number; h: number } | null = null;
   private rightArrowRect: { x: number; y: number; w: number; h: number } | null = null;
   private closeRect: { x: number; y: number; w: number; h: number } | null = null;
+  private backRect: { x: number; y: number; w: number; h: number } | null = null;
+
+  protected backCallback: (() => void) | null = null;
+
+  setBackCallback(cb: (() => void) | null): void {
+    this.backCallback = cb;
+  }
 
   private pageTransition: {
     startMs: number;
@@ -183,10 +190,16 @@ export abstract class BookRenderer {
   /** Called once per draw frame before the book is rendered. */
   protected onBeforeDraw(_delta: number): void {}
 
+  /** Return a pixel offset to translate the entire book this frame. */
+  protected getShakeOffset(): { x: number; y: number } { return { x: 0, y: 0 }; }
+
   /** Called when the active page changes (page transition committed). */
   protected onPageChanged(newPage: number): void {
     this.currentPage = newPage;
   }
+
+  /** Called when a commit page transition begins (before animation plays). */
+  protected onPageTransitionStart(_toPage: number): void {}
 
   /** Called when all hitbox rects are cleared (close fade complete, or animation started). */
   protected onHitboxesClear(): void {}
@@ -246,6 +259,7 @@ export abstract class BookRenderer {
     if (this.closeRect && this.pointInRect(x, y, this.closeRect)) return true;
     if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect)) return true;
     if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect)) return true;
+    if (this.backRect && this.pointInRect(x, y, this.backRect)) return true;
     return false;
   };
 
@@ -341,6 +355,12 @@ export abstract class BookRenderer {
     if (this.openFade?.kind === "closing") return;
     if (this.pageTransition) return;
     if (this.touchDrag?.active) return;
+    if (this.backRect && this.pointInRect(x, y, this.backRect)) {
+      const cb = this.backCallback;
+      this.close();
+      if (cb) cb();
+      return;
+    }
     if (this.handleExtraClick(x, y)) return;
     if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
       this.close();
@@ -414,6 +434,8 @@ export abstract class BookRenderer {
 
     offCtx.save();
     offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+    offCtx.globalCompositeOperation = "source-over";
+    offCtx.globalAlpha = 1;
     offCtx.imageSmoothingEnabled = false;
 
     const prevCtx = Game.ctx;
@@ -423,9 +445,12 @@ export abstract class BookRenderer {
     this.onBeforeDraw(delta);
     this.previewAnimT += delta;
     const theme = this.getTheme();
-
+    // Draw backdrop before shake translate so it always covers the full canvas.
     Game.ctx.fillStyle = theme.backdrop;
     Game.ctx.fillRect(0, 0, GameConstants.WIDTH, GameConstants.HEIGHT);
+
+    // const shakeOff = this.getShakeOffset();
+    // Game.ctx.translate(shakeOff.x, shakeOff.y);
 
     const { x: bookX, y: bookY, w: bookW, h: bookH } = this.computeBookRect();
     const compactMode = this.isCompactMode();
@@ -436,6 +461,7 @@ export abstract class BookRenderer {
       this.leftArrowRect = null;
       this.rightArrowRect = null;
       this.closeRect = null;
+      this.backRect = null;
       this.onHitboxesClear();
 
       const dir = this.touchDrag.dir;
@@ -468,6 +494,7 @@ export abstract class BookRenderer {
       this.leftArrowRect = null;
       this.rightArrowRect = null;
       this.closeRect = null;
+      this.backRect = null;
       this.onHitboxesClear();
 
       const now = Date.now();
@@ -530,6 +557,7 @@ export abstract class BookRenderer {
     offCtx.restore();
 
     prevCtx.save();
+    prevCtx.globalCompositeOperation = "source-over";
     prevCtx.globalAlpha = prevCtx.globalAlpha * a;
     prevCtx.drawImage(this.overlayCanvas, 0, 0);
     prevCtx.restore();
@@ -555,6 +583,7 @@ export abstract class BookRenderer {
       this.leftArrowRect = null;
       this.rightArrowRect = null;
       this.closeRect = null;
+      this.backRect = null;
       this.onHitboxesClear();
     }
     return a;
@@ -600,6 +629,7 @@ export abstract class BookRenderer {
     }
     const r = this.computeBookRect();
     const mode = args.mode ?? "commit";
+    if (mode === "commit") this.onPageTransitionStart(args.toPage);
     const startOffsetPx = args.startOffsetPx ?? 0;
     const endOffsetPx = mode === "commit" ? -args.dir * r.w : 0;
     this.pageTransition = {
@@ -850,6 +880,28 @@ export abstract class BookRenderer {
       const xt = Math.round(closeX + (closeSize - xw) / 2);
       const yt = Math.round(closeY + (closeSize - xh) / 2);
       Game.fillText("X", xt, yt);
+
+      // Back button (shown when backCallback is set)
+      if (this.backCallback !== null) {
+        const backLabel = "< Back";
+        const backW = Game.measureText(backLabel).width + 8;
+        const backH = arrowH;
+        const bx = bookX + 4;
+        const by = arrowY;
+        if (args.enableHitboxes) {
+          this.backRect = { x: bx, y: by, w: backW, h: backH };
+        }
+        Game.ctx.fillStyle = "rgba(255,255,255,0.1)";
+        Game.ctx.fillRect(bx, by, backW, backH);
+        Game.ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        Game.ctx.lineWidth = 1;
+        Game.ctx.strokeRect(bx, by, backW, backH);
+        Game.ctx.fillStyle = theme.accentText;
+        const btY = Math.round(by + (backH - Game.letter_height) / 2);
+        Game.fillText(backLabel, bx + 4, btY);
+      } else if (args.enableHitboxes) {
+        this.backRect = null;
+      }
     }
 
     Game.ctx.restore();

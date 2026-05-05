@@ -42,10 +42,10 @@ export class HoverText {
     // Keep this lightweight and aligned with existing click bounds.
     try {
       if (
-        player.bestiary?.isPointInBestiaryButton(Input.mouseX, Input.mouseY)
+        player.bookLibrary?.isPointInLibraryButton(Input.mouseX, Input.mouseY)
       ) {
         strings.push(
-          player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary",
+          player.bookLibrary.isOpen ? "Close Library" : "Open Library",
         );
         return strings;
       }

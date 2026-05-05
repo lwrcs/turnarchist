@@ -195,6 +195,11 @@ export type PlayerSaveV2 = {
   sightRadius: number;
   light?: PlayerLightSaveV2;
   turnCount?: number;
+
+  /** Spell IDs the player has learned globally. */
+  knownSpells?: string[];
+  /** Weapon itemName IDs the player has discovered. */
+  knownWeaponIds?: string[];
 };
 
 export type PlayerLightSaveV2 = {

@@ -771,6 +771,9 @@ export class Inventory {
     if (item instanceof Equippable) {
       item.setWielder(this.player);
     }
+    if (item instanceof Weapon) {
+      this.player.addKnownWeaponId(item.name);
+    }
     if (item.stackable) {
       if (stackCount) {
         item.stackCount = stackCount;

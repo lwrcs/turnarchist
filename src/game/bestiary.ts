@@ -75,8 +75,6 @@ export class Bestiary extends BookRenderer {
   game: Game;
   player: Player;
   private entryViewStartTime: number = Date.now();
-  private buttonX: number = 0.25;
-  private buttonY: number = 0;
   entries: Array<BestiaryEntry>;
   private seenEnemyTypeNames: Set<string>;
   private enemyNameToClass: Map<string, typeof Enemy>;
@@ -175,10 +173,6 @@ export class Bestiary extends BookRenderer {
   }
 
   protected handleExtraClick(x: number, y: number): boolean {
-    if (this.isPointInBestiaryButton(x, y)) {
-      this.close();
-      return true;
-    }
     if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect)) {
       this.advanceSpriteState(-1);
       return true;
@@ -218,31 +212,6 @@ export class Bestiary extends BookRenderer {
     this.open();
   };
 
-  isPointInBestiaryButton = (x: number, y: number): boolean => {
-    const r = this.getBestiaryButtonRect();
-    return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-  };
-
-  getBestiaryButtonRect = (): { x: number; y: number; w: number; h: number } => {
-    let bx = 0.25;
-    let by = GameConstants.HEIGHT / GameConstants.TILESIZE - 1.25;
-    if (GameConstants.WIDTH < 145) by -= 1.25;
-    const x = Math.round(bx * GameConstants.TILESIZE);
-    const y = Math.round(by * GameConstants.TILESIZE);
-    const w = GameConstants.TILESIZE;
-    const h = GameConstants.TILESIZE;
-    return { x, y, w, h };
-  };
-
-  drawBestiaryButton = (delta: number) => {
-    delta;
-    Game.ctx.save();
-    const r = this.getBestiaryButtonRect();
-    this.buttonX = r.x / GameConstants.TILESIZE;
-    this.buttonY = r.y / GameConstants.TILESIZE;
-    Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
-    Game.ctx.restore();
-  };
 
   addEntry = (enemyTypeName: string) => {
     this.seenEnemyTypeNames.add(enemyTypeName);

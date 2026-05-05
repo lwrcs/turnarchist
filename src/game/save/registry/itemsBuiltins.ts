@@ -926,18 +926,10 @@ export const registerBuiltinItemCodecsV2 = (): void => {
       w.stackCount = value.stackCount;
       w.pickedUp = value.pickedUp;
       w.globalId = value.gid;
-      // Restore inscribed spells
-      w.spells = [];
-      for (const id of value.spellIds) {
-        const spell = spellById(id);
-        if (spell) w.spells.push(spell);
-      }
-      if (w.spells.length === 0) {
-        // Fallback: ensure at least the default spell
-        w.spells = [new PlusSpell()];
-      }
-      const active = spellById(value.activeSpellId);
-      w.activeSpell = active ?? w.spells[0];
+      // Spells are NOT restored here — restorePlayer() calls syncSpellbooksFromKnownSpells()
+      // after all items are loaded, which rebuilds spells from player.knownSpells.
+      w.spells = [new PlusSpell()];
+      w.activeSpell = w.spells[0];
       w.pendingSpell = null;
       return w;
     },

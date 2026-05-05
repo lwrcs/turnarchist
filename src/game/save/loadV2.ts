@@ -28,6 +28,7 @@ import type { Item } from "../../item/item";
 import { Player } from "../../player/player";
 import { Key } from "../../item/key";
 import { Weapon } from "../../item/weapon/weapon";
+import { Spellbook } from "../../item/weapon/spellbook";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
@@ -40,6 +41,7 @@ import { PlayerFireball } from "../../projectile/playerFireball";
 import { Equippable } from "../../item/equippable";
 import { GameplaySettings } from "../gameplaySettings";
 import { GameConstants } from "../gameConstants";
+import { ARMORY_WEAPONS } from "../../gui/armoryBook";
 import { Input } from "../input";
 import { statsTracker } from "../stats";
 
@@ -1305,6 +1307,36 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       const w = p.inventory.items[ps.inventory.equippedWeaponSlot];
       if (w instanceof Weapon) {
         p.inventory.weapon = w;
+      }
+    }
+
+    // Restore known spells (player-global). Backward compat: if absent, harvest from spellbook items.
+    if (ps.knownSpells && ps.knownSpells.length > 0) {
+      p.knownSpells = [...ps.knownSpells];
+    } else {
+      for (const item of p.inventory.items) {
+        if (item instanceof Spellbook) {
+          for (const spell of item.spells) {
+            p.addKnownSpell(spell.id);
+          }
+        }
+      }
+    }
+    // Sync all spellbooks from player's known spells
+    p.syncSpellbooksFromKnownSpells();
+
+    // Restore known weapon IDs
+    if (ps.knownWeaponIds && ps.knownWeaponIds.length > 0) {
+      p.knownWeaponIds = [...ps.knownWeaponIds];
+    }
+    // Populate ArmoryBook from known weapon IDs
+    for (const weaponName of p.knownWeaponIds) {
+      p.armoryBook?.addEntry(weaponName);
+    }
+    // Dev mode: unlock all weapons.
+    if (GameConstants.DEVELOPER_MODE && p.armoryBook) {
+      for (const entry of ARMORY_WEAPONS) {
+        p.armoryBook.addEntry(entry.weaponName);
       }
     }
 

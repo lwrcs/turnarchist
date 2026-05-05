@@ -29,7 +29,7 @@ export class Scroll extends Usable {
       );
       return;
     }
-    const alreadyKnown = book.spells.some((s) => s.id === this.spell.id);
+    const alreadyKnown = player.knownSpells.includes(this.spell.id);
     if (alreadyKnown) {
       player.game.pushMessage(
         `Your spellbook already contains the ${this.spell.name} spell.`,
@@ -37,7 +37,8 @@ export class Scroll extends Usable {
       player.inventory.removeItem(this);
       return;
     }
-    book.addSpell(this.spell);
+    player.addKnownSpell(this.spell.id);
+    player.syncSpellbooksFromKnownSpells();
     player.game.pushMessage(
       `You study the scroll and inscribe its knowledge into your spellbook.`,
     );

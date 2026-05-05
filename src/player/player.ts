@@ -19,6 +19,7 @@ import { BlockSwipeAnimation } from "../particle/blockSwipeAnimation";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 import { Spellbook } from "../item/weapon/spellbook";
+import { PlusSpell, spellById } from "../item/weapon/spell";
 
 import { Enemy } from "../entity/enemy/enemy";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -27,6 +28,8 @@ import { LightSource } from "../lighting/lightSource";
 import { Menu } from "../gui/menu";
 import { Bestiary } from "../game/bestiary";
 import { SpellbookReader } from "../gui/spellbookReader";
+import { BookLibrary } from "../gui/bookLibrary";
+import { ArmoryBook, ARMORY_WEAPONS } from "../gui/armoryBook";
 import { ContextMenu } from "../gui/contextMenu";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
@@ -154,8 +157,43 @@ export class Player extends Drawable {
   seenEnemies: Set<typeof Enemy> = new Set();
   bestiary: Bestiary = null;
   spellbookReader: SpellbookReader = null;
+  bookLibrary: BookLibrary = null;
+  armoryBook: ArmoryBook = null;
+  knownSpells: string[] = [];
+  knownWeaponIds: string[] = [];
+
+  addKnownSpell(id: string): void {
+    if (!this.knownSpells.includes(id)) this.knownSpells.push(id);
+  }
+
+  addKnownWeaponId(name: string): void {
+    if (!this.knownWeaponIds.includes(name)) {
+      this.knownWeaponIds.push(name);
+      this.armoryBook?.addEntry(name);
+    }
+  }
+
+  syncSpellbooksFromKnownSpells(): void {
+    for (const item of this.inventory.items) {
+      if (item instanceof Spellbook) {
+        const resolved = this.knownSpells.map(spellById).filter(
+          (s): s is NonNullable<ReturnType<typeof spellById>> => s != null,
+        );
+        item.spells = resolved.length > 0 ? resolved : [new PlusSpell()];
+        if (!item.spells.includes(item.activeSpell)) {
+          item.activeSpell = item.spells[0];
+        }
+      }
+    }
+  }
+
   get isAnyBookOpen(): boolean {
-    return Boolean(this.bestiary?.isOpen) || Boolean(this.spellbookReader?.isOpen);
+    return (
+      Boolean(this.bestiary?.isOpen) ||
+      Boolean(this.spellbookReader?.isOpen) ||
+      Boolean(this.bookLibrary?.isOpen) ||
+      Boolean(this.armoryBook?.isOpen)
+    );
   }
   contextMenu: ContextMenu = new ContextMenu();
   /**
@@ -241,6 +279,19 @@ export class Player extends Drawable {
 
     this.bestiary = new Bestiary(this.game, this);
     this.spellbookReader = new SpellbookReader();
+    this.bookLibrary = new BookLibrary(this);
+    this.armoryBook = new ArmoryBook(this);
+
+    // Backfill armoryBook from any weapons already collected before armoryBook was created.
+    for (const name of this.knownWeaponIds) {
+      this.armoryBook.addEntry(name);
+    }
+    // Dev mode: unlock all weapons immediately.
+    if (GameConstants.DEVELOPER_MODE) {
+      for (const entry of ARMORY_WEAPONS) {
+        this.armoryBook.addEntry(entry.weaponName);
+      }
+    }
 
     this.cooldownRemaining = 0;
     this.deathScreenPageIndex = 0;
@@ -761,9 +812,12 @@ export class Player extends Drawable {
     // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
     if (this.isAnyBookOpen) {
       const { x, y } = mousePos;
-      const inBestiaryButton = this.bestiary?.isOpen && this.bestiary.isPointInBestiaryButton(x, y);
-      const inControls = this.bestiary?.isPointInBestiaryControls(x, y) || this.spellbookReader?.isPointInBookControls(x, y);
-      return inBestiaryButton || inControls ? "hand" : "arrow";
+      const inControls =
+        this.bestiary?.isPointInBookControls(x, y) ||
+        this.spellbookReader?.isPointInBookControls(x, y) ||
+        this.bookLibrary?.isPointInBookControls(x, y) ||
+        this.armoryBook?.isPointInBookControls(x, y);
+      return inControls ? "hand" : "arrow";
     }
 
     // If the inventory is open, prevent world interactions *behind the inventory UI* from
@@ -821,7 +875,7 @@ export class Player extends Drawable {
       this.inventory.isPointInInventoryButton(x, y) ||
       Menu.isPointInOpenMenuButtonBounds(x, y) ||
       XPCounter.isPointInBounds(x, y) ||
-      (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
+      (this.bookLibrary ? this.bookLibrary.isPointInLibraryButton(x, y) : false) ||
       this.isInventoryItemInteraction(x, y)
     );
   };

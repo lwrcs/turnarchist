@@ -683,6 +683,18 @@ const validatePlayerSaveV2 = (
     };
   }
 
+  const knownSpellsU = get(v, "knownSpells");
+  let knownSpells: string[] | undefined;
+  if (Array.isArray(knownSpellsU)) {
+    knownSpells = knownSpellsU.filter((s): s is string => typeof s === "string");
+  }
+
+  const knownWeaponIdsU = get(v, "knownWeaponIds");
+  let knownWeaponIds: string[] | undefined;
+  if (Array.isArray(knownWeaponIdsU)) {
+    knownWeaponIds = knownWeaponIdsU.filter((s): s is string => typeof s === "string");
+  }
+
   return ok({
     id,
     x,
@@ -698,6 +710,8 @@ const validatePlayerSaveV2 = (
     sightRadius,
     light,
     turnCount,
+    knownSpells,
+    knownWeaponIds,
   });
 };
 

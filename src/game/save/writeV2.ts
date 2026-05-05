@@ -220,6 +220,8 @@ const playerToSave = (game: Game, id: string, p: Player, nowMs: number): PlayerS
       colorRgb: [p.lightColor[0], p.lightColor[1], p.lightColor[2]],
       brightness: p.lightBrightness,
     },
+    knownSpells: p.knownSpells.length > 0 ? [...p.knownSpells] : undefined,
+    knownWeaponIds: p.knownWeaponIds.length > 0 ? [...p.knownWeaponIds] : undefined,
   };
 };
 

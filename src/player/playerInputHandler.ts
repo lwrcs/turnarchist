@@ -38,6 +38,14 @@ export class PlayerInputHandler {
     null;
   private spellbookReaderTouchEndHandler: ((x: number, y: number) => void) | null =
     null;
+  private bookLibraryTouchMoveHandler: ((x: number, y: number) => void) | null =
+    null;
+  private bookLibraryTouchEndHandler: ((x: number, y: number) => void) | null =
+    null;
+  private armoryBookTouchMoveHandler: ((x: number, y: number) => void) | null =
+    null;
+  private armoryBookTouchEndHandler: ((x: number, y: number) => void) | null =
+    null;
 
   constructor(player: Player) {
     this.player = player;
@@ -76,10 +84,14 @@ export class PlayerInputHandler {
       const inventory = this.player.inventory;
       const bestiary = this.player.bestiary;
       const spellbookReader = this.player.spellbookReader;
+      const bookLibrary = this.player.bookLibrary;
+      const armoryBook = this.player.armoryBook;
       const skillsMenu = this.player.skillsMenu;
       // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
       if (bestiary && bestiary.handleTouchStart(x, y)) return true;
       if (spellbookReader && spellbookReader.handleTouchStart(x, y)) return true;
+      if (bookLibrary && bookLibrary.handleTouchStart(x, y)) return true;
+      if (armoryBook && armoryBook.handleTouchStart(x, y)) return true;
       return (
         inventory.isPointInInventoryButton(x, y) ||
         inventory.isPointInQuickbarBounds(x, y).inBounds ||
@@ -88,9 +100,11 @@ export class PlayerInputHandler {
         Menu.isPointInOpenMenuButtonBounds(x, y) ||
         XPCounter.isPointInBounds(x, y) ||
         (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
-        (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+        (bookLibrary ? bookLibrary.isPointInLibraryButton(x, y) : false) ||
         (bestiary ? bestiary.isPointInBookBounds(x, y) : false) ||
-        (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false)
+        (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false) ||
+        (bookLibrary ? bookLibrary.isPointInBookBounds(x, y) : false) ||
+        (armoryBook ? armoryBook.isPointInBookBounds(x, y) : false)
       );
     });
 
@@ -142,6 +156,54 @@ export class PlayerInputHandler {
     };
     Input.touchMoveListeners.push(this.spellbookReaderTouchMoveHandler);
     Input.touchEndListeners.push(this.spellbookReaderTouchEndHandler);
+
+    // BookLibrary drag-follow (mobile).
+    if (this.bookLibraryTouchMoveHandler) {
+      Input.touchMoveListeners = Input.touchMoveListeners.filter(
+        (fn) => fn !== this.bookLibraryTouchMoveHandler,
+      );
+    }
+    if (this.bookLibraryTouchEndHandler) {
+      Input.touchEndListeners = Input.touchEndListeners.filter(
+        (fn) => fn !== this.bookLibraryTouchEndHandler,
+      );
+    }
+    this.bookLibraryTouchMoveHandler = (x: number, y: number) => {
+      const lib = this.player.bookLibrary;
+      if (!lib?.isOpen) return;
+      lib.handleTouchMove(x, y);
+    };
+    this.bookLibraryTouchEndHandler = (x: number, y: number) => {
+      const lib = this.player.bookLibrary;
+      if (!lib?.isOpen) return;
+      lib.handleTouchEnd(x, y);
+    };
+    Input.touchMoveListeners.push(this.bookLibraryTouchMoveHandler);
+    Input.touchEndListeners.push(this.bookLibraryTouchEndHandler);
+
+    // ArmoryBook drag-follow (mobile).
+    if (this.armoryBookTouchMoveHandler) {
+      Input.touchMoveListeners = Input.touchMoveListeners.filter(
+        (fn) => fn !== this.armoryBookTouchMoveHandler,
+      );
+    }
+    if (this.armoryBookTouchEndHandler) {
+      Input.touchEndListeners = Input.touchEndListeners.filter(
+        (fn) => fn !== this.armoryBookTouchEndHandler,
+      );
+    }
+    this.armoryBookTouchMoveHandler = (x: number, y: number) => {
+      const armory = this.player.armoryBook;
+      if (!armory?.isOpen) return;
+      armory.handleTouchMove(x, y);
+    };
+    this.armoryBookTouchEndHandler = (x: number, y: number) => {
+      const armory = this.player.armoryBook;
+      if (!armory?.isOpen) return;
+      armory.handleTouchEnd(x, y);
+    };
+    Input.touchMoveListeners.push(this.armoryBookTouchMoveHandler);
+    Input.touchEndListeners.push(this.armoryBookTouchEndHandler);
 
     Input.mouseDownListeners.push((x: number, y: number, button: number) =>
       this.handleMouseDown(x, y, button),
@@ -221,6 +283,50 @@ export class PlayerInputHandler {
         case InputEnum.LEFT_CLICK: {
           const { x, y } = MouseCursor.getInstance().getPosition();
           this.player.spellbookReader.handleMouseDown(x, y);
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
+    // BookLibrary takes over input while open.
+    if (this.player.bookLibrary?.isOpen) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.bookLibrary.handleInput("escape");
+          return;
+        case InputEnum.LEFT:
+          this.player.bookLibrary.handleInput("left");
+          return;
+        case InputEnum.RIGHT:
+          this.player.bookLibrary.handleInput("right");
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.bookLibrary.handleMouseDown(x, y);
+          return;
+        }
+        default:
+          return;
+      }
+    }
+
+    // ArmoryBook takes over input while open.
+    if (this.player.armoryBook?.isOpen) {
+      switch (input) {
+        case InputEnum.ESCAPE:
+          this.player.armoryBook.handleInput("escape");
+          return;
+        case InputEnum.LEFT:
+          this.player.armoryBook.handleInput("left");
+          return;
+        case InputEnum.RIGHT:
+          this.player.armoryBook.handleInput("right");
+          return;
+        case InputEnum.LEFT_CLICK: {
+          const { x, y } = MouseCursor.getInstance().getPosition();
+          this.player.armoryBook.handleMouseDown(x, y);
           return;
         }
         default:
@@ -744,10 +850,10 @@ export class PlayerInputHandler {
     };
 
     // UI buttons (menus)
-    if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
+    if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
       items.push({
-        label: player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary",
-        onClick: () => player.bestiary?.toggleOpen(),
+        label: player.bookLibrary.isOpen ? "Close Library" : "Open Library",
+        onClick: () => player.bookLibrary?.toggleOpen(),
       });
       items.push({ label: "Cancel", onClick: () => {} });
       menu.openAt(x, y, items);
@@ -842,7 +948,12 @@ export class PlayerInputHandler {
           items.push({
             label: "Read",
             targetName,
-            onClick: () => { player.spellbookReader?.openBook(item); },
+            onClick: () => {
+              if (player.spellbookReader) {
+                player.spellbookReader.setBackCallback(null);
+                player.spellbookReader.openForPlayer(player);
+              }
+            },
           });
         }
 
@@ -1347,7 +1458,7 @@ export class PlayerInputHandler {
     return (
       inv.isPointInQuickbarBounds(x, y).inBounds ||
       inv.isPointInInventoryButton(x, y) ||
-      (player.bestiary?.isPointInBestiaryButton(x, y) ?? false) ||
+      (player.bookLibrary?.isPointInLibraryButton(x, y) ?? false) ||
       Menu.isPointInOpenMenuButtonBounds(x, y) ||
       (player.menu?.open ?? false) ||
       (player.skillsMenu?.isPointInBounds(x, y) ?? false) ||
@@ -1459,6 +1570,18 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (player.bookLibrary?.isOpen) {
+      player.bookLibrary.handleMouseDown(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
+    if (player.armoryBook?.isOpen) {
+      player.armoryBook.handleMouseDown(x, y);
+      Input.mouseDownHandled = true;
+      return;
+    }
+
     if (skillsMenu?.open) {
       skillsMenu.handleClick(x, y);
       Input.mouseDownHandled = true;
@@ -1491,9 +1614,9 @@ export class PlayerInputHandler {
       return;
     }
 
-    // Bestiary button toggle should not affect inventory open/close state.
-    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-      bestiary.toggleOpen();
+    // Library button toggle should not affect inventory open/close state.
+    if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
+      player.bookLibrary.toggleOpen();
       Input.mouseDownHandled = true;
       return;
     }
@@ -1550,7 +1673,7 @@ export class PlayerInputHandler {
 
     // Check if this is a UI interaction
     const isUIInteraction =
-      (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+      (player.bookLibrary ? player.bookLibrary.isPointInLibraryButton(x, y) : false) ||
       inventory.isPointInInventoryButton(x, y) ||
       inventory.isPointInQuickbarBounds(x, y).inBounds ||
       inventory.isOpen ||
@@ -1631,9 +1754,9 @@ export class PlayerInputHandler {
       return;
     }
 
-    // Bestiary button toggle should not affect inventory open/close state.
-    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-      bestiary.toggleOpen();
+    // Library button toggle should not affect inventory open/close state.
+    if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
+      player.bookLibrary.toggleOpen();
       return;
     }
 
@@ -1674,7 +1797,7 @@ export class PlayerInputHandler {
       !inventory.isPointInInventoryButton(x, y) &&
       !inventory.isPointInQuickbarBounds(x, y).inBounds &&
       !inventory.isOpen &&
-      !(bestiary ? bestiary.isPointInBestiaryButton(x, y) : false);
+      !(player.bookLibrary ? player.bookLibrary.isPointInLibraryButton(x, y) : false);
 
     // Only handle movement if it wasn't already handled on mousedown
     if (notInInventoryUI && !Input.mouseDownHandled) {
@@ -1748,8 +1871,8 @@ export class PlayerInputHandler {
         x,
         y,
         inMenuButton: this.isPointInMenuButtonBounds(x, y),
-        inBestiaryButton: bestiary
-          ? bestiary.isPointInBestiaryButton(x, y)
+        inLibraryButton: this.player.bookLibrary
+          ? this.player.bookLibrary.isPointInLibraryButton(x, y)
           : false,
         inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
         inventoryOpen: this.player.inventory.isOpen,
@@ -1773,8 +1896,18 @@ export class PlayerInputHandler {
       return;
     }
 
-    if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-      bestiary.toggleOpen();
+    if (this.player.bookLibrary?.isOpen) {
+      this.player.bookLibrary.handleMouseDown(x, y);
+      return;
+    }
+
+    if (this.player.armoryBook?.isOpen) {
+      this.player.armoryBook.handleMouseDown(x, y);
+      return;
+    }
+
+    if (this.player.bookLibrary && this.player.bookLibrary.isPointInLibraryButton(x, y)) {
+      this.player.bookLibrary.toggleOpen();
       return;
     }
 

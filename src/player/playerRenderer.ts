@@ -727,10 +727,10 @@ export class PlayerRenderer {
         heartStartX = 0.25;
       }
 
-      // On narrow screens, the bottom-left bestiary button can overlap the hearts.
+      // On narrow screens, the bottom-left library button can overlap the hearts.
       // Mirror the coin/inventory-button avoidance logic by shifting the hearts right.
-      if (GameConstants.WIDTH < 145 && this.player.bestiary) {
-        const r = this.player.bestiary.getBestiaryButtonRect();
+      if (GameConstants.WIDTH < 145 && this.player.bookLibrary) {
+        const r = this.player.bookLibrary.getLibraryButtonRect();
         const minHeartStartX = (r.x + r.w + 4) / GameConstants.TILESIZE; // +4px padding
         if (heartStartX < minHeartStartX) heartStartX = minHeartStartX;
       }
@@ -814,8 +814,8 @@ export class PlayerRenderer {
       if (armor) armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
       } // end !CLEAN_MODE
       if (!transitioning) {
-        // Draw the bestiary button first so the inventory can draw over it (requested layering).
-        if (!GameConstants.CLEAN_MODE) this.player.bestiary?.drawBestiaryButton(delta);
+        // Draw the library button first so the inventory can draw over it (requested layering).
+        if (!GameConstants.CLEAN_MODE) this.player.bookLibrary?.drawLibraryButton(delta);
         this.player.inventory.draw(delta);
       }
       const inventoryOpen = this.player.inventory.isOpen;
@@ -877,9 +877,11 @@ export class PlayerRenderer {
         );
       }
 
-      // Draw bestiary last so it renders above inventory/quickbar.
+      // Draw books last so they render above inventory/quickbar.
       if (this.player.bestiary) this.player.bestiary.draw(delta);
       if (this.player.spellbookReader) this.player.spellbookReader.draw(delta);
+      if (this.player.bookLibrary) this.player.bookLibrary.draw(delta);
+      if (this.player.armoryBook) this.player.armoryBook.draw(delta);
     } else {
       Game.ctx.fillStyle = LevelConstants.LEVEL_TEXT_COLOR;
       const gameStats = statsTracker.getStats();

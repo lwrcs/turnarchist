@@ -32452,8 +32452,6 @@ class Bestiary extends bookRenderer_1.BookRenderer {
     constructor(game, player) {
         super();
         this.entryViewStartTime = Date.now();
-        this.buttonX = 0.25;
-        this.buttonY = 0;
         this.cycleEntrySprites = true;
         this.entrySpriteCycleMs = 1200;
         this.manualStateCycling = true;
@@ -32472,30 +32470,6 @@ class Bestiary extends bookRenderer_1.BookRenderer {
             if (idx !== -1)
                 this.currentPage = idx;
             this.open();
-        };
-        this.isPointInBestiaryButton = (x, y) => {
-            const r = this.getBestiaryButtonRect();
-            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-        };
-        this.getBestiaryButtonRect = () => {
-            let bx = 0.25;
-            let by = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
-            if (gameConstants_1.GameConstants.WIDTH < 145)
-                by -= 1.25;
-            const x = Math.round(bx * gameConstants_1.GameConstants.TILESIZE);
-            const y = Math.round(by * gameConstants_1.GameConstants.TILESIZE);
-            const w = gameConstants_1.GameConstants.TILESIZE;
-            const h = gameConstants_1.GameConstants.TILESIZE;
-            return { x, y, w, h };
-        };
-        this.drawBestiaryButton = (delta) => {
-            delta;
-            game_1.Game.ctx.save();
-            const r = this.getBestiaryButtonRect();
-            this.buttonX = r.x / gameConstants_1.GameConstants.TILESIZE;
-            this.buttonY = r.y / gameConstants_1.GameConstants.TILESIZE;
-            game_1.Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
-            game_1.Game.ctx.restore();
         };
         this.addEntry = (enemyTypeName) => {
             this.seenEnemyTypeNames.add(enemyTypeName);
@@ -32875,10 +32849,6 @@ class Bestiary extends bookRenderer_1.BookRenderer {
         this.nextStateRect = null;
     }
     handleExtraClick(x, y) {
-        if (this.isPointInBestiaryButton(x, y)) {
-            this.close();
-            return true;
-        }
         if (this.prevStateRect && this.pointInRect(x, y, this.prevStateRect)) {
             this.advanceSpriteState(-1);
             return true;
@@ -38786,6 +38756,7 @@ const floor_1 = __webpack_require__(/*! ../../tile/floor */ "./src/tile/floor.ts
 const player_1 = __webpack_require__(/*! ../../player/player */ "./src/player/player.ts");
 const key_1 = __webpack_require__(/*! ../../item/key */ "./src/item/key.ts");
 const weapon_1 = __webpack_require__(/*! ../../item/weapon/weapon */ "./src/item/weapon/weapon.ts");
+const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
@@ -38798,6 +38769,7 @@ const playerFireball_1 = __webpack_require__(/*! ../../projectile/playerFireball
 const equippable_1 = __webpack_require__(/*! ../../item/equippable */ "./src/item/equippable.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../gameplaySettings */ "./src/game/gameplaySettings.ts");
 const gameConstants_1 = __webpack_require__(/*! ../gameConstants */ "./src/game/gameConstants.ts");
+const armoryBook_1 = __webpack_require__(/*! ../../gui/armoryBook */ "./src/gui/armoryBook.ts");
 const input_1 = __webpack_require__(/*! ../input */ "./src/game/input.ts");
 const stats_1 = __webpack_require__(/*! ../stats */ "./src/game/stats.ts");
 const collectSaveGids = (save) => {
@@ -39919,6 +39891,35 @@ const loadSaveV2 = async (game, save) => {
                 const w = p.inventory.items[ps.inventory.equippedWeaponSlot];
                 if (w instanceof weapon_1.Weapon) {
                     p.inventory.weapon = w;
+                }
+            }
+            // Restore known spells (player-global). Backward compat: if absent, harvest from spellbook items.
+            if (ps.knownSpells && ps.knownSpells.length > 0) {
+                p.knownSpells = [...ps.knownSpells];
+            }
+            else {
+                for (const item of p.inventory.items) {
+                    if (item instanceof spellbook_1.Spellbook) {
+                        for (const spell of item.spells) {
+                            p.addKnownSpell(spell.id);
+                        }
+                    }
+                }
+            }
+            // Sync all spellbooks from player's known spells
+            p.syncSpellbooksFromKnownSpells();
+            // Restore known weapon IDs
+            if (ps.knownWeaponIds && ps.knownWeaponIds.length > 0) {
+                p.knownWeaponIds = [...ps.knownWeaponIds];
+            }
+            // Populate ArmoryBook from known weapon IDs
+            for (const weaponName of p.knownWeaponIds) {
+                p.armoryBook?.addEntry(weaponName);
+            }
+            // Dev mode: unlock all weapons.
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE && p.armoryBook) {
+                for (const entry of armoryBook_1.ARMORY_WEAPONS) {
+                    p.armoryBook.addEntry(entry.weaponName);
                 }
             }
             return (0, errors_1.ok)(p);
@@ -41974,19 +41975,10 @@ const registerBuiltinItemCodecsV2 = () => {
             w.stackCount = value.stackCount;
             w.pickedUp = value.pickedUp;
             w.globalId = value.gid;
-            // Restore inscribed spells
-            w.spells = [];
-            for (const id of value.spellIds) {
-                const spell = (0, spell_1.spellById)(id);
-                if (spell)
-                    w.spells.push(spell);
-            }
-            if (w.spells.length === 0) {
-                // Fallback: ensure at least the default spell
-                w.spells = [new spell_1.PlusSpell()];
-            }
-            const active = (0, spell_1.spellById)(value.activeSpellId);
-            w.activeSpell = active ?? w.spells[0];
+            // Spells are NOT restored here — restorePlayer() calls syncSpellbooksFromKnownSpells()
+            // after all items are loaded, which rebuilds spells from player.knownSpells.
+            w.spells = [new spell_1.PlusSpell()];
+            w.activeSpell = w.spells[0];
             w.pendingSpell = null;
             return w;
         },
@@ -44189,6 +44181,16 @@ const validatePlayerSaveV2 = (v, path, id) => {
             brightness,
         };
     }
+    const knownSpellsU = get(v, "knownSpells");
+    let knownSpells;
+    if (Array.isArray(knownSpellsU)) {
+        knownSpells = knownSpellsU.filter((s) => typeof s === "string");
+    }
+    const knownWeaponIdsU = get(v, "knownWeaponIds");
+    let knownWeaponIds;
+    if (Array.isArray(knownWeaponIdsU)) {
+        knownWeaponIds = knownWeaponIdsU.filter((s) => typeof s === "string");
+    }
     return (0, errors_1.ok)({
         id,
         x,
@@ -44204,6 +44206,8 @@ const validatePlayerSaveV2 = (v, path, id) => {
         sightRadius,
         light,
         turnCount,
+        knownSpells,
+        knownWeaponIds,
     });
 };
 const validateInventorySaveV2 = (v, path) => {
@@ -45949,6 +45953,8 @@ const playerToSave = (game, id, p, nowMs) => {
             colorRgb: [p.lightColor[0], p.lightColor[1], p.lightColor[2]],
             brightness: p.lightBrightness,
         },
+        knownSpells: p.knownSpells.length > 0 ? [...p.knownSpells] : undefined,
+        knownWeaponIds: p.knownWeaponIds.length > 0 ? [...p.knownWeaponIds] : undefined,
     };
 };
 const inventoryToSave = (game, inv, nowMs) => {
@@ -47329,6 +47335,664 @@ IdGenerator._registry = new Set();
 
 /***/ }),
 
+/***/ "./src/gui/armoryBook.ts":
+/*!*******************************!*\
+  !*** ./src/gui/armoryBook.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ArmoryBook = exports.ARMORY_WEAPONS = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const bookRenderer_1 = __webpack_require__(/*! ./bookRenderer */ "./src/gui/bookRenderer.ts");
+const entity_1 = __webpack_require__(/*! ../entity/entity */ "./src/entity/entity.ts");
+const ATTACK_ANIM = {
+    dagger: {
+        tileX: 12,
+        tileY: 24,
+        frames: 8,
+        animationSpeed: 1,
+        xOffset: 0,
+        yOffset: 0.5,
+    },
+    dualdagger: {
+        tileX: 12,
+        tileY: 40,
+        frames: 8,
+        animationSpeed: 1,
+        xOffset: 0,
+        yOffset: 0.5,
+    },
+    spear: {
+        tileX: 22,
+        tileY: 32,
+        frames: 5,
+        animationSpeed: 0.5,
+        xOffset: -0.125,
+        yOffset: 1,
+    },
+    scythe: {
+        tileX: 0,
+        tileY: 40,
+        frames: 6,
+        animationSpeed: 0.75,
+        xOffset: 0,
+        yOffset: 0.75,
+    },
+    sword: {
+        tileX: 0,
+        tileY: 48,
+        frames: 6,
+        animationSpeed: 0.75,
+        xOffset: 0,
+        yOffset: 0.95,
+    },
+    warhammer: {
+        tileX: 12,
+        tileY: 32,
+        frames: 8,
+        animationSpeed: 2,
+        xOffset: 0.25,
+        yOffset: -0.75 + 1,
+    }, // frame starts at -5
+};
+exports.ARMORY_WEAPONS = [
+    {
+        weaponName: "dagger",
+        displayName: "Dagger",
+        description: "A basic but dependable weapon.",
+        itemTileX: 22, itemTileY: 0,
+        attackType: "dagger",
+        hitOffsets: [{ dx: 0, dy: -1 }],
+        damage: 1,
+    },
+    {
+        weaponName: "dual daggers",
+        displayName: "Dual Daggers",
+        description: "After the first attack, enemies will not take their turn until you attack or move again.",
+        itemTileX: 23, itemTileY: 0,
+        attackType: "dualdagger",
+        hitOffsets: [{ dx: 0, dy: -1 }],
+        damage: 1,
+    },
+    {
+        weaponName: "spear",
+        displayName: "Spear",
+        description: "Hits enemies in front of you within a range of 2 tiles.",
+        itemTileX: 24, itemTileY: 0,
+        attackType: "spear",
+        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }],
+        damage: 1,
+    },
+    {
+        weaponName: "sword",
+        displayName: "Sword",
+        description: "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.",
+        itemTileX: 28, itemTileY: 2,
+        attackType: "sword",
+        hitOffsets: [{ dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 }],
+        damage: 1,
+    },
+    {
+        weaponName: "scythe",
+        displayName: "Scythe",
+        description: "A wide reaping arc. Hits the tile ahead and the flanking tiles of both you and your target.",
+        itemTileX: 23, itemTileY: 2,
+        attackType: "scythe",
+        hitOffsets: [
+            { dx: 0, dy: -1 }, { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
+            { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+        ],
+        damage: 1,
+    },
+    {
+        weaponName: "warhammer",
+        displayName: "Warhammer",
+        description: "A slow, heavy smash that hits only the tile ahead.",
+        itemTileX: 22, itemTileY: 2,
+        attackType: "warhammer",
+        hitOffsets: [{ dx: 0, dy: -1 }],
+        damage: 2,
+    },
+    {
+        weaponName: "greataxe",
+        displayName: "Greataxe",
+        description: "A great axe. It wants to bite.",
+        itemTileX: 24, itemTileY: 2,
+        attackType: null,
+        hitOffsets: [{ dx: 0, dy: -1 }],
+        damage: 2,
+    },
+    {
+        weaponName: "quarterstaff",
+        displayName: "Quarterstaff",
+        description: "Hitting an enemy will push them back 1 tile. Pin them against a wall to instantly kill them.",
+        itemTileX: 22, itemTileY: 4,
+        attackType: null,
+        hitOffsets: [{ dx: 0, dy: -1 }],
+        damage: 1,
+    },
+    {
+        weaponName: "crossbow",
+        displayName: "Crossbow",
+        description: "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.",
+        itemTileX: 23, itemTileY: 4,
+        attackType: null,
+        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }, { dx: 0, dy: -4 }],
+        damage: 4,
+    },
+    {
+        weaponName: "shotgun",
+        displayName: "Shotgun",
+        description: "Fires a wide blast. Short range, full damage at point blank.",
+        itemTileX: 26, itemTileY: 0,
+        attackType: null,
+        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }],
+        damage: 1,
+    },
+];
+const ARMORY_BY_NAME = new Map(exports.ARMORY_WEAPONS.map((e) => [e.weaponName, e]));
+// ── ArmoryBook class ─────────────────────────────────────────────────────────
+class ArmoryBook extends bookRenderer_1.BookRenderer {
+    seededRand() {
+        // Mulberry32
+        this._rngSeed |= 0;
+        this._rngSeed = this._rngSeed + 0x6d2b79f5 | 0;
+        let t = Math.imul(this._rngSeed ^ this._rngSeed >>> 15, 1 | this._rngSeed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    constructor(_player) {
+        super();
+        this.entries = [];
+        this.animT = 0;
+        this._dummyCanvas = null;
+        this._bounceDelays = [];
+        this._lastCycleIndex = -1;
+        this._rngSeed = 0;
+        this._shakeAmountY = 0;
+        this._shakeFrame = 0;
+        this._shakeActive = false;
+        this._lastInAttack = false;
+        this._floaters = [];
+        this.theme = "mahogany";
+        this.handleResize();
+    }
+    addEntry(weaponName) {
+        if (this.entries.some((e) => e.weaponName === weaponName))
+            return;
+        const def = ARMORY_BY_NAME.get(weaponName);
+        if (def)
+            this.entries.push(def);
+    }
+    // ── BookRenderer abstract implementations ───────────────────────────────
+    getPageCount() {
+        return this.entries.length;
+    }
+    drawLeftPage(pageIndex, x, y, w, h, theme) {
+        const entry = this.entries[pageIndex];
+        if (!entry)
+            return;
+        const TILE = gameConstants_1.GameConstants.TILESIZE;
+        // Match the pixel scale used by the attack-pattern grid (7×7 grid in the right page).
+        const scale = Math.max(1, Math.floor(Math.min(w, h) / (7 * TILE)));
+        const drawPx = scale * TILE;
+        const itemX = x + (w - drawPx) / 2;
+        const itemY = y + 4;
+        game_1.Game.drawItem(entry.itemTileX, entry.itemTileY, 1, 2, itemX / TILE, itemY / TILE, scale, scale * 2);
+        const textY = itemY + drawPx * 2 + 6;
+        game_1.Game.ctx.fillStyle = theme.accentText;
+        game_1.Game.fillText(entry.displayName, x, textY);
+        game_1.Game.ctx.fillStyle = theme.text;
+        this.drawWrappedText(entry.description, x, textY + game_1.Game.letter_height + 4, w);
+    }
+    drawRightPage(pageIndex, x, y, w, h, _theme) {
+        const entry = this.entries[pageIndex];
+        if (!entry)
+            return;
+        this.drawAttackPattern(entry, x, y, w, h);
+    }
+    // ── Protected hook overrides ──────────────────────────────────────────────
+    stackedModeEnabled() {
+        return true;
+    }
+    onBeforeDraw(delta) {
+        this.animT += delta;
+        // Tick local screen shake (mirrors Game.drawScreenShake)
+        if (this._shakeActive) {
+            this._shakeAmountY *= 0.8 ** delta;
+            this._shakeFrame += 0.15 * delta;
+            if (Math.abs(this._shakeAmountY) < 0.5) {
+                this._shakeAmountY = 0;
+                this._shakeFrame = 0;
+                this._shakeActive = false;
+            }
+        }
+        // Tick damage floaters
+        for (const f of this._floaters) {
+            f.frame += delta;
+            f.riseY += 0.03 * delta;
+            if (f.frame > 15)
+                f.alpha -= 0.025 * delta;
+            if (f.alpha < 0)
+                f.alpha = 0;
+        }
+        this._floaters = this._floaters.filter(f => f.alpha > 0);
+    }
+    _resetAnim() {
+        this.animT = 0;
+        this._bounceDelays = [];
+        this._lastCycleIndex = -1;
+        this._lastInAttack = false;
+        this._shakeActive = false;
+        this._shakeAmountY = 0;
+        this._shakeFrame = 0;
+        this._floaters = [];
+    }
+    onOpen() { this._resetAnim(); }
+    onPageTransitionStart(_toPage) { this._resetAnim(); }
+    getShakeOffset() {
+        const y = this._shakeActive ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY) : 0;
+        return { x: 0, y };
+    }
+    onPageChanged(newPage) {
+        super.onPageChanged(newPage);
+    }
+    // ── Private: pseudo-renderer ────────────────────────────────────────────
+    /**
+     * Displacement in "drawn tile" units (1 unit = tileDrawSize px) from the
+     * enemy's target position. Negative = above target. Uses gravity + bounce.
+     */
+    bounceDispY(t, delay) {
+        const H = 5.0; // drop height in drawn-tile units
+        const iv = 0.84; // initial downward velocity
+        const g = 0.144; // gravity per frame²
+        const drag = 0.3; // linear air drag coefficient per frame
+        const r = 0.72; // restitution coefficient
+        const lt = t - delay;
+        if (lt <= 0)
+            return -H;
+        // Numerical integration — 8 substeps per frame for accuracy
+        const STEPS = 8;
+        const dt = 1 / STEPS;
+        const steps = Math.round(lt * STEPS);
+        let y = -H;
+        let v = iv;
+        for (let i = 0; i < steps; i++) {
+            v += g * dt;
+            v -= drag * v * dt; // linear drag
+            y += v * dt;
+            if (y >= 0) {
+                y = 0;
+                v = -Math.abs(v) * r;
+            }
+        }
+        return Math.min(0, y);
+    }
+    drawAttackPattern(entry, rx, ry, rw, rh) {
+        const TILE = gameConstants_1.GameConstants.TILESIZE;
+        const GRID = 7;
+        const CENTER = 3;
+        // Snap to integer pixel-perfect scale
+        const maxTileDrawSize = Math.min(rw / GRID, rh / GRID);
+        const scale = Math.max(1, Math.floor(maxTileDrawSize / TILE));
+        const tileDrawSize = scale * TILE;
+        const ratio = scale;
+        const originX = Math.round(rx + (rw - GRID * tileDrawSize) / 2);
+        const originY = Math.round(ry + (rh - GRID * tileDrawSize) / 2);
+        // Reset to known canvas state; clip to panel so falling sprites don't overflow.
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.globalCompositeOperation = "source-over";
+        game_1.Game.ctx.globalAlpha = 1;
+        game_1.Game.ctx.beginPath();
+        game_1.Game.ctx.rect(rx, ry, rw, rh);
+        game_1.Game.ctx.clip();
+        // Border ring
+        game_1.Game.ctx.fillStyle = "rgba(70, 70, 80, 1)";
+        game_1.Game.ctx.fillRect(originX, originY, GRID * tileDrawSize, GRID * tileDrawSize);
+        // Checkerboard (1-tile inset)
+        for (let col = 1; col < GRID - 1; col++) {
+            for (let row = 1; row < GRID - 1; row++) {
+                game_1.Game.ctx.fillStyle = (col + row) % 2 === 0
+                    ? "rgba(85, 85, 95, 1)"
+                    : "rgba(100, 100, 110, 1)";
+                game_1.Game.ctx.fillRect(originX + col * tileDrawSize, originY + row * tileDrawSize, tileDrawSize, tileDrawSize);
+            }
+        }
+        // ── Timing ─────────────────────────────────────────────────────────────
+        const animData = entry.attackType ? ATTACK_ANIM[entry.attackType] : null;
+        // Fall-in phase: enemies drop from above and bounce into position.
+        // PHYS_SCALE slows the physics clock without affecting attack/death timings.
+        const PHYS_SCALE = 5;
+        const MAX_FALL_DELAY = 6; // in physics-time frames
+        // Settle time: simulate same physics as bounceDispY, stop after 6 bounces
+        // (matching the bounce limit in bounceDispY so FALL_DURATION is accurate).
+        const FALL_SETTLE = (() => {
+            const H = 5.0, iv = 0.84, g = 0.144, drag = 0.3, r = 0.72;
+            const STEPS = 8;
+            const dt = 1 / STEPS;
+            let y = -H, v = iv, bounces = 0;
+            for (let frame = 0; frame < 1000; frame++) {
+                for (let s = 0; s < STEPS; s++) {
+                    v += g * dt;
+                    v -= drag * v * dt;
+                    y += v * dt;
+                    if (y >= 0) {
+                        y = 0;
+                        v = -Math.abs(v) * r;
+                        bounces++;
+                    }
+                }
+                if (bounces >= 6)
+                    return frame + 4; // +4 frames for last bounce to settle
+            }
+            return 60;
+        })();
+        // Convert physics settle time to cycleT (real-frame) units
+        const FALL_DURATION = Math.ceil((FALL_SETTLE + MAX_FALL_DELAY) * PHYS_SCALE) + 3;
+        const IDLE_DURATION = -39;
+        const ATTACK_DURATION = animData
+            ? Math.ceil(animData.frames / animData.animationSpeed) + 4
+            : 20;
+        const DYING_DURATION = 15;
+        const CYCLE = FALL_DURATION + IDLE_DURATION + ATTACK_DURATION + DYING_DURATION + 20;
+        const PHASE_ATTACK = FALL_DURATION + IDLE_DURATION;
+        const PHASE_DYING = PHASE_ATTACK + ATTACK_DURATION;
+        const cycleT = this.animT % CYCLE;
+        const inAttack = cycleT >= PHASE_ATTACK && cycleT < PHASE_DYING;
+        const inDying = cycleT >= PHASE_DYING;
+        const dyingT = inDying ? cycleT - PHASE_DYING : 0;
+        const dyingAlpha = inDying ? Math.max(0, 1 - dyingT / DYING_DURATION) : 1;
+        const showHighlight = inAttack || inDying;
+        // Trigger shake + spawn floaters on the leading edge of the attack phase
+        if (inAttack && !this._lastInAttack) {
+            this._shakeAmountY = 6;
+            this._shakeFrame = Math.PI / 2;
+            this._shakeActive = true;
+            // Spawn one damage floater per hit offset
+            const newFloaters = entry.hitOffsets.map(({ dx, dy }) => ({
+                col: CENTER + dx,
+                row: CENTER + dy,
+                riseY: 0,
+                alpha: 1,
+                frame: 0,
+                xoffset: Math.random() * 0.2,
+                damage: entry.damage,
+            }));
+            this._floaters.push(...newFloaters);
+        }
+        this._lastInAttack = inAttack;
+        // Regenerate fall delays each new cycle, seeded from Date.now() for variety.
+        const cycleIndex = Math.floor(this.animT / CYCLE);
+        if (cycleIndex !== this._lastCycleIndex) {
+            this._lastCycleIndex = cycleIndex;
+            this._rngSeed = Date.now();
+            this._bounceDelays = entry.hitOffsets.map(() => this.seededRand() * MAX_FALL_DELAY);
+        }
+        // ── Temp canvas for dummy compositing ──────────────────────────────────
+        if (!this._dummyCanvas)
+            this._dummyCanvas = document.createElement("canvas");
+        const dc = this._dummyCanvas;
+        if (dc.width !== tileDrawSize || dc.height !== tileDrawSize) {
+            dc.width = tileDrawSize;
+            dc.height = tileDrawSize;
+        }
+        const dCtx = dc.getContext("2d");
+        // ── Draw dummies ───────────────────────────────────────────────────────
+        for (let i = 0; i < entry.hitOffsets.length; i++) {
+            const { dx, dy } = entry.hitOffsets[i];
+            const delay = this._bounceDelays[i] ?? 0; // in physics-time frames
+            const col = CENTER + dx;
+            const row = CENTER + dy;
+            const dummyPixelX = originX + col * tileDrawSize;
+            const dummyPixelY = originY + row * tileDrawSize;
+            // Convert cycleT to physics time before sampling bounce curve
+            const dispPx = this.bounceDispY(cycleT / PHYS_SCALE, delay) * tileDrawSize;
+            // Render sprite (+ optional highlight) onto temp canvas at (0,0)
+            dCtx.clearRect(0, 0, tileDrawSize, tileDrawSize);
+            dCtx.globalCompositeOperation = "source-over";
+            dCtx.globalAlpha = 1;
+            dCtx.imageSmoothingEnabled = false;
+            const prevCtx = game_1.Game.ctx;
+            game_1.Game.ctx = dCtx;
+            entity_1.Entity.drawIdleSprite({
+                tileX: 8, tileY: 4, frames: 1, frameStride: 1,
+                x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+            });
+            if (showHighlight) {
+                dCtx.globalCompositeOperation = "lighten";
+                dCtx.globalAlpha = 0.5;
+                dCtx.fillStyle = "#ff0000";
+                dCtx.fillRect(0, 0, tileDrawSize, tileDrawSize);
+                dCtx.globalAlpha = 1;
+                dCtx.globalCompositeOperation = "destination-in";
+                entity_1.Entity.drawIdleSprite({
+                    tileX: 8, tileY: 4, frames: 1, frameStride: 1,
+                    x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+                });
+                dCtx.globalCompositeOperation = "source-over";
+            }
+            game_1.Game.ctx = prevCtx;
+            // Blit at target position + bounce offset, fading out when dying
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalCompositeOperation = "source-over";
+            game_1.Game.ctx.globalAlpha = dyingAlpha;
+            game_1.Game.ctx.drawImage(dc, dummyPixelX, dummyPixelY + dispPx);
+            game_1.Game.ctx.restore();
+        }
+        // ── Player + attack animation ──────────────────────────────────────────
+        const localTForHit = inAttack ? cycleT - PHASE_ATTACK : 0;
+        const hitY = inAttack ? 0.5 * Math.pow(0.7, localTForHit) : 0;
+        const playerTX = (originX + CENTER * tileDrawSize) / TILE;
+        const playerTY = (originY + CENTER * tileDrawSize) / TILE - ratio; // 1 tile up
+        const attackYTweak = { spear: -1 };
+        // Attack FX drawn behind player
+        if (inAttack && animData) {
+            const localT = cycleT - PHASE_ATTACK;
+            const frameStart = entry.attackType === "warhammer" ? -5 : 0;
+            const rawFrame = frameStart + localT * animData.animationSpeed;
+            const frame = Math.max(0, rawFrame);
+            if (frame < animData.frames) {
+                const srcX = animData.tileX + 2 * Math.round(frame / 2);
+                const srcY = animData.tileY + 2;
+                const yTweak = entry.attackType ? (attackYTweak[entry.attackType] ?? 0) : 0;
+                const fxX = playerTX + (-0.5 + animData.xOffset) * ratio;
+                const fxY = playerTY - hitY + (-0.5 + animData.yOffset + yTweak) * ratio;
+                game_1.Game.drawFX(srcX, srcY, 2, 2, fxX, fxY, 2 * ratio, 2 * ratio);
+            }
+        }
+        // Player sprite on top
+        entity_1.Entity.drawIdleSprite({
+            tileX: 1, tileY: 10, frames: 1, frameStride: 1,
+            x: playerTX, y: playerTY - hitY,
+            w: 1, h: 2, drawW: ratio, drawH: ratio * 2,
+        });
+        // Damage floaters
+        for (const f of this._floaters) {
+            if (f.alpha <= 0)
+                continue;
+            const TILE = gameConstants_1.GameConstants.TILESIZE;
+            const fx = originX + f.col * tileDrawSize;
+            const fy = originY + f.row * tileDrawSize - f.riseY * tileDrawSize;
+            const text = "-" + f.damage.toString();
+            const centerX = game_1.Game.measureText(text).width / 2;
+            const drawX = fx + (0.4 + f.xoffset) * tileDrawSize - centerX;
+            const drawY = fy - 0.6 * tileDrawSize;
+            game_1.Game.ctx.globalAlpha = f.alpha;
+            game_1.Game.fillTextOutline(text, drawX, drawY, gameConstants_1.GameConstants.OUTLINE, "red");
+            game_1.Game.ctx.globalAlpha = 1;
+        }
+        game_1.Game.ctx.restore(); // end outer state reset
+    }
+}
+exports.ArmoryBook = ArmoryBook;
+
+
+/***/ }),
+
+/***/ "./src/gui/bookLibrary.ts":
+/*!********************************!*\
+  !*** ./src/gui/bookLibrary.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BookLibrary = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const bookRenderer_1 = __webpack_require__(/*! ./bookRenderer */ "./src/gui/bookRenderer.ts");
+class BookLibrary extends bookRenderer_1.BookRenderer {
+    constructor(player) {
+        super();
+        this.entryRects = [];
+        this.buttonX = 0;
+        this.buttonY = 0;
+        // ── Library button (replaces old bestiary button) ─────────────────────────
+        this.getLibraryButtonRect = () => {
+            let bx = 0.25;
+            let by = gameConstants_1.GameConstants.HEIGHT / gameConstants_1.GameConstants.TILESIZE - 1.25;
+            if (gameConstants_1.GameConstants.WIDTH < 145)
+                by -= 1.25;
+            const x = Math.round(bx * gameConstants_1.GameConstants.TILESIZE);
+            const y = Math.round(by * gameConstants_1.GameConstants.TILESIZE);
+            const w = gameConstants_1.GameConstants.TILESIZE;
+            const h = gameConstants_1.GameConstants.TILESIZE;
+            return { x, y, w, h };
+        };
+        this.isPointInLibraryButton = (x, y) => {
+            const r = this.getLibraryButtonRect();
+            return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+        };
+        this.drawLibraryButton = (_delta) => {
+            game_1.Game.ctx.save();
+            const r = this.getLibraryButtonRect();
+            this.buttonX = r.x / gameConstants_1.GameConstants.TILESIZE;
+            this.buttonY = r.y / gameConstants_1.GameConstants.TILESIZE;
+            game_1.Game.drawFX(1, 0, 1, 1, this.buttonX, this.buttonY, 1, 1);
+            game_1.Game.ctx.restore();
+        };
+        this.player = player;
+        this.theme = "parchment";
+        this.handleResize();
+    }
+    // ── BookRenderer abstract implementations ─────────────────────────────────
+    getPageCount() {
+        return 1;
+    }
+    drawLeftPage(_pageIndex, x, y, w, h, theme) {
+        const entries = this.getEntries();
+        const rowH = game_1.Game.letter_height + 14;
+        const padX = 4;
+        this.entryRects = [];
+        game_1.Game.ctx.fillStyle = theme.accentText;
+        game_1.Game.fillText("Library", x + padX, y);
+        const startY = y + game_1.Game.letter_height + 8;
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const ey = startY + i * rowH;
+            if (ey + rowH > y + h)
+                break;
+            const available = entry.hasContent();
+            const rect = { x: x, y: ey, w: w, h: rowH - 2 };
+            this.entryRects.push(rect);
+            // Row background on hover (approximate — always draw slight bg)
+            game_1.Game.ctx.fillStyle = available
+                ? "rgba(255,255,255,0.06)"
+                : "rgba(255,255,255,0.02)";
+            game_1.Game.ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+            game_1.Game.ctx.strokeStyle = available
+                ? "rgba(255,255,255,0.15)"
+                : "rgba(255,255,255,0.06)";
+            game_1.Game.ctx.lineWidth = 1;
+            game_1.Game.ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+            // Entry title
+            game_1.Game.ctx.fillStyle = available ? theme.text : "rgba(160,155,145,0.6)";
+            game_1.Game.fillText(entry.title, x + padX, ey + 3);
+            // Entry subtitle
+            if (entry.subtitle) {
+                game_1.Game.ctx.fillStyle = available
+                    ? "rgba(120,110,90,0.9)"
+                    : "rgba(120,110,90,0.4)";
+                game_1.Game.fillText(entry.subtitle, x + padX, ey + game_1.Game.letter_height + 4);
+            }
+            // Arrow indicator on right
+            if (available) {
+                const arrowStr = "»";
+                const arrowW = game_1.Game.measureText(arrowStr).width;
+                game_1.Game.ctx.fillStyle = theme.accentText;
+                game_1.Game.fillText(arrowStr, x + w - arrowW - 4, ey + 3);
+            }
+        }
+    }
+    drawRightPage(_pageIndex, _x, _y, _w, _h, _theme) {
+        // Right panel intentionally empty for the TOC
+    }
+    // ── Protected hook overrides ───────────────────────────────────────────────
+    stackedModeEnabled() {
+        return true;
+    }
+    handleExtraClick(x, y) {
+        const entries = this.getEntries();
+        for (let i = 0; i < this.entryRects.length; i++) {
+            const rect = this.entryRects[i];
+            const entry = entries[i];
+            if (!entry)
+                continue;
+            if (this.pointInRect(x, y, rect)) {
+                if (entry.hasContent()) {
+                    entry.onSelect();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+    // ── Private helpers ────────────────────────────────────────────────────────
+    getEntries() {
+        return [
+            {
+                title: "Creature Compendium",
+                subtitle: "Bestiary",
+                hasContent: () => (this.player.bestiary?.entries.length ?? 0) > 0,
+                onSelect: () => {
+                    this.player.bestiary?.setBackCallback(() => this.open());
+                    this.close();
+                    this.player.bestiary?.open();
+                },
+            },
+            {
+                title: "Spell Compendium",
+                subtitle: "Inscribed spells",
+                hasContent: () => this.player.knownSpells.length > 0,
+                onSelect: () => {
+                    this.close();
+                    this.player.spellbookReader?.setBackCallback(() => this.open());
+                    this.player.spellbookReader?.openForPlayer(this.player);
+                },
+            },
+            {
+                title: "Armory",
+                subtitle: "Known weapons",
+                hasContent: () => (this.player.armoryBook?.entries.length ?? 0) > 0,
+                onSelect: () => {
+                    this.player.armoryBook?.setBackCallback(() => this.open());
+                    this.close();
+                    this.player.armoryBook?.open();
+                },
+            },
+        ];
+    }
+}
+exports.BookLibrary = BookLibrary;
+
+
+/***/ }),
+
 /***/ "./src/gui/bookRenderer.ts":
 /*!*********************************!*\
   !*** ./src/gui/bookRenderer.ts ***!
@@ -47440,6 +48104,8 @@ class BookRenderer {
         this.leftArrowRect = null;
         this.rightArrowRect = null;
         this.closeRect = null;
+        this.backRect = null;
+        this.backCallback = null;
         this.pageTransition = null;
         this.openFade = null;
         this.overlayCanvas = null;
@@ -47480,6 +48146,8 @@ class BookRenderer {
             if (this.leftArrowRect && this.pointInRect(x, y, this.leftArrowRect))
                 return true;
             if (this.rightArrowRect && this.pointInRect(x, y, this.rightArrowRect))
+                return true;
+            if (this.backRect && this.pointInRect(x, y, this.backRect))
                 return true;
             return false;
         };
@@ -47583,6 +48251,13 @@ class BookRenderer {
                 return;
             if (this.touchDrag?.active)
                 return;
+            if (this.backRect && this.pointInRect(x, y, this.backRect)) {
+                const cb = this.backCallback;
+                this.close();
+                if (cb)
+                    cb();
+                return;
+            }
             if (this.handleExtraClick(x, y))
                 return;
             if (this.closeRect && this.pointInRect(x, y, this.closeRect)) {
@@ -47661,6 +48336,8 @@ class BookRenderer {
                 return;
             offCtx.save();
             offCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+            offCtx.globalCompositeOperation = "source-over";
+            offCtx.globalAlpha = 1;
             offCtx.imageSmoothingEnabled = false;
             const prevCtx = game_1.Game.ctx;
             game_1.Game.ctx = offCtx;
@@ -47668,8 +48345,11 @@ class BookRenderer {
             this.onBeforeDraw(delta);
             this.previewAnimT += delta;
             const theme = this.getTheme();
+            // Draw backdrop before shake translate so it always covers the full canvas.
             game_1.Game.ctx.fillStyle = theme.backdrop;
             game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+            // const shakeOff = this.getShakeOffset();
+            // Game.ctx.translate(shakeOff.x, shakeOff.y);
             const { x: bookX, y: bookY, w: bookW, h: bookH } = this.computeBookRect();
             const compactMode = this.isCompactMode();
             const stackedMode = compactMode && this.stackedModeEnabled();
@@ -47678,6 +48358,7 @@ class BookRenderer {
                 this.leftArrowRect = null;
                 this.rightArrowRect = null;
                 this.closeRect = null;
+                this.backRect = null;
                 this.onHitboxesClear();
                 const dir = this.touchDrag.dir;
                 const outgoingOffset = this.touchDrag.offsetPx;
@@ -47709,6 +48390,7 @@ class BookRenderer {
                 this.leftArrowRect = null;
                 this.rightArrowRect = null;
                 this.closeRect = null;
+                this.backRect = null;
                 this.onHitboxesClear();
                 const now = Date.now();
                 const tRaw = (now - this.pageTransition.startMs) / this.pageTransition.durationMs;
@@ -47766,6 +48448,7 @@ class BookRenderer {
             game_1.Game.ctx = prevCtx;
             offCtx.restore();
             prevCtx.save();
+            prevCtx.globalCompositeOperation = "source-over";
             prevCtx.globalAlpha = prevCtx.globalAlpha * a;
             prevCtx.drawImage(this.overlayCanvas, 0, 0);
             prevCtx.restore();
@@ -47792,6 +48475,7 @@ class BookRenderer {
                 this.leftArrowRect = null;
                 this.rightArrowRect = null;
                 this.closeRect = null;
+                this.backRect = null;
                 this.onHitboxesClear();
             }
             return a;
@@ -47828,6 +48512,8 @@ class BookRenderer {
             }
             const r = this.computeBookRect();
             const mode = args.mode ?? "commit";
+            if (mode === "commit")
+                this.onPageTransitionStart(args.toPage);
             const startOffsetPx = args.startOffsetPx ?? 0;
             const endOffsetPx = mode === "commit" ? -args.dir * r.w : 0;
             this.pageTransition = {
@@ -48017,6 +48703,28 @@ class BookRenderer {
                 const xt = Math.round(closeX + (closeSize - xw) / 2);
                 const yt = Math.round(closeY + (closeSize - xh) / 2);
                 game_1.Game.fillText("X", xt, yt);
+                // Back button (shown when backCallback is set)
+                if (this.backCallback !== null) {
+                    const backLabel = "< Back";
+                    const backW = game_1.Game.measureText(backLabel).width + 8;
+                    const backH = arrowH;
+                    const bx = bookX + 4;
+                    const by = arrowY;
+                    if (args.enableHitboxes) {
+                        this.backRect = { x: bx, y: by, w: backW, h: backH };
+                    }
+                    game_1.Game.ctx.fillStyle = "rgba(255,255,255,0.1)";
+                    game_1.Game.ctx.fillRect(bx, by, backW, backH);
+                    game_1.Game.ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                    game_1.Game.ctx.lineWidth = 1;
+                    game_1.Game.ctx.strokeRect(bx, by, backW, backH);
+                    game_1.Game.ctx.fillStyle = theme.accentText;
+                    const btY = Math.round(by + (backH - game_1.Game.letter_height) / 2);
+                    game_1.Game.fillText(backLabel, bx + 4, btY);
+                }
+                else if (args.enableHitboxes) {
+                    this.backRect = null;
+                }
             }
             game_1.Game.ctx.restore();
         };
@@ -48057,13 +48765,20 @@ class BookRenderer {
                 game_1.Game.fillText(line, x, yy);
         };
     }
+    setBackCallback(cb) {
+        this.backCallback = cb;
+    }
     // ── Protected hooks (no-op defaults; subclasses override as needed) ───────
     /** Called once per draw frame before the book is rendered. */
     onBeforeDraw(_delta) { }
+    /** Return a pixel offset to translate the entire book this frame. */
+    getShakeOffset() { return { x: 0, y: 0 }; }
     /** Called when the active page changes (page transition committed). */
     onPageChanged(newPage) {
         this.currentPage = newPage;
     }
+    /** Called when a commit page transition begins (before animation plays). */
+    onPageTransitionStart(_toPage) { }
     /** Called when all hitbox rects are cleared (close fade complete, or animation started). */
     onHitboxesClear() { }
     /**
@@ -48554,8 +49269,8 @@ class HoverText {
         // UI hover text (buttons) should take priority and be screen-space, not tile-space.
         // Keep this lightweight and aligned with existing click bounds.
         try {
-            if (player.bestiary?.isPointInBestiaryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                strings.push(player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary");
+            if (player.bookLibrary?.isPointInLibraryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
+                strings.push(player.bookLibrary.isOpen ? "Close Library" : "Open Library");
                 return strings;
             }
             if (player.inventory.isPointInInventoryButton(input_1.Input.mouseX, input_1.Input.mouseY)) {
@@ -50803,28 +51518,34 @@ exports.SpellbookReader = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const bookRenderer_1 = __webpack_require__(/*! ./bookRenderer */ "./src/gui/bookRenderer.ts");
+const spell_1 = __webpack_require__(/*! ../item/weapon/spell */ "./src/item/weapon/spell.ts");
 class SpellbookReader extends bookRenderer_1.BookRenderer {
     constructor() {
         super();
-        this.spellbook = null;
+        this.player = null;
+        this._shakeAmountY = 0;
+        this._shakeFrame = 0;
+        this._shakeActive = false;
+        this._shakeScheduledAt = -1; // previewAnimT value to trigger shake
         this.theme = "arcana";
         this.handleResize();
     }
-    /** Open the reader for a specific spellbook item. */
-    openBook(spellbook) {
-        this.spellbook = spellbook;
+    /** Open the reader showing the player's known spells. */
+    openForPlayer(player) {
+        this.player = player;
         this.currentPage = 0;
         this.activeSubpage = 0;
         this.open();
     }
     // ── BookRenderer abstract implementations ─────────────────────────────────
     getPageCount() {
-        return this.spellbook?.spells.length ?? 0;
+        return this.player?.knownSpells.length ?? 0;
     }
     drawLeftPage(pageIndex, x, y, w, _h, theme) {
-        if (!this.spellbook)
+        if (!this.player)
             return;
-        const spell = this.spellbook.spells[pageIndex];
+        const id = this.player.knownSpells[pageIndex];
+        const spell = id ? (0, spell_1.spellById)(id) : null;
         if (!spell)
             return;
         game_1.Game.ctx.fillStyle = theme.accentText;
@@ -50834,16 +51555,40 @@ class SpellbookReader extends bookRenderer_1.BookRenderer {
         this.drawWrappedText(this.describeSpell(pattern), x, y + 14, w);
     }
     drawRightPage(pageIndex, x, y, w, h, _theme) {
-        if (!this.spellbook)
+        if (!this.player)
             return;
-        const spell = this.spellbook.spells[pageIndex];
+        const id = this.player.knownSpells[pageIndex];
+        const spell = id ? (0, spell_1.spellById)(id) : null;
         if (!spell)
             return;
         this.drawSpellPatternGrid(spell.getPattern(), x, y, w, h);
     }
     // ── Protected hook overrides ───────────────────────────────────────────────
+    onBeforeDraw(delta) {
+        // Tick shake
+        if (this._shakeActive) {
+            this._shakeAmountY *= 0.8 ** delta;
+            this._shakeFrame += 0.15 * delta;
+            if (Math.abs(this._shakeAmountY) < 0.5) {
+                this._shakeAmountY = 0;
+                this._shakeFrame = 0;
+                this._shakeActive = false;
+            }
+        }
+        // Fire scheduled shake
+        if (this._shakeScheduledAt >= 0 && this.previewAnimT >= this._shakeScheduledAt) {
+            this._shakeAmountY = 5;
+            this._shakeFrame = Math.PI / 2;
+            this._shakeActive = true;
+            this._shakeScheduledAt = -1;
+        }
+    }
     stackedModeEnabled() {
         return true;
+    }
+    getShakeOffset() {
+        const y = this._shakeActive ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY) : 0;
+        return { x: 0, y };
     }
     subpageLabel(subpage) {
         return subpage === 0 ? "Info" : "Pattern";
@@ -50860,32 +51605,50 @@ class SpellbookReader extends bookRenderer_1.BookRenderer {
     }
     drawSpellPatternGrid(pattern, rx, ry, rw, rh) {
         const GRID_SIZE = 7;
-        // PlayerFireball: frame starts at 6, ends at 17 (inclusive), rate 0.25/delta
-        // Duration to play all 12 frames: (17 - 6) / 0.25 = 44 delta units
         const FIREBALL_START_FRAME = 6;
         const FIREBALL_END_FRAME = 17;
         const FIREBALL_RATE = 0.25;
         const EXPLOSION_DURATION = (FIREBALL_END_FRAME - FIREBALL_START_FRAME) / FIREBALL_RATE; // 44
-        // Delay between waves: PlayerFireball offsetFrame = spellDelay * 120, drains at 10/delta → 12 delta units per delay step
         const DELAY_UNIT = 12;
         const maxDelay = pattern.delays.length > 0 ? Math.max(...pattern.delays) : 0;
-        const CYCLE = maxDelay * DELAY_UNIT + EXPLOSION_DURATION + 20; // 20 blank frames gap
+        const CYCLE = maxDelay * DELAY_UNIT + EXPLOSION_DURATION + 20;
         const TILE = gameConstants_1.GameConstants.TILESIZE;
-        const tileDrawSize = Math.min(rw / GRID_SIZE, rh / GRID_SIZE);
-        const originX = rx + (rw - GRID_SIZE * tileDrawSize) / 2;
-        const originY = ry + (rh - GRID_SIZE * tileDrawSize) / 2;
+        const maxTileDrawSize = Math.min(rw / GRID_SIZE, rh / GRID_SIZE);
+        const scale = Math.max(1, Math.floor(maxTileDrawSize / TILE));
+        const tileDrawSize = scale * TILE;
+        const originX = Math.round(rx + (rw - GRID_SIZE * tileDrawSize) / 2);
+        const originY = Math.round(ry + (rh - GRID_SIZE * tileDrawSize) / 2);
         const CENTER = 3;
-        const destW = tileDrawSize / TILE;
-        const destH = tileDrawSize / TILE;
-        // Solid grey grid background
-        game_1.Game.ctx.fillStyle = "rgba(90, 90, 100, 1)";
-        game_1.Game.ctx.fillRect(originX, originY, GRID_SIZE * tileDrawSize, GRID_SIZE * tileDrawSize);
-        // Highlight center tile
-        game_1.Game.ctx.fillStyle = "rgba(255, 240, 100, 0.18)";
-        game_1.Game.ctx.fillRect(originX + CENTER * tileDrawSize, originY + CENTER * tileDrawSize, tileDrawSize, tileDrawSize);
-        // Draw looping explosion animations at each pattern offset.
-        // Mirror PlayerFireball exactly: frame starts at FIREBALL_START_FRAME, drawn at (x, y-1) with size 1×2.
+        const destW = scale;
+        const destH = scale;
         const cycleT = this.previewAnimT % CYCLE;
+        // Schedule shake at the midpoint of the first explosion wave
+        const firstExplosionMid = FIREBALL_START_FRAME / FIREBALL_RATE + EXPLOSION_DURATION * 0.5;
+        const cycleBase = this.previewAnimT - cycleT;
+        const shakeTarget = cycleBase + firstExplosionMid;
+        if (cycleT < firstExplosionMid && this._shakeScheduledAt < cycleBase) {
+            this._shakeScheduledAt = shakeTarget;
+        }
+        // Reset to known state; clip to panel
+        game_1.Game.ctx.save();
+        game_1.Game.ctx.globalCompositeOperation = "source-over";
+        game_1.Game.ctx.globalAlpha = 1;
+        game_1.Game.ctx.beginPath();
+        game_1.Game.ctx.rect(rx, ry, rw, rh);
+        game_1.Game.ctx.clip();
+        // Border ring (static, no shake)
+        game_1.Game.ctx.fillStyle = "rgba(70, 70, 80, 1)";
+        game_1.Game.ctx.fillRect(originX, originY, GRID_SIZE * tileDrawSize, GRID_SIZE * tileDrawSize);
+        // Checkerboard (1-tile inset, static)
+        for (let col = 1; col < GRID_SIZE - 1; col++) {
+            for (let row = 1; row < GRID_SIZE - 1; row++) {
+                game_1.Game.ctx.fillStyle = (col + row) % 2 === 0
+                    ? "rgba(85, 85, 95, 1)"
+                    : "rgba(100, 100, 110, 1)";
+                game_1.Game.ctx.fillRect(originX + col * tileDrawSize, originY + row * tileDrawSize, tileDrawSize, tileDrawSize);
+            }
+        }
+        // Draw looping explosion animations
         const { offsets, delays } = pattern;
         for (let i = 0; i < offsets.length; i++) {
             const { dx, dy } = offsets[i];
@@ -50898,10 +51661,10 @@ class SpellbookReader extends bookRenderer_1.BookRenderer {
                 const row = CENTER + dy;
                 const destX = (originX + col * tileDrawSize) / TILE;
                 const destY = (originY + row * tileDrawSize) / TILE;
-                // PlayerFireball draws at (this.x, this.y - 1) with drawW=1, drawH=2
                 game_1.Game.drawFX(frame, 6, 1, 2, destX, destY - destH, destW, destH * 2);
             }
         }
+        game_1.Game.ctx.restore(); // end clip/state reset
     }
 }
 exports.SpellbookReader = SpellbookReader;
@@ -52551,6 +53314,9 @@ class Inventory {
             }
             if (item instanceof equippable_1.Equippable) {
                 item.setWielder(this.player);
+            }
+            if (item instanceof weapon_1.Weapon) {
+                this.player.addKnownWeaponId(item.name);
             }
             if (item.stackable) {
                 if (stackCount) {
@@ -57078,13 +57844,14 @@ class Scroll extends usable_1.Usable {
                 player.game.pushMessage("You have no spellbook to inscribe this scroll into.");
                 return;
             }
-            const alreadyKnown = book.spells.some((s) => s.id === this.spell.id);
+            const alreadyKnown = player.knownSpells.includes(this.spell.id);
             if (alreadyKnown) {
                 player.game.pushMessage(`Your spellbook already contains the ${this.spell.name} spell.`);
                 player.inventory.removeItem(this);
                 return;
             }
-            book.addSpell(this.spell);
+            player.addKnownSpell(this.spell.id);
+            player.syncSpellbooksFromKnownSpells();
             player.game.pushMessage(`You study the scroll and inscribe its knowledge into your spellbook.`);
             player.inventory.removeItem(this);
         };
@@ -67813,11 +68580,14 @@ const item_1 = __webpack_require__(/*! ../item/item */ "./src/item/item.ts");
 const divingHelmet_1 = __webpack_require__(/*! ../item/divingHelmet */ "./src/item/divingHelmet.ts");
 const blockSwipeAnimation_1 = __webpack_require__(/*! ../particle/blockSwipeAnimation */ "./src/particle/blockSwipeAnimation.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const spell_1 = __webpack_require__(/*! ../item/weapon/spell */ "./src/item/weapon/spell.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const menu_1 = __webpack_require__(/*! ../gui/menu */ "./src/gui/menu.ts");
 const bestiary_1 = __webpack_require__(/*! ../game/bestiary */ "./src/game/bestiary.ts");
 const spellbookReader_1 = __webpack_require__(/*! ../gui/spellbookReader */ "./src/gui/spellbookReader.ts");
+const bookLibrary_1 = __webpack_require__(/*! ../gui/bookLibrary */ "./src/gui/bookLibrary.ts");
+const armoryBook_1 = __webpack_require__(/*! ../gui/armoryBook */ "./src/gui/armoryBook.ts");
 const contextMenu_1 = __webpack_require__(/*! ../gui/contextMenu */ "./src/gui/contextMenu.ts");
 const playerInputHandler_1 = __webpack_require__(/*! ./playerInputHandler */ "./src/player/playerInputHandler.ts");
 const playerActionProcessor_1 = __webpack_require__(/*! ./playerActionProcessor */ "./src/player/playerActionProcessor.ts");
@@ -67848,8 +68618,32 @@ var DrawDirection;
     DrawDirection[DrawDirection["Y"] = 1] = "Y";
 })(DrawDirection || (DrawDirection = {}));
 class Player extends drawable_1.Drawable {
+    addKnownSpell(id) {
+        if (!this.knownSpells.includes(id))
+            this.knownSpells.push(id);
+    }
+    addKnownWeaponId(name) {
+        if (!this.knownWeaponIds.includes(name)) {
+            this.knownWeaponIds.push(name);
+            this.armoryBook?.addEntry(name);
+        }
+    }
+    syncSpellbooksFromKnownSpells() {
+        for (const item of this.inventory.items) {
+            if (item instanceof spellbook_1.Spellbook) {
+                const resolved = this.knownSpells.map(spell_1.spellById).filter((s) => s != null);
+                item.spells = resolved.length > 0 ? resolved : [new spell_1.PlusSpell()];
+                if (!item.spells.includes(item.activeSpell)) {
+                    item.activeSpell = item.spells[0];
+                }
+            }
+        }
+    }
     get isAnyBookOpen() {
-        return Boolean(this.bestiary?.isOpen) || Boolean(this.spellbookReader?.isOpen);
+        return (Boolean(this.bestiary?.isOpen) ||
+            Boolean(this.spellbookReader?.isOpen) ||
+            Boolean(this.bookLibrary?.isOpen) ||
+            Boolean(this.armoryBook?.isOpen));
     }
     constructor(game, x, y, isLocalPlayer, z = 0) {
         super();
@@ -67868,6 +68662,10 @@ class Player extends drawable_1.Drawable {
         this.seenEnemies = new Set();
         this.bestiary = null;
         this.spellbookReader = null;
+        this.bookLibrary = null;
+        this.armoryBook = null;
+        this.knownSpells = [];
+        this.knownWeaponIds = [];
         this.contextMenu = new contextMenu_1.ContextMenu();
         /**
          * When the context menu opens, we snapshot the current mouse angle so the player
@@ -68265,9 +69063,11 @@ class Player extends drawable_1.Drawable {
             // Only show the UI pointer when hovering actual buttons; otherwise default arrow.
             if (this.isAnyBookOpen) {
                 const { x, y } = mousePos;
-                const inBestiaryButton = this.bestiary?.isOpen && this.bestiary.isPointInBestiaryButton(x, y);
-                const inControls = this.bestiary?.isPointInBestiaryControls(x, y) || this.spellbookReader?.isPointInBookControls(x, y);
-                return inBestiaryButton || inControls ? "hand" : "arrow";
+                const inControls = this.bestiary?.isPointInBookControls(x, y) ||
+                    this.spellbookReader?.isPointInBookControls(x, y) ||
+                    this.bookLibrary?.isPointInBookControls(x, y) ||
+                    this.armoryBook?.isPointInBookControls(x, y);
+                return inControls ? "hand" : "arrow";
             }
             // If the inventory is open, prevent world interactions *behind the inventory UI* from
             // affecting the cursor. Only show the UI pointer when hovering an occupied slot
@@ -68317,7 +69117,7 @@ class Player extends drawable_1.Drawable {
             return (this.inventory.isPointInInventoryButton(x, y) ||
                 menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
                 xpCounter_1.XPCounter.isPointInBounds(x, y) ||
-                (this.bestiary ? this.bestiary.isPointInBestiaryButton(x, y) : false) ||
+                (this.bookLibrary ? this.bookLibrary.isPointInLibraryButton(x, y) : false) ||
                 this.isInventoryItemInteraction(x, y));
         };
         this.isInventoryItemInteraction = (x, y) => {
@@ -69184,6 +69984,18 @@ class Player extends drawable_1.Drawable {
         this.oxygenLine = new oxygenLine_1.OxygenLine(this);
         this.bestiary = new bestiary_1.Bestiary(this.game, this);
         this.spellbookReader = new spellbookReader_1.SpellbookReader();
+        this.bookLibrary = new bookLibrary_1.BookLibrary(this);
+        this.armoryBook = new armoryBook_1.ArmoryBook(this);
+        // Backfill armoryBook from any weapons already collected before armoryBook was created.
+        for (const name of this.knownWeaponIds) {
+            this.armoryBook.addEntry(name);
+        }
+        // Dev mode: unlock all weapons immediately.
+        if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+            for (const entry of armoryBook_1.ARMORY_WEAPONS) {
+                this.armoryBook.addEntry(entry.weaponName);
+            }
+        }
         this.cooldownRemaining = 0;
         this.deathScreenPageIndex = 0;
         this.deathScreenPageCount = 1;
@@ -69339,6 +70151,10 @@ class PlayerInputHandler {
         this.bestiaryTouchEndHandler = null;
         this.spellbookReaderTouchMoveHandler = null;
         this.spellbookReaderTouchEndHandler = null;
+        this.bookLibraryTouchMoveHandler = null;
+        this.bookLibraryTouchEndHandler = null;
+        this.armoryBookTouchMoveHandler = null;
+        this.armoryBookTouchEndHandler = null;
         this.handleNumKey = (num) => {
             if (this.player.menu.open)
                 return;
@@ -69363,7 +70179,7 @@ class PlayerInputHandler {
                 return false;
             return (inv.isPointInQuickbarBounds(x, y).inBounds ||
                 inv.isPointInInventoryButton(x, y) ||
-                (player.bestiary?.isPointInBestiaryButton(x, y) ?? false) ||
+                (player.bookLibrary?.isPointInLibraryButton(x, y) ?? false) ||
                 menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
                 (player.menu?.open ?? false) ||
                 (player.skillsMenu?.isPointInBounds(x, y) ?? false) ||
@@ -69448,11 +70264,17 @@ class PlayerInputHandler {
             const inventory = this.player.inventory;
             const bestiary = this.player.bestiary;
             const spellbookReader = this.player.spellbookReader;
+            const bookLibrary = this.player.bookLibrary;
+            const armoryBook = this.player.armoryBook;
             const skillsMenu = this.player.skillsMenu;
             // If the bestiary is open, let it arm drag-follow when starting within the book bounds.
             if (bestiary && bestiary.handleTouchStart(x, y))
                 return true;
             if (spellbookReader && spellbookReader.handleTouchStart(x, y))
+                return true;
+            if (bookLibrary && bookLibrary.handleTouchStart(x, y))
+                return true;
+            if (armoryBook && armoryBook.handleTouchStart(x, y))
                 return true;
             return (inventory.isPointInInventoryButton(x, y) ||
                 inventory.isPointInQuickbarBounds(x, y).inBounds ||
@@ -69461,9 +70283,11 @@ class PlayerInputHandler {
                 menu_1.Menu.isPointInOpenMenuButtonBounds(x, y) ||
                 xpCounter_1.XPCounter.isPointInBounds(x, y) ||
                 (skillsMenu ? skillsMenu.isPointInBounds(x, y) : false) ||
-                (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+                (bookLibrary ? bookLibrary.isPointInLibraryButton(x, y) : false) ||
                 (bestiary ? bestiary.isPointInBookBounds(x, y) : false) ||
-                (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false));
+                (spellbookReader ? spellbookReader.isPointInBookBounds(x, y) : false) ||
+                (bookLibrary ? bookLibrary.isPointInBookBounds(x, y) : false) ||
+                (armoryBook ? armoryBook.isPointInBookBounds(x, y) : false));
         });
         // Bestiary drag-follow (mobile): track touch movement while the bestiary is open.
         // Use stable handler references so re-running setup can de-dupe correctly.
@@ -69508,6 +70332,48 @@ class PlayerInputHandler {
         };
         input_1.Input.touchMoveListeners.push(this.spellbookReaderTouchMoveHandler);
         input_1.Input.touchEndListeners.push(this.spellbookReaderTouchEndHandler);
+        // BookLibrary drag-follow (mobile).
+        if (this.bookLibraryTouchMoveHandler) {
+            input_1.Input.touchMoveListeners = input_1.Input.touchMoveListeners.filter((fn) => fn !== this.bookLibraryTouchMoveHandler);
+        }
+        if (this.bookLibraryTouchEndHandler) {
+            input_1.Input.touchEndListeners = input_1.Input.touchEndListeners.filter((fn) => fn !== this.bookLibraryTouchEndHandler);
+        }
+        this.bookLibraryTouchMoveHandler = (x, y) => {
+            const lib = this.player.bookLibrary;
+            if (!lib?.isOpen)
+                return;
+            lib.handleTouchMove(x, y);
+        };
+        this.bookLibraryTouchEndHandler = (x, y) => {
+            const lib = this.player.bookLibrary;
+            if (!lib?.isOpen)
+                return;
+            lib.handleTouchEnd(x, y);
+        };
+        input_1.Input.touchMoveListeners.push(this.bookLibraryTouchMoveHandler);
+        input_1.Input.touchEndListeners.push(this.bookLibraryTouchEndHandler);
+        // ArmoryBook drag-follow (mobile).
+        if (this.armoryBookTouchMoveHandler) {
+            input_1.Input.touchMoveListeners = input_1.Input.touchMoveListeners.filter((fn) => fn !== this.armoryBookTouchMoveHandler);
+        }
+        if (this.armoryBookTouchEndHandler) {
+            input_1.Input.touchEndListeners = input_1.Input.touchEndListeners.filter((fn) => fn !== this.armoryBookTouchEndHandler);
+        }
+        this.armoryBookTouchMoveHandler = (x, y) => {
+            const armory = this.player.armoryBook;
+            if (!armory?.isOpen)
+                return;
+            armory.handleTouchMove(x, y);
+        };
+        this.armoryBookTouchEndHandler = (x, y) => {
+            const armory = this.player.armoryBook;
+            if (!armory?.isOpen)
+                return;
+            armory.handleTouchEnd(x, y);
+        };
+        input_1.Input.touchMoveListeners.push(this.armoryBookTouchMoveHandler);
+        input_1.Input.touchEndListeners.push(this.armoryBookTouchEndHandler);
         input_1.Input.mouseDownListeners.push((x, y, button) => this.handleMouseDown(x, y, button));
         input_1.Input.numKeyListener = (num) => this.handleInput(input_1.InputEnum.NUMBER_1 + num - 1);
         input_1.Input.equalsListener = () => this.handleInput(input_1.InputEnum.EQUALS);
@@ -69578,6 +70444,48 @@ class PlayerInputHandler {
                 case input_1.InputEnum.LEFT_CLICK: {
                     const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
                     this.player.spellbookReader.handleMouseDown(x, y);
+                    return;
+                }
+                default:
+                    return;
+            }
+        }
+        // BookLibrary takes over input while open.
+        if (this.player.bookLibrary?.isOpen) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.bookLibrary.handleInput("escape");
+                    return;
+                case input_1.InputEnum.LEFT:
+                    this.player.bookLibrary.handleInput("left");
+                    return;
+                case input_1.InputEnum.RIGHT:
+                    this.player.bookLibrary.handleInput("right");
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.bookLibrary.handleMouseDown(x, y);
+                    return;
+                }
+                default:
+                    return;
+            }
+        }
+        // ArmoryBook takes over input while open.
+        if (this.player.armoryBook?.isOpen) {
+            switch (input) {
+                case input_1.InputEnum.ESCAPE:
+                    this.player.armoryBook.handleInput("escape");
+                    return;
+                case input_1.InputEnum.LEFT:
+                    this.player.armoryBook.handleInput("left");
+                    return;
+                case input_1.InputEnum.RIGHT:
+                    this.player.armoryBook.handleInput("right");
+                    return;
+                case input_1.InputEnum.LEFT_CLICK: {
+                    const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                    this.player.armoryBook.handleMouseDown(x, y);
                     return;
                 }
                 default:
@@ -70055,10 +70963,10 @@ class PlayerInputHandler {
             return "";
         };
         // UI buttons (menus)
-        if (player.bestiary && player.bestiary.isPointInBestiaryButton(x, y)) {
+        if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
             items.push({
-                label: player.bestiary.isOpen ? "Close Bestiary" : "Open Bestiary",
-                onClick: () => player.bestiary?.toggleOpen(),
+                label: player.bookLibrary.isOpen ? "Close Library" : "Open Library",
+                onClick: () => player.bookLibrary?.toggleOpen(),
             });
             items.push({ label: "Cancel", onClick: () => { } });
             menu.openAt(x, y, items);
@@ -70150,7 +71058,12 @@ class PlayerInputHandler {
                     items.push({
                         label: "Read",
                         targetName,
-                        onClick: () => { player.spellbookReader?.openBook(item); },
+                        onClick: () => {
+                            if (player.spellbookReader) {
+                                player.spellbookReader.setBackCallback(null);
+                                player.spellbookReader.openForPlayer(player);
+                            }
+                        },
                     });
                 }
                 // Torch / candle: "Place" and "Place on wall"
@@ -70688,6 +71601,16 @@ class PlayerInputHandler {
             input_1.Input.mouseDownHandled = true;
             return;
         }
+        if (player.bookLibrary?.isOpen) {
+            player.bookLibrary.handleMouseDown(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
+        if (player.armoryBook?.isOpen) {
+            player.armoryBook.handleMouseDown(x, y);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         if (skillsMenu?.open) {
             skillsMenu.handleClick(x, y);
             input_1.Input.mouseDownHandled = true;
@@ -70716,9 +71639,9 @@ class PlayerInputHandler {
             input_1.Input.mouseDownHandled = true;
             return;
         }
-        // Bestiary button toggle should not affect inventory open/close state.
-        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-            bestiary.toggleOpen();
+        // Library button toggle should not affect inventory open/close state.
+        if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
+            player.bookLibrary.toggleOpen();
             input_1.Input.mouseDownHandled = true;
             return;
         }
@@ -70761,7 +71684,7 @@ class PlayerInputHandler {
             return;
         }
         // Check if this is a UI interaction
-        const isUIInteraction = (bestiary ? bestiary.isPointInBestiaryButton(x, y) : false) ||
+        const isUIInteraction = (player.bookLibrary ? player.bookLibrary.isPointInLibraryButton(x, y) : false) ||
             inventory.isPointInInventoryButton(x, y) ||
             inventory.isPointInQuickbarBounds(x, y).inBounds ||
             inventory.isOpen ||
@@ -70829,9 +71752,9 @@ class PlayerInputHandler {
             player.skillsMenu?.toggleOpen();
             return;
         }
-        // Bestiary button toggle should not affect inventory open/close state.
-        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-            bestiary.toggleOpen();
+        // Library button toggle should not affect inventory open/close state.
+        if (player.bookLibrary && player.bookLibrary.isPointInLibraryButton(x, y)) {
+            player.bookLibrary.toggleOpen();
             return;
         }
         const clickedOutsideInventory = (inventory.isOpen &&
@@ -70860,7 +71783,7 @@ class PlayerInputHandler {
         const notInInventoryUI = !inventory.isPointInInventoryButton(x, y) &&
             !inventory.isPointInQuickbarBounds(x, y).inBounds &&
             !inventory.isOpen &&
-            !(bestiary ? bestiary.isPointInBestiaryButton(x, y) : false);
+            !(player.bookLibrary ? player.bookLibrary.isPointInLibraryButton(x, y) : false);
         // Only handle movement if it wasn't already handled on mousedown
         if (notInInventoryUI && !input_1.Input.mouseDownHandled) {
             if (player.isPushMoveInputLocked())
@@ -70914,8 +71837,8 @@ class PlayerInputHandler {
                 x,
                 y,
                 inMenuButton: this.isPointInMenuButtonBounds(x, y),
-                inBestiaryButton: bestiary
-                    ? bestiary.isPointInBestiaryButton(x, y)
+                inLibraryButton: this.player.bookLibrary
+                    ? this.player.bookLibrary.isPointInLibraryButton(x, y)
                     : false,
                 inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
                 inventoryOpen: this.player.inventory.isOpen,
@@ -70935,8 +71858,16 @@ class PlayerInputHandler {
             this.player.spellbookReader.handleMouseDown(x, y);
             return;
         }
-        if (bestiary && bestiary.isPointInBestiaryButton(x, y)) {
-            bestiary.toggleOpen();
+        if (this.player.bookLibrary?.isOpen) {
+            this.player.bookLibrary.handleMouseDown(x, y);
+            return;
+        }
+        if (this.player.armoryBook?.isOpen) {
+            this.player.armoryBook.handleMouseDown(x, y);
+            return;
+        }
+        if (this.player.bookLibrary && this.player.bookLibrary.isPointInLibraryButton(x, y)) {
+            this.player.bookLibrary.toggleOpen();
             return;
         }
         if (xpCounter_1.XPCounter.isPointInBounds(x, y)) {
@@ -71921,10 +72852,10 @@ class PlayerRenderer {
                 if (heartStartX < 0.25) {
                     heartStartX = 0.25;
                 }
-                // On narrow screens, the bottom-left bestiary button can overlap the hearts.
+                // On narrow screens, the bottom-left library button can overlap the hearts.
                 // Mirror the coin/inventory-button avoidance logic by shifting the hearts right.
-                if (gameConstants_1.GameConstants.WIDTH < 145 && this.player.bestiary) {
-                    const r = this.player.bestiary.getBestiaryButtonRect();
+                if (gameConstants_1.GameConstants.WIDTH < 145 && this.player.bookLibrary) {
+                    const r = this.player.bookLibrary.getLibraryButtonRect();
                     const minHeartStartX = (r.x + r.w + 4) / gameConstants_1.GameConstants.TILESIZE; // +4px padding
                     if (heartStartX < minHeartStartX)
                         heartStartX = minHeartStartX;
@@ -71977,9 +72908,9 @@ class PlayerRenderer {
                         armor.drawGUI(delta, this.player.maxHealth, quickbarStartX);
                 } // end !CLEAN_MODE
                 if (!transitioning) {
-                    // Draw the bestiary button first so the inventory can draw over it (requested layering).
+                    // Draw the library button first so the inventory can draw over it (requested layering).
                     if (!gameConstants_1.GameConstants.CLEAN_MODE)
-                        this.player.bestiary?.drawBestiaryButton(delta);
+                        this.player.bookLibrary?.drawLibraryButton(delta);
                     this.player.inventory.draw(delta);
                 }
                 const inventoryOpen = this.player.inventory.isOpen;
@@ -72012,11 +72943,15 @@ class PlayerRenderer {
                         ? this.player.getRoom()
                         : this.player.game.levels[this.player.depth].rooms[this.player.levelID], this.player, mouseCursor_1.MouseCursor.getInstance().getPosition().x, mouseCursor_1.MouseCursor.getInstance().getPosition().y, drawFor);
                 }
-                // Draw bestiary last so it renders above inventory/quickbar.
+                // Draw books last so they render above inventory/quickbar.
                 if (this.player.bestiary)
                     this.player.bestiary.draw(delta);
                 if (this.player.spellbookReader)
                     this.player.spellbookReader.draw(delta);
+                if (this.player.bookLibrary)
+                    this.player.bookLibrary.draw(delta);
+                if (this.player.armoryBook)
+                    this.player.armoryBook.draw(delta);
             }
             else {
                 game_1.Game.ctx.fillStyle = levelConstants_1.LevelConstants.LEVEL_TEXT_COLOR;
