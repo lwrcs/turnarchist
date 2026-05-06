@@ -120,7 +120,16 @@ export class Door extends Passageway {
   ) => {
     if (GameConstants.SMOOTH_LIGHTING && disable) return 0;
     const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
-    const base = this.opened ? vis / 2 : vis;
+    let base = vis;
+    if (this.opened && this.linkedDoor) {
+      // Only lighten the door tile when the linked room is actually lit.
+      // vis=1 means fully dark; linkedVis < 1 means some light is present.
+      const lx = this.linkedDoor.x;
+      const ly = this.linkedDoor.y;
+      const linkedRoom = this.linkedDoor.room;
+      const linkedVis = linkedRoom?.softVis?.[lx]?.[ly] ?? 1;
+      if (linkedVis < 1) base = vis / 2;
+    }
     return GameConstants.applyShadeForSprites(base);
   };
 

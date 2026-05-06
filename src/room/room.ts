@@ -2077,9 +2077,16 @@ export class Room {
 
   resetDoorLightSources = () => {
     this.doors.forEach((d) => {
-      if (d && d.lightSource) d.lightSource.r = 0;
-      if (d && d.linkedDoor && d.linkedDoor.lightSource)
+      if (d && d.lightSource) {
+        d.lightSource.r = 0;
+        d.lightSource.b = 0;
+        d.lightSource.c = [0, 0, 0];
+      }
+      if (d && d.linkedDoor && d.linkedDoor.lightSource) {
         d.linkedDoor.lightSource.r = 0;
+        d.linkedDoor.lightSource.b = 0;
+        d.linkedDoor.lightSource.c = [0, 0, 0];
+      }
     });
   };
 
@@ -2559,6 +2566,10 @@ export class Room {
     falloffDecay: number = 1,
     action: "cast" | "unCast" = "cast",
   ) => {
+    // A light source with zero (or negative) radius casts no light at all,
+    // not even at its own origin tile.
+    if (radius <= 0) return;
+
     const dx = Math.cos((angle * Math.PI) / 180);
     const dy = Math.sin((angle * Math.PI) / 180);
     // Lighting is currently computed for the local active z-layer only.

@@ -2,6 +2,8 @@ import axios from "axios";
 import type { GameStats as GameStatsType } from "@server/http/schema";
 import { getEnvironmentApiUrl } from "./utils";
 import { v4 as uuidv4 } from "uuid";
+import { GAME_CONTEXT } from "./claudeGameContext";
+import { GAME_STRATEGY_GUIDE } from "./gameStrategyGuide";
 
 export const apiClient = axios.create({
   baseURL: getEnvironmentApiUrl(),
@@ -39,4 +41,16 @@ export const safeRecordGameStats = async (gameStats: GameStats) => {
 export const fetchGameStats = async () => {
   const response = await apiClient.get("/game/stats");
   return response.data;
+};
+
+export const askClaude = async (
+  question: string,
+  dynamicContext: string,
+): Promise<string> => {
+  const response = await apiClient.post("/claude/ask", {
+    question,
+    gameContext: GAME_CONTEXT + "\n\n" + GAME_STRATEGY_GUIDE,
+    dynamicContext,
+  });
+  return response.data.answer as string;
 };

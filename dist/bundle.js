@@ -9694,6 +9694,344 @@ module.exports = __webpack_require__.p + "assets/tileset.0d7689e5a17ec0033346.pn
 
 /***/ }),
 
+/***/ "./src/api/claudeGameContext.ts":
+/*!**************************************!*\
+  !*** ./src/api/claudeGameContext.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GAME_CONTEXT = void 0;
+exports.GAME_CONTEXT = `
+[TURNARCHIST GAMEPLAY REFERENCE]
+
+--- OVERVIEW ---
+Turnarchist is a turn-based roguelike. The player acts, then every enemy in the room responds. Movement and attacks all cost one turn. The game ends on death — no mid-run saves except via the Save action (stored to browser). Floor depth increases as you descend ladders.
+
+--- BIOMES / ENVIRONMENTS ---
+Dungeon, Cave, Forest, Castle (side-path), Glacier, Dark Castle, Desert, Magma Cave, Dark Dungeon, Flooded Cave, Sewer, Tutorial. Each biome has thematic enemies and hazards.
+
+--- PLAYER STATS ---
+Health: tracked as integer hearts. MaxHealth increases via certain items.
+Skills: Melee, Magic, Ranged, Fishing, Mining, Smithing, Crafting, Woodcutting. Each levels via a RuneScape-style XP curve (max level 99). Skill level affects weapon equip requirements and kill XP multipliers.
+
+--- ENEMIES ---
+zombie — slow, moves straight, basic attacker
+beetle — moves on alternating-turn rhythm
+frog — hops in bursts; landing tile is dangerous
+big frog — hulking, wide reach on hops
+big zombie — wide body, stubborn movement
+rat — fast and erratic
+crab — scuttles sideways, attacks at close range
+glowbug — harmless; brightens rooms (useful for visibility)
+crusher — does not fight; falls from above onto tiles (hazard)
+mummy — close-range attacker, quiet steps
+spider — hides until you are adjacent, then strikes
+skeleton — forward-only attack; hits hard; regenerates HP after ~5 turns (kill fast or use burst damage)
+armored skeleton — tougher version of skeleton with more HP
+armored zombie — zombie with extra HP
+bishop — attacks only on diagonals; safe to approach head-on
+burrow knight — marches straight and hits very hard
+warden — keeps distance; periodically summons crushers
+earth wizard — encircles player with walls, then closes the gaps
+energy wizard / wizard bomber — fires fast overlapping energy bursts
+fire wizard — telegraphs flames on nearby tiles, then detonates them
+charge knight — lines up straight then charges the full distance of the room
+big knight — giant body; wide melee threat; short reach
+big skeleton — wide swing covering adjacent tiles
+big wizard — powerful ranged spell area attacks
+king — hits hard; high HP; chess-piece movement rules
+pawn — safe head-on; deadly on diagonals (chess-piece rules)
+queen — threatens both straight and diagonal lines; very dangerous (chess-piece rules)
+rook — controls straight lines; high range (chess-piece rules)
+boltcaster — seeks a clear line of sight, then fires a piercing bolt
+exalter — buffs adjacent enemies, making them hit harder; prioritize it
+occultist — grants shields to allies, prolonging fights; prioritize it
+reaper / spawner — stationary; continuously spawns additional enemies if ignored; kill it first
+
+--- WEAPONS ---
+dagger — basic 1-damage melee, 1-tile range
+sword — hits tile ahead; on hit also strikes the two flanking tiles
+spear — hits 1 and 2 tiles ahead in a straight line (piercing)
+dual daggers — two separate hit attempts per turn
+greataxe — high damage, slightly slower
+warhammer — high damage; some knockback
+scythe — requires scythe blade + scythe handle (crafted); wide arc sweep
+quarter staff — basic staff melee
+crossbow — ranged; requires crossbow stock + crossbow limb + crossbow bolt; uses bolt ammo
+slingshot — short-range ranged, low damage
+shotgun — loud short-range burst
+spellbook — magic weapon that fires spell patterns using mana (cooldown-based)
+
+Weapon modifiers (applied via consumables):
+  weapon blood, weapon poison, weapon curse — apply status effects on hit
+
+--- SPELLS (spellbook patterns) ---
+Plus — cross shape (hits 4 cardinal tiles)
+Cross — X shape (hits 4 diagonal tiles)
+Point — single tile (precise)
+Wave — expanding ring (hits all adjacent tiles)
+Scrolls teach new spells. You can carry and switch spells mid-run.
+Mana Potion restores 5 cooldown ticks across all equipped spellbooks.
+
+--- ARMOR & SHIELDS ---
+Occult shield — absorbs one hit, then recharges after 25 turns
+Wooden shield — similar absorption mechanic, weaker
+Chest plate, shoulder plates, backplate, gauntlets — body armor pieces; reduce or absorb damage
+Diving helmet — required for Flooded Cave / underwater areas
+
+--- RINGS ---
+Gold ring — embed a gem to gain an enchantment
+Emerald ring, Zircon ring (+1 magic damage), Amber ring, Garnet ring — gem-embedded variants
+
+--- USABLE ITEMS ---
+Apple — restores 1 HP (stackable)
+Berries — minor food heal
+Mushrooms — restores 0.5 HP (stackable)
+Green potion — restores 1 HP
+Health potion — restores 1 HP
+Mana potion — reduces spellbook cooldown by 5 (stackable)
+Hourglass — skips your turn without advancing enemies (30 charges; useful for spike trap timing)
+Scrolls — teach new spells to spellbooks
+Spellbook pages — expand spell capacity
+Backpack — increases inventory capacity by 1 slot
+Weapon blood / poison / curse — applies status modifier to held weapon
+Weapon fragments — crafting material
+
+--- TOOLS ---
+Pickaxe — mines rock walls
+Fishing rod — fish in pools
+Hammer — breaks weapons into fragments
+
+--- RESOURCES & CRAFTING ---
+Gems: red gem, blue gem, green gem, orange gem, zircon gem
+Ores/bars: iron ore, iron bar, gold ore, gold bar
+Other: stone, coal, geode
+Gem + Gold Ring → enchanted ring (passive bonus while equipped)
+
+--- LIGHT SOURCES ---
+Torch, candle, lantern — held light; increases vision radius
+Glow stick — placed light source
+Glowbugs (item) — mobile light source
+Shroom light — ambient glow
+
+--- HAZARD TILES ---
+Spike — static; damages player on contact
+Spike trap — alternates on/off every 4 turns; damages player when active (use Hourglass to skip a turn and let it cycle)
+Pool — water tile; fishing spots; crossable without penalty
+Magma pool — damages player on contact (magma biome)
+Chasm — falling hazard; descends a floor
+Down ladder / Up ladder — main-path floor transitions
+
+--- GENERAL TIPS ---
+- Enemies only move after you act — take time to plan each move.
+- The exalter makes nearby enemies more dangerous; kill it first.
+- The reaper (spawner) continuously produces enemies; kill it immediately.
+- Skeletons regenerate; use burst damage or poison to kill them before they heal.
+- The Flooded Cave requires a Diving Helmet to breathe.
+- Rings with gems grant passive bonuses while equipped.
+- Use the Hourglass to let spike traps cycle to their off state before crossing.
+- Bishop enemies only attack diagonally — approach them head-on safely.
+- Charge knight charges in a straight line — step to the side to avoid it.
+- Line up shots carefully — many enemies (and the player with a spear/crossbow) attack only in a straight line.
+`;
+
+
+/***/ }),
+
+/***/ "./src/api/gameStrategyGuide.ts":
+/*!**************************************!*\
+  !*** ./src/api/gameStrategyGuide.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Edit this file to add accurate strategy guidance.
+// This is sent to Claude as context for every /ask query.
+// Sections can be as long or short as needed — just keep it factual.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GAME_STRATEGY_GUIDE = void 0;
+exports.GAME_STRATEGY_GUIDE = `
+[TURNARCHIST STRATEGY GUIDE]
+
+--- CORE MECHANICS ---
+(How turns work, damage, movement rules, etc.)
+
+
+--- EARLY GAME ---
+(What to prioritize in the first few floors, common mistakes, what to pick up)
+
+
+--- ENEMIES: HOW TO FIGHT THEM ---
+
+skeleton:
+
+zombie:
+
+skeleton:
+
+armored skeleton:
+
+armored zombie:
+
+big zombie:
+
+big skeleton:
+
+beetle:
+
+rat:
+
+crab:
+
+frog:
+
+big frog:
+
+spider:
+
+mummy:
+
+crusher:
+
+glowbug:
+
+bishop:
+
+burrow knight:
+
+warden:
+
+earth wizard:
+
+fire wizard:
+
+energy wizard / wizard bomber:
+
+charge knight:
+
+big knight:
+
+big wizard:
+
+king:
+
+queen:
+
+rook:
+
+pawn:
+
+boltcaster:
+
+exalter:
+
+occultist:
+
+reaper / spawner:
+
+
+--- WEAPONS ---
+
+dagger:
+
+sword:
+
+spear:
+
+dual daggers:
+
+greataxe:
+
+warhammer:
+
+scythe:
+
+quarter staff:
+
+crossbow:
+
+slingshot:
+
+shotgun:
+
+spellbook:
+
+
+--- SPELLS ---
+
+Plus:
+
+Cross:
+
+Point:
+
+Wave:
+
+
+--- ITEMS & WHEN TO USE THEM ---
+
+apple / berries / mushrooms / potions:
+
+mana potion:
+
+hourglass:
+
+backpack:
+
+weapon modifiers (blood / poison / curse):
+
+
+--- ARMOR & SHIELDS ---
+
+occult shield:
+
+wooden shield:
+
+body armor pieces:
+
+diving helmet:
+
+
+--- RINGS ---
+
+
+--- TOOLS ---
+
+pickaxe:
+
+fishing rod:
+
+hammer:
+
+
+--- BIOMES & HAZARDS ---
+
+spike traps:
+
+magma pools:
+
+chasm:
+
+flooded cave:
+
+(other biome-specific notes)
+
+
+--- SKILLS ---
+(What each skill does, how to level it, what it unlocks)
+
+
+--- GENERAL TIPS ---
+
+`;
+
+
+/***/ }),
+
 /***/ "./src/api/index.ts":
 /*!**************************!*\
   !*** ./src/api/index.ts ***!
@@ -9703,10 +10041,12 @@ module.exports = __webpack_require__.p + "assets/tileset.0d7689e5a17ec0033346.pn
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchGameStats = exports.safeRecordGameStats = exports.getOrCreateUserId = exports.recordGameStats = exports.apiClient = void 0;
+exports.askClaude = exports.fetchGameStats = exports.safeRecordGameStats = exports.getOrCreateUserId = exports.recordGameStats = exports.apiClient = void 0;
 const axios_1 = __webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs");
 const utils_1 = __webpack_require__(/*! ./utils */ "./src/api/utils.ts");
 const uuid_1 = __webpack_require__(/*! uuid */ "./node_modules/uuid/dist/index.js");
+const claudeGameContext_1 = __webpack_require__(/*! ./claudeGameContext */ "./src/api/claudeGameContext.ts");
+const gameStrategyGuide_1 = __webpack_require__(/*! ./gameStrategyGuide */ "./src/api/gameStrategyGuide.ts");
 exports.apiClient = axios_1.default.create({
     baseURL: (0, utils_1.getEnvironmentApiUrl)(),
 });
@@ -9741,6 +10081,15 @@ const fetchGameStats = async () => {
     return response.data;
 };
 exports.fetchGameStats = fetchGameStats;
+const askClaude = async (question, dynamicContext) => {
+    const response = await exports.apiClient.post("/claude/ask", {
+        question,
+        gameContext: claudeGameContext_1.GAME_CONTEXT + "\n\n" + gameStrategyGuide_1.GAME_STRATEGY_GUIDE,
+        dynamicContext,
+    });
+    return response.data.answer;
+};
+exports.askClaude = askClaude;
 
 
 /***/ }),
@@ -26946,6 +27295,7 @@ const feedbackButton_1 = __webpack_require__(/*! ./gui/feedbackButton */ "./src/
 const oneTimeEventTracker_1 = __webpack_require__(/*! ./game/oneTimeEventTracker */ "./src/game/oneTimeEventTracker.ts");
 const tutorialFlags_1 = __webpack_require__(/*! ./game/tutorialFlags */ "./src/game/tutorialFlags.ts");
 const xpCounter_1 = __webpack_require__(/*! ./gui/xpCounter */ "./src/gui/xpCounter.ts");
+const api_1 = __webpack_require__(/*! ./api */ "./src/api/index.ts");
 var LevelState;
 (function (LevelState) {
     LevelState[LevelState["IN_LEVEL"] = 0] = "IN_LEVEL";
@@ -28327,6 +28677,28 @@ class Game {
         this.commandHandler = (command) => {
             command = command.toLowerCase();
             let enabled = "";
+            if (command.startsWith("ask ")) {
+                if (!gameConstants_1.GameConstants.CLAUDE_ENABLED)
+                    return;
+                const question = command.slice("ask ".length).trim();
+                if (!question) {
+                    this.pushMessage("Usage: /ask <question about the game>");
+                    return;
+                }
+                this.pushMessage("Oracle: thinking...");
+                const player = this.players[this.localPlayerID];
+                const dynamicContext = `Floor depth: ${this.level.depth}, player HP: ${player.health}/${player.maxHealth}.`;
+                void (async () => {
+                    try {
+                        const answer = await (0, api_1.askClaude)(question, dynamicContext);
+                        this.pushMessage(`Oracle: ${answer}`);
+                    }
+                    catch {
+                        this.pushMessage("Oracle: The vision clouds... (could not reach the Oracle)");
+                    }
+                })();
+                return;
+            }
             if (command === "bgred") {
                 this.debugBackgroundRed = !this.debugBackgroundRed;
                 this.pushMessage(`Background debug color is now ${this.debugBackgroundRed ? "RED" : "BLACK"}.`);
@@ -30646,6 +31018,11 @@ class Game {
             const LINE_HEIGHT = Game.letter_height + 1;
             const MAX_LINES_WHEN_CLOSED = 4;
             let linesRemaining = MAX_LINES_WHEN_CLOSED;
+            // Wrap the input text and compute how many lines it occupies
+            const inputLines = this.chatOpen
+                ? new ChatMessage(this.chatTextBox.text).getWrappedLines(CHAT_MAX_WIDTH)
+                : [];
+            const inputLineCount = Math.max(1, inputLines.length);
             if (this.chatOpen) {
                 Game.ctx.fillStyle = "black";
                 if (gameConstants_1.GameConstants.ALPHA_ENABLED)
@@ -30653,23 +31030,44 @@ class Game {
                 Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
                 Game.ctx.globalAlpha = 1;
                 Game.ctx.fillStyle = "white";
-                Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
-                const cursorX = Game.measureText(this.chatTextBox.text.substring(0, this.chatTextBox.cursor)).width;
-                Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
+                // Render each wrapped input line; last line sits at CHAT_BOTTOM_Y
+                for (let i = 0; i < inputLines.length; i++) {
+                    const lineY = CHAT_BOTTOM_Y - (inputLines.length - 1 - i) * LINE_HEIGHT;
+                    Game.fillText(inputLines[i], CHAT_X, lineY);
+                }
+                if (inputLines.length === 0) {
+                    // Empty input — just draw the cursor
+                }
+                // Place cursor on the correct wrapped line at the correct x
+                let charsLeft = this.chatTextBox.cursor;
+                let cursorLine = 0;
+                let cursorOffsetInLine = 0;
+                for (let i = 0; i < inputLines.length; i++) {
+                    if (charsLeft <= inputLines[i].length) {
+                        cursorLine = i;
+                        cursorOffsetInLine = charsLeft;
+                        break;
+                    }
+                    // +1 for the space between words that was consumed during wrapping
+                    charsLeft -= inputLines[i].length + 1;
+                    cursorLine = i + 1;
+                    cursorOffsetInLine = Math.max(0, charsLeft);
+                }
+                const cursorLineY = CHAT_BOTTOM_Y - (inputLines.length - 1 - cursorLine) * LINE_HEIGHT;
+                const cursorX = Game.measureText(inputLines[cursorLine]?.substring(0, cursorOffsetInLine) ?? "").width;
+                Game.ctx.fillRect(CHAT_X + cursorX, cursorLineY, 1, Game.letter_height);
             }
             // Calculate total height needed for all visible messages
-            let totalHeight = 0;
             const messageHeights = [];
             for (let i = 0; i < this.chat.length; i++) {
                 const lines = this.chat[i].getWrappedLines(CHAT_MAX_WIDTH);
                 const messageHeight = lines.length * LINE_HEIGHT;
                 messageHeights.push(messageHeight);
-                totalHeight += messageHeight;
             }
-            // Draw messages from bottom to top
+            // Draw messages from bottom to top, above the (possibly multi-line) input
             let currentY = CHAT_BOTTOM_Y;
             if (this.chatOpen) {
-                currentY -= LINE_HEIGHT; // Account for input line
+                currentY -= inputLineCount * LINE_HEIGHT; // Account for all input lines
             }
             for (let i = this.chat.length - 1; i >= 0; i--) {
                 const message = this.chat[i];
@@ -30948,7 +31346,9 @@ class Game {
                         this.chat.push(new ChatMessage(text));
                     }
                     this.chatTextBox.clear();
-                    this.chatOpen = false;
+                    if (!text.toLowerCase().startsWith("/ask ") || !gameConstants_1.GameConstants.CLAUDE_ENABLED) {
+                        this.chatOpen = false;
+                    }
                 }
                 else {
                     this.chatOpen = false;
@@ -34263,6 +34663,7 @@ class GameConstants {
 exports.GameConstants = GameConstants;
 GameConstants.VERSION = "Alpha v0.3.2"; //"v0.6.3";
 GameConstants.DEVELOPER_MODE = false;
+GameConstants.CLAUDE_ENABLED = false;
 GameConstants.INVENTORY_SNAP_COLS = false;
 GameConstants.INVENTORY_LOCK_COLS = true;
 GameConstants.QUICKBAR_DYNAMIC_WIDTH = true;
@@ -40027,6 +40428,16 @@ const loadSaveV2 = async (game, save) => {
                 catch {
                     // Keep load resilient; a lighting warm-up failure shouldn't block gameplay.
                 }
+            }
+            // Reset all door lightSources across every room before the warm-up.
+            // deactivate() is never called during load, so stale r/b/c values from
+            // before save (on rooms not adjacent to the current active room) would
+            // otherwise persist as ghost lights that cast indefinitely.
+            for (const r of roomsToCheck) {
+                try {
+                    r.resetDoorLightSources();
+                }
+                catch { }
             }
             try {
                 game.room.updateLighting({ x: lp.x, y: lp.y });
@@ -76303,10 +76714,16 @@ class Room {
         };
         this.resetDoorLightSources = () => {
             this.doors.forEach((d) => {
-                if (d && d.lightSource)
+                if (d && d.lightSource) {
                     d.lightSource.r = 0;
-                if (d && d.linkedDoor && d.linkedDoor.lightSource)
+                    d.lightSource.b = 0;
+                    d.lightSource.c = [0, 0, 0];
+                }
+                if (d && d.linkedDoor && d.linkedDoor.lightSource) {
                     d.linkedDoor.lightSource.r = 0;
+                    d.linkedDoor.lightSource.b = 0;
+                    d.linkedDoor.lightSource.c = [0, 0, 0];
+                }
             });
         };
         this.tileValuesToLightSource = (x, y, room) => {
@@ -76669,6 +77086,10 @@ class Room {
          * @param action - 'cast' to add tint, 'unCast' to remove tint.
          */
         this.processTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1, action = "cast") => {
+            // A light source with zero (or negative) radius casts no light at all,
+            // not even at its own origin tile.
+            if (radius <= 0)
+                return;
             const dx = Math.cos((angle * Math.PI) / 180);
             const dy = Math.sin((angle * Math.PI) / 180);
             // Lighting is currently computed for the local active z-layer only.
@@ -86234,7 +86655,17 @@ class Door extends passageway_1.Passageway {
             if (gameConstants_1.GameConstants.SMOOTH_LIGHTING && disable)
                 return 0;
             const vis = this.room.softVis[this.x + offsetX][this.y + offsetY];
-            const base = this.opened ? vis / 2 : vis;
+            let base = vis;
+            if (this.opened && this.linkedDoor) {
+                // Only lighten the door tile when the linked room is actually lit.
+                // vis=1 means fully dark; linkedVis < 1 means some light is present.
+                const lx = this.linkedDoor.x;
+                const ly = this.linkedDoor.y;
+                const linkedRoom = this.linkedDoor.room;
+                const linkedVis = linkedRoom?.softVis?.[lx]?.[ly] ?? 1;
+                if (linkedVis < 1)
+                    base = vis / 2;
+            }
             return gameConstants_1.GameConstants.applyShadeForSprites(base);
         };
         this.examineText = () => {

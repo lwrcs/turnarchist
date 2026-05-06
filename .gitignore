@@ -3,3 +3,5 @@ js/*
 **/.DS_Store
 # keep this pointing to heroku in the github
 src/serverAddress.ts
+.env
+.env.*

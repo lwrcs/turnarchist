@@ -71,6 +71,7 @@ import { TutorialFlags } from "./game/tutorialFlags";
 import { XPCounter } from "./gui/xpCounter";
 import { Crate } from "./entity/object/crate";
 import { Barrel } from "./entity/object/barrel";
+import { askClaude } from "./api";
 
 export enum LevelState {
   IN_LEVEL,
@@ -961,7 +962,9 @@ export class Game {
             this.chat.push(new ChatMessage(text));
           }
           this.chatTextBox.clear();
-          this.chatOpen = false;
+          if (!text.toLowerCase().startsWith("/ask ") || !GameConstants.CLAUDE_ENABLED) {
+            this.chatOpen = false;
+          }
         } else {
           this.chatOpen = false;
         }
@@ -2455,6 +2458,29 @@ export class Game {
   commandHandler = (command: string): void => {
     command = command.toLowerCase();
     let enabled = "";
+
+    if (command.startsWith("ask ")) {
+      if (!GameConstants.CLAUDE_ENABLED) return;
+      const question = command.slice("ask ".length).trim();
+      if (!question) {
+        this.pushMessage("Usage: /ask <question about the game>");
+        return;
+      }
+      this.pushMessage("Oracle: thinking...");
+      const player = this.players[this.localPlayerID];
+      const dynamicContext = `Floor depth: ${this.level.depth}, player HP: ${player.health}/${player.maxHealth}.`;
+      void (async () => {
+        try {
+          const answer = await askClaude(question, dynamicContext);
+          this.pushMessage(`Oracle: ${answer}`);
+        } catch {
+          this.pushMessage(
+            "Oracle: The vision clouds... (could not reach the Oracle)",
+          );
+        }
+      })();
+      return;
+    }
 
     if (command === "bgred") {
       this.debugBackgroundRed = !this.debugBackgroundRed;
@@ -5937,6 +5963,12 @@ export class Game {
     const MAX_LINES_WHEN_CLOSED = 4;
     let linesRemaining = MAX_LINES_WHEN_CLOSED;
 
+    // Wrap the input text and compute how many lines it occupies
+    const inputLines = this.chatOpen
+      ? new ChatMessage(this.chatTextBox.text).getWrappedLines(CHAT_MAX_WIDTH)
+      : [];
+    const inputLineCount = Math.max(1, inputLines.length);
+
     if (this.chatOpen) {
       Game.ctx.fillStyle = "black";
       if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = 0.75;
@@ -5944,28 +5976,58 @@ export class Game {
 
       Game.ctx.globalAlpha = 1;
       Game.ctx.fillStyle = "white";
-      Game.fillText(this.chatTextBox.text, CHAT_X, CHAT_BOTTOM_Y);
+
+      // Render each wrapped input line; last line sits at CHAT_BOTTOM_Y
+      for (let i = 0; i < inputLines.length; i++) {
+        const lineY =
+          CHAT_BOTTOM_Y - (inputLines.length - 1 - i) * LINE_HEIGHT;
+        Game.fillText(inputLines[i], CHAT_X, lineY);
+      }
+      if (inputLines.length === 0) {
+        // Empty input — just draw the cursor
+      }
+
+      // Place cursor on the correct wrapped line at the correct x
+      let charsLeft = this.chatTextBox.cursor;
+      let cursorLine = 0;
+      let cursorOffsetInLine = 0;
+      for (let i = 0; i < inputLines.length; i++) {
+        if (charsLeft <= inputLines[i].length) {
+          cursorLine = i;
+          cursorOffsetInLine = charsLeft;
+          break;
+        }
+        // +1 for the space between words that was consumed during wrapping
+        charsLeft -= inputLines[i].length + 1;
+        cursorLine = i + 1;
+        cursorOffsetInLine = Math.max(0, charsLeft);
+      }
+      const cursorLineY =
+        CHAT_BOTTOM_Y - (inputLines.length - 1 - cursorLine) * LINE_HEIGHT;
       const cursorX = Game.measureText(
-        this.chatTextBox.text.substring(0, this.chatTextBox.cursor),
+        inputLines[cursorLine]?.substring(0, cursorOffsetInLine) ?? "",
       ).width;
-      Game.ctx.fillRect(CHAT_X + cursorX, CHAT_BOTTOM_Y, 1, Game.letter_height);
+      Game.ctx.fillRect(
+        CHAT_X + cursorX,
+        cursorLineY,
+        1,
+        Game.letter_height,
+      );
     }
 
     // Calculate total height needed for all visible messages
-    let totalHeight = 0;
     const messageHeights: number[] = [];
 
     for (let i = 0; i < this.chat.length; i++) {
       const lines = this.chat[i].getWrappedLines(CHAT_MAX_WIDTH);
       const messageHeight = lines.length * LINE_HEIGHT;
       messageHeights.push(messageHeight);
-      totalHeight += messageHeight;
     }
 
-    // Draw messages from bottom to top
+    // Draw messages from bottom to top, above the (possibly multi-line) input
     let currentY = CHAT_BOTTOM_Y;
     if (this.chatOpen) {
-      currentY -= LINE_HEIGHT; // Account for input line
+      currentY -= inputLineCount * LINE_HEIGHT; // Account for all input lines
     }
 
     for (let i = this.chat.length - 1; i >= 0; i--) {

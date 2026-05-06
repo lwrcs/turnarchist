@@ -1444,6 +1444,13 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         // Keep load resilient; a lighting warm-up failure shouldn't block gameplay.
       }
     }
+    // Reset all door lightSources across every room before the warm-up.
+    // deactivate() is never called during load, so stale r/b/c values from
+    // before save (on rooms not adjacent to the current active room) would
+    // otherwise persist as ghost lights that cast indefinitely.
+    for (const r of roomsToCheck) {
+      try { r.resetDoorLightSources(); } catch {}
+    }
     try {
       game.room.updateLighting({ x: lp.x, y: lp.y });
     } catch {

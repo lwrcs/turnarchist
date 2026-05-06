@@ -69,6 +69,7 @@ import { WaveScroll, CrossScroll, PointScroll, PlusScroll } from "../item/usable
 export class GameConstants {
   static readonly VERSION = "Alpha v0.3.2"; //"v0.6.3";
   static DEVELOPER_MODE = false;
+  static CLAUDE_ENABLED = false;
   static INVENTORY_SNAP_COLS = false;
   static INVENTORY_LOCK_COLS = true;
   static QUICKBAR_DYNAMIC_WIDTH = true;

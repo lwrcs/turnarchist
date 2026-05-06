@@ -18,8 +18,11 @@ export const config = {
     port: getEnvironmentVariableOrDefault("PORT", "3000"),
   },
   database: {
-    url: getEnvironmentVariableOrThrow("DATABASE_URL"),
+    url: getEnvironmentVariableOrDefault("DATABASE_URL", ""),
     enableQueryLogs: isDevelopment,
     sslMode: isDevelopment ? "prefer" : "require",
+  },
+  anthropic: {
+    apiKey: getEnvironmentVariableOrDefault("ANTHROPIC_API_KEY", ""),
   },
 };

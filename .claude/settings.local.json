@@ -7,7 +7,10 @@
       "Bash(npx tsc *)",
       "Bash(grep -E \"\\\\.ts$\")",
       "Bash(grep:*)",
-      "Bash(npx webpack:*)"
+      "Bash(npx webpack:*)",
+      "Bash(find /Users/lwrcs/Documents/GitHub/witch-roguelike -name *.env* -o -name tsconfig* -o -name .prettierrc*)",
+      "Bash(ls:*)",
+      "Bash(find /Users/lwrcs/Documents/GitHub/witch-roguelike -maxdepth 1 -type f -name *.html -o -name *.css -o -name *.js)"
     ]
   }
 }
