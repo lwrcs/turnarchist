@@ -1,4 +1,4 @@
-node_modules/*
+**/node_modules
 js/*
 **/.DS_Store
 # keep this pointing to heroku in the github

@@ -14,7 +14,8 @@
       "Bash(find /Users/lwrcs/Documents/GitHub/witch-roguelike -type f -name *discord* -o -name *bot*)",
       "Bash(npm install:*)",
       "Bash(npm start:*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(git rm:*)"
     ]
   }
 }
