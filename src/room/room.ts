@@ -905,12 +905,14 @@ export class Room {
     for (const e of room.entities) {
       if (e.name === "placed_torch" && e.x === d.x && e.y === d.y) {
         if ((e as any).lightSource) {
-          room.lightSources = room.lightSources.filter(ls => ls !== (e as any).lightSource);
+          room.lightSources = room.lightSources.filter(
+            (ls) => ls !== (e as any).lightSource,
+          );
         }
       }
     }
     room.entities = room.entities.filter(
-      e => !(e.name === "placed_torch" && e.x === d.x && e.y === d.y),
+      (e) => !(e.name === "placed_torch" && e.x === d.x && e.y === d.y),
     );
 
     return d;
@@ -1685,10 +1687,22 @@ export class Room {
           totalEnemies: 0,
           counts: {} as Record<string, number>,
           ms: {} as Record<string, number>,
-          enemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
-          nonEnemyTicksByType: {} as Record<string, { calls: number; totalMs: number }>,
-          projectileProcessByType: {} as Record<string, { calls: number; totalMs: number }>,
-          behaviorBreakdown: {} as Record<string, { calls: number; totalMs: number }>,
+          enemyTicksByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
+          nonEnemyTicksByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
+          projectileProcessByType: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
+          behaviorBreakdown: {} as Record<
+            string,
+            { calls: number; totalMs: number }
+          >,
         }
       : null;
 
@@ -1727,7 +1741,8 @@ export class Room {
         if (!this.shouldSimulateEnemy(e)) continue;
         if (prof) prof.simulatedEnemies++;
       }
-      const bx = e.x, by = e.y;
+      const bx = e.x,
+        by = e.y;
       if (prof) {
         const t0 = nowMs();
         e.tick();
@@ -1736,7 +1751,8 @@ export class Room {
         if (e instanceof Enemy) addTypeMs(prof.enemyTicksByType, name, dt);
         else addTypeMs(prof.nonEnemyTicksByType, name, dt);
       } else e.tick();
-      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded)) lightingDirty = true;
+      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded))
+        lightingDirty = true;
       addCount("entityTick");
     }
     addMs("entities.tick", nowMs() - tEntities);
@@ -2124,7 +2140,7 @@ export class Room {
     });
 
     this.doors.forEach((d) => {
-      d.lightSource.b = 0.1;
+      d.lightSource.b = 0;
     });
 
     for (const d of linkedDoors) {
@@ -3187,7 +3203,7 @@ export class Room {
             }
           } else if (tile instanceof Door) {
             const door = tile as Door;
-            if (door.opened === true) computedAlpha = computedAlpha / 2;
+            //if (door.opened === true) computedAlpha = computedAlpha / 2;
             switch (door.doorDir) {
               case Direction.UP:
                 fillY = y - 0.5;
@@ -3330,7 +3346,9 @@ export class Room {
         let computedAlpha = alpha ** factor * smoothFactor;
         computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
 
-        const localPlayer = (this.game as any)?.players?.[(this.game as any)?.localPlayerID];
+        const localPlayer = (this.game as any)?.players?.[
+          (this.game as any)?.localPlayerID
+        ];
         if (
           localPlayer?.rangedTargeting?.isTargetTile(x, y) &&
           !localPlayer?.inventory?.isOpen &&

@@ -1,0 +1,17 @@
+{
+  "name": "turnarchist-bot",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "tsx ./src/index.ts",
+    "start:prod": "tsx ./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.51.0",
+    "@discordjs/rest": "^2.4.0",
+    "discord-api-types": "^0.37.0",
+    "discord.js": "^14.16.0",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.20.4"
+  }
+}

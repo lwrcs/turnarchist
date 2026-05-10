@@ -18,11 +18,9 @@ export class BigKnightEnemy extends Enemy {
   frame: number;
   ticks: number;
   seenPlayer: boolean;
-  ticksSinceFirstHit: number;
   flashingFrame: number;
   targetPlayer: Player;
   aggro: boolean;
-  readonly REGEN_TICKS = 5;
   drops: Array<Item>;
   static difficulty: number = 4;
   static tileX: number = 29;
@@ -42,7 +40,6 @@ export class BigKnightEnemy extends Enemy {
     this.tileY = 0;
     this.seenPlayer = false;
     this.aggro = false;
-    this.ticksSinceFirstHit = 0;
     this.flashingFrame = 0;
     this.deathParticleColor = "#ffffff";
     this.chainPushable = false;
@@ -75,14 +72,7 @@ export class BigKnightEnemy extends Enemy {
     this.lastY = this.y;
     if (!this.dead) {
       if (this.handleSkipTurns()) return;
-      if (this.health === 1) {
-        this.ticksSinceFirstHit++;
-        if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
-          this.health++;
-          this.ticksSinceFirstHit = 0;
-        }
-      } else {
-        if (!this.seenPlayer) {
+      if (!this.seenPlayer) {
           let p = this.nearestPlayer();
           if (p !== false) {
             let [distance, player] = p;
@@ -146,41 +136,39 @@ export class BigKnightEnemy extends Enemy {
               else if (moveY > oldY) this.direction = Direction.DOWN;
               else if (moveY < oldY) this.direction = Direction.UP;
               let hitPlayer = false;
-              if (this.health >= 3) {
-                for (const i in this.game.players) {
-                  if (
-                    this.game.rooms[this.game.players[i].levelID] === this.room
-                  ) {
-                    let playerHit = false;
-                    for (let dx = 0; dx < this.w; dx++) {
-                      for (let dy = 0; dy < this.h; dy++) {
-                        if (
-                          this.game.players[i].x === moveX + dx &&
-                          this.game.players[i].y === moveY + dy
-                        ) {
-                          playerHit = true;
-                          break;
-                        }
-                      }
-                      if (playerHit) break;
-                    }
-                    if (playerHit) {
-                      const src = this.closestTileToPoint(
-                        this.game.players[i].x,
-                        this.game.players[i].y,
-                      );
-                      this.game.players[i].hurt(this.hit(), this.name, {
-                        source: { x: src.x, y: src.y },
-                      });
-                      this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                      this.drawY = 0.5 * (this.y - this.game.players[i].y);
+              for (const i in this.game.players) {
+                if (
+                  this.game.rooms[this.game.players[i].levelID] === this.room
+                ) {
+                  let playerHit = false;
+                  for (let dx = 0; dx < this.w; dx++) {
+                    for (let dy = 0; dy < this.h; dy++) {
                       if (
-                        this.game.players[i] ===
-                        this.game.players[this.game.localPlayerID]
-                      )
-                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                      hitPlayer = true;
+                        this.game.players[i].x === moveX + dx &&
+                        this.game.players[i].y === moveY + dy
+                      ) {
+                        playerHit = true;
+                        break;
+                      }
                     }
+                    if (playerHit) break;
+                  }
+                  if (playerHit) {
+                    const src = this.closestTileToPoint(
+                      this.game.players[i].x,
+                      this.game.players[i].y,
+                    );
+                    this.game.players[i].hurt(this.hit(), this.name, {
+                      source: { x: src.x, y: src.y },
+                    });
+                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                    if (
+                      this.game.players[i] ===
+                      this.game.players[this.game.localPlayerID]
+                    )
+                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    hitPlayer = true;
                   }
                 }
               }
@@ -199,15 +187,6 @@ export class BigKnightEnemy extends Enemy {
             // Mirror KnightEnemy cadence: after acting, become "unconscious" until next warn turn.
             this.rumbling = false;
             this.unconscious = true;
-
-            // Handle regeneration while damaged
-            if (this.health < this.maxHealth) {
-              this.ticksSinceFirstHit++;
-              if (this.ticksSinceFirstHit >= this.REGEN_TICKS) {
-                this.health++;
-                this.ticksSinceFirstHit = 0;
-              }
-            }
           }
 
           let targetPlayerOffline =
@@ -228,7 +207,7 @@ export class BigKnightEnemy extends Enemy {
                   this.facePlayer(player);
                   if (player === this.game.players[this.game.localPlayerID])
                     this.alertTicks = 1;
-                  if (this.health >= 3 && this.ticks % 2 === 0)
+                  if (this.ticks % 2 === 0)
                     this.rumbling = true;
                   this.makeBigHitWarnings();
                 }
@@ -236,7 +215,6 @@ export class BigKnightEnemy extends Enemy {
             }
           }
         }
-      }
     }
   };
 

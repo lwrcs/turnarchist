@@ -441,7 +441,7 @@ export class BeetleEnemy extends Enemy {
               finalY = step.pos.y;
               const manhattanFromStart =
                 Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-              if (manhattanFromStart === 1 || manhattanFromStart === 2) {
+              if (manhattanFromStart === 2) {
                 const dirX = finalX - oldX;
                 const dirY = finalY - oldY;
                 const stepX = dirX !== 0 ? Math.sign(dirX) : 0;
@@ -455,95 +455,26 @@ export class BeetleEnemy extends Enemy {
               }
             }
 
-            // Execute movement: avoid 1-tile attack; prefer 2-3 range
-            if (playerDistance <= 1) {
-              // If too close, try to reposition using 2-tile jump plan or fallback
-              const finalDist =
-                Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-              if (finalDist >= 2) {
-                this.attackOrMoveTo(finalX, finalY, oldX, oldY);
-              } else {
-                const candidates = this.getTwoTileCandidates(oldX, oldY);
-                if (candidates.length > 0) {
-                  const best = this.pickBestCandidate(
-                    candidates,
-                    targetPosition.x,
-                    targetPosition.y,
-                    preferXAxis,
-                    dxToTarget,
-                    dyToTarget,
-                  );
-                  this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
-                } else {
-                  // last resort, move 1 tile but won't be able to attack
-                  const oneTileCandidates = this.getOneTileCandidates(
-                    oldX,
-                    oldY,
-                  );
-                  if (oneTileCandidates.length > 0) {
-                    const best = this.pickBestOneTileCandidate(
-                      oneTileCandidates,
-                      targetPosition.x,
-                      targetPosition.y,
-                      preferXAxis,
-                      dxToTarget,
-                      dyToTarget,
-                    );
-                    this.attackOrMoveTo(best.x, best.y, oldX, oldY);
-                  }
-                }
-              }
+            // Only jump exactly 3 tiles
+            const finalDist =
+              Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+            if (finalDist === 3) {
+              this.attackOrMoveTo(finalX, finalY, oldX, oldY);
             } else {
-              // Player is not adjacent - use computed movement (A* + extension up to 3 tiles)
-              const finalDist =
-                Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
-              if (finalDist >= 1) {
-                this.attackOrMoveTo(finalX, finalY, oldX, oldY);
-              } else {
-                // Fall back to 3-tile or 2-tile jump candidates if A* didn't find a path
-                const candidates3 = this.getThreeTileCandidates(oldX, oldY);
-                if (candidates3.length > 0) {
-                  const best = this.pickBestCandidate(
-                    candidates3,
-                    targetPosition.x,
-                    targetPosition.y,
-                    preferXAxis,
-                    dxToTarget,
-                    dyToTarget,
-                  );
-                  this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
-                } else {
-                  const candidates2 = this.getTwoTileCandidates(oldX, oldY);
-                  if (candidates2.length > 0) {
-                    const best = this.pickBestCandidate(
-                      candidates2,
-                      targetPosition.x,
-                      targetPosition.y,
-                      preferXAxis,
-                      dxToTarget,
-                      dyToTarget,
-                    );
-                    this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
-                  } else {
-                    // Fall back to 1-tile movement if no longer jumps available
-                    const oneTileCandidates = this.getOneTileCandidates(
-                      oldX,
-                      oldY,
-                    );
-                    if (oneTileCandidates.length > 0) {
-                      const best = this.pickBestOneTileCandidate(
-                        oneTileCandidates,
-                        targetPosition.x,
-                        targetPosition.y,
-                        preferXAxis,
-                        dxToTarget,
-                        dyToTarget,
-                      );
-                      this.attackOrMoveTo(best.x, best.y, oldX, oldY);
-                    }
-                  }
-                }
+              // A* didn't produce a 3-tile path — try explicit 3-tile candidates
+              const candidates3 = this.getThreeTileCandidates(oldX, oldY);
+              if (candidates3.length > 0) {
+                const best = this.pickBestCandidate(
+                  candidates3,
+                  targetPosition.x,
+                  targetPosition.y,
+                  preferXAxis,
+                  dxToTarget,
+                  dyToTarget,
+                );
+                this.attackOrMoveTo(best.endX, best.endY, oldX, oldY);
               }
+              // No 3-tile jump available — stay put
             }
             this.rumbling = false;
             this.unconscious = true;
@@ -628,10 +559,6 @@ export class BeetleEnemy extends Enemy {
             [3, 0],
             [0, -3],
             [0, 3],
-            [-2, 0],
-            [2, 0],
-            [0, -2],
-            [0, 2],
           ]
         : [
             [-1, -1],

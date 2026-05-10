@@ -129,6 +129,8 @@ export class Door extends Passageway {
       const linkedRoom = this.linkedDoor.room;
       const linkedVis = linkedRoom?.softVis?.[lx]?.[ly] ?? 1;
       if (linkedVis < 1) base = vis / 2;
+      console.log("linkedVis", linkedVis);
+      console.log("vis", vis);
     }
     return GameConstants.applyShadeForSprites(base);
   };
