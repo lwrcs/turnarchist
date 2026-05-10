@@ -9934,96 +9934,133 @@ reaper / spawner: 4 HP, immune to bleed and poison, doesn't move or attack direc
 
 --- WEAPONS ---
 
-dagger:
+dagger: 1 damage, 1-tile attack. The baseline weapon — no special mechanics, always reliable.
 
-sword:
+sword: 1 damage. Hits the tile ahead, and on hit also strikes the two flanking tiles beside the target. Good for groups. Doesn't degrade.
 
-spear:
+spear: 1 damage. Reaches 2 tiles forward, hitting both — penetrates through the first enemy to the second. Blocked by pushables. Doesn't degrade.
 
-dual daggers:
+dual daggers: First hit freezes enemy turns — they won't act until you attack or move again. Use the pause to reposition or land a safe second hit, which then advances turns normally.
 
-greataxe:
+greataxe: 2-handed, 25 durability. Damage scales with missing HP — 1 at full health, 2 at 75%, 4 at 50%, 8 at 25%. Best used when already hurt.
 
-warhammer:
+warhammer: 2 damage, single tile, no degradation. Has a cooldown after each hit — can't spam it.
 
-scythe:
+scythe: 1 damage, 2-handed. Hits the tile ahead and 4 additional tiles flanking both you and the target. Wide arc, no degradation.
 
-quarter staff:
+quarter staff: 1 damage. Knocks enemies back 1 tile on hit. Pin an enemy against a wall to instantly kill them regardless of HP.
 
-crossbow:
+crossbow: 4 damage ranged. Load a bolt, cock it, then fire in a straight line hitting the first enemy. Two-turn setup, consumes bolt ammo.
 
-slingshot:
+slingshot: Fires in a straight line, 1 damage, hits the first enemy. No ammo required.
 
-shotgun:
+shotgun: Fires up to 3 tiles in a straight line — 1 damage at distance 1–2, 0.5 damage at distance 3. Has durability.
 
-spellbook:
+spellbook: Ranged, up to 4 tile range. Uses a mana/cooldown system and has durability. Casts the active spell — starts with Plus, can learn more from spellbook pages.
 
 
 --- SPELLS ---
 
-Plus:
+Plus: Hits the target tile and all 4 cardinal adjacent tiles simultaneously. 5-tile cross pattern. Good default for clustered enemies.
 
-Cross:
+Cross: Hits the target tile and all 4 diagonal adjacent tiles simultaneously. 5-tile X pattern. Complements Plus — together they cover all 8 surrounding tiles.
 
-Point:
+Point: Hits only the target tile. Single precise shot, best for isolated targets or conserving mana.
 
-Wave:
+Wave: Expanding shockwave — hits the target tile immediately, then the surrounding 8 tiles with a short delay, then an outer ring of 12 tiles (5×5 without corners) with another delay. Best for large groups or when you need area denial.
 
 
 --- ITEMS & WHEN TO USE THEM ---
 
-apple / berries / mushrooms / potions:
+apple / berries / mushrooms / potions: Apple and green potion restore 1 HP. Berries and mushrooms restore 0.5 HP. Food only works when below max HP. Stackable. Use food to top off between fights, save potions for emergencies.
 
-mana potion:
+mana potion: Reduces spellbook cooldown by 5. Only useful if you have a spellbook. Stackable.
 
-hourglass:
+hourglass: Skips your turn — enemies act, you don't move. 30 uses. Useful for letting every-other-turn enemies advance their cycle so you can attack on their inactive turn safely.
 
-backpack:
+backpack: Permanently adds 5 inventory slots. Use immediately, no reason to hold it.
 
-weapon modifiers (blood / poison / curse):
+weapon modifiers (blood / poison / curse): Applied to a weapon from inventory. Blood deals 0.5 damage per turn for 4 ticks (2 total damage). Poison deals 1 damage every 3 turns. Curse is currently a no-op. Blood is better for burst damage, poison for tankier enemies. Many enemies are immune to one or both.
 
 
 --- ARMOR & SHIELDS ---
 
-occult shield:
+occult shield: Absorbs one hit of any size, then recharges after 25 turns. The go-to shield — let it eat a big hit you can't avoid.
 
-wooden shield:
+wooden shield: Absorbs one hit then permanently breaks. Single-use safety net, good for emergencies but not sustainable.
 
-body armor pieces:
+body armor pieces: Each piece halves damage from a specific direction. Chest plate covers front-facing attacks, gauntlets cover side attacks (not diagonal), shoulder plates cover diagonal attacks, backplate covers attacks from behind. Stack them to cover more angles.
 
-diving helmet:
+diving helmet: Stores 100 turns of air for underwater travel. Required for flooded cave areas — without it you'll drown.
 
 
 --- RINGS ---
 
+gold ring: A blank ring — embed a gem into it to create a gem ring. Does nothing on its own.
+
+garnet ring: +1 damage but sets max health to 1 and immediately drops you to 1 HP. Extreme risk/reward — pairs well with the greataxe since low health maximizes its damage, or body armor to survive incoming hits.
+
+zircon ring: +1 magic damage while worn. Best paired with a spellbook.
+
+emerald ring / amber ring: Not yet implemented — placeholder items.
+
 
 --- TOOLS ---
 
-pickaxe:
+pickaxe: Lets you mine walls without equipping it — just having it in your inventory is enough. Not a weapon, can't be equipped.
 
-fishing rod:
+fishing rod: Used to catch fish from water tiles. Can be disassembled into weapon fragments.
 
-hammer:
+hammer: Used on other items from inventory. Disassembles weapons into fragments, cracks geodes open, smelts gold/iron ore into bars, and smiths bars into items. Using it directly heals 1 HP.
 
+
+--- ENVIRONMENTS ---
+
+Main path depths 0–2 are Dungeon. Depth 3 onward becomes Dark Dungeon — darker, harder enemies, more chess-piece enemies and armored undead.
+
+Side paths branch off the main path via down ladders and have their own boss rooms:
+
+Depth 0 side path: Sewer — rats and crabs, no boss, no further exits.
+Depth 1 side path: Forest — frogs, glowbugs, nature enemies. Leads deeper to Castle (chess-piece enemies: knights, rooks, bishops, queens; exalter boss).
+Depth 2 side path: Cave — crabs, spiders, armored undead, beetles. Leads deeper to Dark Castle (heavy chess-piece and armored enemies; warden boss).
+Depth 3+ side path: Dark Castle — accessed from Dark Dungeon. Heavy chess-piece and armored enemies, warden boss.
+Flooded Cave — requires diving helmet to explore. No enemies currently.
 
 --- BIOMES & HAZARDS ---
 
-spike traps:
+spike traps: Fire every 4 turns, dealing 0.5 damage to you (1 damage to enemies). A hit warning appears one turn before they fire. Step off the highlighted tile before it goes off, or lure enemies onto them.
 
-magma pools:
+magma pools: Impassable terrain — blocks movement for both you and enemies. Use them as natural barriers.
 
-chasm:
+chasm: Impassable terrain — blocks movement for both you and enemies.
 
-flooded cave:
-
-(other biome-specific notes)
+flooded cave: Standing in water without a diving helmet causes drowning. First hit comes after 5 turns, then intervals shrink — 4, 3, 2, 1 turns between hits, each dealing 0.5 damage. The diving helmet stores 100 turns of air and recharges when you surface.
 
 
 --- SKILLS ---
-(What each skill does, how to level it, what it unlocks)
+
+Skills level up by performing the relevant activity on a RuneScape-style XP curve up to level 99. XP crystals found in the dungeon grant a chunk of XP to a specific skill.
+
+melee: Leveled by killing enemies with melee weapons. Each weapon tier requires a minimum melee level to equip — dagger (1), quarterstaff (5), sword (10), spear (13), dual daggers (15), warhammer (18), scythe (20), greataxe (25). Higher-tier weapons give more XP per kill, so always use the best weapon you can equip.
+
+magic: Leveled by killing enemies with the spellbook.
+
+ranged: Leveled by killing enemies with ranged weapons (slingshot, shotgun, crossbow).
+
+fishing: Leveled by fishing with the fishing rod. Roughly 30% chance to catch per attempt.
+
+mining: Leveled by mining ore nodes. XP scales with ore type — rock gives minimal XP, garnet gives the most. Deeper floors multiply XP gained.
+
+smithing / crafting: Leveled by using the hammer to smelt ore into bars and smith or craft items. Crafting covers ring-making, gem embedding, and weapon assembly.
+
+woodcutting: Leveled by cutting wood.
 
 
 --- GENERAL TIPS ---
+
+High-level play involves switching weapons to match the situation — a sword clears grouped enemies, a spear pierces through enemies to hit the one behind, dual daggers buy time to reposition, a spellbook handles targets across the room. Carrying two or three weapons and swapping between them is more effective than committing to one.
+
+Food is your most important resource — collect it whenever you can. Health potions come from vending machines, fish from water pools (fishing rod required), apples from trees, berries from bushes, and mushrooms from mushroom patches. Stock up aggressively; healing opportunities are limited between floors.
 
 `;
 
