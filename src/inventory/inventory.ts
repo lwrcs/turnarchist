@@ -1211,6 +1211,19 @@ export class Inventory {
         Game.ctx.lineWidth = 1;
       }
     }
+
+    // Draw key labels (1–9, 0) centered 1px above each slot
+    Game.ctx.globalAlpha = 0.12;
+    Game.ctx.fillStyle = "white";
+    for (let xIdx = 0; xIdx < this.quickbarCols; xIdx++) {
+      const label = xIdx === 9 ? "0" : String(xIdx + 1);
+      const slotCenterX = startX + xIdx * (s + 2 * b + g) + (s + 2 * b) / 2;
+      const labelWidth = Game.measureText(label).width;
+      const labelX = Math.floor(slotCenterX - labelWidth / 2);
+      const labelY = startY - Game.letter_height;
+      Game.fillText(label, labelX, labelY);
+    }
+    Game.ctx.globalAlpha = 1;
   };
 
   drawUsingItem = (

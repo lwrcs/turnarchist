@@ -54031,6 +54031,18 @@ class Inventory {
                     game_1.Game.ctx.lineWidth = 1;
                 }
             }
+            // Draw key labels (1–9, 0) centered 1px above each slot
+            game_1.Game.ctx.globalAlpha = 0.12;
+            game_1.Game.ctx.fillStyle = "white";
+            for (let xIdx = 0; xIdx < this.quickbarCols; xIdx++) {
+                const label = xIdx === 9 ? "0" : String(xIdx + 1);
+                const slotCenterX = startX + xIdx * (s + 2 * b + g) + (s + 2 * b) / 2;
+                const labelWidth = game_1.Game.measureText(label).width;
+                const labelX = Math.floor(slotCenterX - labelWidth / 2);
+                const labelY = startY - game_1.Game.letter_height;
+                game_1.Game.fillText(label, labelX, labelY);
+            }
+            game_1.Game.ctx.globalAlpha = 1;
         };
         this.drawUsingItem = (delta, startX, startY, s, b, g, contextCols = this.cols, contextRows = 1) => {
             // Highlight the usingItem's slot if in using state and it's different from current selection
