@@ -320,10 +320,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
 
       // Mid depth cave enemies
       { class: RatEnemy, weight: 1.2, minDepth: 0 },
-      { class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
-      { class: EnergyWizardEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
+      //{ class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
+      //{ class: EnergyWizardEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
       { class: BeetleEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
-
+      /*
       // Deep cave threats
       {
         class: BigSkullEnemy,
@@ -332,7 +332,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         specialSpawnLogic: "clearFloor",
         size: { w: 2, h: 2 },
       },
-      { class: ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
+      */
+      //{ class: ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
       //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
     ],
     bosses: [
@@ -340,7 +341,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
       { class: Spawner, depth: 0, weight: 0.35 },
       { class: BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
-      { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
+      //{ class: WardenEnemy, depth: 5, weight: 0.35, big: true },
     ],
   },
   [EnvType.FOREST]: {
@@ -615,9 +616,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
       { class: ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
     ],
-    bosses: [
-      { class: WardenEnemy, depth: 2, weight: 1.0, big: true },
-    ],
+    bosses: [{ class: WardenEnemy, depth: 2, weight: 1.0, big: true }],
   },
   [EnvType.PLACEHOLDER]: {
     props: [{ class: NullProp, weight: 1 }],

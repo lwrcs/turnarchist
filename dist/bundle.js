@@ -47787,7 +47787,8 @@ exports.ARMORY_WEAPONS = [
         weaponName: "dagger",
         displayName: "Dagger",
         description: "A basic but dependable weapon.",
-        itemTileX: 22, itemTileY: 0,
+        itemTileX: 22,
+        itemTileY: 0,
         attackType: "dagger",
         hitOffsets: [{ dx: 0, dy: -1 }],
         damage: 1,
@@ -47796,7 +47797,8 @@ exports.ARMORY_WEAPONS = [
         weaponName: "dual daggers",
         displayName: "Dual Daggers",
         description: "After the first attack, enemies will not take their turn until you attack or move again.",
-        itemTileX: 23, itemTileY: 0,
+        itemTileX: 23,
+        itemTileY: 0,
         attackType: "dualdagger",
         hitOffsets: [{ dx: 0, dy: -1 }],
         damage: 1,
@@ -47805,29 +47807,42 @@ exports.ARMORY_WEAPONS = [
         weaponName: "spear",
         displayName: "Spear",
         description: "Hits enemies in front of you within a range of 2 tiles.",
-        itemTileX: 24, itemTileY: 0,
+        itemTileX: 24,
+        itemTileY: 0,
         attackType: "spear",
-        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }],
+        hitOffsets: [
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: -2 },
+        ],
         damage: 1,
     },
     {
         weaponName: "sword",
         displayName: "Sword",
         description: "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.",
-        itemTileX: 28, itemTileY: 2,
+        itemTileX: 28,
+        itemTileY: 2,
         attackType: "sword",
-        hitOffsets: [{ dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 }],
+        hitOffsets: [
+            { dx: -1, dy: -1 },
+            { dx: 0, dy: -1 },
+            { dx: 1, dy: -1 },
+        ],
         damage: 1,
     },
     {
         weaponName: "scythe",
         displayName: "Scythe",
         description: "A wide reaping arc. Hits the tile ahead and the flanking tiles of both you and your target.",
-        itemTileX: 23, itemTileY: 2,
+        itemTileX: 23,
+        itemTileY: 2,
         attackType: "scythe",
         hitOffsets: [
-            { dx: 0, dy: -1 }, { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
-            { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+            { dx: 0, dy: -1 },
+            { dx: -1, dy: -1 },
+            { dx: 1, dy: -1 },
+            { dx: -1, dy: 0 },
+            { dx: 1, dy: 0 },
         ],
         damage: 1,
     },
@@ -47835,7 +47850,8 @@ exports.ARMORY_WEAPONS = [
         weaponName: "warhammer",
         displayName: "Warhammer",
         description: "A slow, heavy smash that hits only the tile ahead.",
-        itemTileX: 22, itemTileY: 2,
+        itemTileX: 22,
+        itemTileY: 2,
         attackType: "warhammer",
         hitOffsets: [{ dx: 0, dy: -1 }],
         damage: 2,
@@ -47844,7 +47860,8 @@ exports.ARMORY_WEAPONS = [
         weaponName: "greataxe",
         displayName: "Greataxe",
         description: "A great axe. It wants to bite.",
-        itemTileX: 24, itemTileY: 2,
+        itemTileX: 24,
+        itemTileY: 2,
         attackType: null,
         hitOffsets: [{ dx: 0, dy: -1 }],
         damage: 2,
@@ -47853,7 +47870,8 @@ exports.ARMORY_WEAPONS = [
         weaponName: "quarterstaff",
         displayName: "Quarterstaff",
         description: "Hitting an enemy will push them back 1 tile. Pin them against a wall to instantly kill them.",
-        itemTileX: 22, itemTileY: 4,
+        itemTileX: 22,
+        itemTileY: 4,
         attackType: null,
         hitOffsets: [{ dx: 0, dy: -1 }],
         damage: 1,
@@ -47862,18 +47880,29 @@ exports.ARMORY_WEAPONS = [
         weaponName: "crossbow",
         displayName: "Crossbow",
         description: "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.",
-        itemTileX: 23, itemTileY: 4,
+        itemTileX: 23,
+        itemTileY: 4,
         attackType: null,
-        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }, { dx: 0, dy: -4 }],
+        hitOffsets: [
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: -2 },
+            { dx: 0, dy: -3 },
+            { dx: 0, dy: -4 },
+        ],
         damage: 4,
     },
     {
         weaponName: "shotgun",
         displayName: "Shotgun",
         description: "Fires a wide blast. Short range, full damage at point blank.",
-        itemTileX: 26, itemTileY: 0,
+        itemTileX: 26,
+        itemTileY: 0,
         attackType: null,
-        hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }],
+        hitOffsets: [
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: -2 },
+            { dx: 0, dy: -3 },
+        ],
         damage: 1,
     },
 ];
@@ -47883,10 +47912,10 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
     seededRand() {
         // Mulberry32
         this._rngSeed |= 0;
-        this._rngSeed = this._rngSeed + 0x6d2b79f5 | 0;
-        let t = Math.imul(this._rngSeed ^ this._rngSeed >>> 15, 1 | this._rngSeed);
-        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        this._rngSeed = (this._rngSeed + 0x6d2b79f5) | 0;
+        let t = Math.imul(this._rngSeed ^ (this._rngSeed >>> 15), 1 | this._rngSeed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
     constructor(_player) {
         super();
@@ -47963,7 +47992,7 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
             if (f.alpha < 0)
                 f.alpha = 0;
         }
-        this._floaters = this._floaters.filter(f => f.alpha > 0);
+        this._floaters = this._floaters.filter((f) => f.alpha > 0);
     }
     _resetAnim() {
         this.animT = 0;
@@ -47975,10 +48004,16 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
         this._shakeFrame = 0;
         this._floaters = [];
     }
-    onOpen() { this._resetAnim(); }
-    onPageTransitionStart(_toPage) { this._resetAnim(); }
+    onOpen() {
+        this._resetAnim();
+    }
+    onPageTransitionStart(_toPage) {
+        this._resetAnim();
+    }
     getShakeOffset() {
-        const y = this._shakeActive ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY) : 0;
+        const y = this._shakeActive
+            ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY)
+            : 0;
         return { x: 0, y };
     }
     onPageChanged(newPage) {
@@ -48039,9 +48074,10 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
         // Checkerboard (1-tile inset)
         for (let col = 1; col < GRID - 1; col++) {
             for (let row = 1; row < GRID - 1; row++) {
-                game_1.Game.ctx.fillStyle = (col + row) % 2 === 0
-                    ? "rgba(85, 85, 95, 1)"
-                    : "rgba(100, 100, 110, 1)";
+                game_1.Game.ctx.fillStyle =
+                    (col + row) % 2 === 0
+                        ? "rgba(85, 85, 95, 1)"
+                        : "rgba(100, 100, 110, 1)";
                 game_1.Game.ctx.fillRect(originX + col * tileDrawSize, originY + row * tileDrawSize, tileDrawSize, tileDrawSize);
             }
         }
@@ -48142,8 +48178,16 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
             const prevCtx = game_1.Game.ctx;
             game_1.Game.ctx = dCtx;
             entity_1.Entity.drawIdleSprite({
-                tileX: 8, tileY: 4, frames: 1, frameStride: 1,
-                x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+                tileX: 8,
+                tileY: 4,
+                frames: 1,
+                frameStride: 1,
+                x: 0,
+                y: 0,
+                w: 1,
+                h: 1,
+                drawW: ratio,
+                drawH: ratio,
             });
             if (showHighlight) {
                 dCtx.globalCompositeOperation = "lighten";
@@ -48153,8 +48197,16 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
                 dCtx.globalAlpha = 1;
                 dCtx.globalCompositeOperation = "destination-in";
                 entity_1.Entity.drawIdleSprite({
-                    tileX: 8, tileY: 4, frames: 1, frameStride: 1,
-                    x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+                    tileX: 8,
+                    tileY: 4,
+                    frames: 1,
+                    frameStride: 1,
+                    x: 0,
+                    y: 0,
+                    w: 1,
+                    h: 1,
+                    drawW: ratio,
+                    drawH: ratio,
                 });
                 dCtx.globalCompositeOperation = "source-over";
             }
@@ -48181,7 +48233,9 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
             if (frame < animData.frames) {
                 const srcX = animData.tileX + 2 * Math.round(frame / 2);
                 const srcY = animData.tileY + 2;
-                const yTweak = entry.attackType ? (attackYTweak[entry.attackType] ?? 0) : 0;
+                const yTweak = entry.attackType
+                    ? (attackYTweak[entry.attackType] ?? 0)
+                    : 0;
                 const fxX = playerTX + (-0.5 + animData.xOffset) * ratio;
                 const fxY = playerTY - hitY + (-0.5 + animData.yOffset + yTweak) * ratio;
                 game_1.Game.drawFX(srcX, srcY, 2, 2, fxX, fxY, 2 * ratio, 2 * ratio);
@@ -48189,9 +48243,16 @@ class ArmoryBook extends bookRenderer_1.BookRenderer {
         }
         // Player sprite on top
         entity_1.Entity.drawIdleSprite({
-            tileX: 1, tileY: 10, frames: 1, frameStride: 1,
-            x: playerTX, y: playerTY - hitY,
-            w: 1, h: 2, drawW: ratio, drawH: ratio * 2,
+            tileX: 1,
+            tileY: 10,
+            frames: 1,
+            frameStride: 1,
+            x: playerTX,
+            y: playerTY - hitY,
+            w: 1,
+            h: 2,
+            drawW: ratio,
+            drawH: ratio * 2,
         });
         // Damage floaters
         for (const f of this._floaters) {
@@ -61768,18 +61829,20 @@ const environmentData = {
             { class: skullEnemy_1.SkullEnemy, weight: 0.8, minDepth: 0 },
             // Mid depth cave enemies
             { class: ratEnemy_1.RatEnemy, weight: 1.2, minDepth: 0 },
-            { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.6, minDepth: 1 },
-            { class: energyWizard_1.EnergyWizardEnemy, weight: 0.5, minDepth: 1 },
-            { class: beetleEnemy_1.BeetleEnemy, weight: 0.5, minDepth: 1 },
+            //{ class: ArmoredzombieEnemy, weight: 0.6, minDepth: 1 }, // Less common undead
+            //{ class: EnergyWizardEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
+            { class: beetleEnemy_1.BeetleEnemy, weight: 0.5, minDepth: 1 }, // Rare magic users
+            /*
             // Deep cave threats
             {
-                class: bigSkullEnemy_1.BigSkullEnemy,
-                weight: 0.15,
-                minDepth: 2,
-                specialSpawnLogic: "clearFloor",
-                size: { w: 2, h: 2 },
+              class: BigSkullEnemy,
+              weight: 0.15,
+              minDepth: 2,
+              specialSpawnLogic: "clearFloor",
+              size: { w: 2, h: 2 },
             },
-            { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
+            */
+            //{ class: ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
             //{ class: MummyEnemy, weight: 0.4, minDepth: 2 }, // Ancient cave mummies
         ],
         bosses: [
@@ -61787,7 +61850,7 @@ const environmentData = {
             { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.8, maxDepth: 4, big: true },
             { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
             { class: bigWizardEnemy_1.BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
-            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
+            //{ class: WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
     [environmentTypes_1.EnvType.FOREST]: {
@@ -62052,9 +62115,7 @@ const environmentData = {
             },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
         ],
-        bosses: [
-            { class: wardenEnemy_1.WardenEnemy, depth: 2, weight: 1.0, big: true },
-        ],
+        bosses: [{ class: wardenEnemy_1.WardenEnemy, depth: 2, weight: 1.0, big: true }],
     },
     [environmentTypes_1.EnvType.PLACEHOLDER]: {
         props: [{ class: NullProp, weight: 1 }],

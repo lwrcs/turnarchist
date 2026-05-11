@@ -97,7 +97,8 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
     weaponName: "dagger",
     displayName: "Dagger",
     description: "A basic but dependable weapon.",
-    itemTileX: 22, itemTileY: 0,
+    itemTileX: 22,
+    itemTileY: 0,
     attackType: "dagger",
     hitOffsets: [{ dx: 0, dy: -1 }],
     damage: 1,
@@ -105,8 +106,10 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
   {
     weaponName: "dual daggers",
     displayName: "Dual Daggers",
-    description: "After the first attack, enemies will not take their turn until you attack or move again.",
-    itemTileX: 23, itemTileY: 0,
+    description:
+      "After the first attack, enemies will not take their turn until you attack or move again.",
+    itemTileX: 23,
+    itemTileY: 0,
     attackType: "dualdagger",
     hitOffsets: [{ dx: 0, dy: -1 }],
     damage: 1,
@@ -115,29 +118,44 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
     weaponName: "spear",
     displayName: "Spear",
     description: "Hits enemies in front of you within a range of 2 tiles.",
-    itemTileX: 24, itemTileY: 0,
+    itemTileX: 24,
+    itemTileY: 0,
     attackType: "spear",
-    hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }],
+    hitOffsets: [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: -2 },
+    ],
     damage: 1,
   },
   {
     weaponName: "sword",
     displayName: "Sword",
-    description: "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.",
-    itemTileX: 28, itemTileY: 2,
+    description:
+      "A balanced blade. Hits the tile ahead. On hit, also strikes the two tiles beside it.",
+    itemTileX: 28,
+    itemTileY: 2,
     attackType: "sword",
-    hitOffsets: [{ dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 }],
+    hitOffsets: [
+      { dx: -1, dy: -1 },
+      { dx: 0, dy: -1 },
+      { dx: 1, dy: -1 },
+    ],
     damage: 1,
   },
   {
     weaponName: "scythe",
     displayName: "Scythe",
-    description: "A wide reaping arc. Hits the tile ahead and the flanking tiles of both you and your target.",
-    itemTileX: 23, itemTileY: 2,
+    description:
+      "A wide reaping arc. Hits the tile ahead and the flanking tiles of both you and your target.",
+    itemTileX: 23,
+    itemTileY: 2,
     attackType: "scythe",
     hitOffsets: [
-      { dx: 0, dy: -1 }, { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
-      { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 },
+      { dx: -1, dy: -1 },
+      { dx: 1, dy: -1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
     ],
     damage: 1,
   },
@@ -145,7 +163,8 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
     weaponName: "warhammer",
     displayName: "Warhammer",
     description: "A slow, heavy smash that hits only the tile ahead.",
-    itemTileX: 22, itemTileY: 2,
+    itemTileX: 22,
+    itemTileY: 2,
     attackType: "warhammer",
     hitOffsets: [{ dx: 0, dy: -1 }],
     damage: 2,
@@ -154,7 +173,8 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
     weaponName: "greataxe",
     displayName: "Greataxe",
     description: "A great axe. It wants to bite.",
-    itemTileX: 24, itemTileY: 2,
+    itemTileX: 24,
+    itemTileY: 2,
     attackType: null,
     hitOffsets: [{ dx: 0, dy: -1 }],
     damage: 2,
@@ -162,8 +182,10 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
   {
     weaponName: "quarterstaff",
     displayName: "Quarterstaff",
-    description: "Hitting an enemy will push them back 1 tile. Pin them against a wall to instantly kill them.",
-    itemTileX: 22, itemTileY: 4,
+    description:
+      "Hitting an enemy will push them back 1 tile. Pin them against a wall to instantly kill them.",
+    itemTileX: 22,
+    itemTileY: 4,
     attackType: null,
     hitOffsets: [{ dx: 0, dy: -1 }],
     damage: 1,
@@ -171,19 +193,31 @@ export const ARMORY_WEAPONS: ArmoryEntry[] = [
   {
     weaponName: "crossbow",
     displayName: "Crossbow",
-    description: "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.",
-    itemTileX: 23, itemTileY: 4,
+    description:
+      "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.",
+    itemTileX: 23,
+    itemTileY: 4,
     attackType: null,
-    hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }, { dx: 0, dy: -4 }],
+    hitOffsets: [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: -2 },
+      { dx: 0, dy: -3 },
+      { dx: 0, dy: -4 },
+    ],
     damage: 4,
   },
   {
     weaponName: "shotgun",
     displayName: "Shotgun",
     description: "Fires a wide blast. Short range, full damage at point blank.",
-    itemTileX: 26, itemTileY: 0,
+    itemTileX: 26,
+    itemTileY: 0,
     attackType: null,
-    hitOffsets: [{ dx: 0, dy: -1 }, { dx: 0, dy: -2 }, { dx: 0, dy: -3 }],
+    hitOffsets: [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: -2 },
+      { dx: 0, dy: -3 },
+    ],
     damage: 1,
   },
 ];
@@ -206,18 +240,25 @@ export class ArmoryBook extends BookRenderer {
   private _shakeActive: boolean = false;
   private _lastInAttack: boolean = false;
   private _floaters: Array<{
-    col: number; row: number;
-    riseY: number; alpha: number; frame: number;
-    xoffset: number; damage: number;
+    col: number;
+    row: number;
+    riseY: number;
+    alpha: number;
+    frame: number;
+    xoffset: number;
+    damage: number;
   }> = [];
 
   private seededRand(): number {
     // Mulberry32
     this._rngSeed |= 0;
-    this._rngSeed = this._rngSeed + 0x6d2b79f5 | 0;
-    let t = Math.imul(this._rngSeed ^ this._rngSeed >>> 15, 1 | this._rngSeed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    this._rngSeed = (this._rngSeed + 0x6d2b79f5) | 0;
+    let t = Math.imul(
+      this._rngSeed ^ (this._rngSeed >>> 15),
+      1 | this._rngSeed,
+    );
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
   constructor(_player: Player) {
@@ -305,7 +346,9 @@ export class ArmoryBook extends BookRenderer {
       this._shakeAmountY *= 0.8 ** delta;
       this._shakeFrame += 0.15 * delta;
       if (Math.abs(this._shakeAmountY) < 0.5) {
-        this._shakeAmountY = 0; this._shakeFrame = 0; this._shakeActive = false;
+        this._shakeAmountY = 0;
+        this._shakeFrame = 0;
+        this._shakeActive = false;
       }
     }
     // Tick damage floaters
@@ -315,7 +358,7 @@ export class ArmoryBook extends BookRenderer {
       if (f.frame > 15) f.alpha -= 0.025 * delta;
       if (f.alpha < 0) f.alpha = 0;
     }
-    this._floaters = this._floaters.filter(f => f.alpha > 0);
+    this._floaters = this._floaters.filter((f) => f.alpha > 0);
   }
 
   private _resetAnim(): void {
@@ -324,15 +367,22 @@ export class ArmoryBook extends BookRenderer {
     this._lastCycleIndex = -1;
     this._lastInAttack = false;
     this._shakeActive = false;
-    this._shakeAmountY = 0; this._shakeFrame = 0;
+    this._shakeAmountY = 0;
+    this._shakeFrame = 0;
     this._floaters = [];
   }
 
-  protected onOpen(): void { this._resetAnim(); }
-  protected onPageTransitionStart(_toPage: number): void { this._resetAnim(); }
+  protected onOpen(): void {
+    this._resetAnim();
+  }
+  protected onPageTransitionStart(_toPage: number): void {
+    this._resetAnim();
+  }
 
   protected getShakeOffset(): { x: number; y: number } {
-    const y = this._shakeActive ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY) : 0;
+    const y = this._shakeActive
+      ? Math.round(Math.sin(this._shakeFrame * Math.PI) * this._shakeAmountY)
+      : 0;
     return { x: 0, y };
   }
 
@@ -347,11 +397,11 @@ export class ArmoryBook extends BookRenderer {
    * enemy's target position. Negative = above target. Uses gravity + bounce.
    */
   private bounceDispY(t: number, delay: number): number {
-    const H    = 5.0;   // drop height in drawn-tile units
-    const iv   = 0.84;  // initial downward velocity
-    const g    = 0.144; // gravity per frame²
-    const drag = 0.3;   // linear air drag coefficient per frame
-    const r    = 0.72;  // restitution coefficient
+    const H = 5.0; // drop height in drawn-tile units
+    const iv = 0.84; // initial downward velocity
+    const g = 0.144; // gravity per frame²
+    const drag = 0.3; // linear air drag coefficient per frame
+    const r = 0.72; // restitution coefficient
 
     const lt = t - delay;
     if (lt <= 0) return -H;
@@ -403,14 +453,20 @@ export class ArmoryBook extends BookRenderer {
 
     // Border ring
     Game.ctx.fillStyle = "rgba(70, 70, 80, 1)";
-    Game.ctx.fillRect(originX, originY, GRID * tileDrawSize, GRID * tileDrawSize);
+    Game.ctx.fillRect(
+      originX,
+      originY,
+      GRID * tileDrawSize,
+      GRID * tileDrawSize,
+    );
 
     // Checkerboard (1-tile inset)
     for (let col = 1; col < GRID - 1; col++) {
       for (let row = 1; row < GRID - 1; row++) {
-        Game.ctx.fillStyle = (col + row) % 2 === 0
-          ? "rgba(85, 85, 95, 1)"
-          : "rgba(100, 100, 110, 1)";
+        Game.ctx.fillStyle =
+          (col + row) % 2 === 0
+            ? "rgba(85, 85, 95, 1)"
+            : "rgba(100, 100, 110, 1)";
         Game.ctx.fillRect(
           originX + col * tileDrawSize,
           originY + row * tileDrawSize,
@@ -430,35 +486,50 @@ export class ArmoryBook extends BookRenderer {
     // Settle time: simulate same physics as bounceDispY, stop after 6 bounces
     // (matching the bounce limit in bounceDispY so FALL_DURATION is accurate).
     const FALL_SETTLE = (() => {
-      const H = 5.0, iv = 0.84, g = 0.144, drag = 0.3, r = 0.72;
-      const STEPS = 8; const dt = 1 / STEPS;
-      let y = -H, v = iv, bounces = 0;
+      const H = 5.0,
+        iv = 0.84,
+        g = 0.144,
+        drag = 0.3,
+        r = 0.72;
+      const STEPS = 8;
+      const dt = 1 / STEPS;
+      let y = -H,
+        v = iv,
+        bounces = 0;
       for (let frame = 0; frame < 1000; frame++) {
         for (let s = 0; s < STEPS; s++) {
-          v += g * dt; v -= drag * v * dt; y += v * dt;
-          if (y >= 0) { y = 0; v = -Math.abs(v) * r; bounces++; }
+          v += g * dt;
+          v -= drag * v * dt;
+          y += v * dt;
+          if (y >= 0) {
+            y = 0;
+            v = -Math.abs(v) * r;
+            bounces++;
+          }
         }
         if (bounces >= 6) return frame + 4; // +4 frames for last bounce to settle
       }
       return 60;
     })();
     // Convert physics settle time to cycleT (real-frame) units
-    const FALL_DURATION = Math.ceil((FALL_SETTLE + MAX_FALL_DELAY) * PHYS_SCALE) + 3;
+    const FALL_DURATION =
+      Math.ceil((FALL_SETTLE + MAX_FALL_DELAY) * PHYS_SCALE) + 3;
 
-    const IDLE_DURATION  = -39;
+    const IDLE_DURATION = -39;
     const ATTACK_DURATION = animData
       ? Math.ceil(animData.frames / animData.animationSpeed) + 4
       : 20;
     const DYING_DURATION = 15;
-    const CYCLE = FALL_DURATION + IDLE_DURATION + ATTACK_DURATION + DYING_DURATION + 20;
+    const CYCLE =
+      FALL_DURATION + IDLE_DURATION + ATTACK_DURATION + DYING_DURATION + 20;
 
     const PHASE_ATTACK = FALL_DURATION + IDLE_DURATION;
-    const PHASE_DYING  = PHASE_ATTACK + ATTACK_DURATION;
+    const PHASE_DYING = PHASE_ATTACK + ATTACK_DURATION;
 
     const cycleT = this.animT % CYCLE;
     const inAttack = cycleT >= PHASE_ATTACK && cycleT < PHASE_DYING;
-    const inDying  = cycleT >= PHASE_DYING;
-    const dyingT   = inDying ? cycleT - PHASE_DYING : 0;
+    const inDying = cycleT >= PHASE_DYING;
+    const dyingT = inDying ? cycleT - PHASE_DYING : 0;
     const dyingAlpha = inDying ? Math.max(0, 1 - dyingT / DYING_DURATION) : 1;
     const showHighlight = inAttack || inDying;
 
@@ -486,11 +557,14 @@ export class ArmoryBook extends BookRenderer {
     if (cycleIndex !== this._lastCycleIndex) {
       this._lastCycleIndex = cycleIndex;
       this._rngSeed = Date.now();
-      this._bounceDelays = entry.hitOffsets.map(() => this.seededRand() * MAX_FALL_DELAY);
+      this._bounceDelays = entry.hitOffsets.map(
+        () => this.seededRand() * MAX_FALL_DELAY,
+      );
     }
 
     // ── Temp canvas for dummy compositing ──────────────────────────────────
-    if (!this._dummyCanvas) this._dummyCanvas = document.createElement("canvas");
+    if (!this._dummyCanvas)
+      this._dummyCanvas = document.createElement("canvas");
     const dc = this._dummyCanvas;
     if (dc.width !== tileDrawSize || dc.height !== tileDrawSize) {
       dc.width = tileDrawSize;
@@ -507,7 +581,8 @@ export class ArmoryBook extends BookRenderer {
       const dummyPixelX = originX + col * tileDrawSize;
       const dummyPixelY = originY + row * tileDrawSize;
       // Convert cycleT to physics time before sampling bounce curve
-      const dispPx = this.bounceDispY(cycleT / PHYS_SCALE, delay) * tileDrawSize;
+      const dispPx =
+        this.bounceDispY(cycleT / PHYS_SCALE, delay) * tileDrawSize;
 
       // Render sprite (+ optional highlight) onto temp canvas at (0,0)
       dCtx.clearRect(0, 0, tileDrawSize, tileDrawSize);
@@ -518,8 +593,16 @@ export class ArmoryBook extends BookRenderer {
       const prevCtx = Game.ctx;
       Game.ctx = dCtx;
       Entity.drawIdleSprite({
-        tileX: 8, tileY: 4, frames: 1, frameStride: 1,
-        x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+        tileX: 8,
+        tileY: 4,
+        frames: 1,
+        frameStride: 1,
+        x: 0,
+        y: 0,
+        w: 1,
+        h: 1,
+        drawW: ratio,
+        drawH: ratio,
       });
 
       if (showHighlight) {
@@ -530,8 +613,16 @@ export class ArmoryBook extends BookRenderer {
         dCtx.globalAlpha = 1;
         dCtx.globalCompositeOperation = "destination-in";
         Entity.drawIdleSprite({
-          tileX: 8, tileY: 4, frames: 1, frameStride: 1,
-          x: 0, y: 0, w: 1, h: 1, drawW: ratio, drawH: ratio,
+          tileX: 8,
+          tileY: 4,
+          frames: 1,
+          frameStride: 1,
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1,
+          drawW: ratio,
+          drawH: ratio,
         });
         dCtx.globalCompositeOperation = "source-over";
       }
@@ -564,18 +655,28 @@ export class ArmoryBook extends BookRenderer {
       if (frame < animData.frames) {
         const srcX = animData.tileX + 2 * Math.round(frame / 2);
         const srcY = animData.tileY + 2;
-        const yTweak = entry.attackType ? (attackYTweak[entry.attackType] ?? 0) : 0;
+        const yTweak = entry.attackType
+          ? (attackYTweak[entry.attackType] ?? 0)
+          : 0;
         const fxX = playerTX + (-0.5 + animData.xOffset) * ratio;
-        const fxY = playerTY - hitY + (-0.5 + animData.yOffset + yTweak) * ratio;
+        const fxY =
+          playerTY - hitY + (-0.5 + animData.yOffset + yTweak) * ratio;
         Game.drawFX(srcX, srcY, 2, 2, fxX, fxY, 2 * ratio, 2 * ratio);
       }
     }
 
     // Player sprite on top
     Entity.drawIdleSprite({
-      tileX: 1, tileY: 10, frames: 1, frameStride: 1,
-      x: playerTX, y: playerTY - hitY,
-      w: 1, h: 2, drawW: ratio, drawH: ratio * 2,
+      tileX: 1,
+      tileY: 10,
+      frames: 1,
+      frameStride: 1,
+      x: playerTX,
+      y: playerTY - hitY,
+      w: 1,
+      h: 2,
+      drawW: ratio,
+      drawH: ratio * 2,
     });
 
     // Damage floaters
