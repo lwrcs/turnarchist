@@ -85589,6 +85589,14 @@ class ReverbEngine {
                         ReverbEngine.originalRefreshBuffer.call(this, sound);
                         // Now intercept the connection and add our reverb routing
                         if (sound._node && sound._node.bufferSource) {
+                            // Skip reverb for music tracks — connect directly to destination
+                            const src = this._src;
+                            const srcStr = Array.isArray(src) ? src[0] : src || "";
+                            const isMusic = srcStr.includes("/music/");
+                            if (isMusic) {
+                                // Leave music connected to the default destination (no reverb)
+                                return;
+                            }
                             ReverbEngine.logStep("B", soundName, "Setting up reverb routing", sound._id);
                             // Disconnect from the original destination
                             sound._node.bufferSource.disconnect();
