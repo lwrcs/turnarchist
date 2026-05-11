@@ -965,6 +965,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       if (!spawned.pickedUp) room.items.push(spawned);
     }
 
+    room.lightSources = [];
     room.entities = [];
     // Reset per-room counters derived from the entities list.
     room.currentSpawnerCount = 0;

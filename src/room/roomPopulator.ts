@@ -1497,11 +1497,15 @@ export class Populator {
       const bottomWall = doorDir === Direction.DOWN ? true : false;
 
       if (leftOpen) {
-        room.roomArray[x - 1][y] = new WallTorch(room, x - 1, y, bottomWall);
+        const t = new PlacedTorch(room, room.game, x - 1, y);
+        t.applyWallDirection(Direction.RIGHT);
+        room.entities.push(t);
       }
 
       if (rightOpen) {
-        room.roomArray[x + 1][y] = new WallTorch(room, x + 1, y, bottomWall);
+        const t = new PlacedTorch(room, room.game, x + 1, y);
+        t.applyWallDirection(Direction.LEFT);
+        room.entities.push(t);
       }
     }
   }
@@ -1524,8 +1528,9 @@ export class Populator {
       placeY !== undefined &&
       room.roomArray[placeX]?.[placeY] instanceof Wall
     ) {
-      room.roomArray[placeX][placeY] = new WallTorch(room, placeX, placeY);
-
+      const t = new PlacedTorch(room, room.game, placeX, placeY);
+      t.applyWallDirection(Direction.DOWN);
+      room.entities.push(t);
       return;
     }
 
@@ -1562,7 +1567,9 @@ export class Populator {
       const t = walls.splice(randomIndex, 1)[0];
       const x = t.x;
       const y = t.y;
-      room.roomArray[x][y] = new WallTorch(room, x, y);
+      const torch = new PlacedTorch(room, room.game, x, y);
+      torch.applyWallDirection(Direction.DOWN);
+      room.entities.push(torch);
     }
     for (let i = 0; i < bottomWallTorches; i++) {
       if (bottomWalls.length == 0) break;
@@ -1570,7 +1577,9 @@ export class Populator {
       const t = bottomWalls.splice(randomIndex, 1)[0];
       const x = t.x;
       const y = t.y;
-      room.roomArray[x][y] = new WallTorch(room, x, y, true);
+      const torch = new PlacedTorch(room, room.game, x, y);
+      torch.applyWallDirection(Direction.UP);
+      room.entities.push(torch);
     }
   }
 

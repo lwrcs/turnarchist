@@ -611,7 +611,6 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         ? (value as { fuel: number }).fuel
         : 500;
       const e = new PlacedTorch(room, ctx.game, value.x, value.y, fuel);
-      e.dead = value.dead;
       e.health = value.health;
       e.maxHealth = value.maxHealth;
       const wallMounted = (value as { wallMounted?: unknown }).wallMounted !== false;
@@ -650,7 +649,6 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         ? (value as { fuel: number }).fuel
         : 100;
       const e = new PlacedCandle(room, ctx.game, value.x, value.y, fuel);
-      e.dead = value.dead;
       e.health = value.health;
       e.maxHealth = value.maxHealth;
       const wallMounted = (value as { wallMounted?: unknown }).wallMounted !== false;

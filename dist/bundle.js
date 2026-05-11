@@ -35904,7 +35904,8 @@ class RoomState {
             }
         }
         for (const enemy of room.entities)
-            this.enemies.push(new EnemyState(enemy, game));
+            if (!enemy.dead)
+                this.enemies.push(new EnemyState(enemy, game));
         for (const item of room.items) {
             if (item) {
                 this.items.push(new ItemState(item, game));
@@ -39946,6 +39947,7 @@ const loadSaveV2 = async (game, save) => {
                 if (!spawned.pickedUp)
                     room.items.push(spawned);
             }
+            room.lightSources = [];
             room.entities = [];
             // Reset per-room counters derived from the entities list.
             room.currentSpawnerCount = 0;
@@ -41294,7 +41296,6 @@ const registerBuiltinEnemyCodecsV2 = () => {
                 ? value.fuel
                 : 500;
             const e = new placedTorch_1.PlacedTorch(room, ctx.game, value.x, value.y, fuel);
-            e.dead = value.dead;
             e.health = value.health;
             e.maxHealth = value.maxHealth;
             const wallMounted = value.wallMounted !== false;
@@ -41335,7 +41336,6 @@ const registerBuiltinEnemyCodecsV2 = () => {
                 ? value.fuel
                 : 100;
             const e = new placedCandle_1.PlacedCandle(room, ctx.game, value.x, value.y, fuel);
-            e.dead = value.dead;
             e.health = value.health;
             e.maxHealth = value.maxHealth;
             const wallMounted = value.wallMounted !== false;
@@ -46577,7 +46577,7 @@ const tryEncodeEnemy = (game, e, nowMs) => {
 const collectPersistedEnemies = (game, room, nowMs) => {
     const out = [];
     for (const e of room.entities) {
-        if (!e)
+        if (!e || e.dead)
             continue;
         const encoded = tryEncodeEnemy(game, e, nowMs);
         if (encoded)
@@ -75623,6 +75623,7 @@ const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
 const spawner_1 = __webpack_require__(/*! ../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
 const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
+const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const chargeEnemy_1 = __webpack_require__(/*! ../entity/enemy/chargeEnemy */ "./src/entity/enemy/chargeEnemy.ts");
 const heart_1 = __webpack_require__(/*! ../item/usable/heart */ "./src/item/usable/heart.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
@@ -79448,10 +79449,14 @@ class Room {
             const leftOpen = leftWallInfo?.isLeftWall === false;
             const rightOpen = rightWallInfo?.isRightWall === false;
             if (leftOpen) {
-                this.roomArray[x - 1][y] = new wallTorch_1.WallTorch(this, x - 1, y);
+                const t = new placedTorch_1.PlacedTorch(this, this.game, x - 1, y);
+                t.applyWallDirection(game_1.Direction.RIGHT);
+                this.entities.push(t);
             }
             if (rightOpen) {
-                this.roomArray[x + 1][y] = new wallTorch_1.WallTorch(this, x + 1, y);
+                const t = new placedTorch_1.PlacedTorch(this, this.game, x + 1, y);
+                t.applyWallDirection(game_1.Direction.LEFT);
+                this.entities.push(t);
             }
         }
     }
@@ -79462,7 +79467,9 @@ class Room {
         if (placeX !== undefined &&
             placeY !== undefined &&
             this.roomArray[placeX]?.[placeY] instanceof wall_1.Wall) {
-            this.roomArray[placeX][placeY] = new wallTorch_1.WallTorch(this, placeX, placeY);
+            const t = new placedTorch_1.PlacedTorch(this, this.game, placeX, placeY);
+            t.applyWallDirection(game_1.Direction.DOWN);
+            this.entities.push(t);
             return;
         }
         let walls = [];
@@ -79493,7 +79500,9 @@ class Room {
             const t = walls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y);
+            const torch = new placedTorch_1.PlacedTorch(this, this.game, x, y);
+            torch.applyWallDirection(game_1.Direction.DOWN);
+            this.entities.push(torch);
         }
         for (let i = 0; i < bottomWallTorches; i++) {
             if (bottomWalls.length == 0)
@@ -79502,7 +79511,9 @@ class Room {
             const t = bottomWalls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            this.roomArray[x][y] = new wallTorch_1.WallTorch(this, x, y, true);
+            const torch = new placedTorch_1.PlacedTorch(this, this.game, x, y);
+            torch.applyWallDirection(game_1.Direction.UP);
+            this.entities.push(torch);
         }
     }
     addChasms(rand) {
@@ -81825,7 +81836,6 @@ const propClusterer_1 = __webpack_require__(/*! ./propClusterer */ "./src/room/p
 const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
-const wallTorch_1 = __webpack_require__(/*! ../tile/wallTorch */ "./src/tile/wallTorch.ts");
 const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
@@ -83347,10 +83357,14 @@ class Populator {
             const rightOpen = rightWallInfo?.isRightWall === false;
             const bottomWall = doorDir === game_2.Direction.DOWN ? true : false;
             if (leftOpen) {
-                room.roomArray[x - 1][y] = new wallTorch_1.WallTorch(room, x - 1, y, bottomWall);
+                const t = new placedTorch_1.PlacedTorch(room, room.game, x - 1, y);
+                t.applyWallDirection(game_2.Direction.RIGHT);
+                room.entities.push(t);
             }
             if (rightOpen) {
-                room.roomArray[x + 1][y] = new wallTorch_1.WallTorch(room, x + 1, y, bottomWall);
+                const t = new placedTorch_1.PlacedTorch(room, room.game, x + 1, y);
+                t.applyWallDirection(game_2.Direction.LEFT);
+                room.entities.push(t);
             }
         }
     }
@@ -83361,7 +83375,9 @@ class Populator {
         if (placeX !== undefined &&
             placeY !== undefined &&
             room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall) {
-            room.roomArray[placeX][placeY] = new wallTorch_1.WallTorch(room, placeX, placeY);
+            const t = new placedTorch_1.PlacedTorch(room, room.game, placeX, placeY);
+            t.applyWallDirection(game_2.Direction.DOWN);
+            room.entities.push(t);
             return;
         }
         let walls = [];
@@ -83392,7 +83408,9 @@ class Populator {
             const t = walls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y);
+            const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+            torch.applyWallDirection(game_2.Direction.DOWN);
+            room.entities.push(torch);
         }
         for (let i = 0; i < bottomWallTorches; i++) {
             if (bottomWalls.length == 0)
@@ -83401,7 +83419,9 @@ class Populator {
             const t = bottomWalls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            room.roomArray[x][y] = new wallTorch_1.WallTorch(room, x, y, true);
+            const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+            torch.applyWallDirection(game_2.Direction.UP);
+            room.entities.push(torch);
         }
     }
     addDoorPlacedTorches(room, x, y, doorDir) {

@@ -35,6 +35,7 @@ import { Chasm } from "../tile/chasm";
 import { Spawner } from "../entity/enemy/spawner";
 import { VendingMachine } from "../entity/object/vendingMachine";
 import { WallTorch } from "../tile/wallTorch";
+import { PlacedTorch } from "../entity/object/placedTorch";
 import { LightSource } from "../lighting/lightSource";
 import { ChargeEnemy } from "../entity/enemy/chargeEnemy";
 import { Shotgun } from "../item/weapon/shotgun";
@@ -759,11 +760,15 @@ export class Room {
       const rightOpen = rightWallInfo?.isRightWall === false;
 
       if (leftOpen) {
-        this.roomArray[x - 1][y] = new WallTorch(this, x - 1, y);
+        const t = new PlacedTorch(this, this.game, x - 1, y);
+        t.applyWallDirection(Direction.RIGHT);
+        this.entities.push(t);
       }
 
       if (rightOpen) {
-        this.roomArray[x + 1][y] = new WallTorch(this, x + 1, y);
+        const t = new PlacedTorch(this, this.game, x + 1, y);
+        t.applyWallDirection(Direction.LEFT);
+        this.entities.push(t);
       }
     }
   }
@@ -785,8 +790,9 @@ export class Room {
       placeY !== undefined &&
       this.roomArray[placeX]?.[placeY] instanceof Wall
     ) {
-      this.roomArray[placeX][placeY] = new WallTorch(this, placeX, placeY);
-
+      const t = new PlacedTorch(this, this.game, placeX, placeY);
+      t.applyWallDirection(Direction.DOWN);
+      this.entities.push(t);
       return;
     }
 
@@ -823,7 +829,9 @@ export class Room {
       const t = walls.splice(randomIndex, 1)[0];
       const x = t.x;
       const y = t.y;
-      this.roomArray[x][y] = new WallTorch(this, x, y);
+      const torch = new PlacedTorch(this, this.game, x, y);
+      torch.applyWallDirection(Direction.DOWN);
+      this.entities.push(torch);
     }
     for (let i = 0; i < bottomWallTorches; i++) {
       if (bottomWalls.length == 0) break;
@@ -831,7 +839,9 @@ export class Room {
       const t = bottomWalls.splice(randomIndex, 1)[0];
       const x = t.x;
       const y = t.y;
-      this.roomArray[x][y] = new WallTorch(this, x, y, true);
+      const torch = new PlacedTorch(this, this.game, x, y);
+      torch.applyWallDirection(Direction.UP);
+      this.entities.push(torch);
     }
   }
 

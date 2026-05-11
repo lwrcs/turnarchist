@@ -457,7 +457,7 @@ const tryEncodeEnemy = (game: Game, e: Entity, nowMs: number): EnemySaveV2 | nul
 const collectPersistedEnemies = (game: Game, room: Room, nowMs: number): EnemySaveV2[] => {
   const out: EnemySaveV2[] = [];
   for (const e of room.entities) {
-    if (!e) continue;
+    if (!e || e.dead) continue;
     const encoded = tryEncodeEnemy(game, e, nowMs);
     if (encoded) out.push(encoded);
   }

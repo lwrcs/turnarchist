@@ -854,7 +854,7 @@ export class RoomState {
     }
 
     for (const enemy of room.entities)
-      this.enemies.push(new EnemyState(enemy, game));
+      if (!enemy.dead) this.enemies.push(new EnemyState(enemy, game));
     for (const item of room.items) {
       if (item) {
         this.items.push(new ItemState(item, game));
