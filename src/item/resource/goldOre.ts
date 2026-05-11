@@ -26,8 +26,8 @@ export class GoldOre extends Item {
       );
       return;
     }
-    if (this.stackCount >= 3) {
-      player.inventory.subtractItem(this, 3);
+    if (this.stackCount >= 1) {
+      player.inventory.subtractItem(this, 1);
       player.inventory.addItem(new GoldBar(this.level, this.x, this.y));
       Sound.playSmith();
       this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);

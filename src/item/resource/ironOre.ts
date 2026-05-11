@@ -27,8 +27,8 @@ export class IronOre extends Item {
       );
       return;
     }
-    if (this.stackCount >= 3) {
-      player.inventory.subtractItem(this, 3);
+    if (this.stackCount >= 1) {
+      player.inventory.subtractItem(this, 1);
       player.inventory.addItem(new IronBar(this.level, this.x, this.y));
       Sound.playSmith();
       this.level.game.pushMessage(`You smelt the iron ore into a iron bar.`);

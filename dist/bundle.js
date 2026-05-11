@@ -57489,8 +57489,8 @@ class GoldOre extends item_1.Item {
                 this.level.game.pushMessage(`You don't have enough space in your inventory to smelt the gold ore.`);
                 return;
             }
-            if (this.stackCount >= 3) {
-                player.inventory.subtractItem(this, 3);
+            if (this.stackCount >= 1) {
+                player.inventory.subtractItem(this, 1);
                 player.inventory.addItem(new goldBar_1.GoldBar(this.level, this.x, this.y));
                 sound_1.Sound.playSmith();
                 this.level.game.pushMessage(`You smelt the gold ore into a gold bar.`);
@@ -57651,8 +57651,8 @@ class IronOre extends item_1.Item {
                 this.level.game.pushMessage(`You don't have enough space in your inventory to smelt the iron ore.`);
                 return;
             }
-            if (this.stackCount >= 3) {
-                player.inventory.subtractItem(this, 3);
+            if (this.stackCount >= 1) {
+                player.inventory.subtractItem(this, 1);
                 player.inventory.addItem(new ironBar_1.IronBar(this.level, this.x, this.y));
                 sound_1.Sound.playSmith();
                 this.level.game.pushMessage(`You smelt the iron ore into a iron bar.`);
