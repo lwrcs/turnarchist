@@ -53,6 +53,20 @@
       onclick="gtag('event', 'click', {event_category: 'navigation', event_label: 'help_button'});">I'm new here...</a>
   </div>
 
+  <!-- Screenshot Gallery -->
+  <div id="galleryOuter" style="background:#000; box-sizing:border-box; width:100%; padding: 100px clamp(0px, calc(100vw - 768px), 200px);">
+    <div id="galleryViewport" style="overflow:hidden; position:relative;">
+      <img id="galleryImg" src="res/site/screenshots/ss_10d8b3e2eef03b642336314978839af3bc838d2c.1920x1080.jpg" alt="Screenshot" style="width:100%; height:auto; display:block; border-radius:4px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; -webkit-user-drag:none;" draggable="false" />
+      <button id="galleryPrev" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); border:none; color:white; font-size:2.5em; cursor:pointer; padding:10px 16px; border-radius:4px; line-height:1; opacity:0.5; z-index:1;"><span style="position:relative; top:-4px;">&#8249;</span></button>
+      <button id="galleryNext" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); border:none; color:white; font-size:2.5em; cursor:pointer; padding:10px 16px; border-radius:4px; line-height:1; opacity:0.5; z-index:1;"><span style="position:relative; top:-4px;">&#8250;</span></button>
+    </div>
+  </div>
+
+  <!-- Steam Widget -->
+  <div class="steam-widget-container" style="text-align:center; padding: 100px 0;">
+    <iframe src="https://store.steampowered.com/widget/4048600/" frameborder="0" width="646" height="190" style="max-width:100%;"></iframe>
+  </div>
+
   <!-- Social Media Container -->
   <div class="social-media-container">
     <!-- Discord Community Link -->
@@ -79,6 +93,11 @@
       <a href="https://www.patreon.com/turnarchist" class="btn patreon-btn"
         onclick="gtag('event', 'click', {event_category: 'social', event_label: 'patreon'});">Support us on Patreon</a>
     </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="galleryLightbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; cursor:pointer; align-items:center; justify-content:center;">
+    <img id="galleryLightboxImg" src="" alt="Screenshot" style="max-width:90vw; max-height:90vh; display:block; border-radius:4px; pointer-events:none; user-select:none; -webkit-user-select:none; -webkit-user-drag:none;" draggable="false" />
   </div>
 
   <footer>© 2025 Turnarchist. All rights reserved.</footer>
@@ -112,6 +131,145 @@
           helpLink.setAttribute("href", "help/index.html" + window.location.search);
         }
       } catch { }
+    })();
+  </script>
+  <script>
+    (function () {
+      var images = [
+        'res/site/screenshots/ss_10d8b3e2eef03b642336314978839af3bc838d2c.1920x1080.jpg',
+        'res/site/screenshots/ss_19013e737179beeb0548ca38eadbb7f14d2b4716.1920x1080.jpg',
+        'res/site/screenshots/ss_23db12a00f25e2719a50536fbf6d3c6ed7dbc559.1920x1080.jpg',
+        'res/site/screenshots/ss_301d6a9d8aa9aeca412af1ac900d42ca95f26f69.1920x1080.jpg',
+        'res/site/screenshots/ss_357da8ae71c82dc7d18d850575b9390c5bf62286.1920x1080.jpg',
+        'res/site/screenshots/ss_41ea174a88a5e862c7779b639c7267d57d286118.1920x1080.jpg',
+        'res/site/screenshots/ss_80d67931acc29c4cd71f4a3a61349c04e867615a.1920x1080.jpg',
+        'res/site/screenshots/ss_a9034b148e9d2cf646aaa404bd2c1de1efee2afa.1920x1080.jpg',
+        'res/site/screenshots/ss_ae0ffe647e23eec6411322a638454afa0bc05459.1920x1080.jpg',
+      ];
+      var idx = 0;
+      var img = document.getElementById('galleryImg');
+
+      var viewport = document.getElementById('galleryViewport');
+      var animating = false;
+
+      // Preload all images up front
+      images.forEach(function (src) {
+        var p = new Image();
+        p.src = src;
+      });
+
+      function show(n) {
+        if (animating) return;
+        var dir = n > idx || (n === 0 && idx === images.length - 1) ? 1 : -1;
+        if (n < idx && !(n === 0 && idx === images.length - 1)) dir = -1;
+        idx = (n + images.length) % images.length;
+        animating = true;
+
+        var next = document.createElement('img');
+        next.src = images[idx];
+        next.style.cssText = 'width:100%; height:auto; display:block; border-radius:4px; cursor:pointer; position:absolute; top:0; left:0; user-select:none; -webkit-user-select:none; -webkit-user-drag:none;';
+        next.draggable = false;
+        next.style.transform = 'translateX(' + (dir * 100) + '%)';
+        viewport.appendChild(next);
+
+        var t = 'transform 0.4s ease';
+        img.style.transition = t;
+        next.style.transition = t;
+
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            img.style.transform = 'translateX(' + (-dir * 100) + '%)';
+            next.style.transform = 'translateX(0)';
+          });
+        });
+
+        setTimeout(function () {
+          // Swap references: promote next to be the permanent img element.
+          // This avoids a 1-frame flash caused by updating img.src and snapping
+          // it back into view — next already shows the correct image at position 0.
+          var old = img;
+          next.style.cssText = 'width:100%; height:auto; display:block; border-radius:4px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; -webkit-user-drag:none;';
+          next.draggable = false;
+          next.style.transition = '';
+          next.style.transform = '';
+          img = next;
+          viewport.removeChild(old);
+          animating = false;
+        }, 400);
+      }
+
+      document.getElementById('galleryPrev').addEventListener('click', function () { show(idx - 1); });
+      document.getElementById('galleryNext').addEventListener('click', function () { show(idx + 1); });
+
+      var lightbox = document.getElementById('galleryLightbox');
+      var lightboxImg = document.getElementById('galleryLightboxImg');
+
+      // Use viewport delegation so the listener survives element swaps.
+      viewport.addEventListener('click', function (e) {
+        if (e.target.closest('button')) return;
+        var fromRect = img.getBoundingClientRect();
+        lightboxImg.src = images[idx];
+
+        // Compute final size mathematically (all screenshots are 1920x1080)
+        var natW = 1920, natH = 1080;
+        var maxW = window.innerWidth * 0.9;
+        var maxH = window.innerHeight * 0.9;
+        var s = Math.min(maxW / natW, maxH / natH);
+        var finalW = natW * s;
+        var finalH = natH * s;
+
+        // Vector from final center to from center
+        var tx = (fromRect.left + fromRect.width / 2) - (window.innerWidth / 2);
+        var ty = (fromRect.top + fromRect.height / 2) - (window.innerHeight / 2);
+        var scaleX = fromRect.width / finalW;
+        var scaleY = fromRect.height / finalH;
+
+        // Set initial transform before showing so browser sees it in the first paint
+        lightboxImg.style.transition = 'none';
+        lightboxImg.style.transformOrigin = 'center center';
+        lightboxImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scaleX + ',' + scaleY + ')';
+        lightbox.style.transition = 'none';
+        lightbox.style.background = 'rgba(0,0,0,0)';
+        lightbox.style.display = 'flex';
+
+        // Force reflow so browser registers the initial transform before animating
+        lightboxImg.offsetWidth;
+
+        lightboxImg.style.transition = 'transform 0.35s ease';
+        lightbox.style.transition = 'background 0.35s ease';
+        lightboxImg.style.transform = 'translate(0,0) scale(1)';
+        lightbox.style.background = 'rgba(0,0,0,0.5)';
+      });
+
+      function closeLightbox() {
+        var fromRect = lightboxImg.getBoundingClientRect();
+        var toRect = img.getBoundingClientRect();
+
+        var scaleX = toRect.width / fromRect.width;
+        var scaleY = toRect.height / fromRect.height;
+        var tx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
+        var ty = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+
+        lightboxImg.style.transition = 'transform 0.3s ease';
+        lightbox.style.transition = 'background 0.3s ease';
+        lightboxImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scaleX + ',' + scaleY + ')';
+        lightbox.style.background = 'rgba(0,0,0,0)';
+
+        setTimeout(function () {
+          lightbox.style.display = 'none';
+          lightboxImg.style.transition = 'none';
+          lightboxImg.style.transform = '';
+          lightbox.style.transition = '';
+        }, 300);
+      }
+
+      lightbox.addEventListener('click', closeLightbox);
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') show(idx - 1);
+        if (e.key === 'ArrowRight') show(idx + 1);
+      });
     })();
   </script>
   <script>

@@ -222,6 +222,108 @@ p {
   transform: scale(1.05);
 }
 
+.gallery-container {
+  position: relative;
+  width: 100%;
+  background: #000;
+  padding: 20px 80px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.gallery-track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex: 1;
+}
+
+.gallery-track::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-track img {
+  scroll-snap-align: start;
+  height: 280px;
+  width: auto;
+  flex-shrink: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.gallery-track img:hover {
+  transform: scale(1.03);
+}
+
+.gallery-btn {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  font-size: 2.5em;
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  line-height: 1;
+  z-index: 1;
+}
+
+.gallery-btn:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.gallery-btn-left { margin-right: 12px; }
+.gallery-btn-right { margin-left: 12px; }
+
+/* Lightbox */
+.gallery-lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-lightbox.open {
+  display: flex;
+}
+
+.gallery-lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 4px;
+}
+
+.gallery-lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 28px;
+  font-size: 2em;
+  color: white;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+
+.steam-widget-container {
+  text-align: center;
+  padding: 160px 0 80px;
+}
+
+.steam-widget-container iframe {
+  max-width: 100%;
+}
+
 /* Social Media Container */
 .social-media-container {
   display: flex;
@@ -251,6 +353,16 @@ p {
   .social-item {
     margin: 0 0 15px 0;
     width: 100%;
+  }
+}
+
+#galleryOuter {
+  padding: 100px 200px;
+}
+
+@media (max-width: 768px) {
+  #galleryOuter {
+    padding: 20px 0;
   }
 }
 
