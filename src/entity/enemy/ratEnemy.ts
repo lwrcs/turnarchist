@@ -31,6 +31,7 @@ export class RatEnemy extends Enemy {
     this.seenPlayer = false;
     this.aggro = false;
     this.name = "rat";
+    this.baseDamage = 0.5;
     this.orthogonalAttack = true;
     this.imageParticleX = 3;
     this.imageParticleY = 24;

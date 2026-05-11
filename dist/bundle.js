@@ -19160,6 +19160,7 @@ class RatEnemy extends enemy_1.Enemy {
         this.seenPlayer = false;
         this.aggro = false;
         this.name = "rat";
+        this.baseDamage = 0.5;
         this.orthogonalAttack = true;
         this.imageParticleX = 3;
         this.imageParticleY = 24;
@@ -86675,8 +86676,6 @@ class Door extends passageway_1.Passageway {
                 const linkedVis = linkedRoom?.softVis?.[lx]?.[ly] ?? 1;
                 if (linkedVis < 1)
                     base = vis / 2;
-                console.log("linkedVis", linkedVis);
-                console.log("vis", vis);
             }
             return gameConstants_1.GameConstants.applyShadeForSprites(base);
         };
