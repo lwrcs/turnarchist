@@ -599,6 +599,9 @@ export class Populator {
       case EnvType.CAVE:
         this.populateCaveEnvironment(room);
         break;
+      case EnvType.CAVE_POCKET:
+        this.populateCavePocketEnvironment(room);
+        break;
       case EnvType.FOREST:
         this.populateForestEnvironment(room);
         break;
@@ -1005,8 +1008,16 @@ export class Populator {
     }
   }
 
+  private getCavePocketPropsWithReducedResourceWeights() {
+    return this.getPropsWithReducedResourceWeights(EnvType.CAVE_POCKET);
+  }
+
   private getCavePropsWithReducedResourceWeights() {
-    const props = environmentData[EnvType.CAVE].props;
+    return this.getPropsWithReducedResourceWeights(EnvType.CAVE);
+  }
+
+  private getPropsWithReducedResourceWeights(envType: EnvType) {
+    const props = environmentData[envType].props;
     const reduceFactor = 0.25;
     const isResourceProp = (p: (typeof props)[number]): boolean =>
       p.class === CoalResource ||
@@ -1365,6 +1376,69 @@ export class Populator {
     }
 
     // ADD: Enemies after props, based on remaining space
+    this.addRandomEnemies(room);
+  }
+
+  private populateCavePocketEnvironment(room: Room) {
+    const numProps = this.getNumProps(room);
+    const orePockets = caveOrePocketsByRoom.get(room) ?? [];
+    const propsOverride =
+      orePockets.length > 0
+        ? this.getCavePocketPropsWithReducedResourceWeights()
+        : undefined;
+
+    this.addPropsWithClustering(
+      room,
+      numProps,
+      room.envType,
+      {
+        clusterTowardsWalls: true,
+        wallAdjacentOnly: true,
+        wallBandSize: 1,
+        wallDeadzone: 0,
+        wallWeight: 100,
+        seedStrategy: "bestWall",
+        baseScore: 0,
+        entityWeight: 5,
+        falloffExponent: 3,
+        maxInfluenceDistance: 1.15,
+        wallDistanceMetric: "manhattan",
+        debugEnabled: true,
+        debugCollectDetails: true,
+        debugLogToConsole: true,
+        debugTopN: 5,
+      },
+      propsOverride,
+    );
+
+    if (orePockets.length > 0) {
+      const perPocketScale = orePockets.length >= 2 ? 0.6 : 1;
+      for (const p of orePockets) {
+        this.addCaveOrePocket(room, p, perPocketScale);
+      }
+    }
+
+    // Guarantee at least 2 gold ore per pocket.
+    const MIN_GOLD = 2;
+    const goldPlaced = room.entities.filter((e) => e instanceof GoldResource).length;
+    const goldShortfall = MIN_GOLD - goldPlaced;
+    if (goldShortfall > 0) {
+      const wallAdjacentTiles = room.getEmptyTiles().filter((t) => {
+        return (
+          room.roomArray[t.x]?.[t.y - 1]?.isSolid() ||
+          room.roomArray[t.x]?.[t.y + 1]?.isSolid() ||
+          room.roomArray[t.x - 1]?.[t.y]?.isSolid() ||
+          room.roomArray[t.x + 1]?.[t.y]?.isSolid()
+        );
+      });
+      const pool = wallAdjacentTiles.length > 0 ? wallAdjacentTiles : room.getEmptyTiles();
+      for (let i = 0; i < goldShortfall && pool.length > 0; i++) {
+        const idx = Math.floor(Random.rand() * pool.length);
+        const { x, y } = pool.splice(idx, 1)[0];
+        GoldResource.add(room, room.game, x, y);
+      }
+    }
+
     this.addRandomEnemies(room);
   }
 
@@ -3670,6 +3744,7 @@ export class Populator {
         } else if (GameplaySettings.ORGANIC_TUNNELS_ENABLED) {
           if (
             this.level.environment.type === EnvType.CAVE ||
+            this.level.environment.type === EnvType.CAVE_POCKET ||
             this.level.environment.type === EnvType.MAGMA_CAVE ||
             this.level.environment.type === EnvType.FOREST
           ) {
@@ -3711,9 +3786,20 @@ export class Populator {
           this.addSpikeTraps(room, Game.randTable([3, 5, 7, 8], rand), rand);
         break;
 
+      case RoomType.ROPECAVE:
+        if (this.level.environment.type === EnvType.CAVE_POCKET) {
+          // Cave pockets use wall-stuck torches for ambiance.
+          this.addTorchesByArea(room);
+          if (room.height > 15 || room.width > 15) {
+            room.builder.addWallBlocksOrganicTunnels(rand);
+          }
+        }
+        break;
+
       case RoomType.CAVE:
         if (
           this.level.environment.type === EnvType.CAVE ||
+          this.level.environment.type === EnvType.CAVE_POCKET ||
           this.level.environment.type === EnvType.MAGMA_CAVE ||
           this.level.environment.type === EnvType.FOREST
         ) {
@@ -4070,6 +4156,9 @@ export class Populator {
         case EnvType.SEWER:
           room.name = "Sewer";
           break;
+        case EnvType.CAVE_POCKET:
+          room.name = "Cave Pocket";
+          break;
         default:
           room.name = "Sidepath";
           break;
@@ -4093,18 +4182,24 @@ export class Populator {
     }
 
     const keepRopeUp = ropeUps[0] ?? null;
+    // For CAVE rooms, all cave pocket downladders are valid; keep them all.
+    // For other envs, keep only the first locked one (or first overall).
+    const isCaveWithPockets = room.envType === EnvType.CAVE;
     const keepSideDown =
-      sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ??
-      sideDowns[0] ??
-      null;
+      isCaveWithPockets
+        ? (sideDowns[0] ?? null)
+        : (sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ??
+           sideDowns[0] ??
+           null);
 
     // Remove extra rope-ups
     for (let i = 1; i < ropeUps.length; i++) {
       const { x, y } = ropeUps[i];
       room.roomArray[x][y] = new Floor(room, x, y);
     }
-    // Remove extra side down ladders
+    // Remove extra side down ladders (for CAVE, keep all cave pocket ones)
     for (const d of sideDowns) {
+      if (isCaveWithPockets) continue; // preserve all cave pocket downladders
       if (keepSideDown && d.x === keepSideDown.x && d.y === keepSideDown.y)
         continue;
       room.roomArray[d.x][d.y] = new Floor(room, d.x, d.y);
@@ -4123,11 +4218,16 @@ export class Populator {
       const desiredExitEnv =
         opts?.terminal === true ? null : (exitSpec?.environment ?? null);
       if (desiredExitEnv === null) {
-        // No configured sidepath for this environment: ensure no exit ladder exists.
-        for (const d of sideDowns) {
-          room.roomArray[d.x][d.y] = new Floor(room, d.x, d.y);
+        // No configured sidepath for this environment: ensure no exit ladder exists —
+        // EXCEPT for CAVE which has intentional cave pocket downladders (unlocked).
+        if (!isCaveWithPockets) {
+          for (const d of sideDowns) {
+            room.roomArray[d.x][d.y] = new Floor(room, d.x, d.y);
+          }
+          room.items = room.items.filter((it) => !(it instanceof Key));
+          return;
         }
-        room.items = room.items.filter((it) => !(it instanceof Key));
+        // CAVE: keep cave pocket downladders and bail out of normalization.
         return;
       }
       const maxPad = Math.max(
@@ -4252,11 +4352,20 @@ export class Populator {
       [3, 4, 4, 5, 5, 5, 6, 6, 7],
       rand,
     );
-    // Caves get extra "ore pocket" endpoints (2), so ensure we carve/connect enough nodes.
+    // For CAVE: determine how many cave pocket downladders (1-3) to place.
+    // Each pocket uses a node endpoint, plus 2 more for ore pockets → need entrance + count + 2.
+    const cavePocketCount =
+      room.envType === EnvType.CAVE
+        ? Game.randTable([1, 1, 2, 2, 3], rand)
+        : 0;
+    // Caves need: 1 entrance + cavePocketCount cave pockets + 2 ore pockets.
+    // Cave pockets (CAVE_POCKET env) need: 1 entrance + 2 ore pockets.
     // Forest and Sewer both get a pool node, so need at least 4.
     const requiredConnected =
       room.envType === EnvType.CAVE
-        ? Math.max(5, requiredConnectedBase)
+        ? Math.max(1 + cavePocketCount + 2, requiredConnectedBase)
+        : room.envType === EnvType.CAVE_POCKET
+        ? Math.max(3, requiredConnectedBase)
         : room.envType === EnvType.FOREST
         ? Math.max(4, requiredConnectedBase)
         : room.envType === EnvType.SEWER
@@ -4277,7 +4386,10 @@ export class Populator {
       minNodeSeparation: opts?.minNodeSeparation,
     });
 
-    const minConnectedNodes = room.envType === EnvType.CAVE ? 5 : 3;
+    const minConnectedNodes =
+      room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET
+        ? Math.max(3, 1 + cavePocketCount + 2)
+        : 3;
     const connected =
       network.connectedNodes.length >= minConnectedNodes
         ? network.connectedNodes
@@ -4290,15 +4402,26 @@ export class Populator {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     const entrance = shuffled[0] ?? null;
-    const keyEndpoint = shuffled[1] ?? null;
-    const exitEndpoint = shuffled[2] ?? null;
+    // For CAVE: shuffled[1..cavePocketCount] = cave pocket endpoints (replaces key+exit).
+    // For others: shuffled[1] = key, shuffled[2] = exit (unchanged).
+    const keyEndpoint = room.envType !== EnvType.CAVE ? (shuffled[1] ?? null) : null;
+    const exitEndpoint = room.envType !== EnvType.CAVE ? (shuffled[2] ?? null) : null;
+    // Ore endpoints: for CAVE after cave pocket slots; for CAVE_POCKET starting at slot 1.
+    const oreSlotStart =
+      room.envType === EnvType.CAVE
+        ? cavePocketCount + 1
+        : room.envType === EnvType.CAVE_POCKET
+        ? 1
+        : 3;
     const oreEndpointA =
-      room.envType === EnvType.CAVE && network.connectedNodes.length >= 5
-        ? (shuffled[3] ?? null)
+      (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET) &&
+      network.connectedNodes.length >= oreSlotStart + 1
+        ? (shuffled[oreSlotStart] ?? null)
         : null;
     const oreEndpointB =
-      room.envType === EnvType.CAVE && network.connectedNodes.length >= 5
-        ? (shuffled[4] ?? null)
+      (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET) &&
+      network.connectedNodes.length >= oreSlotStart + 2
+        ? (shuffled[oreSlotStart + 1] ?? null)
         : null;
     const poolEndpoint =
       (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER) &&
@@ -4315,6 +4438,7 @@ export class Populator {
 
     // Place the exit downladder (locked) at exit endpoint.
     // If this sidepath is terminal (no further chain), suppress the exit entirely.
+    // CAVE uses cave pocket downladders instead (placed below).
     const mazeExitSpec = getEnvDrivenSidePathSpec(
       this.level.environment.type,
       this.numRooms(),
@@ -4343,9 +4467,38 @@ export class Populator {
       room.items.push(key);
     }
 
+    // For CAVE: place 1-3 unlocked cave pocket downladders at node endpoints.
+    if (room.envType === EnvType.CAVE && cavePocketCount > 0) {
+      const cavePocketOpts: SidePathOptions = {
+        caveRooms: 1,
+        locked: false,
+        terminal: true,
+        noBoss: true,
+        envType: EnvType.CAVE_POCKET,
+        mapWidth: 18,
+        mapHeight: 18,
+        softMargin: 4,
+      };
+      for (let i = 1; i <= cavePocketCount; i++) {
+        const ep = shuffled[i] ?? null;
+        if (!ep) continue;
+        const dl = new DownLadder(
+          room,
+          room.game,
+          ep.x,
+          ep.y,
+          true,
+          EnvType.CAVE_POCKET,
+          LockType.NONE,
+          cavePocketOpts,
+        );
+        room.roomArray[ep.x][ep.y] = dl;
+      }
+    }
+
     // Record dedicated ore+gem pocket nodes for cave single-room mazes.
     // Cave population will use this to concentrate resources and reduce them elsewhere.
-    if ((oreEndpointA || oreEndpointB) && room.envType === EnvType.CAVE) {
+    if ((oreEndpointA || oreEndpointB) && (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET)) {
       const pockets: Array<{ x: number; y: number }> = [];
       if (oreEndpointA) pockets.push({ x: oreEndpointA.x, y: oreEndpointA.y });
       if (

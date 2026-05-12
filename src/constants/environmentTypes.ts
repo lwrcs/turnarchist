@@ -12,6 +12,7 @@ export enum EnvType {
   TUTORIAL = 10,
   FLOODED_CAVE = 11,
   SEWER = 12,
+  CAVE_POCKET = 13,
 }
 
 export const getEnvTypeName = (envType: EnvType): string => {
@@ -42,5 +43,7 @@ export const getEnvTypeName = (envType: EnvType): string => {
       return "FLOODED_CAVE";
     case EnvType.SEWER:
       return "SEWER";
+    case EnvType.CAVE_POCKET:
+      return "CAVE_POCKET";
   }
 };

@@ -184,6 +184,8 @@ function getEnvDrivenSpec(
       };
 
     // Terminal environments: no further sidepaths
+    case EnvType.CAVE:
+    case EnvType.CAVE_POCKET:
     case EnvType.CASTLE:
     case EnvType.MAGMA_CAVE:
     case EnvType.FLOODED_CAVE:

@@ -44,10 +44,10 @@ export class IronBar extends Item {
       backplate: number;
       gauntlets: number;
     } = {
-      divingHelmet: 1,
-      shoulderPlates: 1,
-      chestPlate: 2,
-      backplate: 2,
+      divingHelmet: 2,
+      shoulderPlates: 2,
+      chestPlate: 4,
+      backplate: 3,
       gauntlets: 2,
     };
 

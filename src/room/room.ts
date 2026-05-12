@@ -699,6 +699,9 @@ export class Room {
     if (this.envType === EnvType.TUTORIAL || this.envType === EnvType.SEWER) {
       this.skin = SkinType.DUNGEON as SkinType;
     }
+    if (this.envType === EnvType.CAVE_POCKET) {
+      this.skin = SkinType.CAVE;
+    }
     /*
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;

@@ -69,6 +69,7 @@ const ENV_KINDS = [
   "tutorial",
   "flooded_cave",
   "sewer",
+  "cave_pocket",
 ] as const satisfies readonly EnvKind[];
 
 const DIRECTION_KINDS = [

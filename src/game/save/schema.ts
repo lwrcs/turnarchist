@@ -670,7 +670,8 @@ export type EnvKind =
   | "dark_dungeon"
   | "tutorial"
   | "flooded_cave"
-  | "sewer";
+  | "sewer"
+  | "cave_pocket";
 
 export type DirectionKind =
   | "down"

@@ -746,7 +746,15 @@ export abstract class Enemy extends Entity {
 
       if (best) {
         localTarget = { ...localTarget, x: best.x, y: best.y };
+      } else {
+        // No reachable target cell in the local grid — skip pathfinding.
+        return [];
       }
+    }
+
+    // Guard: target must be within local grid bounds before passing to A*.
+    if (!inLocalBounds(localTarget.x, localTarget.y)) {
+      return [];
     }
 
     // Optionally include lastPlayerPos in local space for search variants that support it

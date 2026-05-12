@@ -122,6 +122,9 @@ export class Environment {
     if (this.type === EnvType.TUTORIAL || this.type === EnvType.SEWER) {
       this.skin = SkinType.DUNGEON as SkinType;
     }
+    if (this.type === EnvType.CAVE_POCKET) {
+      this.skin = SkinType.CAVE;
+    }
   }
 }
 
@@ -286,12 +289,12 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
       {
         class: GoldResource,
-        weight: 0.05,
+        weight: 0.1,
         blob: { enabled: true, weight: 0.75, diameter: 5 },
       },
       {
         class: IronResource,
-        weight: 0.1,
+        weight: 0.3,
         blob: { enabled: true, weight: 0.25, diameter: 5 },
       },
       { class: EmeraldResource, weight: 0.001 },
@@ -789,6 +792,37 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     enemies: [
       { class: CrabEnemy, weight: 1.0, minDepth: 0 },
       { class: RatEnemy, weight: 1.5, minDepth: 0 },
+    ],
+  },
+  [EnvType.CAVE_POCKET]: {
+    props: [
+      { class: NullProp, weight: 0.1 },
+      {
+        class: CoalResource,
+        weight: 1.0,
+        blob: { enabled: true, weight: 0.6, diameter: 5 },
+      },
+      {
+        class: GoldResource,
+        weight: 0.4,
+        blob: { enabled: true, weight: 0.8, diameter: 4 },
+      },
+      {
+        class: IronResource,
+        weight: 0.7,
+        blob: { enabled: true, weight: 0.5, diameter: 5 },
+      },
+      { class: EmeraldResource, weight: 0.01 },
+      { class: AmberResource, weight: 0.01 },
+      { class: GarnetResource, weight: 0.01 },
+      { class: ZirconResource, weight: 0.01 },
+      { class: CaveRock, weight: 1.0 },
+      { class: CaveBlock, weight: 1.0 },
+    ],
+    enemies: [
+      { class: CrabEnemy, weight: 1.5, minDepth: 0 },
+      { class: SpiderEnemy, weight: 1.2, minDepth: 0 },
+      { class: RatEnemy, weight: 1.0, minDepth: 0 },
     ],
   },
 };
