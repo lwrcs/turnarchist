@@ -14,6 +14,9 @@ export class RatEnemy extends Enemy {
   aggro: boolean;
   targetPlayer: Player;
   drop: Item;
+  private _cachedMaxLum: number = 0;
+  private _cachedDarkFlee: { x: number; y: number } | null = null;
+  private _cachedMinLum: number = Infinity;
   static difficulty: number = 1;
   static tileX: number = 15;
   static tileY: number = 4;
@@ -61,7 +64,18 @@ export class RatEnemy extends Enemy {
         if (this.room.playerTicked === this.targetPlayer) {
           this.alertTicks = Math.max(0, this.alertTicks - 1);
           this.ticks++;
-          if (this.ticks % 2 === 1) {
+
+          // Use light sample from end of last turn to decide whether to flee.
+          const darkFlee = this._cachedDarkFlee;
+          const maxLum = this._cachedMaxLum;
+          const minLum = this._cachedMinLum;
+          const selfLum = this.getLuminance() ?? 0;
+          const fleeing = maxLum > 0.25 && darkFlee !== null && minLum < maxLum;
+          console.log(
+            `[RAT ${this.x},${this.y}] selfLum=${selfLum.toFixed(3)} maxLum=${maxLum.toFixed(3)} minLum=${minLum === Infinity ? "Inf" : minLum.toFixed(3)} darkFlee=${darkFlee ? `(${darkFlee.x},${darkFlee.y})` : "null"} fleeing=${fleeing}`,
+          );
+
+          if (fleeing || this.ticks % 2 === 1) {
             this.rumbling = true;
             let oldX = this.x;
             let oldY = this.y;
@@ -84,11 +98,7 @@ export class RatEnemy extends Enemy {
               }
             }
 
-            this.target =
-              this.getAverageLuminance() > 0
-                ? this.targetPlayer
-                : this.room.getExtremeLuminanceFromPoint(this.x, this.y)
-                    .darkest;
+            this.target = fleeing ? darkFlee : this.targetPlayer;
             const moves = this.searchPathLocalizedCached(
               this.target as any,
               disablePositions,
@@ -129,10 +139,44 @@ export class RatEnemy extends Enemy {
             }
             this.rumbling = false;
             this.unconscious = true;
+            if (fleeing) this.makeHitWarnings();
           } else {
             this.rumbling = true;
             this.unconscious = false;
             this.makeHitWarnings();
+          }
+
+          // Resample light at new position for use next turn.
+          {
+            let newMaxLum = 0;
+            let newMinLum = Infinity;
+            let newDarkFlee: { x: number; y: number } | null = null;
+            const distToPlayer =
+              Math.abs(this.x - this.targetPlayer.x) +
+              Math.abs(this.y - this.targetPlayer.y);
+            for (let dx = -2; dx <= 2; dx++) {
+              for (let dy = -2; dy <= 2; dy++) {
+                const tx = this.x + dx;
+                const ty = this.y + dy;
+                if (!this.room.roomArray[tx]) continue;
+                const vis = this.room.vis[tx]?.[ty] ?? 0;
+                if (vis > newMaxLum) newMaxLum = vis;
+                if (dx === 0 && dy === 0) continue;
+                const tile = this.room.roomArray[tx]?.[ty];
+                if (!tile || tile.isSolid()) continue;
+                const tileDist =
+                  Math.abs(tx - this.targetPlayer.x) +
+                  Math.abs(ty - this.targetPlayer.y);
+                if (tileDist <= distToPlayer) continue;
+                if (vis < newMinLum) {
+                  newMinLum = vis;
+                  newDarkFlee = { x: tx, y: ty };
+                }
+              }
+            }
+            this._cachedMaxLum = newMaxLum;
+            this._cachedMinLum = newMinLum;
+            this._cachedDarkFlee = newDarkFlee;
           }
         }
 
