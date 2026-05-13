@@ -11774,16 +11774,15 @@ class BeetleEnemy extends enemy_1.Enemy {
         this.jump = (delta) => {
             //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
             let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-            if (j > 2) {
+            if (j > 2)
                 this.jumpDistance = 3;
-            }
-            else if (j > 1) {
-                this.jumpDistance = 2;
-            }
+            //} else if (j > 1) {
+            //  this.jumpDistance = 2;
+            //}
             this.jumpY = Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
             if (this.jumpY < 0.01 && this.jumpY > -0.01) {
                 this.jumpY = 0;
-                this.jumpDistance = 1;
+                //this.jumpDistance = 1;
             }
             if (this.jumpY > this.jumpHeight)
                 this.jumpY = this.jumpHeight;

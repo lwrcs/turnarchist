@@ -69,15 +69,14 @@ export class BeetleEnemy extends Enemy {
   jump = (delta: number) => {
     //console.log(`this.drawX, this.drawY: ${this.drawX}, ${this.drawY}`);
     let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
-    if (j > 2) {
-      this.jumpDistance = 3;
-    } else if (j > 1) {
-      this.jumpDistance = 2;
-    }
+    if (j > 2) this.jumpDistance = 3;
+    //} else if (j > 1) {
+    //  this.jumpDistance = 2;
+    //}
     this.jumpY = Math.sin((j / this.jumpDistance) * Math.PI) * this.jumpHeight;
     if (this.jumpY < 0.01 && this.jumpY > -0.01) {
       this.jumpY = 0;
-      this.jumpDistance = 1;
+      //this.jumpDistance = 1;
     }
     if (this.jumpY > this.jumpHeight) this.jumpY = this.jumpHeight;
   };
@@ -456,8 +455,7 @@ export class BeetleEnemy extends Enemy {
             }
 
             // Only jump exactly 3 tiles
-            const finalDist =
-              Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
+            const finalDist = Math.abs(finalX - oldX) + Math.abs(finalY - oldY);
             if (finalDist === 3) {
               this.attackOrMoveTo(finalX, finalY, oldX, oldY);
             } else {
