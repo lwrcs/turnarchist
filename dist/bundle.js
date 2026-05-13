@@ -19082,9 +19082,11 @@ class RatEnemy extends enemy_1.Enemy {
                                 }
                             }
                             this.rumbling = false;
-                            this.unconscious = true;
-                            if (fleeing)
+                            if (fleeing) {
+                                this.unconscious = false;
                                 this.makeHitWarnings();
+                            }
+                            this.unconscious = true;
                         }
                         else {
                             this.rumbling = true;

@@ -138,8 +138,11 @@ export class RatEnemy extends Enemy {
               }
             }
             this.rumbling = false;
+            if (fleeing) {
+              this.unconscious = false;
+              this.makeHitWarnings();
+            }
             this.unconscious = true;
-            if (fleeing) this.makeHitWarnings();
           } else {
             this.rumbling = true;
             this.unconscious = false;
