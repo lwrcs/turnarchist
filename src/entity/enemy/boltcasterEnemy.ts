@@ -418,11 +418,7 @@ export class BoltcasterEnemy extends Enemy {
         }
 
         // Otherwise, pathfind to nearest inline tile with clear LOS
-        const disablePositions: Array<astar.Position> = [];
-        for (const e of this.room.entities) {
-          if (e !== this)
-            disablePositions.push({ x: e.x, y: e.y } as astar.Position);
-        }
+        const disablePositions = this.getEntityDisablePositions();
         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
           for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
             if (

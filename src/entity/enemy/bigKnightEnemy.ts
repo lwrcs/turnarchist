@@ -136,6 +136,7 @@ export class BigKnightEnemy extends Enemy {
               else if (moveY > oldY) this.direction = Direction.DOWN;
               else if (moveY < oldY) this.direction = Direction.UP;
               let hitPlayer = false;
+              let hitAnything = false;
               for (const i in this.game.players) {
                 if (
                   this.game.rooms[this.game.players[i].levelID] === this.room
@@ -161,14 +162,36 @@ export class BigKnightEnemy extends Enemy {
                     this.game.players[i].hurt(this.hit(), this.name, {
                       source: { x: src.x, y: src.y },
                     });
-                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                    if (
-                      this.game.players[i] ===
-                      this.game.players[this.game.localPlayerID]
-                    )
-                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    if (!hitAnything) {
+                      this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                      this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                      if (
+                        this.game.players[i] ===
+                        this.game.players[this.game.localPlayerID]
+                      )
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                      hitAnything = true;
+                    }
                     hitPlayer = true;
+                  }
+                }
+              }
+              if (hitPlayer) {
+                // Destroy breakable entities in the attack footprint
+                for (const e of [...this.room.entities]) {
+                  if (
+                    e !== this &&
+                    e.destroyable &&
+                    e.destroyableByOthers
+                  ) {
+                    for (let dx = 0; dx < this.w; dx++) {
+                      for (let dy = 0; dy < this.h; dy++) {
+                        if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                          e.hurt(this as any, e.health);
+                          break;
+                        }
+                      }
+                    }
                   }
                 }
               }

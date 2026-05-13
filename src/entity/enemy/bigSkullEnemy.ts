@@ -149,6 +149,17 @@ export class BigSkullEnemy extends Enemy {
           const p = this.targetPlayer;
           const sharesRow = p.y >= this.y && p.y < this.y + this.h;
           const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+          const isSolidInDir = (dir: Direction): boolean => {
+            let nx = this.x, ny = this.y;
+            if (dir === Direction.RIGHT) nx++;
+            else if (dir === Direction.LEFT) nx--;
+            else if (dir === Direction.DOWN) ny++;
+            else if (dir === Direction.UP) ny--;
+            for (let dx = 0; dx < this.w; dx++)
+              for (let dy = 0; dy < this.h; dy++)
+                if (this.room.isSolidAt(nx + dx, ny + dy, this.z ?? 0)) return true;
+            return false;
+          };
           if (sharesRow !== sharesColumn) {
             let desiredDir = this.direction;
             if (sharesRow) {
@@ -156,7 +167,7 @@ export class BigSkullEnemy extends Enemy {
             } else if (sharesColumn) {
               desiredDir = p.y < this.y ? Direction.UP : Direction.DOWN;
             }
-            if (desiredDir !== this.direction) {
+            if (desiredDir !== this.direction && !isSolidInDir(desiredDir)) {
               this.direction = desiredDir;
               this.makeBigHitWarnings();
               this.ticks++;
@@ -165,9 +176,10 @@ export class BigSkullEnemy extends Enemy {
           }
 
           // Build localized disables (avoid scanning the entire room's entities every tick)
+          // Exclude small destroyable entities since this enemy can destroy them via tryMove
           let disablePositions = this.buildEntityDisablePositionsLocalized(
             this.targetPlayer,
-            (e) => e !== this,
+            (e) => e !== this && !(e.destroyable && e.destroyableByOthers && e.w <= 1 && e.h <= 1),
           );
 
           // Check for spike traps around the 2x2 area
@@ -184,18 +196,41 @@ export class BigSkullEnemy extends Enemy {
             }
           }
 
-          const moves = this.searchPathLocalizedCached(
-            this.targetPlayer,
+          // When the player is diagonal and in our forward direction,
+          // pathfind to an aligned intermediate position so we maintain
+          // current direction and line up on one axis first.
+          let pathTarget: { x: number; y: number } = this.targetPlayer;
+          if (!sharesRow && !sharesColumn) {
+            const isForwardH =
+              (this.direction === Direction.RIGHT && p.x > this.x + this.w - 1) ||
+              (this.direction === Direction.LEFT && p.x < this.x);
+            const isForwardV =
+              (this.direction === Direction.DOWN && p.y > this.y + this.h - 1) ||
+              (this.direction === Direction.UP && p.y < this.y);
+            if (isForwardH) {
+              pathTarget = { x: p.x, y: this.y };
+            } else if (isForwardV) {
+              pathTarget = { x: this.x, y: p.y };
+            }
+          }
+
+          let moves = this.searchPathLocalizedCached(
+            pathTarget,
             disablePositions,
           );
+          // Fall back to player position if intermediate target is unreachable
+          if (moves.length === 0 && pathTarget !== this.targetPlayer) {
+            this._pathCache = null;
+            moves = this.searchPathLocalizedCached(
+              this.targetPlayer,
+              disablePositions,
+            );
+          }
 
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
             let moveY = moves[0].pos.y;
             let oldDir = this.direction;
-            let player = this.targetPlayer;
-
-            //this.facePlayer(player);
 
             if (moveX > oldX) this.direction = Direction.RIGHT;
             else if (moveX < oldX) this.direction = Direction.LEFT;
@@ -204,6 +239,7 @@ export class BigSkullEnemy extends Enemy {
 
             if (oldDir === this.direction) {
               let hitPlayer = false;
+              let hitAnything = false;
               let wouldHit = (player: Player, moveX: number, moveY: number) => {
                 return (
                   player.x >= moveX &&
@@ -223,15 +259,37 @@ export class BigSkullEnemy extends Enemy {
                     this.game.players[i].hurt(this.hit(), this.name, {
                       source: { x: this.x, y: this.y },
                     });
-                    this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
-                    this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
-                    if (
-                      this.game.players[i] ===
-                      this.game.players[this.game.localPlayerID]
-                    )
-                      this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                    if (!hitAnything) {
+                      this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
+                      this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
+                      if (
+                        this.game.players[i] ===
+                        this.game.players[this.game.localPlayerID]
+                      )
+                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                      hitAnything = true;
+                    }
                   }
                   hitPlayer = true;
+                }
+              }
+              if (hitPlayer) {
+                // Destroy breakable entities in the attack footprint
+                for (const e of [...this.room.entities]) {
+                  if (
+                    e !== this &&
+                    e.destroyable &&
+                    e.destroyableByOthers
+                  ) {
+                    for (let dx = 0; dx < this.w; dx++) {
+                      for (let dy = 0; dy < this.h; dy++) {
+                        if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                          e.hurt(this as any, e.health);
+                          break;
+                        }
+                      }
+                    }
+                  }
                 }
               }
 
@@ -245,6 +303,8 @@ export class BigSkullEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
+            // When direction changed (gate fired), direction is already updated above —
+            // the enemy spends this turn turning and will move next turn.
           } else {
             this.facePlayer(this.targetPlayer);
           }

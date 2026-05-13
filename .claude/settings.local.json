@@ -16,7 +16,8 @@
       "Bash(npm start:*)",
       "Bash(node -e \":*)",
       "Bash(git rm:*)",
-      "Bash(head -10 grep -n \"this\\\\.game\\\\b\\\\|room\\\\.game\\\\b\\\\|= game\\\\b\" /Users/lwrcs/Documents/GitHub/witch-roguelike/src/room/room.ts)"
+      "Bash(head -10 grep -n \"this\\\\.game\\\\b\\\\|room\\\\.game\\\\b\\\\|= game\\\\b\" /Users/lwrcs/Documents/GitHub/witch-roguelike/src/room/room.ts)",
+      "Bash(perl:*)"
     ]
   }
 }

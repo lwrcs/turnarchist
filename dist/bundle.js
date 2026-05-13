@@ -11325,11 +11325,7 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -11564,11 +11560,7 @@ class ArmoredzombieEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -11983,11 +11975,7 @@ class BeetleEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -12854,6 +12842,7 @@ class BigKnightEnemy extends enemy_1.Enemy {
                             else if (moveY < oldY)
                                 this.direction = game_1.Direction.UP;
                             let hitPlayer = false;
+                            let hitAnything = false;
                             for (const i in this.game.players) {
                                 if (this.game.rooms[this.game.players[i].levelID] === this.room) {
                                     let playerHit = false;
@@ -12873,12 +12862,32 @@ class BigKnightEnemy extends enemy_1.Enemy {
                                         this.game.players[i].hurt(this.hit(), this.name, {
                                             source: { x: src.x, y: src.y },
                                         });
-                                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                        if (this.game.players[i] ===
-                                            this.game.players[this.game.localPlayerID])
-                                            this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                        if (!hitAnything) {
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            hitAnything = true;
+                                        }
                                         hitPlayer = true;
+                                    }
+                                }
+                            }
+                            if (hitPlayer) {
+                                // Destroy breakable entities in the attack footprint
+                                for (const e of [...this.room.entities]) {
+                                    if (e !== this &&
+                                        e.destroyable &&
+                                        e.destroyableByOthers) {
+                                        for (let dx = 0; dx < this.w; dx++) {
+                                            for (let dy = 0; dy < this.h; dy++) {
+                                                if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                                                    e.hurt(this, e.health);
+                                                    break;
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -13096,6 +13105,22 @@ class BigSkullEnemy extends enemy_1.Enemy {
                         const p = this.targetPlayer;
                         const sharesRow = p.y >= this.y && p.y < this.y + this.h;
                         const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+                        const isSolidInDir = (dir) => {
+                            let nx = this.x, ny = this.y;
+                            if (dir === game_1.Direction.RIGHT)
+                                nx++;
+                            else if (dir === game_1.Direction.LEFT)
+                                nx--;
+                            else if (dir === game_1.Direction.DOWN)
+                                ny++;
+                            else if (dir === game_1.Direction.UP)
+                                ny--;
+                            for (let dx = 0; dx < this.w; dx++)
+                                for (let dy = 0; dy < this.h; dy++)
+                                    if (this.room.isSolidAt(nx + dx, ny + dy, this.z ?? 0))
+                                        return true;
+                            return false;
+                        };
                         if (sharesRow !== sharesColumn) {
                             let desiredDir = this.direction;
                             if (sharesRow) {
@@ -13104,7 +13129,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                             else if (sharesColumn) {
                                 desiredDir = p.y < this.y ? game_1.Direction.UP : game_1.Direction.DOWN;
                             }
-                            if (desiredDir !== this.direction) {
+                            if (desiredDir !== this.direction && !isSolidInDir(desiredDir)) {
                                 this.direction = desiredDir;
                                 this.makeBigHitWarnings();
                                 this.ticks++;
@@ -13112,7 +13137,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
                             }
                         }
                         // Build localized disables (avoid scanning the entire room's entities every tick)
-                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this);
+                        // Exclude small destroyable entities since this enemy can destroy them via tryMove
+                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this && !(e.destroyable && e.destroyableByOthers && e.w <= 1 && e.h <= 1));
                         // Check for spike traps around the 2x2 area
                         for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
@@ -13124,13 +13150,32 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
-                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
+                        // When the player is diagonal and in our forward direction,
+                        // pathfind to an aligned intermediate position so we maintain
+                        // current direction and line up on one axis first.
+                        let pathTarget = this.targetPlayer;
+                        if (!sharesRow && !sharesColumn) {
+                            const isForwardH = (this.direction === game_1.Direction.RIGHT && p.x > this.x + this.w - 1) ||
+                                (this.direction === game_1.Direction.LEFT && p.x < this.x);
+                            const isForwardV = (this.direction === game_1.Direction.DOWN && p.y > this.y + this.h - 1) ||
+                                (this.direction === game_1.Direction.UP && p.y < this.y);
+                            if (isForwardH) {
+                                pathTarget = { x: p.x, y: this.y };
+                            }
+                            else if (isForwardV) {
+                                pathTarget = { x: this.x, y: p.y };
+                            }
+                        }
+                        let moves = this.searchPathLocalizedCached(pathTarget, disablePositions);
+                        // Fall back to player position if intermediate target is unreachable
+                        if (moves.length === 0 && pathTarget !== this.targetPlayer) {
+                            this._pathCache = null;
+                            moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
+                        }
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
                             let oldDir = this.direction;
-                            let player = this.targetPlayer;
-                            //this.facePlayer(player);
                             if (moveX > oldX)
                                 this.direction = game_1.Direction.RIGHT;
                             else if (moveX < oldX)
@@ -13141,6 +13186,7 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                 this.direction = game_1.Direction.UP;
                             if (oldDir === this.direction) {
                                 let hitPlayer = false;
+                                let hitAnything = false;
                                 let wouldHit = (player, moveX, moveY) => {
                                     return (player.x >= moveX &&
                                         player.x < moveX + this.w &&
@@ -13155,13 +13201,33 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                             this.game.players[i].hurt(this.hit(), this.name, {
                                                 source: { x: this.x, y: this.y },
                                             });
-                                            this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
-                                            this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
-                                            if (this.game.players[i] ===
-                                                this.game.players[this.game.localPlayerID])
-                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                            if (!hitAnything) {
+                                                this.drawX = 0.5 * (closestTile.x - this.game.players[i].x);
+                                                this.drawY = 0.5 * (closestTile.y - this.game.players[i].y);
+                                                if (this.game.players[i] ===
+                                                    this.game.players[this.game.localPlayerID])
+                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                                hitAnything = true;
+                                            }
                                         }
                                         hitPlayer = true;
+                                    }
+                                }
+                                if (hitPlayer) {
+                                    // Destroy breakable entities in the attack footprint
+                                    for (const e of [...this.room.entities]) {
+                                        if (e !== this &&
+                                            e.destroyable &&
+                                            e.destroyableByOthers) {
+                                            for (let dx = 0; dx < this.w; dx++) {
+                                                for (let dy = 0; dy < this.h; dy++) {
+                                                    if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                                                        e.hurt(this, e.health);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 if (!hitPlayer) {
@@ -13177,6 +13243,8 @@ class BigSkullEnemy extends enemy_1.Enemy {
                                         this.direction = game_1.Direction.UP;
                                 }
                             }
+                            // When direction changed (gate fired), direction is already updated above —
+                            // the enemy spends this turn turning and will move next turn.
                         }
                         else {
                             this.facePlayer(this.targetPlayer);
@@ -13629,6 +13697,22 @@ class BigZombieEnemy extends enemy_1.Enemy {
                         const p = this.targetPlayer;
                         const sharesRow = p.y >= this.y && p.y < this.y + this.h;
                         const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+                        const isSolidInDir = (dir) => {
+                            let nx = this.x, ny = this.y;
+                            if (dir === game_1.Direction.RIGHT)
+                                nx++;
+                            else if (dir === game_1.Direction.LEFT)
+                                nx--;
+                            else if (dir === game_1.Direction.DOWN)
+                                ny++;
+                            else if (dir === game_1.Direction.UP)
+                                ny--;
+                            for (let dx = 0; dx < this.w; dx++)
+                                for (let dy = 0; dy < this.h; dy++)
+                                    if (this.room.isSolidAt(nx + dx, ny + dy, this.z ?? 0))
+                                        return true;
+                            return false;
+                        };
                         if (sharesRow !== sharesColumn) {
                             let desiredDir = this.direction;
                             if (sharesRow) {
@@ -13637,7 +13721,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
                             else if (sharesColumn) {
                                 desiredDir = p.y < this.y ? game_1.Direction.UP : game_1.Direction.DOWN;
                             }
-                            if (desiredDir !== this.direction) {
+                            if (desiredDir !== this.direction && !isSolidInDir(desiredDir)) {
                                 this.direction = desiredDir;
                                 this.makeBigHitWarnings();
                                 this.ticks++;
@@ -13645,7 +13729,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
                             }
                         }
                         // Build localized disables (avoid scanning the entire room's entities every tick)
-                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this);
+                        // Exclude small destroyable entities since this enemy can destroy them via tryMove
+                        let disablePositions = this.buildEntityDisablePositionsLocalized(this.targetPlayer, (e) => e !== this && !(e.destroyable && e.destroyableByOthers && e.w <= 1 && e.h <= 1));
                         // Check spike traps in a larger area for 2x2 entity
                         for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
@@ -13657,16 +13742,34 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                 }
                             }
                         }
+                        // When the player is diagonal and in our forward direction,
+                        // pathfind to an aligned intermediate position so we maintain
+                        // current direction and line up on one axis first.
+                        let pathTarget = this.targetPlayer;
+                        if (!sharesRow && !sharesColumn) {
+                            const isForwardH = (this.direction === game_1.Direction.RIGHT && p.x > this.x + this.w - 1) ||
+                                (this.direction === game_1.Direction.LEFT && p.x < this.x);
+                            const isForwardV = (this.direction === game_1.Direction.DOWN && p.y > this.y + this.h - 1) ||
+                                (this.direction === game_1.Direction.UP && p.y < this.y);
+                            if (isForwardH) {
+                                pathTarget = { x: p.x, y: this.y };
+                            }
+                            else if (isForwardV) {
+                                pathTarget = { x: this.x, y: p.y };
+                            }
+                        }
                         // Localized pathfinding with caching for performance
-                        const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
+                        let moves = this.searchPathLocalizedCached(pathTarget, disablePositions);
+                        // Fall back to player position if intermediate target is unreachable
+                        if (moves.length === 0 && pathTarget !== this.targetPlayer) {
+                            this._pathCache = null;
+                            moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions);
+                        }
                         // If there are moves available
                         if (moves.length > 0) {
                             let moveX = moves[0].pos.x;
                             let moveY = moves[0].pos.y;
                             let oldDir = this.direction;
-                            let player = this.targetPlayer;
-                            // Face the target player
-                            //this.facePlayer(player);
                             // Determine the new direction based on the move
                             if (moveX > oldX)
                                 this.direction = game_1.Direction.RIGHT;
@@ -13679,6 +13782,7 @@ class BigZombieEnemy extends enemy_1.Enemy {
                             // If the direction hasn't changed, attempt to move or attack
                             if (oldDir == this.direction) {
                                 let hitPlayer = false;
+                                let hitAnything = false;
                                 for (const i in this.game.players) {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room) {
                                         // Check if player is within any of the 2x2 positions we're moving to
@@ -13700,13 +13804,33 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                                 this.game.players[i].hurt(this.hit(), this.name, {
                                                     source: { x: src.x, y: src.y },
                                                 });
-                                                this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                                this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                                if (this.game.players[i] ===
-                                                    this.game.players[this.game.localPlayerID])
-                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                                if (!hitAnything) {
+                                                    this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                                    this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                                    if (this.game.players[i] ===
+                                                        this.game.players[this.game.localPlayerID])
+                                                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                                                    hitAnything = true;
+                                                }
                                             }
                                             hitPlayer = true;
+                                        }
+                                    }
+                                }
+                                if (hitPlayer) {
+                                    // Destroy breakable entities in the attack footprint
+                                    for (const e of [...this.room.entities]) {
+                                        if (e !== this &&
+                                            e.destroyable &&
+                                            e.destroyableByOthers) {
+                                            for (let dx = 0; dx < this.w; dx++) {
+                                                for (let dy = 0; dy < this.h; dy++) {
+                                                    if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                                                        e.hurt(this, e.health);
+                                                        break;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -13724,6 +13848,8 @@ class BigZombieEnemy extends enemy_1.Enemy {
                                         this.direction = game_1.Direction.UP;
                                 }
                             }
+                            // When direction changed (gate fired), direction is already updated above —
+                            // the enemy spends this turn turning and will move next turn.
                         }
                         else {
                             this.facePlayer(this.targetPlayer);
@@ -14440,11 +14566,7 @@ class BoltcasterEnemy extends enemy_1.Enemy {
                         return;
                     }
                     // Otherwise, pathfind to nearest inline tile with clear LOS
-                    const disablePositions = [];
-                    for (const e of this.room.entities) {
-                        if (e !== this)
-                            disablePositions.push({ x: e.x, y: e.y });
-                    }
+                    const disablePositions = this.getEntityDisablePositions();
                     for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                         for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                             if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
@@ -14899,11 +15021,7 @@ class CrabEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -15205,11 +15323,7 @@ class CrusherEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -15870,12 +15984,7 @@ class Enemy extends entity_1.Entity {
                         let oldX = this.x;
                         let oldY = this.y;
                         // Create a list of positions to avoid
-                        let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        let disablePositions = this.getEntityDisablePositions();
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -16317,12 +16426,57 @@ class Enemy extends entity_1.Entity {
     get damage() {
         return this.buffed ? 2 * this.baseDamage : this.baseDamage;
     }
+    // For multi-tile enemies, expand disable positions so that every top-left anchor
+    // whose footprint would overlap a disabled tile is also disabled.
+    // For 1x1 enemies the inner loops are single-iteration — returns the input unchanged.
+    expandDisablesForFootprint(positions) {
+        const selfW = this.w ?? 1;
+        const selfH = this.h ?? 1;
+        if (selfW <= 1 && selfH <= 1)
+            return positions;
+        const out = [];
+        const seen = new Set();
+        for (const p of positions) {
+            for (let fx = 0; fx < selfW; fx++) {
+                for (let fy = 0; fy < selfH; fy++) {
+                    const bx = p.x - fx;
+                    const by = p.y - fy;
+                    const key = bx * 100000 + by;
+                    if (seen.has(key))
+                        continue;
+                    seen.add(key);
+                    out.push({ x: bx, y: by });
+                }
+            }
+        }
+        return out;
+    }
+    // Build disable positions for all entities in the room, expanding multi-tile entities
+    // to cover every tile they occupy (not just the top-left anchor).
+    getEntityDisablePositions(filter) {
+        const out = [];
+        for (const e of this.room.entities) {
+            if (e === this)
+                continue;
+            if (filter && !filter(e))
+                continue;
+            const ew = e.w ?? 1;
+            const eh = e.h ?? 1;
+            for (let dx = 0; dx < ew; dx++)
+                for (let dy = 0; dy < eh; dy++)
+                    out.push({ x: e.x + dx, y: e.y + dy });
+        }
+        return out;
+    }
     // Cached variant of searchPathLocalized. Reuses the A* path across turns by tracking
     // whether the enemy moved since the last compute. Three cases:
     //   - Stayed in place (attacked, blocked): fromX/Y matches current pos → reuse same path
     //   - Moved to moves[0]: advance path by one step
     //   - Moved elsewhere (knockback): cache miss, run fresh A*
     searchPathLocalizedCached(target, disablePositions, options) {
+        // Expand disable positions for multi-tile enemies so all overlapping
+        // top-left anchors are blocked, not just the exact entity tile.
+        disablePositions = this.expandDisablesForFootprint(disablePositions);
         const cache = this._pathCache;
         if (cache !== null && cache.targetX === target.x && cache.targetY === target.y) {
             let candidate = null;
@@ -16463,6 +16617,17 @@ class Enemy extends entity_1.Entity {
         const localDisables = (disablePositions || [])
             .filter((p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom)
             .map((p) => ({ x: p.x - left, y: p.y - top }));
+        // For multi-tile enemies, hard-block disable positions in the grid so A* treats
+        // entity-occupied anchors as truly impassable (not just expensive).
+        if (selfW > 1 || selfH > 1) {
+            for (const dp of localDisables) {
+                if (dp.x >= 0 && dp.x < w && dp.y >= 0 && dp.y < h) {
+                    grid[dp.x][dp.y] = null;
+                }
+            }
+            // Clear so A* constructor doesn't double-apply them as cost 99999999
+            localDisables.length = 0;
+        }
         // Localized start/target
         const localStart = { ...this, x: this.x - left, y: this.y - top };
         let localTarget = {
@@ -16720,11 +16885,7 @@ class ExalterEnemy extends enemy_1.Enemy {
                     });
                     // Build disable positions (other entities and nearby active spike traps)
                     let disablePositions = Array();
-                    for (const e of this.room.entities) {
-                        if (e !== this) {
-                            disablePositions.push({ x: e.x, y: e.y });
-                        }
-                    }
+                    disablePositions.push(...this.getEntityDisablePositions());
                     for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                         for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                             if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -17196,11 +17357,7 @@ class FrogEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -17639,11 +17796,7 @@ class KingEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -17833,11 +17986,7 @@ class KnightEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -18038,11 +18187,7 @@ class MummyEnemy extends enemy_1.Enemy {
                         let oldY = this.y;
                         // Create a list of positions to avoid
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -18274,11 +18419,7 @@ class OccultistEnemy extends enemy_1.Enemy {
                     });
                     // Build disable positions (other entities and nearby active spike traps)
                     let disablePositions = Array();
-                    for (const e of this.room.entities) {
-                        if (e !== this) {
-                            disablePositions.push({ x: e.x, y: e.y });
-                        }
-                    }
+                    disablePositions.push(...this.getEntityDisablePositions());
                     for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                         for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                             if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -18654,11 +18795,7 @@ class PawnEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -18846,11 +18983,7 @@ class QueenEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -19033,11 +19166,7 @@ class RatEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -19284,11 +19413,7 @@ class RookEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -19487,11 +19612,7 @@ class SkullEnemy extends enemy_1.Enemy {
                         let oldX = this.x;
                         let oldY = this.y;
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -20346,11 +20467,7 @@ class SpiderEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -20816,11 +20933,7 @@ class WardenEnemy extends enemy_1.Enemy {
                             let oldX = this.x;
                             let oldY = this.y;
                             let disablePositions = Array();
-                            for (const e of this.room.entities) {
-                                if (e !== this) {
-                                    disablePositions.push({ x: e.x, y: e.y });
-                                }
-                            }
+                            disablePositions.push(...this.getEntityDisablePositions());
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -21303,11 +21416,7 @@ class ZombieEnemy extends enemy_1.Enemy {
                         let oldY = this.y;
                         // Create a list of positions to avoid
                         let disablePositions = Array();
-                        for (const e of this.room.entities) {
-                            if (e !== this) {
-                                disablePositions.push({ x: e.x, y: e.y });
-                            }
-                        }
+                        disablePositions.push(...this.getEntityDisablePositions());
                         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                 if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -22230,14 +22339,21 @@ class Entity extends drawable_1.Drawable {
                     const MAX_DIST = 8;
                     outer: while (queue.length > 0) {
                         const { x, y, dist } = queue.shift();
-                        if (this.room.roomArray[x]?.[y] && !this.room.roomArray[x][y].isSolid()) {
+                        if (this.room.roomArray[x]?.[y] &&
+                            !this.room.roomArray[x][y].isSolid()) {
                             candidates.push({ x, y });
                             break outer;
                         }
                         if (dist < MAX_DIST) {
-                            for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+                            for (const [nx, ny] of [
+                                [x - 1, y],
+                                [x + 1, y],
+                                [x, y - 1],
+                                [x, y + 1],
+                            ]) {
                                 const key = `${nx},${ny}`;
-                                if (!visited.has(key) && this.room.roomArray[nx]?.[ny] !== undefined) {
+                                if (!visited.has(key) &&
+                                    this.room.roomArray[nx]?.[ny] !== undefined) {
                                     visited.add(key);
                                     queue.push({ x: nx, y: ny, dist: dist + 1 });
                                 }

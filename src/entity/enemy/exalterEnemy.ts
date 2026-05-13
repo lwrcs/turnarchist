@@ -100,11 +100,7 @@ export class ExalterEnemy extends Enemy {
 
         // Build disable positions (other entities and nearby active spike traps)
         let disablePositions = Array<astar.Position>();
-        for (const e of this.room.entities) {
-          if (e !== this) {
-            disablePositions.push({ x: e.x, y: e.y } as astar.Position);
-          }
-        }
+        disablePositions.push(...this.getEntityDisablePositions());
         for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
           for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
             if (

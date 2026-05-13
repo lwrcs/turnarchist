@@ -381,12 +381,7 @@ export abstract class Enemy extends Entity {
           let oldY = this.y;
 
           // Create a list of positions to avoid
-          let disablePositions = Array<astar.Position>();
-          for (const e of this.room.entities) {
-            if (e !== this) {
-              disablePositions.push({ x: e.x, y: e.y } as astar.Position);
-            }
-          }
+          let disablePositions = this.getEntityDisablePositions();
           for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
             for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
               if (
@@ -527,6 +522,51 @@ export abstract class Enemy extends Entity {
     }
   };
 
+  // For multi-tile enemies, expand disable positions so that every top-left anchor
+  // whose footprint would overlap a disabled tile is also disabled.
+  // For 1x1 enemies the inner loops are single-iteration — returns the input unchanged.
+  protected expandDisablesForFootprint(
+    positions: Array<astar.Position>,
+  ): Array<astar.Position> {
+    const selfW = this.w ?? 1;
+    const selfH = this.h ?? 1;
+    if (selfW <= 1 && selfH <= 1) return positions;
+
+    const out: Array<astar.Position> = [];
+    const seen = new Set<number>();
+
+    for (const p of positions) {
+      for (let fx = 0; fx < selfW; fx++) {
+        for (let fy = 0; fy < selfH; fy++) {
+          const bx = p.x - fx;
+          const by = p.y - fy;
+          const key = bx * 100000 + by;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ x: bx, y: by } as astar.Position);
+        }
+      }
+    }
+
+    return out;
+  }
+
+  // Build disable positions for all entities in the room, expanding multi-tile entities
+  // to cover every tile they occupy (not just the top-left anchor).
+  protected getEntityDisablePositions(filter?: (e: Entity) => boolean): Array<astar.Position> {
+    const out: Array<astar.Position> = [];
+    for (const e of this.room.entities) {
+      if (e === this) continue;
+      if (filter && !filter(e)) continue;
+      const ew = e.w ?? 1;
+      const eh = e.h ?? 1;
+      for (let dx = 0; dx < ew; dx++)
+        for (let dy = 0; dy < eh; dy++)
+          out.push({ x: e.x + dx, y: e.y + dy } as astar.Position);
+    }
+    return out;
+  }
+
   // Cached variant of searchPathLocalized. Reuses the A* path across turns by tracking
   // whether the enemy moved since the last compute. Three cases:
   //   - Stayed in place (attacked, blocked): fromX/Y matches current pos → reuse same path
@@ -537,6 +577,10 @@ export abstract class Enemy extends Entity {
     disablePositions: Array<astar.Position>,
     options?: Parameters<Enemy["searchPathLocalized"]>[2],
   ): any[] {
+    // Expand disable positions for multi-tile enemies so all overlapping
+    // top-left anchors are blocked, not just the exact entity tile.
+    disablePositions = this.expandDisablesForFootprint(disablePositions);
+
     const cache = this._pathCache;
 
     if (cache !== null && cache.targetX === target.x && cache.targetY === target.y) {
@@ -687,6 +731,18 @@ export abstract class Enemy extends Entity {
     const localDisables = (disablePositions || [])
       .filter((p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom)
       .map((p) => ({ x: p.x - left, y: p.y - top })) as Array<astar.Position>;
+
+    // For multi-tile enemies, hard-block disable positions in the grid so A* treats
+    // entity-occupied anchors as truly impassable (not just expensive).
+    if (selfW > 1 || selfH > 1) {
+      for (const dp of localDisables) {
+        if (dp.x >= 0 && dp.x < w && dp.y >= 0 && dp.y < h) {
+          grid[dp.x][dp.y] = null;
+        }
+      }
+      // Clear so A* constructor doesn't double-apply them as cost 99999999
+      localDisables.length = 0;
+    }
 
     // Localized start/target
     const localStart: any = { ...this, x: this.x - left, y: this.y - top };

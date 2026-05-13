@@ -481,7 +481,8 @@ export class Entity extends Drawable {
   };
 
   outlineOpacity = (): number => {
-    if (this.isKeyboardTarget() || this.isRangedTarget()) return Entity.targetPulseOpacity();
+    if (this.isKeyboardTarget() || this.isRangedTarget())
+      return Entity.targetPulseOpacity();
     let opacity = 0;
     if (this.shielded) opacity = 0.25;
     if (this.buffed) opacity = 0.25;
@@ -1305,14 +1306,25 @@ export class Entity extends Drawable {
         const MAX_DIST = 8;
         outer: while (queue.length > 0) {
           const { x, y, dist } = queue.shift()!;
-          if (this.room.roomArray[x]?.[y] && !this.room.roomArray[x][y].isSolid()) {
+          if (
+            this.room.roomArray[x]?.[y] &&
+            !this.room.roomArray[x][y].isSolid()
+          ) {
             candidates.push({ x, y });
             break outer;
           }
           if (dist < MAX_DIST) {
-            for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+            for (const [nx, ny] of [
+              [x - 1, y],
+              [x + 1, y],
+              [x, y - 1],
+              [x, y + 1],
+            ]) {
               const key = `${nx},${ny}`;
-              if (!visited.has(key) && this.room.roomArray[nx]?.[ny] !== undefined) {
+              if (
+                !visited.has(key) &&
+                this.room.roomArray[nx]?.[ny] !== undefined
+              ) {
                 visited.add(key);
                 queue.push({ x: nx, y: ny, dist: dist + 1 });
               }
@@ -1445,8 +1457,7 @@ export class Entity extends Drawable {
     let shade: number;
     if (this.shadeMultiplier > 1)
       shade = GameConstants.applyShadeForSprites(Math.min(1, softVis));
-    else
-      shade = GameConstants.applyShadeForSprites(softVis);
+    else shade = GameConstants.applyShadeForSprites(softVis);
     if (this.isKeyboardTarget() || this.isRangedTarget()) shade *= 0.5;
     return shade;
   };

@@ -96,6 +96,17 @@ export class BigZombieEnemy extends Enemy {
           const p = this.targetPlayer;
           const sharesRow = p.y >= this.y && p.y < this.y + this.h;
           const sharesColumn = p.x >= this.x && p.x < this.x + this.w;
+          const isSolidInDir = (dir: Direction): boolean => {
+            let nx = this.x, ny = this.y;
+            if (dir === Direction.RIGHT) nx++;
+            else if (dir === Direction.LEFT) nx--;
+            else if (dir === Direction.DOWN) ny++;
+            else if (dir === Direction.UP) ny--;
+            for (let dx = 0; dx < this.w; dx++)
+              for (let dy = 0; dy < this.h; dy++)
+                if (this.room.isSolidAt(nx + dx, ny + dy, this.z ?? 0)) return true;
+            return false;
+          };
           if (sharesRow !== sharesColumn) {
             let desiredDir = this.direction;
             if (sharesRow) {
@@ -103,7 +114,7 @@ export class BigZombieEnemy extends Enemy {
             } else if (sharesColumn) {
               desiredDir = p.y < this.y ? Direction.UP : Direction.DOWN;
             }
-            if (desiredDir !== this.direction) {
+            if (desiredDir !== this.direction && !isSolidInDir(desiredDir)) {
               this.direction = desiredDir;
               this.makeBigHitWarnings();
               this.ticks++;
@@ -112,9 +123,10 @@ export class BigZombieEnemy extends Enemy {
           }
 
           // Build localized disables (avoid scanning the entire room's entities every tick)
+          // Exclude small destroyable entities since this enemy can destroy them via tryMove
           let disablePositions = this.buildEntityDisablePositionsLocalized(
             this.targetPlayer,
-            (e) => e !== this,
+            (e) => e !== this && !(e.destroyable && e.destroyableByOthers && e.w <= 1 && e.h <= 1),
           );
 
           // Check spike traps in a larger area for 2x2 entity
@@ -131,21 +143,43 @@ export class BigZombieEnemy extends Enemy {
             }
           }
 
+          // When the player is diagonal and in our forward direction,
+          // pathfind to an aligned intermediate position so we maintain
+          // current direction and line up on one axis first.
+          let pathTarget: { x: number; y: number } = this.targetPlayer;
+          if (!sharesRow && !sharesColumn) {
+            const isForwardH =
+              (this.direction === Direction.RIGHT && p.x > this.x + this.w - 1) ||
+              (this.direction === Direction.LEFT && p.x < this.x);
+            const isForwardV =
+              (this.direction === Direction.DOWN && p.y > this.y + this.h - 1) ||
+              (this.direction === Direction.UP && p.y < this.y);
+            if (isForwardH) {
+              pathTarget = { x: p.x, y: this.y };
+            } else if (isForwardV) {
+              pathTarget = { x: this.x, y: p.y };
+            }
+          }
+
           // Localized pathfinding with caching for performance
-          const moves = this.searchPathLocalizedCached(
-            this.targetPlayer,
+          let moves = this.searchPathLocalizedCached(
+            pathTarget,
             disablePositions,
           );
+          // Fall back to player position if intermediate target is unreachable
+          if (moves.length === 0 && pathTarget !== this.targetPlayer) {
+            this._pathCache = null;
+            moves = this.searchPathLocalizedCached(
+              this.targetPlayer,
+              disablePositions,
+            );
+          }
 
           // If there are moves available
           if (moves.length > 0) {
             let moveX = moves[0].pos.x;
             let moveY = moves[0].pos.y;
             let oldDir = this.direction;
-            let player = this.targetPlayer;
-
-            // Face the target player
-            //this.facePlayer(player);
 
             // Determine the new direction based on the move
             if (moveX > oldX) this.direction = Direction.RIGHT;
@@ -156,6 +190,7 @@ export class BigZombieEnemy extends Enemy {
             // If the direction hasn't changed, attempt to move or attack
             if (oldDir == this.direction) {
               let hitPlayer = false;
+              let hitAnything = false;
               for (const i in this.game.players) {
                 if (
                   this.game.rooms[this.game.players[i].levelID] === this.room
@@ -184,15 +219,37 @@ export class BigZombieEnemy extends Enemy {
                       this.game.players[i].hurt(this.hit(), this.name, {
                         source: { x: src.x, y: src.y },
                       });
-                      this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                      this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                      if (
-                        this.game.players[i] ===
-                        this.game.players[this.game.localPlayerID]
-                      )
-                        this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                      if (!hitAnything) {
+                        this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                        this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                        if (
+                          this.game.players[i] ===
+                          this.game.players[this.game.localPlayerID]
+                        )
+                          this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                        hitAnything = true;
+                      }
                     }
                     hitPlayer = true;
+                  }
+                }
+              }
+              if (hitPlayer) {
+                // Destroy breakable entities in the attack footprint
+                for (const e of [...this.room.entities]) {
+                  if (
+                    e !== this &&
+                    e.destroyable &&
+                    e.destroyableByOthers
+                  ) {
+                    for (let dx = 0; dx < this.w; dx++) {
+                      for (let dy = 0; dy < this.h; dy++) {
+                        if (e.occupiesTile(moveX + dx, moveY + dy, this.z ?? 0)) {
+                          e.hurt(this as any, e.health);
+                          break;
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -207,6 +264,8 @@ export class BigZombieEnemy extends Enemy {
                 else if (this.y < oldY) this.direction = Direction.UP;
               }
             }
+            // When direction changed (gate fired), direction is already updated above —
+            // the enemy spends this turn turning and will move next turn.
           } else {
             this.facePlayer(this.targetPlayer);
           }
