@@ -68,6 +68,7 @@ import { Enemy } from "../entity/enemy/enemy";
 import { Spawner } from "../entity/enemy/spawner";
 import { BigZombieEnemy } from "../entity/enemy/bigZombieEnemy";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
+import { ChessKnightEnemy } from "../entity/enemy/chessKnightEnemy";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { BigWizardEnemy } from "../entity/enemy/bigWizardEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
@@ -111,6 +112,7 @@ export const enemyClassToId: Map<typeof Enemy, number> = new Map<
   [BoltcasterEnemy, 22],
   [EarthWizardEnemy, 23],
   [RatEnemy, 24],
+  [ChessKnightEnemy, 25],
 ]);
 
 export class Environment {
@@ -238,6 +240,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: BishopEnemy, weight: 0.3, minDepth: 2 },
       { class: ArmoredzombieEnemy, weight: 0.5, minDepth: 1 },
       { class: KnightEnemy, weight: 0.7, minDepth: 1 },
+      { class: ChessKnightEnemy, weight: 10, minDepth: 1 },
 
       // Late game enemies (depth 2+)
       { class: ChargeEnemy, weight: 0.5, minDepth: 2 },
@@ -574,6 +577,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
       { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
       { class: ChargeEnemy, weight: 0.01, minDepth: 0 }, // War beasts
+      { class: ChessKnightEnemy, weight: 10, minDepth: 1 },
     ],
     bosses: [
       { class: ExalterEnemy, depth: 0, weight: 1.0 },
@@ -618,6 +622,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         size: { w: 2, h: 2 },
       },
       { class: ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
+      { class: ChessKnightEnemy, weight: 10, minDepth: 1 },
     ],
     bosses: [{ class: WardenEnemy, depth: 2, weight: 1.0, big: true }],
   },
@@ -645,6 +650,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: BishopEnemy, weight: 0.6, minDepth: 1 },
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
       { class: KnightEnemy, weight: 0.7, minDepth: 1 },
+      { class: ChessKnightEnemy, weight: 10, minDepth: 1 },
       { class: RookEnemy, weight: 0.6, minDepth: 1 },
       { class: BoltcasterEnemy, weight: 0.25, minDepth: 1 },
 
@@ -710,6 +716,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: BishopEnemy, weight: 0.6, minDepth: 1 },
       { class: ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
       { class: KnightEnemy, weight: 0.7, minDepth: 1 },
+      { class: ChessKnightEnemy, weight: 10, minDepth: 1 },
 
       // Late game enemies (depth 2+)
       { class: ChargeEnemy, weight: 0.5, minDepth: 2 },

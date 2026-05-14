@@ -31,6 +31,7 @@ import { Wall } from "../../tile/wall";
 import { KingEnemy } from "./kingEnemy";
 import { BoltcasterEnemy } from "./boltcasterEnemy";
 import { EarthWizardEnemy } from "./earthWizard";
+import { ChessKnightEnemy } from "./chessKnightEnemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { SpawnFloor } from "../../tile/spawnfloor";
 import { UpLadder } from "../../tile/upLadder";
@@ -73,6 +74,7 @@ export class Spawner extends Enemy {
     king: 21,
     boltcaster: 22,
     earthwizard: 23,
+    chessknight: 25,
   };
 
   constructor(
@@ -454,6 +456,14 @@ export class Spawner extends Enemy {
               break;
             case 23:
               spawned = new EarthWizardEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 25:
+              spawned = new ChessKnightEnemy(
                 this.room,
                 this.game,
                 position.x,

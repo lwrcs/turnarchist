@@ -62,6 +62,7 @@ import { GlowBugEnemy } from "../../entity/enemy/glowBugEnemy";
 import { KingEnemy } from "../../entity/enemy/kingEnemy";
 import { KnightEnemy } from "../../entity/enemy/knightEnemy";
 import { BigKnightEnemy } from "../../entity/enemy/bigKnightEnemy";
+import { ChessKnightEnemy } from "../../entity/enemy/chessKnightEnemy";
 import { MummyEnemy } from "../../entity/enemy/mummyEnemy";
 import { PawnEnemy } from "../../entity/enemy/pawnEnemy";
 import { QueenEnemy } from "../../entity/enemy/queenEnemy";
@@ -301,6 +302,7 @@ export function populateTestRoom(room: Room, game: Game, clearFirst = false): vo
     [KingEnemy, "king"],
     [KnightEnemy, "knight"],
     [BigKnightEnemy, "big_knight"],
+    [ChessKnightEnemy, "chess_knight"],
     [MummyEnemy, "mummy"],
     [PawnEnemy, "pawn"],
     [QueenEnemy, "queen"],

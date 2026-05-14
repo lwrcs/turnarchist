@@ -742,6 +742,7 @@ export type EnemyKind =
   | "big_zombie"
   | "spider"
   | "warden"
+  | "chess_knight"
   // Props / objects (room.entities)
   | "bomb"
   | "crate"
