@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.8c75bd9ce9500d7407b1.png";
+module.exports = __webpack_require__.p + "assets/mobset.fc48472113368b8e6cc2.png";
 
 /***/ }),
 
@@ -15095,22 +15095,21 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                 this.knightAnimProgress = Math.min(1, this.knightAnimProgress + 0.025 * queueSpeed * delta);
                 const prog = this.knightAnimProgress;
                 const phase1End = this.knightAnimPhase1End;
-                // cubic ease-in-out: accelerates out of each takeoff, decelerates into each landing
+                // single cubic ease-in-out over the whole hop
                 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                const eased = ease(prog);
                 if (prog < phase1End) {
-                    const t = ease(prog / phase1End);
+                    const t = eased / ease(phase1End);
                     visualX = this.knightAnimStartX + (this.knightAnimMidX - this.knightAnimStartX) * t;
                     visualY = this.knightAnimStartY + (this.knightAnimMidY - this.knightAnimStartY) * t;
-                    visualJumpY = Math.sin((prog / phase1End) * Math.PI) * this.jumpHeight;
                 }
                 else {
                     this.direction = this.knightAnimCornerDirection;
-                    const localT = (prog - phase1End) / (1 - phase1End);
-                    const t = ease(localT);
+                    const t = (eased - ease(phase1End)) / (1 - ease(phase1End));
                     visualX = this.knightAnimMidX + (this.knightAnimDestX - this.knightAnimMidX) * t;
                     visualY = this.knightAnimMidY + (this.knightAnimDestY - this.knightAnimMidY) * t;
-                    visualJumpY = Math.sin(localT * Math.PI) * this.jumpHeight * 0.6;
                 }
+                visualJumpY = Math.sin(prog * Math.PI) * this.jumpHeight;
                 // Outbound attack anim complete — start return trip
                 if (this.knightAttackAnim && this.knightAnimProgress >= 1) {
                     this.knightAttackAnim = false;
@@ -15162,7 +15161,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                 this.drawX = savedDrawX;
                 this.drawY = savedDrawY;
             }
-            this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY + this.direction * 2, 1, 2, visualX, visualY - this.drawYOffset - visualJumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity(), 0, false, "#cc0000", 0.45);
+            this.drawMobWithCrush(this.tileX, this.tileY + this.direction * 2, 1, 2, visualX, visualY - this.drawYOffset - visualJumpY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
             if (!this.cloned) {
                 if (!this.seenPlayer) {
                     this.drawSleepingZs(delta);
@@ -15183,7 +15182,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
         this.health = 2;
         this.maxHealth = 2;
         this.defaultMaxHealth = 2;
-        this.tileX = 13;
+        this.tileX = 39;
         this.tileY = 8;
         this.seenPlayer = false;
         this.aggro = false;
@@ -15402,7 +15401,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
 }
 exports.ChessKnightEnemy = ChessKnightEnemy;
 ChessKnightEnemy.difficulty = 3;
-ChessKnightEnemy.tileX = 13;
+ChessKnightEnemy.tileX = 39;
 ChessKnightEnemy.tileY = 8;
 ChessKnightEnemy.examineText = "A chess knight. Moves in an L-shape — two forward, one aside.";
 
