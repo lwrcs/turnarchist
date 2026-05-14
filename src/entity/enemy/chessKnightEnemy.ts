@@ -7,10 +7,14 @@ import { Enemy } from "./enemy";
 import { Item } from "../../item/item";
 
 const KNIGHT_MOVES: [number, number][] = [
-  [-2, -1], [-2, 1],
-  [-1, -2], [-1, 2],
-  [1, -2], [1, 2],
-  [2, -1], [2, 1],
+  [-2, -1],
+  [-2, 1],
+  [-1, -2],
+  [-1, 2],
+  [1, -2],
+  [1, 2],
+  [2, -1],
+  [2, 1],
 ];
 
 interface KnightMoveEntry {
@@ -48,7 +52,8 @@ export class ChessKnightEnemy extends Enemy {
   static difficulty: number = 3;
   static tileX: number = 39;
   static tileY: number = 8;
-  static examineText = "A chess knight. Moves in an L-shape — two forward, one aside.";
+  static examineText =
+    "A chess knight. Moves in an L-shape — two forward, one aside.";
 
   constructor(room: Room, game: Game, x: number, y: number, drop?: Item) {
     super(room, game, x, y);
@@ -65,7 +70,7 @@ export class ChessKnightEnemy extends Enemy {
     this.deathParticleColor = "#cc4444";
     this.hasShadow = true;
     this.jumpHeight = 0.8;
-    this.drawYOffset = 1;
+    this.drawYOffset = 1.3;
     this.knightAnimProgress = 1;
     this.knightAnimStartX = x;
     this.knightAnimStartY = y;
@@ -81,6 +86,7 @@ export class ChessKnightEnemy extends Enemy {
     this.knightMoveQueue = [];
     this.imageParticleX = 3;
     this.imageParticleY = 29;
+    this.extendShadow = true;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
   }
 
@@ -125,7 +131,9 @@ export class ChessKnightEnemy extends Enemy {
       while (i > 0) {
         const parent = (i - 1) >> 1;
         if (open[parent].f <= open[i].f) break;
-        const tmp = open[parent]; open[parent] = open[i]; open[i] = tmp;
+        const tmp = open[parent];
+        open[parent] = open[i];
+        open[i] = tmp;
         i = parent;
       }
     };
@@ -144,14 +152,23 @@ export class ChessKnightEnemy extends Enemy {
           if (l < open.length && open[l].f < open[smallest].f) smallest = l;
           if (r < open.length && open[r].f < open[smallest].f) smallest = r;
           if (smallest === i) break;
-          const tmp = open[i]; open[i] = open[smallest]; open[smallest] = tmp;
+          const tmp = open[i];
+          open[i] = open[smallest];
+          open[smallest] = tmp;
           i = smallest;
         }
       }
       return top;
     };
 
-    insert({ x: this.x, y: this.y, g: 0, f: heuristic(this.x, this.y), firstX: -1, firstY: -1 });
+    insert({
+      x: this.x,
+      y: this.y,
+      g: 0,
+      f: heuristic(this.x, this.y),
+      firstX: -1,
+      firstY: -1,
+    });
     let expanded = 0;
 
     while (open.length > 0 && expanded < 300) {
@@ -207,7 +224,11 @@ export class ChessKnightEnemy extends Enemy {
     return bestPos;
   }
 
-  private buildMoveEntry(destX: number, destY: number, isAttack: boolean): KnightMoveEntry {
+  private buildMoveEntry(
+    destX: number,
+    destY: number,
+    isAttack: boolean,
+  ): KnightMoveEntry {
     const dx = destX - this.x;
     const dy = destY - this.y;
     let midX: number, midY: number, initDir: Direction, cornerDir: Direction;
@@ -256,7 +277,11 @@ export class ChessKnightEnemy extends Enemy {
     this.knightAnimProgress = 0;
   }
 
-  private initKnightAnim(destX: number, destY: number, isAttack: boolean = false): void {
+  private initKnightAnim(
+    destX: number,
+    destY: number,
+    isAttack: boolean = false,
+  ): void {
     const entry = this.buildMoveEntry(destX, destY, isAttack);
     const busy = this.knightAnimProgress < 1 || this.knightAttackAnim;
     if (!busy && this.knightMoveQueue.length === 0) {
@@ -282,14 +307,32 @@ export class ChessKnightEnemy extends Enemy {
       const step1Y = Math.abs(dx) === 2 ? this.y : this.y + Math.sign(dy);
       if (this.isWithinRoomBounds(step1X, step1Y)) {
         this.room.hitwarnings.push(
-          new HitWarning(this.game, step1X, step1Y, this.x, this.y, true, true, this),
+          new HitWarning(
+            this.game,
+            step1X,
+            step1Y,
+            this.x,
+            this.y,
+            true,
+            true,
+            this,
+          ),
         );
       }
 
       // Arrow at elbow pointing from knight along long leg (no X marker)
       if (this.isWithinRoomBounds(elbowX, elbowY)) {
         this.room.hitwarnings.push(
-          new HitWarning(this.game, elbowX, elbowY, this.x, this.y, true, true, this),
+          new HitWarning(
+            this.game,
+            elbowX,
+            elbowY,
+            this.x,
+            this.y,
+            true,
+            true,
+            this,
+          ),
         );
       }
 
@@ -360,7 +403,8 @@ export class ChessKnightEnemy extends Enemy {
         }
 
         let targetPlayerOffline =
-          Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+          Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+          -1;
         if (!this.aggro || targetPlayerOffline) {
           const p = this.nearestPlayer();
           if (p !== false) {
@@ -399,23 +443,30 @@ export class ChessKnightEnemy extends Enemy {
     if (this.knightAnimProgress < 1) {
       // Speed up aggressively based on queue depth
       const queueSpeed = 1 + Math.pow(this.knightMoveQueue.length, 2);
-      this.knightAnimProgress = Math.min(1, this.knightAnimProgress + 0.025 * queueSpeed * delta);
+      this.knightAnimProgress = Math.min(
+        1,
+        this.knightAnimProgress + 0.025 * queueSpeed * delta,
+      );
       const prog = this.knightAnimProgress;
       const phase1End = this.knightAnimPhase1End;
       // single cubic ease-in-out over the whole hop
-      const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const ease = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       const eased = ease(prog);
 
-      if (prog < phase1End) {
-        const t = eased / ease(phase1End);
-        visualX = this.knightAnimStartX + (this.knightAnimMidX - this.knightAnimStartX) * t;
-        visualY = this.knightAnimStartY + (this.knightAnimMidY - this.knightAnimStartY) * t;
-      } else {
-        this.direction = this.knightAnimCornerDirection;
-        const t = (eased - ease(phase1End)) / (1 - ease(phase1End));
-        visualX = this.knightAnimMidX + (this.knightAnimDestX - this.knightAnimMidX) * t;
-        visualY = this.knightAnimMidY + (this.knightAnimDestY - this.knightAnimMidY) * t;
-      }
+      // quadratic bezier through start → elbow → dest for a slight corner cut
+      const bx = this.knightAnimStartX;
+      const by = this.knightAnimStartY;
+      const cx = this.knightAnimMidX;
+      const cy = this.knightAnimMidY;
+      const dx = this.knightAnimDestX;
+      const dy = this.knightAnimDestY;
+      visualX = (1 - eased) * (1 - eased) * bx + 2 * (1 - eased) * eased * cx + eased * eased * dx;
+      visualY = (1 - eased) * (1 - eased) * by + 2 * (1 - eased) * eased * cy + eased * eased * dy;
+
+      // direction change at the phase boundary
+      if (prog >= phase1End * 0.75) this.direction = this.knightAnimCornerDirection;
+
       visualJumpY = Math.sin(prog * Math.PI) * this.jumpHeight;
 
       // Outbound attack anim complete — start return trip
@@ -431,14 +482,24 @@ export class ChessKnightEnemy extends Enemy {
         this.knightAnimPhase1End = 1 / 3;
         const dx1 = elbowX - tx;
         const dy1 = elbowY - ty;
-        this.direction = dx1 !== 0
-          ? (dx1 > 0 ? Direction.RIGHT : Direction.LEFT)
-          : (dy1 > 0 ? Direction.DOWN : Direction.UP);
+        this.direction =
+          dx1 !== 0
+            ? dx1 > 0
+              ? Direction.RIGHT
+              : Direction.LEFT
+            : dy1 > 0
+              ? Direction.DOWN
+              : Direction.UP;
         const dx2 = this.x - elbowX;
         const dy2 = this.y - elbowY;
-        this.knightAnimCornerDirection = dx2 !== 0
-          ? (dx2 > 0 ? Direction.RIGHT : Direction.LEFT)
-          : (dy2 > 0 ? Direction.DOWN : Direction.UP);
+        this.knightAnimCornerDirection =
+          dx2 !== 0
+            ? dx2 > 0
+              ? Direction.RIGHT
+              : Direction.LEFT
+            : dy2 > 0
+              ? Direction.DOWN
+              : Direction.UP;
         this.knightAnimDestX = this.x;
         this.knightAnimDestY = this.y;
         this.knightAnimProgress = 0;
@@ -460,6 +521,7 @@ export class ChessKnightEnemy extends Enemy {
     }
 
     if (this.hasShadow) {
+      this.extendShadow = visualJumpY < 0.2 ? true : false;
       const savedDrawX = this.drawX;
       const savedDrawY = this.drawY;
       this.drawX = this.x - visualX;
@@ -500,6 +562,13 @@ export class ChessKnightEnemy extends Enemy {
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
     this.tickHealthBarHover();
-    this.healthBar.draw(delta, this.health, this.maxHealth, this.x, this.y, true);
+    this.healthBar.draw(
+      delta,
+      this.health,
+      this.maxHealth,
+      this.x,
+      this.y,
+      true,
+    );
   };
 }

@@ -14998,10 +14998,14 @@ const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
 const KNIGHT_MOVES = [
-    [-2, -1], [-2, 1],
-    [-1, -2], [-1, 2],
-    [1, -2], [1, 2],
-    [2, -1], [2, 1],
+    [-2, -1],
+    [-2, 1],
+    [-1, -2],
+    [-1, 2],
+    [1, -2],
+    [1, 2],
+    [2, -1],
+    [2, 1],
 ];
 class ChessKnightEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
@@ -15057,7 +15061,8 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                         }
                         this.makeKnightHitWarnings();
                     }
-                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !== -1;
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
                     if (!this.aggro || targetPlayerOffline) {
                         const p = this.nearestPlayer();
                         if (p !== false) {
@@ -15098,17 +15103,18 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                 // single cubic ease-in-out over the whole hop
                 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
                 const eased = ease(prog);
-                if (prog < phase1End) {
-                    const t = eased / ease(phase1End);
-                    visualX = this.knightAnimStartX + (this.knightAnimMidX - this.knightAnimStartX) * t;
-                    visualY = this.knightAnimStartY + (this.knightAnimMidY - this.knightAnimStartY) * t;
-                }
-                else {
+                // quadratic bezier through start → elbow → dest for a slight corner cut
+                const bx = this.knightAnimStartX;
+                const by = this.knightAnimStartY;
+                const cx = this.knightAnimMidX;
+                const cy = this.knightAnimMidY;
+                const dx = this.knightAnimDestX;
+                const dy = this.knightAnimDestY;
+                visualX = (1 - eased) * (1 - eased) * bx + 2 * (1 - eased) * eased * cx + eased * eased * dx;
+                visualY = (1 - eased) * (1 - eased) * by + 2 * (1 - eased) * eased * cy + eased * eased * dy;
+                // direction change at the phase boundary
+                if (prog >= phase1End * 0.75)
                     this.direction = this.knightAnimCornerDirection;
-                    const t = (eased - ease(phase1End)) / (1 - ease(phase1End));
-                    visualX = this.knightAnimMidX + (this.knightAnimDestX - this.knightAnimMidX) * t;
-                    visualY = this.knightAnimMidY + (this.knightAnimDestY - this.knightAnimMidY) * t;
-                }
                 visualJumpY = Math.sin(prog * Math.PI) * this.jumpHeight;
                 // Outbound attack anim complete — start return trip
                 if (this.knightAttackAnim && this.knightAnimProgress >= 1) {
@@ -15123,14 +15129,24 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                     this.knightAnimPhase1End = 1 / 3;
                     const dx1 = elbowX - tx;
                     const dy1 = elbowY - ty;
-                    this.direction = dx1 !== 0
-                        ? (dx1 > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT)
-                        : (dy1 > 0 ? game_1.Direction.DOWN : game_1.Direction.UP);
+                    this.direction =
+                        dx1 !== 0
+                            ? dx1 > 0
+                                ? game_1.Direction.RIGHT
+                                : game_1.Direction.LEFT
+                            : dy1 > 0
+                                ? game_1.Direction.DOWN
+                                : game_1.Direction.UP;
                     const dx2 = this.x - elbowX;
                     const dy2 = this.y - elbowY;
-                    this.knightAnimCornerDirection = dx2 !== 0
-                        ? (dx2 > 0 ? game_1.Direction.RIGHT : game_1.Direction.LEFT)
-                        : (dy2 > 0 ? game_1.Direction.DOWN : game_1.Direction.UP);
+                    this.knightAnimCornerDirection =
+                        dx2 !== 0
+                            ? dx2 > 0
+                                ? game_1.Direction.RIGHT
+                                : game_1.Direction.LEFT
+                            : dy2 > 0
+                                ? game_1.Direction.DOWN
+                                : game_1.Direction.UP;
                     this.knightAnimDestX = this.x;
                     this.knightAnimDestY = this.y;
                     this.knightAnimProgress = 0;
@@ -15153,6 +15169,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                 }
             }
             if (this.hasShadow) {
+                this.extendShadow = visualJumpY < 0.2 ? true : false;
                 const savedDrawX = this.drawX;
                 const savedDrawY = this.drawY;
                 this.drawX = this.x - visualX;
@@ -15190,7 +15207,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
         this.deathParticleColor = "#cc4444";
         this.hasShadow = true;
         this.jumpHeight = 0.8;
-        this.drawYOffset = 1;
+        this.drawYOffset = 1.3;
         this.knightAnimProgress = 1;
         this.knightAnimStartX = x;
         this.knightAnimStartY = y;
@@ -15206,6 +15223,7 @@ class ChessKnightEnemy extends enemy_1.Enemy {
         this.knightMoveQueue = [];
         this.imageParticleX = 3;
         this.imageParticleY = 29;
+        this.extendShadow = true;
         this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
     }
     isValidKnightDest(nx, ny) {
@@ -15268,7 +15286,14 @@ class ChessKnightEnemy extends enemy_1.Enemy {
             }
             return top;
         };
-        insert({ x: this.x, y: this.y, g: 0, f: heuristic(this.x, this.y), firstX: -1, firstY: -1 });
+        insert({
+            x: this.x,
+            y: this.y,
+            g: 0,
+            f: heuristic(this.x, this.y),
+            firstX: -1,
+            firstY: -1,
+        });
         let expanded = 0;
         while (open.length > 0 && expanded < 300) {
             const curr = pop();
