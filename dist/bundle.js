@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.fc48472113368b8e6cc2.png";
+module.exports = __webpack_require__.p + "assets/mobset.df7d0fd3382dc2ca0261.png";
 
 /***/ }),
 
