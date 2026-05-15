@@ -7,6 +7,8 @@ import { Coin } from "../../item/coin";
 import { Player } from "../../player/player";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
+import { FrogEnemy } from "./frogEnemy";
+import { Random } from "../../utility/random";
 import { DownLadder } from "../../tile/downLadder";
 import { Door } from "../../tile/door";
 import { GameConstants } from "../../game/gameConstants";
@@ -63,11 +65,59 @@ export class BigFrogEnemy extends Enemy {
     //if (drop) this.drop = drop;
     this.h = 2;
     this.w = 2;
-    this.getDrop(["frog"], true);
   }
 
   hit = (): number => {
     return this.damage;
+  };
+
+  uniqueKillBehavior = () => {
+    if (this.cloned) return;
+
+    const playerResult = this.nearestPlayer();
+    const player = playerResult !== false ? playerResult[1] : null;
+
+    // Build the 4 spawn tiles for the 2x2 footprint
+    const tiles: { x: number; y: number }[] = [];
+    for (let dx = 0; dx < this.w; dx++) {
+      for (let dy = 0; dy < this.h; dy++) {
+        tiles.push({ x: this.x + dx, y: this.y + dy });
+      }
+    }
+
+    // Split by manhattan distance == 2 from player
+    const list1: { x: number; y: number }[] = []; // distance == 2
+    const list2: { x: number; y: number }[] = []; // distance != 2
+    for (const tile of tiles) {
+      const dist = player
+        ? Math.abs(tile.x - player.x) + Math.abs(tile.y - player.y)
+        : -1;
+      if (dist === 2) list1.push(tile);
+      else list2.push(tile);
+    }
+
+    // Pick one from list1 for immediate aggro (fallback to list2 if list1 empty)
+    const aggroSource = list1.length > 0 ? list1 : list2;
+    const aggroIdx = Math.floor(Random.rand() * aggroSource.length);
+    const aggroTile = aggroSource.splice(aggroIdx, 1)[0];
+
+    // Wake order for remaining 3: list2 first, then list1 remainder
+    const sleepTiles = [...list2, ...list1];
+
+    // Spawn aggro frog — skipNextTurns=1 so it can't act the turn it spawns
+    const aggroFrog = FrogEnemy.add(this.room, this.game, aggroTile.x, aggroTile.y);
+    if (aggroFrog && player) {
+      (aggroFrog as FrogEnemy).seenPlayer = true;
+      (aggroFrog as FrogEnemy).aggro = true;
+      (aggroFrog as FrogEnemy).targetPlayer = player;
+      (aggroFrog as FrogEnemy).skipNextTurns = 1;
+    }
+
+    // Spawn sleeping frogs with staggered skipNextTurns: 2, 3, 4
+    sleepTiles.forEach((tile, i) => {
+      const frog = FrogEnemy.add(this.room, this.game, tile.x, tile.y);
+      if (frog) (frog as FrogEnemy).skipNextTurns = i + 2;
+    });
   };
 
   poison = () => {};

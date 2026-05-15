@@ -72,6 +72,7 @@ import { BigZombieEnemy } from "../../../entity/enemy/bigZombieEnemy";
 import { SpiderEnemy } from "../../../entity/enemy/spiderEnemy";
 import { WardenEnemy } from "../../../entity/enemy/wardenEnemy";
 import { ChessKnightEnemy } from "../../../entity/enemy/chessKnightEnemy";
+import { GiantFrogEnemy } from "../../../entity/enemy/giantFrogEnemy";
 import { WizardEnemy } from "../../../entity/enemy/wizardEnemy";
 import { WizardState as WizardEnemyState } from "../../../entity/enemy/wizardEnemy";
 import { FireWizardEnemy } from "../../../entity/enemy/fireWizard";
@@ -163,6 +164,7 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof SpiderEnemy) return "spider";
   if (e instanceof WardenEnemy) return "warden";
   if (e instanceof ChessKnightEnemy) return "chess_knight";
+  if (e instanceof GiantFrogEnemy) return "giant_frog";
   if (e instanceof Crate) return "crate";
   if (e instanceof DarkCrate) return "dark_crate";
   if (e instanceof Pot) return "pot";
@@ -564,6 +566,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("spider", SpiderEnemy);
   registerBasic("warden", WardenEnemy);
   registerBasic("chess_knight", ChessKnightEnemy);
+  registerBasic("giant_frog", GiantFrogEnemy);
 
   registerBasic("crate", Crate);
   registerBasic("dark_crate", DarkCrate);

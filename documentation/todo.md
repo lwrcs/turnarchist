@@ -40,6 +40,11 @@
 - [ ] Fences
 - [ ] Bonfire
 - [ ] Traveller
+- [ ] Sand worms (enemy)
+- [ ] Minotaur (enemy)
+- [ ] Cerberus (enemy)
+- [ ] Hydra (enemy)
+- [ ] Boogie man (enemy)
 - [ ] Lore books
 - [x] Bushes trees
 - [ ] Tall grass

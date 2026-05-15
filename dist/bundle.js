@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.df7d0fd3382dc2ca0261.png";
+module.exports = __webpack_require__.p + "assets/mobset.efa04d1d8ffc4e7c8bac.png";
 
 /***/ }),
 
@@ -12315,6 +12315,8 @@ const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
 const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const frogEnemy_1 = __webpack_require__(/*! ./frogEnemy */ "./src/entity/enemy/frogEnemy.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
 class BigFrogEnemy extends enemy_1.Enemy {
@@ -12322,6 +12324,51 @@ class BigFrogEnemy extends enemy_1.Enemy {
         super(room, game, x, y);
         this.hit = () => {
             return this.damage;
+        };
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            const playerResult = this.nearestPlayer();
+            const player = playerResult !== false ? playerResult[1] : null;
+            // Build the 4 spawn tiles for the 2x2 footprint
+            const tiles = [];
+            for (let dx = 0; dx < this.w; dx++) {
+                for (let dy = 0; dy < this.h; dy++) {
+                    tiles.push({ x: this.x + dx, y: this.y + dy });
+                }
+            }
+            // Split by manhattan distance == 2 from player
+            const list1 = []; // distance == 2
+            const list2 = []; // distance != 2
+            for (const tile of tiles) {
+                const dist = player
+                    ? Math.abs(tile.x - player.x) + Math.abs(tile.y - player.y)
+                    : -1;
+                if (dist === 2)
+                    list1.push(tile);
+                else
+                    list2.push(tile);
+            }
+            // Pick one from list1 for immediate aggro (fallback to list2 if list1 empty)
+            const aggroSource = list1.length > 0 ? list1 : list2;
+            const aggroIdx = Math.floor(random_1.Random.rand() * aggroSource.length);
+            const aggroTile = aggroSource.splice(aggroIdx, 1)[0];
+            // Wake order for remaining 3: list2 first, then list1 remainder
+            const sleepTiles = [...list2, ...list1];
+            // Spawn aggro frog — skipNextTurns=1 so it can't act the turn it spawns
+            const aggroFrog = frogEnemy_1.FrogEnemy.add(this.room, this.game, aggroTile.x, aggroTile.y);
+            if (aggroFrog && player) {
+                aggroFrog.seenPlayer = true;
+                aggroFrog.aggro = true;
+                aggroFrog.targetPlayer = player;
+                aggroFrog.skipNextTurns = 1;
+            }
+            // Spawn sleeping frogs with staggered skipNextTurns: 2, 3, 4
+            sleepTiles.forEach((tile, i) => {
+                const frog = frogEnemy_1.FrogEnemy.add(this.room, this.game, tile.x, tile.y);
+                if (frog)
+                    frog.skipNextTurns = i + 2;
+            });
         };
         this.poison = () => { };
         this.behavior = () => {
@@ -12743,7 +12790,6 @@ class BigFrogEnemy extends enemy_1.Enemy {
         //if (drop) this.drop = drop;
         this.h = 2;
         this.w = 2;
-        this.getDrop(["frog"], true);
     }
 }
 exports.BigFrogEnemy = BigFrogEnemy;
@@ -18080,6 +18126,515 @@ FrogEnemy.examineText = "It hops in bursts. Don't stand where it lands.";
 
 /***/ }),
 
+/***/ "./src/entity/enemy/giantFrogEnemy.ts":
+/*!********************************************!*\
+  !*** ./src/entity/enemy/giantFrogEnemy.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GiantFrogEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const coin_1 = __webpack_require__(/*! ../../item/coin */ "./src/item/coin.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const bigFrogEnemy_1 = __webpack_require__(/*! ./bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+class GiantFrogEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.hit = () => {
+            return this.damage;
+        };
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            const playerResult = this.nearestPlayer();
+            const player = playerResult !== false ? playerResult[1] : null;
+            // 4 BigFrog spawn positions: the 4 quadrants of the 4x4 footprint
+            const tiles = [
+                { x: this.x, y: this.y },
+                { x: this.x + 2, y: this.y },
+                { x: this.x, y: this.y + 2 },
+                { x: this.x + 2, y: this.y + 2 },
+            ];
+            // Split by manhattan distance == 2 from player
+            const list1 = []; // distance == 2
+            const list2 = []; // distance != 2
+            for (const tile of tiles) {
+                const dist = player
+                    ? Math.abs(tile.x - player.x) + Math.abs(tile.y - player.y)
+                    : -1;
+                if (dist === 2)
+                    list1.push(tile);
+                else
+                    list2.push(tile);
+            }
+            // Pick one from list1 for immediate aggro (fallback to list2 if list1 empty)
+            const aggroSource = list1.length > 0 ? list1 : list2;
+            const aggroIdx = Math.floor(random_1.Random.rand() * aggroSource.length);
+            const aggroTile = aggroSource.splice(aggroIdx, 1)[0];
+            // Wake order for remaining 3: list2 first, then list1 remainder
+            const sleepTiles = [...list2, ...list1];
+            // Spawn aggro BigFrog — skipNextTurns=1 so it can't act the turn it spawns
+            const aggroFrog = bigFrogEnemy_1.BigFrogEnemy.add(this.room, this.game, aggroTile.x, aggroTile.y);
+            if (aggroFrog && player) {
+                aggroFrog.seenPlayer = true;
+                aggroFrog.aggro = true;
+                aggroFrog.targetPlayer = player;
+                aggroFrog.skipNextTurns = 1;
+            }
+            // Spawn sleeping BigFrogs with staggered skipNextTurns: 2, 3, 4
+            sleepTiles.forEach((tile, i) => {
+                const frog = bigFrogEnemy_1.BigFrogEnemy.add(this.room, this.game, tile.x, tile.y);
+                if (frog)
+                    frog.skipNextTurns = i + 2;
+            });
+        };
+        this.poison = () => { };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (this.cloned)
+                return;
+            this.tileX = 37;
+            this.frameLength = 3;
+            this.animationSpeed = 0.1;
+            if (!this.dead) {
+                if (this.handleSkipTurns())
+                    return;
+                if (!this.seenPlayer) {
+                    this.tileX = 37;
+                    this.lookForPlayer();
+                }
+                else if (this.seenPlayer) {
+                    this.tileX = 37;
+                    if (this.room.playerTicked === this.targetPlayer) {
+                        this.alertTicks = Math.max(0, this.alertTicks - 1);
+                        this.ticks++;
+                        if (!this.canMove) {
+                            // Stationary — just show hit warnings on warning tick
+                            if (this.ticks % 2 === 0) {
+                                this.makeBigHitWarnings();
+                                this.rumbling = true;
+                                this.tileX = 37;
+                                this.frame = 0;
+                                this.frameLength = 2;
+                                this.animationSpeed = 0.2;
+                            }
+                            else {
+                                this.rumbling = false;
+                            }
+                        }
+                        else if (this.ticks % 2 === 1) {
+                            this.rumbling = true;
+                            let oldX = this.x;
+                            let oldY = this.y;
+                            let disablePositions = Array();
+                            let targetPosition = {
+                                x: this.targetPlayer.x,
+                                y: this.targetPlayer.y,
+                            };
+                            disablePositions = this.buildEntityDisablePositionsLocalized(targetPosition, (e) => e !== this && !e.destroyable);
+                            for (let xx = this.x - 1; xx <= this.x + this.w; xx++) {
+                                for (let yy = this.y - 1; yy <= this.y + this.h; yy++) {
+                                    if (this.room.roomArray[xx] &&
+                                        this.room.roomArray[xx][yy] &&
+                                        this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
+                                        this.room.roomArray[xx][yy].on) {
+                                        disablePositions.push({ x: xx, y: yy });
+                                    }
+                                }
+                            }
+                            const px = this.targetPlayer.x;
+                            const py = this.targetPlayer.y;
+                            const sharesRow = py >= this.y && py < this.y + this.h;
+                            const sharesCol = px >= this.x && px < this.x + this.w;
+                            const isRightAdjacent = sharesRow && px === this.x + this.w;
+                            const isLeftAdjacent = sharesRow && px === this.x - 1;
+                            const isBelowAdjacent = sharesCol && py === this.y + this.h;
+                            const isAboveAdjacent = sharesCol && py === this.y - 1;
+                            let triedAdjacentJump = false;
+                            let performedJump = false;
+                            const isAreaClear = (tx, ty, w, h) => {
+                                const occupied = new Set();
+                                for (const e of this.room.entities) {
+                                    if (e === this)
+                                        continue;
+                                    if (e.destroyable)
+                                        continue;
+                                    const ew = e.w || 1;
+                                    const eh = e.h || 1;
+                                    for (let dx = 0; dx < ew; dx++) {
+                                        for (let dy = 0; dy < eh; dy++) {
+                                            occupied.add(`${e.x + dx},${e.y + dy}`);
+                                        }
+                                    }
+                                }
+                                for (let xx = 0; xx < w; xx++) {
+                                    for (let yy = 0; yy < h; yy++) {
+                                        const ax = tx + xx;
+                                        const ay = ty + yy;
+                                        if (!this.room.roomArray[ax] || !this.room.roomArray[ax][ay])
+                                            return false;
+                                        const tile = this.room.roomArray[ax][ay];
+                                        if (tile.isSolid() ||
+                                            tile.isDoor ||
+                                            tile instanceof downLadder_1.DownLadder)
+                                            return false;
+                                        if (occupied.has(`${ax},${ay}`))
+                                            return false;
+                                    }
+                                }
+                                return true;
+                            };
+                            if (isRightAdjacent) {
+                                triedAdjacentJump = true;
+                                const tx = px + 1;
+                                const ty = this.y;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    performedJump = true;
+                                    return;
+                                }
+                            }
+                            else if (isLeftAdjacent) {
+                                triedAdjacentJump = true;
+                                const tx = px - this.w;
+                                const ty = this.y;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    performedJump = true;
+                                    return;
+                                }
+                            }
+                            else if (isBelowAdjacent) {
+                                triedAdjacentJump = true;
+                                const tx = this.x;
+                                const ty = py + 1;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    performedJump = true;
+                                    return;
+                                }
+                            }
+                            else if (isAboveAdjacent) {
+                                triedAdjacentJump = true;
+                                const tx = this.x;
+                                const ty = py - this.h;
+                                if (isAreaClear(tx, ty, this.w, this.h)) {
+                                    this.tryMove(tx, ty);
+                                    this.setDrawXY(oldX, oldY);
+                                    if (this.jumping) {
+                                        this.frame = 8;
+                                        this.animationSpeed = 1;
+                                    }
+                                    if (this.x > oldX)
+                                        this.direction = game_1.Direction.RIGHT;
+                                    else if (this.x < oldX)
+                                        this.direction = game_1.Direction.LEFT;
+                                    else if (this.y > oldY)
+                                        this.direction = game_1.Direction.DOWN;
+                                    else if (this.y < oldY)
+                                        this.direction = game_1.Direction.UP;
+                                    this.rumbling = false;
+                                    performedJump = true;
+                                    return;
+                                }
+                            }
+                            if (triedAdjacentJump && !performedJump) {
+                                this.rumbling = false;
+                                return;
+                            }
+                            const moves = this.searchPathLocalizedCached(targetPosition, disablePositions, { useLastPlayerPos: true, allowOmni: false });
+                            if (moves[1]) {
+                                const wouldHit = (player, moveX, moveY) => {
+                                    return (player.x >= moveX &&
+                                        player.x < moveX + this.w &&
+                                        player.y >= moveY &&
+                                        player.y < moveY + this.h);
+                                };
+                                let hitPlayer = false;
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] !== this.room)
+                                        continue;
+                                    if (wouldHit(this.game.players[i], moves[1].pos.x, moves[1].pos.y)) {
+                                        const closestTile = this.closestTile(this.game.players[i]);
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: closestTile.x, y: closestTile.y },
+                                            });
+                                            this.drawX +=
+                                                1.5 * (closestTile.x - this.game.players[i].x);
+                                            this.drawY +=
+                                                1.5 * (closestTile.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(5 * this.drawX, 5 * this.drawY);
+                                        }
+                                        hitPlayer = true;
+                                    }
+                                }
+                                if (!hitPlayer) {
+                                    if (moves.length > 1) {
+                                        let moveX = moves[1].pos.x;
+                                        let moveY = moves[1].pos.y;
+                                        this.tryMove(moveX, moveY);
+                                        this.setDrawXY(oldX, oldY);
+                                        if (this.jumping) {
+                                            this.frame = 8;
+                                            this.animationSpeed = 1;
+                                        }
+                                        if (this.x > moveX)
+                                            this.direction = game_1.Direction.RIGHT;
+                                        else if (this.x < moveX)
+                                            this.direction = game_1.Direction.LEFT;
+                                        else if (this.y > moveY)
+                                            this.direction = game_1.Direction.DOWN;
+                                        else if (this.y < moveY)
+                                            this.direction = game_1.Direction.UP;
+                                    }
+                                }
+                            }
+                            this.rumbling = false;
+                        }
+                        else {
+                            this.makeBigHitWarnings();
+                            this.rumbling = true;
+                            //this.tileX = 39;
+                            this.frame = 0;
+                            this.frameLength = 2;
+                            this.animationSpeed = 0.2;
+                        }
+                    }
+                    let targetPlayerOffline = Object.values(this.game.offlinePlayers).indexOf(this.targetPlayer) !==
+                        -1;
+                    if (!this.aggro || targetPlayerOffline) {
+                        let p = this.nearestPlayer();
+                        if (p !== false) {
+                            let [distance, player] = p;
+                            if (distance <= 6 &&
+                                (targetPlayerOffline ||
+                                    distance < this.playerDistance(this.targetPlayer))) {
+                                if (player !== this.targetPlayer) {
+                                    this.targetPlayer = player;
+                                    this.facePlayer(player);
+                                    if (player === this.game.players[this.game.localPlayerID])
+                                        this.alertTicks = 1;
+                                    if (this.ticks % 2 === 0) {
+                                        this.makeBigHitWarnings();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        this.jump = (delta) => {
+            if (this.jumping && !this.cloned) {
+                let j = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+                if (j >= 1) {
+                    this.jumpDistance = 2;
+                }
+                this.jumpY =
+                    Math.sin((j / (this.jumpDistance + 1)) * Math.PI) * this.jumpHeight;
+                if (this.jumpY < 0.01 && this.jumpY > -0.01) {
+                    this.jumpY = 0;
+                    this.jumpDistance = 1;
+                }
+                if (this.jumpY > this.jumpHeight)
+                    this.jumpY = this.jumpHeight;
+            }
+        };
+        this.bigEnemyShake = () => {
+            if (this.w > 1 || this.h > 1) {
+                setTimeout(() => {
+                    this.game.shakeScreen(0 * this.drawX, 7);
+                }, 500);
+            }
+        };
+        this.makeBigHitWarnings = () => {
+            this.makeHitWarnings();
+        };
+        this.makeHitWarnings = () => {
+            if (this.unconscious || !this.seenPlayer || this.ticks % 2 === 1)
+                return;
+            const targets = [
+                // Left face (x - 2)
+                { tx: this.x - 2, ty: this.y },
+                { tx: this.x - 2, ty: this.y + 1 },
+                { tx: this.x - 2, ty: this.y + 2 },
+                { tx: this.x - 2, ty: this.y + 3 },
+                // Right face (x + 5)
+                { tx: this.x + 5, ty: this.y },
+                { tx: this.x + 5, ty: this.y + 1 },
+                { tx: this.x + 5, ty: this.y + 2 },
+                { tx: this.x + 5, ty: this.y + 3 },
+                // Top face (y - 2)
+                { tx: this.x, ty: this.y - 2 },
+                { tx: this.x + 1, ty: this.y - 2 },
+                { tx: this.x + 2, ty: this.y - 2 },
+                { tx: this.x + 3, ty: this.y - 2 },
+                // Bottom face (y + 5)
+                { tx: this.x, ty: this.y + 5 },
+                { tx: this.x + 1, ty: this.y + 5 },
+                { tx: this.x + 2, ty: this.y + 5 },
+                { tx: this.x + 3, ty: this.y + 5 },
+                // Corner diagonals
+                { tx: this.x - 1, ty: this.y - 1 },
+                { tx: this.x + 4, ty: this.y - 1 },
+                { tx: this.x - 1, ty: this.y + 4 },
+                { tx: this.x + 4, ty: this.y + 4 },
+            ];
+            for (const { tx, ty } of targets) {
+                if (!this.isWithinRoomBounds(tx, ty))
+                    continue;
+                if (this.occupiesTile(tx, ty, this.z ?? 0))
+                    continue;
+                this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, tx, ty, this.x, this.y, true, false, this));
+            }
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+            this.tickHealthBarHover();
+            this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 1.5, this.y, true);
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.frame += this.animationSpeed * delta;
+                if (this.frame >= this.frameLength) {
+                    this.frame = 0;
+                }
+                let rumbleX = this.rumble(this.rumbling, this.frame).x;
+                let rumbleY = this.rumble(this.rumbling, this.frame).y;
+                if (this.drawX !== 0 || this.drawY !== 0) {
+                    this.jumping = true;
+                }
+                else {
+                    this.jumping = false;
+                }
+                if (this.jumping) {
+                    if (this.frame < 4)
+                        this.frame = 4;
+                    this.frameLength = 11;
+                    this.animationSpeed = 0.2;
+                }
+                else {
+                    this.frameLength = 3;
+                    this.animationSpeed = 0.1;
+                }
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.drawMobWithCrush(this.tileX /* +
+                  (this.tileX !== 59 && !this.rumbling && !this.cloned
+                    ? Math.floor(this.frame)
+                    : 0) * 2,
+                    */, this.tileY, 4, 4, this.x + rumbleX - this.drawX, this.y - this.drawYOffset - this.drawY - this.jumpY + 1, 4, 4, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            }
+            if (!this.cloned) {
+                if (!this.seenPlayer) {
+                    this.drawSleepingZs(delta, 1.5 * gameConstants_1.GameConstants.TILESIZE);
+                }
+                if (this.alertTicks > 0) {
+                    this.drawExclamation(delta, 1.5 * gameConstants_1.GameConstants.TILESIZE);
+                }
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 8;
+        this.maxHealth = 8;
+        this.defaultMaxHealth = 8;
+        this.tileX = 37;
+        this.tileY = 27;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.deathParticleColor = "#ffffff";
+        this.frameLength = 3;
+        this.startFrame = 0;
+        this.animationSpeed = 0.1;
+        this.tickCount = 0;
+        this.jumping = false;
+        this.jumpDistance = 1;
+        this.drop = drop ? drop : new coin_1.Coin(this.room, this.x, this.y);
+        this.name = "giantfrog";
+        this.orthogonalAttack = true;
+        this.diagonalAttack = true;
+        this.jumpHeight = 3;
+        this.imageParticleX = 3;
+        this.imageParticleY = 30;
+        this.canDestroyOthers = true;
+        this.halfJumped = false;
+        this.canCrushOthers = true;
+        this.dropChance = 1;
+        this.h = 4;
+        this.w = 4;
+        this.canMove = false;
+    }
+}
+exports.GiantFrogEnemy = GiantFrogEnemy;
+GiantFrogEnemy.difficulty = 4;
+GiantFrogEnemy.tileX = 39;
+GiantFrogEnemy.tileY = 26;
+GiantFrogEnemy.examineText = "A colossal croaker. The ground trembles beneath it.";
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/glowBugEnemy.ts":
 /*!******************************************!*\
   !*** ./src/entity/enemy/glowBugEnemy.ts ***!
@@ -20287,6 +20842,7 @@ const kingEnemy_1 = __webpack_require__(/*! ./kingEnemy */ "./src/entity/enemy/k
 const boltcasterEnemy_1 = __webpack_require__(/*! ./boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const earthWizard_1 = __webpack_require__(/*! ./earthWizard */ "./src/entity/enemy/earthWizard.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ./chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
+const giantFrogEnemy_1 = __webpack_require__(/*! ./giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const spawnfloor_1 = __webpack_require__(/*! ../../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
@@ -20467,6 +21023,9 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 25:
                                 spawned = new chessKnightEnemy_1.ChessKnightEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 26:
+                                spawned = new giantFrogEnemy_1.GiantFrogEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             default:
                                 console.warn("spawner tried to spawn unknown enemy type", this.enemySpawnType);
@@ -20696,6 +21255,7 @@ Spawner.spawnTypeByName = {
     boltcaster: 22,
     earthwizard: 23,
     chessknight: 25,
+    giantfrog: 26,
 };
 
 
@@ -41300,6 +41860,7 @@ const bigZombieEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/bigZombie
 const spiderEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/spiderEnemy */ "./src/entity/enemy/spiderEnemy.ts");
 const wardenEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
+const giantFrogEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const wizardEnemy_2 = __webpack_require__(/*! ../../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const fireWizard_1 = __webpack_require__(/*! ../../../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
@@ -41440,6 +42001,8 @@ const entityToKind = (e) => {
         return "warden";
     if (e instanceof chessKnightEnemy_1.ChessKnightEnemy)
         return "chess_knight";
+    if (e instanceof giantFrogEnemy_1.GiantFrogEnemy)
+        return "giant_frog";
     if (e instanceof crate_1.Crate)
         return "crate";
     if (e instanceof darkCrate_1.DarkCrate)
@@ -41881,6 +42444,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("spider", spiderEnemy_1.SpiderEnemy);
     registerBasic("warden", wardenEnemy_1.WardenEnemy);
     registerBasic("chess_knight", chessKnightEnemy_1.ChessKnightEnemy);
+    registerBasic("giant_frog", giantFrogEnemy_1.GiantFrogEnemy);
     registerBasic("crate", crate_1.Crate);
     registerBasic("dark_crate", darkCrate_1.DarkCrate);
     registerBasic("pot", pot_1.Pot);
@@ -44262,6 +44826,7 @@ const kingEnemy_1 = __webpack_require__(/*! ../../entity/enemy/kingEnemy */ "./s
 const knightEnemy_1 = __webpack_require__(/*! ../../entity/enemy/knightEnemy */ "./src/entity/enemy/knightEnemy.ts");
 const bigKnightEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigKnightEnemy */ "./src/entity/enemy/bigKnightEnemy.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ../../entity/enemy/chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
+const giantFrogEnemy_1 = __webpack_require__(/*! ../../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
 const mummyEnemy_1 = __webpack_require__(/*! ../../entity/enemy/mummyEnemy */ "./src/entity/enemy/mummyEnemy.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const queenEnemy_1 = __webpack_require__(/*! ../../entity/enemy/queenEnemy */ "./src/entity/enemy/queenEnemy.ts");
@@ -44477,6 +45042,7 @@ function populateTestRoom(room, game, clearFirst = false) {
         [knightEnemy_1.KnightEnemy, "knight"],
         [bigKnightEnemy_1.BigKnightEnemy, "big_knight"],
         [chessKnightEnemy_1.ChessKnightEnemy, "chess_knight"],
+        [giantFrogEnemy_1.GiantFrogEnemy, "giant_frog"],
         [mummyEnemy_1.MummyEnemy, "mummy"],
         [pawnEnemy_1.PawnEnemy, "pawn"],
         [queenEnemy_1.QueenEnemy, "queen"],
@@ -44695,6 +45261,7 @@ const ENEMY_KINDS = [
     "knight",
     "big_knight",
     "chess_knight",
+    "giant_frog",
     "mummy",
     "pawn",
     "queen",
@@ -62275,6 +62842,7 @@ const spiderEnemy_1 = __webpack_require__(/*! ../entity/enemy/spiderEnemy */ "./
 const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianResource */ "./src/entity/resource/obsidianResource.ts");
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
+const giantFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
@@ -62334,6 +62902,7 @@ exports.enemyClassToId = new Map([
     [earthWizard_1.EarthWizardEnemy, 23],
     [ratEnemy_1.RatEnemy, 24],
     [chessKnightEnemy_1.ChessKnightEnemy, 25],
+    [giantFrogEnemy_1.GiantFrogEnemy, 26],
 ]);
 class Environment {
     constructor(type) {
@@ -62388,7 +62957,7 @@ const environmentData = {
             { class: bishopEnemy_1.BishopEnemy, weight: 0.3, minDepth: 2 },
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.5, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
-            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 10, minDepth: 1 },
+            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 0.1, minDepth: 3 },
             // Late game enemies (depth 2+)
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
             {
@@ -62424,6 +62993,7 @@ const environmentData = {
             { class: bigZombieEnemy_1.BigZombieEnemy, depth: 0, weight: 0.6, maxDepth: 4, big: true },
             { class: queenEnemy_1.QueenEnemy, depth: 1, weight: 0.6, maxDepth: 4 },
             { class: bigFrogEnemy_1.BigFrogEnemy, depth: 1, weight: 0.35, big: true },
+            { class: giantFrogEnemy_1.GiantFrogEnemy, depth: 3, weight: 0.2, big: true },
             { class: exalterEnemy_1.ExalterEnemy, depth: 1, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.5, big: true },
@@ -62715,7 +63285,7 @@ const environmentData = {
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 0 },
             { class: fireWizard_1.FireWizardEnemy, weight: 0.1, minDepth: 0 },
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.01, minDepth: 0 },
-            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 10, minDepth: 1 },
+            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 0.1, minDepth: 1 },
         ],
         bosses: [
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 1.0 },
@@ -62758,7 +63328,7 @@ const environmentData = {
                 size: { w: 2, h: 2 },
             },
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.8, minDepth: 2 },
-            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 10, minDepth: 1 },
+            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 0.1, minDepth: 1 },
         ],
         bosses: [{ class: wardenEnemy_1.WardenEnemy, depth: 2, weight: 1.0, big: true }],
     },
@@ -62783,11 +63353,11 @@ const environmentData = {
             // Only high-level, late-game threats
             // Depth 1 enemies
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
-            { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
+            //{ class: BishopEnemy, weight: 0.6, minDepth: 1 },
             { class: energyWizard_1.EnergyWizardEnemy, weight: 0.1, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
-            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 10, minDepth: 1 },
-            { class: rookEnemy_1.RookEnemy, weight: 0.6, minDepth: 1 },
+            //{ class: ChessKnightEnemy, weight: 0.1, minDepth: 1 },
+            //{ class: RookEnemy, weight: 0.6, minDepth: 1 },
             { class: boltcasterEnemy_1.BoltcasterEnemy, weight: 0.25, minDepth: 1 },
             // Depth 2 enemies
             { class: armoredSkullEnemy_1.ArmoredSkullEnemy, weight: 0.7, minDepth: 2 },
@@ -62850,7 +63420,7 @@ const environmentData = {
             { class: bishopEnemy_1.BishopEnemy, weight: 0.6, minDepth: 1 },
             { class: armoredzombieEnemy_1.ArmoredzombieEnemy, weight: 0.8, minDepth: 1 },
             { class: knightEnemy_1.KnightEnemy, weight: 0.7, minDepth: 1 },
-            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 10, minDepth: 1 },
+            { class: chessKnightEnemy_1.ChessKnightEnemy, weight: 0.1, minDepth: 1 },
             // Late game enemies (depth 2+)
             { class: chargeEnemy_1.ChargeEnemy, weight: 0.5, minDepth: 2 },
             {
@@ -76425,6 +76995,7 @@ const coal_1 = __webpack_require__(/*! ../item/resource/coal */ "./src/item/reso
 const passageway_1 = __webpack_require__(/*! ../tile/passageway */ "./src/tile/passageway.ts");
 const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
+const giantFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -76472,6 +77043,7 @@ var EnemyType;
     EnemyType["barrel"] = "barrel";
     EnemyType["crate"] = "crate";
     EnemyType["chessknight"] = "chessknight";
+    EnemyType["giantfrog"] = "giantfrog";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -76518,6 +77090,7 @@ exports.EnemyTypeMap = {
     [EnemyType.barrel]: barrel_1.Barrel,
     [EnemyType.crate]: crate_1.Crate,
     [EnemyType.chessknight]: chessKnightEnemy_1.ChessKnightEnemy,
+    [EnemyType.giantfrog]: giantFrogEnemy_1.GiantFrogEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -80433,6 +81006,9 @@ class Room {
                         break;
                     case 25:
                         chessKnightEnemy_1.ChessKnightEnemy.add(this, this.game, x, y);
+                        break;
+                    case 26:
+                        giantFrogEnemy_1.GiantFrogEnemy.add(this, this.game, x, y);
                         break;
                 }
             }

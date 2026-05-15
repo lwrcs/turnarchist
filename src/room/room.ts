@@ -112,6 +112,7 @@ import { Coal } from "../item/resource/coal";
 import { Passageway } from "../tile/passageway";
 import { TallSucculent } from "../entity/object/tallSucculent";
 import { ChessKnightEnemy } from "../entity/enemy/chessKnightEnemy";
+import { GiantFrogEnemy } from "../entity/enemy/giantFrogEnemy";
 
 // #endregion
 
@@ -160,6 +161,7 @@ export enum EnemyType {
   barrel = "barrel",
   crate = "crate",
   chessknight = "chessknight",
+  giantfrog = "giantfrog",
   // Add other enemy types here
 }
 
@@ -207,6 +209,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.barrel]: Barrel,
   [EnemyType.crate]: Crate,
   [EnemyType.chessknight]: ChessKnightEnemy,
+  [EnemyType.giantfrog]: GiantFrogEnemy,
   // Add other enemy mappings here
 };
 
@@ -1096,6 +1099,9 @@ export class Room {
             break;
           case 25:
             ChessKnightEnemy.add(this, this.game, x, y);
+            break;
+          case 26:
+            GiantFrogEnemy.add(this, this.game, x, y);
             break;
         }
       }

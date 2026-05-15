@@ -131,6 +131,7 @@ const ENEMY_KINDS = [
   "knight",
   "big_knight",
   "chess_knight",
+  "giant_frog",
   "mummy",
   "pawn",
   "queen",
