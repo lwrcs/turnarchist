@@ -580,7 +580,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: EnergyWizardEnemy, weight: 0.1, minDepth: 0 }, // Court wizards
       { class: FireWizardEnemy, weight: 0.1, minDepth: 0 }, // Battle mages
       { class: ChargeEnemy, weight: 0.01, minDepth: 0 }, // War beasts
-      { class: ChessKnightEnemy, weight: 0.1, minDepth: 1 },
+      { class: ChessKnightEnemy, weight: 0.5, minDepth: 0, entityWeight: 0.5 },
     ],
     bosses: [
       { class: ExalterEnemy, depth: 0, weight: 1.0 },
