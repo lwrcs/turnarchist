@@ -38810,6 +38810,12 @@ GameplaySettings.HIT_STUNS_ATTACK = false;
  * It cannot be equipped, and mining only requires a pickaxe anywhere in inventory.
  */
 GameplaySettings.PICKAXE_AS_TOOL = true;
+/**
+ * When enabled, diagonal attacks are valid:
+ * - Mouse clicks use 8 direction sectors
+ * - Pressing two perpendicular direction keys simultaneously triggers a diagonal attack
+ */
+GameplaySettings.DIAGONAL_ATTACKING = true;
 GameplaySettings.BASE_ENEMY_ALERT_RANGE = 4;
 GameplaySettings.BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;
@@ -61957,6 +61963,7 @@ const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./s
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
 const attackAnimation_1 = __webpack_require__(/*! ../../particle/attackAnimation */ "./src/particle/attackAnimation.ts");
 const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const pushChain_1 = __webpack_require__(/*! ../../utility/pushChain */ "./src/utility/pushChain.ts");
 const skills_1 = __webpack_require__(/*! ../../game/skills */ "./src/game/skills.ts");
 const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
@@ -62131,7 +62138,7 @@ class Weapon extends equippable_1.Equippable {
                 return null;
             const dx = targetX - p.x;
             const dy = targetY - p.y;
-            if (dx !== 0 && dy !== 0)
+            if (dx !== 0 && dy !== 0 && !gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
                 return null;
             if (dx === 0 && dy === 0)
                 return null;
@@ -70554,6 +70561,23 @@ class Player extends drawable_1.Drawable {
                     ? { direction: game_1.Direction.LEFT, x: nextX, y: this.y }
                     : { direction: game_1.Direction.RIGHT, x: nextX, y: this.y };
             }
+            // Diagonal — only when DIAGONAL_ATTACKING is enabled
+            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+                const stepX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
+                const stepY = targetY < this.y ? this.y - 1 : this.y + 1;
+                if (!this.game.room.roomArray[stepX] ||
+                    !this.game.room.roomArray[stepX][stepY]) {
+                    return null;
+                }
+                const dir = stepX < this.x
+                    ? stepY < this.y
+                        ? game_1.Direction.UP_LEFT
+                        : game_1.Direction.DOWN_LEFT
+                    : stepY < this.y
+                        ? game_1.Direction.UP_RIGHT
+                        : game_1.Direction.DOWN_RIGHT;
+                return { direction: dir, x: stepX, y: stepY };
+            }
             return null;
         };
         this.stall = () => {
@@ -70648,9 +70672,12 @@ class Player extends drawable_1.Drawable {
             // Same tile - not in range
             if (eX === this.x && eY === this.y)
                 return false;
-            // Diagonal - not in range
-            if (eX !== this.x && eY !== this.y)
-                return false;
+            // Diagonal
+            if (eX !== this.x && eY !== this.y) {
+                if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
+                    return false;
+                return Math.abs(eX - this.x) === Math.abs(eY - this.y) && Math.abs(eX - this.x) <= r;
+            }
             // Check horizontal range
             if (eY === this.y) {
                 return Math.abs(eX - this.x) <= r;
@@ -71855,6 +71882,9 @@ class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
         this.mouseHoldInitialDirection = null;
+        this.pendingMoveDir = null;
+        this.pendingMoveTime = 0;
+        this.pendingMoveTimer = null;
         this.mobileAimTileX = null;
         this.mobileAimTileY = null;
         this.bestiaryTouchMoveHandler = null;
@@ -72341,60 +72371,28 @@ class PlayerInputHandler {
                     this.navigateDeathScreen(-1);
                     break;
                 }
-                if (this.player.isPushMoveInputLocked())
-                    break;
-                if (!this.ignoreDirectionInput())
-                    this.player.actionProcessor.process({
-                        type: "Move",
-                        direction: game_1.Direction.LEFT,
-                        targetX: this.player.x - 1,
-                        targetY: this.player.y,
-                    });
+                this.handleDirectionKey(game_1.Direction.LEFT);
                 break;
             case input_1.InputEnum.RIGHT:
                 if (this.player.dead) {
                     this.navigateDeathScreen(1);
                     break;
                 }
-                if (this.player.isPushMoveInputLocked())
-                    break;
-                if (!this.ignoreDirectionInput())
-                    this.player.actionProcessor.process({
-                        type: "Move",
-                        direction: game_1.Direction.RIGHT,
-                        targetX: this.player.x + 1,
-                        targetY: this.player.y,
-                    });
+                this.handleDirectionKey(game_1.Direction.RIGHT);
                 break;
             case input_1.InputEnum.UP:
                 if (this.player.dead) {
                     this.navigateDeathScreen(-1);
                     break;
                 }
-                if (this.player.isPushMoveInputLocked())
-                    break;
-                if (!this.ignoreDirectionInput())
-                    this.player.actionProcessor.process({
-                        type: "Move",
-                        direction: game_1.Direction.UP,
-                        targetX: this.player.x,
-                        targetY: this.player.y - 1,
-                    });
+                this.handleDirectionKey(game_1.Direction.UP);
                 break;
             case input_1.InputEnum.DOWN:
                 if (this.player.dead) {
                     this.navigateDeathScreen(1);
                     break;
                 }
-                if (this.player.isPushMoveInputLocked())
-                    break;
-                if (!this.ignoreDirectionInput())
-                    this.player.actionProcessor.process({
-                        type: "Move",
-                        direction: game_1.Direction.DOWN,
-                        targetX: this.player.x,
-                        targetY: this.player.y + 1,
-                    });
+                this.handleDirectionKey(game_1.Direction.DOWN);
                 break;
             case input_1.InputEnum.SPACE:
                 // If camera animation is running, speed it up
@@ -73776,6 +73774,79 @@ class PlayerInputHandler {
                 break;
         }
     }
+    isPerpendicularDir(a, b) {
+        const v = [game_1.Direction.UP, game_1.Direction.DOWN];
+        const h = [game_1.Direction.LEFT, game_1.Direction.RIGHT];
+        return (v.includes(a) && h.includes(b)) || (h.includes(a) && v.includes(b));
+    }
+    combineDiagonal(a, b) {
+        const up = a === game_1.Direction.UP || b === game_1.Direction.UP;
+        const left = a === game_1.Direction.LEFT || b === game_1.Direction.LEFT;
+        if (up && left)
+            return game_1.Direction.UP_LEFT;
+        if (up)
+            return game_1.Direction.UP_RIGHT;
+        if (left)
+            return game_1.Direction.DOWN_LEFT;
+        return game_1.Direction.DOWN_RIGHT;
+    }
+    processCardinalMove(dir) {
+        const dx = dir === game_1.Direction.LEFT ? -1 : dir === game_1.Direction.RIGHT ? 1 : 0;
+        const dy = dir === game_1.Direction.UP ? -1 : dir === game_1.Direction.DOWN ? 1 : 0;
+        this.player.actionProcessor.process({
+            type: "Move",
+            direction: dir,
+            targetX: this.player.x + dx,
+            targetY: this.player.y + dy,
+        });
+    }
+    processDiagonalMove(dir) {
+        const dx = dir === game_1.Direction.UP_LEFT || dir === game_1.Direction.DOWN_LEFT ? -1 : 1;
+        const dy = dir === game_1.Direction.UP_LEFT || dir === game_1.Direction.UP_RIGHT ? -1 : 1;
+        this.player.actionProcessor.process({
+            type: "Move",
+            direction: dir,
+            targetX: this.player.x + dx,
+            targetY: this.player.y + dy,
+        });
+    }
+    handleDirectionKey(dir) {
+        if (this.player.isPushMoveInputLocked())
+            return;
+        if (this.ignoreDirectionInput())
+            return;
+        if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+            this.processCardinalMove(dir);
+            return;
+        }
+        const WINDOW = 10;
+        if (this.pendingMoveDir !== null &&
+            this.isPerpendicularDir(dir, this.pendingMoveDir) &&
+            Date.now() - this.pendingMoveTime < WINDOW) {
+            // Second key arrived within window — fire diagonal
+            if (this.pendingMoveTimer !== null) {
+                clearTimeout(this.pendingMoveTimer);
+                this.pendingMoveTimer = null;
+            }
+            const diagDir = this.combineDiagonal(dir, this.pendingMoveDir);
+            this.pendingMoveDir = null;
+            this.processDiagonalMove(diagDir);
+        }
+        else {
+            // Buffer this keypress; fire cardinal after window if nothing arrives
+            if (this.pendingMoveTimer !== null)
+                clearTimeout(this.pendingMoveTimer);
+            this.pendingMoveDir = dir;
+            this.pendingMoveTime = Date.now();
+            this.pendingMoveTimer = setTimeout(() => {
+                this.pendingMoveDir = null;
+                this.pendingMoveTimer = null;
+                if (!this.player.isPushMoveInputLocked() && !this.ignoreDirectionInput()) {
+                    this.processCardinalMove(dir);
+                }
+            }, WINDOW);
+        }
+    }
     // Dummy methods for mute button functionality
     isPointInMuteButtonBounds(x, y) {
         const tile = gameConstants_1.GameConstants.TILESIZE;
@@ -73871,6 +73942,18 @@ class PlayerMovement {
         };
         this.player = player;
     }
+    toCardinalDirection(dir) {
+        switch (dir) {
+            case game_1.Direction.UP_LEFT:
+            case game_1.Direction.UP_RIGHT:
+                return game_1.Direction.UP;
+            case game_1.Direction.DOWN_LEFT:
+            case game_1.Direction.DOWN_RIGHT:
+                return game_1.Direction.DOWN;
+            default:
+                return dir;
+        }
+    }
     move(direction, targetX, targetY) {
         if (!(direction in game_1.Direction) || !this.player)
             return;
@@ -73884,7 +73967,7 @@ class PlayerMovement {
             this.lastChangeDirectionTime = now;
             this.player.inputHandler.setMostRecentMoveInput("keyboard");
             this.player.lastDirection = this.player.direction;
-            this.player.direction = direction;
+            this.player.direction = this.toCardinalDirection(direction);
             this.player.tryMove(x, y);
         }
         else {
@@ -73928,6 +74011,14 @@ class PlayerMovement {
                 return { x: this.player.x, y: this.player.y - 1 };
             case game_1.Direction.DOWN:
                 return { x: this.player.x, y: this.player.y + 1 };
+            case game_1.Direction.UP_LEFT:
+                return { x: this.player.x - 1, y: this.player.y - 1 };
+            case game_1.Direction.UP_RIGHT:
+                return { x: this.player.x + 1, y: this.player.y - 1 };
+            case game_1.Direction.DOWN_LEFT:
+                return { x: this.player.x - 1, y: this.player.y + 1 };
+            case game_1.Direction.DOWN_RIGHT:
+                return { x: this.player.x + 1, y: this.player.y + 1 };
             default:
                 return null;
         }

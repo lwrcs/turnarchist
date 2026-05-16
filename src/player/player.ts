@@ -554,6 +554,29 @@ export class Player extends Drawable {
         : { direction: Direction.RIGHT, x: nextX, y: this.y };
     }
 
+    // Diagonal — only when DIAGONAL_ATTACKING is enabled
+    if (GameplaySettings.DIAGONAL_ATTACKING) {
+      const stepX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
+      const stepY = targetY < this.y ? this.y - 1 : this.y + 1;
+
+      if (
+        !this.game.room.roomArray[stepX] ||
+        !this.game.room.roomArray[stepX][stepY]
+      ) {
+        return null;
+      }
+
+      const dir =
+        stepX < this.x
+          ? stepY < this.y
+            ? Direction.UP_LEFT
+            : Direction.DOWN_LEFT
+          : stepY < this.y
+            ? Direction.UP_RIGHT
+            : Direction.DOWN_RIGHT;
+      return { direction: dir, x: stepX, y: stepY };
+    }
+
     return null;
   };
 
@@ -672,8 +695,11 @@ export class Player extends Drawable {
     // Same tile - not in range
     if (eX === this.x && eY === this.y) return false;
 
-    // Diagonal - not in range
-    if (eX !== this.x && eY !== this.y) return false;
+    // Diagonal
+    if (eX !== this.x && eY !== this.y) {
+      if (!GameplaySettings.DIAGONAL_ATTACKING) return false;
+      return Math.abs(eX - this.x) === Math.abs(eY - this.y) && Math.abs(eX - this.x) <= r;
+    }
 
     // Check horizontal range
     if (eY === this.y) {

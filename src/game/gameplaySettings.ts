@@ -92,6 +92,13 @@ export class GameplaySettings {
    */
   static PICKAXE_AS_TOOL: boolean = true;
 
+  /**
+   * When enabled, diagonal attacks are valid:
+   * - Mouse clicks use 8 direction sectors
+   * - Pressing two perpendicular direction keys simultaneously triggers a diagonal attack
+   */
+  static DIAGONAL_ATTACKING: boolean = true;
+
   static readonly BASE_ENEMY_ALERT_RANGE = 4;
   static readonly BASE_ENEMY_ALERT_NEARBY_RANGE = 2;
 

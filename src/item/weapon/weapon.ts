@@ -9,6 +9,7 @@ import { WeaponFragments } from "../usable/weaponFragments";
 import { Enemy } from "../../entity/enemy/enemy";
 import { AttackAnimation } from "../../particle/attackAnimation";
 import { Direction } from "../../game";
+import { GameplaySettings } from "../../game/gameplaySettings";
 import { Armor } from "../armor";
 import { computePushChain, applyPushChain } from "../../utility/pushChain";
 import { SKILL_DISPLAY_NAME, type Skill } from "../../game/skills";
@@ -298,7 +299,7 @@ export abstract class Weapon extends Equippable {
     if (!p) return null;
     const dx = targetX - p.x;
     const dy = targetY - p.y;
-    if (dx !== 0 && dy !== 0) return null;
+    if (dx !== 0 && dy !== 0 && !GameplaySettings.DIAGONAL_ATTACKING) return null;
     if (dx === 0 && dy === 0) return null;
     const sx = dx === 0 ? 0 : dx > 0 ? 1 : -1;
     const sy = dy === 0 ? 0 : dy > 0 ? 1 : -1;

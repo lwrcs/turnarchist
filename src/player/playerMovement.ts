@@ -17,6 +17,19 @@ export class PlayerMovement {
     this.player = player;
   }
 
+  private toCardinalDirection(dir: Direction): Direction {
+    switch (dir) {
+      case Direction.UP_LEFT:
+      case Direction.UP_RIGHT:
+        return Direction.UP;
+      case Direction.DOWN_LEFT:
+      case Direction.DOWN_RIGHT:
+        return Direction.DOWN;
+      default:
+        return dir;
+    }
+  }
+
   move(direction: Direction, targetX?: number, targetY?: number): void {
     if (!(direction in Direction) || !this.player) return;
 
@@ -30,7 +43,7 @@ export class PlayerMovement {
       this.lastChangeDirectionTime = now;
       this.player.inputHandler.setMostRecentMoveInput("keyboard");
       this.player.lastDirection = this.player.direction;
-      this.player.direction = direction;
+      this.player.direction = this.toCardinalDirection(direction);
       this.player.tryMove(x, y);
     } else {
       if (!this.enemyTurnInputLockActive()) {
@@ -89,6 +102,14 @@ export class PlayerMovement {
         return { x: this.player.x, y: this.player.y - 1 };
       case Direction.DOWN:
         return { x: this.player.x, y: this.player.y + 1 };
+      case Direction.UP_LEFT:
+        return { x: this.player.x - 1, y: this.player.y - 1 };
+      case Direction.UP_RIGHT:
+        return { x: this.player.x + 1, y: this.player.y - 1 };
+      case Direction.DOWN_LEFT:
+        return { x: this.player.x - 1, y: this.player.y + 1 };
+      case Direction.DOWN_RIGHT:
+        return { x: this.player.x + 1, y: this.player.y + 1 };
       default:
         return null;
     }

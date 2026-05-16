@@ -28,6 +28,9 @@ export class PlayerInputHandler {
   moveStartTime: number;
   keyboardTarget: Entity | null = null;
   private mouseHoldInitialDirection: Direction | null = null;
+  private pendingMoveDir: Direction | null = null;
+  private pendingMoveTime: number = 0;
+  private pendingMoveTimer: ReturnType<typeof setTimeout> | null = null;
   private mobileAimTileX: number | null = null;
   private mobileAimTileY: number | null = null;
   private bestiaryTouchMoveHandler: ((x: number, y: number) => void) | null =
@@ -470,14 +473,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(-1);
           break;
         }
-        if (this.player.isPushMoveInputLocked()) break;
-        if (!this.ignoreDirectionInput())
-          this.player.actionProcessor.process({
-            type: "Move",
-            direction: Direction.LEFT,
-            targetX: this.player.x - 1,
-            targetY: this.player.y,
-          });
+        this.handleDirectionKey(Direction.LEFT);
         break;
 
       case InputEnum.RIGHT:
@@ -485,14 +481,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(1);
           break;
         }
-        if (this.player.isPushMoveInputLocked()) break;
-        if (!this.ignoreDirectionInput())
-          this.player.actionProcessor.process({
-            type: "Move",
-            direction: Direction.RIGHT,
-            targetX: this.player.x + 1,
-            targetY: this.player.y,
-          });
+        this.handleDirectionKey(Direction.RIGHT);
         break;
 
       case InputEnum.UP:
@@ -500,14 +489,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(-1);
           break;
         }
-        if (this.player.isPushMoveInputLocked()) break;
-        if (!this.ignoreDirectionInput())
-          this.player.actionProcessor.process({
-            type: "Move",
-            direction: Direction.UP,
-            targetX: this.player.x,
-            targetY: this.player.y - 1,
-          });
+        this.handleDirectionKey(Direction.UP);
         break;
 
       case InputEnum.DOWN:
@@ -515,14 +497,7 @@ export class PlayerInputHandler {
           this.navigateDeathScreen(1);
           break;
         }
-        if (this.player.isPushMoveInputLocked()) break;
-        if (!this.ignoreDirectionInput())
-          this.player.actionProcessor.process({
-            type: "Move",
-            direction: Direction.DOWN,
-            targetX: this.player.x,
-            targetY: this.player.y + 1,
-          });
+        this.handleDirectionKey(Direction.DOWN);
         break;
       case InputEnum.SPACE:
         // If camera animation is running, speed it up
@@ -2133,6 +2108,81 @@ export class PlayerInputHandler {
   setMostRecentMoveInput = (input: string) => {
     this.mostRecentMoveInput = input;
   };
+
+  private isPerpendicularDir(a: Direction, b: Direction): boolean {
+    const v = [Direction.UP, Direction.DOWN];
+    const h = [Direction.LEFT, Direction.RIGHT];
+    return (v.includes(a) && h.includes(b)) || (h.includes(a) && v.includes(b));
+  }
+
+  private combineDiagonal(a: Direction, b: Direction): Direction {
+    const up = a === Direction.UP || b === Direction.UP;
+    const left = a === Direction.LEFT || b === Direction.LEFT;
+    if (up && left) return Direction.UP_LEFT;
+    if (up) return Direction.UP_RIGHT;
+    if (left) return Direction.DOWN_LEFT;
+    return Direction.DOWN_RIGHT;
+  }
+
+  private processCardinalMove(dir: Direction): void {
+    const dx = dir === Direction.LEFT ? -1 : dir === Direction.RIGHT ? 1 : 0;
+    const dy = dir === Direction.UP ? -1 : dir === Direction.DOWN ? 1 : 0;
+    this.player.actionProcessor.process({
+      type: "Move",
+      direction: dir,
+      targetX: this.player.x + dx,
+      targetY: this.player.y + dy,
+    });
+  }
+
+  private processDiagonalMove(dir: Direction): void {
+    const dx = dir === Direction.UP_LEFT || dir === Direction.DOWN_LEFT ? -1 : 1;
+    const dy = dir === Direction.UP_LEFT || dir === Direction.UP_RIGHT ? -1 : 1;
+    this.player.actionProcessor.process({
+      type: "Move",
+      direction: dir,
+      targetX: this.player.x + dx,
+      targetY: this.player.y + dy,
+    });
+  }
+
+  private handleDirectionKey(dir: Direction): void {
+    if (this.player.isPushMoveInputLocked()) return;
+    if (this.ignoreDirectionInput()) return;
+
+    if (!GameplaySettings.DIAGONAL_ATTACKING) {
+      this.processCardinalMove(dir);
+      return;
+    }
+
+    const WINDOW = 10;
+    if (
+      this.pendingMoveDir !== null &&
+      this.isPerpendicularDir(dir, this.pendingMoveDir) &&
+      Date.now() - this.pendingMoveTime < WINDOW
+    ) {
+      // Second key arrived within window — fire diagonal
+      if (this.pendingMoveTimer !== null) {
+        clearTimeout(this.pendingMoveTimer);
+        this.pendingMoveTimer = null;
+      }
+      const diagDir = this.combineDiagonal(dir, this.pendingMoveDir);
+      this.pendingMoveDir = null;
+      this.processDiagonalMove(diagDir);
+    } else {
+      // Buffer this keypress; fire cardinal after window if nothing arrives
+      if (this.pendingMoveTimer !== null) clearTimeout(this.pendingMoveTimer);
+      this.pendingMoveDir = dir;
+      this.pendingMoveTime = Date.now();
+      this.pendingMoveTimer = setTimeout(() => {
+        this.pendingMoveDir = null;
+        this.pendingMoveTimer = null;
+        if (!this.player.isPushMoveInputLocked() && !this.ignoreDirectionInput()) {
+          this.processCardinalMove(dir);
+        }
+      }, WINDOW);
+    }
+  }
 
   mouseAngle = () => {
     const mousePosition = MouseCursor.getInstance().getPosition();
