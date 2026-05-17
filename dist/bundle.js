@@ -57692,26 +57692,26 @@ DropTable.drops = [
     // Spell scrolls — wizard-exclusive, rarity scales with pattern power
     {
         itemType: "pointscroll",
-        dropRate: 1000,
-        category: ["consumable", "magic"],
+        dropRate: 5,
+        category: ["magic", "wizard"],
         unique: true,
     },
     {
         itemType: "plusscroll",
-        dropRate: 5,
-        category: ["consumable", "magic"],
+        dropRate: 10,
+        category: ["magic", "wizard"],
         unique: true,
     },
     {
         itemType: "crossscroll",
-        dropRate: 15,
-        category: ["consumable", "magic"],
+        dropRate: 20,
+        category: ["magic", "wizard"],
         unique: true,
     },
     {
         itemType: "wavescroll",
         dropRate: 30,
-        category: ["consumable", "magic"],
+        category: ["magic", "wizard"],
         unique: true,
     },
     // Upgrades
