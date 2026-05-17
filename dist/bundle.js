@@ -10893,6 +10893,7 @@ class HitWarning extends drawable_1.Drawable {
         this._pointerOffset = null;
         this.alpha = 0;
         this.tickedForDeath = false;
+        this.skipSave = false;
         this.tick = () => {
             if (this.tickedForDeath)
                 this.dead = true;
@@ -10993,6 +10994,9 @@ class HitWarning extends drawable_1.Drawable {
         this.isEnemy = isEnemy !== undefined ? isEnemy : true;
         this.pointerOffset = this.getPointerOffset();
         this.removeOverlapping();
+    }
+    getSaveFields() {
+        return { eX: this.eX, eY: this.eY, isEnemy: !!this.isEnemy, dirOnly: !!this.dirOnly };
     }
     getPointerDir() {
         if (this._pointerDir === null) {
@@ -15071,6 +15075,7 @@ class KnightCornerHitWarning extends hitWarning_1.HitWarning {
     constructor(game, x, y, initDir, cornerDir, parent) {
         // dirOnly=true so no X marker, eX/eY = tile itself so base draws nothing
         super(game, x, y, x, y, true, true, parent);
+        this.skipSave = true;
         this._alpha = 0;
         this._tickedForDeath = false;
         this.draw = (delta) => {
@@ -15130,6 +15135,7 @@ class KnightCornerHitWarning extends hitWarning_1.HitWarning {
 class KnightArmHitWarning extends hitWarning_1.HitWarning {
     constructor(game, x, y, sprites, destTiles, w, h, drawX, drawY, clipSide, parent) {
         super(game, x, y, x, y, true, true, parent);
+        this.skipSave = true;
         this._alpha = 0;
         this._tickedForDeath = false;
         this._offscreenFrames = [];
@@ -41530,7 +41536,7 @@ const loadSaveV2 = async (game, save) => {
             }
             room.hitwarnings = [];
             for (const hws of rd.hitWarnings) {
-                const hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.x, hws.y);
+                const hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.eX ?? hws.x, hws.eY ?? hws.y, hws.isEnemy, hws.dirOnly);
                 hw.dead = hws.dead;
                 room.hitwarnings.push(hw);
             }
@@ -47596,7 +47602,23 @@ const validateHitWarningSaveV2 = (v, path) => {
         return (0, errors_1.err)({ kind: "InvalidSchema", message: "y must be number", path: `${path}.y` });
     if (!isBoolean(dead))
         return (0, errors_1.err)({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
-    return (0, errors_1.ok)({ x, y, dead });
+    const eX = get(v, "eX");
+    const eY = get(v, "eY");
+    const isEnemy = get(v, "isEnemy");
+    const dirOnly = get(v, "dirOnly");
+    if (eX !== undefined && !isNumber(eX))
+        return (0, errors_1.err)({ kind: "InvalidSchema", message: "eX must be number", path: `${path}.eX` });
+    if (eY !== undefined && !isNumber(eY))
+        return (0, errors_1.err)({ kind: "InvalidSchema", message: "eY must be number", path: `${path}.eY` });
+    return (0, errors_1.ok)({
+        x,
+        y,
+        dead,
+        eX: isNumber(eX) ? eX : undefined,
+        eY: isNumber(eY) ? eY : undefined,
+        isEnemy: isBoolean(isEnemy) ? isEnemy : true,
+        dirOnly: isBoolean(dirOnly) ? dirOnly : false,
+    });
 };
 
 
@@ -47873,9 +47895,10 @@ const roomToDelta = (game, r, nowMs) => {
 const collectHitWarnings = (room) => {
     const out = [];
     for (const hw of room.hitwarnings) {
-        if (!hw)
+        if (!hw || hw.skipSave)
             continue;
-        out.push({ x: hw.x, y: hw.y, dead: hw.dead });
+        const { eX, eY, isEnemy, dirOnly } = hw.getSaveFields();
+        out.push({ x: hw.x, y: hw.y, dead: hw.dead, eX, eY, isEnemy, dirOnly });
     }
     return out;
 };

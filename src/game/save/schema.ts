@@ -651,6 +651,10 @@ export type HitWarningSaveV2 = {
   x: number;
   y: number;
   dead: boolean;
+  eX?: number;
+  eY?: number;
+  isEnemy: boolean;
+  dirOnly: boolean;
 };
 
 /**

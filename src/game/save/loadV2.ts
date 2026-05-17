@@ -1127,7 +1127,15 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
 
     room.hitwarnings = [];
     for (const hws of rd.hitWarnings) {
-      const hw = new HitWarning(game, hws.x, hws.y, hws.x, hws.y);
+      const hw = new HitWarning(
+        game,
+        hws.x,
+        hws.y,
+        hws.eX ?? hws.x,
+        hws.eY ?? hws.y,
+        hws.isEnemy,
+        hws.dirOnly,
+      );
       hw.dead = hws.dead;
       room.hitwarnings.push(hw);
     }

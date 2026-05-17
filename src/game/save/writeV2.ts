@@ -290,8 +290,9 @@ const roomToDelta = (game: Game, r: Room, nowMs: number): RoomDeltaV2 => {
 const collectHitWarnings = (room: Room): RoomDeltaV2["hitWarnings"] => {
   const out: RoomDeltaV2["hitWarnings"] = [];
   for (const hw of room.hitwarnings) {
-    if (!hw) continue;
-    out.push({ x: hw.x, y: hw.y, dead: hw.dead });
+    if (!hw || hw.skipSave) continue;
+    const { eX, eY, isEnemy, dirOnly } = hw.getSaveFields();
+    out.push({ x: hw.x, y: hw.y, dead: hw.dead, eX, eY, isEnemy, dirOnly });
   }
   return out;
 };

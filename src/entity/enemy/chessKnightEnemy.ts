@@ -23,6 +23,7 @@ function knightCornerSprite(initDir: Direction, cornerDir: Direction): [number, 
 }
 
 class KnightCornerHitWarning extends HitWarning {
+  override readonly skipSave: boolean = true;
   private cornerTileX: number;
   private cornerTileY: number;
   private cornerRedTileX: number;
@@ -96,6 +97,7 @@ class KnightCornerHitWarning extends HitWarning {
 // Alternate hitwarning: composites one or two arm sprites onto an offscreen canvas,
 // then blits the result at 50% alpha so overlapping halves read as a single shape.
 class KnightArmHitWarning extends HitWarning {
+  override readonly skipSave: boolean = true;
   private spriteW: number;
   private spriteH: number;
   private spriteDrawX: number;

@@ -2277,5 +2277,21 @@ const validateHitWarningSaveV2 = (v: unknown, path: string): Result<HitWarningSa
   if (!isNumber(y)) return err({ kind: "InvalidSchema", message: "y must be number", path: `${path}.y` });
   if (!isBoolean(dead))
     return err({ kind: "InvalidSchema", message: "dead must be boolean", path: `${path}.dead` });
-  return ok({ x, y, dead });
+  const eX = get(v, "eX");
+  const eY = get(v, "eY");
+  const isEnemy = get(v, "isEnemy");
+  const dirOnly = get(v, "dirOnly");
+  if (eX !== undefined && !isNumber(eX))
+    return err({ kind: "InvalidSchema", message: "eX must be number", path: `${path}.eX` });
+  if (eY !== undefined && !isNumber(eY))
+    return err({ kind: "InvalidSchema", message: "eY must be number", path: `${path}.eY` });
+  return ok({
+    x,
+    y,
+    dead,
+    eX: isNumber(eX) ? eX : undefined,
+    eY: isNumber(eY) ? eY : undefined,
+    isEnemy: isBoolean(isEnemy) ? isEnemy : true,
+    dirOnly: isBoolean(dirOnly) ? dirOnly : false,
+  });
 };
