@@ -29134,6 +29134,7 @@ class Game {
         // Reference package.json
         this.version = "0.3.2";
         this.loginMessage = "";
+        this.prevIsMobile = null;
         /**
          * True while a save is being loaded and the Game instance is temporarily in an inconsistent state
          * (players/rooms cleared, regeneration in progress). The run loop will render a safe loading screen
@@ -31389,26 +31390,35 @@ class Game {
             // Calculate maximum possible scale based on window size
             let maxWidthScale = Math.floor(window.innerWidth / gameConstants_1.GameConstants.DEFAULTWIDTH);
             let maxHeightScale = Math.floor(window.innerHeight / gameConstants_1.GameConstants.DEFAULTHEIGHT);
+            const mobileChanged = this.isMobile !== this.prevIsMobile;
             if (this.isMobile) {
-                if (this.isMobile)
+                if (mobileChanged) {
                     console.log("Mobile detected");
-                gameConstants_1.GameConstants.SHADE_LEVELS = 35;
+                    gameConstants_1.GameConstants.SHADE_LEVELS = 35;
+                    levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 8;
+                    levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+                    gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
+                }
                 gameConstants_1.GameConstants.isMobile = true;
-                levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 8;
-                levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE = 7;
-                gameConstants_1.GameConstants.USE_WEBGL_BLUR = true;
                 // Use smaller scale for mobile devices based on screen size
                 // Adjust max scale with scaleOffset
                 const integerScale = gameConstants_1.GameConstants.SOFT_SCALE + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
             }
             else {
+                if (mobileChanged) {
+                    levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP = 2;
+                    if (!isSafari)
+                        gameConstants_1.GameConstants.USE_WEBGL_BLUR = false;
+                }
                 gameConstants_1.GameConstants.isMobile = false;
                 // For desktop, use standard scaling logic
                 // Ensure GameConstants.SCALE is an integer. If not, round it.
                 const integerScale = gameConstants_1.GameConstants.SOFT_SCALE + scaleOffset;
                 Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
             }
+            if (mobileChanged)
+                this.prevIsMobile = this.isMobile;
             // Handle case where scale would be 0
             if (Game.scale === 0) {
                 // Recalculate max scales without flooring to check for minimum scale
@@ -31473,6 +31483,11 @@ class Game {
             // If photo mode is active, lock canvas back to photo dimensions after scale computation.
             if (this.photoMode) {
                 this.applyPhotoModeResize();
+            }
+            // Lighting constants changed — recalculate door light sources for the current room.
+            if (mobileChanged && this.room) {
+                this.room.resetDoorLightSources();
+                this.room.updateLighting();
             }
         };
         this.shakeScreen = (shakeX, shakeY, clamp = false) => {
@@ -41382,7 +41397,10 @@ const loadSaveV2 = async (game, save) => {
                 if (!spawned.pickedUp)
                     room.items.push(spawned);
             }
-            room.lightSources = [];
+            // Clear non-door light sources (enemies re-add their own below).
+            // Door light sources were pushed to the array by Door constructors during
+            // level generation; preserve them so updateLighting can emit through doors.
+            room.lightSources = room.doors.flatMap(d => d?.lightSource ? [d.lightSource] : []);
             room.entities = [];
             // Reset per-room counters derived from the entities list.
             room.currentSpawnerCount = 0;

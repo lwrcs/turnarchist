@@ -751,6 +751,7 @@ export class Game {
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
   isMobile: boolean;
+  private prevIsMobile: boolean | null = null;
   started: boolean;
   startedFadeOut: boolean;
   screenShakeActive: boolean;
@@ -4593,25 +4594,33 @@ export class Game {
       window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
 
+    const mobileChanged = this.isMobile !== this.prevIsMobile;
     if (this.isMobile) {
-      if (this.isMobile) console.log("Mobile detected");
-      GameConstants.SHADE_LEVELS = 35;
+      if (mobileChanged) {
+        console.log("Mobile detected");
+        GameConstants.SHADE_LEVELS = 35;
+        LevelConstants.LIGHTING_ANGLE_STEP = 8;
+        LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+        GameConstants.USE_WEBGL_BLUR = true;
+      }
       GameConstants.isMobile = true;
-      LevelConstants.LIGHTING_ANGLE_STEP = 8;
-      LevelConstants.LIGHTING_MAX_DISTANCE = 7;
-      GameConstants.USE_WEBGL_BLUR = true;
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
       const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
+      if (mobileChanged) {
+        LevelConstants.LIGHTING_ANGLE_STEP = 2;
+        if (!isSafari) GameConstants.USE_WEBGL_BLUR = false;
+      }
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
       const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
+    if (mobileChanged) this.prevIsMobile = this.isMobile;
 
     // Handle case where scale would be 0
     if (Game.scale === 0) {
@@ -4703,6 +4712,12 @@ export class Game {
     // If photo mode is active, lock canvas back to photo dimensions after scale computation.
     if (this.photoMode) {
       this.applyPhotoModeResize();
+    }
+
+    // Lighting constants changed — recalculate door light sources for the current room.
+    if (mobileChanged && this.room) {
+      this.room.resetDoorLightSources();
+      this.room.updateLighting();
     }
   };
 
