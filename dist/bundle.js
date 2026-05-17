@@ -66228,11 +66228,6 @@ function getDungeonDepthSpec(depth, rand) {
  */
 function getEnvDrivenSpec(parentEnv, numParentRooms) {
     switch (parentEnv) {
-        case environmentTypes_1.EnvType.CAVE:
-            return {
-                environment: environmentTypes_1.EnvType.DARK_CASTLE,
-                options: (0, sidePathManager_1.createDarkCastleSidePathOptions)(),
-            };
         case environmentTypes_1.EnvType.FOREST:
             return {
                 environment: environmentTypes_1.EnvType.CASTLE,
@@ -84526,7 +84521,6 @@ class Populator {
                 this.level.isMainPath) {
                 const castleEntryEnvs = new Set([
                     environmentTypes_1.EnvType.FOREST,
-                    environmentTypes_1.EnvType.CAVE,
                 ]);
                 let mainDown = null;
                 let hasCastleChainEntry = false;
@@ -89641,10 +89635,11 @@ class DownLadder extends passageway_1.Passageway {
         this.environment = environment;
         this.opts = opts;
         this.sidePathManager = new sidePathManager_1.SidePathManager(game);
-        // Determine effective lock based on save override, generator intent, or explicit param
+        // Determine effective lock based on save override, generator intent, or explicit param.
+        // opts.locked === false opts out of the isSidePath default (used by cave pockets).
         const effectiveLockType = lockStateOverride
             ? lockStateOverride.lockType
-            : isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE
+            : isSidePath && !gameConstants_1.GameConstants.DEVELOPER_MODE && opts?.locked !== false
                 ? lockable_1.LockType.LOCKED
                 : lockType;
         // Initialize lockable using effective state (include saved keyID if provided)

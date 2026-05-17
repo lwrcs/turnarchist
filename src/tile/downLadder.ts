@@ -45,10 +45,11 @@ export class DownLadder extends Passageway {
     this.opts = opts;
     this.sidePathManager = new SidePathManager(game);
 
-    // Determine effective lock based on save override, generator intent, or explicit param
+    // Determine effective lock based on save override, generator intent, or explicit param.
+    // opts.locked === false opts out of the isSidePath default (used by cave pockets).
     const effectiveLockType = lockStateOverride
       ? lockStateOverride.lockType
-      : isSidePath && !GameConstants.DEVELOPER_MODE
+      : isSidePath && !GameConstants.DEVELOPER_MODE && opts?.locked !== false
         ? LockType.LOCKED
         : lockType;
 
