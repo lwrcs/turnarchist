@@ -68,6 +68,7 @@ import fontUrl = require("../res/font.png");
 import { FeedbackButton } from "./gui/feedbackButton";
 import { OneTimeEventTracker } from "./game/oneTimeEventTracker";
 import { TutorialFlags } from "./game/tutorialFlags";
+import { isTutorialHintShown, markTutorialHintShown } from "./game/tutorialPersistence";
 import { XPCounter } from "./gui/xpCounter";
 import { Crate } from "./entity/object/crate";
 import { Barrel } from "./entity/object/barrel";
@@ -5723,6 +5724,7 @@ export class Game {
     // Pointer to quickbar slot 2 (index 1)
     const id = "equip-candle";
     if (this.pointers.has(id)) return;
+    if (isTutorialHintShown(id)) return;
 
     const resolver: PointerAnchorResolver = () => {
       return inv.getQuickbarSlotRect(1);
@@ -5758,6 +5760,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: "Equip Candle",
@@ -5766,14 +5769,14 @@ export class Game {
       safety,
       arrowDirection: "down",
       textDy: -2,
-      timeoutMs: 60000,
+      timeoutMs: 15000,
       tags: ["tutorial"],
       zIndex: 10,
     });
 
     // Pointer to quickbar slot 3 (index 2) when the wooden shield is in inventory
     const shieldId = "equip-wooden-shield";
-    if (!this.pointers.has(shieldId)) {
+    if (!this.pointers.has(shieldId) && !isTutorialHintShown(shieldId)) {
       let hasWoodenShield = false;
       try {
         for (const it of inv.items) {
@@ -5801,6 +5804,7 @@ export class Game {
           return false;
         };
 
+        markTutorialHintShown(shieldId);
         this.addPointer({
           id: shieldId,
           text: "Equip Shield",
@@ -5809,7 +5813,7 @@ export class Game {
           safety,
           arrowDirection: "down",
           textDy: -2,
-          timeoutMs: 60000,
+          timeoutMs: 15000,
           tags: ["tutorial"],
           zIndex: 10,
         });
@@ -5820,6 +5824,7 @@ export class Game {
   // Show a pointer prompting the user to open the inventory when quickbar is full
   public maybeShowOpenInventoryPointer = () => {
     if (this.tutorialFlags.openInventoryShown) return;
+    if (isTutorialHintShown("open-inventory")) return;
     if (this.levelState !== LevelState.IN_LEVEL) return;
     const player = this.players?.[this.localPlayerID];
     const inv = player?.inventory;
@@ -5833,6 +5838,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: this.isMobile ? "Tap to open inventory" : "Click to open inventory",
@@ -5841,7 +5847,7 @@ export class Game {
       safety,
       arrowDirection: "down",
       textDy: -2,
-      timeoutMs: 45000,
+      timeoutMs: 12000,
       tags: ["tutorial"],
       zIndex: 10,
     });
@@ -5851,6 +5857,7 @@ export class Game {
   // Show a pointer prompting the user to open the skills panel after their first skill level-up.
   public maybeShowOpenSkillsPointer = () => {
     if (this.tutorialFlags.openSkillsShown) return;
+    if (isTutorialHintShown("open-skills")) return;
     if (this.levelState !== LevelState.IN_LEVEL) return;
     const player = this.players?.[this.localPlayerID];
     if (!player) return;
@@ -5865,6 +5872,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: this.isMobile ? "Tap Skills" : "Click Skills",
@@ -5874,7 +5882,7 @@ export class Game {
       // Place the text underneath the button, with an arrow pointing up.
       arrowDirection: "up",
       textDy: 2,
-      timeoutMs: 45000,
+      timeoutMs: 12000,
       tags: ["tutorial"],
       zIndex: 10,
     });

@@ -28699,6 +28699,7 @@ const fontUrl = __webpack_require__(/*! ../res/font.png */ "./res/font.png");
 const feedbackButton_1 = __webpack_require__(/*! ./gui/feedbackButton */ "./src/gui/feedbackButton.ts");
 const oneTimeEventTracker_1 = __webpack_require__(/*! ./game/oneTimeEventTracker */ "./src/game/oneTimeEventTracker.ts");
 const tutorialFlags_1 = __webpack_require__(/*! ./game/tutorialFlags */ "./src/game/tutorialFlags.ts");
+const tutorialPersistence_1 = __webpack_require__(/*! ./game/tutorialPersistence */ "./src/game/tutorialPersistence.ts");
 const xpCounter_1 = __webpack_require__(/*! ./gui/xpCounter */ "./src/gui/xpCounter.ts");
 const api_1 = __webpack_require__(/*! ./api */ "./src/api/index.ts");
 var LevelState;
@@ -32208,6 +32209,8 @@ class Game {
             const id = "equip-candle";
             if (this.pointers.has(id))
                 return;
+            if ((0, tutorialPersistence_1.isTutorialHintShown)(id))
+                return;
             const resolver = () => {
                 return inv.getQuickbarSlotRect(1);
             };
@@ -32239,6 +32242,7 @@ class Game {
                 () => this.levelState !== LevelState.IN_LEVEL,
                 () => player.dead,
             ];
+            (0, tutorialPersistence_1.markTutorialHintShown)(id);
             this.addPointer({
                 id,
                 text: "Equip Candle",
@@ -32247,13 +32251,13 @@ class Game {
                 safety,
                 arrowDirection: "down",
                 textDy: -2,
-                timeoutMs: 60000,
+                timeoutMs: 15000,
                 tags: ["tutorial"],
                 zIndex: 10,
             });
             // Pointer to quickbar slot 3 (index 2) when the wooden shield is in inventory
             const shieldId = "equip-wooden-shield";
-            if (!this.pointers.has(shieldId)) {
+            if (!this.pointers.has(shieldId) && !(0, tutorialPersistence_1.isTutorialHintShown)(shieldId)) {
                 let hasWoodenShield = false;
                 try {
                     for (const it of inv.items) {
@@ -32278,6 +32282,7 @@ class Game {
                         catch { }
                         return false;
                     };
+                    (0, tutorialPersistence_1.markTutorialHintShown)(shieldId);
                     this.addPointer({
                         id: shieldId,
                         text: "Equip Shield",
@@ -32286,7 +32291,7 @@ class Game {
                         safety,
                         arrowDirection: "down",
                         textDy: -2,
-                        timeoutMs: 60000,
+                        timeoutMs: 15000,
                         tags: ["tutorial"],
                         zIndex: 10,
                     });
@@ -32296,6 +32301,8 @@ class Game {
         // Show a pointer prompting the user to open the inventory when quickbar is full
         this.maybeShowOpenInventoryPointer = () => {
             if (this.tutorialFlags.openInventoryShown)
+                return;
+            if ((0, tutorialPersistence_1.isTutorialHintShown)("open-inventory"))
                 return;
             if (this.levelState !== LevelState.IN_LEVEL)
                 return;
@@ -32310,6 +32317,7 @@ class Game {
                 () => this.levelState !== LevelState.IN_LEVEL,
                 () => player.dead,
             ];
+            (0, tutorialPersistence_1.markTutorialHintShown)(id);
             this.addPointer({
                 id,
                 text: this.isMobile ? "Tap to open inventory" : "Click to open inventory",
@@ -32318,7 +32326,7 @@ class Game {
                 safety,
                 arrowDirection: "down",
                 textDy: -2,
-                timeoutMs: 45000,
+                timeoutMs: 12000,
                 tags: ["tutorial"],
                 zIndex: 10,
             });
@@ -32327,6 +32335,8 @@ class Game {
         // Show a pointer prompting the user to open the skills panel after their first skill level-up.
         this.maybeShowOpenSkillsPointer = () => {
             if (this.tutorialFlags.openSkillsShown)
+                return;
+            if ((0, tutorialPersistence_1.isTutorialHintShown)("open-skills"))
                 return;
             if (this.levelState !== LevelState.IN_LEVEL)
                 return;
@@ -32343,6 +32353,7 @@ class Game {
                 () => this.levelState !== LevelState.IN_LEVEL,
                 () => player.dead,
             ];
+            (0, tutorialPersistence_1.markTutorialHintShown)(id);
             this.addPointer({
                 id,
                 text: this.isMobile ? "Tap Skills" : "Click Skills",
@@ -32352,7 +32363,7 @@ class Game {
                 // Place the text underneath the button, with an arrow pointing up.
                 arrowDirection: "up",
                 textDy: 2,
-                timeoutMs: 45000,
+                timeoutMs: 12000,
                 tags: ["tutorial"],
                 zIndex: 10,
             });
@@ -49132,6 +49143,51 @@ class TutorialFlags {
     }
 }
 exports.TutorialFlags = TutorialFlags;
+
+
+/***/ }),
+
+/***/ "./src/game/tutorialPersistence.ts":
+/*!*****************************************!*\
+  !*** ./src/game/tutorialPersistence.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// Persistent (cross-session) tracking for first-game-only tutorial hints.
+// Uses localStorage directly so the flags survive across save/load cycles and new games.
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.markTutorialHintShown = exports.isTutorialHintShown = void 0;
+const KEY = "wr_tutorial_shown";
+const load = () => {
+    try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw)
+            return new Set();
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed))
+            return new Set(parsed);
+    }
+    catch { }
+    return new Set();
+};
+const flush = (shown) => {
+    try {
+        localStorage.setItem(KEY, JSON.stringify(Array.from(shown)));
+    }
+    catch { }
+};
+const isTutorialHintShown = (id) => {
+    return load().has(id);
+};
+exports.isTutorialHintShown = isTutorialHintShown;
+const markTutorialHintShown = (id) => {
+    const shown = load();
+    shown.add(id);
+    flush(shown);
+};
+exports.markTutorialHintShown = markTutorialHintShown;
 
 
 /***/ }),
