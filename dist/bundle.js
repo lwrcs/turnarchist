@@ -51175,7 +51175,7 @@ class HoverText {
                 return strings;
             }
             if (menu_1.Menu.isPointInOpenMenuButtonBounds(input_1.Input.mouseX, input_1.Input.mouseY)) {
-                strings.push(player.menu.open ? "Close Menu" : "Open Menu");
+                strings.push(player.settingsMenu?.open ? "Close Menu" : "Open Menu");
                 return strings;
             }
             if (xpCounter_1.XPCounter.isPointInBounds(input_1.Input.mouseX, input_1.Input.mouseY)) {
@@ -53118,6 +53118,655 @@ PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
     game_1.Game.ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
     game_1.Game.ctx.restore();
 };
+
+
+/***/ }),
+
+/***/ "./src/gui/settingsMenu.ts":
+/*!*********************************!*\
+  !*** ./src/gui/settingsMenu.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SettingsMenu = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/gui/mouseCursor.ts");
+const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
+const BUTTON_HEIGHT = 14;
+const SPACING = 2;
+const SIDEBAR_PADDING = 12;
+const CONTENT_PADDING = 24;
+const PANEL_GAP = 4;
+const CHECKBOX_SIZE = 7;
+const CHECKBOX_MARGIN = 4;
+const DISMISS_MARGIN = 10;
+class SettingsMenu {
+    constructor(game) {
+        this.open = false;
+        this.activeCategoryIndex = 0;
+        this.activeItemIndex = 0;
+        this.focusPanel = "sidebar";
+        this.scrollOffset = 0;
+        // Hover animation state per slot
+        this.sidebarHoverAnims = [];
+        this.contentHoverAnims = [];
+        // Debouncing
+        this.lastClickTime = 0;
+        this.CLICK_DEBOUNCE = 150;
+        // Fade animation
+        this.openFade = null;
+        // Layout mode: sidebar (wide) or topbar (narrow/mobile)
+        this.layoutMode = "sidebar";
+        // Track input method for hover behavior
+        this.lastInputWasMouse = false;
+        // Cached layout (recomputed on open / resize)
+        this.sidebarX = 0;
+        this.sidebarY = 0;
+        this.sidebarWidth = 0;
+        this.contentX = 0;
+        this.contentY = 0;
+        this.contentWidth = 0;
+        this.visibleContentHeight = 0;
+        // Topbar-specific layout
+        this.topbarX = 0;
+        this.topbarY = 0;
+        this.topbarButtonWidth = 0;
+        this.game = game;
+        this.categories = this.buildCategories();
+        this.sidebarHoverAnims = new Array(this.categories.length).fill(0);
+        this.contentHoverAnims = new Array(10).fill(0);
+    }
+    buildCategories() {
+        return [
+            {
+                name: "Graphics",
+                items: [
+                    { label: "- Scale", kind: "action", onActivate: () => this.game.decreaseScale() },
+                    { label: "+ Scale", kind: "action", onActivate: () => this.game.increaseScale() },
+                    {
+                        label: "Smooth Lighting",
+                        kind: "toggle",
+                        getState: () => gameConstants_1.GameConstants.SMOOTH_LIGHTING,
+                        onActivate: () => {
+                            gameConstants_1.GameConstants.SMOOTH_LIGHTING = !gameConstants_1.GameConstants.SMOOTH_LIGHTING;
+                            this.game.pushMessage(`Smooth lighting is now ${gameConstants_1.GameConstants.SMOOTH_LIGHTING ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
+                    {
+                        label: "Screen Shake",
+                        kind: "toggle",
+                        getState: () => gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED,
+                        onActivate: () => {
+                            gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED = !gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED;
+                            this.game.pushMessage(`Screen shake is now ${gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
+                ],
+            },
+            {
+                name: "Audio",
+                items: [
+                    {
+                        label: "Mute Sound",
+                        kind: "toggle",
+                        getState: () => sound_1.Sound.audioMuted,
+                        onActivate: () => {
+                            sound_1.Sound.toggleMute();
+                            this.game.pushMessage(sound_1.Sound.audioMuted ? "Sound Muted" : "Sound Unmuted");
+                            this.saveSettings();
+                        },
+                    },
+                ],
+            },
+            {
+                name: "Controls",
+                items: [
+                    {
+                        label: "Slow Inputs Near Enemies",
+                        kind: "toggle",
+                        getState: () => gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
+                        onActivate: () => {
+                            gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES = !gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES;
+                            this.game.pushMessage(`Slow inputs near enemies is now ${gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
+                    {
+                        label: "Hover Text",
+                        kind: "toggle",
+                        getState: () => gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
+                        onActivate: () => {
+                            gameConstants_1.GameConstants.HOVER_TEXT_ENABLED = !gameConstants_1.GameConstants.HOVER_TEXT_ENABLED;
+                            this.game.pushMessage(`Hover text is now ${gameConstants_1.GameConstants.HOVER_TEXT_ENABLED ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
+                ],
+            },
+            {
+                name: "Game",
+                items: [
+                    {
+                        label: "New Game",
+                        kind: "action",
+                        onActivate: () => {
+                            this.close();
+                            this.game.newGame();
+                        },
+                    },
+                ],
+            },
+        ];
+    }
+    saveSettings() {
+        try {
+            const { saveSettings } = __webpack_require__(/*! ../game/settingsPersistence */ "./src/game/settingsPersistence.ts");
+            saveSettings(this.game);
+        }
+        catch { }
+    }
+    toggleOpen() {
+        if (this.open && (!this.openFade || this.openFade.kind !== "closing")) {
+            this.close();
+        }
+        else {
+            this.openMenu();
+        }
+    }
+    openMenu() {
+        this.open = true;
+        this.focusPanel = "sidebar";
+        this.activeItemIndex = 0;
+        this.scrollOffset = 0;
+        this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
+        this.computeLayout();
+    }
+    close() {
+        if (!this.open)
+            return;
+        this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
+    }
+    openAlpha() {
+        if (!this.open)
+            return 0;
+        if (!this.openFade)
+            return 1;
+        const t = Math.max(0, Math.min(1, (Date.now() - this.openFade.startMs) / this.openFade.durationMs));
+        const ease = t * (2 - t); // ease-out quadratic
+        if (this.openFade.kind === "opening") {
+            if (t >= 1)
+                this.openFade = null;
+            return ease;
+        }
+        const a = 1 - ease;
+        if (t >= 1) {
+            this.openFade = null;
+            this.open = false;
+        }
+        return a;
+    }
+    computeLayout() {
+        const screenW = gameConstants_1.GameConstants.WIDTH;
+        const screenH = gameConstants_1.GameConstants.HEIGHT;
+        const MARGIN = 6;
+        // Sidebar width: longest category name + padding
+        let maxSidebarText = 0;
+        for (const cat of this.categories) {
+            const w = game_1.Game.measureText(cat.name).width;
+            if (w > maxSidebarText)
+                maxSidebarText = w;
+        }
+        this.sidebarWidth = maxSidebarText + SIDEBAR_PADDING;
+        // Content width: longest label across ALL categories + padding (checkbox area + text padding)
+        let maxContentText = 0;
+        for (const cat of this.categories) {
+            for (const item of cat.items) {
+                const w = game_1.Game.measureText(item.label).width;
+                if (w > maxContentText)
+                    maxContentText = w;
+            }
+        }
+        this.contentWidth = maxContentText + CONTENT_PADDING;
+        // Decide layout mode based on available width (extra 16px padding before switching)
+        const sidebarTotalWidth = this.sidebarWidth + PANEL_GAP + this.contentWidth;
+        if (sidebarTotalWidth + MARGIN * 2 + 16 > screenW) {
+            this.layoutMode = "topbar";
+        }
+        else {
+            this.layoutMode = "sidebar";
+        }
+        const items = this.categories[this.activeCategoryIndex].items;
+        if (this.layoutMode === "sidebar") {
+            // --- SIDEBAR LAYOUT (wide screens) ---
+            const startX = Math.round((screenW - sidebarTotalWidth) / 2);
+            this.sidebarX = startX;
+            this.contentX = startX + this.sidebarWidth + PANEL_GAP;
+            const sidebarHeight = this.categories.length * (BUTTON_HEIGHT + SPACING) - SPACING;
+            const contentHeight = items.length * (BUTTON_HEIGHT + SPACING) - SPACING;
+            const tallest = Math.max(sidebarHeight, contentHeight);
+            const topY = Math.round((screenH - tallest) / 2);
+            this.sidebarY = topY;
+            this.contentY = topY;
+            this.visibleContentHeight = screenH - topY * 2;
+        }
+        else {
+            // --- TOPBAR LAYOUT (narrow screens) ---
+            // Topbar button width: same as sidebar button width so text fits
+            this.topbarButtonWidth = this.sidebarWidth;
+            // Topbar: 2x2 grid of category buttons, centered
+            const topbarCols = 2;
+            const topbarRows = Math.ceil(this.categories.length / topbarCols);
+            const topbarTotalWidth = topbarCols * (this.topbarButtonWidth + SPACING) - SPACING;
+            const topbarTotalHeight = topbarRows * (BUTTON_HEIGHT + SPACING) - SPACING;
+            this.topbarX = Math.round((screenW - topbarTotalWidth) / 2);
+            this.topbarY = MARGIN + 10;
+            // Content panel: centered below topbar grid, clamped to screen width
+            const maxContentWidth = screenW - MARGIN * 2;
+            this.contentWidth = Math.min(this.contentWidth, maxContentWidth);
+            this.contentX = Math.round((screenW - this.contentWidth) / 2);
+            this.contentY = this.topbarY + topbarTotalHeight + PANEL_GAP;
+            this.visibleContentHeight = screenH - this.contentY - MARGIN;
+        }
+        // Ensure hover anim arrays are sized
+        while (this.contentHoverAnims.length < items.length) {
+            this.contentHoverAnims.push(0);
+        }
+    }
+    // ==================== DRAWING ====================
+    draw(delta) {
+        if (!this.open)
+            return;
+        const alpha = this.openAlpha();
+        if (alpha <= 0)
+            return;
+        const ctx = game_1.Game.ctx;
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = alpha;
+        // Scrim
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        // Recompute layout in case of resize
+        this.computeLayout();
+        // Draw sidebar
+        this.drawSidebar(delta);
+        // Draw content
+        this.drawContent(delta);
+        ctx.restore();
+    }
+    drawSidebar(delta) {
+        const ctx = game_1.Game.ctx;
+        for (let i = 0; i < this.categories.length; i++) {
+            const cat = this.categories[i];
+            // Position depends on layout mode
+            let btnX, btnY, btnW;
+            if (this.layoutMode === "topbar") {
+                const pos = this.getTopbarButtonPos(i);
+                btnX = pos.x;
+                btnY = pos.y;
+                btnW = this.topbarButtonWidth;
+            }
+            else {
+                btnX = this.sidebarX;
+                btnY = this.sidebarY + i * (BUTTON_HEIGHT + SPACING);
+                btnW = this.sidebarWidth;
+            }
+            // Hover animation (only for mouse input)
+            const isSelected = this.focusPanel === "sidebar" && this.activeCategoryIndex === i;
+            const isActive = this.activeCategoryIndex === i;
+            let hovered = false;
+            if (this.lastInputWasMouse) {
+                const cursor = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                hovered = this.isPointInRect(cursor.x, cursor.y, btnX, btnY, btnW, BUTTON_HEIGHT);
+            }
+            const target = (isSelected || hovered) ? 1 : 0;
+            this.sidebarHoverAnims[i] += 0.3 * delta * (target - this.sidebarHoverAnims[i]);
+            this.sidebarHoverAnims[i] = Math.max(0, Math.min(1, this.sidebarHoverAnims[i]));
+            const growPx = Math.round(1 * this.sidebarHoverAnims[i]);
+            const bx = Math.round(btnX - growPx);
+            const by = Math.round(btnY - growPx);
+            const bw = Math.round(btnW + 2 * growPx);
+            const bh = Math.round(BUTTON_HEIGHT + 2 * growPx);
+            // Background - darker and more opaque if this is the active category
+            ctx.fillStyle = isActive ? "rgba(40, 40, 40, 0.8)" : "rgba(100, 100, 100, 0.5)";
+            ctx.fillRect(bx, by, bw, bh);
+            // Text (centered)
+            ctx.fillStyle = "rgba(255, 255, 0, 1)";
+            const textW = game_1.Game.measureText(cat.name).width;
+            const textX = Math.round(bx + (bw - textW) / 2);
+            const textY = Math.round(by + (bh - game_1.Game.letter_height) / 2);
+            game_1.Game.fillText(cat.name, textX, textY);
+        }
+    }
+    drawContent(delta) {
+        const ctx = game_1.Game.ctx;
+        const items = this.categories[this.activeCategoryIndex].items;
+        // Clip to content area for scrolling
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(this.contentX - 1, this.contentY - 1, this.contentWidth + 2, this.visibleContentHeight + 2);
+        ctx.clip();
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const baseY = this.contentY + i * (BUTTON_HEIGHT + SPACING) - this.scrollOffset;
+            // Hover animation (only for mouse input)
+            const isSelected = this.focusPanel === "content" && this.activeItemIndex === i;
+            let hovered = false;
+            if (this.lastInputWasMouse) {
+                const cursor = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                hovered = this.isPointInRect(cursor.x, cursor.y, this.contentX, baseY, this.contentWidth, BUTTON_HEIGHT);
+            }
+            const target = (isSelected || hovered) ? 1 : 0;
+            if (i >= this.contentHoverAnims.length)
+                this.contentHoverAnims.push(0);
+            this.contentHoverAnims[i] += 0.3 * delta * (target - this.contentHoverAnims[i]);
+            this.contentHoverAnims[i] = Math.max(0, Math.min(1, this.contentHoverAnims[i]));
+            const growPx = Math.round(1 * this.contentHoverAnims[i]);
+            const bx = Math.round(this.contentX - growPx);
+            const by = Math.round(baseY - growPx);
+            const bw = Math.round(this.contentWidth + 2 * growPx);
+            const bh = Math.round(BUTTON_HEIGHT + 2 * growPx);
+            // Background
+            ctx.fillStyle = isSelected ? "rgba(75, 75, 75, 0.5)" : "rgba(100, 100, 100, 0.5)";
+            ctx.fillRect(bx, by, bw, bh);
+            // Checkbox for toggles
+            const textStartX = this.contentX + CHECKBOX_MARGIN + CHECKBOX_SIZE + 4;
+            if (item.kind === "toggle") {
+                const checkX = Math.round(this.contentX + CHECKBOX_MARGIN);
+                const checkY = Math.round(baseY + (BUTTON_HEIGHT - CHECKBOX_SIZE) / 2);
+                // Draw 1px border using fillRects for pixel perfection
+                ctx.fillStyle = "rgba(255, 255, 0, 1)";
+                // Top
+                ctx.fillRect(checkX, checkY, CHECKBOX_SIZE, 1);
+                // Bottom
+                ctx.fillRect(checkX, checkY + CHECKBOX_SIZE - 1, CHECKBOX_SIZE, 1);
+                // Left
+                ctx.fillRect(checkX, checkY, 1, CHECKBOX_SIZE);
+                // Right
+                ctx.fillRect(checkX + CHECKBOX_SIZE - 1, checkY, 1, CHECKBOX_SIZE);
+                // Fill if toggled
+                if (item.getState && item.getState()) {
+                    ctx.fillRect(checkX + 2, checkY + 2, CHECKBOX_SIZE - 4, CHECKBOX_SIZE - 4);
+                }
+            }
+            // Text
+            ctx.fillStyle = "rgba(255, 255, 0, 1)";
+            const textX = Math.round(item.kind === "toggle" ? textStartX : this.contentX + CHECKBOX_MARGIN);
+            const textY = Math.round(baseY + (BUTTON_HEIGHT - game_1.Game.letter_height) / 2);
+            game_1.Game.fillText(item.label, textX, textY);
+        }
+        ctx.restore();
+        // Scroll indicator
+        const totalContentH = items.length * (BUTTON_HEIGHT + SPACING) - SPACING;
+        if (totalContentH > this.visibleContentHeight) {
+            const barHeight = Math.max(4, Math.round(this.visibleContentHeight * (this.visibleContentHeight / totalContentH)));
+            const barY = Math.round(this.contentY + (this.scrollOffset / (totalContentH - this.visibleContentHeight)) * (this.visibleContentHeight - barHeight));
+            ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.fillRect(this.contentX + this.contentWidth + 1, barY, 2, barHeight);
+        }
+    }
+    // ==================== INPUT ====================
+    inputHandler(input) {
+        if (!this.open)
+            return;
+        if (this.openFade?.kind === "closing")
+            return;
+        const items = this.categories[this.activeCategoryIndex].items;
+        // Arrow keys / WASD disable mouse hover; mouse move or click enables it
+        if (input === input_1.InputEnum.UP || input === input_1.InputEnum.DOWN || input === input_1.InputEnum.LEFT || input === input_1.InputEnum.RIGHT) {
+            this.lastInputWasMouse = false;
+        }
+        else if (input === input_1.InputEnum.LEFT_CLICK || input === input_1.InputEnum.MOUSE_MOVE) {
+            this.lastInputWasMouse = true;
+        }
+        switch (input) {
+            case input_1.InputEnum.ESCAPE:
+                this.close();
+                break;
+            case input_1.InputEnum.UP:
+                if (this.layoutMode === "topbar") {
+                    if (this.focusPanel === "content") {
+                        if (this.activeItemIndex === 0) {
+                            // Move focus back to topbar grid
+                            this.focusPanel = "sidebar";
+                        }
+                        else {
+                            this.activeItemIndex--;
+                            this.ensureItemVisible();
+                        }
+                    }
+                    else {
+                        // Move up one row in 2x2 grid (subtract 2)
+                        const prev = this.activeCategoryIndex - 2;
+                        if (prev >= 0) {
+                            this.activeCategoryIndex = prev;
+                            this.activeItemIndex = 0;
+                            this.scrollOffset = 0;
+                            this.resetContentHoverAnims();
+                        }
+                    }
+                }
+                else {
+                    if (this.focusPanel === "sidebar") {
+                        this.activeCategoryIndex = (this.activeCategoryIndex - 1 + this.categories.length) % this.categories.length;
+                        this.activeItemIndex = 0;
+                        this.scrollOffset = 0;
+                        this.resetContentHoverAnims();
+                    }
+                    else {
+                        this.activeItemIndex = (this.activeItemIndex - 1 + items.length) % items.length;
+                        this.ensureItemVisible();
+                    }
+                }
+                break;
+            case input_1.InputEnum.DOWN:
+                if (this.layoutMode === "topbar") {
+                    if (this.focusPanel === "sidebar") {
+                        // Move down one row in 2x2 grid (add 2), or into content if at bottom row
+                        const next = this.activeCategoryIndex + 2;
+                        if (next < this.categories.length) {
+                            this.activeCategoryIndex = next;
+                            this.activeItemIndex = 0;
+                            this.scrollOffset = 0;
+                            this.resetContentHoverAnims();
+                        }
+                        else {
+                            this.focusPanel = "content";
+                            this.activeItemIndex = 0;
+                            this.scrollOffset = 0;
+                        }
+                    }
+                    else {
+                        this.activeItemIndex = (this.activeItemIndex + 1) % items.length;
+                        this.ensureItemVisible();
+                    }
+                }
+                else {
+                    if (this.focusPanel === "sidebar") {
+                        this.activeCategoryIndex = (this.activeCategoryIndex + 1) % this.categories.length;
+                        this.activeItemIndex = 0;
+                        this.scrollOffset = 0;
+                        this.resetContentHoverAnims();
+                    }
+                    else {
+                        this.activeItemIndex = (this.activeItemIndex + 1) % items.length;
+                        this.ensureItemVisible();
+                    }
+                }
+                break;
+            case input_1.InputEnum.RIGHT:
+                if (this.layoutMode === "topbar") {
+                    if (this.focusPanel === "sidebar") {
+                        // Move right one column in 2x2 grid
+                        const col = this.activeCategoryIndex % 2;
+                        if (col === 0 && this.activeCategoryIndex + 1 < this.categories.length) {
+                            this.activeCategoryIndex++;
+                            this.activeItemIndex = 0;
+                            this.scrollOffset = 0;
+                            this.resetContentHoverAnims();
+                        }
+                    }
+                }
+                else {
+                    if (this.focusPanel === "sidebar") {
+                        this.focusPanel = "content";
+                        this.activeItemIndex = 0;
+                        this.scrollOffset = 0;
+                    }
+                }
+                break;
+            case input_1.InputEnum.LEFT:
+                if (this.layoutMode === "topbar") {
+                    if (this.focusPanel === "sidebar") {
+                        // Move left one column in 2x2 grid
+                        const col = this.activeCategoryIndex % 2;
+                        if (col === 1) {
+                            this.activeCategoryIndex--;
+                            this.activeItemIndex = 0;
+                            this.scrollOffset = 0;
+                            this.resetContentHoverAnims();
+                        }
+                    }
+                }
+                else {
+                    if (this.focusPanel === "content") {
+                        this.focusPanel = "sidebar";
+                    }
+                }
+                break;
+            case input_1.InputEnum.SPACE:
+            case input_1.InputEnum.ENTER:
+                if (this.focusPanel === "sidebar") {
+                    this.focusPanel = "content";
+                    this.activeItemIndex = 0;
+                }
+                else {
+                    this.activateItem(this.activeItemIndex);
+                }
+                break;
+            case input_1.InputEnum.LEFT_CLICK: {
+                const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                this.handleClick(x, y);
+                break;
+            }
+        }
+    }
+    handleClick(x, y) {
+        const now = Date.now();
+        if (now - this.lastClickTime < this.CLICK_DEBOUNCE)
+            return;
+        this.lastClickTime = now;
+        // Sidebar / Topbar categories
+        for (let i = 0; i < this.categories.length; i++) {
+            let btnX, btnY, btnW;
+            if (this.layoutMode === "topbar") {
+                const pos = this.getTopbarButtonPos(i);
+                btnX = pos.x;
+                btnY = pos.y;
+                btnW = this.topbarButtonWidth;
+            }
+            else {
+                btnX = this.sidebarX;
+                btnY = this.sidebarY + i * (BUTTON_HEIGHT + SPACING);
+                btnW = this.sidebarWidth;
+            }
+            if (this.isPointInRect(x, y, btnX, btnY, btnW, BUTTON_HEIGHT)) {
+                this.activeCategoryIndex = i;
+                this.focusPanel = "sidebar";
+                this.activeItemIndex = 0;
+                this.scrollOffset = 0;
+                this.resetContentHoverAnims();
+                return;
+            }
+        }
+        // Content
+        const items = this.categories[this.activeCategoryIndex].items;
+        for (let i = 0; i < items.length; i++) {
+            const by = this.contentY + i * (BUTTON_HEIGHT + SPACING) - this.scrollOffset;
+            if (this.isPointInRect(x, y, this.contentX, by, this.contentWidth, BUTTON_HEIGHT)) {
+                this.focusPanel = "content";
+                this.activeItemIndex = i;
+                this.activateItem(i);
+                return;
+            }
+        }
+        // Click outside dismiss: if click is outside the menu panels + margin, close
+        if (!this.isPointInMenuBounds(x, y)) {
+            this.close();
+        }
+    }
+    /** Check if a point is within the combined menu area (panels + margin). */
+    isPointInMenuBounds(px, py) {
+        let menuLeft, menuTop, menuRight, menuBottom;
+        if (this.layoutMode === "topbar") {
+            const lastPos = this.getTopbarButtonPos(this.categories.length - 1);
+            menuLeft = this.topbarX;
+            menuTop = this.topbarY;
+            menuRight = Math.max(lastPos.x + this.topbarButtonWidth, this.contentX + this.contentWidth);
+            menuBottom = this.contentY + this.visibleContentHeight;
+        }
+        else {
+            menuLeft = this.sidebarX;
+            menuTop = Math.min(this.sidebarY, this.contentY);
+            menuRight = this.contentX + this.contentWidth;
+            menuBottom = Math.max(this.sidebarY + this.categories.length * (BUTTON_HEIGHT + SPACING) - SPACING, this.contentY + this.visibleContentHeight);
+        }
+        return this.isPointInRect(px, py, menuLeft - DISMISS_MARGIN, menuTop - DISMISS_MARGIN, (menuRight - menuLeft) + DISMISS_MARGIN * 2, (menuBottom - menuTop) + DISMISS_MARGIN * 2);
+    }
+    activateItem(index) {
+        const items = this.categories[this.activeCategoryIndex].items;
+        if (index >= 0 && index < items.length) {
+            items[index].onActivate();
+        }
+    }
+    ensureItemVisible() {
+        const itemTop = this.activeItemIndex * (BUTTON_HEIGHT + SPACING);
+        const itemBottom = itemTop + BUTTON_HEIGHT;
+        if (itemTop < this.scrollOffset) {
+            this.scrollOffset = itemTop;
+        }
+        else if (itemBottom > this.scrollOffset + this.visibleContentHeight) {
+            this.scrollOffset = itemBottom - this.visibleContentHeight;
+        }
+        this.scrollOffset = Math.round(Math.max(0, this.scrollOffset));
+    }
+    resetContentHoverAnims() {
+        for (let i = 0; i < this.contentHoverAnims.length; i++) {
+            this.contentHoverAnims[i] = 0;
+        }
+    }
+    handleWheel(deltaY) {
+        if (!this.open)
+            return;
+        const items = this.categories[this.activeCategoryIndex].items;
+        const totalH = items.length * (BUTTON_HEIGHT + SPACING) - SPACING;
+        if (totalH <= this.visibleContentHeight)
+            return;
+        this.scrollOffset += deltaY > 0 ? (BUTTON_HEIGHT + SPACING) : -(BUTTON_HEIGHT + SPACING);
+        this.scrollOffset = Math.round(Math.max(0, Math.min(totalH - this.visibleContentHeight, this.scrollOffset)));
+    }
+    // ==================== UTILITY ====================
+    /** Get the x,y position of a topbar category button in the 2x2 grid. */
+    getTopbarButtonPos(index) {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        return {
+            x: this.topbarX + col * (this.topbarButtonWidth + SPACING),
+            y: this.topbarY + row * (BUTTON_HEIGHT + SPACING),
+        };
+    }
+    isPointInRect(px, py, rx, ry, rw, rh) {
+        return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh;
+    }
+}
+exports.SettingsMenu = SettingsMenu;
 
 
 /***/ }),
@@ -56000,6 +56649,8 @@ class Inventory {
         };
         this.handleMouseDown = (x, y, button) => {
             if (this.player.menu.open ||
+                this.player.settingsMenu?.open ||
+                this.player.skillsMenu?.open ||
                 this.player.isAnyBookOpen ||
                 this.player.contextMenu?.open)
                 return;
@@ -56068,9 +56719,11 @@ class Inventory {
             this.dragStartMouseX = null;
             this.dragStartMouseY = null;
             if (this.player.menu.open ||
+                this.player.settingsMenu?.open ||
+                this.player.skillsMenu?.open ||
                 this.player.isAnyBookOpen ||
                 this.player.contextMenu?.open) {
-                // If a context menu is open, cancel any drag to avoid losing items.
+                // If a modal overlay is open, cancel any drag to avoid losing items.
                 this.cancelDragAndRestore();
                 return;
             }
@@ -70563,6 +71216,7 @@ const imageParticle_1 = __webpack_require__(/*! ../particle/imageParticle */ "./
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const oxygenLine_1 = __webpack_require__(/*! ./oxygenLine */ "./src/player/oxygenLine.ts");
 const skillsMenu_1 = __webpack_require__(/*! ../gui/skillsMenu */ "./src/gui/skillsMenu.ts");
+const settingsMenu_1 = __webpack_require__(/*! ../gui/settingsMenu */ "./src/gui/settingsMenu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 const rangedTargetingSystem_1 = __webpack_require__(/*! ../item/weapon/rangedTargetingSystem */ "./src/item/weapon/rangedTargetingSystem.ts");
 var PlayerDirection;
@@ -71030,6 +71684,10 @@ class Player extends drawable_1.Drawable {
                 const { x, y } = mousePos;
                 const inSkillsPanel = this.skillsMenu.isPointInBounds(x, y);
                 return inSkillsPanel ? "hand" : "arrow";
+            }
+            // If the settings menu is open, it visually owns the cursor.
+            if (this.settingsMenu?.open) {
+                return "hand";
             }
             // If the menu is open, it visually owns the cursor: don't let world interactions behind
             // the menu influence the cursor icon.
@@ -71924,6 +72582,7 @@ class Player extends drawable_1.Drawable {
         this.depth = 0;
         this.menu = new menu_1.Menu(this);
         this.skillsMenu = new skillsMenu_1.SkillsMenu();
+        this.settingsMenu = new settingsMenu_1.SettingsMenu(game);
         this.busyAnimating = false;
         this.mapToggled = true;
         this.health = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
@@ -72139,7 +72798,7 @@ class PlayerInputHandler {
         this.armoryBookTouchMoveHandler = null;
         this.armoryBookTouchEndHandler = null;
         this.handleNumKey = (num) => {
-            if (this.player.menu.open)
+            if (this.player.menu.open || this.player.settingsMenu?.open)
                 return;
             this.setMostRecentInput("keyboard");
             this.player.actionProcessor.process({
@@ -72173,6 +72832,7 @@ class PlayerInputHandler {
                 this.player.dead ||
                 this.player.game.levelState !== game_1.LevelState.IN_LEVEL ||
                 this.player.menu.open ||
+                this.player.settingsMenu?.open ||
                 (this.player.inventory.isPointInQuickbarBounds(input_1.Input.mouseX, input_1.Input.mouseY)
                     .inBounds &&
                     this.player.game.isMobile));
@@ -72576,6 +73236,15 @@ class PlayerInputHandler {
                     return;
             }
         }
+        if (this.player.settingsMenu?.open) {
+            if (input === input_1.InputEnum.RIGHT_CLICK) {
+                const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                this.handleMouseRightClickAt(x, y);
+                return;
+            }
+            this.player.settingsMenu.inputHandler(input);
+            return;
+        }
         if (this.player.menu.open) {
             // Allow context menu on right-click even while the menu is open (options are overlay-scoped).
             if (input === input_1.InputEnum.RIGHT_CLICK) {
@@ -72786,6 +73455,10 @@ class PlayerInputHandler {
         // Only handle while in-game
         if (this.player.game.levelState !== game_1.LevelState.IN_LEVEL)
             return;
+        if (this.player.settingsMenu?.open) {
+            this.player.settingsMenu.handleWheel(deltaY);
+            return;
+        }
         if (this.player.skillsMenu?.open)
             return;
         // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -72857,6 +73530,7 @@ class PlayerInputHandler {
             // - Menu / Skills / Bestiary => Cancel only
             // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
             if (player.menu?.open ||
+                player.settingsMenu?.open ||
                 player.skillsMenu?.open ||
                 player.isAnyBookOpen) {
                 menu.openAt(x, y, [{ label: "Cancel", onClick: () => { } }]);
@@ -72934,8 +73608,8 @@ class PlayerInputHandler {
         }
         if (menu_1.Menu.isPointInOpenMenuButtonBounds(x, y)) {
             items.push({
-                label: player.menu.open ? "Close Menu" : "Open Menu",
-                onClick: () => player.menu.toggleOpen(),
+                label: player.settingsMenu.open ? "Close Menu" : "Open Menu",
+                onClick: () => player.settingsMenu.toggleOpen(),
             });
             items.push({ label: "Cancel", onClick: () => { } });
             menu.openAt(x, y, items);
@@ -73584,7 +74258,12 @@ class PlayerInputHandler {
         input_1.Input.lastMouseDownY = y;
         const inventory = player.inventory;
         const bestiary = player.bestiary;
-        // Handle menu first: menu clicks should not affect inventory open/close state.
+        // Handle settings/menu first: clicks should not affect inventory open/close state.
+        if (this.player.settingsMenu?.open) {
+            this.player.settingsMenu.inputHandler(input_1.InputEnum.LEFT_CLICK);
+            input_1.Input.mouseDownHandled = true;
+            return;
+        }
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(x, y);
             input_1.Input.mouseDownHandled = true;
@@ -73693,7 +74372,9 @@ class PlayerInputHandler {
         }
         const inventory = player.inventory;
         const bestiary = player.bestiary;
-        // If the menu is open, it consumes clicks and should not affect inventory open/close state.
+        // If the settings/menu is open, it consumes clicks and should not affect inventory open/close state.
+        if (this.player.settingsMenu?.open)
+            return;
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(x, y);
             return;
@@ -73771,6 +74452,10 @@ class PlayerInputHandler {
             }
             return;
         }
+        if (this.player.settingsMenu?.open) {
+            this.player.settingsMenu.inputHandler(input_1.InputEnum.LEFT_CLICK);
+            return;
+        }
         if (this.player.menu.open) {
             this.player.menu.mouseInputHandler(input_1.Input.mouseX, input_1.Input.mouseY);
             return;
@@ -73793,7 +74478,7 @@ class PlayerInputHandler {
                     : false,
                 inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
                 inventoryOpen: this.player.inventory.isOpen,
-                menuOpen: this.player.menu.open,
+                menuOpen: this.player.settingsMenu?.open || this.player.menu.open,
                 ctxMenuOpen: Boolean(ctxMenu?.open),
             });
         }
@@ -74104,7 +74789,7 @@ class PlayerInputHandler {
         return menu_1.Menu.isPointInOpenMenuButtonBounds(x, y);
     }
     handleMenuButtonClick() {
-        this.player.menu.toggleOpen();
+        this.player.settingsMenu.toggleOpen();
     }
     handleDeathScreenInput(x, y) {
         if (this.isInteractingWithFeedbackButton(x, y)) {
@@ -74503,6 +75188,7 @@ class PlayerRenderer {
         this.drawPlayerSprite = (delta) => {
             const player = this.player;
             const anyOverlayOpen = Boolean(player.menu?.open) ||
+                Boolean(player.settingsMenu?.open) ||
                 Boolean(player.skillsMenu?.open) ||
                 player.isAnyBookOpen ||
                 Boolean(player.inventory?.isOpen) ||
@@ -75164,7 +75850,9 @@ class PlayerRenderer {
             // - Menu should appear above skills (and everything else).
             // - Context menu should appear above EVERYTHING (including Menu/Skills) so right-click is never hidden.
             this.player.skillsMenu?.draw(delta);
-            if (this.player.menu.open)
+            if (this.player.settingsMenu?.open)
+                this.player.settingsMenu.draw(delta);
+            else if (this.player.menu.open)
                 this.player.menu.draw(delta);
             this.player.contextMenu?.draw(delta);
             game_1.Game.ctx.restore();
@@ -75316,6 +76004,7 @@ class PlayerRenderer {
         this.drawTileCursor = (delta) => {
             if (this.player.inventory.isOpen ||
                 this.player.menu?.open ||
+                this.player.settingsMenu?.open ||
                 this.player.skillsMenu?.open ||
                 this.player.contextMenu?.open ||
                 this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
@@ -75361,6 +76050,8 @@ class PlayerRenderer {
             if (this.player.inventory?.isOpen)
                 return;
             if (this.player.menu?.open)
+                return;
+            if (this.player.settingsMenu?.open)
                 return;
             if (this.player.skillsMenu?.open)
                 return;

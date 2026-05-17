@@ -208,6 +208,7 @@ export class PlayerRenderer {
     const player = this.player;
     const anyOverlayOpen =
       Boolean(player.menu?.open) ||
+      Boolean(player.settingsMenu?.open) ||
       Boolean(player.skillsMenu?.open) ||
       player.isAnyBookOpen ||
       Boolean(player.inventory?.isOpen) ||
@@ -1103,7 +1104,8 @@ export class PlayerRenderer {
     // - Menu should appear above skills (and everything else).
     // - Context menu should appear above EVERYTHING (including Menu/Skills) so right-click is never hidden.
     this.player.skillsMenu?.draw(delta);
-    if (this.player.menu.open) this.player.menu.draw(delta);
+    if (this.player.settingsMenu?.open) this.player.settingsMenu.draw(delta);
+    else if (this.player.menu.open) this.player.menu.draw(delta);
     this.player.contextMenu?.draw(delta);
     Game.ctx.restore();
   };
@@ -1319,6 +1321,7 @@ export class PlayerRenderer {
     if (
       this.player.inventory.isOpen ||
       this.player.menu?.open ||
+      this.player.settingsMenu?.open ||
       this.player.skillsMenu?.open ||
       this.player.contextMenu?.open ||
       this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
@@ -1386,6 +1389,7 @@ export class PlayerRenderer {
     if (!rt?.active) return;
     if (this.player.inventory?.isOpen) return;
     if (this.player.menu?.open) return;
+    if (this.player.settingsMenu?.open) return;
     if (this.player.skillsMenu?.open) return;
     if (this.player.isAnyBookOpen) return;
     if (this.player.inputHandler.isMouseOverUI()) return;
