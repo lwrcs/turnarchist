@@ -22624,7 +22624,7 @@ class WizardEnemy extends enemy_1.Enemy {
         if (drop)
             this.drop = drop;
         // Include "wizard" category so wizard-specific drops can be added without affecting other enemies.
-        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin", "wizard"]);
+        this.getDrop(["coin", "magic"]);
     }
 }
 exports.WizardEnemy = WizardEnemy;
@@ -57411,6 +57411,7 @@ const gauntlets_1 = __webpack_require__(/*! ./gauntlets */ "./src/item/gauntlets
 const shoulderPlates_1 = __webpack_require__(/*! ./shoulderPlates */ "./src/item/shoulderPlates.ts");
 const chestPlate_1 = __webpack_require__(/*! ./chestPlate */ "./src/item/chestPlate.ts");
 const bluePotion_1 = __webpack_require__(/*! ./usable/bluePotion */ "./src/item/usable/bluePotion.ts");
+const scroll_1 = __webpack_require__(/*! ./usable/scroll */ "./src/item/usable/scroll.ts");
 const xpCrystal_1 = __webpack_require__(/*! ./xpCrystal */ "./src/item/xpCrystal.ts");
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
@@ -57448,6 +57449,10 @@ exports.ItemTypeMap = {
     rangedXpCrystal: xpCrystal_1.RangedXpCrystal,
     weaponfragments: weaponFragments_1.WeaponFragments,
     spellbookPage: spellbookPage_1.SpellbookPage,
+    pointscroll: scroll_1.PointScroll,
+    plusscroll: scroll_1.PlusScroll,
+    crossscroll: scroll_1.CrossScroll,
+    wavescroll: scroll_1.WaveScroll,
     backpack: backpack_1.Backpack,
     candle: candle_1.Candle,
     torch: torch_1.Torch,
@@ -57605,8 +57610,8 @@ DropTable.drops = [
     // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
     {
         itemType: "bluePotion",
-        dropRate: 60,
-        category: ["wizard", "consumable", "magic"],
+        dropRate: 30,
+        category: ["consumable", "magic"],
         minDepth: 1,
     },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -57627,6 +57632,31 @@ DropTable.drops = [
         itemType: "spellbookPage",
         dropRate: 100,
         category: ["consumable", "magic"],
+    },
+    // Spell scrolls — wizard-exclusive, rarity scales with pattern power
+    {
+        itemType: "pointscroll",
+        dropRate: 1000,
+        category: ["consumable", "magic"],
+        unique: true,
+    },
+    {
+        itemType: "plusscroll",
+        dropRate: 5,
+        category: ["consumable", "magic"],
+        unique: true,
+    },
+    {
+        itemType: "crossscroll",
+        dropRate: 15,
+        category: ["consumable", "magic"],
+        unique: true,
+    },
+    {
+        itemType: "wavescroll",
+        dropRate: 30,
+        category: ["consumable", "magic"],
+        unique: true,
     },
     // Upgrades
     { itemType: "backpack", dropRate: 100, category: ["upgrade"] },

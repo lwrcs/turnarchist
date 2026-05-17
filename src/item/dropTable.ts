@@ -47,6 +47,12 @@ import { Gauntlets } from "./gauntlets";
 import { ShoulderPlates } from "./shoulderPlates";
 import { ChestPlate } from "./chestPlate";
 import { BluePotion } from "./usable/bluePotion";
+import {
+  WaveScroll,
+  CrossScroll,
+  PointScroll,
+  PlusScroll,
+} from "./usable/scroll";
 import { MagicXpCrystal, MeleeXpCrystal, RangedXpCrystal } from "./xpCrystal";
 
 interface Drop {
@@ -99,6 +105,11 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 
   weaponfragments: WeaponFragments,
   spellbookPage: SpellbookPage,
+
+  pointscroll: PointScroll,
+  plusscroll: PlusScroll,
+  crossscroll: CrossScroll,
+  wavescroll: WaveScroll,
 
   backpack: Backpack,
 
@@ -264,8 +275,8 @@ export class DropTable {
     // Mana potion: wizard-biased utility consumable (resets spellbook cooldowns).
     {
       itemType: "bluePotion",
-      dropRate: 60,
-      category: ["wizard", "consumable", "magic"],
+      dropRate: 30,
+      category: ["consumable", "magic"],
       minDepth: 1,
     },
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
@@ -289,6 +300,32 @@ export class DropTable {
       itemType: "spellbookPage",
       dropRate: 100,
       category: ["consumable", "magic"],
+    },
+
+    // Spell scrolls — wizard-exclusive, rarity scales with pattern power
+    {
+      itemType: "pointscroll",
+      dropRate: 1000,
+      category: ["consumable", "magic"],
+      unique: true,
+    },
+    {
+      itemType: "plusscroll",
+      dropRate: 5,
+      category: ["consumable", "magic"],
+      unique: true,
+    },
+    {
+      itemType: "crossscroll",
+      dropRate: 15,
+      category: ["consumable", "magic"],
+      unique: true,
+    },
+    {
+      itemType: "wavescroll",
+      dropRate: 30,
+      category: ["consumable", "magic"],
+      unique: true,
     },
 
     // Upgrades
