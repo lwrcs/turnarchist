@@ -2172,22 +2172,43 @@ export class PlayerInputHandler {
     });
   }
 
+  private hasDiagonalTarget(dir: Direction): boolean {
+    const room = this.player.getRoom?.() ?? this.player.game.room;
+    if (!room) return false;
+    const px = this.player.x;
+    const py = this.player.y;
+    // The two diagonal positions reachable by combining this cardinal dir with either perpendicular
+    let candidates: { x: number; y: number }[];
+    switch (dir) {
+      case Direction.UP:    candidates = [{ x: px - 1, y: py - 1 }, { x: px + 1, y: py - 1 }]; break;
+      case Direction.DOWN:  candidates = [{ x: px - 1, y: py + 1 }, { x: px + 1, y: py + 1 }]; break;
+      case Direction.LEFT:  candidates = [{ x: px - 1, y: py - 1 }, { x: px - 1, y: py + 1 }]; break;
+      case Direction.RIGHT: candidates = [{ x: px + 1, y: py - 1 }, { x: px + 1, y: py + 1 }]; break;
+      default: return false;
+    }
+    return candidates.some(({ x, y }) =>
+      room.entities.some((e) => e.x === x && e.y === y && e.isEnemy && !e.dead),
+    );
+  }
+
   private handleDirectionKey(dir: Direction): void {
     if (this.player.isPushMoveInputLocked()) return;
     if (this.ignoreDirectionInput()) return;
 
-    if (!GameplaySettings.DIAGONAL_ATTACKING) {
+    // Only use double-keypress diagonal window when the equipped weapon supports diagonal attacks
+    const weapon = this.player.inventory?.getWeapon?.();
+    if (!weapon?.allowsDiagonalAttack) {
       this.processCardinalMove(dir);
       return;
     }
 
-    const WINDOW = 10;
+    const WINDOW = 25;
     if (
       this.pendingMoveDir !== null &&
       this.isPerpendicularDir(dir, this.pendingMoveDir) &&
       Date.now() - this.pendingMoveTime < WINDOW
     ) {
-      // Second key arrived within window — fire diagonal
+      // Second key arrived within window — fire diagonal attack
       if (this.pendingMoveTimer !== null) {
         clearTimeout(this.pendingMoveTimer);
         this.pendingMoveTimer = null;
@@ -2196,6 +2217,11 @@ export class PlayerInputHandler {
       this.pendingMoveDir = null;
       this.processDiagonalMove(diagDir);
     } else {
+      // Skip the buffer entirely if no enemy sits on either reachable diagonal
+      if (!this.hasDiagonalTarget(dir)) {
+        this.processCardinalMove(dir);
+        return;
+      }
       // Buffer this keypress; fire cardinal after window if nothing arrives
       if (this.pendingMoveTimer !== null) clearTimeout(this.pendingMoveTimer);
       this.pendingMoveDir = dir;

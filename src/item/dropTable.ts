@@ -8,6 +8,7 @@ import { Heart } from "./usable/heart";
 import { Item } from "./item";
 import { RedGem } from "./resource/redgem";
 import { WeaponFragments } from "./usable/weaponFragments";
+import { Rapier } from "./weapon/rapier";
 import { Spear } from "./weapon/spear";
 import { Warhammer } from "./weapon/warhammer";
 import { DualDagger } from "./weapon/dualdagger";
@@ -66,6 +67,7 @@ interface Drop {
 export const ItemTypeMap: { [key: string]: typeof Item } = {
   dualdagger: DualDagger,
   warhammer: Warhammer,
+  rapier: Rapier,
   spear: Spear,
   spellbook: Spellbook,
   greataxe: Greataxe,
@@ -130,6 +132,12 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
 export class DropTable {
   static drops: Drop[] = [
     // Weapons - Higher numbers = rarer
+    {
+      itemType: "rapier",
+      dropRate: 500,
+      category: ["weapon", "melee"],
+      unique: true,
+    },
     {
       itemType: "dualdagger",
       dropRate: 500,

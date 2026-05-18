@@ -14,6 +14,7 @@ import { WeaponPoison } from "../item/usable/weaponPoison";
 import { LevelConstants } from "../level/levelConstants";
 import { Dagger } from "../item/weapon/dagger";
 import { DualDagger } from "../item/weapon/dualdagger";
+import { Rapier } from "../item/weapon/rapier";
 import { Spear } from "../item/weapon/spear";
 import { Spellbook } from "../item/weapon/spellbook";
 import { Warhammer } from "../item/weapon/warhammer";
@@ -584,6 +585,7 @@ export class GameConstants {
     GarnetRing,
     Crossbow,
     CrossbowBolt,
+    Rapier,
     Spear,
     Pickaxe,
     Lantern,

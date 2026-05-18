@@ -33429,6 +33429,7 @@ class Game {
                 case "dagger":
                 case "sword":
                 case "spear":
+                case "rapier":
                 case "dual_daggers":
                 case "greataxe":
                 case "warhammer":
@@ -36027,6 +36028,7 @@ const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./s
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
+const rapier_1 = __webpack_require__(/*! ../item/weapon/rapier */ "./src/item/weapon/rapier.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
@@ -36502,6 +36504,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     garnetRing_1.GarnetRing,
     crossbow_1.Crossbow,
     crossbowBolt_1.CrossbowBolt,
+    rapier_1.Rapier,
     spear_1.Spear,
     pickaxe_1.Pickaxe,
     lantern_1.Lantern,
@@ -42885,6 +42888,7 @@ const spellbook_1 = __webpack_require__(/*! ../../../item/weapon/spellbook */ ".
 const dagger_1 = __webpack_require__(/*! ../../../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const sword_1 = __webpack_require__(/*! ../../../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const spear_1 = __webpack_require__(/*! ../../../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const rapier_1 = __webpack_require__(/*! ../../../item/weapon/rapier */ "./src/item/weapon/rapier.ts");
 const dualdagger_1 = __webpack_require__(/*! ../../../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const greataxe_1 = __webpack_require__(/*! ../../../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const warhammer_1 = __webpack_require__(/*! ../../../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
@@ -43018,6 +43022,8 @@ const itemToKind = (item) => {
         return "sword";
     if (item instanceof spear_1.Spear)
         return "spear";
+    if (item instanceof rapier_1.Rapier)
+        return "rapier";
     if (item instanceof dualdagger_1.DualDagger)
         return "dual_daggers";
     if (item instanceof greataxe_1.Greataxe)
@@ -43097,6 +43103,7 @@ const isWeaponItemSaveV2 = (v) => {
     return (v.kind === "dagger" ||
         v.kind === "sword" ||
         v.kind === "spear" ||
+        v.kind === "rapier" ||
         v.kind === "dual_daggers" ||
         v.kind === "greataxe" ||
         v.kind === "warhammer" ||
@@ -43684,6 +43691,20 @@ const registerBuiltinItemCodecsV2 = () => {
             if (!isWeaponItemSaveV2(value) || value.kind !== "spear")
                 throw new Error("spear codec spawn received non-spear save");
             const w = new spear_1.Spear(room, value.x, value.y);
+            applyWeaponSave(w, value);
+            return w;
+        },
+    });
+    register("rapier", {
+        save: (v) => {
+            if (!(v instanceof rapier_1.Rapier))
+                throw new Error("rapier codec received non-Rapier");
+            return saveBaseWeapon("rapier", v);
+        },
+        spawn: (value, room, _ctx) => {
+            if (!isWeaponItemSaveV2(value) || value.kind !== "rapier")
+                throw new Error("rapier codec spawn received non-rapier save");
+            const w = new rapier_1.Rapier(room, value.x, value.y);
             applyWeaponSave(w, value);
             return w;
         },
@@ -45010,6 +45031,7 @@ exports.ITEM_KIND_VALUES_V2 = [
     "dagger",
     "sword",
     "spear",
+    "rapier",
     "dual_daggers",
     "greataxe",
     "warhammer",
@@ -57429,6 +57451,7 @@ const greengem_1 = __webpack_require__(/*! ./resource/greengem */ "./src/item/re
 const heart_1 = __webpack_require__(/*! ./usable/heart */ "./src/item/usable/heart.ts");
 const redgem_1 = __webpack_require__(/*! ./resource/redgem */ "./src/item/resource/redgem.ts");
 const weaponFragments_1 = __webpack_require__(/*! ./usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const rapier_1 = __webpack_require__(/*! ./weapon/rapier */ "./src/item/weapon/rapier.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/item/weapon/spear.ts");
 const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
@@ -57472,6 +57495,7 @@ const xpCrystal_1 = __webpack_require__(/*! ./xpCrystal */ "./src/item/xpCrystal
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
+    rapier: rapier_1.Rapier,
     spear: spear_1.Spear,
     spellbook: spellbook_1.Spellbook,
     greataxe: greataxe_1.Greataxe,
@@ -57528,6 +57552,12 @@ exports.DropTable = DropTable;
 _a = DropTable;
 DropTable.drops = [
     // Weapons - Higher numbers = rarer
+    {
+        itemType: "rapier",
+        dropRate: 500,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
     {
         itemType: "dualdagger",
         dropRate: 500,
@@ -61723,6 +61753,51 @@ exports.RangedTargetingSystem = RangedTargetingSystem;
 
 /***/ }),
 
+/***/ "./src/item/weapon/rapier.ts":
+/*!***********************************!*\
+  !*** ./src/item/weapon/rapier.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Rapier = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class Rapier extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.swing();
+            sound_1.Sound.playShortSlice();
+        };
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const isDiagonal = newX !== this.wielder.x && newY !== this.wielder.y;
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus);
+            // Diagonal inputs never move the player — only attack
+            if (isDiagonal)
+                return false;
+            return !hitSomething;
+        };
+        this.tileX = 25;
+        this.tileY = 0;
+        this.name = "rapier";
+        this.description = "Attacks cardinally and diagonally. Press two direction keys together to thrust on a diagonal.";
+        this.useCost = 1;
+        this.degradeable = false;
+        this.allowsDiagonalAttack = true;
+    }
+}
+exports.Rapier = Rapier;
+Rapier.itemName = "rapier";
+Rapier.examineText = "A slender thrusting blade. Angles the rest couldn't.";
+
+
+/***/ }),
+
 /***/ "./src/item/weapon/scythe.ts":
 /*!***********************************!*\
   !*** ./src/item/weapon/scythe.ts ***!
@@ -63161,7 +63236,7 @@ class Weapon extends equippable_1.Equippable {
                 return null;
             const dx = targetX - p.x;
             const dy = targetY - p.y;
-            if (dx !== 0 && dy !== 0 && !gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
+            if (dx !== 0 && dy !== 0 && !gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING && !this.allowsDiagonalAttack)
                 return null;
             if (dx === 0 && dy === 0)
                 return null;
@@ -63309,6 +63384,7 @@ class Weapon extends equippable_1.Equippable {
         this.manaCost = 0;
         this.twoHanded = false;
         this.knockbackDistance = 0;
+        this.allowsDiagonalAttack = false;
         this._swingHitIds = null;
         // Defaults (can be overridden by rules)
         this.combatSkill = "melee";
@@ -71526,7 +71602,16 @@ class Player extends drawable_1.Drawable {
             if (mouseTile.x === undefined || mouseTile.y === undefined) {
                 return false;
             }
-            return mouseTile.x === this.x || mouseTile.y === this.y;
+            if (mouseTile.x === this.x || mouseTile.y === this.y)
+                return true;
+            // Allow diagonal when the equipped weapon supports it
+            const weapon = this.inventory?.getWeapon?.();
+            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING || weapon?.allowsDiagonalAttack) {
+                const dx = Math.abs(mouseTile.x - this.x);
+                const dy = Math.abs(mouseTile.y - this.y);
+                return dx === dy && dx <= 1;
+            }
+            return false;
         };
         this.canMoveWithMouse = () => {
             if (this.inventory.isOpen) {
@@ -71580,8 +71665,9 @@ class Player extends drawable_1.Drawable {
                     ? { direction: game_1.Direction.LEFT, x: nextX, y: this.y }
                     : { direction: game_1.Direction.RIGHT, x: nextX, y: this.y };
             }
-            // Diagonal — only when DIAGONAL_ATTACKING is enabled
-            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+            // Diagonal — when DIAGONAL_ATTACKING is enabled, or the equipped weapon supports it
+            const diagWeapon = this.inventory?.getWeapon?.();
+            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING || diagWeapon?.allowsDiagonalAttack) {
                 const stepX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
                 const stepY = targetY < this.y ? this.y - 1 : this.y + 1;
                 if (!this.game.room.roomArray[stepX] ||
@@ -71693,7 +71779,8 @@ class Player extends drawable_1.Drawable {
                 return false;
             // Diagonal
             if (eX !== this.x && eY !== this.y) {
-                if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
+                const weapon = this.inventory?.getWeapon?.();
+                if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING && !weapon?.allowsDiagonalAttack)
                     return false;
                 return Math.abs(eX - this.x) === Math.abs(eY - this.y) && Math.abs(eX - this.x) <= r;
             }
@@ -74860,20 +74947,47 @@ class PlayerInputHandler {
             targetY: this.player.y + dy,
         });
     }
+    hasDiagonalTarget(dir) {
+        const room = this.player.getRoom?.() ?? this.player.game.room;
+        if (!room)
+            return false;
+        const px = this.player.x;
+        const py = this.player.y;
+        // The two diagonal positions reachable by combining this cardinal dir with either perpendicular
+        let candidates;
+        switch (dir) {
+            case game_1.Direction.UP:
+                candidates = [{ x: px - 1, y: py - 1 }, { x: px + 1, y: py - 1 }];
+                break;
+            case game_1.Direction.DOWN:
+                candidates = [{ x: px - 1, y: py + 1 }, { x: px + 1, y: py + 1 }];
+                break;
+            case game_1.Direction.LEFT:
+                candidates = [{ x: px - 1, y: py - 1 }, { x: px - 1, y: py + 1 }];
+                break;
+            case game_1.Direction.RIGHT:
+                candidates = [{ x: px + 1, y: py - 1 }, { x: px + 1, y: py + 1 }];
+                break;
+            default: return false;
+        }
+        return candidates.some(({ x, y }) => room.entities.some((e) => e.x === x && e.y === y && e.isEnemy && !e.dead));
+    }
     handleDirectionKey(dir) {
         if (this.player.isPushMoveInputLocked())
             return;
         if (this.ignoreDirectionInput())
             return;
-        if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+        // Only use double-keypress diagonal window when the equipped weapon supports diagonal attacks
+        const weapon = this.player.inventory?.getWeapon?.();
+        if (!weapon?.allowsDiagonalAttack) {
             this.processCardinalMove(dir);
             return;
         }
-        const WINDOW = 10;
+        const WINDOW = 25;
         if (this.pendingMoveDir !== null &&
             this.isPerpendicularDir(dir, this.pendingMoveDir) &&
             Date.now() - this.pendingMoveTime < WINDOW) {
-            // Second key arrived within window — fire diagonal
+            // Second key arrived within window — fire diagonal attack
             if (this.pendingMoveTimer !== null) {
                 clearTimeout(this.pendingMoveTimer);
                 this.pendingMoveTimer = null;
@@ -74883,6 +74997,11 @@ class PlayerInputHandler {
             this.processDiagonalMove(diagDir);
         }
         else {
+            // Skip the buffer entirely if no enemy sits on either reachable diagonal
+            if (!this.hasDiagonalTarget(dir)) {
+                this.processCardinalMove(dir);
+                return;
+            }
             // Buffer this keypress; fire cardinal after window if nothing arrives
             if (this.pendingMoveTimer !== null)
                 clearTimeout(this.pendingMoveTimer);

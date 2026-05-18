@@ -4094,6 +4094,7 @@ export class Game {
         case "dagger":
         case "sword":
         case "spear":
+        case "rapier":
         case "dual_daggers":
         case "greataxe":
         case "warhammer":

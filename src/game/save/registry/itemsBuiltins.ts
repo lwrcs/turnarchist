@@ -19,6 +19,7 @@ import { Spellbook } from "../../../item/weapon/spellbook";
 import { Dagger } from "../../../item/weapon/dagger";
 import { Sword } from "../../../item/weapon/sword";
 import { Spear } from "../../../item/weapon/spear";
+import { Rapier } from "../../../item/weapon/rapier";
 import { DualDagger } from "../../../item/weapon/dualdagger";
 import { Greataxe } from "../../../item/weapon/greataxe";
 import { Warhammer } from "../../../item/weapon/warhammer";
@@ -130,6 +131,7 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof Dagger) return "dagger";
   if (item instanceof Sword) return "sword";
   if (item instanceof Spear) return "spear";
+  if (item instanceof Rapier) return "rapier";
   if (item instanceof DualDagger) return "dual_daggers";
   if (item instanceof Greataxe) return "greataxe";
   if (item instanceof Warhammer) return "warhammer";
@@ -185,6 +187,7 @@ const isWeaponItemSaveV2 = (v: ItemSaveV2): v is WeaponItemSaveV2 => {
     v.kind === "dagger" ||
     v.kind === "sword" ||
     v.kind === "spear" ||
+    v.kind === "rapier" ||
     v.kind === "dual_daggers" ||
     v.kind === "greataxe" ||
     v.kind === "warhammer" ||
@@ -781,6 +784,19 @@ export const registerBuiltinItemCodecsV2 = (): void => {
       if (!isWeaponItemSaveV2(value) || value.kind !== "spear")
         throw new Error("spear codec spawn received non-spear save");
       const w = new Spear(room, value.x, value.y);
+      applyWeaponSave(w, value);
+      return w;
+    },
+  });
+  register("rapier", {
+    save: (v) => {
+      if (!(v instanceof Rapier)) throw new Error("rapier codec received non-Rapier");
+      return saveBaseWeapon("rapier", v);
+    },
+    spawn: (value, room, _ctx) => {
+      if (!isWeaponItemSaveV2(value) || value.kind !== "rapier")
+        throw new Error("rapier codec spawn received non-rapier save");
+      const w = new Rapier(room, value.x, value.y);
       applyWeaponSave(w, value);
       return w;
     },

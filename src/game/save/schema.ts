@@ -515,6 +515,7 @@ export type WeaponItemKind =
   | "dagger"
   | "sword"
   | "spear"
+  | "rapier"
   | "dual_daggers"
   | "greataxe"
   | "warhammer"
@@ -849,6 +850,7 @@ export const ITEM_KIND_VALUES_V2 = [
   "dagger",
   "sword",
   "spear",
+  "rapier",
   "dual_daggers",
   "greataxe",
   "warhammer",
