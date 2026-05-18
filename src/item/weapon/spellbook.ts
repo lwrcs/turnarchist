@@ -42,6 +42,10 @@ export class Spellbook extends Weapon implements RangedWeapon {
     this.pendingSpell = null;
   }
 
+  getPatternOffsets = (): Array<{ dx: number; dy: number }> => {
+    return (this.pendingSpell ?? this.activeSpell).getPattern().offsets;
+  };
+
   addSpell = (spell: Spell): void => {
     if (this.spells.some((s) => s.id === spell.id)) return;
     this.spells.push(spell);

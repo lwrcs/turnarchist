@@ -6,6 +6,8 @@ export interface RangedWeapon {
   fireAtTarget(player: Player, tx: number, ty: number): boolean;
   /** Max range in tiles (optional, informational). */
   targetingMaxRange?: number;
+  /** Offsets from the aim tile that will be affected by the weapon's pattern. */
+  getPatternOffsets?(): Array<{ dx: number; dy: number }>;
 }
 
 export class RangedTargetingSystem {
@@ -120,9 +122,18 @@ export class RangedTargetingSystem {
     return Math.atan2(dy, dx);
   }
 
-  /** True if (x, y) is the current target tile. */
+  /** All world tiles covered by the weapon's pattern at the current aim point. */
+  getPatternTiles(): Array<{ x: number; y: number }> {
+    if (!this.active) return [];
+    const offsets = this.weapon?.getPatternOffsets?.();
+    if (!offsets || offsets.length === 0) return [{ x: this.targetX, y: this.targetY }];
+    return offsets.map((o) => ({ x: this.targetX + o.dx, y: this.targetY + o.dy }));
+  }
+
+  /** True if (x, y) is covered by the weapon's pattern at the current aim point. */
   isTargetTile(x: number, y: number): boolean {
-    return this.active && this.targetX === x && this.targetY === y;
+    if (!this.active) return false;
+    return this.getPatternTiles().some((t) => t.x === x && t.y === y);
   }
 
   /** The weapon currently being aimed, or null. */

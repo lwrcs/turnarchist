@@ -61739,9 +61739,20 @@ class RangedTargetingSystem {
             return null;
         return Math.atan2(dy, dx);
     }
-    /** True if (x, y) is the current target tile. */
+    /** All world tiles covered by the weapon's pattern at the current aim point. */
+    getPatternTiles() {
+        if (!this.active)
+            return [];
+        const offsets = this.weapon?.getPatternOffsets?.();
+        if (!offsets || offsets.length === 0)
+            return [{ x: this.targetX, y: this.targetY }];
+        return offsets.map((o) => ({ x: this.targetX + o.dx, y: this.targetY + o.dy }));
+    }
+    /** True if (x, y) is covered by the weapon's pattern at the current aim point. */
     isTargetTile(x, y) {
-        return this.active && this.targetX === x && this.targetY === y;
+        if (!this.active)
+            return false;
+        return this.getPatternTiles().some((t) => t.x === x && t.y === y);
     }
     /** The weapon currently being aimed, or null. */
     getWeapon() {
@@ -62643,6 +62654,9 @@ class Spellbook extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.targetingMaxRange = 4;
+        this.getPatternOffsets = () => {
+            return (this.pendingSpell ?? this.activeSpell).getPattern().offsets;
+        };
         this.addSpell = (spell) => {
             if (this.spells.some((s) => s.id === spell.id))
                 return;
@@ -76319,7 +76333,7 @@ class PlayerRenderer {
             const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
             const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
             const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
-            // Tile cursor (same FX sprite used for keyboard target indicator)
+            // Tile cursor on the aim tile only
             game_1.Game.drawFX(24 + Math.floor(hitWarning_1.HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
             // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
             // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).
