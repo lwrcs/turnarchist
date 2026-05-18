@@ -153,23 +153,28 @@ export abstract class Weapon extends Equippable {
   break = () => {
     this.durability = 0;
     this.equipped = false;
-    this.wielder.inventory.weapon = null;
     this.game.pushMessage("Your weapon breaks");
     if (this.status.poison || this.status.blood || this.status.curse) {
       this.clearStatus();
     }
     this.broken = true;
-    const hasPreviousWeapon = this.wielder.inventory.items.some(
-      (item) => item === this.previousWeapon,
-    );
-    if (
-      hasPreviousWeapon &&
-      this.previousWeapon !== null &&
-      this.previousWeapon.broken === false &&
-      this.previousWeapon.cooldown === 0
-    ) {
-      this.wielder.inventory.weapon = this.previousWeapon;
-      this.previousWeapon.equipped = true;
+    // Only touch inventory.weapon if this weapon is the currently active one.
+    // In ranged-targeting mode the spellbook fires without ever becoming inventory.weapon,
+    // so clearing it would silently discard the weapon that actually was active.
+    if (this.wielder.inventory.weapon === this) {
+      this.wielder.inventory.weapon = null;
+      const hasPreviousWeapon = this.wielder.inventory.items.some(
+        (item) => item === this.previousWeapon,
+      );
+      if (
+        hasPreviousWeapon &&
+        this.previousWeapon !== null &&
+        this.previousWeapon.broken === false &&
+        this.previousWeapon.cooldown === 0
+      ) {
+        this.wielder.inventory.weapon = this.previousWeapon;
+        this.previousWeapon.equipped = true;
+      }
     }
   };
 

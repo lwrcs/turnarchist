@@ -54,6 +54,10 @@ export class Spellbook extends Weapon implements RangedWeapon {
         rt.stop();
         return;
       }
+      if (this.broken) {
+        this.level.game.pushMessage("Your spellbook is broken.");
+        return;
+      }
       if (this.cooldown > 0) {
         this.level.game.pushMessage("Not enough mana.");
         return;
@@ -65,7 +69,7 @@ export class Spellbook extends Weapon implements RangedWeapon {
   };
 
   fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
-    if (this.cooldown > 0) return false;
+    if (this.broken || this.cooldown > 0) return false;
     const room = player.getRoom();
     if (!room) return false;
     const z = (player as any).z ?? 0;
