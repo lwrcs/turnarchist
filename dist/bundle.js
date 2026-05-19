@@ -16461,6 +16461,416 @@ EarthWizardEnemy.examineText = "An earth wizard. Rings you in, then crushes the 
 
 /***/ }),
 
+/***/ "./src/entity/enemy/ectomancerEnemy.ts":
+/*!*********************************************!*\
+  !*** ./src/entity/enemy/ectomancerEnemy.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EctomancerEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+class EctomancerEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.hit = () => 1;
+        this.bleed = () => { };
+        this.uniqueKillBehavior = () => {
+            // Kill every ghost we spawned; their death un-freezes the base via Enemy.kill chain below.
+            for (const link of this.links.slice()) {
+                this.dissolveLink(link, "ectomancer_died");
+            }
+            this.links = [];
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+        };
+        /** Called from Enemy.kill on either side of a link to tear it down cleanly. */
+        this.notifyLinkSideDied = (side) => {
+            const link = this.links.find((l) => l.base === side || l.ghost === side);
+            if (!link)
+                return;
+            this.links = this.links.filter((l) => l !== link);
+            if (side === link.base) {
+                // Base died — kill the ghost with proper fade animation.
+                if (!link.ghost.dead) {
+                    link.ghost.ectomancerOwner = null;
+                    link.ghost.kill();
+                }
+            }
+            else if (side === link.ghost) {
+                // Ghost died — un-freeze base.
+                if (!link.base.dead) {
+                    link.base.ghostFrozen = false;
+                }
+                link.base.ectomancerOwner = null;
+            }
+        };
+        this.dissolveLink = (link, _reason) => {
+            if (!link.base.dead) {
+                link.base.ghostFrozen = false;
+            }
+            link.base.ectomancerOwner = null;
+            if (!link.ghost.dead) {
+                // Clear owner first so kill() doesn't re-enter notifyLinkSideDied.
+                link.ghost.ectomancerOwner = null;
+                link.ghost.kill();
+            }
+            else {
+                link.ghost.ectomancerOwner = null;
+            }
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            let candidates = this.candidates();
+            if (!this.dead) {
+                if (this.handleSkipTurns())
+                    return;
+                this.ticks++;
+                this.ghostify(candidates);
+                this.prune();
+                if (this.links.length > 0) {
+                    // Move toward the farthest linked base — like exalter/occultist keep proximity.
+                    let target = this.links.reduce((farthest, current) => {
+                        const dF = utils_1.Utils.distance(this.x, this.y, farthest.base.x, farthest.base.y);
+                        const dC = utils_1.Utils.distance(this.x, this.y, current.base.x, current.base.y);
+                        return dC > dF ? current : farthest;
+                    }).base;
+                    let disablePositions = Array();
+                    disablePositions.push(...this.getEntityDisablePositions());
+                    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                        for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                            if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
+                                this.room.roomArray[xx][yy].on) {
+                                disablePositions.push({ x: xx, y: yy });
+                            }
+                        }
+                    }
+                    const moves = this.searchPathLocalizedCached({ x: target.x, y: target.y }, disablePositions);
+                    if (moves.length > 0) {
+                        const oldX = this.x;
+                        const oldY = this.y;
+                        const moveX = moves[0].pos.x;
+                        const moveY = moves[0].pos.y;
+                        this.tryMove(moveX, moveY);
+                        this.setDrawXY(oldX, oldY);
+                        if (this.x > oldX)
+                            this.direction = game_2.Direction.RIGHT;
+                        else if (this.x < oldX)
+                            this.direction = game_2.Direction.LEFT;
+                        else if (this.y > oldY)
+                            this.direction = game_2.Direction.DOWN;
+                        else if (this.y < oldY)
+                            this.direction = game_2.Direction.UP;
+                    }
+                }
+                else {
+                    this.runAway();
+                }
+            }
+            if (this.links.length > 0) {
+                this.shadeColor = "#3a8174";
+            }
+            else {
+                this.shadeColor = "#000000";
+            }
+            if (this.lightSource) {
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            }
+            this.syncBeams();
+        };
+        this.onHurt = (damage = 1) => {
+            if (this.health < this.lastHealth &&
+                this.health % 2 === 0 &&
+                this.health > 0) {
+                this.teleport();
+            }
+            this.lastHealth = this.health;
+        };
+        /** Drop any link whose base or ghost is dead (covers off-screen deaths and edge cases). */
+        this.prune = () => {
+            const stillAlive = [];
+            for (const link of this.links) {
+                if (link.base.dead || link.ghost.dead) {
+                    if (!link.ghost.dead) {
+                        link.ghost.ectomancerOwner = null;
+                        link.ghost.kill();
+                    }
+                    else {
+                        link.ghost.ectomancerOwner = null;
+                    }
+                    if (!link.base.dead)
+                        link.base.ghostFrozen = false;
+                    link.base.ectomancerOwner = null;
+                    continue;
+                }
+                stillAlive.push(link);
+            }
+            this.links = stillAlive;
+        };
+        /** Filter for enemies eligible to be ghostified by this ectomancer. */
+        this.candidates = () => {
+            const alreadyAnchored = new Set();
+            for (const l of this.links) {
+                alreadyAnchored.add(l.base);
+                alreadyAnchored.add(l.ghost);
+            }
+            return this.room.entities.filter((entity) => {
+                if (!(entity instanceof enemy_1.Enemy))
+                    return false;
+                if (entity === this)
+                    return false;
+                if (entity.dead)
+                    return false;
+                if (entity.isGhostly)
+                    return false; // never re-ghostify a ghost
+                if (entity.ghostFrozen)
+                    return false; // already frozen by some ectomancer
+                if (entity.ghostifiedBefore)
+                    return false; // already had a ghost killed; immune
+                if (alreadyAnchored.has(entity))
+                    return false;
+                if (entity instanceof EctomancerEnemy)
+                    return false;
+                // Skip support-caster peers (occultist/exalter set destroyableByOthers=false too);
+                // ghostifying a buff caster gets weird fast.
+                if (entity.destroyableByOthers === false)
+                    return false;
+                if (utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) > this.range)
+                    return false;
+                return true;
+            });
+        };
+        this.ghostify = (candidates) => {
+            if (this.links.length >= gameplaySettings_1.GameplaySettings.MAX_ECTOMANCER_GHOSTS)
+                return;
+            for (const base of candidates) {
+                if (this.links.length >= gameplaySettings_1.GameplaySettings.MAX_ECTOMANCER_GHOSTS)
+                    break;
+                const distance = utils_1.Utils.distance(this.x, this.y, base.x, base.y);
+                // Same probabilistic gating used by exalter/occultist for cadence consistency.
+                if (random_1.Random.rand() * 10 > distance) {
+                    this.tryGhostify(base);
+                }
+            }
+        };
+        this.tryGhostify = (base) => {
+            const ghost = this.spawnGhostFrom(base);
+            if (!ghost)
+                return null;
+            base.ghostFrozen = true;
+            base.ghostifiedBefore = true;
+            base.ectomancerOwner = this;
+            ghost.ectomancerOwner = this;
+            const link = { base, ghost };
+            this.links.push(link);
+            this.attachBeam(link);
+            return link;
+        };
+        /** Spawn a ghostly copy of `base` on the same tile. */
+        this.spawnGhostFrom = (base) => {
+            const Ctor = base.constructor;
+            let ghost;
+            try {
+                ghost = new Ctor(base.room, base.game, base.x, base.y);
+            }
+            catch {
+                return null;
+            }
+            this.applyGhostlyState(ghost, base);
+            base.room.entities.push(ghost);
+            return ghost;
+        };
+        /** Apply the visual+behavioral tweaks that distinguish a ghost from a real enemy. */
+        this.applyGhostlyState = (ghost, base) => {
+            ghost.isGhostly = true;
+            ghost.alpha = entity_1.Entity.GHOSTLY_ALPHA;
+            ghost.ghostlyBeamParentGid = base.globalId;
+            ghost.drops = [];
+            ghost.dropChance = 0;
+            ghost.enemyKillXpMultiplier = 0;
+            ghost.direction = base.direction;
+            ghost.health = base.health;
+            ghost.maxHealth = base.maxHealth;
+            // Give the ghost a target player — fall back to ectomancer's nearest if base hasn't seen one.
+            const nearestResult = this.nearestPlayer();
+            const player = base.targetPlayer ?? (nearestResult !== false ? nearestResult[1] : null);
+            if (player) {
+                ghost.targetPlayer = player;
+                ghost.seenPlayer = true;
+                ghost.aggro = true;
+            }
+        };
+        this.beamCenter = (e) => ({
+            x: e.x + (e.w ?? 1) / 2 - 0.5,
+            y: e.y + (e.h ?? 1) / 2 - 0.5,
+        });
+        this.attachBeam = (link) => {
+            const gc = this.beamCenter(link.ghost);
+            const bc = this.beamCenter(link.base);
+            // Beam parent = ghost so BeamEffect.tick() auto-destroys it when the ghost dies.
+            const beam = new beamEffect_1.BeamEffect(gc.x, gc.y, bc.x, bc.y, link.ghost);
+            beam.compositeOperation = "source-over";
+            beam.color = "#8FE0D2";
+            beam.alpha = 0.35;
+            beam.lineWidth = 4;
+            beam.turbulence = 0.4;
+            beam.gravity = 0.1;
+            beam.iterations = 1;
+            beam.segments = 100;
+            beam.angleChange = 0.001;
+            beam.springDamping = 0.01;
+            beam.drawableY = link.ghost.drawableY;
+            beam.type = "ghost";
+            this.room.projectiles.push(beam);
+        };
+        this.syncBeams = () => {
+            for (const projectile of this.room.projectiles) {
+                if (!(projectile instanceof beamEffect_1.BeamEffect))
+                    continue;
+                if (projectile.type !== "ghost")
+                    continue;
+                const ghost = projectile.parent;
+                if (!(ghost instanceof enemy_1.Enemy))
+                    continue;
+                const link = this.links.find((l) => l.ghost === ghost);
+                if (!link)
+                    continue;
+                const gc = this.beamCenter(link.ghost);
+                const bc = this.beamCenter(link.base);
+                projectile.setTarget(gc.x, gc.y, bc.x, bc.y);
+                projectile.drawableY = link.ghost.drawableY;
+            }
+        };
+        this.teleport = () => {
+            const newTile = this.findConstrainedFarTile();
+            if (!newTile)
+                return;
+            this.drawX = newTile.x - this.x;
+            this.drawY = newTile.y - this.y;
+            this.x = newTile.x;
+            this.y = newTile.y;
+            this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
+            this.room.updateLighting();
+            this.syncBeams();
+        };
+        this.findConstrainedFarTile = () => {
+            const emptyTiles = this.room.getEmptyTiles();
+            const player = this.getPlayer();
+            if (!player || player === false || emptyTiles.length === 0)
+                return null;
+            const interactionRange = gameplaySettings_1.GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+            const withinPlayerRange = (t) => {
+                const dx = t.x - player.x;
+                const dy = t.y - player.y;
+                return dx * dx + dy * dy <= interactionRange * interactionRange;
+            };
+            const linked = this.links.map((l) => l.base);
+            const maxLinkedDist = this.range;
+            const withinAllLinked = (t, dist) => linked.every((e) => utils_1.Utils.distance(t.x, t.y, e.x, e.y) <= dist);
+            let candidates = emptyTiles.filter((t) => withinPlayerRange(t) &&
+                (linked.length === 0 || withinAllLinked(t, maxLinkedDist)));
+            if (candidates.length === 0 && linked.length > 0) {
+                candidates = emptyTiles.filter((t) => withinPlayerRange(t) && withinAllLinked(t, maxLinkedDist * 2));
+            }
+            if (candidates.length === 0) {
+                candidates = emptyTiles.filter((t) => withinPlayerRange(t));
+            }
+            if (candidates.length === 0)
+                return null;
+            const tilesWithDistances = candidates.map((tile) => {
+                const distance = utils_1.Utils.distance(tile.x, tile.y, player.x, player.y);
+                return { tile, distance };
+            });
+            tilesWithDistances.sort((a, b) => b.distance - a.distance);
+            const farTiles = tilesWithDistances.slice(0, Math.max(1, Math.floor(tilesWithDistances.length / 2)));
+            const randomIndex = Math.floor(random_1.Random.rand() * farTiles.length);
+            return farTiles[randomIndex]?.tile ?? null;
+        };
+        this.updateBeam = (delta) => {
+            for (let beam of this.room.projectiles) {
+                if (!(beam instanceof beamEffect_1.BeamEffect))
+                    continue;
+                if (beam.type !== "ghost")
+                    continue;
+                const link = this.links.find((l) => l.ghost === beam.parent);
+                if (!link)
+                    continue;
+                const gc = this.beamCenter(link.ghost);
+                const bc = this.beamCenter(link.base);
+                beam.setTarget(gc.x - link.ghost.drawX, gc.y - link.ghost.drawY, bc.x - link.base.drawX, bc.y - link.base.drawY);
+                beam.drawableY = link.ghost.drawableY;
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.drawableY = this.y;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.updateBeam(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.health = 6;
+        this.lastHealth = this.health;
+        this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
+        this.tileX = EctomancerEnemy.tileX;
+        this.tileY = EctomancerEnemy.tileY;
+        this.isGhostly = true;
+        this.alpha = entity_1.Entity.GHOSTLY_ALPHA;
+        this.seenPlayer = true;
+        this.name = "ectomancer";
+        this.range = 6;
+        this.aggro = false;
+        this.frame = 0;
+        this.hasShadow = true;
+        this.links = [];
+        this.shadeColor = "#000000";
+        this.enemyKillXpMultiplier = 2;
+        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [30, 60, 55], 3.5, 20);
+        this.addLightSource(this.lightSource);
+        this.room.updateLighting();
+        this.hasBloom = true;
+        this.bloomColor = "#8FE0D2"; // pale cyan-green
+        this.bloomAlpha = 0.5;
+        this.softBloomAlpha = 0;
+        this.dropChance = 1;
+        this.getDrop(["ectomancer"], false);
+        this.pushable = false;
+        this.chainPushable = false;
+        this.destroyableByOthers = false;
+    }
+}
+exports.EctomancerEnemy = EctomancerEnemy;
+EctomancerEnemy.examineText = "An ectomancer. Tears spirits from the living to fight in their place.";
+EctomancerEnemy.tileX = 59;
+EctomancerEnemy.tileY = 8;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/enemy.ts":
 /*!***********************************!*\
   !*** ./src/entity/enemy/enemy.ts ***!
@@ -16629,16 +17039,19 @@ class Enemy extends entity_1.Entity {
         };
         this.getDisablePositions = () => {
             let disablePositions = Array();
+            const mw = this.w ?? 1;
+            const mh = this.h ?? 1;
             for (const e of this.room.entities) {
                 if (e !== this) {
                     const ew = e.w ?? 1;
                     const eh = e.h ?? 1;
                     for (let dx = 0; dx < ew; dx++) {
                         for (let dy = 0; dy < eh; dy++) {
-                            disablePositions.push({
-                                x: e.x + dx,
-                                y: e.y + dy,
-                            });
+                            const tx = e.x + dx;
+                            const ty = e.y + dy;
+                            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                                continue;
+                            disablePositions.push({ x: tx, y: ty });
                         }
                     }
                 }
@@ -16656,16 +17069,19 @@ class Enemy extends entity_1.Entity {
         };
         this.findPath = () => {
             let disablePositions = Array();
+            const mw = this.w ?? 1;
+            const mh = this.h ?? 1;
             for (const e of this.room.entities) {
                 if (e !== this) {
                     const ew = e.w ?? 1;
                     const eh = e.h ?? 1;
                     for (let dx = 0; dx < ew; dx++) {
                         for (let dy = 0; dy < eh; dy++) {
-                            disablePositions.push({
-                                x: e.x + dx,
-                                y: e.y + dy,
-                            });
+                            const tx = e.x + dx;
+                            const ty = e.y + dy;
+                            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                                continue;
+                            disablePositions.push({ x: tx, y: ty });
                         }
                     }
                 }
@@ -16695,6 +17111,12 @@ class Enemy extends entity_1.Entity {
         this.tick = () => {
             this.tickPoison();
             this.tickBleed();
+            if (this.ghostFrozen && !this.dead) {
+                this.lastX = this.x;
+                this.lastY = this.y;
+                this.hurtThisTurn = false;
+                return;
+            }
             this.behavior();
             if (this.x !== this.lastX || this.y !== this.lastY) {
                 this.emitEntityData();
@@ -16909,11 +17331,15 @@ class Enemy extends entity_1.Entity {
                 const ey1 = e.y + h - 1;
                 if (ex1 < left || ex0 > right || ey1 < top || ey0 > bottom)
                     continue;
+                const mw = this.w ?? 1;
+                const mh = this.h ?? 1;
                 for (let dx = 0; dx < w; dx++) {
                     for (let dy = 0; dy < h; dy++) {
                         const x = e.x + dx;
                         const y = e.y + dy;
                         if (x < left || x > right || y < top || y > bottom)
+                            continue;
+                        if (x >= this.x && x < this.x + mw && y >= this.y && y < this.y + mh)
                             continue;
                         out.push({ x, y });
                     }
@@ -17198,6 +17624,8 @@ class Enemy extends entity_1.Entity {
     // to cover every tile they occupy (not just the top-left anchor).
     getEntityDisablePositions(filter) {
         const out = [];
+        const mw = this.w ?? 1;
+        const mh = this.h ?? 1;
         for (const e of this.room.entities) {
             if (e === this)
                 continue;
@@ -17205,9 +17633,17 @@ class Enemy extends entity_1.Entity {
                 continue;
             const ew = e.w ?? 1;
             const eh = e.h ?? 1;
-            for (let dx = 0; dx < ew; dx++)
-                for (let dy = 0; dy < eh; dy++)
-                    out.push({ x: e.x + dx, y: e.y + dy });
+            for (let dx = 0; dx < ew; dx++) {
+                for (let dy = 0; dy < eh; dy++) {
+                    const tx = e.x + dx;
+                    const ty = e.y + dy;
+                    // Skip tiles that are inside our own current footprint — we're vacating
+                    // them, so they shouldn't count as blocked for pathfinding purposes.
+                    if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                        continue;
+                    out.push({ x: tx, y: ty });
+                }
+            }
         }
         return out;
     }
@@ -22972,6 +23408,32 @@ class Entity extends drawable_1.Drawable {
         this.seeThroughAlpha = 1;
         this.softSeeThroughAlpha = 1;
         /**
+         * Ghostly state — when true, `drawMobWithCrush` (and `drawObjWithCrush`) auto-applies
+         * a desaturated cyan-green tint and half opacity. Used by the Ectomancer to render
+         * its spectral copies of other enemies without each enemy subclass needing changes.
+         *
+         * `ghostlyBeamParentGid` is the gid of the base enemy this ghost is anchored to, so
+         * the link can be re-established on save load.
+         */
+        this.isGhostly = false;
+        this.ghostlyBeamParentGid = null;
+        /**
+         * "Frozen" state — when true, an enemy's `behavior()` is short-circuited so it cannot
+         * move or attack. Used by the Ectomancer to lock the base enemy while a ghost copy
+         * acts in its place. Distinct from `unconscious`/`stunned` so existing AI flags are
+         * unaffected.
+         */
+        this.ghostFrozen = false;
+        /** Set to true after a ghost spawned from this enemy is killed, preventing re-ghostification. */
+        this.ghostifiedBefore = false;
+        /**
+         * Back-reference to the EctomancerEnemy that owns the (base, ghost) link this entity is
+         * part of. Typed loosely so Entity does not depend on a concrete enemy subclass. When
+         * either side of the link dies, `Entity.kill` notifies the owner so it can tear the
+         * link down (kill the ghost / unfreeze the base).
+         */
+        this.ectomancerOwner = null;
+        /**
          * Returns true if this entity occupies the given tile coordinate, accounting for footprint.
          * Useful for interactions involving 2x2+ enemies where `x/y` alone is insufficient.
          */
@@ -23274,6 +23736,14 @@ class Entity extends drawable_1.Drawable {
                 return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
             };
             let entityCollide = (entity) => {
+                // If the entity is already overlapping our current footprint, we're moving
+                // away from a pre-existing overlap — don't block the move.
+                const alreadyOverlapping = !(entity.x >= this.x + this.w ||
+                    entity.x + entity.w <= this.x ||
+                    entity.y >= this.y + this.h ||
+                    entity.y + entity.h <= this.y);
+                if (alreadyOverlapping)
+                    return false;
                 let flag = true;
                 if (entity.x >= x + this.w || entity.x + entity.w <= x)
                     flag = false;
@@ -23692,6 +24162,11 @@ class Entity extends drawable_1.Drawable {
             //this.room.entities = this.room.entities.filter((e) => e !== this);
             this.removeLightSource(this.lightSource);
             this.uniqueKillBehavior();
+            if (this.ectomancerOwner) {
+                const owner = this.ectomancerOwner;
+                this.ectomancerOwner = null;
+                owner.notifyLinkSideDied(this);
+            }
         };
         this.uniqueKillBehavior = () => { };
         this.updateHurtFrame = (delta) => {
@@ -24616,6 +25091,11 @@ class Entity extends drawable_1.Drawable {
             outlineColor = "yellow";
             outlineOpacity = Entity.targetPulseOpacity();
         }
+        if (this.isGhostly) {
+            colorOverlay = Entity.GHOSTLY_TINT;
+            colorOverlayOpacity = Math.max(colorOverlayOpacity, Entity.GHOSTLY_TINT_OPACITY);
+            colorOverlayDesaturate = true;
+        }
         const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
         game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
     }
@@ -24650,6 +25130,9 @@ Entity.targetPulseOpacity = () => {
     const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
     return Math.round(raw * steps) / steps;
 };
+Entity.GHOSTLY_TINT = "#8FE0D2";
+Entity.GHOSTLY_TINT_OPACITY = 0.6;
+Entity.GHOSTLY_ALPHA = 0.5;
 /**
  * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
  * Useful for bestiary pages without instantiating enemies.
@@ -28541,6 +29024,7 @@ exports.ENTITY_EXAMINE_TEXT = {
     EnergyWizardEnemy: "An energy wizard. Fast bursts and nasty overlaps.",
     ExalterEnemy: "An exalter. Makes other enemies hit harder.",
     OccultistEnemy: "An occultist. Shields allies and drags out fights.",
+    EctomancerEnemy: "An ectomancer. Tears spirits from the living to fight in their place.",
     WardenEnemy: "A warden. Keeps its distance and calls in crushers.",
     CrusherEnemy: "A crusher. It doesn't fight— it falls.",
     Spawner: "A reaper. It spits out trouble if left alone.",
@@ -35778,6 +36262,23 @@ exports.BESTIARY_ENEMIES = {
             },
         ],
     },
+    EctomancerEnemy: {
+        typeName: "EctomancerEnemy",
+        displayName: "Ectomancer",
+        description: "A support caster that tears spectral copies from nearby enemies. The originals are frozen in place while their ghosts attack.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 59,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 6,
+                maxHp: 6,
+                frames: 4,
+            },
+        ],
+    },
     WardenEnemy: {
         typeName: "WardenEnemy",
         displayName: "Warden",
@@ -36725,6 +37226,7 @@ const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 class HitWarningState {
@@ -36867,6 +37369,7 @@ var EnemyType;
     EnemyType[EnemyType["PAWN_STATUE"] = 62] = "PAWN_STATUE";
     EnemyType[EnemyType["ROOK_STATUE"] = 63] = "ROOK_STATUE";
     EnemyType[EnemyType["BISHOP_STATUE"] = 64] = "BISHOP_STATUE";
+    EnemyType[EnemyType["ECTOMANCER"] = 65] = "ECTOMANCER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -37071,6 +37574,8 @@ class EnemyState {
             this.type = EnemyType.BIGFROG;
         if (enemy instanceof exalterEnemy_1.ExalterEnemy)
             this.type = EnemyType.EXALTER;
+        if (enemy instanceof ectomancerEnemy_1.EctomancerEnemy)
+            this.type = EnemyType.ECTOMANCER;
         if (enemy instanceof kingEnemy_1.KingEnemy)
             this.type = EnemyType.KING;
         if (enemy instanceof garnetResource_1.GarnetResource)
@@ -37253,6 +37758,8 @@ let loadEnemy = (es, game) => {
         enemy = new beetleEnemy_1.BeetleEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.EXALTER)
         enemy = new exalterEnemy_1.ExalterEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.ECTOMANCER)
+        enemy = new ectomancerEnemy_1.EctomancerEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.KING)
         enemy = new kingEnemy_1.KingEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.GARNET)
@@ -39119,6 +39626,10 @@ GameplaySettings.MAX_ENEMY_DENSITY = 0.117; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
+GameplaySettings.MAX_ECTOMANCER_GHOSTS = 4; // Maximum number of ghosts an ectomancer can sustain
+GameplaySettings.ECTOMANCER_MIN_DEPTH = 1;
+GameplaySettings.ECTOMANCER_SPAWN_CHANCE = 0.08;
+GameplaySettings.ECTOMANCER_AREA_THRESHOLD = 220;
 
 
 /***/ }),
@@ -40250,6 +40761,7 @@ const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const spawner_1 = __webpack_require__(/*! ../../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
@@ -40348,6 +40860,17 @@ function entityFP(entity) {
     }
     if (entity instanceof exalterEnemy_1.ExalterEnemy) {
         stateStr += `,exaltBuffed=${entity.buffedEnemies?.length ?? 0}`;
+    }
+    if (entity instanceof ectomancerEnemy_1.EctomancerEnemy) {
+        stateStr += `,ectoLinks=${entity.links?.length ?? 0}`;
+    }
+    if (entity instanceof enemy_1.Enemy) {
+        if (entity.isGhostly)
+            stateStr += `,ghostly=1`;
+        if (entity.ghostFrozen)
+            stateStr += `,ghostFrozen=1`;
+        if (entity.ghostifiedBefore)
+            stateStr += `,ghostifiedBefore=1`;
     }
     if (entity instanceof spawner_1.Spawner) {
         stateStr += `,spawnType=${entity.enemySpawnType},nextTick=${entity.nextSpawnTick}`;
@@ -40603,6 +41126,7 @@ const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./sr
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
@@ -41548,6 +42072,41 @@ const loadSaveV2 = async (game, save) => {
                     room.projectiles.push(anim);
                 }
             }
+            // Post-pass: re-link ectomancer (base, ghost) pairs, re-apply ghostly state, attach
+            // beams, and restore ectomancerOwner back-refs. Must run AFTER room.projectiles is
+            // initialized so that attachBeam() pushes into the final projectiles array.
+            for (const es of rd.enemies) {
+                const baseGids = es
+                    .ectomancerLinkBaseGids;
+                const ghostGids = es
+                    .ectomancerLinkGhostGids;
+                if (!Array.isArray(baseGids) || !Array.isArray(ghostGids))
+                    continue;
+                const ectomancer = entitiesByGid.get(es.gid);
+                if (!(ectomancer instanceof ectomancerEnemy_1.EctomancerEnemy))
+                    continue;
+                const n = Math.min(baseGids.length, ghostGids.length);
+                for (let i = 0; i < n; i++) {
+                    const base = entitiesByGid.get(baseGids[i]);
+                    const ghost = entitiesByGid.get(ghostGids[i]);
+                    if (!(base instanceof enemy_1.Enemy) || !(ghost instanceof enemy_1.Enemy))
+                        continue;
+                    if (base.dead || ghost.dead)
+                        continue;
+                    // Re-apply link state explicitly — spawnBasic restores these from saved flags,
+                    // but we reinforce here as the authoritative post-pass for live links.
+                    base.ghostFrozen = true;
+                    ghost.isGhostly = true;
+                    ghost.alpha = 0.5;
+                    ghost.drops = [];
+                    ghost.dropChance = 0;
+                    ghost.enemyKillXpMultiplier = 0;
+                    ectomancer.links.push({ base, ghost });
+                    base.ectomancerOwner = ectomancer;
+                    ghost.ectomancerOwner = ectomancer;
+                    ectomancer.attachBeam({ base, ghost });
+                }
+            }
             room.hitwarnings = [];
             for (const hws of rd.hitWarnings) {
                 const hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.eX ?? hws.x, hws.eY ?? hws.y, hws.isEnemy, hws.dirOnly);
@@ -42157,6 +42716,7 @@ const bigWizardEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/bigWizard
 const zombieEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const enemy_1 = __webpack_require__(/*! ../../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mappers_1 = __webpack_require__(/*! ../mappers */ "./src/game/save/mappers.ts");
 const enemies_1 = __webpack_require__(/*! ./enemies */ "./src/game/save/registry/enemies.ts");
@@ -42238,6 +42798,8 @@ const entityToKind = (e) => {
         return "occultist";
     if (e instanceof exalterEnemy_1.ExalterEnemy)
         return "exalter";
+    if (e instanceof ectomancerEnemy_1.EctomancerEnemy)
+        return "ectomancer";
     if (e instanceof armoredSkullEnemy_1.ArmoredSkullEnemy)
         return "armored_skull";
     if (e instanceof armoredzombieEnemy_1.ArmoredzombieEnemy)
@@ -42347,6 +42909,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
     const saveBasic = (kind, value) => {
         const isEnemy = value instanceof enemy_1.Enemy;
+        const isEctomancer = value instanceof ectomancerEnemy_1.EctomancerEnemy;
         return {
             kind,
             gid: value.globalId,
@@ -42369,6 +42932,16 @@ const registerBuiltinEnemyCodecsV2 = () => {
             buffedBefore: value.buffedBefore === true ? true : undefined,
             shieldedEnemyGids: value instanceof occultistEnemy_1.OccultistEnemy && value.shieldedEnemies.length > 0
                 ? value.shieldedEnemies.map((e) => e.globalId)
+                : undefined,
+            isGhostly: value.isGhostly === true ? true : undefined,
+            ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
+            ghostFrozen: value.ghostFrozen === true ? true : undefined,
+            ghostifiedBefore: value.ghostifiedBefore === true ? true : undefined,
+            ectomancerLinkBaseGids: isEctomancer && value.links.length > 0
+                ? value.links.map((l) => l.base.globalId)
+                : undefined,
+            ectomancerLinkGhostGids: isEctomancer && value.links.length > 0
+                ? value.links.map((l) => l.ghost.globalId)
                 : undefined,
         };
     };
@@ -42397,6 +42970,19 @@ const registerBuiltinEnemyCodecsV2 = () => {
             const healthU = sh.health;
             if (typeof healthU === "number")
                 e.applyShield(healthU, true);
+        }
+        if ("isGhostly" in value && value.isGhostly === true) {
+            e.isGhostly = true;
+            e.alpha = 0.5;
+        }
+        if ("ghostlyBeamParentGid" in value && typeof value.ghostlyBeamParentGid === "string") {
+            e.ghostlyBeamParentGid = value.ghostlyBeamParentGid;
+        }
+        if ("ghostFrozen" in value && value.ghostFrozen === true) {
+            e.ghostFrozen = true;
+        }
+        if ("ghostifiedBefore" in value && value.ghostifiedBefore === true) {
+            e.ghostifiedBefore = true;
         }
         e.globalId = value.gid;
         return e;
@@ -42706,6 +43292,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     // Other enemies / entities using basic envelope
     registerBasic("occultist", occultistEnemy_1.OccultistEnemy);
     registerBasic("exalter", exalterEnemy_1.ExalterEnemy);
+    registerBasic("ectomancer", ectomancerEnemy_1.EctomancerEnemy);
     registerBasic("armored_skull", armoredSkullEnemy_1.ArmoredSkullEnemy);
     registerBasic("armored_zombie", armoredzombieEnemy_1.ArmoredzombieEnemy);
     registerBasic("beetle", beetleEnemy_1.BeetleEnemy);
@@ -45149,6 +45736,7 @@ const bigWizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigWizardEne
 const zombieEnemy_1 = __webpack_require__(/*! ../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const coalResource_1 = __webpack_require__(/*! ../../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const ironResource_1 = __webpack_require__(/*! ../../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
@@ -45365,6 +45953,7 @@ function populateTestRoom(room, game, clearFirst = false) {
         [zombieEnemy_1.ZombieEnemy, "zombie"],
         [occultistEnemy_1.OccultistEnemy, "occultist"],
         [exalterEnemy_1.ExalterEnemy, "exalter"],
+        [ectomancerEnemy_1.EctomancerEnemy, "ectomancer"],
     ];
     // Resources
     const resourceCtors = [
@@ -45551,6 +46140,7 @@ const ENEMY_KINDS = [
     "zombie",
     "occultist",
     "exalter",
+    "ectomancer",
     "armored_skull",
     "armored_zombie",
     "beetle",
@@ -47475,6 +48065,71 @@ const validateEnemySaveV2 = (v, path) => {
         }
         shieldedEnemyGids = gids;
     }
+    const isGhostlyU = get(v, "isGhostly");
+    let isGhostly = undefined;
+    if (isGhostlyU !== undefined) {
+        if (!isBoolean(isGhostlyU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "isGhostly must be boolean if present",
+                path: `${path}.isGhostly`,
+            });
+        isGhostly = isGhostlyU;
+    }
+    const ghostlyBeamParentGidU = get(v, "ghostlyBeamParentGid");
+    let ghostlyBeamParentGid = undefined;
+    if (ghostlyBeamParentGidU !== undefined) {
+        const g = asGid(ghostlyBeamParentGidU, `${path}.ghostlyBeamParentGid`);
+        if (isErr(g))
+            return (0, errors_1.err)(g.error);
+        ghostlyBeamParentGid = g.value;
+    }
+    const ghostFrozenU = get(v, "ghostFrozen");
+    let ghostFrozen = undefined;
+    if (ghostFrozenU !== undefined) {
+        if (!isBoolean(ghostFrozenU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "ghostFrozen must be boolean if present",
+                path: `${path}.ghostFrozen`,
+            });
+        ghostFrozen = ghostFrozenU;
+    }
+    const ghostifiedBeforeU = get(v, "ghostifiedBefore");
+    let ghostifiedBefore = undefined;
+    if (ghostifiedBeforeU !== undefined) {
+        if (!isBoolean(ghostifiedBeforeU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "ghostifiedBefore must be boolean if present",
+                path: `${path}.ghostifiedBefore`,
+            });
+        ghostifiedBefore = ghostifiedBeforeU;
+    }
+    const validateGidArray = (raw, fieldPath) => {
+        if (raw === undefined)
+            return (0, errors_1.ok)(undefined);
+        if (!Array.isArray(raw))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: `${fieldPath} must be array if present`,
+                path: fieldPath,
+            });
+        const out = [];
+        for (let i = 0; i < raw.length; i++) {
+            const g = asGid(raw[i], `${fieldPath}[${i}]`);
+            if (isErr(g))
+                return (0, errors_1.err)(g.error);
+            out.push(g.value);
+        }
+        return (0, errors_1.ok)(out);
+    };
+    const linkBaseR = validateGidArray(get(v, "ectomancerLinkBaseGids"), `${path}.ectomancerLinkBaseGids`);
+    if (isErr(linkBaseR))
+        return (0, errors_1.err)(linkBaseR.error);
+    const linkGhostR = validateGidArray(get(v, "ectomancerLinkGhostGids"), `${path}.ectomancerLinkGhostGids`);
+    if (isErr(linkGhostR))
+        return (0, errors_1.err)(linkGhostR.error);
     return (0, errors_1.ok)({
         kind,
         gid: gidR.value,
@@ -47496,6 +48151,12 @@ const validateEnemySaveV2 = (v, path) => {
         buffed,
         buffedBefore,
         shieldedEnemyGids,
+        isGhostly,
+        ghostlyBeamParentGid,
+        ghostFrozen,
+        ghostifiedBefore,
+        ectomancerLinkBaseGids: linkBaseR.value,
+        ectomancerLinkGhostGids: linkGhostR.value,
     });
 };
 const validateProjectileSaveV2 = (v, path) => {
@@ -57625,6 +58286,18 @@ DropTable.drops = [
         unique: true,
     },
     {
+        itemType: "shieldleftfragment",
+        dropRate: 10,
+        category: ["ectomancer"],
+        unique: true,
+    },
+    {
+        itemType: "shieldrightfragment",
+        dropRate: 10,
+        category: ["ectomancer"],
+        unique: true,
+    },
+    {
         itemType: "crossbowstock",
         dropRate: 20,
         category: ["crossbow"],
@@ -64003,6 +64676,7 @@ const chessKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/chessKnightEn
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const bigWizardEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigWizardEnemy */ "./src/entity/enemy/bigWizardEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
@@ -64131,6 +64805,7 @@ const environmentData = {
             { class: giantFrogEnemy_1.GiantFrogEnemy, depth: 3, weight: 0.2, big: true },
             { class: exalterEnemy_1.ExalterEnemy, depth: 1, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 2, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.5, big: true },
         ],
     },
@@ -64317,6 +64992,7 @@ const environmentData = {
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
             { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.25 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
@@ -64426,6 +65102,7 @@ const environmentData = {
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 1.0 },
             { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.45, big: true },
         ],
     },
@@ -64520,6 +65197,7 @@ const environmentData = {
         bosses: [
             { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.25 },
             { class: wardenEnemy_1.WardenEnemy, depth: 3, weight: 0.85, big: true },
         ],
     },
@@ -64587,6 +65265,7 @@ const environmentData = {
             { class: spawner_1.Spawner, depth: 0, weight: 0.5 },
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 0, weight: 0.4, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 0, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 4, weight: 0.6, big: true },
         ],
     },
@@ -76416,6 +77095,21 @@ const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/p
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 class BeamEffect extends projectile_1.Projectile {
+    static getOffscreenCtx(width, height) {
+        if (!BeamEffect.offscreenCanvas) {
+            BeamEffect.offscreenCanvas = document.createElement("canvas");
+            BeamEffect.offscreenCanvas.width = width;
+            BeamEffect.offscreenCanvas.height = height;
+            BeamEffect.offscreenCtx =
+                BeamEffect.offscreenCanvas.getContext("2d");
+        }
+        else if (BeamEffect.offscreenCanvas.width !== width ||
+            BeamEffect.offscreenCanvas.height !== height) {
+            BeamEffect.offscreenCanvas.width = width;
+            BeamEffect.offscreenCanvas.height = height;
+        }
+        return BeamEffect.offscreenCtx;
+    }
     constructor(x1, y1, x2, y2, parent) {
         super(parent, x1, y1);
         this.active = true;
@@ -76423,6 +77117,7 @@ class BeamEffect extends projectile_1.Projectile {
         this.attachmentInfluence = [];
         this.drawOnTop = false;
         this.alpha = 1;
+        this.lineWidth = 2;
         this.gravity = BeamEffect.GRAVITY;
         this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
         this.turbulence = BeamEffect.TURBULENCE;
@@ -76442,12 +77137,12 @@ class BeamEffect extends projectile_1.Projectile {
         this.draw = (delta) => {
             this.drawableY = this.y - 0.01;
             const skipDrawing = this.drawOnTop === true;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, skipDrawing, true);
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, this.lineWidth, delta, this.compositeOperation, skipDrawing, true);
         };
         this.drawTopLayer = (delta) => {
             if (!this.drawOnTop)
                 return;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, false, false);
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, this.lineWidth, delta, this.compositeOperation, false, false);
         };
         const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -76671,9 +77366,27 @@ class BeamEffect extends projectile_1.Projectile {
             return;
         }
         const ctx = game_1.Game.ctx;
-        ctx.save();
-        game_1.Game.ctx.globalCompositeOperation =
-            compositeOperation;
+        const mainCanvas = ctx.canvas;
+        const useOffscreen = this.alpha < 1;
+        let drawCtx;
+        if (useOffscreen) {
+            const offCtx = BeamEffect.getOffscreenCtx(mainCanvas.width, mainCanvas.height);
+            // Clear in identity space, then mirror the main canvas transform so
+            // beam pixels land at the same screen positions as they would on Game.ctx.
+            const cameraTransform = ctx.getTransform();
+            offCtx.setTransform(1, 0, 0, 1, 0, 0);
+            offCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            offCtx.setTransform(cameraTransform);
+            offCtx.globalCompositeOperation =
+                compositeOperation;
+            drawCtx = offCtx;
+        }
+        else {
+            ctx.save();
+            ctx.globalCompositeOperation =
+                compositeOperation;
+            drawCtx = ctx;
+        }
         for (let i = 0; i < this.points.length - 1; i++) {
             const p1 = this.points[i];
             const p2 = this.points[i + 1];
@@ -76686,18 +77399,30 @@ class BeamEffect extends projectile_1.Projectile {
             let y = p1.y;
             for (let step = 0; step <= steps; step++) {
                 const brightness = this.getBrightnessAt(x, y);
-                const adjustedColor = this.getColorWithBrightness(color, brightness, this.alpha);
+                const adjustedColor = this.getColorWithBrightness(color, brightness, useOffscreen ? 1 : this.alpha);
+                const half = lineWidth / 2;
                 for (let w = 0; w < lineWidth; w++) {
                     for (let h = 0; h < lineWidth; h++) {
-                        ctx.fillStyle = adjustedColor;
-                        ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
+                        drawCtx.fillStyle = adjustedColor;
+                        drawCtx.fillRect(Math.round(x - half + w), Math.round(y - half + h), 1, 1);
                     }
                 }
                 x += xIncrement;
                 y += yIncrement;
             }
         }
-        ctx.restore();
+        if (useOffscreen) {
+            // Blit the offscreen canvas onto Game.ctx in raw screen pixels —
+            // reset the transform so drawImage is 1:1, not camera-offset.
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalAlpha = this.alpha;
+            ctx.drawImage(BeamEffect.offscreenCanvas, 0, 0);
+            ctx.restore();
+        }
+        else {
+            ctx.restore();
+        }
         this.prevStartX = startX;
         this.prevStartY = startY;
         this.prevEndX = endX;
@@ -76854,6 +77579,8 @@ BeamEffect.SPRING_STIFFNESS = 0.01;
 // How quickly spring oscillations settle
 // Range: 0.001-0.1, recommended: 0.1
 BeamEffect.SPRING_DAMPING = 0.1;
+BeamEffect.offscreenCanvas = null;
+BeamEffect.offscreenCtx = null;
 
 
 /***/ }),
@@ -78282,6 +79009,7 @@ const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
@@ -78330,6 +79058,7 @@ var EnemyType;
     EnemyType["beetle"] = "beetle";
     EnemyType["bigfrog"] = "bigfrog";
     EnemyType["exalter"] = "exalter";
+    EnemyType["ectomancer"] = "ectomancer";
     EnemyType["king"] = "king";
     EnemyType["chest"] = "chest";
     EnemyType["boltcaster"] = "boltcaster";
@@ -78377,6 +79106,7 @@ exports.EnemyTypeMap = {
     [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
     [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
+    [EnemyType.ectomancer]: ectomancerEnemy_1.EctomancerEnemy,
     [EnemyType.king]: kingEnemy_1.KingEnemy,
     [EnemyType.chest]: chest_1.Chest,
     [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,

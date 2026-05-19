@@ -104,6 +104,7 @@ import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { Key } from "../item/key";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../entity/enemy/ectomancerEnemy";
 import { KingEnemy } from "../entity/enemy/kingEnemy";
 import { BoltcasterEnemy } from "../entity/enemy/boltcasterEnemy";
 import { EarthWizardEnemy } from "../entity/enemy/earthWizard";
@@ -153,6 +154,7 @@ export enum EnemyType {
   beetle = "beetle",
   bigfrog = "bigfrog",
   exalter = "exalter",
+  ectomancer = "ectomancer",
   king = "king",
   chest = "chest",
   boltcaster = "boltcaster",
@@ -201,6 +203,7 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.beetle]: BeetleEnemy,
   [EnemyType.bigfrog]: BigFrogEnemy,
   [EnemyType.exalter]: ExalterEnemy,
+  [EnemyType.ectomancer]: EctomancerEnemy,
   [EnemyType.king]: KingEnemy,
   [EnemyType.chest]: Chest,
   [EnemyType.boltcaster]: BoltcasterEnemy,

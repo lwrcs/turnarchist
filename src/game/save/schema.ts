@@ -380,6 +380,23 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   buffedBefore?: boolean;
   /** Occultist: GIDs of enemies this occultist is actively shielding. */
   shieldedEnemyGids?: Gid[];
+  /**
+   * Ghostly state for any enemy. When true, the entity is a spectral copy spawned by an
+   * ectomancer; renders desaturated + cyan-green tinted at half opacity.
+   */
+  isGhostly?: boolean;
+  /** Gid of the base enemy this ghost is anchored to (only set when isGhostly is true). */
+  ghostlyBeamParentGid?: Gid;
+  /** Set on the *base* enemy when an ectomancer has frozen it in place. */
+  ghostFrozen?: boolean;
+  /** Set once a ghost spawned from this enemy has been killed; prevents re-ghostification. */
+  ghostifiedBefore?: boolean;
+  /**
+   * Ectomancer: pairs of (base gid, ghost gid). Encoded as two parallel arrays of the same
+   * length; index i in each refers to a single link. Restored as `EctomancerEnemy.links`.
+   */
+  ectomancerLinkBaseGids?: Gid[];
+  ectomancerLinkGhostGids?: Gid[];
 };
 
 export type WizardTypeKind = "energy" | "fire" | "earth" | "big";
@@ -722,6 +739,7 @@ export type EnemyKind =
   | "zombie"
   | "occultist"
   | "exalter"
+  | "ectomancer"
   // Enemies
   | "armored_skull"
   | "armored_zombie"

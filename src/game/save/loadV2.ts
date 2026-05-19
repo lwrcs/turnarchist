@@ -32,6 +32,7 @@ import { Spellbook } from "../../item/weapon/spellbook";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
+import { EctomancerEnemy } from "../../entity/enemy/ectomancerEnemy";
 import { Enemy } from "../../entity/enemy/enemy";
 import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
@@ -1122,6 +1123,38 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         );
         if (!pgid.ok) return pgid;
         room.projectiles.push(anim);
+      }
+    }
+
+    // Post-pass: re-link ectomancer (base, ghost) pairs, re-apply ghostly state, attach
+    // beams, and restore ectomancerOwner back-refs. Must run AFTER room.projectiles is
+    // initialized so that attachBeam() pushes into the final projectiles array.
+    for (const es of rd.enemies) {
+      const baseGids = (es as { ectomancerLinkBaseGids?: unknown })
+        .ectomancerLinkBaseGids;
+      const ghostGids = (es as { ectomancerLinkGhostGids?: unknown })
+        .ectomancerLinkGhostGids;
+      if (!Array.isArray(baseGids) || !Array.isArray(ghostGids)) continue;
+      const ectomancer = entitiesByGid.get(es.gid);
+      if (!(ectomancer instanceof EctomancerEnemy)) continue;
+      const n = Math.min(baseGids.length, ghostGids.length);
+      for (let i = 0; i < n; i++) {
+        const base = entitiesByGid.get(baseGids[i] as string);
+        const ghost = entitiesByGid.get(ghostGids[i] as string);
+        if (!(base instanceof Enemy) || !(ghost instanceof Enemy)) continue;
+        if (base.dead || ghost.dead) continue;
+        // Re-apply link state explicitly — spawnBasic restores these from saved flags,
+        // but we reinforce here as the authoritative post-pass for live links.
+        base.ghostFrozen = true;
+        ghost.isGhostly = true;
+        ghost.alpha = 0.5;
+        ghost.drops = [];
+        ghost.dropChance = 0;
+        ghost.enemyKillXpMultiplier = 0;
+        ectomancer.links.push({ base, ghost });
+        base.ectomancerOwner = ectomancer;
+        ghost.ectomancerOwner = ectomancer;
+        ectomancer.attachBeam({ base, ghost });
       }
     }
 

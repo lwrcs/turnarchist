@@ -133,4 +133,8 @@ export class GameplaySettings {
 
   static readonly MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
   static readonly MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
+  static readonly MAX_ECTOMANCER_GHOSTS = 4; // Maximum number of ghosts an ectomancer can sustain
+  static readonly ECTOMANCER_MIN_DEPTH = 1;
+  static readonly ECTOMANCER_SPAWN_CHANCE = 0.08;
+  static readonly ECTOMANCER_AREA_THRESHOLD = 220;
 }

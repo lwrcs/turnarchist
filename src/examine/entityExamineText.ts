@@ -37,6 +37,8 @@ export const ENTITY_EXAMINE_TEXT: Readonly<Record<string, string>> = {
 
   ExalterEnemy: "An exalter. Makes other enemies hit harder.",
   OccultistEnemy: "An occultist. Shields allies and drags out fights.",
+  EctomancerEnemy:
+    "An ectomancer. Tears spirits from the living to fight in their place.",
   WardenEnemy: "A warden. Keeps its distance and calls in crushers.",
   CrusherEnemy: "A crusher. It doesn't fight— it falls.",
   Spawner: "A reaper. It spits out trouble if left alone.",

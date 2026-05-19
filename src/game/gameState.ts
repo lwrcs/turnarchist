@@ -169,6 +169,7 @@ import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../entity/enemy/ectomancerEnemy";
 import { IronOre } from "../item/resource/ironOre";
 import { IronBar } from "../item/resource/ironBar";
 
@@ -338,6 +339,7 @@ export enum EnemyType {
   PAWN_STATUE,
   ROOK_STATUE,
   BISHOP_STATUE,
+  ECTOMANCER,
 }
 
 export class EnemyState {
@@ -556,6 +558,7 @@ export class EnemyState {
     if (enemy instanceof BeetleEnemy) this.type = EnemyType.BEETLE;
     if (enemy instanceof BigFrogEnemy) this.type = EnemyType.BIGFROG;
     if (enemy instanceof ExalterEnemy) this.type = EnemyType.EXALTER;
+    if (enemy instanceof EctomancerEnemy) this.type = EnemyType.ECTOMANCER;
     if (enemy instanceof KingEnemy) this.type = EnemyType.KING;
     if (enemy instanceof GarnetResource) this.type = EnemyType.GARNET;
     if (enemy instanceof ZirconResource) this.type = EnemyType.ZIRCON;
@@ -716,6 +719,8 @@ let loadEnemy = (es: EnemyState, game: Game): Entity => {
     enemy = new BeetleEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.EXALTER)
     enemy = new ExalterEnemy(room, game, es.x, es.y);
+  if (es.type === EnemyType.ECTOMANCER)
+    enemy = new EctomancerEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.KING) enemy = new KingEnemy(room, game, es.x, es.y);
   if (es.type === EnemyType.GARNET)
     enemy = new GarnetResource(room, game, es.x, es.y);

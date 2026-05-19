@@ -204,6 +204,18 @@ export class DropTable {
       category: ["occultist"],
       unique: true,
     },
+    {
+      itemType: "shieldleftfragment",
+      dropRate: 10,
+      category: ["ectomancer"],
+      unique: true,
+    },
+    {
+      itemType: "shieldrightfragment",
+      dropRate: 10,
+      category: ["ectomancer"],
+      unique: true,
+    },
 
     {
       itemType: "crossbowstock",
