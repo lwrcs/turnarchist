@@ -29988,6 +29988,11 @@ class Game {
             input_1.Input.touchEndListeners.length = 0;
             this.resetTutorialState();
             stats_1.statsTracker.resetStats();
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                const xp50 = (0, skills_1.xpForLevel)(50);
+                for (const skill of skills_1.SKILLS)
+                    stats_1.statsTracker.awardSkillXp(skill, xp50);
+            }
             this.currentDepth = 0;
             this.encounteredEnemies = [];
             this.levels = [];
@@ -62277,6 +62282,7 @@ class DualDagger extends weapon_1.Weapon {
         this.firstAttack = true;
         this.name = "Dual Daggers";
         this.useCost = 2;
+        this.degradeable = false;
         this.description =
             "After the first attack, enemies will not take their turn until you attack or move again.";
     }
@@ -70739,7 +70745,7 @@ class AttackAnimation extends particle_1.Particle {
                 }
                 break;
             case "dualdagger":
-                this.frames = 8;
+                this.frames = 7;
                 this.tileY = 40;
                 this.yOffset = 0;
                 this.xOffset = 0;
