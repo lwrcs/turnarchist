@@ -46,6 +46,7 @@ import { BubbleImageParticle } from "../particle/imageParticle";
 import { Random } from "../utility/random";
 import { AnchorOptions, OxygenLine } from "./oxygenLine";
 import { SkillsMenu } from "../gui/skillsMenu";
+import { SettingsMenu } from "../gui/settingsMenu";
 import { XPCounter } from "../gui/xpCounter";
 import { RangedTargetingSystem } from "../item/weapon/rangedTargetingSystem";
 
@@ -114,6 +115,7 @@ export class Player extends Drawable {
   depth: number;
   menu: Menu;
   skillsMenu: SkillsMenu;
+  settingsMenu: SettingsMenu;
   busyAnimating: boolean;
   private pushMoveInputLockActive: boolean = false;
   private pushMoveInputLockEntities: Entity[] = [];
@@ -233,6 +235,7 @@ export class Player extends Drawable {
     this.depth = 0;
     this.menu = new Menu(this);
     this.skillsMenu = new SkillsMenu();
+    this.settingsMenu = new SettingsMenu(game);
     this.busyAnimating = false;
 
     this.mapToggled = true;
@@ -823,6 +826,11 @@ export class Player extends Drawable {
       const { x, y } = mousePos;
       const inSkillsPanel = this.skillsMenu.isPointInBounds(x, y);
       return inSkillsPanel ? "hand" : "arrow";
+    }
+
+    // If the settings menu is open, it visually owns the cursor.
+    if (this.settingsMenu?.open) {
+      return "hand";
     }
 
     // If the menu is open, it visually owns the cursor: don't let world interactions behind

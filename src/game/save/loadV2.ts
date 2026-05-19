@@ -965,7 +965,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       if (!spawned.pickedUp) room.items.push(spawned);
     }
 
-    room.lightSources = [];
+    // Clear non-door light sources (enemies re-add their own below).
+    // Door light sources were pushed to the array by Door constructors during
+    // level generation; preserve them so updateLighting can emit through doors.
+    room.lightSources = room.doors.flatMap(d => d?.lightSource ? [d.lightSource] : []);
     room.entities = [];
     // Reset per-room counters derived from the entities list.
     room.currentSpawnerCount = 0;
@@ -1124,7 +1127,15 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
 
     room.hitwarnings = [];
     for (const hws of rd.hitWarnings) {
-      const hw = new HitWarning(game, hws.x, hws.y, hws.x, hws.y);
+      const hw = new HitWarning(
+        game,
+        hws.x,
+        hws.y,
+        hws.eX ?? hws.x,
+        hws.eY ?? hws.y,
+        hws.isEnemy,
+        hws.dirOnly,
+      );
       hw.dead = hws.dead;
       room.hitwarnings.push(hw);
     }

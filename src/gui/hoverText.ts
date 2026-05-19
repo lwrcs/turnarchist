@@ -58,7 +58,7 @@ export class HoverText {
         return strings;
       }
       if (Menu.isPointInOpenMenuButtonBounds(Input.mouseX, Input.mouseY)) {
-        strings.push(player.menu.open ? "Close Menu" : "Open Menu");
+        strings.push(player.settingsMenu?.open ? "Close Menu" : "Open Menu");
         return strings;
       }
       if (XPCounter.isPointInBounds(Input.mouseX, Input.mouseY)) {

@@ -38,6 +38,7 @@ export class HitWarning extends Drawable {
   private ticks: number;
   private tickedForDeath = false;
   private static readonly previewOffsetY = 0.2;
+  readonly skipSave: boolean = false;
 
   constructor(
     game: Game,
@@ -65,6 +66,10 @@ export class HitWarning extends Drawable {
     this.isEnemy = isEnemy !== undefined ? isEnemy : true;
     this.pointerOffset = this.getPointerOffset();
     this.removeOverlapping();
+  }
+
+  getSaveFields(): { eX: number | undefined; eY: number | undefined; isEnemy: boolean; dirOnly: boolean } {
+    return { eX: this.eX, eY: this.eY, isEnemy: !!this.isEnemy, dirOnly: !!this.dirOnly };
   }
 
   tick = () => {

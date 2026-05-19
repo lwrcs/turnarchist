@@ -68,6 +68,7 @@ import fontUrl = require("../res/font.png");
 import { FeedbackButton } from "./gui/feedbackButton";
 import { OneTimeEventTracker } from "./game/oneTimeEventTracker";
 import { TutorialFlags } from "./game/tutorialFlags";
+import { isTutorialHintShown, markTutorialHintShown } from "./game/tutorialPersistence";
 import { XPCounter } from "./gui/xpCounter";
 import { Crate } from "./entity/object/crate";
 import { Barrel } from "./entity/object/barrel";
@@ -751,6 +752,7 @@ export class Game {
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
   isMobile: boolean;
+  private prevIsMobile: boolean | null = null;
   started: boolean;
   startedFadeOut: boolean;
   screenShakeActive: boolean;
@@ -4593,25 +4595,33 @@ export class Game {
       window.innerHeight / GameConstants.DEFAULTHEIGHT,
     );
 
+    const mobileChanged = this.isMobile !== this.prevIsMobile;
     if (this.isMobile) {
-      if (this.isMobile) console.log("Mobile detected");
-      GameConstants.SHADE_LEVELS = 35;
+      if (mobileChanged) {
+        console.log("Mobile detected");
+        GameConstants.SHADE_LEVELS = 35;
+        LevelConstants.LIGHTING_ANGLE_STEP = 8;
+        LevelConstants.LIGHTING_MAX_DISTANCE = 7;
+        GameConstants.USE_WEBGL_BLUR = true;
+      }
       GameConstants.isMobile = true;
-      LevelConstants.LIGHTING_ANGLE_STEP = 8;
-      LevelConstants.LIGHTING_MAX_DISTANCE = 7;
-      GameConstants.USE_WEBGL_BLUR = true;
 
       // Use smaller scale for mobile devices based on screen size
       // Adjust max scale with scaleOffset
       const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale); // Cap at 3 + offset for mobile
     } else {
+      if (mobileChanged) {
+        LevelConstants.LIGHTING_ANGLE_STEP = 2;
+        if (!isSafari) GameConstants.USE_WEBGL_BLUR = false;
+      }
       GameConstants.isMobile = false;
       // For desktop, use standard scaling logic
       // Ensure GameConstants.SCALE is an integer. If not, round it.
       const integerScale = GameConstants.SOFT_SCALE + scaleOffset;
       Game.scale = Math.min(maxWidthScale, maxHeightScale, integerScale);
     }
+    if (mobileChanged) this.prevIsMobile = this.isMobile;
 
     // Handle case where scale would be 0
     if (Game.scale === 0) {
@@ -4703,6 +4713,12 @@ export class Game {
     // If photo mode is active, lock canvas back to photo dimensions after scale computation.
     if (this.photoMode) {
       this.applyPhotoModeResize();
+    }
+
+    // Lighting constants changed — recalculate door light sources for the current room.
+    if (mobileChanged && this.room) {
+      this.room.resetDoorLightSources();
+      this.room.updateLighting();
     }
   };
 
@@ -5708,6 +5724,7 @@ export class Game {
     // Pointer to quickbar slot 2 (index 1)
     const id = "equip-candle";
     if (this.pointers.has(id)) return;
+    if (isTutorialHintShown(id)) return;
 
     const resolver: PointerAnchorResolver = () => {
       return inv.getQuickbarSlotRect(1);
@@ -5743,6 +5760,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: "Equip Candle",
@@ -5751,14 +5769,14 @@ export class Game {
       safety,
       arrowDirection: "down",
       textDy: -2,
-      timeoutMs: 60000,
+      timeoutMs: 15000,
       tags: ["tutorial"],
       zIndex: 10,
     });
 
     // Pointer to quickbar slot 3 (index 2) when the wooden shield is in inventory
     const shieldId = "equip-wooden-shield";
-    if (!this.pointers.has(shieldId)) {
+    if (!this.pointers.has(shieldId) && !isTutorialHintShown(shieldId)) {
       let hasWoodenShield = false;
       try {
         for (const it of inv.items) {
@@ -5786,6 +5804,7 @@ export class Game {
           return false;
         };
 
+        markTutorialHintShown(shieldId);
         this.addPointer({
           id: shieldId,
           text: "Equip Shield",
@@ -5794,7 +5813,7 @@ export class Game {
           safety,
           arrowDirection: "down",
           textDy: -2,
-          timeoutMs: 60000,
+          timeoutMs: 15000,
           tags: ["tutorial"],
           zIndex: 10,
         });
@@ -5805,6 +5824,7 @@ export class Game {
   // Show a pointer prompting the user to open the inventory when quickbar is full
   public maybeShowOpenInventoryPointer = () => {
     if (this.tutorialFlags.openInventoryShown) return;
+    if (isTutorialHintShown("open-inventory")) return;
     if (this.levelState !== LevelState.IN_LEVEL) return;
     const player = this.players?.[this.localPlayerID];
     const inv = player?.inventory;
@@ -5818,6 +5838,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: this.isMobile ? "Tap to open inventory" : "Click to open inventory",
@@ -5826,7 +5847,7 @@ export class Game {
       safety,
       arrowDirection: "down",
       textDy: -2,
-      timeoutMs: 45000,
+      timeoutMs: 12000,
       tags: ["tutorial"],
       zIndex: 10,
     });
@@ -5836,6 +5857,7 @@ export class Game {
   // Show a pointer prompting the user to open the skills panel after their first skill level-up.
   public maybeShowOpenSkillsPointer = () => {
     if (this.tutorialFlags.openSkillsShown) return;
+    if (isTutorialHintShown("open-skills")) return;
     if (this.levelState !== LevelState.IN_LEVEL) return;
     const player = this.players?.[this.localPlayerID];
     if (!player) return;
@@ -5850,6 +5872,7 @@ export class Game {
       () => player.dead,
     ];
 
+    markTutorialHintShown(id);
     this.addPointer({
       id,
       text: this.isMobile ? "Tap Skills" : "Click Skills",
@@ -5859,7 +5882,7 @@ export class Game {
       // Place the text underneath the button, with an arrow pointing up.
       arrowDirection: "up",
       textDy: 2,
-      timeoutMs: 45000,
+      timeoutMs: 12000,
       tags: ["tutorial"],
       zIndex: 10,
     });

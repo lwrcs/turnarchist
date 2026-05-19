@@ -558,7 +558,6 @@ export class Populator {
     ) {
       const castleEntryEnvs: ReadonlySet<EnvType> = new Set([
         EnvType.FOREST,
-        EnvType.CAVE,
       ]);
       let mainDown: DownLadder | null = null;
       let hasCastleChainEntry = false;

@@ -148,12 +148,6 @@ function getEnvDrivenSpec(
   numParentRooms?: number,
 ): SidePathSpec | null {
   switch (parentEnv) {
-    case EnvType.CAVE:
-      return {
-        environment: EnvType.DARK_CASTLE,
-        options: createDarkCastleSidePathOptions(),
-      };
-
     case EnvType.FOREST:
       return {
         environment: EnvType.CASTLE,

@@ -433,6 +433,16 @@ export class PlayerInputHandler {
       }
     }
 
+    if (this.player.settingsMenu?.open) {
+      if (input === InputEnum.RIGHT_CLICK) {
+        const { x, y } = MouseCursor.getInstance().getPosition();
+        this.handleMouseRightClickAt(x, y);
+        return;
+      }
+      this.player.settingsMenu.inputHandler(input);
+      return;
+    }
+
     if (this.player.menu.open) {
       // Allow context menu on right-click even while the menu is open (options are overlay-scoped).
       if (input === InputEnum.RIGHT_CLICK) {
@@ -661,6 +671,10 @@ export class PlayerInputHandler {
   private handleMouseWheel(deltaY: number) {
     // Only handle while in-game
     if (this.player.game.levelState !== LevelState.IN_LEVEL) return;
+    if (this.player.settingsMenu?.open) {
+      this.player.settingsMenu.handleWheel(deltaY);
+      return;
+    }
     if (this.player.skillsMenu?.open) return;
 
     // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -680,7 +694,7 @@ export class PlayerInputHandler {
   }
 
   handleNumKey = (num: number) => {
-    if (this.player.menu.open) return;
+    if (this.player.menu.open || this.player.settingsMenu?.open) return;
     this.setMostRecentInput("keyboard");
     this.player.actionProcessor.process({
       type: "InventorySelect",
@@ -759,6 +773,7 @@ export class PlayerInputHandler {
       // - Inventory => allow inventory-specific right click only when over inventory UI; otherwise Cancel only
       if (
         player.menu?.open ||
+        player.settingsMenu?.open ||
         player.skillsMenu?.open ||
         player.isAnyBookOpen
       ) {
@@ -845,8 +860,8 @@ export class PlayerInputHandler {
     }
     if (Menu.isPointInOpenMenuButtonBounds(x, y)) {
       items.push({
-        label: player.menu.open ? "Close Menu" : "Open Menu",
-        onClick: () => player.menu.toggleOpen(),
+        label: player.settingsMenu.open ? "Close Menu" : "Open Menu",
+        onClick: () => player.settingsMenu.toggleOpen(),
       });
       items.push({ label: "Cancel", onClick: () => {} });
       menu.openAt(x, y, items);
@@ -1582,7 +1597,12 @@ export class PlayerInputHandler {
     const inventory = player.inventory;
     const bestiary = player.bestiary;
 
-    // Handle menu first: menu clicks should not affect inventory open/close state.
+    // Handle settings/menu first: clicks should not affect inventory open/close state.
+    if (this.player.settingsMenu?.open) {
+      this.player.settingsMenu.inputHandler(InputEnum.LEFT_CLICK);
+      Input.mouseDownHandled = true;
+      return;
+    }
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(x, y);
       Input.mouseDownHandled = true;
@@ -1717,7 +1737,8 @@ export class PlayerInputHandler {
     const inventory = player.inventory;
     const bestiary = player.bestiary;
 
-    // If the menu is open, it consumes clicks and should not affect inventory open/close state.
+    // If the settings/menu is open, it consumes clicks and should not affect inventory open/close state.
+    if (this.player.settingsMenu?.open) return;
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(x, y);
       return;
@@ -1787,6 +1808,7 @@ export class PlayerInputHandler {
       this.player.dead ||
       this.player.game.levelState !== LevelState.IN_LEVEL ||
       this.player.menu.open ||
+      this.player.settingsMenu?.open ||
       (this.player.inventory.isPointInQuickbarBounds(Input.mouseX, Input.mouseY)
         .inBounds &&
         this.player.game.isMobile)
@@ -1826,6 +1848,10 @@ export class PlayerInputHandler {
       return;
     }
 
+    if (this.player.settingsMenu?.open) {
+      this.player.settingsMenu.inputHandler(InputEnum.LEFT_CLICK);
+      return;
+    }
     if (this.player.menu.open) {
       this.player.menu.mouseInputHandler(Input.mouseX, Input.mouseY);
       return;
@@ -1851,7 +1877,7 @@ export class PlayerInputHandler {
           : false,
         inInventoryButton: this.player.inventory.isPointInInventoryButton(x, y),
         inventoryOpen: this.player.inventory.isOpen,
-        menuOpen: this.player.menu.open,
+        menuOpen: this.player.settingsMenu?.open || this.player.menu.open,
         ctxMenuOpen: Boolean(ctxMenu?.open),
       });
     }
@@ -2238,7 +2264,7 @@ export class PlayerInputHandler {
   }
 
   handleMenuButtonClick() {
-    this.player.menu.toggleOpen();
+    this.player.settingsMenu.toggleOpen();
   }
 
   private handleDeathScreenInput(x: number, y: number) {

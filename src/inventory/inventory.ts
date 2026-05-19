@@ -1804,6 +1804,8 @@ export class Inventory {
   handleMouseDown = (x: number, y: number, button: number) => {
     if (
       this.player.menu.open ||
+      this.player.settingsMenu?.open ||
+      this.player.skillsMenu?.open ||
       this.player.isAnyBookOpen ||
       this.player.contextMenu?.open
     )
@@ -1879,10 +1881,12 @@ export class Inventory {
 
     if (
       this.player.menu.open ||
+      this.player.settingsMenu?.open ||
+      this.player.skillsMenu?.open ||
       this.player.isAnyBookOpen ||
       this.player.contextMenu?.open
     ) {
-      // If a context menu is open, cancel any drag to avoid losing items.
+      // If a modal overlay is open, cancel any drag to avoid losing items.
       this.cancelDragAndRestore();
       return;
     }
