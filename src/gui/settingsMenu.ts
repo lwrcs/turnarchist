@@ -1,5 +1,6 @@
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
+import { GameplaySettings } from "../game/gameplaySettings";
 import { InputEnum } from "../game/input";
 import { MouseCursor } from "./mouseCursor";
 import { Sound } from "../sound/sound";
@@ -146,6 +147,18 @@ export class SettingsMenu {
       {
         name: "Game",
         items: [
+          {
+            label: "Crossbow Intercept",
+            kind: "toggle",
+            getState: () => GameplaySettings.CROSSBOW_LINE_INTERCEPT,
+            onActivate: () => {
+              GameplaySettings.CROSSBOW_LINE_INTERCEPT = !GameplaySettings.CROSSBOW_LINE_INTERCEPT;
+              this.game.pushMessage(
+                `Crossbow intercept is now ${GameplaySettings.CROSSBOW_LINE_INTERCEPT ? "enabled" : "disabled"}`,
+              );
+              this.saveSettings();
+            },
+          },
           {
             label: "New Game",
             kind: "action",

@@ -29,6 +29,21 @@ export class GameplaySettings {
   static CROSSBOW_TARGETING_ENABLED = true;
   static SPELLBOOK_TARGETING_ENABLED = true;
 
+  /**
+   * When enabled, crossbow targeting redirects the cursor to any enemy whose tile
+   * the shot path would pass through before reaching the aimed tile.
+   *
+   * MARGIN: how far inside the tile the path must travel to count as a single-enemy block.
+   * At 0.35 the inner 30% of the tile must be crossed — catches cardinal/diagonal and
+   * squarely-placed off-angle enemies, but ignores corner grazes.
+   *
+   * MULTI_MARGIN: looser margin used only when the path clips 2+ enemies simultaneously.
+   * At 0.1, two enemies crowding the corridor together block even if neither alone would.
+   */
+  static CROSSBOW_LINE_INTERCEPT: boolean = true;
+  static readonly CROSSBOW_LINE_INTERCEPT_MARGIN = 0.35;
+  static readonly CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN = 0.1;
+
   // === UI ===
   /**
    * When the Bestiary would normally switch to a narrow "two subpages" layout, use a

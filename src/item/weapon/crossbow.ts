@@ -18,6 +18,7 @@ enum CrossbowState {
 export class Crossbow extends Weapon implements RangedWeapon {
   static itemName = "crossbow";
   static examineText = "A crossbow. Point, load, and regret.";
+  lineIntercept = true;
   state: CrossbowState;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
@@ -27,7 +28,7 @@ export class Crossbow extends Weapon implements RangedWeapon {
     this.name = Crossbow.itemName;
     this.state = CrossbowState.EMPTY;
     this.disabled = true;
-    this.damage = 4;
+    this.damage = 2;
     this.description =
       "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.";
   }
@@ -163,9 +164,8 @@ export class Crossbow extends Weapon implements RangedWeapon {
     const entitiesAtTarget = room.entities.filter(
       (e: any) => e.pointIn(tx, ty) && (e?.z ?? 0) === z,
     );
-    const hitTarget = entitiesAtTarget.find(
-      (e: any) => e.destroyable && !e.pushable,
-    ) ?? null;
+    const hitTarget =
+      entitiesAtTarget.find((e: any) => e.destroyable && !e.pushable) ?? null;
 
     this.state = CrossbowState.FIRING;
 
@@ -180,13 +180,7 @@ export class Crossbow extends Weapon implements RangedWeapon {
     player.setHitXY(tx, ty);
 
     room.particles.push(
-      new ArrowParticle(
-        room,
-        fromX + 0.5,
-        fromY,
-        tx + 0.5,
-        ty,
-      ),
+      new ArrowParticle(room, fromX + 0.5, fromY, tx + 0.5, ty),
     );
 
     room.tick(player);

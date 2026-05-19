@@ -1,6 +1,7 @@
 import { setCookie, getCookie } from "../utility/cookies";
 import { Game } from "../game";
 import { GameConstants } from "./gameConstants";
+import { GameplaySettings } from "./gameplaySettings";
 import { Sound } from "../sound/sound";
 
 const SETTINGS_KEY = "wr_settings";
@@ -13,6 +14,7 @@ type Settings = {
   hoverText?: boolean;
   screenShake?: boolean;
   slowInputsNearEnemies?: boolean;
+  crossbowLineIntercept?: boolean;
 };
 
 export const saveSettings = (game: Game) => {
@@ -24,6 +26,7 @@ export const saveSettings = (game: Game) => {
     hoverText: GameConstants.HOVER_TEXT_ENABLED,
     screenShake: GameConstants.SCREEN_SHAKE_ENABLED,
     slowInputsNearEnemies: GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
+    crossbowLineIntercept: GameplaySettings.CROSSBOW_LINE_INTERCEPT,
   };
   setCookie(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -52,6 +55,9 @@ export const loadSettings = (game: Game) => {
     }
     if (typeof s.slowInputsNearEnemies === "boolean") {
       GameConstants.SLOW_INPUTS_NEAR_ENEMIES = s.slowInputsNearEnemies;
+    }
+    if (typeof s.crossbowLineIntercept === "boolean") {
+      GameplaySettings.CROSSBOW_LINE_INTERCEPT = s.crossbowLineIntercept;
     }
   } catch (e) {
     console.warn("Failed to parse settings cookie", e);

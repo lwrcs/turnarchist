@@ -39540,6 +39540,20 @@ GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
 GameplaySettings.KEYBOARD_TARGETING_ENABLED = false;
 GameplaySettings.CROSSBOW_TARGETING_ENABLED = true;
 GameplaySettings.SPELLBOOK_TARGETING_ENABLED = true;
+/**
+ * When enabled, crossbow targeting redirects the cursor to any enemy whose tile
+ * the shot path would pass through before reaching the aimed tile.
+ *
+ * MARGIN: how far inside the tile the path must travel to count as a single-enemy block.
+ * At 0.35 the inner 30% of the tile must be crossed — catches cardinal/diagonal and
+ * squarely-placed off-angle enemies, but ignores corner grazes.
+ *
+ * MULTI_MARGIN: looser margin used only when the path clips 2+ enemies simultaneously.
+ * At 0.1, two enemies crowding the corridor together block even if neither alone would.
+ */
+GameplaySettings.CROSSBOW_LINE_INTERCEPT = true;
+GameplaySettings.CROSSBOW_LINE_INTERCEPT_MARGIN = 0.35;
+GameplaySettings.CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN = 0.1;
 // === UI ===
 /**
  * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
@@ -49106,6 +49120,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadSettings = exports.saveSettings = void 0;
 const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const SETTINGS_KEY = "wr_settings";
 const saveSettings = (game) => {
@@ -49117,6 +49132,7 @@ const saveSettings = (game) => {
         hoverText: gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
         screenShake: gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED,
         slowInputsNearEnemies: gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
+        crossbowLineIntercept: gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT,
     };
     (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -49148,6 +49164,9 @@ const loadSettings = (game) => {
         }
         if (typeof s.slowInputsNearEnemies === "boolean") {
             gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES = s.slowInputsNearEnemies;
+        }
+        if (typeof s.crossbowLineIntercept === "boolean") {
+            gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT = s.crossbowLineIntercept;
         }
     }
     catch (e) {
@@ -53999,6 +54018,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SettingsMenu = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/gui/mouseCursor.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
@@ -54118,6 +54138,16 @@ class SettingsMenu {
             {
                 name: "Game",
                 items: [
+                    {
+                        label: "Crossbow Intercept",
+                        kind: "toggle",
+                        getState: () => gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT,
+                        onActivate: () => {
+                            gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT = !gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT;
+                            this.game.pushMessage(`Crossbow intercept is now ${gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
                     {
                         label: "New Game",
                         kind: "action",
@@ -61764,6 +61794,7 @@ var CrossbowState;
 class Crossbow extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.lineIntercept = true;
         this.toggleEquip = () => {
             if (this.wielder && this.requiredSkill) {
                 const lvl = stats_1.statsTracker.getSkillLevel(this.requiredSkill);
@@ -61972,7 +62003,7 @@ class Crossbow extends weapon_1.Weapon {
         this.name = Crossbow.itemName;
         this.state = CrossbowState.EMPTY;
         this.disabled = true;
-        this.damage = 4;
+        this.damage = 2;
         this.description =
             "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.";
     }
@@ -62383,6 +62414,7 @@ QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RangedTargetingSystem = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class RangedTargetingSystem {
     constructor(player) {
         this.active = false;
@@ -62436,6 +62468,11 @@ class RangedTargetingSystem {
         if (room.tileInside(nx, ny) && !room.isSolidAt(nx, ny, this.player.z ?? 0) && this.hasLineOfSight(nx, ny)) {
             this.targetX = nx;
             this.targetY = ny;
+            const intercept = this.findPathIntercept(nx, ny);
+            if (intercept) {
+                this.targetX = intercept.x;
+                this.targetY = intercept.y;
+            }
         }
     }
     syncToMouse() {
@@ -62467,8 +62504,102 @@ class RangedTargetingSystem {
             lastX = cx;
             lastY = cy;
         }
-        this.targetX = lastX;
-        this.targetY = lastY;
+        const intercept = this.findPathIntercept(lastX, lastY);
+        if (intercept) {
+            this.targetX = intercept.x;
+            this.targetY = intercept.y;
+        }
+        else {
+            this.targetX = lastX;
+            this.targetY = lastY;
+        }
+    }
+    /**
+     * Returns the tile of the closest enemy that blocks the shot path, or null.
+     *
+     * Two-pass logic:
+     *  1. Strict margin (CROSSBOW_LINE_INTERCEPT_MARGIN = 0.35): a single enemy squarely
+     *     in the path (cardinal, diagonal, or closely-aligned off-angle) triggers a redirect.
+     *  2. Loose margin (CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN = 0.10): if 2+ enemies
+     *     simultaneously clip the path at the looser threshold, the closest redirects.
+     *     This handles narrow corridors where two adjacent enemies together block the shot
+     *     even if neither is perfectly in line.
+     */
+    findPathIntercept(tx, ty) {
+        if (!this.weapon?.lineIntercept)
+            return null;
+        if (!gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT)
+            return null;
+        const room = this.player.getRoom();
+        if (!room)
+            return null;
+        // Ray from player center toward target tile center (t=0 at player, t=1 at target)
+        const px = this.player.x + 0.5;
+        const py = this.player.y + 0.5;
+        const rdx = tx + 0.5 - px;
+        const rdy = ty + 0.5 - py;
+        const z = this.player.z ?? 0;
+        const slabHits = (margin) => {
+            const hits = [];
+            for (const entity of room.entities) {
+                const e = entity;
+                if (e.dead || e.isGhostly || !e.destroyable || e.pushable || !e.isEnemy)
+                    continue;
+                if ((e.z ?? 0) !== z)
+                    continue;
+                const ew = e.w ?? 1;
+                const eh = e.h ?? 1;
+                const ex = e.x;
+                const ey = e.y;
+                if (tx >= ex && tx < ex + ew && ty >= ey && ty < ey + eh)
+                    continue;
+                const xmin = ex + margin;
+                const xmax = ex + ew - margin;
+                const ymin = ey + margin;
+                const ymax = ey + eh - margin;
+                let tmin = 0;
+                let tmax = 1;
+                if (Math.abs(rdx) < 1e-9) {
+                    if (px < xmin || px > xmax)
+                        continue;
+                }
+                else {
+                    const t1 = (xmin - px) / rdx;
+                    const t2 = (xmax - px) / rdx;
+                    tmin = Math.max(tmin, Math.min(t1, t2));
+                    tmax = Math.min(tmax, Math.max(t1, t2));
+                }
+                if (Math.abs(rdy) < 1e-9) {
+                    if (py < ymin || py > ymax)
+                        continue;
+                }
+                else {
+                    const t1 = (ymin - py) / rdy;
+                    const t2 = (ymax - py) / rdy;
+                    tmin = Math.max(tmin, Math.min(t1, t2));
+                    tmax = Math.min(tmax, Math.max(t1, t2));
+                }
+                if (tmax < tmin || tmax < 0 || tmin >= 1)
+                    continue;
+                hits.push({ t: Math.max(0, tmin), entity });
+            }
+            return hits;
+        };
+        // Pass 1: single enemy squarely blocking the path
+        const strict = slabHits(gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT_MARGIN);
+        if (strict.length > 0) {
+            strict.sort((a, b) => a.t - b.t);
+            const e = strict[0].entity;
+            return { x: e.x, y: e.y };
+        }
+        // Pass 2: two or more enemies collectively crowding the path
+        const loose = slabHits(gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN);
+        if (loose.length >= 2) {
+            loose.sort((a, b) => a.t - b.t);
+            const e = loose[0].entity;
+            return { x: e.x, y: e.y };
+        }
+        return null;
     }
     fire() {
         if (!this.active || !this.weapon) {
