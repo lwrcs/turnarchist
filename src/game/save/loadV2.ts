@@ -32,7 +32,9 @@ import { Spellbook } from "../../item/weapon/spellbook";
 import { HitWarning } from "../../drawable/hitWarning";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
+import { ExalterEnemy } from "../../entity/enemy/exalterEnemy";
 import { EctomancerEnemy } from "../../entity/enemy/ectomancerEnemy";
+import { BeamEffect } from "../../projectile/beamEffect";
 import { Enemy } from "../../entity/enemy/enemy";
 import { Chest } from "../../entity/object/chest";
 import { WizardFireball } from "../../projectile/wizardFireball";
@@ -1019,17 +1021,6 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       }
     }
 
-    // Post-pass: re-link occultist shieldedEnemies (enemies may appear after their occultist in rd.enemies).
-    for (const es of rd.enemies) {
-      if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids)) continue;
-      const occultist = entitiesByGid.get(es.gid);
-      if (!(occultist instanceof OccultistEnemy)) continue;
-      for (const sgid of es.shieldedEnemyGids) {
-        const shielded = entitiesByGid.get(sgid);
-        if (shielded instanceof Enemy) occultist.shieldedEnemies.push(shielded);
-      }
-    }
-
     room.projectiles = [];
     for (const ps of rd.projectiles) {
       if (ps.kind === "wizard_fireball") {
@@ -1123,6 +1114,60 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         );
         if (!pgid.ok) return pgid;
         room.projectiles.push(anim);
+      }
+    }
+
+    // Post-pass: re-link occultist shieldedEnemies, restore shield visual and beam.
+    // Must run after room.projectiles=[] so that pushed projectiles survive.
+    for (const es of rd.enemies) {
+      if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids)) continue;
+      const occultist = entitiesByGid.get(es.gid);
+      if (!(occultist instanceof OccultistEnemy)) continue;
+      for (const sgid of es.shieldedEnemyGids) {
+        const shielded = entitiesByGid.get(sgid);
+        if (!(shielded instanceof Enemy) || shielded.dead) continue;
+        occultist.shieldedEnemies.push(shielded);
+        // Re-register the EnemyShield projectile (created during spawnBasic but cleared by room.projectiles=[]).
+        if (shielded.shield && !shielded.shield.dead) {
+          room.projectiles.push(shielded.shield);
+        }
+        // Re-create the beam between shielded enemy and occultist.
+        const beam = new BeamEffect(shielded.x, shielded.y, occultist.x, occultist.y, shielded);
+        beam.compositeOperation = "source-over";
+        beam.color = "#2E0854";
+        beam.turbulence = 0.4;
+        beam.gravity = 0.1;
+        beam.iterations = 1;
+        beam.segments = 100;
+        beam.angleChange = 0.001;
+        beam.springDamping = 0.01;
+        beam.drawableY = shielded.drawableY;
+        beam.type = "shield";
+        room.projectiles.push(beam);
+      }
+    }
+
+    // Post-pass: re-link exalter buffedEnemies and restore beam.
+    for (const es of rd.enemies) {
+      if (!("buffedEnemyGids" in es) || !Array.isArray(es.buffedEnemyGids)) continue;
+      const exalter = entitiesByGid.get(es.gid);
+      if (!(exalter instanceof ExalterEnemy)) continue;
+      for (const bgid of es.buffedEnemyGids) {
+        const buffed = entitiesByGid.get(bgid);
+        if (!(buffed instanceof Enemy) || buffed.dead) continue;
+        exalter.buffedEnemies.push(buffed);
+        const beam = new BeamEffect(buffed.x, buffed.y, exalter.x, exalter.y, buffed);
+        beam.compositeOperation = "source-over";
+        beam.color = "#00FFFF";
+        beam.turbulence = 0.4;
+        beam.gravity = 0.1;
+        beam.iterations = 1;
+        beam.segments = 100;
+        beam.angleChange = 0.001;
+        beam.springDamping = 0.01;
+        beam.drawableY = buffed.drawableY;
+        beam.type = "buff";
+        room.projectiles.push(beam);
       }
     }
 

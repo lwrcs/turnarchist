@@ -380,6 +380,8 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   buffedBefore?: boolean;
   /** Occultist: GIDs of enemies this occultist is actively shielding. */
   shieldedEnemyGids?: Gid[];
+  shieldedBefore?: boolean;
+  buffedEnemyGids?: Gid[];
   /**
    * Ghostly state for any enemy. When true, the entity is a spectral copy spawned by an
    * ectomancer; renders desaturated + cyan-green tinted at half opacity.

@@ -30,7 +30,7 @@ export class EctomancerEnemy extends Enemy {
   seenPlayer: boolean;
   range: number;
   static tileX: number = 59;
-  static tileY: number = 8;
+  static tileY: number = 10;
   lastHealth: number;
   /** Active (base, ghost) pairs created by this ectomancer. */
   links: EctomancerLink[];

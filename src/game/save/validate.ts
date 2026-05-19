@@ -2123,6 +2123,36 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     shieldedEnemyGids = gids;
   }
 
+  const shieldedBeforeU = get(v, "shieldedBefore");
+  let shieldedBefore: boolean | undefined = undefined;
+  if (shieldedBeforeU !== undefined) {
+    if (!isBoolean(shieldedBeforeU))
+      return err({
+        kind: "InvalidSchema",
+        message: "shieldedBefore must be boolean if present",
+        path: `${path}.shieldedBefore`,
+      });
+    shieldedBefore = shieldedBeforeU;
+  }
+
+  const buffedEnemyGidsU = get(v, "buffedEnemyGids");
+  let buffedEnemyGids: string[] | undefined = undefined;
+  if (buffedEnemyGidsU !== undefined) {
+    if (!Array.isArray(buffedEnemyGidsU))
+      return err({
+        kind: "InvalidSchema",
+        message: "buffedEnemyGids must be array if present",
+        path: `${path}.buffedEnemyGids`,
+      });
+    const gids: string[] = [];
+    for (let i = 0; i < buffedEnemyGidsU.length; i++) {
+      const g = asGid(buffedEnemyGidsU[i], `${path}.buffedEnemyGids[${i}]`);
+      if (isErr(g)) return err(g.error);
+      gids.push(g.value);
+    }
+    buffedEnemyGids = gids;
+  }
+
   const isGhostlyU = get(v, "isGhostly");
   let isGhostly: boolean | undefined = undefined;
   if (isGhostlyU !== undefined) {
@@ -2219,6 +2249,8 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     buffed,
     buffedBefore,
     shieldedEnemyGids,
+    shieldedBefore,
+    buffedEnemyGids,
     isGhostly,
     ghostlyBeamParentGid,
     ghostFrozen,

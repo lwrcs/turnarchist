@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.efa04d1d8ffc4e7c8bac.png";
+module.exports = __webpack_require__.p + "assets/mobset.b8952f823adfeec23736.png";
 
 /***/ }),
 
@@ -16866,7 +16866,7 @@ class EctomancerEnemy extends enemy_1.Enemy {
 exports.EctomancerEnemy = EctomancerEnemy;
 EctomancerEnemy.examineText = "An ectomancer. Tears spirits from the living to fight in their place.";
 EctomancerEnemy.tileX = 59;
-EctomancerEnemy.tileY = 8;
+EctomancerEnemy.tileY = 10;
 
 
 /***/ }),
@@ -25037,6 +25037,7 @@ class Entity extends drawable_1.Drawable {
             wallMounted: original.wallMounted,
             z: original.z ?? 0,
             alpha: original.alpha,
+            isGhostly: original.isGhostly,
             shadeColor: original.shadeColor,
             shadeMultiplier: original.shadeMultiplier,
             softShadeColor: original.softShadeColor,
@@ -36270,7 +36271,7 @@ exports.BESTIARY_ENEMIES = {
             {
                 label: "Idle",
                 tileX: 59,
-                tileY: 8,
+                tileY: 10,
                 w: 1,
                 h: 2,
                 hp: 6,
@@ -41126,7 +41127,9 @@ const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./sr
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
@@ -41987,19 +41990,6 @@ const loadSaveV2 = async (game, save) => {
                     }
                 }
             }
-            // Post-pass: re-link occultist shieldedEnemies (enemies may appear after their occultist in rd.enemies).
-            for (const es of rd.enemies) {
-                if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids))
-                    continue;
-                const occultist = entitiesByGid.get(es.gid);
-                if (!(occultist instanceof occultistEnemy_1.OccultistEnemy))
-                    continue;
-                for (const sgid of es.shieldedEnemyGids) {
-                    const shielded = entitiesByGid.get(sgid);
-                    if (shielded instanceof enemy_1.Enemy)
-                        occultist.shieldedEnemies.push(shielded);
-                }
-            }
             room.projectiles = [];
             for (const ps of rd.projectiles) {
                 if (ps.kind === "wizard_fireball") {
@@ -42070,6 +42060,64 @@ const loadSaveV2 = async (game, save) => {
                     if (!pgid.ok)
                         return pgid;
                     room.projectiles.push(anim);
+                }
+            }
+            // Post-pass: re-link occultist shieldedEnemies, restore shield visual and beam.
+            // Must run after room.projectiles=[] so that pushed projectiles survive.
+            for (const es of rd.enemies) {
+                if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids))
+                    continue;
+                const occultist = entitiesByGid.get(es.gid);
+                if (!(occultist instanceof occultistEnemy_1.OccultistEnemy))
+                    continue;
+                for (const sgid of es.shieldedEnemyGids) {
+                    const shielded = entitiesByGid.get(sgid);
+                    if (!(shielded instanceof enemy_1.Enemy) || shielded.dead)
+                        continue;
+                    occultist.shieldedEnemies.push(shielded);
+                    // Re-register the EnemyShield projectile (created during spawnBasic but cleared by room.projectiles=[]).
+                    if (shielded.shield && !shielded.shield.dead) {
+                        room.projectiles.push(shielded.shield);
+                    }
+                    // Re-create the beam between shielded enemy and occultist.
+                    const beam = new beamEffect_1.BeamEffect(shielded.x, shielded.y, occultist.x, occultist.y, shielded);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#2E0854";
+                    beam.turbulence = 0.4;
+                    beam.gravity = 0.1;
+                    beam.iterations = 1;
+                    beam.segments = 100;
+                    beam.angleChange = 0.001;
+                    beam.springDamping = 0.01;
+                    beam.drawableY = shielded.drawableY;
+                    beam.type = "shield";
+                    room.projectiles.push(beam);
+                }
+            }
+            // Post-pass: re-link exalter buffedEnemies and restore beam.
+            for (const es of rd.enemies) {
+                if (!("buffedEnemyGids" in es) || !Array.isArray(es.buffedEnemyGids))
+                    continue;
+                const exalter = entitiesByGid.get(es.gid);
+                if (!(exalter instanceof exalterEnemy_1.ExalterEnemy))
+                    continue;
+                for (const bgid of es.buffedEnemyGids) {
+                    const buffed = entitiesByGid.get(bgid);
+                    if (!(buffed instanceof enemy_1.Enemy) || buffed.dead)
+                        continue;
+                    exalter.buffedEnemies.push(buffed);
+                    const beam = new beamEffect_1.BeamEffect(buffed.x, buffed.y, exalter.x, exalter.y, buffed);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#00FFFF";
+                    beam.turbulence = 0.4;
+                    beam.gravity = 0.1;
+                    beam.iterations = 1;
+                    beam.segments = 100;
+                    beam.angleChange = 0.001;
+                    beam.springDamping = 0.01;
+                    beam.drawableY = buffed.drawableY;
+                    beam.type = "buff";
+                    room.projectiles.push(beam);
                 }
             }
             // Post-pass: re-link ectomancer (base, ghost) pairs, re-apply ghostly state, attach
@@ -42933,6 +42981,10 @@ const registerBuiltinEnemyCodecsV2 = () => {
             shieldedEnemyGids: value instanceof occultistEnemy_1.OccultistEnemy && value.shieldedEnemies.length > 0
                 ? value.shieldedEnemies.map((e) => e.globalId)
                 : undefined,
+            shieldedBefore: value.shieldedBefore === true ? true : undefined,
+            buffedEnemyGids: value instanceof exalterEnemy_1.ExalterEnemy && value.buffedEnemies.length > 0
+                ? value.buffedEnemies.map((e) => e.globalId)
+                : undefined,
             isGhostly: value.isGhostly === true ? true : undefined,
             ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
             ghostFrozen: value.ghostFrozen === true ? true : undefined,
@@ -42984,6 +43036,8 @@ const registerBuiltinEnemyCodecsV2 = () => {
         if ("ghostifiedBefore" in value && value.ghostifiedBefore === true) {
             e.ghostifiedBefore = true;
         }
+        if ("shieldedBefore" in value && value.shieldedBefore === true)
+            e.shieldedBefore = true;
         e.globalId = value.gid;
         return e;
     };
@@ -48065,6 +48119,35 @@ const validateEnemySaveV2 = (v, path) => {
         }
         shieldedEnemyGids = gids;
     }
+    const shieldedBeforeU = get(v, "shieldedBefore");
+    let shieldedBefore = undefined;
+    if (shieldedBeforeU !== undefined) {
+        if (!isBoolean(shieldedBeforeU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "shieldedBefore must be boolean if present",
+                path: `${path}.shieldedBefore`,
+            });
+        shieldedBefore = shieldedBeforeU;
+    }
+    const buffedEnemyGidsU = get(v, "buffedEnemyGids");
+    let buffedEnemyGids = undefined;
+    if (buffedEnemyGidsU !== undefined) {
+        if (!Array.isArray(buffedEnemyGidsU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "buffedEnemyGids must be array if present",
+                path: `${path}.buffedEnemyGids`,
+            });
+        const gids = [];
+        for (let i = 0; i < buffedEnemyGidsU.length; i++) {
+            const g = asGid(buffedEnemyGidsU[i], `${path}.buffedEnemyGids[${i}]`);
+            if (isErr(g))
+                return (0, errors_1.err)(g.error);
+            gids.push(g.value);
+        }
+        buffedEnemyGids = gids;
+    }
     const isGhostlyU = get(v, "isGhostly");
     let isGhostly = undefined;
     if (isGhostlyU !== undefined) {
@@ -48151,6 +48234,8 @@ const validateEnemySaveV2 = (v, path) => {
         buffed,
         buffedBefore,
         shieldedEnemyGids,
+        shieldedBefore,
+        buffedEnemyGids,
         isGhostly,
         ghostlyBeamParentGid,
         ghostFrozen,

@@ -1288,7 +1288,7 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
       {
         label: "Idle",
         tileX: 59,
-        tileY: 8,
+        tileY: 10,
         w: 1,
         h: 2,
         hp: 6,

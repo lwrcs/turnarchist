@@ -232,6 +232,11 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         value instanceof OccultistEnemy && value.shieldedEnemies.length > 0
           ? value.shieldedEnemies.map((e) => e.globalId)
           : undefined,
+      shieldedBefore: value.shieldedBefore === true ? true : undefined,
+      buffedEnemyGids:
+        value instanceof ExalterEnemy && value.buffedEnemies.length > 0
+          ? value.buffedEnemies.map((e) => e.globalId)
+          : undefined,
       isGhostly: value.isGhostly === true ? true : undefined,
       ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
       ghostFrozen: value.ghostFrozen === true ? true : undefined,
@@ -279,6 +284,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
     if ("ghostifiedBefore" in value && value.ghostifiedBefore === true) {
       e.ghostifiedBefore = true;
     }
+    if ("shieldedBefore" in value && value.shieldedBefore === true) e.shieldedBefore = true;
     e.globalId = value.gid;
     return e;
   };
