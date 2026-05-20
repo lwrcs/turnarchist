@@ -80017,7 +80017,7 @@ class Room {
                 }
                 else
                     e.tick();
-                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded))
+                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded || e.lightSource))
                     lightingDirty = true;
                 addCount("entityTick");
             }

@@ -1779,7 +1779,7 @@ export class Room {
         if (e instanceof Enemy) addTypeMs(prof.enemyTicksByType, name, dt);
         else addTypeMs(prof.nonEnemyTicksByType, name, dt);
       } else e.tick();
-      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded))
+      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded || e.lightSource))
         lightingDirty = true;
       addCount("entityTick");
     }
