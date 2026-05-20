@@ -15270,37 +15270,61 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                         else if (this.ticks % 2 === 1) {
                             // Move turn
                             this.rumbling = true;
-                            const move = this.searchKnightPath();
-                            if (move !== null) {
-                                const moveX = move.x;
-                                const moveY = move.y;
-                                let hitPlayer = false;
-                                let hitAnything = false;
-                                for (const i in this.game.players) {
-                                    const p = this.game.players[i];
-                                    if (this.game.rooms[p.levelID] === this.room &&
-                                        p.x === moveX &&
-                                        p.y === moveY) {
-                                        if (!this.shouldSkipAttack()) {
-                                            p.hurt(this.hit(), this.name, {
-                                                source: { x: this.x, y: this.y },
-                                            });
-                                            if (!hitAnything) {
-                                                this.initKnightAnim(moveX, moveY, true);
-                                                if (p === this.game.players[this.game.localPlayerID])
-                                                    this.game.shakeScreen(8 * (this.x - moveX), 8 * (this.y - moveY));
-                                                hitAnything = true;
-                                            }
-                                        }
-                                        hitPlayer = true;
+                            if (this.justHurt) {
+                                let bestDist = -1;
+                                let bestPos = null;
+                                for (const [dx, dy] of KNIGHT_MOVES) {
+                                    const nx = this.x + dx;
+                                    const ny = this.y + dy;
+                                    if (!this.isValidKnightDest(nx, ny))
+                                        continue;
+                                    const dist = Math.abs(nx - this.targetPlayer.x) +
+                                        Math.abs(ny - this.targetPlayer.y);
+                                    if (dist > bestDist) {
+                                        bestDist = dist;
+                                        bestPos = { x: nx, y: ny };
                                     }
                                 }
-                                if (!hitPlayer) {
-                                    this.initKnightAnim(moveX, moveY, false);
-                                    this.x = moveX;
-                                    this.y = moveY;
+                                if (bestPos) {
+                                    this.initKnightAnim(bestPos.x, bestPos.y, false);
+                                    this.x = bestPos.x;
+                                    this.y = bestPos.y;
                                 }
+                                this.justHurt = false;
                             }
+                            else {
+                                const move = this.searchKnightPath();
+                                if (move !== null) {
+                                    const moveX = move.x;
+                                    const moveY = move.y;
+                                    let hitPlayer = false;
+                                    let hitAnything = false;
+                                    for (const i in this.game.players) {
+                                        const p = this.game.players[i];
+                                        if (this.game.rooms[p.levelID] === this.room &&
+                                            p.x === moveX &&
+                                            p.y === moveY) {
+                                            if (!this.shouldSkipAttack()) {
+                                                p.hurt(this.hit(), this.name, {
+                                                    source: { x: this.x, y: this.y },
+                                                });
+                                                if (!hitAnything) {
+                                                    this.initKnightAnim(moveX, moveY, true);
+                                                    if (p === this.game.players[this.game.localPlayerID])
+                                                        this.game.shakeScreen(8 * (this.x - moveX), 8 * (this.y - moveY));
+                                                    hitAnything = true;
+                                                }
+                                            }
+                                            hitPlayer = true;
+                                        }
+                                    }
+                                    if (!hitPlayer) {
+                                        this.initKnightAnim(moveX, moveY, false);
+                                        this.x = moveX;
+                                        this.y = moveY;
+                                    }
+                                }
+                            } // end else (not justHurt)
                             this.rumbling = false;
                             this.unconscious = true;
                         }
@@ -85932,7 +85956,7 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 25); // 25 = chess knight (not ready for spawner yet)
             spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2), spawnTable);
             room.removeDoorObstructions();
         };

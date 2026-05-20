@@ -3279,7 +3279,7 @@ export class Populator {
   populateSpawner = (room: Room, rand: () => number) => {
     const spawnTable = this.getEnemyPoolForDepth(
       Math.max(0, room.depth - 1),
-    ).filter((t) => t !== 7);
+    ).filter((t) => t !== 7 && t !== 25); // 25 = chess knight (not ready for spawner yet)
     Spawner.add(
       room,
       room.game,
