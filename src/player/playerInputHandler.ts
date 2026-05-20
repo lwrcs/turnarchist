@@ -20,6 +20,11 @@ import { Candle } from "../item/light/candle";
 import { PlacedTorch } from "../entity/object/placedTorch";
 import { PlacedCandle } from "../entity/object/placedCandle";
 import { Spellbook } from "../item/weapon/spellbook";
+import { Apple } from "../item/usable/apple";
+import { Fish } from "../item/usable/fish";
+import { GreenPotion } from "../item/usable/greenPotion";
+import { Shrooms } from "../item/usable/shrooms";
+import { Berries } from "../item/usable/berries";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -217,6 +222,7 @@ export class PlayerInputHandler {
     Input.minusListener = () => this.handleInput(InputEnum.MINUS);
     Input.escapeListener = () => this.handleInput(InputEnum.ESCAPE);
     Input.fListener = () => this.handleInput(InputEnum.F);
+    Input.rListener = () => this.handleInput(InputEnum.R);
     Input.wheelListener = (deltaY: number) => this.handleMouseWheel(deltaY);
   }
 
@@ -510,6 +516,34 @@ export class PlayerInputHandler {
         //this.player.game.newGame();
         //this.player.stall();
         break;
+      case InputEnum.R: {
+        const player = this.player;
+        const needed = player.maxHealth - player.health;
+        if (needed <= 0) {
+          player.game.pushMessage("You're already full.");
+          break;
+        }
+        const bigFoodClasses = [Apple, Fish, GreenPotion];
+        const smallFoodClasses = [Shrooms, Berries];
+        const tryEat = (classes: (new (...args: any[]) => any)[]): boolean => {
+          for (const cls of classes) {
+            const item = player.inventory.hasItem(cls);
+            if (item) {
+              item.onUse(player);
+              return true;
+            }
+          }
+          return false;
+        };
+        let ate: boolean;
+        if (needed <= 0.5) {
+          ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+        } else {
+          ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+        }
+        if (!ate) player.game.pushMessage("You have no food.");
+        break;
+      }
       case InputEnum.LEFT:
         if (this.player.dead) {
           this.navigateDeathScreen(-1);

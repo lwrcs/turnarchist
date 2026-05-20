@@ -39725,6 +39725,7 @@ var InputEnum;
     InputEnum[InputEnum["ESCAPE"] = 26] = "ESCAPE";
     InputEnum[InputEnum["F"] = 27] = "F";
     InputEnum[InputEnum["ENTER"] = 28] = "ENTER";
+    InputEnum[InputEnum["R"] = 29] = "R";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -39766,6 +39767,7 @@ exports.Input = {
     escapeListener: function () { },
     fListener: function () { },
     enterListener: function () { },
+    rListener: function () { },
     wheelListener: function (deltaY) { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
@@ -39828,6 +39830,7 @@ exports.Input = {
     ESCAPE: "Escape",
     F: "KeyF",
     ENTER: "Enter",
+    R: "KeyR",
     rawMouseX: 0,
     rawMouseY: 0,
     // Returns the CSS-to-logical-pixel ratio for the game canvas.
@@ -39923,6 +39926,9 @@ exports.Input = {
                 break;
             case exports.Input.ENTER:
                 exports.Input.enterListener();
+                break;
+            case exports.Input.R:
+                exports.Input.rListener();
                 break;
         }
     },
@@ -73950,6 +73956,11 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
+const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
+const greenPotion_1 = __webpack_require__(/*! ../item/usable/greenPotion */ "./src/item/usable/greenPotion.ts");
+const shrooms_1 = __webpack_require__(/*! ../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
+const berries_1 = __webpack_require__(/*! ../item/usable/berries */ "./src/item/usable/berries.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
@@ -74193,6 +74204,7 @@ class PlayerInputHandler {
         input_1.Input.minusListener = () => this.handleInput(input_1.InputEnum.MINUS);
         input_1.Input.escapeListener = () => this.handleInput(input_1.InputEnum.ESCAPE);
         input_1.Input.fListener = () => this.handleInput(input_1.InputEnum.F);
+        input_1.Input.rListener = () => this.handleInput(input_1.InputEnum.R);
         input_1.Input.wheelListener = (deltaY) => this.handleMouseWheel(deltaY);
     }
     handleInput(input) {
@@ -74478,6 +74490,36 @@ class PlayerInputHandler {
                 //this.player.game.newGame();
                 //this.player.stall();
                 break;
+            case input_1.InputEnum.R: {
+                const player = this.player;
+                const needed = player.maxHealth - player.health;
+                if (needed <= 0) {
+                    player.game.pushMessage("You're already full.");
+                    break;
+                }
+                const bigFoodClasses = [apple_1.Apple, fish_1.Fish, greenPotion_1.GreenPotion];
+                const smallFoodClasses = [shrooms_1.Shrooms, berries_1.Berries];
+                const tryEat = (classes) => {
+                    for (const cls of classes) {
+                        const item = player.inventory.hasItem(cls);
+                        if (item) {
+                            item.onUse(player);
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                let ate;
+                if (needed <= 0.5) {
+                    ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+                }
+                else {
+                    ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+                }
+                if (!ate)
+                    player.game.pushMessage("You have no food.");
+                break;
+            }
             case input_1.InputEnum.LEFT:
                 if (this.player.dead) {
                     this.navigateDeathScreen(-1);
