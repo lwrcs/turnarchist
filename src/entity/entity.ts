@@ -567,6 +567,7 @@ export class Entity extends Drawable {
     this.hasBloom = true;
     this.bloomColor = "#00FFFF";
     this.bloomAlpha = 0.5;
+    if (this.lightSource) this.removeLightSource(this.lightSource);
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,

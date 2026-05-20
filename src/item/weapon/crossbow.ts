@@ -45,13 +45,18 @@ export class Crossbow extends Weapon implements RangedWeapon {
     }
 
     if (GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+      const rt = (this.wielder as unknown as Player)?.rangedTargeting;
+      if (rt?.active) {
+        rt.stop();
+        return;
+      }
       if (this.state === CrossbowState.EMPTY) {
         this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
       } else if (this.state === CrossbowState.LOADED) {
         this.cock();
-        (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+        rt?.start(this);
       } else if (this.state === CrossbowState.COCKED) {
-        (this.wielder as unknown as Player)?.rangedTargeting?.start(this);
+        rt?.start(this);
       } else if (this.cooldown > 0) {
         this.level.game.pushMessage("Cooldown: " + this.cooldown);
       }

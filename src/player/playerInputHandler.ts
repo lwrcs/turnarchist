@@ -367,10 +367,42 @@ export class PlayerInputHandler {
         case InputEnum.MOUSE_MOVE:
           rt.syncToMouse();
           return;
-        case InputEnum.LEFT_CLICK:
+        case InputEnum.LEFT_CLICK: {
           // If inventory is open let the click fall through to close it normally.
-          if (!invOpen) { rt.fire(); return; }
+          if (!invOpen) {
+            // Clicking the active weapon's own quickbar slot cancels targeting.
+            const { x, y } = MouseCursor.getInstance().getPosition();
+            const inv = this.player.inventory;
+            const clickedSlot = inv.getQuickbarSlotIndexAtPoint(x, y);
+            const weapon = rt.getWeapon();
+            const weaponSlot = weapon ? inv.items.indexOf(weapon as any) : -1;
+            if (clickedSlot !== null && weaponSlot !== -1 && clickedSlot === weaponSlot) {
+              rt.stop();
+              return;
+            }
+            rt.fire();
+            return;
+          }
           break;
+        }
+        case InputEnum.NUMBER_1:
+        case InputEnum.NUMBER_2:
+        case InputEnum.NUMBER_3:
+        case InputEnum.NUMBER_4:
+        case InputEnum.NUMBER_5:
+        case InputEnum.NUMBER_6:
+        case InputEnum.NUMBER_7:
+        case InputEnum.NUMBER_8:
+        case InputEnum.NUMBER_9:
+        case InputEnum.NUMBER_0: {
+          // Press the weapon's hotkey again to cancel targeting.
+          const pressedSlot = input - InputEnum.NUMBER_1;
+          const weapon = rt.getWeapon();
+          const inv = this.player.inventory;
+          const weaponSlot = weapon ? inv.items.indexOf(weapon as any) : -1;
+          if (weaponSlot !== -1 && pressedSlot === weaponSlot) rt.stop();
+          return; // swallow number keys during targeting regardless
+        }
         default:
           return;
       }

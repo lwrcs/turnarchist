@@ -23525,6 +23525,8 @@ class Entity extends drawable_1.Drawable {
             this.hasBloom = true;
             this.bloomColor = "#00FFFF";
             this.bloomAlpha = 0.5;
+            if (this.lightSource)
+                this.removeLightSource(this.lightSource);
             this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [0, 40, 40], 3.5, 20);
             this.addLightSource(this.lightSource);
             this.room.updateLighting();
@@ -61809,15 +61811,20 @@ class Crossbow extends weapon_1.Weapon {
                 }
             }
             if (gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+                const rt = this.wielder?.rangedTargeting;
+                if (rt?.active) {
+                    rt.stop();
+                    return;
+                }
                 if (this.state === CrossbowState.EMPTY) {
                     this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
                 }
                 else if (this.state === CrossbowState.LOADED) {
                     this.cock();
-                    this.wielder?.rangedTargeting?.start(this);
+                    rt?.start(this);
                 }
                 else if (this.state === CrossbowState.COCKED) {
-                    this.wielder?.rangedTargeting?.start(this);
+                    rt?.start(this);
                 }
                 else if (this.cooldown > 0) {
                     this.level.game.pushMessage("Cooldown: " + this.cooldown);
@@ -74309,13 +74316,43 @@ class PlayerInputHandler {
                 case input_1.InputEnum.MOUSE_MOVE:
                     rt.syncToMouse();
                     return;
-                case input_1.InputEnum.LEFT_CLICK:
+                case input_1.InputEnum.LEFT_CLICK: {
                     // If inventory is open let the click fall through to close it normally.
                     if (!invOpen) {
+                        // Clicking the active weapon's own quickbar slot cancels targeting.
+                        const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                        const inv = this.player.inventory;
+                        const clickedSlot = inv.getQuickbarSlotIndexAtPoint(x, y);
+                        const weapon = rt.getWeapon();
+                        const weaponSlot = weapon ? inv.items.indexOf(weapon) : -1;
+                        if (clickedSlot !== null && weaponSlot !== -1 && clickedSlot === weaponSlot) {
+                            rt.stop();
+                            return;
+                        }
                         rt.fire();
                         return;
                     }
                     break;
+                }
+                case input_1.InputEnum.NUMBER_1:
+                case input_1.InputEnum.NUMBER_2:
+                case input_1.InputEnum.NUMBER_3:
+                case input_1.InputEnum.NUMBER_4:
+                case input_1.InputEnum.NUMBER_5:
+                case input_1.InputEnum.NUMBER_6:
+                case input_1.InputEnum.NUMBER_7:
+                case input_1.InputEnum.NUMBER_8:
+                case input_1.InputEnum.NUMBER_9:
+                case input_1.InputEnum.NUMBER_0: {
+                    // Press the weapon's hotkey again to cancel targeting.
+                    const pressedSlot = input - input_1.InputEnum.NUMBER_1;
+                    const weapon = rt.getWeapon();
+                    const inv = this.player.inventory;
+                    const weaponSlot = weapon ? inv.items.indexOf(weapon) : -1;
+                    if (weaponSlot !== -1 && pressedSlot === weaponSlot)
+                        rt.stop();
+                    return; // swallow number keys during targeting regardless
+                }
                 default:
                     return;
             }
