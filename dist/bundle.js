@@ -74510,11 +74510,11 @@ class PlayerInputHandler {
                     return false;
                 };
                 let ate;
-                if (needed <= 0.5) {
-                    ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+                if (player.health <= 1) {
+                    ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
                 }
                 else {
-                    ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+                    ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
                 }
                 if (!ate)
                     player.game.pushMessage("You have no food.");

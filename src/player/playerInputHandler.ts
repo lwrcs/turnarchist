@@ -536,10 +536,10 @@ export class PlayerInputHandler {
           return false;
         };
         let ate: boolean;
-        if (needed <= 0.5) {
-          ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
-        } else {
+        if (player.health <= 1) {
           ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+        } else {
+          ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
         }
         if (!ate) player.game.pushMessage("You have no food.");
         break;
