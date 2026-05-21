@@ -85514,6 +85514,7 @@ const room_1 = __webpack_require__(/*! ./room */ "./src/room/room.ts");
 const enemy_1 = __webpack_require__(/*! ../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const game_2 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
+const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const spiketrap_1 = __webpack_require__(/*! ../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const chasm_1 = __webpack_require__(/*! ../tile/chasm */ "./src/tile/chasm.ts");
@@ -85749,7 +85750,9 @@ class Populator {
                     for (const [start, end, step] of cornerScans) {
                         for (let x = start; step > 0 ? x <= end : x >= end; x += step) {
                             if (exitRoom.roomArray[x]?.[topY] instanceof wall_1.Wall) {
-                                const torch = new placedTorch_1.PlacedTorch(exitRoom, exitRoom.game, x, topY);
+                                const torch = this.shouldUseCandle(exitRoom)
+                                    ? new placedCandle_1.PlacedCandle(exitRoom, exitRoom.game, x, topY)
+                                    : new placedTorch_1.PlacedTorch(exitRoom, exitRoom.game, x, topY);
                                 torch.applyWallDirection(game_2.Direction.UP);
                                 exitRoom.entities.push(torch);
                                 break;
@@ -86252,6 +86255,8 @@ class Populator {
         this.addTorchesByArea = (room) => {
             if (room.envType === environmentTypes_1.EnvType.SEWER)
                 return;
+            if (room.envType === environmentTypes_1.EnvType.CAVE_POCKET)
+                return;
             const factor = room.envType === environmentTypes_1.EnvType.TUTORIAL ? 2 : 1;
             let numTorches = Math.max(1, Math.floor(Math.sqrt(room.roomArea) / 3) -
                 Math.floor(Math.sqrt(room.depth)));
@@ -86465,10 +86470,15 @@ class Populator {
         return this.level.getFurthestFromLadder("down");
     }
     /** Returns a set of "x,y" strings covering every tile adjacent to a PlacedTorch in the room. */
+    shouldUseCandle(room) {
+        return ((room.depth >= 0 && room.depth <= 1) ||
+            room.envType === environmentTypes_1.EnvType.CASTLE ||
+            room.envType === environmentTypes_1.EnvType.DARK_CASTLE);
+    }
     torchAdjacentSet(room) {
         const s = new Set();
         for (const e of room.entities) {
-            if (e.name !== "placed_torch")
+            if (e.name !== "placed_torch" && e.name !== "placed_candle")
                 continue;
             const tx = e.x, ty = e.y;
             s.add(`${tx},${ty}`);
@@ -86482,6 +86492,8 @@ class Populator {
     addFloorTorches(room, rand) {
         // No floor torches in sewer (damp/dark aesthetic) or any env that skips wall torches
         if (room.envType === environmentTypes_1.EnvType.SEWER)
+            return;
+        if (room.envType === environmentTypes_1.EnvType.CAVE_POCKET)
             return;
         // Mirror the room-type exclusions that also skip wall torches
         const noTorchTypes = new Set([
@@ -86527,7 +86539,9 @@ class Populator {
                 const p = dist <= 1 ? 0 : Math.min(cap, k * Math.log(dist));
                 if (p <= 0 || rand() >= p)
                     continue;
-                const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+                const torch = this.shouldUseCandle(room)
+                    ? new placedCandle_1.PlacedCandle(room, room.game, x, y)
+                    : new placedTorch_1.PlacedTorch(room, room.game, x, y);
                 torch.applyFloorPlacement();
                 room.entities.push(torch);
                 forbidden.add(`${x},${y}`);
@@ -87091,12 +87105,16 @@ class Populator {
             const rightOpen = rightWallInfo?.isRightWall === false;
             const bottomWall = doorDir === game_2.Direction.DOWN ? true : false;
             if (leftOpen) {
-                const t = new placedTorch_1.PlacedTorch(room, room.game, x - 1, y);
+                const t = this.shouldUseCandle(room)
+                    ? new placedCandle_1.PlacedCandle(room, room.game, x - 1, y)
+                    : new placedTorch_1.PlacedTorch(room, room.game, x - 1, y);
                 t.applyWallDirection(game_2.Direction.RIGHT);
                 room.entities.push(t);
             }
             if (rightOpen) {
-                const t = new placedTorch_1.PlacedTorch(room, room.game, x + 1, y);
+                const t = this.shouldUseCandle(room)
+                    ? new placedCandle_1.PlacedCandle(room, room.game, x + 1, y)
+                    : new placedTorch_1.PlacedTorch(room, room.game, x + 1, y);
                 t.applyWallDirection(game_2.Direction.LEFT);
                 room.entities.push(t);
             }
@@ -87109,7 +87127,9 @@ class Populator {
         if (placeX !== undefined &&
             placeY !== undefined &&
             room.roomArray[placeX]?.[placeY] instanceof wall_1.Wall) {
-            const t = new placedTorch_1.PlacedTorch(room, room.game, placeX, placeY);
+            const t = this.shouldUseCandle(room)
+                ? new placedCandle_1.PlacedCandle(room, room.game, placeX, placeY)
+                : new placedTorch_1.PlacedTorch(room, room.game, placeX, placeY);
             t.applyWallDirection(game_2.Direction.DOWN);
             room.entities.push(t);
             return;
@@ -87142,7 +87162,9 @@ class Populator {
             const t = walls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+            const torch = this.shouldUseCandle(room)
+                ? new placedCandle_1.PlacedCandle(room, room.game, x, y)
+                : new placedTorch_1.PlacedTorch(room, room.game, x, y);
             torch.applyWallDirection(game_2.Direction.DOWN);
             room.entities.push(torch);
         }
@@ -87153,7 +87175,9 @@ class Populator {
             const t = bottomWalls.splice(randomIndex, 1)[0];
             const x = t.x;
             const y = t.y;
-            const torch = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+            const torch = this.shouldUseCandle(room)
+                ? new placedCandle_1.PlacedCandle(room, room.game, x, y)
+                : new placedTorch_1.PlacedTorch(room, room.game, x, y);
             torch.applyWallDirection(game_2.Direction.UP);
             room.entities.push(torch);
         }
@@ -87163,26 +87187,38 @@ class Populator {
             return;
         if (!x || !y)
             return;
+        if (room.envType === environmentTypes_1.EnvType.CAVE_POCKET)
+            return;
         room.calculateWallInfo();
         const leftWallInfo = room.wallInfo.get(`${x - 1},${y}`);
         const rightWallInfo = room.wallInfo.get(`${x + 1},${y}`);
         const leftOpen = leftWallInfo?.isLeftWall === false;
         const rightOpen = rightWallInfo?.isRightWall === false;
         const dir = doorDir === game_2.Direction.DOWN ? game_2.Direction.DOWN : game_2.Direction.UP;
+        const makeTorchOrCandle = (tx, ty) => {
+            if (this.shouldUseCandle(room)) {
+                const c = new placedCandle_1.PlacedCandle(room, room.game, tx, ty);
+                c.applyWallDirection(dir);
+                room.entities.push(c);
+            }
+            else {
+                const t = new placedTorch_1.PlacedTorch(room, room.game, tx, ty);
+                t.applyWallDirection(dir);
+                room.entities.push(t);
+            }
+        };
         if (leftOpen && room.roomArray[x - 1]?.[y] instanceof wall_1.Wall) {
-            const t = new placedTorch_1.PlacedTorch(room, room.game, x - 1, y);
-            t.applyWallDirection(dir);
-            room.entities.push(t);
+            makeTorchOrCandle(x - 1, y);
         }
         if (rightOpen && room.roomArray[x + 1]?.[y] instanceof wall_1.Wall) {
-            const t = new placedTorch_1.PlacedTorch(room, room.game, x + 1, y);
-            t.applyWallDirection(dir);
-            room.entities.push(t);
+            makeTorchOrCandle(x + 1, y);
         }
     }
     addPlacedTorches(room, numTorches, rand, placeX, placeY) {
         if (room.level.environment.type === environmentTypes_1.EnvType.FOREST &&
             room.type !== room_1.RoomType.DOWNLADDER)
+            return;
+        if (room.envType === environmentTypes_1.EnvType.CAVE_POCKET)
             return;
         const rx = room.roomX, ry = room.roomY;
         const rw = room.width, rh = room.height;
@@ -87209,9 +87245,16 @@ class Populator {
             return null;
         };
         const place = (x, y, dir) => {
-            const t = new placedTorch_1.PlacedTorch(room, room.game, x, y);
-            t.applyWallDirection(dir);
-            room.entities.push(t);
+            if (this.shouldUseCandle(room)) {
+                const c = new placedCandle_1.PlacedCandle(room, room.game, x, y);
+                c.applyWallDirection(dir);
+                room.entities.push(c);
+            }
+            else {
+                const t = new placedTorch_1.PlacedTorch(room, room.game, x, y);
+                t.applyWallDirection(dir);
+                room.entities.push(t);
+            }
         };
         const dirTarget = (x, y, d) => ({
             x: d === game_2.Direction.LEFT ? x + 1 : d === game_2.Direction.RIGHT ? x - 1 : x,
