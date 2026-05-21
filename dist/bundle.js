@@ -12323,6 +12323,7 @@ const frogEnemy_1 = __webpack_require__(/*! ./frogEnemy */ "./src/entity/enemy/f
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
 const downLadder_1 = __webpack_require__(/*! ../../tile/downLadder */ "./src/tile/downLadder.ts");
 const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const weaponPoison_1 = __webpack_require__(/*! ../../item/usable/weaponPoison */ "./src/item/usable/weaponPoison.ts");
 class BigFrogEnemy extends enemy_1.Enemy {
     constructor(room, game, x, y, drop) {
         super(room, game, x, y);
@@ -12353,25 +12354,22 @@ class BigFrogEnemy extends enemy_1.Enemy {
                 else
                     list2.push(tile);
             }
-            // Pick one from list1 for immediate aggro (fallback to list2 if list1 empty)
-            const aggroSource = list1.length > 0 ? list1 : list2;
-            const aggroIdx = Math.floor(random_1.Random.rand() * aggroSource.length);
-            const aggroTile = aggroSource.splice(aggroIdx, 1)[0];
-            // Wake order for remaining 3: list2 first, then list1 remainder
-            const sleepTiles = [...list2, ...list1];
-            // Spawn aggro frog — skipNextTurns=1 so it can't act the turn it spawns
-            const aggroFrog = frogEnemy_1.FrogEnemy.add(this.room, this.game, aggroTile.x, aggroTile.y);
-            if (aggroFrog && player) {
-                aggroFrog.seenPlayer = true;
-                aggroFrog.aggro = true;
-                aggroFrog.targetPlayer = player;
-                aggroFrog.skipNextTurns = 1;
-            }
-            // Spawn sleeping frogs with staggered skipNextTurns: 2, 3, 4
-            sleepTiles.forEach((tile, i) => {
+            const allTiles = [...list1, ...list2];
+            // Pick one tile at random to carry the poison drop
+            const poisonIdx = Math.floor(random_1.Random.rand() * allTiles.length);
+            // Spawn all 4 frogs, all waking up instantly
+            const spawnedFrogs = allTiles.map((tile, i) => {
                 const frog = frogEnemy_1.FrogEnemy.add(this.room, this.game, tile.x, tile.y);
-                if (frog)
-                    frog.skipNextTurns = i + 2;
+                if (frog && player) {
+                    frog.seenPlayer = true;
+                    frog.aggro = true;
+                    frog.targetPlayer = player;
+                    frog.skipNextTurns = 1;
+                }
+                if (i === poisonIdx && frog) {
+                    frog.drops = [new weaponPoison_1.WeaponPoison(this.room, tile.x, tile.y)];
+                }
+                return frog;
             });
         };
         this.poison = () => { };

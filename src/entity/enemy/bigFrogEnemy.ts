@@ -12,6 +12,7 @@ import { Random } from "../../utility/random";
 import { DownLadder } from "../../tile/downLadder";
 import { Door } from "../../tile/door";
 import { GameConstants } from "../../game/gameConstants";
+import { WeaponPoison } from "../../item/usable/weaponPoison";
 
 export class BigFrogEnemy extends Enemy {
   ticks: number;
@@ -96,27 +97,24 @@ export class BigFrogEnemy extends Enemy {
       else list2.push(tile);
     }
 
-    // Pick one from list1 for immediate aggro (fallback to list2 if list1 empty)
-    const aggroSource = list1.length > 0 ? list1 : list2;
-    const aggroIdx = Math.floor(Random.rand() * aggroSource.length);
-    const aggroTile = aggroSource.splice(aggroIdx, 1)[0];
+    const allTiles = [...list1, ...list2];
 
-    // Wake order for remaining 3: list2 first, then list1 remainder
-    const sleepTiles = [...list2, ...list1];
+    // Pick one tile at random to carry the poison drop
+    const poisonIdx = Math.floor(Random.rand() * allTiles.length);
 
-    // Spawn aggro frog — skipNextTurns=1 so it can't act the turn it spawns
-    const aggroFrog = FrogEnemy.add(this.room, this.game, aggroTile.x, aggroTile.y);
-    if (aggroFrog && player) {
-      (aggroFrog as FrogEnemy).seenPlayer = true;
-      (aggroFrog as FrogEnemy).aggro = true;
-      (aggroFrog as FrogEnemy).targetPlayer = player;
-      (aggroFrog as FrogEnemy).skipNextTurns = 1;
-    }
-
-    // Spawn sleeping frogs with staggered skipNextTurns: 2, 3, 4
-    sleepTiles.forEach((tile, i) => {
+    // Spawn all 4 frogs, all waking up instantly
+    const spawnedFrogs = allTiles.map((tile, i) => {
       const frog = FrogEnemy.add(this.room, this.game, tile.x, tile.y);
-      if (frog) (frog as FrogEnemy).skipNextTurns = i + 2;
+      if (frog && player) {
+        (frog as FrogEnemy).seenPlayer = true;
+        (frog as FrogEnemy).aggro = true;
+        (frog as FrogEnemy).targetPlayer = player;
+        (frog as FrogEnemy).skipNextTurns = 1;
+      }
+      if (i === poisonIdx && frog) {
+        (frog as FrogEnemy).drops = [new WeaponPoison(this.room, tile.x, tile.y)];
+      }
+      return frog;
     });
   };
 
