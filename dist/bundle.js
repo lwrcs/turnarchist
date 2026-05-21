@@ -85998,7 +85998,7 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 25); // 25 = chess knight (not ready for spawner yet)
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
             spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2), spawnTable);
             room.removeDoorObstructions();
         };
@@ -88118,7 +88118,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -88132,7 +88132,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -88228,7 +88228,7 @@ class Populator {
             // current depth's enemy pool (mirrors prior logic from addBossesAt()).
             const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
                 ? [
-                    this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7),
+                    this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25),
                 ]
                 : (boss.additionalParams ?? []);
             chosenBoss = boss.class?.add
@@ -89073,7 +89073,7 @@ class Populator {
             const pos = room.getRandomEmptyPosition(tiles);
             if (!pos)
                 return;
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
             const boss = spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
             if (boss)
                 boss.isBossEnemy = true;
@@ -89231,7 +89231,7 @@ class Populator {
         if (!boss)
             return;
         const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
-            ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+            ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25)]
             : (boss.additionalParams ?? []);
         if (boss.class?.add) {
             const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);
