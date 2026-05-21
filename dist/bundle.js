@@ -19207,46 +19207,15 @@ class GiantFrogEnemy extends enemy_1.Enemy {
                 }, 500);
             }
         };
-        this.makeBigHitWarnings = () => {
-            this.makeHitWarnings();
-        };
+        this.makeBigHitWarnings = () => { };
         this.makeHitWarnings = () => {
-            if (this.unconscious || !this.seenPlayer || this.ticks % 2 === 1)
-                return;
-            const targets = [
-                // Left face (x - 2)
-                { tx: this.x - 2, ty: this.y },
-                { tx: this.x - 2, ty: this.y + 1 },
-                { tx: this.x - 2, ty: this.y + 2 },
-                { tx: this.x - 2, ty: this.y + 3 },
-                // Right face (x + 5)
-                { tx: this.x + 5, ty: this.y },
-                { tx: this.x + 5, ty: this.y + 1 },
-                { tx: this.x + 5, ty: this.y + 2 },
-                { tx: this.x + 5, ty: this.y + 3 },
-                // Top face (y - 2)
-                { tx: this.x, ty: this.y - 2 },
-                { tx: this.x + 1, ty: this.y - 2 },
-                { tx: this.x + 2, ty: this.y - 2 },
-                { tx: this.x + 3, ty: this.y - 2 },
-                // Bottom face (y + 5)
-                { tx: this.x, ty: this.y + 5 },
-                { tx: this.x + 1, ty: this.y + 5 },
-                { tx: this.x + 2, ty: this.y + 5 },
-                { tx: this.x + 3, ty: this.y + 5 },
-                // Corner diagonals
-                { tx: this.x - 1, ty: this.y - 1 },
-                { tx: this.x + 4, ty: this.y - 1 },
-                { tx: this.x - 1, ty: this.y + 4 },
-                { tx: this.x + 4, ty: this.y + 4 },
-            ];
-            for (const { tx, ty } of targets) {
-                if (!this.isWithinRoomBounds(tx, ty))
-                    continue;
-                if (this.occupiesTile(tx, ty, this.z ?? 0))
-                    continue;
-                this.room.hitwarnings.push(new hitWarning_1.HitWarning(this.game, tx, ty, this.x, this.y, true, false, this));
-            }
+            return;
+            // removed by dead control flow
+
+            // removed by dead control flow
+
+            // removed by dead control flow
+
         };
         this.drawTopLayer = (delta) => {
             this.drawableY = this.y;
@@ -65252,14 +65221,21 @@ const environmentData = {
                     chance: 0.5,
                 },
             },
+            {
+                class: giantFrogEnemy_1.GiantFrogEnemy,
+                weight: 0.01,
+                minDepth: 0,
+                specialSpawnLogic: "clearFloor",
+                size: { w: 4, h: 4 },
+            },
         ],
         bosses: [
             { class: bigFrogEnemy_1.BigFrogEnemy, depth: 0, weight: 1.0, big: true },
-            { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            //{ class: ExalterEnemy, depth: 0, weight: 0.35 },
             { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
-            { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
-            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.25 },
-            { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
+            //{ class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            //{ class: EctomancerEnemy, depth: 1, weight: 0.25 },
+            //{ class: WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
     [environmentTypes_1.EnvType.DESERT]: {
@@ -65611,6 +65587,10 @@ const environmentData = {
             { class: crabEnemy_1.CrabEnemy, weight: 1.5, minDepth: 0 },
             { class: spiderEnemy_1.SpiderEnemy, weight: 1.2, minDepth: 0 },
             { class: ratEnemy_1.RatEnemy, weight: 1.0, minDepth: 0 },
+        ],
+        bosses: [
+            { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
+            { class: bigWizardEnemy_1.BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
         ],
     },
 };

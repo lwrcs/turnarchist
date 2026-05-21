@@ -467,14 +467,21 @@ const environmentData: Record<EnvType, EnvironmentData> = {
           chance: 0.5,
         },
       },
+      {
+        class: GiantFrogEnemy,
+        weight: 0.01,
+        minDepth: 0,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 4, h: 4 },
+      },
     ],
     bosses: [
       { class: BigFrogEnemy, depth: 0, weight: 1.0, big: true },
-      { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      //{ class: ExalterEnemy, depth: 0, weight: 0.35 },
       { class: Spawner, depth: 0, weight: 0.25 },
-      { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
-      { class: EctomancerEnemy, depth: 1, weight: 0.25 },
-      { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
+      //{ class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      //{ class: EctomancerEnemy, depth: 1, weight: 0.25 },
+      //{ class: WardenEnemy, depth: 5, weight: 0.35, big: true },
     ],
   },
   [EnvType.DESERT]: {
@@ -839,6 +846,10 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: CrabEnemy, weight: 1.5, minDepth: 0 },
       { class: SpiderEnemy, weight: 1.2, minDepth: 0 },
       { class: RatEnemy, weight: 1.0, minDepth: 0 },
+    ],
+    bosses: [
+      { class: Spawner, depth: 0, weight: 0.35 },
+      { class: BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
     ],
   },
 };

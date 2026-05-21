@@ -445,11 +445,10 @@ export class GiantFrogEnemy extends Enemy {
     }
   };
 
-  makeBigHitWarnings = () => {
-    this.makeHitWarnings();
-  };
+  makeBigHitWarnings = () => {};
 
   makeHitWarnings = () => {
+    return;
     if (this.unconscious || !this.seenPlayer || this.ticks % 2 === 1) return;
 
     const targets = [
