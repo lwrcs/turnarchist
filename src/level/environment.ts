@@ -295,18 +295,18 @@ const environmentData: Record<EnvType, EnvironmentData> = {
         weight: 0.5,
         blob: { enabled: true, weight: 0.5, diameter: 5 },
       },
-      {
+      /*{
         class: GoldResource,
-        weight: 0.1,
+        weight: 0,
         blob: { enabled: true, weight: 0.75, diameter: 5 },
-      },
+      },*/
       {
         class: IronResource,
-        weight: 0.3,
+        weight: 0.05,
         blob: { enabled: true, weight: 0.25, diameter: 5 },
       },
-      { class: EmeraldResource, weight: 0.001 },
-      { class: AmberResource, weight: 0.001 },
+      //{ class: EmeraldResource, weight: 0.001 },
+      //{ class: AmberResource, weight: 0.001 },
       { class: CaveRock, weight: 0.5 },
       {
         class: Mushrooms,

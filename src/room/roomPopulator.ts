@@ -143,11 +143,6 @@ const DEFAULT_BLOB_OPTIONS: Required<
   chance: 1,
 };
 
-// Generation-time metadata for special sidepath rooms (do not serialize).
-const caveOrePocketsByRoom = new WeakMap<
-  Room,
-  Array<{ x: number; y: number }>
->();
 
 export class Populator {
   level: Level;
@@ -1318,21 +1313,6 @@ export class Populator {
 
   private populateCaveEnvironment(room: Room) {
     const numProps = this.getNumProps(room);
-    // Single-room cave sidepath mazes are intentionally large; concentrate ore+gems in a dedicated
-    // pocket and reduce their frequency elsewhere in the cave.
-    const isSingleRoomSidepathMaze =
-      room.envType === EnvType.CAVE &&
-      room.type === RoomType.ROPECAVE &&
-      room.level?.rooms?.length === 1 &&
-      (room.level?.generationOptions?.caveRooms ?? 0) <= 1;
-    const orePockets = isSingleRoomSidepathMaze
-      ? (caveOrePocketsByRoom.get(room) ?? [])
-      : [];
-
-    const propsOverride =
-      orePockets.length > 0
-        ? this.getCavePropsWithReducedResourceWeights()
-        : undefined;
 
     //this.addProps(room, numProps, room.envType);
     this.addPropsWithClustering(
@@ -1356,37 +1336,7 @@ export class Populator {
         debugLogToConsole: true,
         debugTopN: 5,
       },
-      propsOverride,
     );
-
-    if (orePockets.length > 0) {
-      // If we have multiple pockets, scale each down so the total stays sane.
-      const perPocketScale = orePockets.length >= 2 ? 0.6 : 1;
-      for (const p of orePockets) {
-        this.addCaveOrePocket(room, p, perPocketScale);
-      }
-    }
-
-    // Guarantee at least 3 gold ore per cave room.
-    const MIN_GOLD = 3;
-    const goldPlaced = room.entities.filter((e) => e instanceof GoldResource).length;
-    const goldShortfall = MIN_GOLD - goldPlaced;
-    if (goldShortfall > 0) {
-      const wallAdjacentTiles = room.getEmptyTiles().filter((t) => {
-        return (
-          room.roomArray[t.x]?.[t.y - 1]?.isSolid() ||
-          room.roomArray[t.x]?.[t.y + 1]?.isSolid() ||
-          room.roomArray[t.x - 1]?.[t.y]?.isSolid() ||
-          room.roomArray[t.x + 1]?.[t.y]?.isSolid()
-        );
-      });
-      const pool = wallAdjacentTiles.length > 0 ? wallAdjacentTiles : room.getEmptyTiles();
-      for (let i = 0; i < goldShortfall && pool.length > 0; i++) {
-        const idx = Math.floor(Random.rand() * pool.length);
-        const { x, y } = pool.splice(idx, 1)[0];
-        GoldResource.add(room, room.game, x, y);
-      }
-    }
 
     // ADD: Enemies after props, based on remaining space
     this.addRandomEnemies(room);
@@ -1394,11 +1344,6 @@ export class Populator {
 
   private populateCavePocketEnvironment(room: Room) {
     const numProps = this.getNumProps(room);
-    const orePockets = caveOrePocketsByRoom.get(room) ?? [];
-    const propsOverride =
-      orePockets.length > 0
-        ? this.getCavePocketPropsWithReducedResourceWeights()
-        : undefined;
 
     this.addPropsWithClustering(
       room,
@@ -1421,36 +1366,7 @@ export class Populator {
         debugLogToConsole: true,
         debugTopN: 5,
       },
-      propsOverride,
     );
-
-    if (orePockets.length > 0) {
-      const perPocketScale = orePockets.length >= 2 ? 0.6 : 1;
-      for (const p of orePockets) {
-        this.addCaveOrePocket(room, p, perPocketScale);
-      }
-    }
-
-    // Guarantee at least 2 gold ore per pocket.
-    const MIN_GOLD = 2;
-    const goldPlaced = room.entities.filter((e) => e instanceof GoldResource).length;
-    const goldShortfall = MIN_GOLD - goldPlaced;
-    if (goldShortfall > 0) {
-      const wallAdjacentTiles = room.getEmptyTiles().filter((t) => {
-        return (
-          room.roomArray[t.x]?.[t.y - 1]?.isSolid() ||
-          room.roomArray[t.x]?.[t.y + 1]?.isSolid() ||
-          room.roomArray[t.x - 1]?.[t.y]?.isSolid() ||
-          room.roomArray[t.x + 1]?.[t.y]?.isSolid()
-        );
-      });
-      const pool = wallAdjacentTiles.length > 0 ? wallAdjacentTiles : room.getEmptyTiles();
-      for (let i = 0; i < goldShortfall && pool.length > 0; i++) {
-        const idx = Math.floor(Random.rand() * pool.length);
-        const { x, y } = pool.splice(idx, 1)[0];
-        GoldResource.add(room, room.game, x, y);
-      }
-    }
 
     this.addRandomEnemies(room);
   }
@@ -4397,14 +4313,13 @@ export class Populator {
       room.envType === EnvType.CAVE
         ? Game.randTable([1, 1, 2, 2, 3], rand)
         : 0;
-    // Caves need: 1 entrance + cavePocketCount cave pockets + 2 ore pockets.
-    // Cave pockets (CAVE_POCKET env) need: 1 entrance + 2 ore pockets.
+    // Caves need: 1 entrance + cavePocketCount cave pockets.
     // Forest and Sewer both get a pool node, so need at least 4.
     const requiredConnected =
       room.envType === EnvType.CAVE
-        ? Math.max(1 + cavePocketCount + 2, requiredConnectedBase)
+        ? Math.max(1 + cavePocketCount, requiredConnectedBase)
         : room.envType === EnvType.CAVE_POCKET
-        ? Math.max(3, requiredConnectedBase)
+        ? Math.max(1, requiredConnectedBase)
         : room.envType === EnvType.FOREST
         ? Math.max(4, requiredConnectedBase)
         : room.envType === EnvType.SEWER
@@ -4426,8 +4341,10 @@ export class Populator {
     });
 
     const minConnectedNodes =
-      room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET
-        ? Math.max(3, 1 + cavePocketCount + 2)
+      room.envType === EnvType.CAVE
+        ? Math.max(2, 1 + cavePocketCount)
+        : room.envType === EnvType.CAVE_POCKET
+        ? 1
         : 3;
     const connected =
       network.connectedNodes.length >= minConnectedNodes
@@ -4445,23 +4362,6 @@ export class Populator {
     // For others: shuffled[1] = key, shuffled[2] = exit (unchanged).
     const keyEndpoint = room.envType !== EnvType.CAVE ? (shuffled[1] ?? null) : null;
     const exitEndpoint = room.envType !== EnvType.CAVE ? (shuffled[2] ?? null) : null;
-    // Ore endpoints: for CAVE after cave pocket slots; for CAVE_POCKET starting at slot 1.
-    const oreSlotStart =
-      room.envType === EnvType.CAVE
-        ? cavePocketCount + 1
-        : room.envType === EnvType.CAVE_POCKET
-        ? 1
-        : 3;
-    const oreEndpointA =
-      (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET) &&
-      network.connectedNodes.length >= oreSlotStart + 1
-        ? (shuffled[oreSlotStart] ?? null)
-        : null;
-    const oreEndpointB =
-      (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET) &&
-      network.connectedNodes.length >= oreSlotStart + 2
-        ? (shuffled[oreSlotStart + 1] ?? null)
-        : null;
     const poolEndpoint =
       (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER) &&
       network.connectedNodes.length >= 4
@@ -4533,22 +4433,6 @@ export class Populator {
         );
         room.roomArray[ep.x][ep.y] = dl;
       }
-    }
-
-    // Record dedicated ore+gem pocket nodes for cave single-room mazes.
-    // Cave population will use this to concentrate resources and reduce them elsewhere.
-    if ((oreEndpointA || oreEndpointB) && (room.envType === EnvType.CAVE || room.envType === EnvType.CAVE_POCKET)) {
-      const pockets: Array<{ x: number; y: number }> = [];
-      if (oreEndpointA) pockets.push({ x: oreEndpointA.x, y: oreEndpointA.y });
-      if (
-        oreEndpointB &&
-        (!oreEndpointA ||
-          oreEndpointB.x !== oreEndpointA.x ||
-          oreEndpointB.y !== oreEndpointA.y)
-      ) {
-        pockets.push({ x: oreEndpointB.x, y: oreEndpointB.y });
-      }
-      if (pockets.length > 0) caveOrePocketsByRoom.set(room, pockets);
     }
 
     // Place bosses guarding key + exit (localized near their endpoints).
