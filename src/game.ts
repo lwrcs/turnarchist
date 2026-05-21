@@ -55,7 +55,7 @@ import type {
   ItemKind,
   ItemSaveV2,
 } from "./game/save/schema";
-import { SKILL_DISPLAY_NAME } from "./game/skills";
+import { SKILL_DISPLAY_NAME, SKILLS, xpForLevel } from "./game/skills";
 import type { Skill } from "./game/skills";
 import { FloatingTextPopup } from "./particle/floatingTextPopup";
 import { BootLoadingRenderer } from "./boot/bootLoadingRenderer";
@@ -1737,6 +1737,10 @@ export class Game {
     this.resetTutorialState();
 
     statsTracker.resetStats();
+    if (GameConstants.DEVELOPER_MODE) {
+      const xp50 = xpForLevel(50);
+      for (const skill of SKILLS) statsTracker.awardSkillXp(skill, xp50);
+    }
     this.currentDepth = 0;
     this.encounteredEnemies = [];
     this.levels = [];
@@ -4094,6 +4098,7 @@ export class Game {
         case "dagger":
         case "sword":
         case "spear":
+        case "rapier":
         case "dual_daggers":
         case "greataxe":
         case "warhammer":

@@ -1279,6 +1279,25 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
     ],
   },
 
+  EctomancerEnemy: {
+    typeName: "EctomancerEnemy",
+    displayName: "Ectomancer",
+    description:
+      "A support caster that tears spectral copies from nearby enemies. The originals are frozen in place while their ghosts attack.",
+    sprites: [
+      {
+        label: "Idle",
+        tileX: 59,
+        tileY: 10,
+        w: 1,
+        h: 2,
+        hp: 6,
+        maxHp: 6,
+        frames: 4,
+      },
+    ],
+  },
+
   WardenEnemy: {
     typeName: "WardenEnemy",
     displayName: "Warden",

@@ -72,6 +72,29 @@ export class BeamEffect extends Projectile {
   // Range: 0.001-0.1, recommended: 0.1
   private static readonly SPRING_DAMPING = 0.1;
 
+  private static offscreenCanvas: HTMLCanvasElement | null = null;
+  private static offscreenCtx: CanvasRenderingContext2D | null = null;
+
+  private static getOffscreenCtx(
+    width: number,
+    height: number,
+  ): CanvasRenderingContext2D {
+    if (!BeamEffect.offscreenCanvas) {
+      BeamEffect.offscreenCanvas = document.createElement("canvas");
+      BeamEffect.offscreenCanvas.width = width;
+      BeamEffect.offscreenCanvas.height = height;
+      BeamEffect.offscreenCtx =
+        BeamEffect.offscreenCanvas.getContext("2d")!;
+    } else if (
+      BeamEffect.offscreenCanvas.width !== width ||
+      BeamEffect.offscreenCanvas.height !== height
+    ) {
+      BeamEffect.offscreenCanvas.width = width;
+      BeamEffect.offscreenCanvas.height = height;
+    }
+    return BeamEffect.offscreenCtx!;
+  }
+
   protected points: Point[];
   private prevStartX: number;
   private prevStartY: number;
@@ -90,6 +113,7 @@ export class BeamEffect extends Projectile {
   };
   drawOnTop: boolean = false;
   alpha: number = 1;
+  lineWidth: number = 2;
   targetX: number;
   targetY: number;
   color: string;
@@ -408,9 +432,31 @@ export class BeamEffect extends Projectile {
     }
 
     const ctx = Game.ctx;
-    ctx.save();
-    Game.ctx.globalCompositeOperation =
-      compositeOperation as GlobalCompositeOperation;
+    const mainCanvas = ctx.canvas;
+    const useOffscreen = this.alpha < 1;
+
+    let drawCtx: CanvasRenderingContext2D;
+    if (useOffscreen) {
+      const offCtx = BeamEffect.getOffscreenCtx(
+        mainCanvas.width,
+        mainCanvas.height,
+      );
+      // Clear in identity space, then mirror the main canvas transform so
+      // beam pixels land at the same screen positions as they would on Game.ctx.
+      const cameraTransform = ctx.getTransform();
+      offCtx.setTransform(1, 0, 0, 1, 0, 0);
+      offCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      offCtx.setTransform(cameraTransform);
+      offCtx.globalCompositeOperation =
+        compositeOperation as GlobalCompositeOperation;
+      drawCtx = offCtx;
+    } else {
+      ctx.save();
+      ctx.globalCompositeOperation =
+        compositeOperation as GlobalCompositeOperation;
+      drawCtx = ctx;
+    }
+
     for (let i = 0; i < this.points.length - 1; i++) {
       const p1 = this.points[i];
       const p2 = this.points[i + 1];
@@ -430,12 +476,13 @@ export class BeamEffect extends Projectile {
         const adjustedColor = this.getColorWithBrightness(
           color,
           brightness,
-          this.alpha,
+          useOffscreen ? 1 : this.alpha,
         );
+        const half = lineWidth / 2;
         for (let w = 0; w < lineWidth; w++) {
           for (let h = 0; h < lineWidth; h++) {
-            ctx.fillStyle = adjustedColor;
-            ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
+            drawCtx.fillStyle = adjustedColor;
+            drawCtx.fillRect(Math.round(x - half + w), Math.round(y - half + h), 1, 1);
           }
         }
         x += xIncrement;
@@ -443,7 +490,17 @@ export class BeamEffect extends Projectile {
       }
     }
 
-    ctx.restore();
+    if (useOffscreen) {
+      // Blit the offscreen canvas onto Game.ctx in raw screen pixels —
+      // reset the transform so drawImage is 1:1, not camera-offset.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = this.alpha;
+      ctx.drawImage(BeamEffect.offscreenCanvas!, 0, 0);
+      ctx.restore();
+    } else {
+      ctx.restore();
+    }
 
     this.prevStartX = startX;
     this.prevStartY = startY;
@@ -600,7 +657,7 @@ export class BeamEffect extends Projectile {
       this.x,
       this.y,
       this.color,
-      2,
+      this.lineWidth,
       delta,
       this.compositeOperation,
       skipDrawing,
@@ -616,7 +673,7 @@ export class BeamEffect extends Projectile {
       this.x,
       this.y,
       this.color,
-      2,
+      this.lineWidth,
       delta,
       this.compositeOperation,
       false,

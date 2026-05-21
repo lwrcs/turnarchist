@@ -227,6 +227,34 @@ export class Entity extends Drawable {
   lootDropped: boolean = false;
   seeThroughAlpha: number = 1;
   softSeeThroughAlpha: number = 1;
+  /**
+   * Ghostly state — when true, `drawMobWithCrush` (and `drawObjWithCrush`) auto-applies
+   * a desaturated cyan-green tint and half opacity. Used by the Ectomancer to render
+   * its spectral copies of other enemies without each enemy subclass needing changes.
+   *
+   * `ghostlyBeamParentGid` is the gid of the base enemy this ghost is anchored to, so
+   * the link can be re-established on save load.
+   */
+  isGhostly: boolean = false;
+  ghostlyBeamParentGid: string | null = null;
+  /**
+   * "Frozen" state — when true, an enemy's `behavior()` is short-circuited so it cannot
+   * move or attack. Used by the Ectomancer to lock the base enemy while a ghost copy
+   * acts in its place. Distinct from `unconscious`/`stunned` so existing AI flags are
+   * unaffected.
+   */
+  ghostFrozen: boolean = false;
+  /** Set to true after a ghost spawned from this enemy is killed, preventing re-ghostification. */
+  ghostifiedBefore: boolean = false;
+  /**
+   * Back-reference to the EctomancerEnemy that owns the (base, ghost) link this entity is
+   * part of. Typed loosely so Entity does not depend on a concrete enemy subclass. When
+   * either side of the link dies, `Entity.kill` notifies the owner so it can tear the
+   * link down (kill the ghost / unfreeze the base).
+   */
+  ectomancerOwner: {
+    notifyLinkSideDied: (e: Entity) => void;
+  } | null = null;
   // Shadow rendering resources moved to Shadow class
 
   private _imageParticleTiles: { x: number; y: number };
@@ -409,6 +437,7 @@ export class Entity extends Drawable {
       wallMounted: (original as any).wallMounted,
       z: original.z ?? 0,
       alpha: original.alpha,
+      isGhostly: original.isGhostly,
       shadeColor: original.shadeColor,
       shadeMultiplier: original.shadeMultiplier,
       softShadeColor: original.softShadeColor,
@@ -496,6 +525,10 @@ export class Entity extends Drawable {
     return Math.round(raw * steps) / steps;
   };
 
+  static readonly GHOSTLY_TINT = "#8FE0D2";
+  static readonly GHOSTLY_TINT_OPACITY = 0.6;
+  static readonly GHOSTLY_ALPHA = 0.5;
+
   applyShield = (shieldHealth: number = 1, loading: boolean = false) => {
     if (!this.shieldedBefore || loading) {
       this.shield = new EnemyShield(this, this.x, this.y, shieldHealth);
@@ -534,6 +567,7 @@ export class Entity extends Drawable {
     this.hasBloom = true;
     this.bloomColor = "#00FFFF";
     this.bloomAlpha = 0.5;
+    if (this.lightSource) this.removeLightSource(this.lightSource);
     this.lightSource = Lighting.newLightSource(
       this.x + 0.5,
       this.y + 0.5,
@@ -799,6 +833,11 @@ export class Entity extends Drawable {
       outlineColor = "yellow";
       outlineOpacity = Entity.targetPulseOpacity();
     }
+    if (this.isGhostly) {
+      colorOverlay = Entity.GHOSTLY_TINT;
+      colorOverlayOpacity = Math.max(colorOverlayOpacity, Entity.GHOSTLY_TINT_OPACITY);
+      colorOverlayDesaturate = true;
+    }
     const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
     Game.drawMob(
       sX,
@@ -927,6 +966,14 @@ export class Entity extends Drawable {
     };
 
     let entityCollide = (entity: Entity): boolean => {
+      // If the entity is already overlapping our current footprint, we're moving
+      // away from a pre-existing overlap — don't block the move.
+      const alreadyOverlapping =
+        !(entity.x >= this.x + this.w ||
+          entity.x + entity.w <= this.x ||
+          entity.y >= this.y + this.h ||
+          entity.y + entity.h <= this.y);
+      if (alreadyOverlapping) return false;
       let flag = true;
       if (entity.x >= x + this.w || entity.x + entity.w <= x) flag = false;
       if (entity.y >= y + this.h || entity.y + entity.h <= y) flag = false;
@@ -1414,6 +1461,12 @@ export class Entity extends Drawable {
     this.removeLightSource(this.lightSource);
 
     this.uniqueKillBehavior();
+
+    if (this.ectomancerOwner) {
+      const owner = this.ectomancerOwner;
+      this.ectomancerOwner = null;
+      owner.notifyLinkSideDied(this);
+    }
   };
 
   uniqueKillBehavior = () => {};

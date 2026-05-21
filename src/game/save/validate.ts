@@ -115,6 +115,7 @@ const ENEMY_KINDS = [
   "zombie",
   "occultist",
   "exalter",
+  "ectomancer",
   "armored_skull",
   "armored_zombie",
   "beetle",
@@ -2122,6 +2123,111 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     shieldedEnemyGids = gids;
   }
 
+  const shieldedBeforeU = get(v, "shieldedBefore");
+  let shieldedBefore: boolean | undefined = undefined;
+  if (shieldedBeforeU !== undefined) {
+    if (!isBoolean(shieldedBeforeU))
+      return err({
+        kind: "InvalidSchema",
+        message: "shieldedBefore must be boolean if present",
+        path: `${path}.shieldedBefore`,
+      });
+    shieldedBefore = shieldedBeforeU;
+  }
+
+  const buffedEnemyGidsU = get(v, "buffedEnemyGids");
+  let buffedEnemyGids: string[] | undefined = undefined;
+  if (buffedEnemyGidsU !== undefined) {
+    if (!Array.isArray(buffedEnemyGidsU))
+      return err({
+        kind: "InvalidSchema",
+        message: "buffedEnemyGids must be array if present",
+        path: `${path}.buffedEnemyGids`,
+      });
+    const gids: string[] = [];
+    for (let i = 0; i < buffedEnemyGidsU.length; i++) {
+      const g = asGid(buffedEnemyGidsU[i], `${path}.buffedEnemyGids[${i}]`);
+      if (isErr(g)) return err(g.error);
+      gids.push(g.value);
+    }
+    buffedEnemyGids = gids;
+  }
+
+  const isGhostlyU = get(v, "isGhostly");
+  let isGhostly: boolean | undefined = undefined;
+  if (isGhostlyU !== undefined) {
+    if (!isBoolean(isGhostlyU))
+      return err({
+        kind: "InvalidSchema",
+        message: "isGhostly must be boolean if present",
+        path: `${path}.isGhostly`,
+      });
+    isGhostly = isGhostlyU;
+  }
+
+  const ghostlyBeamParentGidU = get(v, "ghostlyBeamParentGid");
+  let ghostlyBeamParentGid: string | undefined = undefined;
+  if (ghostlyBeamParentGidU !== undefined) {
+    const g = asGid(ghostlyBeamParentGidU, `${path}.ghostlyBeamParentGid`);
+    if (isErr(g)) return err(g.error);
+    ghostlyBeamParentGid = g.value;
+  }
+
+  const ghostFrozenU = get(v, "ghostFrozen");
+  let ghostFrozen: boolean | undefined = undefined;
+  if (ghostFrozenU !== undefined) {
+    if (!isBoolean(ghostFrozenU))
+      return err({
+        kind: "InvalidSchema",
+        message: "ghostFrozen must be boolean if present",
+        path: `${path}.ghostFrozen`,
+      });
+    ghostFrozen = ghostFrozenU;
+  }
+
+  const ghostifiedBeforeU = get(v, "ghostifiedBefore");
+  let ghostifiedBefore: boolean | undefined = undefined;
+  if (ghostifiedBeforeU !== undefined) {
+    if (!isBoolean(ghostifiedBeforeU))
+      return err({
+        kind: "InvalidSchema",
+        message: "ghostifiedBefore must be boolean if present",
+        path: `${path}.ghostifiedBefore`,
+      });
+    ghostifiedBefore = ghostifiedBeforeU;
+  }
+
+  const validateGidArray = (
+    raw: unknown,
+    fieldPath: string,
+  ): Result<string[] | undefined> => {
+    if (raw === undefined) return ok(undefined);
+    if (!Array.isArray(raw))
+      return err({
+        kind: "InvalidSchema",
+        message: `${fieldPath} must be array if present`,
+        path: fieldPath,
+      });
+    const out: string[] = [];
+    for (let i = 0; i < raw.length; i++) {
+      const g = asGid(raw[i], `${fieldPath}[${i}]`);
+      if (isErr(g)) return err(g.error);
+      out.push(g.value);
+    }
+    return ok(out);
+  };
+
+  const linkBaseR = validateGidArray(
+    get(v, "ectomancerLinkBaseGids"),
+    `${path}.ectomancerLinkBaseGids`,
+  );
+  if (isErr(linkBaseR)) return err(linkBaseR.error);
+  const linkGhostR = validateGidArray(
+    get(v, "ectomancerLinkGhostGids"),
+    `${path}.ectomancerLinkGhostGids`,
+  );
+  if (isErr(linkGhostR)) return err(linkGhostR.error);
+
   return ok({
     kind,
     gid: gidR.value,
@@ -2143,6 +2249,14 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     buffed,
     buffedBefore,
     shieldedEnemyGids,
+    shieldedBefore,
+    buffedEnemyGids,
+    isGhostly,
+    ghostlyBeamParentGid,
+    ghostFrozen,
+    ghostifiedBefore,
+    ectomancerLinkBaseGids: linkBaseR.value,
+    ectomancerLinkGhostGids: linkGhostR.value,
   });
 };
 

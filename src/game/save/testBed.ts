@@ -80,6 +80,7 @@ import { BigWizardEnemy } from "../../entity/enemy/bigWizardEnemy";
 import { ZombieEnemy } from "../../entity/enemy/zombieEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../../entity/enemy/ectomancerEnemy";
 import { CoalResource } from "../../entity/resource/coalResource";
 import { GoldResource } from "../../entity/resource/goldResource";
 import { IronResource } from "../../entity/resource/ironResource";
@@ -321,6 +322,7 @@ export function populateTestRoom(room: Room, game: Game, clearFirst = false): vo
     [ZombieEnemy, "zombie"],
     [OccultistEnemy, "occultist"],
     [ExalterEnemy, "exalter"],
+    [EctomancerEnemy, "ectomancer"],
   ];
 
   // Resources

@@ -73,6 +73,7 @@ import { ChessKnightEnemy } from "../entity/enemy/chessKnightEnemy";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { BigWizardEnemy } from "../entity/enemy/bigWizardEnemy";
 import { ExalterEnemy } from "../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../entity/enemy/ectomancerEnemy";
 import { Room } from "../room/room";
 import { Game } from "../game";
 import { Entity } from "../entity/entity";
@@ -282,6 +283,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: GiantFrogEnemy, depth: 3, weight: 0.2, big: true },
       { class: ExalterEnemy, depth: 1, weight: 0.35 },
       { class: OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
+      { class: EctomancerEnemy, depth: 2, weight: 0.3 },
       { class: WardenEnemy, depth: 5, weight: 0.5, big: true },
     ],
   },
@@ -471,6 +473,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ExalterEnemy, depth: 0, weight: 0.35 },
       { class: Spawner, depth: 0, weight: 0.25 },
       { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: EctomancerEnemy, depth: 1, weight: 0.25 },
       { class: WardenEnemy, depth: 5, weight: 0.35, big: true },
     ],
   },
@@ -586,6 +589,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: ExalterEnemy, depth: 0, weight: 1.0 },
       { class: Spawner, depth: 0, weight: 0.25 },
       { class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+      { class: EctomancerEnemy, depth: 1, weight: 0.3 },
       { class: WardenEnemy, depth: 5, weight: 0.45, big: true },
     ],
   },
@@ -683,6 +687,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
     bosses: [
       { class: Spawner, depth: 0, weight: 0.35 },
       { class: ExalterEnemy, depth: 0, weight: 0.35 },
+      { class: EctomancerEnemy, depth: 1, weight: 0.25 },
       { class: WardenEnemy, depth: 3, weight: 0.85, big: true },
     ],
   },
@@ -752,6 +757,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Spawner, depth: 0, weight: 0.5 },
       { class: ExalterEnemy, depth: 0, weight: 0.35 },
       { class: OccultistEnemy, depth: 0, weight: 0.4, maxDepth: 4 },
+      { class: EctomancerEnemy, depth: 0, weight: 0.3 },
       { class: WardenEnemy, depth: 4, weight: 0.6, big: true },
     ],
   },

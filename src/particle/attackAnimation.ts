@@ -83,7 +83,7 @@ export class AttackAnimation extends Particle {
         break;
 
       case "dualdagger":
-        this.frames = 8;
+        this.frames = 7;
         this.tileY = 40;
         this.yOffset = 0;
         this.xOffset = 0;

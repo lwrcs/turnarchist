@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.efa04d1d8ffc4e7c8bac.png";
+module.exports = __webpack_require__.p + "assets/mobset.b8952f823adfeec23736.png";
 
 /***/ }),
 
@@ -15270,37 +15270,61 @@ class ChessKnightEnemy extends enemy_1.Enemy {
                         else if (this.ticks % 2 === 1) {
                             // Move turn
                             this.rumbling = true;
-                            const move = this.searchKnightPath();
-                            if (move !== null) {
-                                const moveX = move.x;
-                                const moveY = move.y;
-                                let hitPlayer = false;
-                                let hitAnything = false;
-                                for (const i in this.game.players) {
-                                    const p = this.game.players[i];
-                                    if (this.game.rooms[p.levelID] === this.room &&
-                                        p.x === moveX &&
-                                        p.y === moveY) {
-                                        if (!this.shouldSkipAttack()) {
-                                            p.hurt(this.hit(), this.name, {
-                                                source: { x: this.x, y: this.y },
-                                            });
-                                            if (!hitAnything) {
-                                                this.initKnightAnim(moveX, moveY, true);
-                                                if (p === this.game.players[this.game.localPlayerID])
-                                                    this.game.shakeScreen(8 * (this.x - moveX), 8 * (this.y - moveY));
-                                                hitAnything = true;
-                                            }
-                                        }
-                                        hitPlayer = true;
+                            if (this.justHurt) {
+                                let bestDist = -1;
+                                let bestPos = null;
+                                for (const [dx, dy] of KNIGHT_MOVES) {
+                                    const nx = this.x + dx;
+                                    const ny = this.y + dy;
+                                    if (!this.isValidKnightDest(nx, ny))
+                                        continue;
+                                    const dist = Math.abs(nx - this.targetPlayer.x) +
+                                        Math.abs(ny - this.targetPlayer.y);
+                                    if (dist > bestDist) {
+                                        bestDist = dist;
+                                        bestPos = { x: nx, y: ny };
                                     }
                                 }
-                                if (!hitPlayer) {
-                                    this.initKnightAnim(moveX, moveY, false);
-                                    this.x = moveX;
-                                    this.y = moveY;
+                                if (bestPos) {
+                                    this.initKnightAnim(bestPos.x, bestPos.y, false);
+                                    this.x = bestPos.x;
+                                    this.y = bestPos.y;
                                 }
+                                this.justHurt = false;
                             }
+                            else {
+                                const move = this.searchKnightPath();
+                                if (move !== null) {
+                                    const moveX = move.x;
+                                    const moveY = move.y;
+                                    let hitPlayer = false;
+                                    let hitAnything = false;
+                                    for (const i in this.game.players) {
+                                        const p = this.game.players[i];
+                                        if (this.game.rooms[p.levelID] === this.room &&
+                                            p.x === moveX &&
+                                            p.y === moveY) {
+                                            if (!this.shouldSkipAttack()) {
+                                                p.hurt(this.hit(), this.name, {
+                                                    source: { x: this.x, y: this.y },
+                                                });
+                                                if (!hitAnything) {
+                                                    this.initKnightAnim(moveX, moveY, true);
+                                                    if (p === this.game.players[this.game.localPlayerID])
+                                                        this.game.shakeScreen(8 * (this.x - moveX), 8 * (this.y - moveY));
+                                                    hitAnything = true;
+                                                }
+                                            }
+                                            hitPlayer = true;
+                                        }
+                                    }
+                                    if (!hitPlayer) {
+                                        this.initKnightAnim(moveX, moveY, false);
+                                        this.x = moveX;
+                                        this.y = moveY;
+                                    }
+                                }
+                            } // end else (not justHurt)
                             this.rumbling = false;
                             this.unconscious = true;
                         }
@@ -16461,6 +16485,416 @@ EarthWizardEnemy.examineText = "An earth wizard. Rings you in, then crushes the 
 
 /***/ }),
 
+/***/ "./src/entity/enemy/ectomancerEnemy.ts":
+/*!*********************************************!*\
+  !*** ./src/entity/enemy/ectomancerEnemy.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EctomancerEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const game_2 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const utils_1 = __webpack_require__(/*! ../../utility/utils */ "./src/utility/utils.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+const lighting_1 = __webpack_require__(/*! ../../lighting/lighting */ "./src/lighting/lighting.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+class EctomancerEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y) {
+        super(room, game, x, y);
+        this.hit = () => 1;
+        this.bleed = () => { };
+        this.uniqueKillBehavior = () => {
+            // Kill every ghost we spawned; their death un-freezes the base via Enemy.kill chain below.
+            for (const link of this.links.slice()) {
+                this.dissolveLink(link, "ectomancer_died");
+            }
+            this.links = [];
+            this.removeLightSource(this.lightSource);
+            this.lightSource = null;
+        };
+        /** Called from Enemy.kill on either side of a link to tear it down cleanly. */
+        this.notifyLinkSideDied = (side) => {
+            const link = this.links.find((l) => l.base === side || l.ghost === side);
+            if (!link)
+                return;
+            this.links = this.links.filter((l) => l !== link);
+            if (side === link.base) {
+                // Base died — kill the ghost with proper fade animation.
+                if (!link.ghost.dead) {
+                    link.ghost.ectomancerOwner = null;
+                    link.ghost.kill();
+                }
+            }
+            else if (side === link.ghost) {
+                // Ghost died — un-freeze base.
+                if (!link.base.dead) {
+                    link.base.ghostFrozen = false;
+                }
+                link.base.ectomancerOwner = null;
+            }
+        };
+        this.dissolveLink = (link, _reason) => {
+            if (!link.base.dead) {
+                link.base.ghostFrozen = false;
+            }
+            link.base.ectomancerOwner = null;
+            if (!link.ghost.dead) {
+                // Clear owner first so kill() doesn't re-enter notifyLinkSideDied.
+                link.ghost.ectomancerOwner = null;
+                link.ghost.kill();
+            }
+            else {
+                link.ghost.ectomancerOwner = null;
+            }
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            let candidates = this.candidates();
+            if (!this.dead) {
+                if (this.handleSkipTurns())
+                    return;
+                this.ticks++;
+                this.ghostify(candidates);
+                this.prune();
+                if (this.links.length > 0) {
+                    // Move toward the farthest linked base — like exalter/occultist keep proximity.
+                    let target = this.links.reduce((farthest, current) => {
+                        const dF = utils_1.Utils.distance(this.x, this.y, farthest.base.x, farthest.base.y);
+                        const dC = utils_1.Utils.distance(this.x, this.y, current.base.x, current.base.y);
+                        return dC > dF ? current : farthest;
+                    }).base;
+                    let disablePositions = Array();
+                    disablePositions.push(...this.getEntityDisablePositions());
+                    for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                        for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                            if (this.room.roomArray[xx]?.[yy] instanceof spiketrap_1.SpikeTrap &&
+                                this.room.roomArray[xx][yy].on) {
+                                disablePositions.push({ x: xx, y: yy });
+                            }
+                        }
+                    }
+                    const moves = this.searchPathLocalizedCached({ x: target.x, y: target.y }, disablePositions);
+                    if (moves.length > 0) {
+                        const oldX = this.x;
+                        const oldY = this.y;
+                        const moveX = moves[0].pos.x;
+                        const moveY = moves[0].pos.y;
+                        this.tryMove(moveX, moveY);
+                        this.setDrawXY(oldX, oldY);
+                        if (this.x > oldX)
+                            this.direction = game_2.Direction.RIGHT;
+                        else if (this.x < oldX)
+                            this.direction = game_2.Direction.LEFT;
+                        else if (this.y > oldY)
+                            this.direction = game_2.Direction.DOWN;
+                        else if (this.y < oldY)
+                            this.direction = game_2.Direction.UP;
+                    }
+                }
+                else {
+                    this.runAway();
+                }
+            }
+            if (this.links.length > 0) {
+                this.shadeColor = "#3a8174";
+            }
+            else {
+                this.shadeColor = "#000000";
+            }
+            if (this.lightSource) {
+                this.lightSource.updatePosition(this.x + 0.5, this.y + 0.5);
+            }
+            this.syncBeams();
+        };
+        this.onHurt = (damage = 1) => {
+            if (this.health < this.lastHealth &&
+                this.health % 2 === 0 &&
+                this.health > 0) {
+                this.teleport();
+            }
+            this.lastHealth = this.health;
+        };
+        /** Drop any link whose base or ghost is dead (covers off-screen deaths and edge cases). */
+        this.prune = () => {
+            const stillAlive = [];
+            for (const link of this.links) {
+                if (link.base.dead || link.ghost.dead) {
+                    if (!link.ghost.dead) {
+                        link.ghost.ectomancerOwner = null;
+                        link.ghost.kill();
+                    }
+                    else {
+                        link.ghost.ectomancerOwner = null;
+                    }
+                    if (!link.base.dead)
+                        link.base.ghostFrozen = false;
+                    link.base.ectomancerOwner = null;
+                    continue;
+                }
+                stillAlive.push(link);
+            }
+            this.links = stillAlive;
+        };
+        /** Filter for enemies eligible to be ghostified by this ectomancer. */
+        this.candidates = () => {
+            const alreadyAnchored = new Set();
+            for (const l of this.links) {
+                alreadyAnchored.add(l.base);
+                alreadyAnchored.add(l.ghost);
+            }
+            return this.room.entities.filter((entity) => {
+                if (!(entity instanceof enemy_1.Enemy))
+                    return false;
+                if (entity === this)
+                    return false;
+                if (entity.dead)
+                    return false;
+                if (entity.isGhostly)
+                    return false; // never re-ghostify a ghost
+                if (entity.ghostFrozen)
+                    return false; // already frozen by some ectomancer
+                if (entity.ghostifiedBefore)
+                    return false; // already had a ghost killed; immune
+                if (alreadyAnchored.has(entity))
+                    return false;
+                if (entity instanceof EctomancerEnemy)
+                    return false;
+                // Skip support-caster peers (occultist/exalter set destroyableByOthers=false too);
+                // ghostifying a buff caster gets weird fast.
+                if (entity.destroyableByOthers === false)
+                    return false;
+                if (utils_1.Utils.distance(this.x, this.y, entity.x, entity.y) > this.range)
+                    return false;
+                return true;
+            });
+        };
+        this.ghostify = (candidates) => {
+            if (this.links.length >= gameplaySettings_1.GameplaySettings.MAX_ECTOMANCER_GHOSTS)
+                return;
+            for (const base of candidates) {
+                if (this.links.length >= gameplaySettings_1.GameplaySettings.MAX_ECTOMANCER_GHOSTS)
+                    break;
+                const distance = utils_1.Utils.distance(this.x, this.y, base.x, base.y);
+                // Same probabilistic gating used by exalter/occultist for cadence consistency.
+                if (random_1.Random.rand() * 10 > distance) {
+                    this.tryGhostify(base);
+                }
+            }
+        };
+        this.tryGhostify = (base) => {
+            const ghost = this.spawnGhostFrom(base);
+            if (!ghost)
+                return null;
+            base.ghostFrozen = true;
+            base.ghostifiedBefore = true;
+            base.ectomancerOwner = this;
+            ghost.ectomancerOwner = this;
+            const link = { base, ghost };
+            this.links.push(link);
+            this.attachBeam(link);
+            return link;
+        };
+        /** Spawn a ghostly copy of `base` on the same tile. */
+        this.spawnGhostFrom = (base) => {
+            const Ctor = base.constructor;
+            let ghost;
+            try {
+                ghost = new Ctor(base.room, base.game, base.x, base.y);
+            }
+            catch {
+                return null;
+            }
+            this.applyGhostlyState(ghost, base);
+            base.room.entities.push(ghost);
+            return ghost;
+        };
+        /** Apply the visual+behavioral tweaks that distinguish a ghost from a real enemy. */
+        this.applyGhostlyState = (ghost, base) => {
+            ghost.isGhostly = true;
+            ghost.alpha = entity_1.Entity.GHOSTLY_ALPHA;
+            ghost.ghostlyBeamParentGid = base.globalId;
+            ghost.drops = [];
+            ghost.dropChance = 0;
+            ghost.enemyKillXpMultiplier = 0;
+            ghost.direction = base.direction;
+            ghost.health = base.health;
+            ghost.maxHealth = base.maxHealth;
+            // Give the ghost a target player — fall back to ectomancer's nearest if base hasn't seen one.
+            const nearestResult = this.nearestPlayer();
+            const player = base.targetPlayer ?? (nearestResult !== false ? nearestResult[1] : null);
+            if (player) {
+                ghost.targetPlayer = player;
+                ghost.seenPlayer = true;
+                ghost.aggro = true;
+            }
+        };
+        this.beamCenter = (e) => ({
+            x: e.x + (e.w ?? 1) / 2 - 0.5,
+            y: e.y + (e.h ?? 1) / 2 - 0.5,
+        });
+        this.attachBeam = (link) => {
+            const gc = this.beamCenter(link.ghost);
+            const bc = this.beamCenter(link.base);
+            // Beam parent = ghost so BeamEffect.tick() auto-destroys it when the ghost dies.
+            const beam = new beamEffect_1.BeamEffect(gc.x, gc.y, bc.x, bc.y, link.ghost);
+            beam.compositeOperation = "source-over";
+            beam.color = "#8FE0D2";
+            beam.alpha = 0.35;
+            beam.lineWidth = 4;
+            beam.turbulence = 0.4;
+            beam.gravity = 0.1;
+            beam.iterations = 1;
+            beam.segments = 100;
+            beam.angleChange = 0.001;
+            beam.springDamping = 0.01;
+            beam.drawableY = link.ghost.drawableY;
+            beam.type = "ghost";
+            this.room.projectiles.push(beam);
+        };
+        this.syncBeams = () => {
+            for (const projectile of this.room.projectiles) {
+                if (!(projectile instanceof beamEffect_1.BeamEffect))
+                    continue;
+                if (projectile.type !== "ghost")
+                    continue;
+                const ghost = projectile.parent;
+                if (!(ghost instanceof enemy_1.Enemy))
+                    continue;
+                const link = this.links.find((l) => l.ghost === ghost);
+                if (!link)
+                    continue;
+                const gc = this.beamCenter(link.ghost);
+                const bc = this.beamCenter(link.base);
+                projectile.setTarget(gc.x, gc.y, bc.x, bc.y);
+                projectile.drawableY = link.ghost.drawableY;
+            }
+        };
+        this.teleport = () => {
+            const newTile = this.findConstrainedFarTile();
+            if (!newTile)
+                return;
+            this.drawX = newTile.x - this.x;
+            this.drawY = newTile.y - this.y;
+            this.x = newTile.x;
+            this.y = newTile.y;
+            this.lightSource?.updatePosition(this.x + 0.5, this.y + 0.5);
+            this.room.updateLighting();
+            this.syncBeams();
+        };
+        this.findConstrainedFarTile = () => {
+            const emptyTiles = this.room.getEmptyTiles();
+            const player = this.getPlayer();
+            if (!player || player === false || emptyTiles.length === 0)
+                return null;
+            const interactionRange = gameplaySettings_1.GameplaySettings.MAXIMUM_ENEMY_INTERACTION_DISTANCE;
+            const withinPlayerRange = (t) => {
+                const dx = t.x - player.x;
+                const dy = t.y - player.y;
+                return dx * dx + dy * dy <= interactionRange * interactionRange;
+            };
+            const linked = this.links.map((l) => l.base);
+            const maxLinkedDist = this.range;
+            const withinAllLinked = (t, dist) => linked.every((e) => utils_1.Utils.distance(t.x, t.y, e.x, e.y) <= dist);
+            let candidates = emptyTiles.filter((t) => withinPlayerRange(t) &&
+                (linked.length === 0 || withinAllLinked(t, maxLinkedDist)));
+            if (candidates.length === 0 && linked.length > 0) {
+                candidates = emptyTiles.filter((t) => withinPlayerRange(t) && withinAllLinked(t, maxLinkedDist * 2));
+            }
+            if (candidates.length === 0) {
+                candidates = emptyTiles.filter((t) => withinPlayerRange(t));
+            }
+            if (candidates.length === 0)
+                return null;
+            const tilesWithDistances = candidates.map((tile) => {
+                const distance = utils_1.Utils.distance(tile.x, tile.y, player.x, player.y);
+                return { tile, distance };
+            });
+            tilesWithDistances.sort((a, b) => b.distance - a.distance);
+            const farTiles = tilesWithDistances.slice(0, Math.max(1, Math.floor(tilesWithDistances.length / 2)));
+            const randomIndex = Math.floor(random_1.Random.rand() * farTiles.length);
+            return farTiles[randomIndex]?.tile ?? null;
+        };
+        this.updateBeam = (delta) => {
+            for (let beam of this.room.projectiles) {
+                if (!(beam instanceof beamEffect_1.BeamEffect))
+                    continue;
+                if (beam.type !== "ghost")
+                    continue;
+                const link = this.links.find((l) => l.ghost === beam.parent);
+                if (!link)
+                    continue;
+                const gc = this.beamCenter(link.ghost);
+                const bc = this.beamCenter(link.base);
+                beam.setTarget(gc.x - link.ghost.drawX, gc.y - link.ghost.drawY, bc.x - link.base.drawX, bc.y - link.base.drawY);
+                beam.drawableY = link.ghost.drawableY;
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.drawableY = this.y;
+            if (!this.dead) {
+                this.updateDrawXY(delta);
+                this.updateBeam(delta);
+                this.frame += 0.1 * delta;
+                if (this.frame >= 4)
+                    this.frame = 0;
+                if (this.hasShadow)
+                    this.drawShadow(delta);
+                this.drawMobWithCrush(this.tileX + Math.floor(this.frame), this.tileY, 1, 2, this.x - this.drawX, this.y - this.drawYOffset - this.drawY, 1, 2, this.softShadeColor, this.shadeAmount(), undefined, this.outlineColor(), this.outlineOpacity());
+            }
+            game_1.Game.ctx.restore();
+        };
+        this.ticks = 0;
+        this.health = 6;
+        this.lastHealth = this.health;
+        this.maxHealth = 6;
+        this.defaultMaxHealth = 6;
+        this.tileX = EctomancerEnemy.tileX;
+        this.tileY = EctomancerEnemy.tileY;
+        this.isGhostly = true;
+        this.alpha = entity_1.Entity.GHOSTLY_ALPHA;
+        this.seenPlayer = true;
+        this.name = "ectomancer";
+        this.range = 6;
+        this.aggro = false;
+        this.frame = 0;
+        this.hasShadow = true;
+        this.links = [];
+        this.shadeColor = "#000000";
+        this.enemyKillXpMultiplier = 2;
+        this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [30, 60, 55], 3.5, 20);
+        this.addLightSource(this.lightSource);
+        this.room.updateLighting();
+        this.hasBloom = true;
+        this.bloomColor = "#8FE0D2"; // pale cyan-green
+        this.bloomAlpha = 0.5;
+        this.softBloomAlpha = 0;
+        this.dropChance = 1;
+        this.getDrop(["ectomancer"], false);
+        this.pushable = false;
+        this.chainPushable = false;
+        this.destroyableByOthers = false;
+    }
+}
+exports.EctomancerEnemy = EctomancerEnemy;
+EctomancerEnemy.examineText = "An ectomancer. Tears spirits from the living to fight in their place.";
+EctomancerEnemy.tileX = 59;
+EctomancerEnemy.tileY = 10;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/enemy.ts":
 /*!***********************************!*\
   !*** ./src/entity/enemy/enemy.ts ***!
@@ -16629,16 +17063,19 @@ class Enemy extends entity_1.Entity {
         };
         this.getDisablePositions = () => {
             let disablePositions = Array();
+            const mw = this.w ?? 1;
+            const mh = this.h ?? 1;
             for (const e of this.room.entities) {
                 if (e !== this) {
                     const ew = e.w ?? 1;
                     const eh = e.h ?? 1;
                     for (let dx = 0; dx < ew; dx++) {
                         for (let dy = 0; dy < eh; dy++) {
-                            disablePositions.push({
-                                x: e.x + dx,
-                                y: e.y + dy,
-                            });
+                            const tx = e.x + dx;
+                            const ty = e.y + dy;
+                            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                                continue;
+                            disablePositions.push({ x: tx, y: ty });
                         }
                     }
                 }
@@ -16656,16 +17093,19 @@ class Enemy extends entity_1.Entity {
         };
         this.findPath = () => {
             let disablePositions = Array();
+            const mw = this.w ?? 1;
+            const mh = this.h ?? 1;
             for (const e of this.room.entities) {
                 if (e !== this) {
                     const ew = e.w ?? 1;
                     const eh = e.h ?? 1;
                     for (let dx = 0; dx < ew; dx++) {
                         for (let dy = 0; dy < eh; dy++) {
-                            disablePositions.push({
-                                x: e.x + dx,
-                                y: e.y + dy,
-                            });
+                            const tx = e.x + dx;
+                            const ty = e.y + dy;
+                            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                                continue;
+                            disablePositions.push({ x: tx, y: ty });
                         }
                     }
                 }
@@ -16695,6 +17135,12 @@ class Enemy extends entity_1.Entity {
         this.tick = () => {
             this.tickPoison();
             this.tickBleed();
+            if (this.ghostFrozen && !this.dead) {
+                this.lastX = this.x;
+                this.lastY = this.y;
+                this.hurtThisTurn = false;
+                return;
+            }
             this.behavior();
             if (this.x !== this.lastX || this.y !== this.lastY) {
                 this.emitEntityData();
@@ -16909,11 +17355,15 @@ class Enemy extends entity_1.Entity {
                 const ey1 = e.y + h - 1;
                 if (ex1 < left || ex0 > right || ey1 < top || ey0 > bottom)
                     continue;
+                const mw = this.w ?? 1;
+                const mh = this.h ?? 1;
                 for (let dx = 0; dx < w; dx++) {
                     for (let dy = 0; dy < h; dy++) {
                         const x = e.x + dx;
                         const y = e.y + dy;
                         if (x < left || x > right || y < top || y > bottom)
+                            continue;
+                        if (x >= this.x && x < this.x + mw && y >= this.y && y < this.y + mh)
                             continue;
                         out.push({ x, y });
                     }
@@ -17198,6 +17648,8 @@ class Enemy extends entity_1.Entity {
     // to cover every tile they occupy (not just the top-left anchor).
     getEntityDisablePositions(filter) {
         const out = [];
+        const mw = this.w ?? 1;
+        const mh = this.h ?? 1;
         for (const e of this.room.entities) {
             if (e === this)
                 continue;
@@ -17205,9 +17657,17 @@ class Enemy extends entity_1.Entity {
                 continue;
             const ew = e.w ?? 1;
             const eh = e.h ?? 1;
-            for (let dx = 0; dx < ew; dx++)
-                for (let dy = 0; dy < eh; dy++)
-                    out.push({ x: e.x + dx, y: e.y + dy });
+            for (let dx = 0; dx < ew; dx++) {
+                for (let dy = 0; dy < eh; dy++) {
+                    const tx = e.x + dx;
+                    const ty = e.y + dy;
+                    // Skip tiles that are inside our own current footprint — we're vacating
+                    // them, so they shouldn't count as blocked for pathfinding purposes.
+                    if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh)
+                        continue;
+                    out.push({ x: tx, y: ty });
+                }
+            }
         }
         return out;
     }
@@ -22972,6 +23432,32 @@ class Entity extends drawable_1.Drawable {
         this.seeThroughAlpha = 1;
         this.softSeeThroughAlpha = 1;
         /**
+         * Ghostly state — when true, `drawMobWithCrush` (and `drawObjWithCrush`) auto-applies
+         * a desaturated cyan-green tint and half opacity. Used by the Ectomancer to render
+         * its spectral copies of other enemies without each enemy subclass needing changes.
+         *
+         * `ghostlyBeamParentGid` is the gid of the base enemy this ghost is anchored to, so
+         * the link can be re-established on save load.
+         */
+        this.isGhostly = false;
+        this.ghostlyBeamParentGid = null;
+        /**
+         * "Frozen" state — when true, an enemy's `behavior()` is short-circuited so it cannot
+         * move or attack. Used by the Ectomancer to lock the base enemy while a ghost copy
+         * acts in its place. Distinct from `unconscious`/`stunned` so existing AI flags are
+         * unaffected.
+         */
+        this.ghostFrozen = false;
+        /** Set to true after a ghost spawned from this enemy is killed, preventing re-ghostification. */
+        this.ghostifiedBefore = false;
+        /**
+         * Back-reference to the EctomancerEnemy that owns the (base, ghost) link this entity is
+         * part of. Typed loosely so Entity does not depend on a concrete enemy subclass. When
+         * either side of the link dies, `Entity.kill` notifies the owner so it can tear the
+         * link down (kill the ghost / unfreeze the base).
+         */
+        this.ectomancerOwner = null;
+        /**
          * Returns true if this entity occupies the given tile coordinate, accounting for footprint.
          * Useful for interactions involving 2x2+ enemies where `x/y` alone is insufficient.
          */
@@ -23063,6 +23549,8 @@ class Entity extends drawable_1.Drawable {
             this.hasBloom = true;
             this.bloomColor = "#00FFFF";
             this.bloomAlpha = 0.5;
+            if (this.lightSource)
+                this.removeLightSource(this.lightSource);
             this.lightSource = lighting_1.Lighting.newLightSource(this.x + 0.5, this.y + 0.5, [0, 40, 40], 3.5, 20);
             this.addLightSource(this.lightSource);
             this.room.updateLighting();
@@ -23274,6 +23762,14 @@ class Entity extends drawable_1.Drawable {
                 return (someX >= x && someX < x + this.w && someY >= y && someY < y + this.h);
             };
             let entityCollide = (entity) => {
+                // If the entity is already overlapping our current footprint, we're moving
+                // away from a pre-existing overlap — don't block the move.
+                const alreadyOverlapping = !(entity.x >= this.x + this.w ||
+                    entity.x + entity.w <= this.x ||
+                    entity.y >= this.y + this.h ||
+                    entity.y + entity.h <= this.y);
+                if (alreadyOverlapping)
+                    return false;
                 let flag = true;
                 if (entity.x >= x + this.w || entity.x + entity.w <= x)
                     flag = false;
@@ -23692,6 +24188,11 @@ class Entity extends drawable_1.Drawable {
             //this.room.entities = this.room.entities.filter((e) => e !== this);
             this.removeLightSource(this.lightSource);
             this.uniqueKillBehavior();
+            if (this.ectomancerOwner) {
+                const owner = this.ectomancerOwner;
+                this.ectomancerOwner = null;
+                owner.notifyLinkSideDied(this);
+            }
         };
         this.uniqueKillBehavior = () => { };
         this.updateHurtFrame = (delta) => {
@@ -24562,6 +25063,7 @@ class Entity extends drawable_1.Drawable {
             wallMounted: original.wallMounted,
             z: original.z ?? 0,
             alpha: original.alpha,
+            isGhostly: original.isGhostly,
             shadeColor: original.shadeColor,
             shadeMultiplier: original.shadeMultiplier,
             softShadeColor: original.softShadeColor,
@@ -24616,6 +25118,11 @@ class Entity extends drawable_1.Drawable {
             outlineColor = "yellow";
             outlineOpacity = Entity.targetPulseOpacity();
         }
+        if (this.isGhostly) {
+            colorOverlay = Entity.GHOSTLY_TINT;
+            colorOverlayOpacity = Math.max(colorOverlayOpacity, Entity.GHOSTLY_TINT_OPACITY);
+            colorOverlayDesaturate = true;
+        }
         const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
         game_1.Game.drawMob(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir, outlineColor, outlineOpacity, outlineOffset, outlineManhattan, colorOverlay, colorOverlayOpacity, colorOverlayDesaturate, dottedOutline);
     }
@@ -24650,6 +25157,9 @@ Entity.targetPulseOpacity = () => {
     const raw = 0.1 + ((Math.sin(Date.now() / 167) + 1) / 2) * 0.4;
     return Math.round(raw * steps) / steps;
 };
+Entity.GHOSTLY_TINT = "#8FE0D2";
+Entity.GHOSTLY_TINT_OPACITY = 0.6;
+Entity.GHOSTLY_ALPHA = 0.5;
 /**
  * UI helper: draw an entity sprite given its base mob tilesheet coordinates.
  * Useful for bestiary pages without instantiating enemies.
@@ -28541,6 +29051,7 @@ exports.ENTITY_EXAMINE_TEXT = {
     EnergyWizardEnemy: "An energy wizard. Fast bursts and nasty overlaps.",
     ExalterEnemy: "An exalter. Makes other enemies hit harder.",
     OccultistEnemy: "An occultist. Shields allies and drags out fights.",
+    EctomancerEnemy: "An ectomancer. Tears spirits from the living to fight in their place.",
     WardenEnemy: "A warden. Keeps its distance and calls in crushers.",
     CrusherEnemy: "A crusher. It doesn't fight— it falls.",
     Spawner: "A reaper. It spits out trouble if left alone.",
@@ -29503,6 +30014,11 @@ class Game {
             input_1.Input.touchEndListeners.length = 0;
             this.resetTutorialState();
             stats_1.statsTracker.resetStats();
+            if (gameConstants_1.GameConstants.DEVELOPER_MODE) {
+                const xp50 = (0, skills_1.xpForLevel)(50);
+                for (const skill of skills_1.SKILLS)
+                    stats_1.statsTracker.awardSkillXp(skill, xp50);
+            }
             this.currentDepth = 0;
             this.encounteredEnemies = [];
             this.levels = [];
@@ -33429,6 +33945,7 @@ class Game {
                 case "dagger":
                 case "sword":
                 case "spear":
+                case "rapier":
                 case "dual_daggers":
                 case "greataxe":
                 case "warhammer":
@@ -35777,6 +36294,23 @@ exports.BESTIARY_ENEMIES = {
             },
         ],
     },
+    EctomancerEnemy: {
+        typeName: "EctomancerEnemy",
+        displayName: "Ectomancer",
+        description: "A support caster that tears spectral copies from nearby enemies. The originals are frozen in place while their ghosts attack.",
+        sprites: [
+            {
+                label: "Idle",
+                tileX: 59,
+                tileY: 10,
+                w: 1,
+                h: 2,
+                hp: 6,
+                maxHp: 6,
+                frames: 4,
+            },
+        ],
+    },
     WardenEnemy: {
         typeName: "WardenEnemy",
         displayName: "Warden",
@@ -36027,6 +36561,7 @@ const weaponBlood_1 = __webpack_require__(/*! ../item/usable/weaponBlood */ "./s
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
 const dagger_1 = __webpack_require__(/*! ../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const dualdagger_1 = __webpack_require__(/*! ../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
+const rapier_1 = __webpack_require__(/*! ../item/weapon/rapier */ "./src/item/weapon/rapier.ts");
 const spear_1 = __webpack_require__(/*! ../item/weapon/spear */ "./src/item/weapon/spear.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
 const hammer_1 = __webpack_require__(/*! ../item/tool/hammer */ "./src/item/tool/hammer.ts");
@@ -36502,6 +37037,7 @@ GameConstants.STARTING_DEV_INVENTORY = [
     garnetRing_1.GarnetRing,
     crossbow_1.Crossbow,
     crossbowBolt_1.CrossbowBolt,
+    rapier_1.Rapier,
     spear_1.Spear,
     pickaxe_1.Pickaxe,
     lantern_1.Lantern,
@@ -36722,6 +37258,7 @@ const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const ironOre_1 = __webpack_require__(/*! ../item/resource/ironOre */ "./src/item/resource/ironOre.ts");
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 class HitWarningState {
@@ -36864,6 +37401,7 @@ var EnemyType;
     EnemyType[EnemyType["PAWN_STATUE"] = 62] = "PAWN_STATUE";
     EnemyType[EnemyType["ROOK_STATUE"] = 63] = "ROOK_STATUE";
     EnemyType[EnemyType["BISHOP_STATUE"] = 64] = "BISHOP_STATUE";
+    EnemyType[EnemyType["ECTOMANCER"] = 65] = "ECTOMANCER";
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 class EnemyState {
     constructor(enemy, game) {
@@ -37068,6 +37606,8 @@ class EnemyState {
             this.type = EnemyType.BIGFROG;
         if (enemy instanceof exalterEnemy_1.ExalterEnemy)
             this.type = EnemyType.EXALTER;
+        if (enemy instanceof ectomancerEnemy_1.EctomancerEnemy)
+            this.type = EnemyType.ECTOMANCER;
         if (enemy instanceof kingEnemy_1.KingEnemy)
             this.type = EnemyType.KING;
         if (enemy instanceof garnetResource_1.GarnetResource)
@@ -37250,6 +37790,8 @@ let loadEnemy = (es, game) => {
         enemy = new beetleEnemy_1.BeetleEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.EXALTER)
         enemy = new exalterEnemy_1.ExalterEnemy(room, game, es.x, es.y);
+    if (es.type === EnemyType.ECTOMANCER)
+        enemy = new ectomancerEnemy_1.EctomancerEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.KING)
         enemy = new kingEnemy_1.KingEnemy(room, game, es.x, es.y);
     if (es.type === EnemyType.GARNET)
@@ -39029,6 +39571,20 @@ GameplaySettings.OXYGEN_LINE_MAX_LENGTH = 25;
 GameplaySettings.KEYBOARD_TARGETING_ENABLED = false;
 GameplaySettings.CROSSBOW_TARGETING_ENABLED = true;
 GameplaySettings.SPELLBOOK_TARGETING_ENABLED = true;
+/**
+ * When enabled, crossbow targeting redirects the cursor to any enemy whose tile
+ * the shot path would pass through before reaching the aimed tile.
+ *
+ * MARGIN: how far inside the tile the path must travel to count as a single-enemy block.
+ * At 0.35 the inner 30% of the tile must be crossed — catches cardinal/diagonal and
+ * squarely-placed off-angle enemies, but ignores corner grazes.
+ *
+ * MULTI_MARGIN: looser margin used only when the path clips 2+ enemies simultaneously.
+ * At 0.1, two enemies crowding the corridor together block even if neither alone would.
+ */
+GameplaySettings.CROSSBOW_LINE_INTERCEPT = true;
+GameplaySettings.CROSSBOW_LINE_INTERCEPT_MARGIN = 0.35;
+GameplaySettings.CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN = 0.1;
 // === UI ===
 /**
  * When the Bestiary would normally switch to a narrow "two subpages" layout, use a
@@ -39116,6 +39672,10 @@ GameplaySettings.MAX_ENEMY_DENSITY = 0.117; // Maximum enemy density cap
 GameplaySettings.FOREST_ENEMY_REDUCTION = 0.25; // Multiplier for enemy count in forest environments
 GameplaySettings.MAX_OCCULTIST_SHIELDS = 7; // Maximum number of shields an occultist can have
 GameplaySettings.MAX_EXALTER_BUFFS = 7; // Maximum number of buffs an exalter can have
+GameplaySettings.MAX_ECTOMANCER_GHOSTS = 4; // Maximum number of ghosts an ectomancer can sustain
+GameplaySettings.ECTOMANCER_MIN_DEPTH = 1;
+GameplaySettings.ECTOMANCER_SPAWN_CHANCE = 0.08;
+GameplaySettings.ECTOMANCER_AREA_THRESHOLD = 220;
 
 
 /***/ }),
@@ -39165,6 +39725,7 @@ var InputEnum;
     InputEnum[InputEnum["ESCAPE"] = 26] = "ESCAPE";
     InputEnum[InputEnum["F"] = 27] = "F";
     InputEnum[InputEnum["ENTER"] = 28] = "ENTER";
+    InputEnum[InputEnum["R"] = 29] = "R";
 })(InputEnum = exports.InputEnum || (exports.InputEnum = {}));
 exports.Input = {
     _pressed: {},
@@ -39206,6 +39767,7 @@ exports.Input = {
     escapeListener: function () { },
     fListener: function () { },
     enterListener: function () { },
+    rListener: function () { },
     wheelListener: function (deltaY) { },
     mouseLeftClickListeners: [],
     mouseRightClickListeners: [],
@@ -39268,6 +39830,7 @@ exports.Input = {
     ESCAPE: "Escape",
     F: "KeyF",
     ENTER: "Enter",
+    R: "KeyR",
     rawMouseX: 0,
     rawMouseY: 0,
     // Returns the CSS-to-logical-pixel ratio for the game canvas.
@@ -39363,6 +39926,9 @@ exports.Input = {
                 break;
             case exports.Input.ENTER:
                 exports.Input.enterListener();
+                break;
+            case exports.Input.R:
+                exports.Input.rListener();
                 break;
         }
     },
@@ -40247,6 +40813,7 @@ const writeV2_1 = __webpack_require__(/*! ./writeV2 */ "./src/game/save/writeV2.
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const spawner_1 = __webpack_require__(/*! ../../entity/enemy/spawner */ "./src/entity/enemy/spawner.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const vendingMachine_1 = __webpack_require__(/*! ../../entity/object/vendingMachine */ "./src/entity/object/vendingMachine.ts");
@@ -40345,6 +40912,17 @@ function entityFP(entity) {
     }
     if (entity instanceof exalterEnemy_1.ExalterEnemy) {
         stateStr += `,exaltBuffed=${entity.buffedEnemies?.length ?? 0}`;
+    }
+    if (entity instanceof ectomancerEnemy_1.EctomancerEnemy) {
+        stateStr += `,ectoLinks=${entity.links?.length ?? 0}`;
+    }
+    if (entity instanceof enemy_1.Enemy) {
+        if (entity.isGhostly)
+            stateStr += `,ghostly=1`;
+        if (entity.ghostFrozen)
+            stateStr += `,ghostFrozen=1`;
+        if (entity.ghostifiedBefore)
+            stateStr += `,ghostifiedBefore=1`;
     }
     if (entity instanceof spawner_1.Spawner) {
         stateStr += `,spawnType=${entity.enemySpawnType},nextTick=${entity.nextSpawnTick}`;
@@ -40600,6 +41178,9 @@ const spellbook_1 = __webpack_require__(/*! ../../item/weapon/spellbook */ "./sr
 const hitWarning_1 = __webpack_require__(/*! ../../drawable/hitWarning */ "./src/drawable/hitWarning.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
+const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
 const wizardFireball_1 = __webpack_require__(/*! ../../projectile/wizardFireball */ "./src/projectile/wizardFireball.ts");
@@ -41460,19 +42041,6 @@ const loadSaveV2 = async (game, save) => {
                     }
                 }
             }
-            // Post-pass: re-link occultist shieldedEnemies (enemies may appear after their occultist in rd.enemies).
-            for (const es of rd.enemies) {
-                if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids))
-                    continue;
-                const occultist = entitiesByGid.get(es.gid);
-                if (!(occultist instanceof occultistEnemy_1.OccultistEnemy))
-                    continue;
-                for (const sgid of es.shieldedEnemyGids) {
-                    const shielded = entitiesByGid.get(sgid);
-                    if (shielded instanceof enemy_1.Enemy)
-                        occultist.shieldedEnemies.push(shielded);
-                }
-            }
             room.projectiles = [];
             for (const ps of rd.projectiles) {
                 if (ps.kind === "wizard_fireball") {
@@ -41543,6 +42111,99 @@ const loadSaveV2 = async (game, save) => {
                     if (!pgid.ok)
                         return pgid;
                     room.projectiles.push(anim);
+                }
+            }
+            // Post-pass: re-link occultist shieldedEnemies, restore shield visual and beam.
+            // Must run after room.projectiles=[] so that pushed projectiles survive.
+            for (const es of rd.enemies) {
+                if (!("shieldedEnemyGids" in es) || !Array.isArray(es.shieldedEnemyGids))
+                    continue;
+                const occultist = entitiesByGid.get(es.gid);
+                if (!(occultist instanceof occultistEnemy_1.OccultistEnemy))
+                    continue;
+                for (const sgid of es.shieldedEnemyGids) {
+                    const shielded = entitiesByGid.get(sgid);
+                    if (!(shielded instanceof enemy_1.Enemy) || shielded.dead)
+                        continue;
+                    occultist.shieldedEnemies.push(shielded);
+                    // Re-register the EnemyShield projectile (created during spawnBasic but cleared by room.projectiles=[]).
+                    if (shielded.shield && !shielded.shield.dead) {
+                        room.projectiles.push(shielded.shield);
+                    }
+                    // Re-create the beam between shielded enemy and occultist.
+                    const beam = new beamEffect_1.BeamEffect(shielded.x, shielded.y, occultist.x, occultist.y, shielded);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#2E0854";
+                    beam.turbulence = 0.4;
+                    beam.gravity = 0.1;
+                    beam.iterations = 1;
+                    beam.segments = 100;
+                    beam.angleChange = 0.001;
+                    beam.springDamping = 0.01;
+                    beam.drawableY = shielded.drawableY;
+                    beam.type = "shield";
+                    room.projectiles.push(beam);
+                }
+            }
+            // Post-pass: re-link exalter buffedEnemies and restore beam.
+            for (const es of rd.enemies) {
+                if (!("buffedEnemyGids" in es) || !Array.isArray(es.buffedEnemyGids))
+                    continue;
+                const exalter = entitiesByGid.get(es.gid);
+                if (!(exalter instanceof exalterEnemy_1.ExalterEnemy))
+                    continue;
+                for (const bgid of es.buffedEnemyGids) {
+                    const buffed = entitiesByGid.get(bgid);
+                    if (!(buffed instanceof enemy_1.Enemy) || buffed.dead)
+                        continue;
+                    exalter.buffedEnemies.push(buffed);
+                    const beam = new beamEffect_1.BeamEffect(buffed.x, buffed.y, exalter.x, exalter.y, buffed);
+                    beam.compositeOperation = "source-over";
+                    beam.color = "#00FFFF";
+                    beam.turbulence = 0.4;
+                    beam.gravity = 0.1;
+                    beam.iterations = 1;
+                    beam.segments = 100;
+                    beam.angleChange = 0.001;
+                    beam.springDamping = 0.01;
+                    beam.drawableY = buffed.drawableY;
+                    beam.type = "buff";
+                    room.projectiles.push(beam);
+                }
+            }
+            // Post-pass: re-link ectomancer (base, ghost) pairs, re-apply ghostly state, attach
+            // beams, and restore ectomancerOwner back-refs. Must run AFTER room.projectiles is
+            // initialized so that attachBeam() pushes into the final projectiles array.
+            for (const es of rd.enemies) {
+                const baseGids = es
+                    .ectomancerLinkBaseGids;
+                const ghostGids = es
+                    .ectomancerLinkGhostGids;
+                if (!Array.isArray(baseGids) || !Array.isArray(ghostGids))
+                    continue;
+                const ectomancer = entitiesByGid.get(es.gid);
+                if (!(ectomancer instanceof ectomancerEnemy_1.EctomancerEnemy))
+                    continue;
+                const n = Math.min(baseGids.length, ghostGids.length);
+                for (let i = 0; i < n; i++) {
+                    const base = entitiesByGid.get(baseGids[i]);
+                    const ghost = entitiesByGid.get(ghostGids[i]);
+                    if (!(base instanceof enemy_1.Enemy) || !(ghost instanceof enemy_1.Enemy))
+                        continue;
+                    if (base.dead || ghost.dead)
+                        continue;
+                    // Re-apply link state explicitly — spawnBasic restores these from saved flags,
+                    // but we reinforce here as the authoritative post-pass for live links.
+                    base.ghostFrozen = true;
+                    ghost.isGhostly = true;
+                    ghost.alpha = 0.5;
+                    ghost.drops = [];
+                    ghost.dropChance = 0;
+                    ghost.enemyKillXpMultiplier = 0;
+                    ectomancer.links.push({ base, ghost });
+                    base.ectomancerOwner = ectomancer;
+                    ghost.ectomancerOwner = ectomancer;
+                    ectomancer.attachBeam({ base, ghost });
                 }
             }
             room.hitwarnings = [];
@@ -42154,6 +42815,7 @@ const bigWizardEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/bigWizard
 const zombieEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const enemy_1 = __webpack_require__(/*! ../../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const mappers_1 = __webpack_require__(/*! ../mappers */ "./src/game/save/mappers.ts");
 const enemies_1 = __webpack_require__(/*! ./enemies */ "./src/game/save/registry/enemies.ts");
@@ -42235,6 +42897,8 @@ const entityToKind = (e) => {
         return "occultist";
     if (e instanceof exalterEnemy_1.ExalterEnemy)
         return "exalter";
+    if (e instanceof ectomancerEnemy_1.EctomancerEnemy)
+        return "ectomancer";
     if (e instanceof armoredSkullEnemy_1.ArmoredSkullEnemy)
         return "armored_skull";
     if (e instanceof armoredzombieEnemy_1.ArmoredzombieEnemy)
@@ -42344,6 +43008,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     (0, itemsBuiltins_1.registerBuiltinItemCodecsV2)();
     const saveBasic = (kind, value) => {
         const isEnemy = value instanceof enemy_1.Enemy;
+        const isEctomancer = value instanceof ectomancerEnemy_1.EctomancerEnemy;
         return {
             kind,
             gid: value.globalId,
@@ -42366,6 +43031,20 @@ const registerBuiltinEnemyCodecsV2 = () => {
             buffedBefore: value.buffedBefore === true ? true : undefined,
             shieldedEnemyGids: value instanceof occultistEnemy_1.OccultistEnemy && value.shieldedEnemies.length > 0
                 ? value.shieldedEnemies.map((e) => e.globalId)
+                : undefined,
+            shieldedBefore: value.shieldedBefore === true ? true : undefined,
+            buffedEnemyGids: value instanceof exalterEnemy_1.ExalterEnemy && value.buffedEnemies.length > 0
+                ? value.buffedEnemies.map((e) => e.globalId)
+                : undefined,
+            isGhostly: value.isGhostly === true ? true : undefined,
+            ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
+            ghostFrozen: value.ghostFrozen === true ? true : undefined,
+            ghostifiedBefore: value.ghostifiedBefore === true ? true : undefined,
+            ectomancerLinkBaseGids: isEctomancer && value.links.length > 0
+                ? value.links.map((l) => l.base.globalId)
+                : undefined,
+            ectomancerLinkGhostGids: isEctomancer && value.links.length > 0
+                ? value.links.map((l) => l.ghost.globalId)
                 : undefined,
         };
     };
@@ -42395,6 +43074,21 @@ const registerBuiltinEnemyCodecsV2 = () => {
             if (typeof healthU === "number")
                 e.applyShield(healthU, true);
         }
+        if ("isGhostly" in value && value.isGhostly === true) {
+            e.isGhostly = true;
+            e.alpha = 0.5;
+        }
+        if ("ghostlyBeamParentGid" in value && typeof value.ghostlyBeamParentGid === "string") {
+            e.ghostlyBeamParentGid = value.ghostlyBeamParentGid;
+        }
+        if ("ghostFrozen" in value && value.ghostFrozen === true) {
+            e.ghostFrozen = true;
+        }
+        if ("ghostifiedBefore" in value && value.ghostifiedBefore === true) {
+            e.ghostifiedBefore = true;
+        }
+        if ("shieldedBefore" in value && value.shieldedBefore === true)
+            e.shieldedBefore = true;
         e.globalId = value.gid;
         return e;
     };
@@ -42703,6 +43397,7 @@ const registerBuiltinEnemyCodecsV2 = () => {
     // Other enemies / entities using basic envelope
     registerBasic("occultist", occultistEnemy_1.OccultistEnemy);
     registerBasic("exalter", exalterEnemy_1.ExalterEnemy);
+    registerBasic("ectomancer", ectomancerEnemy_1.EctomancerEnemy);
     registerBasic("armored_skull", armoredSkullEnemy_1.ArmoredSkullEnemy);
     registerBasic("armored_zombie", armoredzombieEnemy_1.ArmoredzombieEnemy);
     registerBasic("beetle", beetleEnemy_1.BeetleEnemy);
@@ -42885,6 +43580,7 @@ const spellbook_1 = __webpack_require__(/*! ../../../item/weapon/spellbook */ ".
 const dagger_1 = __webpack_require__(/*! ../../../item/weapon/dagger */ "./src/item/weapon/dagger.ts");
 const sword_1 = __webpack_require__(/*! ../../../item/weapon/sword */ "./src/item/weapon/sword.ts");
 const spear_1 = __webpack_require__(/*! ../../../item/weapon/spear */ "./src/item/weapon/spear.ts");
+const rapier_1 = __webpack_require__(/*! ../../../item/weapon/rapier */ "./src/item/weapon/rapier.ts");
 const dualdagger_1 = __webpack_require__(/*! ../../../item/weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
 const greataxe_1 = __webpack_require__(/*! ../../../item/weapon/greataxe */ "./src/item/weapon/greataxe.ts");
 const warhammer_1 = __webpack_require__(/*! ../../../item/weapon/warhammer */ "./src/item/weapon/warhammer.ts");
@@ -43018,6 +43714,8 @@ const itemToKind = (item) => {
         return "sword";
     if (item instanceof spear_1.Spear)
         return "spear";
+    if (item instanceof rapier_1.Rapier)
+        return "rapier";
     if (item instanceof dualdagger_1.DualDagger)
         return "dual_daggers";
     if (item instanceof greataxe_1.Greataxe)
@@ -43097,6 +43795,7 @@ const isWeaponItemSaveV2 = (v) => {
     return (v.kind === "dagger" ||
         v.kind === "sword" ||
         v.kind === "spear" ||
+        v.kind === "rapier" ||
         v.kind === "dual_daggers" ||
         v.kind === "greataxe" ||
         v.kind === "warhammer" ||
@@ -43684,6 +44383,20 @@ const registerBuiltinItemCodecsV2 = () => {
             if (!isWeaponItemSaveV2(value) || value.kind !== "spear")
                 throw new Error("spear codec spawn received non-spear save");
             const w = new spear_1.Spear(room, value.x, value.y);
+            applyWeaponSave(w, value);
+            return w;
+        },
+    });
+    register("rapier", {
+        save: (v) => {
+            if (!(v instanceof rapier_1.Rapier))
+                throw new Error("rapier codec received non-Rapier");
+            return saveBaseWeapon("rapier", v);
+        },
+        spawn: (value, room, _ctx) => {
+            if (!isWeaponItemSaveV2(value) || value.kind !== "rapier")
+                throw new Error("rapier codec spawn received non-rapier save");
+            const w = new rapier_1.Rapier(room, value.x, value.y);
             applyWeaponSave(w, value);
             return w;
         },
@@ -45010,6 +45723,7 @@ exports.ITEM_KIND_VALUES_V2 = [
     "dagger",
     "sword",
     "spear",
+    "rapier",
     "dual_daggers",
     "greataxe",
     "warhammer",
@@ -45127,6 +45841,7 @@ const bigWizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/bigWizardEne
 const zombieEnemy_1 = __webpack_require__(/*! ../../entity/enemy/zombieEnemy */ "./src/entity/enemy/zombieEnemy.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const coalResource_1 = __webpack_require__(/*! ../../entity/resource/coalResource */ "./src/entity/resource/coalResource.ts");
 const goldResource_1 = __webpack_require__(/*! ../../entity/resource/goldResource */ "./src/entity/resource/goldResource.ts");
 const ironResource_1 = __webpack_require__(/*! ../../entity/resource/ironResource */ "./src/entity/resource/ironResource.ts");
@@ -45343,6 +46058,7 @@ function populateTestRoom(room, game, clearFirst = false) {
         [zombieEnemy_1.ZombieEnemy, "zombie"],
         [occultistEnemy_1.OccultistEnemy, "occultist"],
         [exalterEnemy_1.ExalterEnemy, "exalter"],
+        [ectomancerEnemy_1.EctomancerEnemy, "ectomancer"],
     ];
     // Resources
     const resourceCtors = [
@@ -45529,6 +46245,7 @@ const ENEMY_KINDS = [
     "zombie",
     "occultist",
     "exalter",
+    "ectomancer",
     "armored_skull",
     "armored_zombie",
     "beetle",
@@ -47453,6 +48170,100 @@ const validateEnemySaveV2 = (v, path) => {
         }
         shieldedEnemyGids = gids;
     }
+    const shieldedBeforeU = get(v, "shieldedBefore");
+    let shieldedBefore = undefined;
+    if (shieldedBeforeU !== undefined) {
+        if (!isBoolean(shieldedBeforeU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "shieldedBefore must be boolean if present",
+                path: `${path}.shieldedBefore`,
+            });
+        shieldedBefore = shieldedBeforeU;
+    }
+    const buffedEnemyGidsU = get(v, "buffedEnemyGids");
+    let buffedEnemyGids = undefined;
+    if (buffedEnemyGidsU !== undefined) {
+        if (!Array.isArray(buffedEnemyGidsU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "buffedEnemyGids must be array if present",
+                path: `${path}.buffedEnemyGids`,
+            });
+        const gids = [];
+        for (let i = 0; i < buffedEnemyGidsU.length; i++) {
+            const g = asGid(buffedEnemyGidsU[i], `${path}.buffedEnemyGids[${i}]`);
+            if (isErr(g))
+                return (0, errors_1.err)(g.error);
+            gids.push(g.value);
+        }
+        buffedEnemyGids = gids;
+    }
+    const isGhostlyU = get(v, "isGhostly");
+    let isGhostly = undefined;
+    if (isGhostlyU !== undefined) {
+        if (!isBoolean(isGhostlyU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "isGhostly must be boolean if present",
+                path: `${path}.isGhostly`,
+            });
+        isGhostly = isGhostlyU;
+    }
+    const ghostlyBeamParentGidU = get(v, "ghostlyBeamParentGid");
+    let ghostlyBeamParentGid = undefined;
+    if (ghostlyBeamParentGidU !== undefined) {
+        const g = asGid(ghostlyBeamParentGidU, `${path}.ghostlyBeamParentGid`);
+        if (isErr(g))
+            return (0, errors_1.err)(g.error);
+        ghostlyBeamParentGid = g.value;
+    }
+    const ghostFrozenU = get(v, "ghostFrozen");
+    let ghostFrozen = undefined;
+    if (ghostFrozenU !== undefined) {
+        if (!isBoolean(ghostFrozenU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "ghostFrozen must be boolean if present",
+                path: `${path}.ghostFrozen`,
+            });
+        ghostFrozen = ghostFrozenU;
+    }
+    const ghostifiedBeforeU = get(v, "ghostifiedBefore");
+    let ghostifiedBefore = undefined;
+    if (ghostifiedBeforeU !== undefined) {
+        if (!isBoolean(ghostifiedBeforeU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "ghostifiedBefore must be boolean if present",
+                path: `${path}.ghostifiedBefore`,
+            });
+        ghostifiedBefore = ghostifiedBeforeU;
+    }
+    const validateGidArray = (raw, fieldPath) => {
+        if (raw === undefined)
+            return (0, errors_1.ok)(undefined);
+        if (!Array.isArray(raw))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: `${fieldPath} must be array if present`,
+                path: fieldPath,
+            });
+        const out = [];
+        for (let i = 0; i < raw.length; i++) {
+            const g = asGid(raw[i], `${fieldPath}[${i}]`);
+            if (isErr(g))
+                return (0, errors_1.err)(g.error);
+            out.push(g.value);
+        }
+        return (0, errors_1.ok)(out);
+    };
+    const linkBaseR = validateGidArray(get(v, "ectomancerLinkBaseGids"), `${path}.ectomancerLinkBaseGids`);
+    if (isErr(linkBaseR))
+        return (0, errors_1.err)(linkBaseR.error);
+    const linkGhostR = validateGidArray(get(v, "ectomancerLinkGhostGids"), `${path}.ectomancerLinkGhostGids`);
+    if (isErr(linkGhostR))
+        return (0, errors_1.err)(linkGhostR.error);
     return (0, errors_1.ok)({
         kind,
         gid: gidR.value,
@@ -47474,6 +48285,14 @@ const validateEnemySaveV2 = (v, path) => {
         buffed,
         buffedBefore,
         shieldedEnemyGids,
+        shieldedBefore,
+        buffedEnemyGids,
+        isGhostly,
+        ghostlyBeamParentGid,
+        ghostFrozen,
+        ghostifiedBefore,
+        ectomancerLinkBaseGids: linkBaseR.value,
+        ectomancerLinkGhostGids: linkGhostR.value,
     });
 };
 const validateProjectileSaveV2 = (v, path) => {
@@ -48338,6 +49157,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadSettings = exports.saveSettings = void 0;
 const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
 const SETTINGS_KEY = "wr_settings";
 const saveSettings = (game) => {
@@ -48349,6 +49169,7 @@ const saveSettings = (game) => {
         hoverText: gameConstants_1.GameConstants.HOVER_TEXT_ENABLED,
         screenShake: gameConstants_1.GameConstants.SCREEN_SHAKE_ENABLED,
         slowInputsNearEnemies: gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
+        crossbowLineIntercept: gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT,
     };
     (0, cookies_1.setCookie)(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -48380,6 +49201,9 @@ const loadSettings = (game) => {
         }
         if (typeof s.slowInputsNearEnemies === "boolean") {
             gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES = s.slowInputsNearEnemies;
+        }
+        if (typeof s.crossbowLineIntercept === "boolean") {
+            gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT = s.crossbowLineIntercept;
         }
     }
     catch (e) {
@@ -53231,6 +54055,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SettingsMenu = void 0;
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
 const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/gui/mouseCursor.ts");
 const sound_1 = __webpack_require__(/*! ../sound/sound */ "./src/sound/sound.ts");
@@ -53350,6 +54175,16 @@ class SettingsMenu {
             {
                 name: "Game",
                 items: [
+                    {
+                        label: "Crossbow Intercept",
+                        kind: "toggle",
+                        getState: () => gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT,
+                        onActivate: () => {
+                            gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT = !gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT;
+                            this.game.pushMessage(`Crossbow intercept is now ${gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT ? "enabled" : "disabled"}`);
+                            this.saveSettings();
+                        },
+                    },
                     {
                         label: "New Game",
                         kind: "action",
@@ -57429,6 +58264,7 @@ const greengem_1 = __webpack_require__(/*! ./resource/greengem */ "./src/item/re
 const heart_1 = __webpack_require__(/*! ./usable/heart */ "./src/item/usable/heart.ts");
 const redgem_1 = __webpack_require__(/*! ./resource/redgem */ "./src/item/resource/redgem.ts");
 const weaponFragments_1 = __webpack_require__(/*! ./usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const rapier_1 = __webpack_require__(/*! ./weapon/rapier */ "./src/item/weapon/rapier.ts");
 const spear_1 = __webpack_require__(/*! ./weapon/spear */ "./src/item/weapon/spear.ts");
 const warhammer_1 = __webpack_require__(/*! ./weapon/warhammer */ "./src/item/weapon/warhammer.ts");
 const dualdagger_1 = __webpack_require__(/*! ./weapon/dualdagger */ "./src/item/weapon/dualdagger.ts");
@@ -57472,6 +58308,7 @@ const xpCrystal_1 = __webpack_require__(/*! ./xpCrystal */ "./src/item/xpCrystal
 exports.ItemTypeMap = {
     dualdagger: dualdagger_1.DualDagger,
     warhammer: warhammer_1.Warhammer,
+    rapier: rapier_1.Rapier,
     spear: spear_1.Spear,
     spellbook: spellbook_1.Spellbook,
     greataxe: greataxe_1.Greataxe,
@@ -57528,6 +58365,12 @@ exports.DropTable = DropTable;
 _a = DropTable;
 DropTable.drops = [
     // Weapons - Higher numbers = rarer
+    {
+        itemType: "rapier",
+        dropRate: 500,
+        category: ["weapon", "melee"],
+        unique: true,
+    },
     {
         itemType: "dualdagger",
         dropRate: 500,
@@ -57592,6 +58435,18 @@ DropTable.drops = [
         itemType: "shieldrightfragment",
         dropRate: 10,
         category: ["occultist"],
+        unique: true,
+    },
+    {
+        itemType: "shieldleftfragment",
+        dropRate: 10,
+        category: ["ectomancer"],
+        unique: true,
+    },
+    {
+        itemType: "shieldrightfragment",
+        dropRate: 10,
+        category: ["ectomancer"],
         unique: true,
     },
     {
@@ -60976,6 +61831,7 @@ var CrossbowState;
 class Crossbow extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        this.lineIntercept = true;
         this.toggleEquip = () => {
             if (this.wielder && this.requiredSkill) {
                 const lvl = stats_1.statsTracker.getSkillLevel(this.requiredSkill);
@@ -60985,15 +61841,20 @@ class Crossbow extends weapon_1.Weapon {
                 }
             }
             if (gameplaySettings_1.GameplaySettings.CROSSBOW_TARGETING_ENABLED) {
+                const rt = this.wielder?.rangedTargeting;
+                if (rt?.active) {
+                    rt.stop();
+                    return;
+                }
                 if (this.state === CrossbowState.EMPTY) {
                     this.level.game.pushMessage("Use a bolt on the crossbow to load it.");
                 }
                 else if (this.state === CrossbowState.LOADED) {
                     this.cock();
-                    this.wielder?.rangedTargeting?.start(this);
+                    rt?.start(this);
                 }
                 else if (this.state === CrossbowState.COCKED) {
-                    this.wielder?.rangedTargeting?.start(this);
+                    rt?.start(this);
                 }
                 else if (this.cooldown > 0) {
                     this.level.game.pushMessage("Cooldown: " + this.cooldown);
@@ -61184,7 +62045,7 @@ class Crossbow extends weapon_1.Weapon {
         this.name = Crossbow.itemName;
         this.state = CrossbowState.EMPTY;
         this.disabled = true;
-        this.damage = 4;
+        this.damage = 2;
         this.description =
             "Uses bolts. Load and cock it, then fire in a straight line to hit the first enemy in sight.";
     }
@@ -61458,6 +62319,7 @@ class DualDagger extends weapon_1.Weapon {
         this.firstAttack = true;
         this.name = "Dual Daggers";
         this.useCost = 2;
+        this.degradeable = false;
         this.description =
             "After the first attack, enemies will not take their turn until you attack or move again.";
     }
@@ -61595,6 +62457,7 @@ QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RangedTargetingSystem = void 0;
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class RangedTargetingSystem {
     constructor(player) {
         this.active = false;
@@ -61648,6 +62511,11 @@ class RangedTargetingSystem {
         if (room.tileInside(nx, ny) && !room.isSolidAt(nx, ny, this.player.z ?? 0) && this.hasLineOfSight(nx, ny)) {
             this.targetX = nx;
             this.targetY = ny;
+            const intercept = this.findPathIntercept(nx, ny);
+            if (intercept) {
+                this.targetX = intercept.x;
+                this.targetY = intercept.y;
+            }
         }
     }
     syncToMouse() {
@@ -61679,8 +62547,102 @@ class RangedTargetingSystem {
             lastX = cx;
             lastY = cy;
         }
-        this.targetX = lastX;
-        this.targetY = lastY;
+        const intercept = this.findPathIntercept(lastX, lastY);
+        if (intercept) {
+            this.targetX = intercept.x;
+            this.targetY = intercept.y;
+        }
+        else {
+            this.targetX = lastX;
+            this.targetY = lastY;
+        }
+    }
+    /**
+     * Returns the tile of the closest enemy that blocks the shot path, or null.
+     *
+     * Two-pass logic:
+     *  1. Strict margin (CROSSBOW_LINE_INTERCEPT_MARGIN = 0.35): a single enemy squarely
+     *     in the path (cardinal, diagonal, or closely-aligned off-angle) triggers a redirect.
+     *  2. Loose margin (CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN = 0.10): if 2+ enemies
+     *     simultaneously clip the path at the looser threshold, the closest redirects.
+     *     This handles narrow corridors where two adjacent enemies together block the shot
+     *     even if neither is perfectly in line.
+     */
+    findPathIntercept(tx, ty) {
+        if (!this.weapon?.lineIntercept)
+            return null;
+        if (!gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT)
+            return null;
+        const room = this.player.getRoom();
+        if (!room)
+            return null;
+        // Ray from player center toward target tile center (t=0 at player, t=1 at target)
+        const px = this.player.x + 0.5;
+        const py = this.player.y + 0.5;
+        const rdx = tx + 0.5 - px;
+        const rdy = ty + 0.5 - py;
+        const z = this.player.z ?? 0;
+        const slabHits = (margin) => {
+            const hits = [];
+            for (const entity of room.entities) {
+                const e = entity;
+                if (e.dead || e.isGhostly || !e.destroyable || e.pushable || !e.isEnemy)
+                    continue;
+                if ((e.z ?? 0) !== z)
+                    continue;
+                const ew = e.w ?? 1;
+                const eh = e.h ?? 1;
+                const ex = e.x;
+                const ey = e.y;
+                if (tx >= ex && tx < ex + ew && ty >= ey && ty < ey + eh)
+                    continue;
+                const xmin = ex + margin;
+                const xmax = ex + ew - margin;
+                const ymin = ey + margin;
+                const ymax = ey + eh - margin;
+                let tmin = 0;
+                let tmax = 1;
+                if (Math.abs(rdx) < 1e-9) {
+                    if (px < xmin || px > xmax)
+                        continue;
+                }
+                else {
+                    const t1 = (xmin - px) / rdx;
+                    const t2 = (xmax - px) / rdx;
+                    tmin = Math.max(tmin, Math.min(t1, t2));
+                    tmax = Math.min(tmax, Math.max(t1, t2));
+                }
+                if (Math.abs(rdy) < 1e-9) {
+                    if (py < ymin || py > ymax)
+                        continue;
+                }
+                else {
+                    const t1 = (ymin - py) / rdy;
+                    const t2 = (ymax - py) / rdy;
+                    tmin = Math.max(tmin, Math.min(t1, t2));
+                    tmax = Math.min(tmax, Math.max(t1, t2));
+                }
+                if (tmax < tmin || tmax < 0 || tmin >= 1)
+                    continue;
+                hits.push({ t: Math.max(0, tmin), entity });
+            }
+            return hits;
+        };
+        // Pass 1: single enemy squarely blocking the path
+        const strict = slabHits(gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT_MARGIN);
+        if (strict.length > 0) {
+            strict.sort((a, b) => a.t - b.t);
+            const e = strict[0].entity;
+            return { x: e.x, y: e.y };
+        }
+        // Pass 2: two or more enemies collectively crowding the path
+        const loose = slabHits(gameplaySettings_1.GameplaySettings.CROSSBOW_LINE_INTERCEPT_MULTI_MARGIN);
+        if (loose.length >= 2) {
+            loose.sort((a, b) => a.t - b.t);
+            const e = loose[0].entity;
+            return { x: e.x, y: e.y };
+        }
+        return null;
     }
     fire() {
         if (!this.active || !this.weapon) {
@@ -61709,9 +62671,20 @@ class RangedTargetingSystem {
             return null;
         return Math.atan2(dy, dx);
     }
-    /** True if (x, y) is the current target tile. */
+    /** All world tiles covered by the weapon's pattern at the current aim point. */
+    getPatternTiles() {
+        if (!this.active)
+            return [];
+        const offsets = this.weapon?.getPatternOffsets?.();
+        if (!offsets || offsets.length === 0)
+            return [{ x: this.targetX, y: this.targetY }];
+        return offsets.map((o) => ({ x: this.targetX + o.dx, y: this.targetY + o.dy }));
+    }
+    /** True if (x, y) is covered by the weapon's pattern at the current aim point. */
     isTargetTile(x, y) {
-        return this.active && this.targetX === x && this.targetY === y;
+        if (!this.active)
+            return false;
+        return this.getPatternTiles().some((t) => t.x === x && t.y === y);
     }
     /** The weapon currently being aimed, or null. */
     getWeapon() {
@@ -61719,6 +62692,51 @@ class RangedTargetingSystem {
     }
 }
 exports.RangedTargetingSystem = RangedTargetingSystem;
+
+
+/***/ }),
+
+/***/ "./src/item/weapon/rapier.ts":
+/*!***********************************!*\
+  !*** ./src/item/weapon/rapier.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Rapier = void 0;
+const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
+const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
+class Rapier extends weapon_1.Weapon {
+    constructor(level, x, y) {
+        super(level, x, y);
+        this.hitSound = () => {
+            sound_1.Sound.swing();
+            sound_1.Sound.playShortSlice();
+        };
+        this.weaponMove = (newX, newY) => {
+            if (this.checkForPushables(newX, newY))
+                return true;
+            const isDiagonal = newX !== this.wielder.x && newY !== this.wielder.y;
+            const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus);
+            // Diagonal inputs never move the player — only attack
+            if (isDiagonal)
+                return false;
+            return !hitSomething;
+        };
+        this.tileX = 25;
+        this.tileY = 0;
+        this.name = "rapier";
+        this.description = "Attacks cardinally and diagonally. Press two direction keys together to thrust on a diagonal.";
+        this.useCost = 1;
+        this.degradeable = false;
+        this.allowsDiagonalAttack = true;
+    }
+}
+exports.Rapier = Rapier;
+Rapier.itemName = "rapier";
+Rapier.examineText = "A slender thrusting blade. Angles the rest couldn't.";
 
 
 /***/ }),
@@ -62568,6 +63586,9 @@ class Spellbook extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
         this.targetingMaxRange = 4;
+        this.getPatternOffsets = () => {
+            return (this.pendingSpell ?? this.activeSpell).getPattern().offsets;
+        };
         this.addSpell = (spell) => {
             if (this.spells.some((s) => s.id === spell.id))
                 return;
@@ -62580,6 +63601,10 @@ class Spellbook extends weapon_1.Weapon {
                     rt.stop();
                     return;
                 }
+                if (this.broken) {
+                    this.level.game.pushMessage("Your spellbook is broken.");
+                    return;
+                }
                 if (this.cooldown > 0) {
                     this.level.game.pushMessage("Not enough mana.");
                     return;
@@ -62590,7 +63615,7 @@ class Spellbook extends weapon_1.Weapon {
             super.toggleEquip();
         };
         this.fireAtTarget = (player, tx, ty) => {
-            if (this.cooldown > 0)
+            if (this.broken || this.cooldown > 0)
                 return false;
             const room = player.getRoom();
             if (!room)
@@ -63036,15 +64061,26 @@ class Weapon extends equippable_1.Equippable {
         };
         this.break = () => {
             this.durability = 0;
-            this.wielder.inventory.weapon = null;
-            this.toggleEquip();
-            //this.wielder.inventory.removeItem(this);
-            //this.wielder = null;
+            this.equipped = false;
             this.game.pushMessage("Your weapon breaks");
             if (this.status.poison || this.status.blood || this.status.curse) {
                 this.clearStatus();
             }
             this.broken = true;
+            // Only touch inventory.weapon if this weapon is the currently active one.
+            // In ranged-targeting mode the spellbook fires without ever becoming inventory.weapon,
+            // so clearing it would silently discard the weapon that actually was active.
+            if (this.wielder.inventory.weapon === this) {
+                this.wielder.inventory.weapon = null;
+                const hasPreviousWeapon = this.wielder.inventory.items.some((item) => item === this.previousWeapon);
+                if (hasPreviousWeapon &&
+                    this.previousWeapon !== null &&
+                    this.previousWeapon.broken === false &&
+                    this.previousWeapon.cooldown === 0) {
+                    this.wielder.inventory.weapon = this.previousWeapon;
+                    this.previousWeapon.equipped = true;
+                }
+            }
         };
         this.coEquippable = (other) => {
             if (other instanceof Weapon)
@@ -63161,7 +64197,7 @@ class Weapon extends equippable_1.Equippable {
                 return null;
             const dx = targetX - p.x;
             const dy = targetY - p.y;
-            if (dx !== 0 && dy !== 0 && !gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
+            if (dx !== 0 && dy !== 0 && !gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING && !this.allowsDiagonalAttack)
                 return null;
             if (dx === 0 && dy === 0)
                 return null;
@@ -63309,6 +64345,7 @@ class Weapon extends equippable_1.Equippable {
         this.manaCost = 0;
         this.twoHanded = false;
         this.knockbackDistance = 0;
+        this.allowsDiagonalAttack = false;
         this._swingHitIds = null;
         // Defaults (can be overridden by rules)
         this.combatSkill = "melee";
@@ -63898,6 +64935,7 @@ const chessKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/chessKnightEn
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const bigWizardEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigWizardEnemy */ "./src/entity/enemy/bigWizardEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const caveRockResource_1 = __webpack_require__(/*! ../entity/resource/caveRockResource */ "./src/entity/resource/caveRockResource.ts");
 const caveBlock_1 = __webpack_require__(/*! ../entity/object/caveBlock */ "./src/entity/object/caveBlock.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
@@ -64026,6 +65064,7 @@ const environmentData = {
             { class: giantFrogEnemy_1.GiantFrogEnemy, depth: 3, weight: 0.2, big: true },
             { class: exalterEnemy_1.ExalterEnemy, depth: 1, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.35, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 2, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.5, big: true },
         ],
     },
@@ -64212,6 +65251,7 @@ const environmentData = {
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
             { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.25 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.35, big: true },
         ],
     },
@@ -64321,6 +65361,7 @@ const environmentData = {
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 1.0 },
             { class: spawner_1.Spawner, depth: 0, weight: 0.25 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 5, weight: 0.45, big: true },
         ],
     },
@@ -64415,6 +65456,7 @@ const environmentData = {
         bosses: [
             { class: spawner_1.Spawner, depth: 0, weight: 0.35 },
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 1, weight: 0.25 },
             { class: wardenEnemy_1.WardenEnemy, depth: 3, weight: 0.85, big: true },
         ],
     },
@@ -64482,6 +65524,7 @@ const environmentData = {
             { class: spawner_1.Spawner, depth: 0, weight: 0.5 },
             { class: exalterEnemy_1.ExalterEnemy, depth: 0, weight: 0.35 },
             { class: occultistEnemy_1.OccultistEnemy, depth: 0, weight: 0.4, maxDepth: 4 },
+            { class: ectomancerEnemy_1.EctomancerEnemy, depth: 0, weight: 0.3 },
             { class: wardenEnemy_1.WardenEnemy, depth: 4, weight: 0.6, big: true },
         ],
     },
@@ -69739,7 +70782,7 @@ class AttackAnimation extends particle_1.Particle {
                 }
                 break;
             case "dualdagger":
-                this.frames = 8;
+                this.frames = 7;
                 this.tileY = 40;
                 this.yOffset = 0;
                 this.xOffset = 0;
@@ -71526,7 +72569,16 @@ class Player extends drawable_1.Drawable {
             if (mouseTile.x === undefined || mouseTile.y === undefined) {
                 return false;
             }
-            return mouseTile.x === this.x || mouseTile.y === this.y;
+            if (mouseTile.x === this.x || mouseTile.y === this.y)
+                return true;
+            // Allow diagonal when the equipped weapon supports it
+            const weapon = this.inventory?.getWeapon?.();
+            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING || weapon?.allowsDiagonalAttack) {
+                const dx = Math.abs(mouseTile.x - this.x);
+                const dy = Math.abs(mouseTile.y - this.y);
+                return dx === dy && dx <= 1;
+            }
+            return false;
         };
         this.canMoveWithMouse = () => {
             if (this.inventory.isOpen) {
@@ -71580,8 +72632,9 @@ class Player extends drawable_1.Drawable {
                     ? { direction: game_1.Direction.LEFT, x: nextX, y: this.y }
                     : { direction: game_1.Direction.RIGHT, x: nextX, y: this.y };
             }
-            // Diagonal — only when DIAGONAL_ATTACKING is enabled
-            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+            // Diagonal — when DIAGONAL_ATTACKING is enabled, or the equipped weapon supports it
+            const diagWeapon = this.inventory?.getWeapon?.();
+            if (gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING || diagWeapon?.allowsDiagonalAttack) {
                 const stepX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
                 const stepY = targetY < this.y ? this.y - 1 : this.y + 1;
                 if (!this.game.room.roomArray[stepX] ||
@@ -71693,7 +72746,8 @@ class Player extends drawable_1.Drawable {
                 return false;
             // Diagonal
             if (eX !== this.x && eY !== this.y) {
-                if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING)
+                const weapon = this.inventory?.getWeapon?.();
+                if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING && !weapon?.allowsDiagonalAttack)
                     return false;
                 return Math.abs(eX - this.x) === Math.abs(eY - this.y) && Math.abs(eX - this.x) <= r;
             }
@@ -72902,6 +73956,11 @@ const candle_1 = __webpack_require__(/*! ../item/light/candle */ "./src/item/lig
 const placedTorch_1 = __webpack_require__(/*! ../entity/object/placedTorch */ "./src/entity/object/placedTorch.ts");
 const placedCandle_1 = __webpack_require__(/*! ../entity/object/placedCandle */ "./src/entity/object/placedCandle.ts");
 const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const apple_1 = __webpack_require__(/*! ../item/usable/apple */ "./src/item/usable/apple.ts");
+const fish_1 = __webpack_require__(/*! ../item/usable/fish */ "./src/item/usable/fish.ts");
+const greenPotion_1 = __webpack_require__(/*! ../item/usable/greenPotion */ "./src/item/usable/greenPotion.ts");
+const shrooms_1 = __webpack_require__(/*! ../item/usable/shrooms */ "./src/item/usable/shrooms.ts");
+const berries_1 = __webpack_require__(/*! ../item/usable/berries */ "./src/item/usable/berries.ts");
 class PlayerInputHandler {
     constructor(player) {
         this.keyboardTarget = null;
@@ -73145,6 +74204,7 @@ class PlayerInputHandler {
         input_1.Input.minusListener = () => this.handleInput(input_1.InputEnum.MINUS);
         input_1.Input.escapeListener = () => this.handleInput(input_1.InputEnum.ESCAPE);
         input_1.Input.fListener = () => this.handleInput(input_1.InputEnum.F);
+        input_1.Input.rListener = () => this.handleInput(input_1.InputEnum.R);
         input_1.Input.wheelListener = (deltaY) => this.handleMouseWheel(deltaY);
     }
     handleInput(input) {
@@ -73292,13 +74352,43 @@ class PlayerInputHandler {
                 case input_1.InputEnum.MOUSE_MOVE:
                     rt.syncToMouse();
                     return;
-                case input_1.InputEnum.LEFT_CLICK:
+                case input_1.InputEnum.LEFT_CLICK: {
                     // If inventory is open let the click fall through to close it normally.
                     if (!invOpen) {
+                        // Clicking the active weapon's own quickbar slot cancels targeting.
+                        const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                        const inv = this.player.inventory;
+                        const clickedSlot = inv.getQuickbarSlotIndexAtPoint(x, y);
+                        const weapon = rt.getWeapon();
+                        const weaponSlot = weapon ? inv.items.indexOf(weapon) : -1;
+                        if (clickedSlot !== null && weaponSlot !== -1 && clickedSlot === weaponSlot) {
+                            rt.stop();
+                            return;
+                        }
                         rt.fire();
                         return;
                     }
                     break;
+                }
+                case input_1.InputEnum.NUMBER_1:
+                case input_1.InputEnum.NUMBER_2:
+                case input_1.InputEnum.NUMBER_3:
+                case input_1.InputEnum.NUMBER_4:
+                case input_1.InputEnum.NUMBER_5:
+                case input_1.InputEnum.NUMBER_6:
+                case input_1.InputEnum.NUMBER_7:
+                case input_1.InputEnum.NUMBER_8:
+                case input_1.InputEnum.NUMBER_9:
+                case input_1.InputEnum.NUMBER_0: {
+                    // Press the weapon's hotkey again to cancel targeting.
+                    const pressedSlot = input - input_1.InputEnum.NUMBER_1;
+                    const weapon = rt.getWeapon();
+                    const inv = this.player.inventory;
+                    const weaponSlot = weapon ? inv.items.indexOf(weapon) : -1;
+                    if (weaponSlot !== -1 && pressedSlot === weaponSlot)
+                        rt.stop();
+                    return; // swallow number keys during targeting regardless
+                }
                 default:
                     return;
             }
@@ -73400,6 +74490,36 @@ class PlayerInputHandler {
                 //this.player.game.newGame();
                 //this.player.stall();
                 break;
+            case input_1.InputEnum.R: {
+                const player = this.player;
+                const needed = player.maxHealth - player.health;
+                if (needed <= 0) {
+                    player.game.pushMessage("You're already full.");
+                    break;
+                }
+                const bigFoodClasses = [apple_1.Apple, fish_1.Fish, greenPotion_1.GreenPotion];
+                const smallFoodClasses = [shrooms_1.Shrooms, berries_1.Berries];
+                const tryEat = (classes) => {
+                    for (const cls of classes) {
+                        const item = player.inventory.hasItem(cls);
+                        if (item) {
+                            item.onUse(player);
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+                let ate;
+                if (player.health <= 1) {
+                    ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+                }
+                else {
+                    ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+                }
+                if (!ate)
+                    player.game.pushMessage("You have no food.");
+                break;
+            }
             case input_1.InputEnum.LEFT:
                 if (this.player.dead) {
                     this.navigateDeathScreen(-1);
@@ -74860,20 +75980,47 @@ class PlayerInputHandler {
             targetY: this.player.y + dy,
         });
     }
+    hasDiagonalTarget(dir) {
+        const room = this.player.getRoom?.() ?? this.player.game.room;
+        if (!room)
+            return false;
+        const px = this.player.x;
+        const py = this.player.y;
+        // The two diagonal positions reachable by combining this cardinal dir with either perpendicular
+        let candidates;
+        switch (dir) {
+            case game_1.Direction.UP:
+                candidates = [{ x: px - 1, y: py - 1 }, { x: px + 1, y: py - 1 }];
+                break;
+            case game_1.Direction.DOWN:
+                candidates = [{ x: px - 1, y: py + 1 }, { x: px + 1, y: py + 1 }];
+                break;
+            case game_1.Direction.LEFT:
+                candidates = [{ x: px - 1, y: py - 1 }, { x: px - 1, y: py + 1 }];
+                break;
+            case game_1.Direction.RIGHT:
+                candidates = [{ x: px + 1, y: py - 1 }, { x: px + 1, y: py + 1 }];
+                break;
+            default: return false;
+        }
+        return candidates.some(({ x, y }) => room.entities.some((e) => e.x === x && e.y === y && e.isEnemy && !e.dead));
+    }
     handleDirectionKey(dir) {
         if (this.player.isPushMoveInputLocked())
             return;
         if (this.ignoreDirectionInput())
             return;
-        if (!gameplaySettings_1.GameplaySettings.DIAGONAL_ATTACKING) {
+        // Only use double-keypress diagonal window when the equipped weapon supports diagonal attacks
+        const weapon = this.player.inventory?.getWeapon?.();
+        if (!weapon?.allowsDiagonalAttack) {
             this.processCardinalMove(dir);
             return;
         }
-        const WINDOW = 10;
+        const WINDOW = 25;
         if (this.pendingMoveDir !== null &&
             this.isPerpendicularDir(dir, this.pendingMoveDir) &&
             Date.now() - this.pendingMoveTime < WINDOW) {
-            // Second key arrived within window — fire diagonal
+            // Second key arrived within window — fire diagonal attack
             if (this.pendingMoveTimer !== null) {
                 clearTimeout(this.pendingMoveTimer);
                 this.pendingMoveTimer = null;
@@ -74883,6 +76030,11 @@ class PlayerInputHandler {
             this.processDiagonalMove(diagDir);
         }
         else {
+            // Skip the buffer entirely if no enemy sits on either reachable diagonal
+            if (!this.hasDiagonalTarget(dir)) {
+                this.processCardinalMove(dir);
+                return;
+            }
             // Buffer this keypress; fire cardinal after window if nothing arrives
             if (this.pendingMoveTimer !== null)
                 clearTimeout(this.pendingMoveTimer);
@@ -76185,7 +77337,7 @@ class PlayerRenderer {
             const offsetY = Math.floor(gameConstants_1.GameConstants.HEIGHT / 2) / gameConstants_1.GameConstants.TILESIZE;
             const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
             const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
-            // Tile cursor (same FX sprite used for keyboard target indicator)
+            // Tile cursor on the aim tile only
             game_1.Game.drawFX(24 + Math.floor(hitWarning_1.HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
             // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
             // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).
@@ -76268,6 +77420,21 @@ const projectile_1 = __webpack_require__(/*! ./projectile */ "./src/projectile/p
 const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/random.ts");
 const door_1 = __webpack_require__(/*! ../tile/door */ "./src/tile/door.ts");
 class BeamEffect extends projectile_1.Projectile {
+    static getOffscreenCtx(width, height) {
+        if (!BeamEffect.offscreenCanvas) {
+            BeamEffect.offscreenCanvas = document.createElement("canvas");
+            BeamEffect.offscreenCanvas.width = width;
+            BeamEffect.offscreenCanvas.height = height;
+            BeamEffect.offscreenCtx =
+                BeamEffect.offscreenCanvas.getContext("2d");
+        }
+        else if (BeamEffect.offscreenCanvas.width !== width ||
+            BeamEffect.offscreenCanvas.height !== height) {
+            BeamEffect.offscreenCanvas.width = width;
+            BeamEffect.offscreenCanvas.height = height;
+        }
+        return BeamEffect.offscreenCtx;
+    }
     constructor(x1, y1, x2, y2, parent) {
         super(parent, x1, y1);
         this.active = true;
@@ -76275,6 +77442,7 @@ class BeamEffect extends projectile_1.Projectile {
         this.attachmentInfluence = [];
         this.drawOnTop = false;
         this.alpha = 1;
+        this.lineWidth = 2;
         this.gravity = BeamEffect.GRAVITY;
         this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
         this.turbulence = BeamEffect.TURBULENCE;
@@ -76294,12 +77462,12 @@ class BeamEffect extends projectile_1.Projectile {
         this.draw = (delta) => {
             this.drawableY = this.y - 0.01;
             const skipDrawing = this.drawOnTop === true;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, skipDrawing, true);
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, this.lineWidth, delta, this.compositeOperation, skipDrawing, true);
         };
         this.drawTopLayer = (delta) => {
             if (!this.drawOnTop)
                 return;
-            this.render(this.targetX, this.targetY, this.x, this.y, this.color, 2, delta, this.compositeOperation, false, false);
+            this.render(this.targetX, this.targetY, this.x, this.y, this.color, this.lineWidth, delta, this.compositeOperation, false, false);
         };
         const startX = x1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
         const startY = y1 * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
@@ -76523,9 +77691,27 @@ class BeamEffect extends projectile_1.Projectile {
             return;
         }
         const ctx = game_1.Game.ctx;
-        ctx.save();
-        game_1.Game.ctx.globalCompositeOperation =
-            compositeOperation;
+        const mainCanvas = ctx.canvas;
+        const useOffscreen = this.alpha < 1;
+        let drawCtx;
+        if (useOffscreen) {
+            const offCtx = BeamEffect.getOffscreenCtx(mainCanvas.width, mainCanvas.height);
+            // Clear in identity space, then mirror the main canvas transform so
+            // beam pixels land at the same screen positions as they would on Game.ctx.
+            const cameraTransform = ctx.getTransform();
+            offCtx.setTransform(1, 0, 0, 1, 0, 0);
+            offCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            offCtx.setTransform(cameraTransform);
+            offCtx.globalCompositeOperation =
+                compositeOperation;
+            drawCtx = offCtx;
+        }
+        else {
+            ctx.save();
+            ctx.globalCompositeOperation =
+                compositeOperation;
+            drawCtx = ctx;
+        }
         for (let i = 0; i < this.points.length - 1; i++) {
             const p1 = this.points[i];
             const p2 = this.points[i + 1];
@@ -76538,18 +77724,30 @@ class BeamEffect extends projectile_1.Projectile {
             let y = p1.y;
             for (let step = 0; step <= steps; step++) {
                 const brightness = this.getBrightnessAt(x, y);
-                const adjustedColor = this.getColorWithBrightness(color, brightness, this.alpha);
+                const adjustedColor = this.getColorWithBrightness(color, brightness, useOffscreen ? 1 : this.alpha);
+                const half = lineWidth / 2;
                 for (let w = 0; w < lineWidth; w++) {
                     for (let h = 0; h < lineWidth; h++) {
-                        ctx.fillStyle = adjustedColor;
-                        ctx.fillRect(Math.round(x + w), Math.round(y + h), 1, 1);
+                        drawCtx.fillStyle = adjustedColor;
+                        drawCtx.fillRect(Math.round(x - half + w), Math.round(y - half + h), 1, 1);
                     }
                 }
                 x += xIncrement;
                 y += yIncrement;
             }
         }
-        ctx.restore();
+        if (useOffscreen) {
+            // Blit the offscreen canvas onto Game.ctx in raw screen pixels —
+            // reset the transform so drawImage is 1:1, not camera-offset.
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalAlpha = this.alpha;
+            ctx.drawImage(BeamEffect.offscreenCanvas, 0, 0);
+            ctx.restore();
+        }
+        else {
+            ctx.restore();
+        }
         this.prevStartX = startX;
         this.prevStartY = startY;
         this.prevEndX = endX;
@@ -76706,6 +77904,8 @@ BeamEffect.SPRING_STIFFNESS = 0.01;
 // How quickly spring oscillations settle
 // Range: 0.001-0.1, recommended: 0.1
 BeamEffect.SPRING_DAMPING = 0.1;
+BeamEffect.offscreenCanvas = null;
+BeamEffect.offscreenCtx = null;
 
 
 /***/ }),
@@ -78134,6 +79334,7 @@ const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const key_1 = __webpack_require__(/*! ../item/key */ "./src/item/key.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
+const ectomancerEnemy_1 = __webpack_require__(/*! ../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
 const kingEnemy_1 = __webpack_require__(/*! ../entity/enemy/kingEnemy */ "./src/entity/enemy/kingEnemy.ts");
 const boltcasterEnemy_1 = __webpack_require__(/*! ../entity/enemy/boltcasterEnemy */ "./src/entity/enemy/boltcasterEnemy.ts");
 const earthWizard_1 = __webpack_require__(/*! ../entity/enemy/earthWizard */ "./src/entity/enemy/earthWizard.ts");
@@ -78182,6 +79383,7 @@ var EnemyType;
     EnemyType["beetle"] = "beetle";
     EnemyType["bigfrog"] = "bigfrog";
     EnemyType["exalter"] = "exalter";
+    EnemyType["ectomancer"] = "ectomancer";
     EnemyType["king"] = "king";
     EnemyType["chest"] = "chest";
     EnemyType["boltcaster"] = "boltcaster";
@@ -78229,6 +79431,7 @@ exports.EnemyTypeMap = {
     [EnemyType.beetle]: beetleEnemy_1.BeetleEnemy,
     [EnemyType.bigfrog]: bigFrogEnemy_1.BigFrogEnemy,
     [EnemyType.exalter]: exalterEnemy_1.ExalterEnemy,
+    [EnemyType.ectomancer]: ectomancerEnemy_1.EctomancerEnemy,
     [EnemyType.king]: kingEnemy_1.KingEnemy,
     [EnemyType.chest]: chest_1.Chest,
     [EnemyType.boltcaster]: boltcasterEnemy_1.BoltcasterEnemy,
@@ -78880,7 +80083,7 @@ class Room {
                 }
                 else
                     e.tick();
-                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded))
+                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded || e.lightSource))
                     lightingDirty = true;
                 addCount("entityTick");
             }
@@ -84795,7 +85998,7 @@ class Populator {
             room.removeDoorObstructions();
         };
         this.populateSpawner = (room, rand) => {
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
             spawner_1.Spawner.add(room, room.game, Math.floor(room.roomX + room.width / 2), Math.floor(room.roomY + room.height / 2), spawnTable);
             room.removeDoorObstructions();
         };
@@ -86915,7 +88118,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -86929,7 +88132,7 @@ class Populator {
                 if (position === null)
                     break;
                 const { x, y } = position;
-                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+                const spawnTable = this.getEnvEnemyPoolForDepth(room.envType, Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
                 lastSpawner = spawner_1.Spawner.add(room, room.game, x, y, spawnTable);
             }
         }
@@ -87025,7 +88228,7 @@ class Populator {
             // current depth's enemy pool (mirrors prior logic from addBossesAt()).
             const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
                 ? [
-                    this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7),
+                    this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25),
                 ]
                 : (boss.additionalParams ?? []);
             chosenBoss = boss.class?.add
@@ -87870,7 +89073,7 @@ class Populator {
             const pos = room.getRandomEmptyPosition(tiles);
             if (!pos)
                 return;
-            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7);
+            const spawnTable = this.getEnemyPoolForDepth(Math.max(0, room.depth - 1)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
             const boss = spawner_1.Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
             if (boss)
                 boss.isBossEnemy = true;
@@ -88028,7 +89231,7 @@ class Populator {
         if (!boss)
             return;
         const extraArgs = boss.class === spawner_1.Spawner && !boss.additionalParams?.length
-            ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+            ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25)]
             : (boss.additionalParams ?? []);
         if (boss.class?.add) {
             const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);

@@ -20,6 +20,11 @@ import { Candle } from "../item/light/candle";
 import { PlacedTorch } from "../entity/object/placedTorch";
 import { PlacedCandle } from "../entity/object/placedCandle";
 import { Spellbook } from "../item/weapon/spellbook";
+import { Apple } from "../item/usable/apple";
+import { Fish } from "../item/usable/fish";
+import { GreenPotion } from "../item/usable/greenPotion";
+import { Shrooms } from "../item/usable/shrooms";
+import { Berries } from "../item/usable/berries";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -217,6 +222,7 @@ export class PlayerInputHandler {
     Input.minusListener = () => this.handleInput(InputEnum.MINUS);
     Input.escapeListener = () => this.handleInput(InputEnum.ESCAPE);
     Input.fListener = () => this.handleInput(InputEnum.F);
+    Input.rListener = () => this.handleInput(InputEnum.R);
     Input.wheelListener = (deltaY: number) => this.handleMouseWheel(deltaY);
   }
 
@@ -367,10 +373,42 @@ export class PlayerInputHandler {
         case InputEnum.MOUSE_MOVE:
           rt.syncToMouse();
           return;
-        case InputEnum.LEFT_CLICK:
+        case InputEnum.LEFT_CLICK: {
           // If inventory is open let the click fall through to close it normally.
-          if (!invOpen) { rt.fire(); return; }
+          if (!invOpen) {
+            // Clicking the active weapon's own quickbar slot cancels targeting.
+            const { x, y } = MouseCursor.getInstance().getPosition();
+            const inv = this.player.inventory;
+            const clickedSlot = inv.getQuickbarSlotIndexAtPoint(x, y);
+            const weapon = rt.getWeapon();
+            const weaponSlot = weapon ? inv.items.indexOf(weapon as any) : -1;
+            if (clickedSlot !== null && weaponSlot !== -1 && clickedSlot === weaponSlot) {
+              rt.stop();
+              return;
+            }
+            rt.fire();
+            return;
+          }
           break;
+        }
+        case InputEnum.NUMBER_1:
+        case InputEnum.NUMBER_2:
+        case InputEnum.NUMBER_3:
+        case InputEnum.NUMBER_4:
+        case InputEnum.NUMBER_5:
+        case InputEnum.NUMBER_6:
+        case InputEnum.NUMBER_7:
+        case InputEnum.NUMBER_8:
+        case InputEnum.NUMBER_9:
+        case InputEnum.NUMBER_0: {
+          // Press the weapon's hotkey again to cancel targeting.
+          const pressedSlot = input - InputEnum.NUMBER_1;
+          const weapon = rt.getWeapon();
+          const inv = this.player.inventory;
+          const weaponSlot = weapon ? inv.items.indexOf(weapon as any) : -1;
+          if (weaponSlot !== -1 && pressedSlot === weaponSlot) rt.stop();
+          return; // swallow number keys during targeting regardless
+        }
         default:
           return;
       }
@@ -478,6 +516,34 @@ export class PlayerInputHandler {
         //this.player.game.newGame();
         //this.player.stall();
         break;
+      case InputEnum.R: {
+        const player = this.player;
+        const needed = player.maxHealth - player.health;
+        if (needed <= 0) {
+          player.game.pushMessage("You're already full.");
+          break;
+        }
+        const bigFoodClasses = [Apple, Fish, GreenPotion];
+        const smallFoodClasses = [Shrooms, Berries];
+        const tryEat = (classes: (new (...args: any[]) => any)[]): boolean => {
+          for (const cls of classes) {
+            const item = player.inventory.hasItem(cls);
+            if (item) {
+              item.onUse(player);
+              return true;
+            }
+          }
+          return false;
+        };
+        let ate: boolean;
+        if (player.health <= 1) {
+          ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+        } else {
+          ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+        }
+        if (!ate) player.game.pushMessage("You have no food.");
+        break;
+      }
       case InputEnum.LEFT:
         if (this.player.dead) {
           this.navigateDeathScreen(-1);
@@ -2172,22 +2238,43 @@ export class PlayerInputHandler {
     });
   }
 
+  private hasDiagonalTarget(dir: Direction): boolean {
+    const room = this.player.getRoom?.() ?? this.player.game.room;
+    if (!room) return false;
+    const px = this.player.x;
+    const py = this.player.y;
+    // The two diagonal positions reachable by combining this cardinal dir with either perpendicular
+    let candidates: { x: number; y: number }[];
+    switch (dir) {
+      case Direction.UP:    candidates = [{ x: px - 1, y: py - 1 }, { x: px + 1, y: py - 1 }]; break;
+      case Direction.DOWN:  candidates = [{ x: px - 1, y: py + 1 }, { x: px + 1, y: py + 1 }]; break;
+      case Direction.LEFT:  candidates = [{ x: px - 1, y: py - 1 }, { x: px - 1, y: py + 1 }]; break;
+      case Direction.RIGHT: candidates = [{ x: px + 1, y: py - 1 }, { x: px + 1, y: py + 1 }]; break;
+      default: return false;
+    }
+    return candidates.some(({ x, y }) =>
+      room.entities.some((e) => e.x === x && e.y === y && e.isEnemy && !e.dead),
+    );
+  }
+
   private handleDirectionKey(dir: Direction): void {
     if (this.player.isPushMoveInputLocked()) return;
     if (this.ignoreDirectionInput()) return;
 
-    if (!GameplaySettings.DIAGONAL_ATTACKING) {
+    // Only use double-keypress diagonal window when the equipped weapon supports diagonal attacks
+    const weapon = this.player.inventory?.getWeapon?.();
+    if (!weapon?.allowsDiagonalAttack) {
       this.processCardinalMove(dir);
       return;
     }
 
-    const WINDOW = 10;
+    const WINDOW = 25;
     if (
       this.pendingMoveDir !== null &&
       this.isPerpendicularDir(dir, this.pendingMoveDir) &&
       Date.now() - this.pendingMoveTime < WINDOW
     ) {
-      // Second key arrived within window — fire diagonal
+      // Second key arrived within window — fire diagonal attack
       if (this.pendingMoveTimer !== null) {
         clearTimeout(this.pendingMoveTimer);
         this.pendingMoveTimer = null;
@@ -2196,6 +2283,11 @@ export class PlayerInputHandler {
       this.pendingMoveDir = null;
       this.processDiagonalMove(diagDir);
     } else {
+      // Skip the buffer entirely if no enemy sits on either reachable diagonal
+      if (!this.hasDiagonalTarget(dir)) {
+        this.processCardinalMove(dir);
+        return;
+      }
       // Buffer this keypress; fire cardinal after window if nothing arrives
       if (this.pendingMoveTimer !== null) clearTimeout(this.pendingMoveTimer);
       this.pendingMoveDir = dir;

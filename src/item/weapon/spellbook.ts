@@ -42,6 +42,10 @@ export class Spellbook extends Weapon implements RangedWeapon {
     this.pendingSpell = null;
   }
 
+  getPatternOffsets = (): Array<{ dx: number; dy: number }> => {
+    return (this.pendingSpell ?? this.activeSpell).getPattern().offsets;
+  };
+
   addSpell = (spell: Spell): void => {
     if (this.spells.some((s) => s.id === spell.id)) return;
     this.spells.push(spell);
@@ -52,6 +56,10 @@ export class Spellbook extends Weapon implements RangedWeapon {
       const rt = (this.wielder as unknown as Player)?.rangedTargeting;
       if (rt?.active) {
         rt.stop();
+        return;
+      }
+      if (this.broken) {
+        this.level.game.pushMessage("Your spellbook is broken.");
         return;
       }
       if (this.cooldown > 0) {
@@ -65,7 +73,7 @@ export class Spellbook extends Weapon implements RangedWeapon {
   };
 
   fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
-    if (this.cooldown > 0) return false;
+    if (this.broken || this.cooldown > 0) return false;
     const room = player.getRoom();
     if (!room) return false;
     const z = (player as any).z ?? 0;

@@ -478,7 +478,17 @@ export class Player extends Drawable {
       return false;
     }
 
-    return mouseTile.x === this.x || mouseTile.y === this.y;
+    if (mouseTile.x === this.x || mouseTile.y === this.y) return true;
+
+    // Allow diagonal when the equipped weapon supports it
+    const weapon = this.inventory?.getWeapon?.();
+    if (GameplaySettings.DIAGONAL_ATTACKING || weapon?.allowsDiagonalAttack) {
+      const dx = Math.abs(mouseTile.x - this.x);
+      const dy = Math.abs(mouseTile.y - this.y);
+      return dx === dy && dx <= 1;
+    }
+
+    return false;
   };
 
   canMoveWithMouse = () => {
@@ -557,8 +567,9 @@ export class Player extends Drawable {
         : { direction: Direction.RIGHT, x: nextX, y: this.y };
     }
 
-    // Diagonal — only when DIAGONAL_ATTACKING is enabled
-    if (GameplaySettings.DIAGONAL_ATTACKING) {
+    // Diagonal — when DIAGONAL_ATTACKING is enabled, or the equipped weapon supports it
+    const diagWeapon = this.inventory?.getWeapon?.();
+    if (GameplaySettings.DIAGONAL_ATTACKING || diagWeapon?.allowsDiagonalAttack) {
       const stepX = mouseTile.x < this.x ? this.x - 1 : this.x + 1;
       const stepY = targetY < this.y ? this.y - 1 : this.y + 1;
 
@@ -700,7 +711,8 @@ export class Player extends Drawable {
 
     // Diagonal
     if (eX !== this.x && eY !== this.y) {
-      if (!GameplaySettings.DIAGONAL_ATTACKING) return false;
+      const weapon = this.inventory?.getWeapon?.();
+      if (!GameplaySettings.DIAGONAL_ATTACKING && !weapon?.allowsDiagonalAttack) return false;
       return Math.abs(eX - this.x) === Math.abs(eY - this.y) && Math.abs(eX - this.x) <= r;
     }
 

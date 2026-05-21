@@ -37,6 +37,7 @@ export abstract class Weapon extends Equippable {
   manaCost: number;
   twoHanded: boolean;
   knockbackDistance: number;
+  allowsDiagonalAttack: boolean;
   private _swingHitIds: Set<string> | null;
   private _cooldownLastTurnProcessed: number | null = null;
 
@@ -77,6 +78,7 @@ export abstract class Weapon extends Equippable {
     this.manaCost = 0;
     this.twoHanded = false;
     this.knockbackDistance = 0;
+    this.allowsDiagonalAttack = false;
     this._swingHitIds = null;
 
     // Defaults (can be overridden by rules)
@@ -150,15 +152,30 @@ export abstract class Weapon extends Equippable {
   };
   break = () => {
     this.durability = 0;
-    this.wielder.inventory.weapon = null;
-    this.toggleEquip();
-    //this.wielder.inventory.removeItem(this);
-    //this.wielder = null;
+    this.equipped = false;
     this.game.pushMessage("Your weapon breaks");
     if (this.status.poison || this.status.blood || this.status.curse) {
       this.clearStatus();
     }
     this.broken = true;
+    // Only touch inventory.weapon if this weapon is the currently active one.
+    // In ranged-targeting mode the spellbook fires without ever becoming inventory.weapon,
+    // so clearing it would silently discard the weapon that actually was active.
+    if (this.wielder.inventory.weapon === this) {
+      this.wielder.inventory.weapon = null;
+      const hasPreviousWeapon = this.wielder.inventory.items.some(
+        (item) => item === this.previousWeapon,
+      );
+      if (
+        hasPreviousWeapon &&
+        this.previousWeapon !== null &&
+        this.previousWeapon.broken === false &&
+        this.previousWeapon.cooldown === 0
+      ) {
+        this.wielder.inventory.weapon = this.previousWeapon;
+        this.previousWeapon.equipped = true;
+      }
+    }
   };
 
   coEquippable = (other: Equippable): boolean => {
@@ -299,7 +316,7 @@ export abstract class Weapon extends Equippable {
     if (!p) return null;
     const dx = targetX - p.x;
     const dy = targetY - p.y;
-    if (dx !== 0 && dy !== 0 && !GameplaySettings.DIAGONAL_ATTACKING) return null;
+    if (dx !== 0 && dy !== 0 && !GameplaySettings.DIAGONAL_ATTACKING && !this.allowsDiagonalAttack) return null;
     if (dx === 0 && dy === 0) return null;
     const sx = dx === 0 ? 0 : dx > 0 ? 1 : -1;
     const sy = dy === 0 ? 0 : dy > 0 ? 1 : -1;

@@ -2888,7 +2888,7 @@ export class Populator {
         const spawnTable = this.getEnvEnemyPoolForDepth(
           room.envType,
           Math.max(0, room.depth - 1),
-        ).filter((t) => t !== 7);
+        ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
 
         lastSpawner = Spawner.add(room, room.game, x, y, spawnTable);
       }
@@ -2909,7 +2909,7 @@ export class Populator {
         const spawnTable = this.getEnvEnemyPoolForDepth(
           room.envType,
           Math.max(0, room.depth - 1),
-        ).filter((t) => t !== 7);
+        ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
 
         lastSpawner = Spawner.add(room, room.game, x, y, spawnTable);
       }
@@ -3021,7 +3021,7 @@ export class Populator {
         boss.class === Spawner && !boss.additionalParams?.length
           ? [
               this.getEnemyPoolForDepth(Math.max(0, depth)).filter(
-                (t) => t !== 7,
+                (t) => t !== 7 && t !== 11 && t !== 21 && t !== 25,
               ),
             ]
           : (boss.additionalParams ?? []);
@@ -3279,7 +3279,7 @@ export class Populator {
   populateSpawner = (room: Room, rand: () => number) => {
     const spawnTable = this.getEnemyPoolForDepth(
       Math.max(0, room.depth - 1),
-    ).filter((t) => t !== 7);
+    ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
     Spawner.add(
       room,
       room.game,
@@ -4523,7 +4523,7 @@ export class Populator {
       if (!pos) return;
       const spawnTable = this.getEnemyPoolForDepth(
         Math.max(0, room.depth - 1),
-      ).filter((t) => t !== 7);
+      ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
       const boss = Spawner.add(room, room.game, pos.x, pos.y, spawnTable);
       if (boss) boss.isBossEnemy = true;
     };
@@ -4701,7 +4701,7 @@ export class Populator {
 
     const extraArgs =
       boss.class === Spawner && !boss.additionalParams?.length
-        ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7)]
+        ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25)]
         : (boss.additionalParams ?? []);
     if (boss.class?.add) {
       const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);

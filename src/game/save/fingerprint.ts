@@ -20,6 +20,7 @@ import { collectRoomsForSaveAtCurrentDepth } from "./writeV2";
 import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../../entity/enemy/ectomancerEnemy";
 import { Spawner } from "../../entity/enemy/spawner";
 import { Chest } from "../../entity/object/chest";
 import { VendingMachine } from "../../entity/object/vendingMachine";
@@ -199,6 +200,14 @@ function entityFP(entity: Entity): EntityFP {
   }
   if (entity instanceof ExalterEnemy) {
     stateStr += `,exaltBuffed=${entity.buffedEnemies?.length ?? 0}`;
+  }
+  if (entity instanceof EctomancerEnemy) {
+    stateStr += `,ectoLinks=${entity.links?.length ?? 0}`;
+  }
+  if (entity instanceof Enemy) {
+    if (entity.isGhostly) stateStr += `,ghostly=1`;
+    if (entity.ghostFrozen) stateStr += `,ghostFrozen=1`;
+    if (entity.ghostifiedBefore) stateStr += `,ghostifiedBefore=1`;
   }
   if (entity instanceof Spawner) {
     stateStr += `,spawnType=${entity.enemySpawnType},nextTick=${entity.nextSpawnTick}`;

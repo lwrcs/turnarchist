@@ -665,6 +665,29 @@ export class ChessKnightEnemy extends Enemy {
           } else if (this.ticks % 2 === 1) {
             // Move turn
             this.rumbling = true;
+
+            if (this.justHurt) {
+              let bestDist = -1;
+              let bestPos: { x: number; y: number } | null = null;
+              for (const [dx, dy] of KNIGHT_MOVES) {
+                const nx = this.x + dx;
+                const ny = this.y + dy;
+                if (!this.isValidKnightDest(nx, ny)) continue;
+                const dist =
+                  Math.abs(nx - this.targetPlayer.x) +
+                  Math.abs(ny - this.targetPlayer.y);
+                if (dist > bestDist) {
+                  bestDist = dist;
+                  bestPos = { x: nx, y: ny };
+                }
+              }
+              if (bestPos) {
+                this.initKnightAnim(bestPos.x, bestPos.y, false);
+                this.x = bestPos.x;
+                this.y = bestPos.y;
+              }
+              this.justHurt = false;
+            } else {
             const move = this.searchKnightPath();
 
             if (move !== null) {
@@ -704,6 +727,7 @@ export class ChessKnightEnemy extends Enemy {
                 this.y = moveY;
               }
             }
+            } // end else (not justHurt)
 
             this.rumbling = false;
             this.unconscious = true;

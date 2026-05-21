@@ -276,16 +276,18 @@ export abstract class Enemy extends Entity {
 
   getDisablePositions = (): Array<astar.Position> => {
     let disablePositions = Array<astar.Position>();
+    const mw = this.w ?? 1;
+    const mh = this.h ?? 1;
     for (const e of this.room.entities) {
       if (e !== this) {
         const ew = e.w ?? 1;
         const eh = e.h ?? 1;
         for (let dx = 0; dx < ew; dx++) {
           for (let dy = 0; dy < eh; dy++) {
-            disablePositions.push({
-              x: e.x + dx,
-              y: e.y + dy,
-            } as astar.Position);
+            const tx = e.x + dx;
+            const ty = e.y + dy;
+            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh) continue;
+            disablePositions.push({ x: tx, y: ty } as astar.Position);
           }
         }
       }
@@ -306,16 +308,18 @@ export abstract class Enemy extends Entity {
 
   findPath = () => {
     let disablePositions = Array<astar.Position>();
+    const mw = this.w ?? 1;
+    const mh = this.h ?? 1;
     for (const e of this.room.entities) {
       if (e !== this) {
         const ew = e.w ?? 1;
         const eh = e.h ?? 1;
         for (let dx = 0; dx < ew; dx++) {
           for (let dy = 0; dy < eh; dy++) {
-            disablePositions.push({
-              x: e.x + dx,
-              y: e.y + dy,
-            } as astar.Position);
+            const tx = e.x + dx;
+            const ty = e.y + dy;
+            if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh) continue;
+            disablePositions.push({ x: tx, y: ty } as astar.Position);
           }
         }
       }
@@ -346,6 +350,12 @@ export abstract class Enemy extends Entity {
   tick = () => {
     this.tickPoison();
     this.tickBleed();
+    if (this.ghostFrozen && !this.dead) {
+      this.lastX = this.x;
+      this.lastY = this.y;
+      this.hurtThisTurn = false;
+      return;
+    }
     this.behavior();
     if (this.x !== this.lastX || this.y !== this.lastY) {
       this.emitEntityData();
@@ -555,14 +565,23 @@ export abstract class Enemy extends Entity {
   // to cover every tile they occupy (not just the top-left anchor).
   protected getEntityDisablePositions(filter?: (e: Entity) => boolean): Array<astar.Position> {
     const out: Array<astar.Position> = [];
+    const mw = this.w ?? 1;
+    const mh = this.h ?? 1;
     for (const e of this.room.entities) {
       if (e === this) continue;
       if (filter && !filter(e)) continue;
       const ew = e.w ?? 1;
       const eh = e.h ?? 1;
-      for (let dx = 0; dx < ew; dx++)
-        for (let dy = 0; dy < eh; dy++)
-          out.push({ x: e.x + dx, y: e.y + dy } as astar.Position);
+      for (let dx = 0; dx < ew; dx++) {
+        for (let dy = 0; dy < eh; dy++) {
+          const tx = e.x + dx;
+          const ty = e.y + dy;
+          // Skip tiles that are inside our own current footprint — we're vacating
+          // them, so they shouldn't count as blocked for pathfinding purposes.
+          if (tx >= this.x && tx < this.x + mw && ty >= this.y && ty < this.y + mh) continue;
+          out.push({ x: tx, y: ty } as astar.Position);
+        }
+      }
     }
     return out;
   }
@@ -932,11 +951,14 @@ export abstract class Enemy extends Entity {
       const ey1 = e.y + h - 1;
       if (ex1 < left || ex0 > right || ey1 < top || ey0 > bottom) continue;
 
+      const mw = this.w ?? 1;
+      const mh = this.h ?? 1;
       for (let dx = 0; dx < w; dx++) {
         for (let dy = 0; dy < h; dy++) {
           const x = e.x + dx;
           const y = e.y + dy;
           if (x < left || x > right || y < top || y > bottom) continue;
+          if (x >= this.x && x < this.x + mw && y >= this.y && y < this.y + mh) continue;
           out.push({ x, y } as astar.Position);
         }
       }

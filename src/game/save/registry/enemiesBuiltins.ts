@@ -82,6 +82,7 @@ import { BigWizardEnemy } from "../../../entity/enemy/bigWizardEnemy";
 import { ZombieEnemy } from "../../../entity/enemy/zombieEnemy";
 import { OccultistEnemy } from "../../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../../entity/enemy/exalterEnemy";
+import { EctomancerEnemy } from "../../../entity/enemy/ectomancerEnemy";
 import { Enemy } from "../../../entity/enemy/enemy";
 import type { LoadContext, SaveContext } from "../context";
 import type { BasicEnemySaveV2, EnemyKind, EnemySaveV2, ItemSaveV2 } from "../schema";
@@ -139,6 +140,7 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof ZombieEnemy) return "zombie";
   if (e instanceof OccultistEnemy) return "occultist";
   if (e instanceof ExalterEnemy) return "exalter";
+  if (e instanceof EctomancerEnemy) return "ectomancer";
   if (e instanceof ArmoredSkullEnemy) return "armored_skull";
   if (e instanceof ArmoredzombieEnemy) return "armored_zombie";
   if (e instanceof BeetleEnemy) return "beetle";
@@ -205,6 +207,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
 
   const saveBasic = (kind: BasicEnemyKind, value: Entity): BasicEnemySaveV2 => {
     const isEnemy = value instanceof Enemy;
+    const isEctomancer = value instanceof EctomancerEnemy;
     return {
       kind,
       gid: value.globalId,
@@ -229,6 +232,23 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         value instanceof OccultistEnemy && value.shieldedEnemies.length > 0
           ? value.shieldedEnemies.map((e) => e.globalId)
           : undefined,
+      shieldedBefore: value.shieldedBefore === true ? true : undefined,
+      buffedEnemyGids:
+        value instanceof ExalterEnemy && value.buffedEnemies.length > 0
+          ? value.buffedEnemies.map((e) => e.globalId)
+          : undefined,
+      isGhostly: value.isGhostly === true ? true : undefined,
+      ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
+      ghostFrozen: value.ghostFrozen === true ? true : undefined,
+      ghostifiedBefore: value.ghostifiedBefore === true ? true : undefined,
+      ectomancerLinkBaseGids:
+        isEctomancer && value.links.length > 0
+          ? value.links.map((l) => l.base.globalId)
+          : undefined,
+      ectomancerLinkGhostGids:
+        isEctomancer && value.links.length > 0
+          ? value.links.map((l) => l.ghost.globalId)
+          : undefined,
     } satisfies BasicEnemySaveV2;
   };
 
@@ -251,6 +271,20 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       const healthU = (sh as { health?: unknown }).health;
       if (typeof healthU === "number") e.applyShield(healthU, true);
     }
+    if ("isGhostly" in value && value.isGhostly === true) {
+      e.isGhostly = true;
+      e.alpha = 0.5;
+    }
+    if ("ghostlyBeamParentGid" in value && typeof value.ghostlyBeamParentGid === "string") {
+      e.ghostlyBeamParentGid = value.ghostlyBeamParentGid;
+    }
+    if ("ghostFrozen" in value && value.ghostFrozen === true) {
+      e.ghostFrozen = true;
+    }
+    if ("ghostifiedBefore" in value && value.ghostifiedBefore === true) {
+      e.ghostifiedBefore = true;
+    }
+    if ("shieldedBefore" in value && value.shieldedBefore === true) e.shieldedBefore = true;
     e.globalId = value.gid;
     return e;
   };
@@ -541,6 +575,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   // Other enemies / entities using basic envelope
   registerBasic("occultist", OccultistEnemy);
   registerBasic("exalter", ExalterEnemy);
+  registerBasic("ectomancer", EctomancerEnemy);
   registerBasic("armored_skull", ArmoredSkullEnemy);
   registerBasic("armored_zombie", ArmoredzombieEnemy);
   registerBasic("beetle", BeetleEnemy);

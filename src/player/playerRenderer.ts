@@ -1399,17 +1399,8 @@ export class PlayerRenderer {
     const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
     const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
 
-    // Tile cursor (same FX sprite used for keyboard target indicator)
-    Game.drawFX(
-      24 + Math.floor(HitWarning.frame),
-      5,
-      1,
-      1,
-      screenX,
-      screenY,
-      1,
-      1,
-    );
+    // Tile cursor on the aim tile only
+    Game.drawFX(24 + Math.floor(HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
 
     // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
     // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).
