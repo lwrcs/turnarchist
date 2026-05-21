@@ -36,11 +36,21 @@ export class BigTree extends Entity {
     this.w = 2;
     this.h = 1;
     this.hitSound = Sound.playBush;
-    if (Random.rand() < 0.5)
-      this.drops.push(new Apple(this.room, this.x, this.y));
-    //this.drawableY = 0.1;
-    //this.drops.push(new Shrooms(this.room, this.x, this.y));
   }
+
+  onHurt = () => {
+    if (this.health === 1) {
+      for (let i = 0; i < 3; i++) {
+        if (Random.rand() < 1 / 3) {
+          const apple = new Apple(this.room, this.x, this.y);
+          apple.level = this.room;
+          this.room.items.push(apple);
+          apple.onDrop();
+          apple.autoPickup();
+        }
+      }
+    }
+  };
 
   get type() {
     return EntityType.PROP;

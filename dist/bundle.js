@@ -25268,6 +25268,19 @@ class BigTree extends entity_1.Entity {
         super(room, game, x, y);
         this.seeThroughAlpha = 1;
         this.softSeeThroughAlpha = 1;
+        this.onHurt = () => {
+            if (this.health === 1) {
+                for (let i = 0; i < 3; i++) {
+                    if (random_1.Random.rand() < 1 / 3) {
+                        const apple = new apple_1.Apple(this.room, this.x, this.y);
+                        apple.level = this.room;
+                        this.room.items.push(apple);
+                        apple.onDrop();
+                        apple.autoPickup();
+                    }
+                }
+            }
+        };
         this.uniqueKillBehavior = () => {
             if (this.cloned)
                 return;
@@ -25323,10 +25336,6 @@ class BigTree extends entity_1.Entity {
         this.w = 2;
         this.h = 1;
         this.hitSound = sound_1.Sound.playBush;
-        if (random_1.Random.rand() < 0.5)
-            this.drops.push(new apple_1.Apple(this.room, this.x, this.y));
-        //this.drawableY = 0.1;
-        //this.drops.push(new Shrooms(this.room, this.x, this.y));
     }
     get type() {
         return entity_2.EntityType.PROP;
