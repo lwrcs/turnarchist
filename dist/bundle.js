@@ -35551,6 +35551,7 @@ const hitWarning_1 = __webpack_require__(/*! ../drawable/hitWarning */ "./src/dr
 const healthbar_1 = __webpack_require__(/*! ../drawable/healthbar */ "./src/drawable/healthbar.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 const bookRenderer_1 = __webpack_require__(/*! ../gui/bookRenderer */ "./src/gui/bookRenderer.ts");
+const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 class Bestiary extends bookRenderer_1.BookRenderer {
     constructor(game, player) {
         super();
@@ -35561,6 +35562,8 @@ class Bestiary extends bookRenderer_1.BookRenderer {
         this.activeSpriteStateIndex = 0;
         this.prevStateRect = null;
         this.nextStateRect = null;
+        this._beamCache = new Map();
+        this._lastDelta = 1 / 60;
         // ── Public Bestiary-specific API ──────────────────────────────────────────
         this.entryUp = () => {
             this.setActiveEntryIndex(this.currentPage - 1);
@@ -35575,6 +35578,8 @@ class Bestiary extends bookRenderer_1.BookRenderer {
             this.open();
         };
         this.addEntry = (enemyTypeName) => {
+            if (bestiaryEnemyRegistry_1.BESTIARY_EXCLUDED.has(enemyTypeName))
+                return;
             this.seenEnemyTypeNames.add(enemyTypeName);
             this.ensureEntry(enemyTypeName);
             (0, bestiaryPersistence_1.saveSeenEnemyTypes)(this.seenEnemyTypeNames);
@@ -35591,6 +35596,8 @@ class Bestiary extends bookRenderer_1.BookRenderer {
         // ── Private Bestiary helpers ───────────────────────────────────────────────
         this.ensureEntry = (enemyTypeName) => {
             if (this.entries.some((e) => e.typeName === enemyTypeName))
+                return;
+            if (bestiaryEnemyRegistry_1.BESTIARY_EXCLUDED.has(enemyTypeName))
                 return;
             const reg = bestiaryEnemyRegistry_1.BESTIARY_ENEMIES[enemyTypeName];
             if (reg) {
@@ -35616,6 +35623,8 @@ class Bestiary extends bookRenderer_1.BookRenderer {
                         hitWarningsWide: s.hitWarningsWide,
                         hitWarnings: s.hitWarnings,
                         rumbling: s.rumbling,
+                        additionalSprites: s.additionalSprites,
+                        beamPreview: s.beamPreview,
                     })),
                 });
                 return;
@@ -35662,7 +35671,7 @@ class Bestiary extends bookRenderer_1.BookRenderer {
                 this.activeSpriteStateIndex = 0;
             }
         };
-        this.drawSpritesWithHitWarnings = (sprites, rect) => {
+        this.drawSpritesWithHitWarnings = (sprites, rect, typeName = "") => {
             const theme = this.getTheme();
             const count = sprites.length;
             if (count === 0) {
@@ -35673,12 +35682,12 @@ class Bestiary extends bookRenderer_1.BookRenderer {
             if (count > 1) {
                 if (this.manualStateCycling) {
                     const idx = ((this.activeSpriteStateIndex % count) + count) % count;
-                    this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+                    this.drawSpritesWithHitWarnings([sprites[idx]], rect, typeName);
                     return;
                 }
                 if (this.cycleEntrySprites) {
                     const idx = this.activeCycledSpriteIndex(count);
-                    this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+                    this.drawSpritesWithHitWarnings([sprites[idx]], rect, typeName);
                     return;
                 }
             }
@@ -35725,25 +35734,58 @@ class Bestiary extends bookRenderer_1.BookRenderer {
                 const frameIndex = frames <= 1 ? 0 : Math.floor(Date.now() / frameMs) % frames;
                 const tx = s.tileX + frameIndex * stride * w;
                 this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "behind");
-                if (s.sheet === "obj") {
-                    game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+                if (!s.beamPreview) {
+                    if (s.sheet === "obj") {
+                        game_1.Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+                    }
+                    else {
+                        entity_1.Entity.drawIdleSprite({
+                            tileX: s.tileX,
+                            tileY: s.tileY,
+                            x,
+                            y,
+                            w: s.w,
+                            h: s.h,
+                            drawW,
+                            drawH,
+                            frames: s.frames,
+                            frameStride: s.frameStride,
+                            frameMs: s.frameMs,
+                            shadeColor: "Black",
+                            shadeAmount: 0,
+                        });
+                    }
                 }
-                else {
-                    entity_1.Entity.drawIdleSprite({
-                        tileX: s.tileX,
-                        tileY: s.tileY,
-                        x,
-                        y,
-                        w: s.w,
-                        h: s.h,
-                        drawW,
-                        drawH,
-                        frames: s.frames,
-                        frameStride: s.frameStride,
-                        frameMs: s.frameMs,
-                        shadeColor: "Black",
-                        shadeAmount: 0,
-                    });
+                for (const extra of s.additionalSprites ?? []) {
+                    const ew = extra.w ?? 1;
+                    const eh = extra.h ?? 1;
+                    const extraAlpha = extra.alpha ?? 1;
+                    const savedAlpha = game_1.Game.ctx.globalAlpha;
+                    if (extraAlpha !== 1)
+                        game_1.Game.ctx.globalAlpha = savedAlpha * extraAlpha;
+                    if (extra.sheet === "fx") {
+                        game_1.Game.drawFX(extra.tileX, extra.tileY, ew, eh, x + extra.dx, y + extra.dy, ew, eh, "Black", 0);
+                    }
+                    else {
+                        entity_1.Entity.drawIdleSprite({
+                            tileX: extra.tileX,
+                            tileY: extra.tileY,
+                            x: x + extra.dx,
+                            y: y + extra.dy,
+                            w: ew,
+                            h: eh,
+                            drawW: ew,
+                            drawH: eh,
+                            shadeColor: "Black",
+                            shadeAmount: 0,
+                        });
+                    }
+                    if (extraAlpha !== 1)
+                        game_1.Game.ctx.globalAlpha = savedAlpha;
+                }
+                if (s.beamPreview) {
+                    const cacheKey = `${typeName}_${i}`;
+                    this._drawBeamPreview(s, cacheKey, { drawX: xBase, drawY: yBase }, this._lastDelta);
                 }
                 this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "front");
                 if (s.hp !== undefined && s.maxHp !== undefined && s.maxHp > 1) {
@@ -35937,12 +35979,13 @@ class Bestiary extends bookRenderer_1.BookRenderer {
         const entry = this.entries[pageIndex];
         if (!entry)
             return;
-        this.drawSpritesWithHitWarnings(entry.sprites ?? [], { x, y, w, h });
+        this.drawSpritesWithHitWarnings(entry.sprites ?? [], { x, y, w, h }, entry.typeName);
         this.drawStateCycleButton(theme, entry, { x, y, w, h });
     }
     // ── Protected hook overrides ───────────────────────────────────────────────
     onBeforeDraw(delta) {
         hitWarning_1.HitWarning.updatePreviewFrame(delta);
+        this._lastDelta = delta;
     }
     onPageChanged(newPage) {
         this.setActiveEntryIndex(newPage);
@@ -35971,6 +36014,79 @@ class Bestiary extends bookRenderer_1.BookRenderer {
     onOpen() {
         this.entryViewStartTime = Date.now();
     }
+    _drawBeamPreview(sprite, cacheKey, basePos, delta) {
+        const bp = sprite.beamPreview;
+        const ts = gameConstants_1.GameConstants.TILESIZE;
+        let entry = this._beamCache.get(cacheKey);
+        if (!entry) {
+            const headX = basePos.drawX + bp.headOffset.x;
+            const headY = basePos.drawY + bp.headOffset.y;
+            const tailX = basePos.drawX + bp.tailOffset.x;
+            const tailY = basePos.drawY + bp.tailOffset.y;
+            const beam = new beamEffect_1.BeamEffect(headX, headY, tailX, tailY, null);
+            beam.color = bp.color;
+            if (bp.shadowBeamColor !== undefined)
+                beam.shadowBeamColor = bp.shadowBeamColor;
+            if (bp.beamOutlineColor !== undefined)
+                beam.beamOutlineColor = bp.beamOutlineColor;
+            if (bp.lineWidth !== undefined)
+                beam.lineWidth = bp.lineWidth;
+            if (bp.tailWidth !== undefined)
+                beam.tailWidth = bp.tailWidth;
+            if (bp.tailTaperStart !== undefined)
+                beam.tailTaperStart = bp.tailTaperStart;
+            if (bp.headTipWidth !== undefined)
+                beam.headTipWidth = bp.headTipWidth;
+            if (bp.headTaperLength !== undefined)
+                beam.headTaperLength = bp.headTaperLength;
+            if (bp.shadowOffsetY !== undefined)
+                beam.shadowOffsetY = bp.shadowOffsetY;
+            if (bp.gravity !== undefined)
+                beam.gravity = bp.gravity;
+            if (bp.turbulence !== undefined)
+                beam.turbulence = bp.turbulence;
+            if (bp.damping !== undefined)
+                beam.damping = bp.damping;
+            if (bp.springStiffness !== undefined)
+                beam.springStiffness = bp.springStiffness;
+            if (bp.springDamping !== undefined)
+                beam.springDamping = bp.springDamping;
+            if (bp.iterations !== undefined)
+                beam.iterations = bp.iterations;
+            if (bp.showStripes !== undefined)
+                beam.showStripes = bp.showStripes;
+            if (bp.eyeColor !== undefined)
+                beam.eyeColor = bp.eyeColor;
+            beam.useBrightnessSampling = false;
+            beam.renderFps = 0;
+            if (bp.naturalLengthTiles)
+                beam.naturalLength = bp.naturalLengthTiles * ts;
+            entry = { beam, isWarmed: false };
+            this._beamCache.set(cacheKey, entry);
+        }
+        const { beam } = entry;
+        beam.x = basePos.drawX + bp.headOffset.x;
+        beam.y = basePos.drawY + bp.headOffset.y;
+        beam.targetX = basePos.drawX + bp.tailOffset.x;
+        beam.targetY = basePos.drawY + bp.tailOffset.y;
+        if (bp.guideOffsets.length > 0) {
+            const N = bp.guideOffsets.length;
+            beam.setGuideNodes(bp.guideOffsets.map((off, idx) => ({
+                x: basePos.drawX + off.x,
+                y: basePos.drawY + off.y,
+                tPosition: (idx + 1) / (N + 1),
+                weight: 0.85,
+                influenceDistance: 1.5,
+            })));
+        }
+        if (!entry.isWarmed) {
+            entry.isWarmed = true;
+            for (let w = 0; w < 40; w++) {
+                beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, 1, beam.compositeOperation, true, true);
+            }
+        }
+        beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, delta, beam.compositeOperation, false, true);
+    }
 }
 exports.Bestiary = Bestiary;
 
@@ -35986,7 +36102,7 @@ exports.Bestiary = Bestiary;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BESTIARY_ENEMIES = void 0;
+exports.BESTIARY_ENEMIES = exports.BESTIARY_EXCLUDED = void 0;
 const SHOW_X = { redX: true };
 const SHOW_FULL = {
     redArrow: false,
@@ -36053,6 +36169,11 @@ const DIAGONAL_1 = [
 ];
 const OMNI_1 = [...CARDINAL_1, ...DIAGONAL_1];
 const line = (dx, dy, len) => Array.from({ length: len }, (_, i) => ({ x: dx * (i + 1), y: dy * (i + 1) }));
+/**
+ * Enemy type names that should be silently excluded from the bestiary.
+ * Use this for sub-entities that are not standalone enemies (e.g. snake segments).
+ */
+exports.BESTIARY_EXCLUDED = new Set(["SnakeSegmentEnemy"]);
 // NOTE: These are intentionally hand-authored so every enemy has a meaningful description and correct sprite tiles.
 // If you add a new enemy, add it here so the bestiary remains complete and high-quality.
 exports.BESTIARY_ENEMIES = {
@@ -37220,6 +37341,144 @@ exports.BESTIARY_ENEMIES = {
                 hp: 1,
                 maxHp: 1,
                 frames: 4,
+            },
+        ],
+    },
+    GiantFrogEnemy: {
+        typeName: "GiantFrogEnemy",
+        displayName: "Giant Frog",
+        description: "Passive and immobile. Killing it spawns four big frogs, each of which spawns four frogs on death. Sixteen frogs total if you're not careful.",
+        sprites: [
+            {
+                label: "",
+                tileX: 37,
+                tileY: 27,
+                w: 4,
+                h: 4,
+                hp: 8,
+                maxHp: 8,
+            },
+        ],
+    },
+    ChessKnightEnemy: {
+        typeName: "ChessKnightEnemy",
+        displayName: "Knight",
+        description: "A leaping knight that attacks from L-shaped positions. It hops over obstacles and strikes tiles it never directly approaches — plan several moves ahead.",
+        sprites: [
+            {
+                label: "",
+                tileX: 39,
+                tileY: 8,
+                w: 1,
+                h: 2,
+                hp: 2,
+                maxHp: 2,
+                hitWarnings: [
+                    { x: -2, y: -1 }, { x: -2, y: 1 },
+                    { x: -1, y: -2 }, { x: -1, y: 2 },
+                    { x: 1, y: -2 }, { x: 1, y: 2 },
+                    { x: 2, y: -1 }, { x: 2, y: 1 },
+                ].map((o) => hw(o, SHOW_X)),
+                additionalSprites: [
+                    { tileX: 22, tileY: 24, w: 2, h: 2, dx: -0.5, dy: 2.5, sheet: "fx", alpha: 0.55 },
+                    { tileX: 26, tileY: 24, w: 2, h: 2, dx: -0.5, dy: 2.5, sheet: "fx", alpha: 0.55 },
+                    { tileX: 24, tileY: 24, w: 2, h: 2, dx: -0.5, dy: -0.5, sheet: "fx", alpha: 0.55 },
+                    { tileX: 28, tileY: 24, w: 2, h: 2, dx: -0.5, dy: -0.5, sheet: "fx", alpha: 0.55 },
+                    { tileX: 22, tileY: 26, w: 2, h: 2, dx: -2, dy: 1, sheet: "fx", alpha: 0.55 },
+                    { tileX: 26, tileY: 26, w: 2, h: 2, dx: -2, dy: 1, sheet: "fx", alpha: 0.55 },
+                    { tileX: 24, tileY: 26, w: 2, h: 2, dx: 1, dy: 1, sheet: "fx", alpha: 0.55 },
+                    { tileX: 28, tileY: 26, w: 2, h: 2, dx: 1, dy: 1, sheet: "fx", alpha: 0.55 },
+                ],
+            },
+        ],
+    },
+    SnakeHeadEnemy: {
+        typeName: "SnakeHeadEnemy",
+        displayName: "Serpent",
+        description: "A serpent with a long body that fills several tiles. Hits to any segment are redirected to the head — the tail is as dangerous to stand next to as the fangs.",
+        sprites: [
+            {
+                label: "",
+                tileX: 39,
+                tileY: 17,
+                w: 1,
+                h: 1,
+                hp: 5,
+                maxHp: 5,
+                hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+                beamPreview: {
+                    headOffset: { x: 0, y: 0 },
+                    tailOffset: { x: 0, y: 1 },
+                    guideOffsets: [
+                        { x: 1, y: 0 },
+                        { x: 2, y: 0 },
+                        { x: 2, y: 1 },
+                        { x: 1, y: 1 },
+                    ],
+                    naturalLengthTiles: 5,
+                    color: "#18213a",
+                    shadowBeamColor: "#587cb3",
+                    lineWidth: 5,
+                    tailWidth: 2,
+                    tailTaperStart: 0.75,
+                    headTipWidth: 1,
+                    headTaperLength: 0.0625,
+                    shadowOffsetY: -4,
+                    beamOutlineColor: "#1f2127",
+                    gravity: 0,
+                    turbulence: 0.03,
+                    damping: 0.95,
+                    springStiffness: 0.04,
+                    springDamping: 0.06,
+                    iterations: 8,
+                    showStripes: true,
+                    eyeColor: "#000000",
+                },
+            },
+        ],
+    },
+    WormHeadEnemy: {
+        typeName: "WormHeadEnemy",
+        displayName: "Worm",
+        description: "A thick earthworm that can lunge from any direction, including diagonals. Harder to kite than a serpent — it doesn't need a straight corridor to reach you.",
+        sprites: [
+            {
+                label: "",
+                tileX: 41,
+                tileY: 16,
+                w: 1,
+                h: 1,
+                hp: 4,
+                maxHp: 4,
+                hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
+                beamPreview: {
+                    headOffset: { x: 0, y: 0 },
+                    tailOffset: { x: 1, y: 0 },
+                    guideOffsets: [
+                        { x: 0, y: 1 },
+                        { x: 0, y: 2 },
+                        { x: 1, y: 2 },
+                        { x: 1, y: 1 },
+                    ],
+                    naturalLengthTiles: 5,
+                    color: "#2e1a0a",
+                    shadowBeamColor: "#6b3d18",
+                    lineWidth: 6,
+                    tailWidth: 3,
+                    tailTaperStart: 0.8,
+                    headTipWidth: 2,
+                    headTaperLength: 0.075,
+                    shadowOffsetY: -3,
+                    beamOutlineColor: "#1a0f05",
+                    gravity: 0,
+                    turbulence: 0.025,
+                    damping: 0.95,
+                    springStiffness: 0.04,
+                    springDamping: 0.06,
+                    iterations: 8,
+                    showStripes: false,
+                    eyeColor: null,
+                },
             },
         ],
     },
@@ -78396,7 +78655,7 @@ class BeamEffect extends projectile_1.Projectile {
         this.iterations = BeamEffect.ITERATIONS;
         this.segments = BeamEffect.SEGMENTS;
         this.tick = () => {
-            if (this.parent.dead) {
+            if (this.parent && this.parent.dead) {
                 this.destroy();
             }
         };

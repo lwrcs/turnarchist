@@ -1001,7 +1001,7 @@ export class BeamEffect extends Projectile {
   }
 
   tick = () => {
-    if (this.parent.dead) {
+    if (this.parent && this.parent.dead) {
       this.destroy();
     }
   };

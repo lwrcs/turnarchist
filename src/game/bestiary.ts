@@ -8,12 +8,13 @@ import { enemyClassToId } from "../level/environment";
 import { loadSeenEnemyTypes, saveSeenEnemyTypes } from "./bestiaryPersistence";
 import { globalEventBus } from "../event/eventBus";
 import { EVENTS } from "../event/events";
-import { BESTIARY_ENEMIES } from "./bestiaryEnemyRegistry";
+import { BESTIARY_ENEMIES, BeamPreviewSpec, BESTIARY_EXCLUDED } from "./bestiaryEnemyRegistry";
 import { Entity } from "../entity/entity";
 import { HitWarning, HitWarningDirection } from "../drawable/hitWarning";
 import { HealthBar } from "../drawable/healthbar";
 import { GameplaySettings } from "./gameplaySettings";
 import { BookRenderer, BookTheme } from "../gui/bookRenderer";
+import { BeamEffect, BeamGuideNode } from "../projectile/beamEffect";
 
 interface BestiaryEntry {
   typeName: string;
@@ -68,6 +69,22 @@ interface BestiaryEntry {
       alpha?: number;
     }>;
     rumbling?: boolean;
+    beamPreview?: BeamPreviewSpec;
+    /**
+     * Extra sprites drawn at tile-unit offsets from this sprite's (x, y) top-left.
+     * Used to show multi-tile compositions (e.g. a curled snake body).
+     */
+    additionalSprites?: Array<{
+      tileX: number;
+      tileY: number;
+      w?: number;
+      h?: number;
+      /** Tile-unit offset from main sprite's top-left. */
+      dx: number;
+      dy: number;
+      sheet?: "fx";
+      alpha?: number;
+    }>;
   }>;
 }
 
@@ -86,6 +103,8 @@ export class Bestiary extends BookRenderer {
 
   private prevStateRect: { x: number; y: number; w: number; h: number } | null = null;
   private nextStateRect: { x: number; y: number; w: number; h: number } | null = null;
+  private _beamCache: Map<string, { beam: BeamEffect; isWarmed: boolean }> = new Map();
+  private _lastDelta: number = 1 / 60;
 
   constructor(game: Game, player: Player) {
     super();
@@ -153,7 +172,7 @@ export class Bestiary extends BookRenderer {
   ): void {
     const entry = this.entries[pageIndex];
     if (!entry) return;
-    this.drawSpritesWithHitWarnings(entry.sprites ?? [], { x, y, w, h });
+    this.drawSpritesWithHitWarnings(entry.sprites ?? [], { x, y, w, h }, entry.typeName);
     this.drawStateCycleButton(theme, entry, { x, y, w, h });
   }
 
@@ -161,6 +180,7 @@ export class Bestiary extends BookRenderer {
 
   protected onBeforeDraw(delta: number): void {
     HitWarning.updatePreviewFrame(delta);
+    this._lastDelta = delta;
   }
 
   protected onPageChanged(newPage: number): void {
@@ -214,6 +234,7 @@ export class Bestiary extends BookRenderer {
 
 
   addEntry = (enemyTypeName: string) => {
+    if (BESTIARY_EXCLUDED.has(enemyTypeName)) return;
     this.seenEnemyTypeNames.add(enemyTypeName);
     this.ensureEntry(enemyTypeName);
     saveSeenEnemyTypes(this.seenEnemyTypeNames);
@@ -230,6 +251,7 @@ export class Bestiary extends BookRenderer {
 
   private ensureEntry = (enemyTypeName: string) => {
     if (this.entries.some((e) => e.typeName === enemyTypeName)) return;
+    if (BESTIARY_EXCLUDED.has(enemyTypeName)) return;
 
     const reg = BESTIARY_ENEMIES[enemyTypeName];
     if (reg) {
@@ -255,6 +277,8 @@ export class Bestiary extends BookRenderer {
           hitWarningsWide: s.hitWarningsWide,
           hitWarnings: s.hitWarnings,
           rumbling: s.rumbling,
+          additionalSprites: s.additionalSprites,
+          beamPreview: s.beamPreview,
         })),
       });
       return;
@@ -314,6 +338,7 @@ export class Bestiary extends BookRenderer {
   private drawSpritesWithHitWarnings = (
     sprites: BestiaryEntry["sprites"],
     rect: { x: number; y: number; w: number; h: number },
+    typeName: string = "",
   ) => {
     const theme = this.getTheme();
     const count = sprites.length;
@@ -326,12 +351,12 @@ export class Bestiary extends BookRenderer {
     if (count > 1) {
       if (this.manualStateCycling) {
         const idx = ((this.activeSpriteStateIndex % count) + count) % count;
-        this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+        this.drawSpritesWithHitWarnings([sprites[idx]], rect, typeName);
         return;
       }
       if (this.cycleEntrySprites) {
         const idx = this.activeCycledSpriteIndex(count);
-        this.drawSpritesWithHitWarnings([sprites[idx]], rect);
+        this.drawSpritesWithHitWarnings([sprites[idx]], rect, typeName);
         return;
       }
     }
@@ -390,24 +415,56 @@ export class Bestiary extends BookRenderer {
 
       this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "behind");
 
-      if (s.sheet === "obj") {
-        Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
-      } else {
-        Entity.drawIdleSprite({
-          tileX: s.tileX,
-          tileY: s.tileY,
-          x,
-          y,
-          w: s.w,
-          h: s.h,
-          drawW,
-          drawH,
-          frames: s.frames,
-          frameStride: s.frameStride,
-          frameMs: s.frameMs,
-          shadeColor: "Black",
-          shadeAmount: 0,
-        });
+      if (!s.beamPreview) {
+        if (s.sheet === "obj") {
+          Game.drawObj(tx, s.tileY, w, h, x, y, drawW, drawH, "Black", 0);
+        } else {
+          Entity.drawIdleSprite({
+            tileX: s.tileX,
+            tileY: s.tileY,
+            x,
+            y,
+            w: s.w,
+            h: s.h,
+            drawW,
+            drawH,
+            frames: s.frames,
+            frameStride: s.frameStride,
+            frameMs: s.frameMs,
+            shadeColor: "Black",
+            shadeAmount: 0,
+          });
+        }
+      }
+
+      for (const extra of s.additionalSprites ?? []) {
+        const ew = extra.w ?? 1;
+        const eh = extra.h ?? 1;
+        const extraAlpha = extra.alpha ?? 1;
+        const savedAlpha = Game.ctx.globalAlpha;
+        if (extraAlpha !== 1) Game.ctx.globalAlpha = savedAlpha * extraAlpha;
+        if (extra.sheet === "fx") {
+          Game.drawFX(extra.tileX, extra.tileY, ew, eh, x + extra.dx, y + extra.dy, ew, eh, "Black", 0);
+        } else {
+          Entity.drawIdleSprite({
+            tileX: extra.tileX,
+            tileY: extra.tileY,
+            x: x + extra.dx,
+            y: y + extra.dy,
+            w: ew,
+            h: eh,
+            drawW: ew,
+            drawH: eh,
+            shadeColor: "Black",
+            shadeAmount: 0,
+          });
+        }
+        if (extraAlpha !== 1) Game.ctx.globalAlpha = savedAlpha;
+      }
+
+      if (s.beamPreview) {
+        const cacheKey = `${typeName}_${i}`;
+        this._drawBeamPreview(s, cacheKey, { drawX: xBase, drawY: yBase }, this._lastDelta);
       }
 
       this.drawEffectsPreview(s, { xBase, yBase, drawW, drawH }, "front");
@@ -450,6 +507,77 @@ export class Bestiary extends BookRenderer {
       }
     }
   };
+
+  private _drawBeamPreview(
+    sprite: BestiaryEntry["sprites"][number],
+    cacheKey: string,
+    basePos: { drawX: number; drawY: number },
+    delta: number,
+  ): void {
+    const bp = sprite.beamPreview!;
+    const ts = GameConstants.TILESIZE;
+
+    let entry = this._beamCache.get(cacheKey);
+    if (!entry) {
+      const headX = basePos.drawX + bp.headOffset.x;
+      const headY = basePos.drawY + bp.headOffset.y;
+      const tailX = basePos.drawX + bp.tailOffset.x;
+      const tailY = basePos.drawY + bp.tailOffset.y;
+
+      const beam = new BeamEffect(headX, headY, tailX, tailY, null as any);
+      beam.color = bp.color;
+      if (bp.shadowBeamColor !== undefined) beam.shadowBeamColor = bp.shadowBeamColor;
+      if (bp.beamOutlineColor !== undefined) beam.beamOutlineColor = bp.beamOutlineColor;
+      if (bp.lineWidth !== undefined) beam.lineWidth = bp.lineWidth;
+      if (bp.tailWidth !== undefined) beam.tailWidth = bp.tailWidth;
+      if (bp.tailTaperStart !== undefined) beam.tailTaperStart = bp.tailTaperStart;
+      if (bp.headTipWidth !== undefined) beam.headTipWidth = bp.headTipWidth;
+      if (bp.headTaperLength !== undefined) beam.headTaperLength = bp.headTaperLength;
+      if (bp.shadowOffsetY !== undefined) beam.shadowOffsetY = bp.shadowOffsetY;
+      if (bp.gravity !== undefined) beam.gravity = bp.gravity;
+      if (bp.turbulence !== undefined) beam.turbulence = bp.turbulence;
+      if (bp.damping !== undefined) beam.damping = bp.damping;
+      if (bp.springStiffness !== undefined) beam.springStiffness = bp.springStiffness;
+      if (bp.springDamping !== undefined) beam.springDamping = bp.springDamping;
+      if (bp.iterations !== undefined) beam.iterations = bp.iterations;
+      if (bp.showStripes !== undefined) beam.showStripes = bp.showStripes;
+      if (bp.eyeColor !== undefined) beam.eyeColor = bp.eyeColor;
+      beam.useBrightnessSampling = false;
+      beam.renderFps = 0;
+      if (bp.naturalLengthTiles) beam.naturalLength = bp.naturalLengthTiles * ts;
+
+      entry = { beam, isWarmed: false };
+      this._beamCache.set(cacheKey, entry);
+    }
+
+    const { beam } = entry;
+    beam.x = basePos.drawX + bp.headOffset.x;
+    beam.y = basePos.drawY + bp.headOffset.y;
+    beam.targetX = basePos.drawX + bp.tailOffset.x;
+    beam.targetY = basePos.drawY + bp.tailOffset.y;
+
+    if (bp.guideOffsets.length > 0) {
+      const N = bp.guideOffsets.length;
+      beam.setGuideNodes(
+        bp.guideOffsets.map((off, idx) => ({
+          x: basePos.drawX + off.x,
+          y: basePos.drawY + off.y,
+          tPosition: (idx + 1) / (N + 1),
+          weight: 0.85,
+          influenceDistance: 1.5,
+        })),
+      );
+    }
+
+    if (!entry.isWarmed) {
+      entry.isWarmed = true;
+      for (let w = 0; w < 40; w++) {
+        beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, 1, beam.compositeOperation, true, true);
+      }
+    }
+
+    beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, delta, beam.compositeOperation, false, true);
+  }
 
   private drawEffectsPreview = (
     sprite: BestiaryEntry["sprites"][number],

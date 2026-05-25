@@ -1,3 +1,27 @@
+export interface BeamPreviewSpec {
+  headOffset: { x: number; y: number };
+  tailOffset: { x: number; y: number };
+  guideOffsets: { x: number; y: number }[];
+  naturalLengthTiles: number;
+  color: string;
+  shadowBeamColor?: string | null;
+  beamOutlineColor?: string | null;
+  lineWidth?: number;
+  tailWidth?: number;
+  tailTaperStart?: number;
+  headTipWidth?: number;
+  headTaperLength?: number;
+  shadowOffsetY?: number;
+  gravity?: number;
+  turbulence?: number;
+  damping?: number;
+  springStiffness?: number;
+  springDamping?: number;
+  iterations?: number;
+  showStripes?: boolean;
+  eyeColor?: string | null;
+}
+
 export type BestiaryEnemySprite = {
   label?: string;
   tileX: number;
@@ -98,6 +122,25 @@ export type BestiaryEnemySprite = {
    * When true, apply the same 2-frame 1px rumble used by enemies like the Crab.
    */
   rumbling?: boolean;
+  /**
+   * When present, a BeamEffect is rendered in place of (or alongside) the main sprite
+   * to depict a segmented body (snake, worm, etc.).
+   */
+  beamPreview?: BeamPreviewSpec;
+  /**
+   * Extra sprites drawn at tile-unit offsets from this sprite's top-left.
+   * Used for multi-tile compositions such as a curled snake/worm body.
+   */
+  additionalSprites?: Array<{
+    tileX: number;
+    tileY: number;
+    w?: number;
+    h?: number;
+    dx: number;
+    dy: number;
+    sheet?: "fx";
+    alpha?: number;
+  }>;
 };
 
 export type BestiaryEnemyInfo = {
@@ -196,6 +239,12 @@ const line = (
   len: number,
 ): Array<{ x: number; y: number }> =>
   Array.from({ length: len }, (_, i) => ({ x: dx * (i + 1), y: dy * (i + 1) }));
+
+/**
+ * Enemy type names that should be silently excluded from the bestiary.
+ * Use this for sub-entities that are not standalone enemies (e.g. snake segments).
+ */
+export const BESTIARY_EXCLUDED = new Set<string>(["SnakeSegmentEnemy"]);
 
 // NOTE: These are intentionally hand-authored so every enemy has a meaningful description and correct sprite tiles.
 // If you add a new enemy, add it here so the bestiary remains complete and high-quality.
@@ -1463,6 +1512,152 @@ export const BESTIARY_ENEMIES: Record<string, BestiaryEnemyInfo> = {
         hp: 1,
         maxHp: 1,
         frames: 4,
+      },
+    ],
+  },
+
+  GiantFrogEnemy: {
+    typeName: "GiantFrogEnemy",
+    displayName: "Giant Frog",
+    description:
+      "Passive and immobile. Killing it spawns four big frogs, each of which spawns four frogs on death. Sixteen frogs total if you're not careful.",
+    sprites: [
+      {
+        label: "",
+        tileX: 37,
+        tileY: 27,
+        w: 4,
+        h: 4,
+        hp: 8,
+        maxHp: 8,
+      },
+    ],
+  },
+
+  ChessKnightEnemy: {
+    typeName: "ChessKnightEnemy",
+    displayName: "Knight",
+    description:
+      "A leaping knight that attacks from L-shaped positions. It hops over obstacles and strikes tiles it never directly approaches — plan several moves ahead.",
+    sprites: [
+      {
+        label: "",
+        tileX: 39,
+        tileY: 8,
+        w: 1,
+        h: 2,
+        hp: 2,
+        maxHp: 2,
+        hitWarnings: [
+          { x: -2, y: -1 }, { x: -2, y: 1 },
+          { x: -1, y: -2 }, { x: -1, y: 2 },
+          { x:  1, y: -2 }, { x:  1, y: 2 },
+          { x:  2, y: -1 }, { x:  2, y: 1 },
+        ].map((o) => hw(o, SHOW_X)),
+        additionalSprites: [
+          { tileX: 22, tileY: 24, w: 2, h: 2, dx: -0.5, dy: 2.5,  sheet: "fx", alpha: 0.55 },
+          { tileX: 26, tileY: 24, w: 2, h: 2, dx: -0.5, dy: 2.5,  sheet: "fx", alpha: 0.55 },
+          { tileX: 24, tileY: 24, w: 2, h: 2, dx: -0.5, dy: -0.5, sheet: "fx", alpha: 0.55 },
+          { tileX: 28, tileY: 24, w: 2, h: 2, dx: -0.5, dy: -0.5, sheet: "fx", alpha: 0.55 },
+          { tileX: 22, tileY: 26, w: 2, h: 2, dx: -2,   dy: 1,    sheet: "fx", alpha: 0.55 },
+          { tileX: 26, tileY: 26, w: 2, h: 2, dx: -2,   dy: 1,    sheet: "fx", alpha: 0.55 },
+          { tileX: 24, tileY: 26, w: 2, h: 2, dx: 1,    dy: 1,    sheet: "fx", alpha: 0.55 },
+          { tileX: 28, tileY: 26, w: 2, h: 2, dx: 1,    dy: 1,    sheet: "fx", alpha: 0.55 },
+        ],
+      },
+    ],
+  },
+
+  SnakeHeadEnemy: {
+    typeName: "SnakeHeadEnemy",
+    displayName: "Serpent",
+    description:
+      "A serpent with a long body that fills several tiles. Hits to any segment are redirected to the head — the tail is as dangerous to stand next to as the fangs.",
+    sprites: [
+      {
+        label: "",
+        tileX: 39,
+        tileY: 17,
+        w: 1,
+        h: 1,
+        hp: 5,
+        maxHp: 5,
+        hitWarnings: CARDINAL_1.map((o) => hw(o, SHOW_FULL)),
+        beamPreview: {
+          headOffset: { x: 0, y: 0 },
+          tailOffset: { x: 0, y: 1 },
+          guideOffsets: [
+            { x: 1, y: 0 },
+            { x: 2, y: 0 },
+            { x: 2, y: 1 },
+            { x: 1, y: 1 },
+          ],
+          naturalLengthTiles: 5,
+          color: "#18213a",
+          shadowBeamColor: "#587cb3",
+          lineWidth: 5,
+          tailWidth: 2,
+          tailTaperStart: 0.75,
+          headTipWidth: 1,
+          headTaperLength: 0.0625,
+          shadowOffsetY: -4,
+          beamOutlineColor: "#1f2127",
+          gravity: 0,
+          turbulence: 0.03,
+          damping: 0.95,
+          springStiffness: 0.04,
+          springDamping: 0.06,
+          iterations: 8,
+          showStripes: true,
+          eyeColor: "#000000",
+        },
+      },
+    ],
+  },
+
+  WormHeadEnemy: {
+    typeName: "WormHeadEnemy",
+    displayName: "Worm",
+    description:
+      "A thick earthworm that can lunge from any direction, including diagonals. Harder to kite than a serpent — it doesn't need a straight corridor to reach you.",
+    sprites: [
+      {
+        label: "",
+        tileX: 41,
+        tileY: 16,
+        w: 1,
+        h: 1,
+        hp: 4,
+        maxHp: 4,
+        hitWarnings: OMNI_1.map((o) => hw(o, SHOW_FULL)),
+        beamPreview: {
+          headOffset: { x: 0, y: 0 },
+          tailOffset: { x: 1, y: 0 },
+          guideOffsets: [
+            { x: 0, y: 1 },
+            { x: 0, y: 2 },
+            { x: 1, y: 2 },
+            { x: 1, y: 1 },
+          ],
+          naturalLengthTiles: 5,
+          color: "#2e1a0a",
+          shadowBeamColor: "#6b3d18",
+          lineWidth: 6,
+          tailWidth: 3,
+          tailTaperStart: 0.8,
+          headTipWidth: 2,
+          headTaperLength: 0.075,
+          shadowOffsetY: -3,
+          beamOutlineColor: "#1a0f05",
+          gravity: 0,
+          turbulence: 0.025,
+          damping: 0.95,
+          springStiffness: 0.04,
+          springDamping: 0.06,
+          iterations: 8,
+          showStripes: false,
+          eyeColor: null,
+        },
       },
     ],
   },
