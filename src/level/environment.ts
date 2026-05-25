@@ -47,6 +47,9 @@ import { ObsidianResource } from "../entity/resource/obsidianResource";
 import { PawnEnemy } from "../entity/enemy/pawnEnemy";
 import { BigFrogEnemy } from "../entity/enemy/bigFrogEnemy";
 import { GiantFrogEnemy } from "../entity/enemy/giantFrogEnemy";
+import { SnakeHeadEnemy } from "../entity/enemy/snakeHeadEnemy";
+import { SnakeSegmentEnemy } from "../entity/enemy/snakeSegmentEnemy";
+import { WormHeadEnemy } from "../entity/enemy/wormHeadEnemy";
 import { BeetleEnemy } from "../entity/enemy/beetleEnemy";
 import { GarnetResource } from "../entity/resource/garnetResource";
 import { ZirconResource } from "../entity/resource/zirconResource";
@@ -116,6 +119,9 @@ export const enemyClassToId: Map<typeof Enemy, number> = new Map<
   [RatEnemy, 24],
   [ChessKnightEnemy, 25],
   [GiantFrogEnemy, 26],
+  [SnakeHeadEnemy, 27],
+  [SnakeSegmentEnemy, 28],
+  [WormHeadEnemy, 29],
 ]);
 
 export class Environment {

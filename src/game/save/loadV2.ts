@@ -34,6 +34,8 @@ import { WizardEnemy } from "../../entity/enemy/wizardEnemy";
 import { OccultistEnemy } from "../../entity/enemy/occultistEnemy";
 import { ExalterEnemy } from "../../entity/enemy/exalterEnemy";
 import { EctomancerEnemy } from "../../entity/enemy/ectomancerEnemy";
+import { AbstractSnakeHeadEnemy } from "../../entity/enemy/abstractSnakeHeadEnemy";
+import { SnakeSegmentEnemy } from "../../entity/enemy/snakeSegmentEnemy";
 import { BeamEffect } from "../../projectile/beamEffect";
 import { Enemy } from "../../entity/enemy/enemy";
 import { Chest } from "../../entity/object/chest";
@@ -1201,6 +1203,33 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         ghost.ectomancerOwner = ectomancer;
         ectomancer.attachBeam({ base, ghost });
       }
+    }
+
+    // Post-pass: re-link snake head <-> segment chains and recreate body beam.
+    for (const es of rd.enemies) {
+      const segGids = (es as { snakeSegmentGids?: unknown }).snakeSegmentGids;
+      if (!Array.isArray(segGids)) continue;
+      const head = entitiesByGid.get(es.gid);
+      if (!(head instanceof AbstractSnakeHeadEnemy) || head.dead) continue;
+
+      const resolved: SnakeSegmentEnemy[] = [];
+      for (const sgid of segGids) {
+        const seg = entitiesByGid.get(sgid as string);
+        if (seg instanceof SnakeSegmentEnemy && !seg.dead) {
+          resolved.push(seg);
+        }
+      }
+      // Sort by saved chainIndex if available (parallel arrays on segments themselves).
+      resolved.sort((a, b) => a.chainIndex - b.chainIndex);
+
+      head.segments = resolved;
+      let prev: AbstractSnakeHeadEnemy | SnakeSegmentEnemy = head;
+      for (const seg of resolved) {
+        seg.head = head;
+        seg.predecessor = prev;
+        prev = seg;
+      }
+      head.createBeam();
     }
 
     room.hitwarnings = [];

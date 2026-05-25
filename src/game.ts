@@ -3667,6 +3667,19 @@ export class Game {
       case "hq":
         GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
         break;
+      case "snakebeam":
+        GameConstants.TOGGLE_SNAKE_BEAM_RENDERING();
+        this.pushMessage(
+          `Snake beam rendering ${GameConstants.SNAKE_BEAM_RENDERING ? "enabled" : "disabled"}`,
+        );
+        break;
+      case "snakecenter":
+      case "debug":
+        GameConstants.TOGGLE_SNAKE_DEBUG_CENTERS();
+        this.pushMessage(
+          `Snake center debug ${GameConstants.SNAKE_DEBUG_CENTERS ? "enabled" : "disabled"}`,
+        );
+        break;
       case "genroom":
         this.generateAndShowRoomLayout();
         break;

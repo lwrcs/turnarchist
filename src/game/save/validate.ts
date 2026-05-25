@@ -133,6 +133,9 @@ const ENEMY_KINDS = [
   "big_knight",
   "chess_knight",
   "giant_frog",
+  "snake_head",
+  "snake_segment",
+  "worm_head",
   "mummy",
   "pawn",
   "queen",
@@ -2228,6 +2231,32 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
   );
   if (isErr(linkGhostR)) return err(linkGhostR.error);
 
+  const snakeSegmentGidsR = validateGidArray(
+    get(v, "snakeSegmentGids"),
+    `${path}.snakeSegmentGids`,
+  );
+  if (isErr(snakeSegmentGidsR)) return err(snakeSegmentGidsR.error);
+
+  const snakeHeadGidU = get(v, "snakeHeadGid");
+  let snakeHeadGid: string | undefined = undefined;
+  if (snakeHeadGidU !== undefined) {
+    const g = asGid(snakeHeadGidU, `${path}.snakeHeadGid`);
+    if (isErr(g)) return err(g.error);
+    snakeHeadGid = g.value;
+  }
+
+  const snakeChainIndexU = get(v, "snakeChainIndex");
+  let snakeChainIndex: number | undefined = undefined;
+  if (snakeChainIndexU !== undefined) {
+    if (!isNumber(snakeChainIndexU))
+      return err({
+        kind: "InvalidSchema",
+        message: "snakeChainIndex must be number if present",
+        path: `${path}.snakeChainIndex`,
+      });
+    snakeChainIndex = snakeChainIndexU;
+  }
+
   return ok({
     kind,
     gid: gidR.value,
@@ -2257,6 +2286,9 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     ghostifiedBefore,
     ectomancerLinkBaseGids: linkBaseR.value,
     ectomancerLinkGhostGids: linkGhostR.value,
+    snakeSegmentGids: snakeSegmentGidsR.value,
+    snakeHeadGid,
+    snakeChainIndex,
   });
 };
 

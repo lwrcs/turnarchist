@@ -9668,7 +9668,7 @@ module.exports = __webpack_require__.p + "assets/itemset.f73fcc57868bea77c766.pn
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
 "use strict";
-module.exports = __webpack_require__.p + "assets/mobset.b8952f823adfeec23736.png";
+module.exports = __webpack_require__.p + "assets/mobset.c168eb0a2303c96c9fbd.png";
 
 /***/ }),
 
@@ -11211,6 +11211,425 @@ class DownladderMaker extends entity_1.Entity {
     }
 }
 exports.DownladderMaker = DownladderMaker;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/abstractSnakeHeadEnemy.ts":
+/*!****************************************************!*\
+  !*** ./src/entity/enemy/abstractSnakeHeadEnemy.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AbstractSnakeHeadEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const entity_1 = __webpack_require__(/*! ../entity */ "./src/entity/entity.ts");
+const snakeSegmentEnemy_1 = __webpack_require__(/*! ./snakeSegmentEnemy */ "./src/entity/enemy/snakeSegmentEnemy.ts");
+const snakeSprites_1 = __webpack_require__(/*! ./snakeSprites */ "./src/entity/enemy/snakeSprites.ts");
+const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
+class AbstractSnakeHeadEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y);
+        this.defaultSegmentCount = 6;
+        this.beam = null;
+        /** When true, the beam renders alternating darker stripe bands. */
+        this.hasStripes = true;
+        /** Pathfinding movement constraint for this snake-like entity. */
+        this.movementMode = "orthogonal";
+        /**
+         * Spawn body segments in a trailing line. Stops at the first blocked tile.
+         * Called from the constructor for fresh spawns; on load, the chain is rebuilt
+         * by the loadV2 post-pass (segments restored independently, then re-linked).
+         */
+        this.spawnChain = () => {
+            const dx = -1;
+            const dy = 0;
+            let prev = this;
+            for (let i = 0; i < this.defaultSegmentCount; i++) {
+                const sx = this.x + dx * (i + 1);
+                const sy = this.y + dy * (i + 1);
+                const seg = snakeSegmentEnemy_1.SnakeSegmentEnemy.add(this.room, this.game, sx, sy, this, prev, i);
+                if (!seg)
+                    break;
+                this.segments.push(seg);
+                prev = seg;
+            }
+        };
+        /**
+         * Lazily creates (or returns the existing) BeamEffect for beam rendering mode.
+         */
+        this.ensureBeam = () => {
+            if (this.beam)
+                return this.beam;
+            const alive = this.segments.filter((s) => !s.dead);
+            const lastSeg = alive[alive.length - 1];
+            const endX = lastSeg ? lastSeg.x : this.x;
+            const endY = lastSeg ? lastSeg.y : this.y;
+            const b = new beamEffect_1.BeamEffect(this.x, this.y, endX, endY, this);
+            this.configureBeam(b);
+            b.setHostRoom(this.room);
+            this.beam = b;
+            return b;
+        };
+        /** Updates beam endpoints and guide nodes from the visual (animated) positions of each segment. */
+        this._updateBeam = () => {
+            if (!this.beam)
+                return;
+            const alive = this.segments.filter((s) => !s.dead);
+            const lastSeg = alive[alive.length - 1];
+            this.beam.x = this.x - this.drawX;
+            this.beam.y = this.y - this.drawY;
+            this.beam.targetX = lastSeg
+                ? lastSeg.x - lastSeg.drawX
+                : this.x - this.drawX;
+            this.beam.targetY = lastSeg
+                ? lastSeg.y - lastSeg.drawY
+                : this.y - this.drawY;
+            this.beam.naturalLength = alive.length * gameConstants_1.GameConstants.TILESIZE;
+            if (alive.length > 0) {
+                const anchors = [
+                    { x: this.x - this.drawX, y: this.y - this.drawY },
+                    ...alive.map((seg) => ({ x: seg.x - seg.drawX, y: seg.y - seg.drawY })),
+                ];
+                const N = anchors.length;
+                const nodes = [];
+                for (let i = 0; i < N - 1; i++) {
+                    if (i + 1 < N - 1) {
+                        nodes.push({
+                            x: anchors[i + 1].x,
+                            y: anchors[i + 1].y,
+                            tPosition: (i + 1) / (N - 1),
+                            weight: 0.7,
+                            influenceDistance: 2.5,
+                        });
+                    }
+                    const P0 = anchors[Math.max(0, i - 1)];
+                    const P1 = anchors[i];
+                    const P2 = anchors[i + 1];
+                    const P3 = anchors[Math.min(N - 1, i + 2)];
+                    const midX = (-P0.x + 9 * P1.x + 9 * P2.x - P3.x) / 16;
+                    const midY = (-P0.y + 9 * P1.y + 9 * P2.y - P3.y) / 16;
+                    nodes.push({
+                        x: midX,
+                        y: midY,
+                        tPosition: (i + 0.5) / (N - 1),
+                        weight: 0.65,
+                        influenceDistance: 2.5,
+                    });
+                }
+                this.beam.setGuideNodes(nodes);
+            }
+            else {
+                this.beam.setGuideNodes([]);
+            }
+        };
+        /**
+         * Kept as a no-op hook for the loadV2 post-pass to call after re-linking
+         * segments. Beams have been replaced with per-segment sprites; nothing
+         * extra to construct.
+         */
+        this.createBeam = () => {
+            // no-op: sprite-based rendering needs no separate visual setup.
+        };
+        this.hit = () => this.damage;
+        /**
+         * Snake-style chain shift: each segment moves to the predecessor's pre-move position.
+         */
+        this.shiftChain = (headOldX, headOldY) => {
+            let prevOldX = headOldX;
+            let prevOldY = headOldY;
+            for (const seg of this.segments) {
+                if (seg.dead)
+                    continue;
+                const segOldX = seg.x;
+                const segOldY = seg.y;
+                if (segOldX !== prevOldX || segOldY !== prevOldY) {
+                    seg.followTo(prevOldX, prevOldY);
+                }
+                prevOldX = segOldX;
+                prevOldY = segOldY;
+            }
+        };
+        /**
+         * Compute the would-be next move tile without committing it.
+         * Used during the prep tick to decide whether to issue a hit warning.
+         */
+        this.peekNextMove = () => {
+            let disablePositions = this.getEntityDisablePositions();
+            for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                    const tile = this.room.roomArray[xx]?.[yy];
+                    if (tile instanceof spiketrap_1.SpikeTrap && tile.on) {
+                        disablePositions.push({ x: xx, y: yy });
+                    }
+                }
+            }
+            const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, this._pathOptions());
+            if (moves.length === 0)
+                return null;
+            return { x: moves[0].pos.x, y: moves[0].pos.y };
+        };
+        /** Update `this.direction` from an old→new position, including diagonals. */
+        this._updateDirection = (oldX, oldY) => {
+            const dx = this.x - oldX;
+            const dy = this.y - oldY;
+            if (dx > 0 && dy > 0)
+                this.direction = game_1.Direction.DOWN_RIGHT;
+            else if (dx > 0 && dy < 0)
+                this.direction = game_1.Direction.UP_RIGHT;
+            else if (dx < 0 && dy > 0)
+                this.direction = game_1.Direction.DOWN_LEFT;
+            else if (dx < 0 && dy < 0)
+                this.direction = game_1.Direction.UP_LEFT;
+            else if (dx > 0)
+                this.direction = game_1.Direction.RIGHT;
+            else if (dx < 0)
+                this.direction = game_1.Direction.LEFT;
+            else if (dy > 0)
+                this.direction = game_1.Direction.DOWN;
+            else if (dy < 0)
+                this.direction = game_1.Direction.UP;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            if (this.dead)
+                return;
+            if (this.handleSkipTurns())
+                return;
+            if (!this.seenPlayer) {
+                this.lookForPlayer();
+                return;
+            }
+            if (this.room.playerTicked !== this.targetPlayer)
+                return;
+            this.alertTicks = Math.max(0, this.alertTicks - 1);
+            this.ticks++;
+            if (this.ticks % 2 === 1) {
+                // ACT turn: pathfind, attack-if-player-in-way, otherwise move + shift chain.
+                this.rumbling = true;
+                const oldX = this.x;
+                const oldY = this.y;
+                let disablePositions = this.getEntityDisablePositions();
+                for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
+                    for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
+                        const tile = this.room.roomArray[xx]?.[yy];
+                        if (tile instanceof spiketrap_1.SpikeTrap && tile.on) {
+                            disablePositions.push({ x: xx, y: yy });
+                        }
+                    }
+                }
+                const moves = this.searchPathLocalizedCached(this.targetPlayer, disablePositions, this._pathOptions());
+                if (moves.length > 0) {
+                    const moveX = moves[0].pos.x;
+                    const moveY = moves[0].pos.y;
+                    let hitPlayer = false;
+                    for (const i in this.game.players) {
+                        const p = this.game.players[i];
+                        if (this.game.rooms[p.levelID] === this.room &&
+                            p.x === moveX &&
+                            p.y === moveY) {
+                            if (!this.shouldSkipAttack()) {
+                                p.hurt(this.hit(), this.name, {
+                                    source: { x: this.x, y: this.y },
+                                });
+                                this.drawX = 0.5 * (this.x - p.x);
+                                this.drawY = 0.5 * (this.y - p.y);
+                                if (p === this.game.players[this.game.localPlayerID])
+                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
+                            }
+                            hitPlayer = true;
+                        }
+                    }
+                    if (!hitPlayer) {
+                        this.tryMove(moveX, moveY);
+                        this.setDrawXY(oldX, oldY);
+                        this._updateDirection(oldX, oldY);
+                        if (this.x !== oldX || this.y !== oldY) {
+                            this.shiftChain(oldX, oldY);
+                        }
+                    }
+                }
+                this.rumbling = false;
+                this.unconscious = true;
+            }
+            else {
+                // PREP turn: shake in place and only warn if the act turn would land on the player.
+                this.rumbling = true;
+                this.unconscious = false;
+                const next = this.peekNextMove();
+                if (next &&
+                    next.x === this.targetPlayer.x &&
+                    next.y === this.targetPlayer.y) {
+                    this.makeHitWarnings();
+                }
+            }
+        };
+        this.uniqueKillBehavior = () => {
+            if (this.cloned)
+                return;
+            for (const seg of this.segments) {
+                if (seg.dead)
+                    continue;
+                entity_1.Entity.cloneEntity(seg);
+                seg.dead = true;
+                seg.head = null;
+                seg.predecessor = null;
+            }
+            this.segments = [];
+        };
+        /**
+         * Head sprite faces away from its first segment.
+         */
+        this.pickSprite = () => {
+            const first = this.segments.find((s) => !s.dead);
+            if (first) {
+                const dirToNext = (0, snakeSprites_1.snakeDirTo)(this, first);
+                if (dirToNext)
+                    return (0, snakeSprites_1.pickHeadSprite)(dirToNext);
+            }
+            switch (this.direction) {
+                case game_1.Direction.LEFT:
+                    return snakeSprites_1.SNAKE_SPRITES.head.left;
+                case game_1.Direction.RIGHT:
+                    return snakeSprites_1.SNAKE_SPRITES.head.right;
+                case game_1.Direction.UP:
+                    return snakeSprites_1.SNAKE_SPRITES.head.up;
+                case game_1.Direction.DOWN:
+                default:
+                    return snakeSprites_1.SNAKE_SPRITES.head.down;
+            }
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            if (this.hasShadow)
+                this.drawShadow(delta);
+            if (gameConstants_1.GameConstants.SNAKE_BEAM_RENDERING) {
+                if (!this.cloned) {
+                    const beam = this.ensureBeam();
+                    if (beam) {
+                        this._updateBeam();
+                        beam.render(beam.x, beam.y, beam.targetX, beam.targetY, beam.color, beam.lineWidth, delta, beam.compositeOperation, false, true);
+                    }
+                }
+                else if (this.beam) {
+                    this.beam.render(this.beam.x, this.beam.y, this.beam.targetX, this.beam.targetY, this.beam.color, this.beam.lineWidth, delta, this.beam.compositeOperation, false, false);
+                }
+                game_1.Game.ctx.restore();
+                return;
+            }
+            if (!this.cloned) {
+                const animMagnitude = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+                if (animMagnitude <= 0.5) {
+                    const sprite = this.pickSprite();
+                    this.tileX = sprite.x;
+                    this.tileY = sprite.y;
+                }
+            }
+            game_1.Game.drawMob(this.tileX, this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.softShadeColor, 0, undefined, this.outlineColor(), this.outlineOpacity());
+            this.room.applyInlineShadeOverlay(this.x, this.y, this.drawX, this.drawY, game_1.Game.mobset, this.tileX, this.tileY);
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+            this.tickHealthBarHover();
+            this.healthBar.draw(delta, this.health, this.maxHealth, this.x + 0.5, this.y, false);
+            if (gameConstants_1.GameConstants.SNAKE_DEBUG_CENTERS) {
+                const ts = gameConstants_1.GameConstants.TILESIZE;
+                game_1.Game.ctx.save();
+                game_1.Game.ctx.fillStyle = "#ff2222";
+                game_1.Game.ctx.fillRect(Math.round((this.x - this.drawX + 0.5) * ts) - 1, Math.round((this.y - this.drawY + 0.5) * ts) - 1, 2, 2);
+                game_1.Game.ctx.fillStyle = "#ff22ff";
+                for (const seg of this.segments) {
+                    if (seg.dead)
+                        continue;
+                    game_1.Game.ctx.fillRect(Math.round((seg.x - seg.drawX + 0.5) * ts) - 1, Math.round((seg.y - seg.drawY + 0.5) * ts) - 1, 2, 2);
+                }
+                game_1.Game.ctx.restore();
+            }
+        };
+        this.ticks = 0;
+        this.frame = 0;
+        this.health = 5;
+        this.maxHealth = 5;
+        this.defaultMaxHealth = 5;
+        this.tileX = 41;
+        this.tileY = 17;
+        this.seenPlayer = false;
+        this.aggro = false;
+        this.name = "snake";
+        this.baseDamage = 1;
+        this.orthogonalAttack = true;
+        this.pushable = false;
+        this.chainPushable = false;
+        this.imageParticleX = 3;
+        this.imageParticleY = 30;
+        this.segments = [];
+        this.hasShadow = false;
+        this.drawYOffset = 0;
+        if (drop)
+            this.drop = drop;
+        this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+        if (!this.constructor.__isCloning &&
+            !this.constructor.__skipChainSpawn) {
+            this.spawnChain();
+        }
+    }
+    /** Subclasses override to configure beam visuals (colors, widths, physics). */
+    configureBeam(b) {
+        b.color = "#18213a";
+        b.shadowBeamColor = "#587cb3";
+        b.lineWidth = 5;
+        b.tailWidth = 2;
+        b.tailTaperStart = 0.75;
+        b.headTipWidth = 1;
+        b.headTaperLength = 0.0625;
+        b.shadowOffsetY = -4;
+        b.beamOutlineColor = "#1f2127";
+        b.gravity = 0;
+        b.turbulence = 0.03;
+        b.damping = 0.95;
+        b.springStiffness = 0.04;
+        b.springDamping = 0.06;
+        b.bendingStiffness = 0;
+        b.iterations = 8;
+        b.useBrightnessSampling = true;
+        b.renderFps = 15;
+        b.eyeColor = "#000000";
+        b.showStripes = this.hasStripes;
+    }
+    /**
+     * Returns pathfinding options for this entity's movementMode.
+     * All paths use useLastPlayerPos so A* targets the player's last known tile.
+     */
+    _pathOptions() {
+        switch (this.movementMode) {
+            case "diagonal":
+                return { useLastPlayerPos: true, diagonals: true, diagonalsOnly: true };
+            case "omni":
+                return { useLastPlayerPos: true, diagonals: true };
+            case "orthogonal":
+            default:
+                return { useLastPlayerPos: true, allowOmni: false };
+        }
+    }
+    clone() {
+        const cloned = super.clone();
+        cloned.beam = this.beam;
+        return cloned;
+    }
+}
+exports.AbstractSnakeHeadEnemy = AbstractSnakeHeadEnemy;
 
 
 /***/ }),
@@ -21475,6 +21894,293 @@ SkullEnemy.examineText = "A skeleton. Hits hard, and doesn't stay down for long.
 
 /***/ }),
 
+/***/ "./src/entity/enemy/snakeHeadEnemy.ts":
+/*!********************************************!*\
+  !*** ./src/entity/enemy/snakeHeadEnemy.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SnakeHeadEnemy = void 0;
+const abstractSnakeHeadEnemy_1 = __webpack_require__(/*! ./abstractSnakeHeadEnemy */ "./src/entity/enemy/abstractSnakeHeadEnemy.ts");
+class SnakeHeadEnemy extends abstractSnakeHeadEnemy_1.AbstractSnakeHeadEnemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y, drop);
+        // All defaults (name, health, colors, movementMode, hasStripes) are set in
+        // AbstractSnakeHeadEnemy. No overrides needed for the standard snake.
+    }
+}
+exports.SnakeHeadEnemy = SnakeHeadEnemy;
+SnakeHeadEnemy.difficulty = 2;
+SnakeHeadEnemy.tileX = 41;
+SnakeHeadEnemy.tileY = 17;
+SnakeHeadEnemy.examineText = "A serpent. The body coils long behind it; aim for the head.";
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/snakeSegmentEnemy.ts":
+/*!***********************************************!*\
+  !*** ./src/entity/enemy/snakeSegmentEnemy.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SnakeSegmentEnemy = void 0;
+const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
+const enemy_1 = __webpack_require__(/*! ./enemy */ "./src/entity/enemy/enemy.ts");
+const gameConstants_1 = __webpack_require__(/*! ../../game/gameConstants */ "./src/game/gameConstants.ts");
+const snakeSprites_1 = __webpack_require__(/*! ./snakeSprites */ "./src/entity/enemy/snakeSprites.ts");
+class SnakeSegmentEnemy extends enemy_1.Enemy {
+    constructor(room, game, x, y, head, predecessor, chainIndex = 0) {
+        super(room, game, x, y);
+        this.hit = () => 0;
+        this.hurt = (playerHitBy, damage, type = "none") => {
+            if (this.head && !this.head.dead) {
+                this.head.hurt(playerHitBy, damage, type);
+            }
+        };
+        this.kill = () => {
+            // Only the head's uniqueKillBehavior should kill segments; ignore direct calls.
+            if (this.head && !this.head.dead)
+                return;
+            this.dead = true;
+        };
+        this.behavior = () => {
+            this.lastX = this.x;
+            this.lastY = this.y;
+            // Movement is driven by the head calling followTo().
+        };
+        this.followTo = (x, y) => {
+            if (this.dead)
+                return;
+            const oldX = this.x;
+            const oldY = this.y;
+            this.tryMove(x, y);
+            this.setDrawXY(oldX, oldY);
+            if (this.x > oldX)
+                this.direction = game_1.Direction.RIGHT;
+            else if (this.x < oldX)
+                this.direction = game_1.Direction.LEFT;
+            else if (this.y > oldY)
+                this.direction = game_1.Direction.DOWN;
+            else if (this.y < oldY)
+                this.direction = game_1.Direction.UP;
+        };
+        /**
+         * Sprite is chosen from this segment's logical position relative to its
+         * predecessor and successor (the segment after it in the chain). Tail =
+         * last segment in chain (no successor).
+         */
+        this.pickSprite = () => {
+            const head = this.head;
+            if (!head)
+                return snakeSprites_1.SNAKE_SPRITES.straight.horizontal;
+            const successor = head.segments[this.chainIndex + 1];
+            const predecessor = this.predecessor;
+            const dirPrev = predecessor
+                ? (0, snakeSprites_1.snakeDirTo)(this, predecessor)
+                : null;
+            const dirNext = successor
+                ? (0, snakeSprites_1.snakeDirTo)(this, successor)
+                : null;
+            if (!successor) {
+                // Tail: derive from predecessor direction only.
+                if (dirPrev)
+                    return (0, snakeSprites_1.pickTailSprite)(dirPrev);
+                return snakeSprites_1.SNAKE_SPRITES.straight.horizontal;
+            }
+            if (dirPrev && dirNext)
+                return (0, snakeSprites_1.pickBodySprite)(dirPrev, dirNext);
+            if (dirPrev)
+                return (0, snakeSprites_1.pickBodySprite)(dirPrev, dirPrev);
+            if (dirNext)
+                return (0, snakeSprites_1.pickBodySprite)(dirNext, dirNext);
+            return snakeSprites_1.SNAKE_SPRITES.straight.horizontal;
+        };
+        this.draw = (delta) => {
+            if (this.dead)
+                return;
+            game_1.Game.ctx.save();
+            game_1.Game.ctx.globalAlpha = this.alpha;
+            this.updateDrawXY(delta);
+            if (gameConstants_1.GameConstants.SNAKE_BEAM_RENDERING) {
+                // Beam mode: head's beam (live or dying clone) provides the visual for the whole body.
+                game_1.Game.ctx.restore();
+                return;
+            }
+            if (this.hasShadow)
+                this.drawShadow(delta);
+            // Live segments recompute their sprite from chain context — but only
+            // once the movement animation is at least 50% complete. This avoids
+            // the sprite snapping to its post-move orientation while the visual
+            // is still sliding from the old tile. (drawX/drawY are 1.0 right after
+            // a move and decay toward 0; the new sprite kicks in once both fall
+            // below half a tile of offset.)
+            // Death clones don't have head/predecessor refs (Entity.cloneEntity
+            // doesn't copy them) so we preserve the tileX/tileY that cloneEntity
+            // already copied from the original at the moment of death.
+            if (!this.cloned) {
+                const animMagnitude = Math.max(Math.abs(this.drawX), Math.abs(this.drawY));
+                if (animMagnitude <= 0.5) {
+                    const sprite = this.pickSprite();
+                    this.tileX = sprite.x;
+                    this.tileY = sprite.y;
+                }
+            }
+            // Draw sprite with no internal shade; the room's smooth tile-sliced
+            // shading is then applied on top so the whole snake reads as one
+            // continuous body lit per-tile.
+            game_1.Game.drawMob(this.tileX, this.tileY, 1, 1, this.x - this.drawX, this.y - this.drawY, 1, 1, this.softShadeColor, 0, undefined, this.outlineColor(), this.outlineOpacity());
+            this.room.applyInlineShadeOverlay(this.x, this.y, this.drawX, this.drawY, game_1.Game.mobset, this.tileX, this.tileY);
+            game_1.Game.ctx.restore();
+        };
+        this.drawTopLayer = (delta) => {
+            this.drawableY = this.y;
+        };
+        this.head = head ?? null;
+        this.predecessor = predecessor ?? null;
+        this.chainIndex = chainIndex;
+        this.health = 1;
+        this.maxHealth = 1;
+        this.defaultMaxHealth = 1;
+        this.tileX = 40;
+        this.tileY = 16;
+        this.name = "snake_segment";
+        this.pushable = false;
+        this.chainPushable = false;
+        this.destroyable = true;
+        this.dropChance = 0;
+        this.drops = [];
+        this.enemyKillXpMultiplier = 0;
+        this.hasDamageNumbers = false;
+        this.baseDamage = 0;
+        this.imageParticleX = 3;
+        this.imageParticleY = 30;
+        // Snake body sprites are 1x1 and sit flat on the floor — no upward sprite offset.
+        this.drawYOffset = 0;
+    }
+}
+exports.SnakeSegmentEnemy = SnakeSegmentEnemy;
+SnakeSegmentEnemy.difficulty = 1;
+SnakeSegmentEnemy.tileX = 40;
+SnakeSegmentEnemy.tileY = 16;
+SnakeSegmentEnemy.examineText = "A coil of muscle and scale.";
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/snakeSprites.ts":
+/*!******************************************!*\
+  !*** ./src/entity/enemy/snakeSprites.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Sprite tile coordinates for snake body parts on the mob spritesheet.
+ * Pixel coords / 16 → tile coords. Each sprite is 1x1 tile.
+ *
+ * Naming conventions:
+ *  - "bend" tiles connect the two named directions (e.g. "left-down" = body
+ *    extends to the left neighbor and the down neighbor from this tile).
+ *  - "head face X" = head sprite facing direction X (body extends in the
+ *    opposite direction from the head's facing).
+ *  - "tail X" = tail tip pointing direction X (body extends opposite).
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.pickTailSprite = exports.pickHeadSprite = exports.pickBodySprite = exports.snakeDirTo = exports.SNAKE_SPRITES = void 0;
+exports.SNAKE_SPRITES = {
+    bend: {
+        "left-down": { x: 38, y: 16 },
+        "right-down": { x: 37, y: 16 },
+        "left-up": { x: 38, y: 17 },
+        "right-up": { x: 37, y: 17 },
+    },
+    straight: {
+        vertical: { x: 39, y: 16 },
+        horizontal: { x: 40, y: 16 },
+    },
+    head: {
+        left: { x: 39, y: 17 },
+        right: { x: 40, y: 17 },
+        up: { x: 41, y: 16 },
+        down: { x: 41, y: 17 },
+    },
+    tail: {
+        up: { x: 42, y: 16 },
+        down: { x: 42, y: 17 },
+        right: { x: 43, y: 16 },
+        left: { x: 43, y: 17 },
+    },
+};
+/** Returns the cardinal direction from `from` to `to`, or null if not cardinal-adjacent. */
+const snakeDirTo = (from, to) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    if (dx === 1 && dy === 0)
+        return "right";
+    if (dx === -1 && dy === 0)
+        return "left";
+    if (dx === 0 && dy === 1)
+        return "down";
+    if (dx === 0 && dy === -1)
+        return "up";
+    return null;
+};
+exports.snakeDirTo = snakeDirTo;
+const oppositeDir = (d) => {
+    if (d === "left")
+        return "right";
+    if (d === "right")
+        return "left";
+    if (d === "up")
+        return "down";
+    return "up";
+};
+/**
+ * Pick the body sprite for a middle segment given the two cardinal directions
+ * pointing at its neighbors (predecessor + successor).
+ *  - If the two directions are opposite (straight section): horizontal/vertical
+ *  - Otherwise (bend): one of the four bend tiles, named by the two directions.
+ */
+const pickBodySprite = (d1, d2) => {
+    if (d1 === oppositeDir(d2)) {
+        if (d1 === "left" || d1 === "right")
+            return exports.SNAKE_SPRITES.straight.horizontal;
+        return exports.SNAKE_SPRITES.straight.vertical;
+    }
+    const hasLeft = d1 === "left" || d2 === "left";
+    const hasRight = d1 === "right" || d2 === "right";
+    const hasUp = d1 === "up" || d2 === "up";
+    const hasDown = d1 === "down" || d2 === "down";
+    if (hasLeft && hasDown)
+        return exports.SNAKE_SPRITES.bend["left-down"];
+    if (hasRight && hasDown)
+        return exports.SNAKE_SPRITES.bend["right-down"];
+    if (hasLeft && hasUp)
+        return exports.SNAKE_SPRITES.bend["left-up"];
+    if (hasRight && hasUp)
+        return exports.SNAKE_SPRITES.bend["right-up"];
+    // Fallback: same direction repeated; treat as straight.
+    return exports.SNAKE_SPRITES.straight.horizontal;
+};
+exports.pickBodySprite = pickBodySprite;
+/** Head sprite: head looks AWAY from the next segment (opposite of body direction). */
+const pickHeadSprite = (dirToNext) => exports.SNAKE_SPRITES.head[oppositeDir(dirToNext)];
+exports.pickHeadSprite = pickHeadSprite;
+/** Tail sprite: tail tip points AWAY from predecessor (opposite of body direction). */
+const pickTailSprite = (dirToPredecessor) => exports.SNAKE_SPRITES.tail[oppositeDir(dirToPredecessor)];
+exports.pickTailSprite = pickTailSprite;
+
+
+/***/ }),
+
 /***/ "./src/entity/enemy/spawner.ts":
 /*!*************************************!*\
   !*** ./src/entity/enemy/spawner.ts ***!
@@ -21518,6 +22224,7 @@ const boltcasterEnemy_1 = __webpack_require__(/*! ./boltcasterEnemy */ "./src/en
 const earthWizard_1 = __webpack_require__(/*! ./earthWizard */ "./src/entity/enemy/earthWizard.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ./chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
 const giantFrogEnemy_1 = __webpack_require__(/*! ./giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
+const wormHeadEnemy_1 = __webpack_require__(/*! ./wormHeadEnemy */ "./src/entity/enemy/wormHeadEnemy.ts");
 const spiketrap_1 = __webpack_require__(/*! ../../tile/spiketrap */ "./src/tile/spiketrap.ts");
 const spawnfloor_1 = __webpack_require__(/*! ../../tile/spawnfloor */ "./src/tile/spawnfloor.ts");
 const upLadder_1 = __webpack_require__(/*! ../../tile/upLadder */ "./src/tile/upLadder.ts");
@@ -21701,6 +22408,9 @@ class Spawner extends enemy_1.Enemy {
                                 break;
                             case 26:
                                 spawned = new giantFrogEnemy_1.GiantFrogEnemy(this.room, this.game, position.x, position.y);
+                                break;
+                            case 29:
+                                spawned = new wormHeadEnemy_1.WormHeadEnemy(this.room, this.game, position.x, position.y);
                                 break;
                             default:
                                 console.warn("spawner tried to spawn unknown enemy type", this.enemySpawnType);
@@ -21931,6 +22641,7 @@ Spawner.spawnTypeByName = {
     earthwizard: 23,
     chessknight: 25,
     giantfrog: 26,
+    worm: 29,
 };
 
 
@@ -23058,6 +23769,65 @@ exports.WizardEnemy = WizardEnemy;
 WizardEnemy.difficulty = 3;
 WizardEnemy.tileX = 6;
 WizardEnemy.tileY = 0;
+
+
+/***/ }),
+
+/***/ "./src/entity/enemy/wormHeadEnemy.ts":
+/*!*******************************************!*\
+  !*** ./src/entity/enemy/wormHeadEnemy.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WormHeadEnemy = void 0;
+const abstractSnakeHeadEnemy_1 = __webpack_require__(/*! ./abstractSnakeHeadEnemy */ "./src/entity/enemy/abstractSnakeHeadEnemy.ts");
+class WormHeadEnemy extends abstractSnakeHeadEnemy_1.AbstractSnakeHeadEnemy {
+    constructor(room, game, x, y, drop) {
+        super(room, game, x, y, drop);
+        this.name = "worm";
+        this.health = 4;
+        this.maxHealth = 4;
+        this.defaultMaxHealth = 4;
+        this.baseDamage = 1;
+        this.defaultSegmentCount = 5;
+        // Worm moves diagonally only and attacks on diagonal adjacency.
+        this.movementMode = "omni";
+        this.orthogonalAttack = true;
+        this.diagonalAttack = true;
+        // No beam stripes — solid body.
+        this.hasStripes = false;
+    }
+    configureBeam(b) {
+        b.color = "#2e1a0a";
+        b.shadowBeamColor = "#6b3d18";
+        b.lineWidth = 6;
+        b.tailWidth = 3;
+        b.tailTaperStart = 0.8;
+        b.headTipWidth = 2;
+        b.headTaperLength = 0.075;
+        b.shadowOffsetY = -3;
+        b.beamOutlineColor = "#1a0f05";
+        b.gravity = 0;
+        b.turbulence = 0.025;
+        b.damping = 0.95;
+        b.springStiffness = 0.04;
+        b.springDamping = 0.06;
+        b.bendingStiffness = 0;
+        b.iterations = 8;
+        b.useBrightnessSampling = true;
+        b.renderFps = 15;
+        b.eyeColor = null;
+        b.showStripes = false;
+    }
+}
+exports.WormHeadEnemy = WormHeadEnemy;
+WormHeadEnemy.difficulty = 2;
+WormHeadEnemy.tileX = 41;
+WormHeadEnemy.tileY = 17;
+WormHeadEnemy.examineText = "A bloated earthworm. It burrows diagonally, skirting your guard.";
 
 
 /***/ }),
@@ -31618,6 +32388,15 @@ class Game {
                 case "hq":
                     gameConstants_1.GameConstants.TOGGLE_HIGH_QUALITY_BLUR();
                     break;
+                case "snakebeam":
+                    gameConstants_1.GameConstants.TOGGLE_SNAKE_BEAM_RENDERING();
+                    this.pushMessage(`Snake beam rendering ${gameConstants_1.GameConstants.SNAKE_BEAM_RENDERING ? "enabled" : "disabled"}`);
+                    break;
+                case "snakecenter":
+                case "debug":
+                    gameConstants_1.GameConstants.TOGGLE_SNAKE_DEBUG_CENTERS();
+                    this.pushMessage(`Snake center debug ${gameConstants_1.GameConstants.SNAKE_DEBUG_CENTERS ? "enabled" : "disabled"}`);
+                    break;
                 case "genroom":
                     this.generateAndShowRoomLayout();
                     break;
@@ -36861,6 +37640,8 @@ GameConstants.HIGH_QUALITY_BLUR = false; // true = 49 samples, false = 13 sample
 GameConstants.BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
 GameConstants.ENEMIES_BLOCK_LIGHT = true;
 GameConstants.SHADING_DISABLED = false;
+GameConstants.SNAKE_BEAM_RENDERING = true;
+GameConstants.SNAKE_DEBUG_CENTERS = false;
 GameConstants.USE_PNG_LEVELS = true;
 GameConstants.SHADE_LAYER_COMPOSITE_OPERATIONS = [
     "source-over",
@@ -36932,6 +37713,13 @@ GameConstants.SET_SHADE_LAYER_COMPOSITE_OPERATION = (back = false) => {
 };
 GameConstants.TOGGLE_USE_OPTIMIZED_SHADING = () => {
     GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+};
+GameConstants.TOGGLE_SNAKE_BEAM_RENDERING = () => {
+    GameConstants.SNAKE_BEAM_RENDERING = !GameConstants.SNAKE_BEAM_RENDERING;
+    console.log(`Snake beam rendering is now ${GameConstants.SNAKE_BEAM_RENDERING ? "enabled" : "disabled"}`);
+};
+GameConstants.TOGGLE_SNAKE_DEBUG_CENTERS = () => {
+    GameConstants.SNAKE_DEBUG_CENTERS = !GameConstants.SNAKE_DEBUG_CENTERS;
 };
 GameConstants.TOGGLE_ENEMIES_BLOCK_LIGHT = () => {
     GameConstants.ENEMIES_BLOCK_LIGHT = !GameConstants.ENEMIES_BLOCK_LIGHT;
@@ -41156,6 +41944,8 @@ const wizardEnemy_1 = __webpack_require__(/*! ../../entity/enemy/wizardEnemy */ 
 const occultistEnemy_1 = __webpack_require__(/*! ../../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const exalterEnemy_1 = __webpack_require__(/*! ../../entity/enemy/exalterEnemy */ "./src/entity/enemy/exalterEnemy.ts");
 const ectomancerEnemy_1 = __webpack_require__(/*! ../../entity/enemy/ectomancerEnemy */ "./src/entity/enemy/ectomancerEnemy.ts");
+const abstractSnakeHeadEnemy_1 = __webpack_require__(/*! ../../entity/enemy/abstractSnakeHeadEnemy */ "./src/entity/enemy/abstractSnakeHeadEnemy.ts");
+const snakeSegmentEnemy_1 = __webpack_require__(/*! ../../entity/enemy/snakeSegmentEnemy */ "./src/entity/enemy/snakeSegmentEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const enemy_1 = __webpack_require__(/*! ../../entity/enemy/enemy */ "./src/entity/enemy/enemy.ts");
 const chest_1 = __webpack_require__(/*! ../../entity/object/chest */ "./src/entity/object/chest.ts");
@@ -42182,6 +42972,32 @@ const loadSaveV2 = async (game, save) => {
                     ectomancer.attachBeam({ base, ghost });
                 }
             }
+            // Post-pass: re-link snake head <-> segment chains and recreate body beam.
+            for (const es of rd.enemies) {
+                const segGids = es.snakeSegmentGids;
+                if (!Array.isArray(segGids))
+                    continue;
+                const head = entitiesByGid.get(es.gid);
+                if (!(head instanceof abstractSnakeHeadEnemy_1.AbstractSnakeHeadEnemy) || head.dead)
+                    continue;
+                const resolved = [];
+                for (const sgid of segGids) {
+                    const seg = entitiesByGid.get(sgid);
+                    if (seg instanceof snakeSegmentEnemy_1.SnakeSegmentEnemy && !seg.dead) {
+                        resolved.push(seg);
+                    }
+                }
+                // Sort by saved chainIndex if available (parallel arrays on segments themselves).
+                resolved.sort((a, b) => a.chainIndex - b.chainIndex);
+                head.segments = resolved;
+                let prev = head;
+                for (const seg of resolved) {
+                    seg.head = head;
+                    seg.predecessor = prev;
+                    prev = seg;
+                }
+                head.createBeam();
+            }
             room.hitwarnings = [];
             for (const hws of rd.hitWarnings) {
                 const hw = new hitWarning_1.HitWarning(game, hws.x, hws.y, hws.eX ?? hws.x, hws.eY ?? hws.y, hws.isEnemy, hws.dirOnly);
@@ -42782,6 +43598,10 @@ const spiderEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/spiderEnemy 
 const wardenEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/wardenEnemy */ "./src/entity/enemy/wardenEnemy.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
 const giantFrogEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
+const snakeHeadEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/snakeHeadEnemy */ "./src/entity/enemy/snakeHeadEnemy.ts");
+const snakeSegmentEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/snakeSegmentEnemy */ "./src/entity/enemy/snakeSegmentEnemy.ts");
+const wormHeadEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/wormHeadEnemy */ "./src/entity/enemy/wormHeadEnemy.ts");
+const abstractSnakeHeadEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/abstractSnakeHeadEnemy */ "./src/entity/enemy/abstractSnakeHeadEnemy.ts");
 const wizardEnemy_1 = __webpack_require__(/*! ../../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const wizardEnemy_2 = __webpack_require__(/*! ../../../entity/enemy/wizardEnemy */ "./src/entity/enemy/wizardEnemy.ts");
 const fireWizard_1 = __webpack_require__(/*! ../../../entity/enemy/fireWizard */ "./src/entity/enemy/fireWizard.ts");
@@ -42927,6 +43747,12 @@ const entityToKind = (e) => {
         return "chess_knight";
     if (e instanceof giantFrogEnemy_1.GiantFrogEnemy)
         return "giant_frog";
+    if (e instanceof wormHeadEnemy_1.WormHeadEnemy)
+        return "worm_head";
+    if (e instanceof snakeHeadEnemy_1.SnakeHeadEnemy)
+        return "snake_head";
+    if (e instanceof snakeSegmentEnemy_1.SnakeSegmentEnemy)
+        return "snake_segment";
     if (e instanceof crate_1.Crate)
         return "crate";
     if (e instanceof darkCrate_1.DarkCrate)
@@ -43022,6 +43848,13 @@ const registerBuiltinEnemyCodecsV2 = () => {
             ectomancerLinkGhostGids: isEctomancer && value.links.length > 0
                 ? value.links.map((l) => l.ghost.globalId)
                 : undefined,
+            snakeSegmentGids: value instanceof abstractSnakeHeadEnemy_1.AbstractSnakeHeadEnemy && value.segments.length > 0
+                ? value.segments.map((s) => s.globalId)
+                : undefined,
+            snakeHeadGid: value instanceof snakeSegmentEnemy_1.SnakeSegmentEnemy && value.head
+                ? value.head.globalId
+                : undefined,
+            snakeChainIndex: value instanceof snakeSegmentEnemy_1.SnakeSegmentEnemy ? value.chainIndex : undefined,
         };
     };
     const spawnBasic = (Ctor, value, room, ctx) => {
@@ -43065,6 +43898,11 @@ const registerBuiltinEnemyCodecsV2 = () => {
         }
         if ("shieldedBefore" in value && value.shieldedBefore === true)
             e.shieldedBefore = true;
+        if (e instanceof snakeSegmentEnemy_1.SnakeSegmentEnemy &&
+            "snakeChainIndex" in value &&
+            typeof value.snakeChainIndex === "number") {
+            e.chainIndex = value.snakeChainIndex;
+        }
         e.globalId = value.gid;
         return e;
     };
@@ -43400,6 +44238,46 @@ const registerBuiltinEnemyCodecsV2 = () => {
     registerBasic("warden", wardenEnemy_1.WardenEnemy);
     registerBasic("chess_knight", chessKnightEnemy_1.ChessKnightEnemy);
     registerBasic("giant_frog", giantFrogEnemy_1.GiantFrogEnemy);
+    // Snake head's constructor normally spawns its segment chain. During load, segments
+    // are restored independently and the chain is rebuilt by the post-pass in loadV2,
+    // so we suppress chain spawning by toggling __skipChainSpawn around construction.
+    register("snake_head", {
+        save: (value) => {
+            if (!(value instanceof snakeHeadEnemy_1.SnakeHeadEnemy))
+                throw new Error("snake_head codec received wrong entity type");
+            return saveBasic("snake_head", value);
+        },
+        spawn: (value, room, ctx) => {
+            if (value.kind !== "snake_head")
+                throw new Error("snake_head codec spawn received wrong kind");
+            snakeHeadEnemy_1.SnakeHeadEnemy.__skipChainSpawn = true;
+            try {
+                return spawnBasic(snakeHeadEnemy_1.SnakeHeadEnemy, value, room, ctx);
+            }
+            finally {
+                snakeHeadEnemy_1.SnakeHeadEnemy.__skipChainSpawn = false;
+            }
+        },
+    });
+    register("worm_head", {
+        save: (value) => {
+            if (!(value instanceof wormHeadEnemy_1.WormHeadEnemy))
+                throw new Error("worm_head codec received wrong entity type");
+            return saveBasic("worm_head", value);
+        },
+        spawn: (value, room, ctx) => {
+            if (value.kind !== "worm_head")
+                throw new Error("worm_head codec spawn received wrong kind");
+            wormHeadEnemy_1.WormHeadEnemy.__skipChainSpawn = true;
+            try {
+                return spawnBasic(wormHeadEnemy_1.WormHeadEnemy, value, room, ctx);
+            }
+            finally {
+                wormHeadEnemy_1.WormHeadEnemy.__skipChainSpawn = false;
+            }
+        },
+    });
+    registerBasic("snake_segment", snakeSegmentEnemy_1.SnakeSegmentEnemy);
     registerBasic("crate", crate_1.Crate);
     registerBasic("dark_crate", darkCrate_1.DarkCrate);
     registerBasic("pot", pot_1.Pot);
@@ -46239,6 +47117,9 @@ const ENEMY_KINDS = [
     "big_knight",
     "chess_knight",
     "giant_frog",
+    "snake_head",
+    "snake_segment",
+    "worm_head",
     "mummy",
     "pawn",
     "queen",
@@ -48240,6 +49121,28 @@ const validateEnemySaveV2 = (v, path) => {
     const linkGhostR = validateGidArray(get(v, "ectomancerLinkGhostGids"), `${path}.ectomancerLinkGhostGids`);
     if (isErr(linkGhostR))
         return (0, errors_1.err)(linkGhostR.error);
+    const snakeSegmentGidsR = validateGidArray(get(v, "snakeSegmentGids"), `${path}.snakeSegmentGids`);
+    if (isErr(snakeSegmentGidsR))
+        return (0, errors_1.err)(snakeSegmentGidsR.error);
+    const snakeHeadGidU = get(v, "snakeHeadGid");
+    let snakeHeadGid = undefined;
+    if (snakeHeadGidU !== undefined) {
+        const g = asGid(snakeHeadGidU, `${path}.snakeHeadGid`);
+        if (isErr(g))
+            return (0, errors_1.err)(g.error);
+        snakeHeadGid = g.value;
+    }
+    const snakeChainIndexU = get(v, "snakeChainIndex");
+    let snakeChainIndex = undefined;
+    if (snakeChainIndexU !== undefined) {
+        if (!isNumber(snakeChainIndexU))
+            return (0, errors_1.err)({
+                kind: "InvalidSchema",
+                message: "snakeChainIndex must be number if present",
+                path: `${path}.snakeChainIndex`,
+            });
+        snakeChainIndex = snakeChainIndexU;
+    }
     return (0, errors_1.ok)({
         kind,
         gid: gidR.value,
@@ -48269,6 +49172,9 @@ const validateEnemySaveV2 = (v, path) => {
         ghostifiedBefore,
         ectomancerLinkBaseGids: linkBaseR.value,
         ectomancerLinkGhostGids: linkGhostR.value,
+        snakeSegmentGids: snakeSegmentGidsR.value,
+        snakeHeadGid,
+        snakeChainIndex,
     });
 };
 const validateProjectileSaveV2 = (v, path) => {
@@ -64886,6 +65792,9 @@ const obsidianResource_1 = __webpack_require__(/*! ../entity/resource/obsidianRe
 const pawnEnemy_1 = __webpack_require__(/*! ../entity/enemy/pawnEnemy */ "./src/entity/enemy/pawnEnemy.ts");
 const bigFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/bigFrogEnemy */ "./src/entity/enemy/bigFrogEnemy.ts");
 const giantFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
+const snakeHeadEnemy_1 = __webpack_require__(/*! ../entity/enemy/snakeHeadEnemy */ "./src/entity/enemy/snakeHeadEnemy.ts");
+const snakeSegmentEnemy_1 = __webpack_require__(/*! ../entity/enemy/snakeSegmentEnemy */ "./src/entity/enemy/snakeSegmentEnemy.ts");
+const wormHeadEnemy_1 = __webpack_require__(/*! ../entity/enemy/wormHeadEnemy */ "./src/entity/enemy/wormHeadEnemy.ts");
 const beetleEnemy_1 = __webpack_require__(/*! ../entity/enemy/beetleEnemy */ "./src/entity/enemy/beetleEnemy.ts");
 const garnetResource_1 = __webpack_require__(/*! ../entity/resource/garnetResource */ "./src/entity/resource/garnetResource.ts");
 const zirconResource_1 = __webpack_require__(/*! ../entity/resource/zirconResource */ "./src/entity/resource/zirconResource.ts");
@@ -64947,6 +65856,9 @@ exports.enemyClassToId = new Map([
     [ratEnemy_1.RatEnemy, 24],
     [chessKnightEnemy_1.ChessKnightEnemy, 25],
     [giantFrogEnemy_1.GiantFrogEnemy, 26],
+    [snakeHeadEnemy_1.SnakeHeadEnemy, 27],
+    [snakeSegmentEnemy_1.SnakeSegmentEnemy, 28],
+    [wormHeadEnemy_1.WormHeadEnemy, 29],
 ]);
 class Environment {
     constructor(type) {
@@ -77430,6 +78342,48 @@ class BeamEffect extends projectile_1.Projectile {
         this.drawOnTop = false;
         this.alpha = 1;
         this.lineWidth = 2;
+        this.guideNodes = [];
+        /** Fixed physical length of the rope in pixels. When nonzero, overrides the head-to-tail distance calculation so the rope maintains this length regardless of endpoint positions. */
+        this.naturalLength = 0;
+        /** If nonzero, draw a second copy of the beam shifted by this many pixels in Y (use negative for upward). */
+        this.shadowOffsetY = 0;
+        /** Color for the shadow (offset) beam layer. Falls back to `color` if null. */
+        this.shadowBeamColor = null;
+        /** If set, draw a 1-pixel outline of this color around the combined beam shape. */
+        this.beamOutlineColor = null;
+        /** When false, getBrightnessAt always returns 1 (beam color is unmodulated by room lighting). Shade comes from applyInlineShadeOverlayForCanvas instead. */
+        this.useBrightnessSampling = true;
+        /** Resistance to direction changes along the rope. Each point is pulled toward the midpoint of its neighbours, smoothing sharp bends into gradual arcs. */
+        this.bendingStiffness = 0;
+        /** Width at the tail end of the beam (t=1). When > 0 and < lineWidth, beam tapers toward the tail. 0 = no taper. */
+        this.tailWidth = 0;
+        /** t-fraction at which tail tapering begins. 0 = linear from start; e.g. 0.75 keeps body at full width and only tapers the last 25%. */
+        this.tailTaperStart = 0;
+        /** Width at the very tip of the head (t=0). 0 = no head taper. Drives a circular curve to headNeckWidth, then widens to lineWidth. */
+        this.headTipWidth = 0;
+        /** Width at the neck dip, between the tip and the body. Only used when headTipWidth > 0. */
+        this.headNeckWidth = 0;
+        /** Fraction of the beam (from t=0) that forms the head+neck zone. */
+        this.headTaperLength = 0.25;
+        /** Per-instance canvases for the dual-layer + outline compositing pass. */
+        this._beamCompositeCanvas = null;
+        this._beamCompositeCtx = null;
+        this._beamOutlineCanvas = null;
+        this._beamOutlineCtx = null;
+        this._tileShadeSmallCanvas = null;
+        this._tileShadeSmallCtx = null;
+        this._tileShadeLargeCanvas = null;
+        this._tileShadeLargeCtx = null;
+        this._renderAccum = 0;
+        this._lastOriginX = 0;
+        this._lastOriginY = 0;
+        this._hasCachedFrame = false;
+        /** Cap visual redraws per second (0 = unlimited). Physics simulation is unaffected. */
+        this.renderFps = 0;
+        /** If set, draw two 1-px eye pixels at the head, perpendicular to the beam direction. */
+        this.eyeColor = null;
+        /** When false, stripe shading on the beam is disabled (both color layers drawn solid). */
+        this.showStripes = true;
         this.gravity = BeamEffect.GRAVITY;
         this.motionInfluence = BeamEffect.MOTION_INFLUENCE;
         this.turbulence = BeamEffect.TURBULENCE;
@@ -77506,6 +78460,51 @@ class BeamEffect extends projectile_1.Projectile {
             this.points[idx].y = this.lerp(this.points[idx].y, targetY, weight);
         }
     }
+    setGuideNodes(nodes) {
+        this.guideNodes = nodes;
+    }
+    applyGuideNode(node, segmentLength) {
+        if (this.points.length < 2)
+            return;
+        const anchorX = node.x * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const anchorY = node.y * gameConstants_1.GameConstants.TILESIZE + 0.5 * gameConstants_1.GameConstants.TILESIZE;
+        const baseWeight = this.clamp01(node.weight ?? 0.85);
+        const influenceTiles = node.influenceDistance ?? 1.5;
+        const influenceDistancePx = influenceTiles * gameConstants_1.GameConstants.TILESIZE;
+        if (influenceDistancePx <= 0)
+            return;
+        const lastIdx = this.points.length - 1;
+        const tClamped = Math.min(1, Math.max(0, node.tPosition));
+        const centerIdx = Math.round(tClamped * lastIdx);
+        // Pin the center point directly to the anchor (no falloff at center).
+        if (centerIdx > 0 && centerIdx < lastIdx) {
+            const prevInfluence = this.attachmentInfluence[centerIdx] ?? 0;
+            if (baseWeight > prevInfluence) {
+                this.attachmentInfluence[centerIdx] = baseWeight;
+                this.points[centerIdx].x = this.lerp(this.points[centerIdx].x, anchorX, baseWeight);
+                this.points[centerIdx].y = this.lerp(this.points[centerIdx].y, anchorY, baseWeight);
+            }
+        }
+        const maxSegments = Math.max(1, Math.floor(influenceDistancePx / Math.max(segmentLength, 1e-4)));
+        for (let i = 1; i <= maxSegments; i++) {
+            const distanceAlong = segmentLength * i;
+            const ratio = Math.min(1, distanceAlong / influenceDistancePx);
+            const falloff = Math.pow(1 - ratio, 2);
+            const weight = baseWeight * falloff;
+            if (weight <= 0)
+                continue;
+            for (const idx of [centerIdx - i, centerIdx + i]) {
+                if (idx <= 0 || idx >= lastIdx)
+                    continue;
+                const prevInfluence = this.attachmentInfluence[idx] ?? 0;
+                if (weight <= prevInfluence)
+                    continue;
+                this.attachmentInfluence[idx] = weight;
+                this.points[idx].x = this.lerp(this.points[idx].x, anchorX, weight);
+                this.points[idx].y = this.lerp(this.points[idx].y, anchorY, weight);
+            }
+        }
+    }
     clamp01(value) {
         if (value < 0)
             return 0;
@@ -77525,7 +78524,7 @@ class BeamEffect extends projectile_1.Projectile {
         }
     }
     getBrightnessAt(px, py) {
-        if (!this.hostRoom)
+        if (!this.hostRoom || !this.useBrightnessSampling)
             return 1;
         const tileX = Math.floor(px / gameConstants_1.GameConstants.TILESIZE);
         const tileY = Math.floor(py / gameConstants_1.GameConstants.TILESIZE);
@@ -77677,6 +78676,30 @@ class BeamEffect extends projectile_1.Projectile {
             this.prevEndY = endY;
             return;
         }
+        // Visual-frame throttle: simulate every frame but only redraw at renderFps.
+        if (this.renderFps > 0) {
+            this._renderAccum += delta;
+            const frameInterval = 1 / this.renderFps;
+            if (this._renderAccum < frameInterval) {
+                if (this._hasCachedFrame)
+                    this._reblitLastFrame();
+                this.prevStartX = startX;
+                this.prevStartY = startY;
+                this.prevEndX = endX;
+                this.prevEndY = endY;
+                return;
+            }
+            this._renderAccum -= frameInterval;
+        }
+        // Dual-layer (shadow copy) or outlined beam: compositing path
+        if (this.shadowOffsetY !== 0 || this.beamOutlineColor !== null) {
+            this._renderWithComposite(color, lineWidth);
+            this.prevStartX = startX;
+            this.prevStartY = startY;
+            this.prevEndX = endX;
+            this.prevEndY = endY;
+            return;
+        }
         const ctx = game_1.Game.ctx;
         const mainCanvas = ctx.canvas;
         const useOffscreen = this.alpha < 1;
@@ -77765,6 +78788,292 @@ class BeamEffect extends projectile_1.Projectile {
         point.velocityX = Math.min(Math.max(point.velocityX, -this.maxVelocity), this.maxVelocity);
         point.velocityY = Math.min(Math.max(point.velocityY, -this.maxVelocity), this.maxVelocity);
     }
+    _getBeamBounds() {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const p of this.points) {
+            if (p.x < minX)
+                minX = p.x;
+            if (p.x > maxX)
+                maxX = p.x;
+            if (p.y < minY)
+                minY = p.y;
+            if (p.y > maxY)
+                maxY = p.y;
+            if (this.shadowOffsetY !== 0) {
+                const sy = p.y + this.shadowOffsetY;
+                if (sy < minY)
+                    minY = sy;
+                if (sy > maxY)
+                    maxY = sy;
+            }
+        }
+        if (!isFinite(minX))
+            return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+        return { minX, minY, maxX, maxY };
+    }
+    _getSegmentWidth(t, lineWidth) {
+        // Tail zone only — head steps are applied per-segment-index in _drawBeamPassToCtx.
+        if (this.tailWidth > 0 && this.tailWidth < lineWidth) {
+            const start = this.tailTaperStart;
+            if (t >= start) {
+                const f = start < 1 ? (t - start) / (1 - start) : 1;
+                return Math.max(this.tailWidth, Math.round(lineWidth + (this.tailWidth - lineWidth) * f));
+            }
+        }
+        return lineWidth;
+    }
+    _drawBeamPassToCtx(ctx, offX, offY, color, lineWidth, dynamicOffsetY = 0) {
+        const n = this.points.length;
+        const hasTaper = (this.tailWidth > 0 && this.tailWidth < lineWidth) || this.headTipWidth > 0;
+        const comps = this.getColorComponents(color);
+        const sf = 0.75;
+        const stripeColor = `rgb(${Math.round(comps.r * sf)},${Math.round(comps.g * sf)},${Math.round(comps.b * sf)})`;
+        let headPx = 0;
+        for (let i = 0; i < n - 1; i++) {
+            const t = i / Math.max(1, n - 2);
+            const p1 = this.points[i];
+            const p2 = this.points[i + 1];
+            const pdx = p2.x - p1.x;
+            const pdy = p2.y - p1.y;
+            const steps = Math.max(1, Math.round(Math.max(Math.abs(pdx), Math.abs(pdy))));
+            const xInc = pdx / steps;
+            const yInc = pdy / steps;
+            let wx = p1.x;
+            let wy = p1.y;
+            for (let step = 0; step <= steps; step++) {
+                let segWidth;
+                if (this.headTipWidth > 0 && headPx < 3) {
+                    const offsets = [4, 2, 1];
+                    segWidth = Math.max(1, lineWidth - offsets[headPx]);
+                }
+                else {
+                    segWidth = hasTaper ? this._getSegmentWidth(t, lineWidth) : lineWidth;
+                }
+                const half = Math.floor(segWidth / 2);
+                const segOffY = dynamicOffsetY !== 0 && hasTaper
+                    ? Math.round(dynamicOffsetY * (segWidth / lineWidth))
+                    : dynamicOffsetY;
+                const cx = Math.round(wx + offX);
+                const cy = Math.round(wy + offY + segOffY);
+                ctx.fillStyle = (this.showStripes && (headPx % 6) < 3) ? stripeColor : color;
+                for (let w = 0; w < segWidth; w++) {
+                    for (let h = 0; h < segWidth; h++) {
+                        ctx.fillRect(cx - half + w, cy - half + h, 1, 1);
+                    }
+                }
+                wx += xInc;
+                wy += yInc;
+                headPx++;
+            }
+        }
+    }
+    _applyTileShadeOverlay(maskCanvas, originX, originY) {
+        if (!this.hostRoom)
+            return;
+        const ts = gameConstants_1.GameConstants.TILESIZE;
+        const blurPad = 2; // extra tile padding so blur doesn't clip at canvas edge
+        const minTX = Math.floor(originX / ts) - blurPad;
+        const minTY = Math.floor(originY / ts) - blurPad;
+        const maxTX = Math.ceil((originX + maskCanvas.width) / ts) + blurPad;
+        const maxTY = Math.ceil((originY + maskCanvas.height) / ts) + blurPad;
+        const numTX = maxTX - minTX;
+        const numTY = maxTY - minTY;
+        if (numTX <= 0 || numTY <= 0)
+            return;
+        // Small canvas: 1 px per tile — stores softVis shade alpha per tile.
+        if (!this._tileShadeSmallCanvas ||
+            this._tileShadeSmallCanvas.width < numTX ||
+            this._tileShadeSmallCanvas.height < numTY) {
+            this._tileShadeSmallCanvas = document.createElement("canvas");
+            this._tileShadeSmallCanvas.width = numTX;
+            this._tileShadeSmallCanvas.height = numTY;
+            this._tileShadeSmallCtx = this._tileShadeSmallCanvas.getContext("2d");
+        }
+        const sCtx = this._tileShadeSmallCtx;
+        sCtx.clearRect(0, 0, numTX, numTY);
+        for (let dtx = 0; dtx < numTX; dtx++) {
+            for (let dty = 0; dty < numTY; dty++) {
+                const sv = this.hostRoom.softVis?.[minTX + dtx]?.[minTY + dty] ?? 0;
+                if (sv <= 0)
+                    continue;
+                sCtx.globalAlpha = sv;
+                sCtx.fillStyle = "#000";
+                sCtx.fillRect(dtx, dty, 1, 1);
+            }
+        }
+        sCtx.globalAlpha = 1;
+        // Large canvas: full-pixel scale-up of the small canvas, blurred.
+        const largeW = numTX * ts;
+        const largeH = numTY * ts;
+        if (!this._tileShadeLargeCanvas ||
+            this._tileShadeLargeCanvas.width < largeW ||
+            this._tileShadeLargeCanvas.height < largeH) {
+            this._tileShadeLargeCanvas = document.createElement("canvas");
+            this._tileShadeLargeCanvas.width = largeW;
+            this._tileShadeLargeCanvas.height = largeH;
+            this._tileShadeLargeCtx = this._tileShadeLargeCanvas.getContext("2d");
+        }
+        const lCtx = this._tileShadeLargeCtx;
+        lCtx.clearRect(0, 0, largeW, largeH);
+        // Scale small → large with bilinear interpolation and apply blur in one pass.
+        lCtx.imageSmoothingEnabled = true;
+        lCtx.imageSmoothingQuality = "high";
+        lCtx.filter = `blur(${Math.round(ts * 0.5)}px)`;
+        lCtx.drawImage(this._tileShadeSmallCanvas, 0, 0, numTX, numTY, 0, 0, largeW, largeH);
+        lCtx.filter = "none";
+        // Mask to beam shape: keep only pixels where the beam canvas has pixels.
+        const beamOffX = originX - minTX * ts;
+        const beamOffY = originY - minTY * ts;
+        lCtx.imageSmoothingEnabled = false;
+        lCtx.globalCompositeOperation = "destination-in";
+        lCtx.drawImage(maskCanvas, beamOffX, beamOffY);
+        lCtx.globalCompositeOperation = "source-over";
+        // Blit masked shade onto Game.ctx. Do not override globalAlpha here — the
+        // caller (draw()) already set it to the entity's fading alpha, so the shade
+        // blit inherits the same fade as the beam canvases above it.
+        game_1.Game.ctx.drawImage(this._tileShadeLargeCanvas, 0, 0, largeW, largeH, minTX * ts, minTY * ts, largeW, largeH);
+    }
+    _drawBeamEyes() {
+        if (!this.eyeColor || this.points.length < 2)
+            return;
+        const p0 = this.points[0];
+        const p1 = this.points[1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.001)
+            return;
+        // Unit vector toward body from head tip.
+        const nx = dx / len;
+        const ny = dy / len;
+        // Perpendicular (side) direction.
+        const perpX = -ny;
+        const perpY = nx;
+        // 1 px into the beam from the tip centre, 1 px to each side — lands on the
+        // outer edge pixels of the 3-px-wide head zone (headPx=1 in the taper).
+        const bx = p0.x + nx;
+        const by = p0.y + ny - 5;
+        game_1.Game.ctx.fillStyle = this.eyeColor;
+        game_1.Game.ctx.fillRect(Math.round(bx + perpX * 2), Math.round(by + perpY * 2), 1, 1);
+        game_1.Game.ctx.fillRect(Math.round(bx - perpX * 2), Math.round(by - perpY * 2), 1, 1);
+    }
+    _reblitLastFrame() {
+        if (!this._beamCompositeCanvas)
+            return;
+        const prevOp = game_1.Game.ctx.globalCompositeOperation;
+        if (prevOp !== this.compositeOperation) {
+            game_1.Game.ctx.globalCompositeOperation = this.compositeOperation;
+        }
+        if (this.beamOutlineColor && this._beamOutlineCanvas) {
+            game_1.Game.ctx.drawImage(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+        }
+        game_1.Game.ctx.drawImage(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+        if (game_1.Game.ctx.globalCompositeOperation !== prevOp) {
+            game_1.Game.ctx.globalCompositeOperation = prevOp;
+        }
+        if (this.useBrightnessSampling) {
+            this._applyTileShadeOverlay(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+            if (this.beamOutlineColor && this._beamOutlineCanvas) {
+                this._applyTileShadeOverlay(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+            }
+        }
+        else {
+            this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+            if (this.beamOutlineColor && this._beamOutlineCanvas) {
+                this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+            }
+        }
+        this._drawBeamEyes();
+    }
+    _renderWithComposite(color, lineWidth) {
+        if (this.points.length < 2)
+            return;
+        const lhalf = Math.ceil(lineWidth / 2);
+        const pad = lhalf + (this.beamOutlineColor ? 1 : 0) + 1;
+        const bounds = this._getBeamBounds();
+        const originX = Math.floor(bounds.minX) - pad;
+        const originY = Math.floor(bounds.minY) - pad;
+        const cW = Math.ceil(bounds.maxX - bounds.minX) + 2 * pad + 1;
+        const cH = Math.ceil(bounds.maxY - bounds.minY) + 2 * pad + 1;
+        if (cW <= 0 || cH <= 0)
+            return;
+        if (!this._beamCompositeCanvas ||
+            this._beamCompositeCanvas.width < cW ||
+            this._beamCompositeCanvas.height < cH) {
+            this._beamCompositeCanvas = document.createElement("canvas");
+            this._beamCompositeCanvas.width = cW;
+            this._beamCompositeCanvas.height = cH;
+            this._beamCompositeCtx = this._beamCompositeCanvas.getContext("2d");
+        }
+        const cCtx = this._beamCompositeCtx;
+        const cCanvas = this._beamCompositeCanvas;
+        this._lastOriginX = originX;
+        this._lastOriginY = originY;
+        this._hasCachedFrame = true;
+        cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+        cCtx.globalCompositeOperation = "source-over";
+        const offX = -originX;
+        const offY = -originY;
+        this._drawBeamPassToCtx(cCtx, offX, offY, color, lineWidth);
+        if (this.shadowOffsetY !== 0) {
+            this._drawBeamPassToCtx(cCtx, offX, offY, this.shadowBeamColor ?? color, lineWidth, this.shadowOffsetY);
+        }
+        const prevOp = game_1.Game.ctx.globalCompositeOperation;
+        if (prevOp !== this.compositeOperation) {
+            game_1.Game.ctx.globalCompositeOperation = this.compositeOperation;
+        }
+        if (this.beamOutlineColor) {
+            if (!this._beamOutlineCanvas ||
+                this._beamOutlineCanvas.width < cCanvas.width ||
+                this._beamOutlineCanvas.height < cCanvas.height) {
+                this._beamOutlineCanvas = document.createElement("canvas");
+                this._beamOutlineCanvas.width = cCanvas.width;
+                this._beamOutlineCanvas.height = cCanvas.height;
+                this._beamOutlineCtx = this._beamOutlineCanvas.getContext("2d");
+            }
+            const oCtx = this._beamOutlineCtx;
+            const oCanvas = this._beamOutlineCanvas;
+            oCtx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+            oCtx.globalCompositeOperation = "source-over";
+            // 4-directional 1px dilation of the combined beam shape
+            oCtx.drawImage(cCanvas, -1, 0);
+            oCtx.drawImage(cCanvas, 1, 0);
+            oCtx.drawImage(cCanvas, 0, -1);
+            oCtx.drawImage(cCanvas, 0, 1);
+            // Tint with outline color
+            oCtx.globalCompositeOperation = "source-in";
+            oCtx.fillStyle = this.beamOutlineColor;
+            oCtx.fillRect(0, 0, oCanvas.width, oCanvas.height);
+            // Punch out the interior (original beam pixels)
+            oCtx.globalCompositeOperation = "destination-out";
+            oCtx.drawImage(cCanvas, 0, 0);
+            oCtx.globalCompositeOperation = "source-over";
+            // Blit outline behind beam
+            game_1.Game.ctx.drawImage(oCanvas, originX, originY);
+        }
+        // Blit composite beam on top
+        game_1.Game.ctx.drawImage(cCanvas, originX, originY);
+        if (game_1.Game.ctx.globalCompositeOperation !== prevOp) {
+            game_1.Game.ctx.globalCompositeOperation = prevOp;
+        }
+        // Apply room shade overlay masked to beam shape, then separately to outline ring.
+        // oCanvas has the beam interior punched out so the two masks are non-overlapping.
+        // useBrightnessSampling = true → new tile-based overlay (blurred softVis squares).
+        // useBrightnessSampling = false → legacy inline shade src canvas path.
+        if (this.useBrightnessSampling) {
+            this._applyTileShadeOverlay(cCanvas, originX, originY);
+            if (this.beamOutlineColor && this._beamOutlineCanvas) {
+                this._applyTileShadeOverlay(this._beamOutlineCanvas, originX, originY);
+            }
+        }
+        else {
+            this.hostRoom?.applyInlineShadeOverlayForCanvas(cCanvas, originX, originY);
+            if (this.beamOutlineColor && this._beamOutlineCanvas) {
+                this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamOutlineCanvas, originX, originY);
+            }
+        }
+        this._drawBeamEyes();
+    }
     simulateRope(startX, startY, endX, endY, delta) {
         const iterationsThisFrame = Math.ceil(this.iterations * delta);
         for (let iteration = 0; iteration < iterationsThisFrame; iteration++) {
@@ -77777,11 +79086,19 @@ class BeamEffect extends projectile_1.Projectile {
                 const springForceXNext = (nextPoint.x - point.x) * this.springStiffness;
                 const springForceYNext = (nextPoint.y - point.y) * this.springStiffness;
                 this.applyTurbulence(point, i);
+                // Bending resistance: pull each point toward the midpoint of its neighbours.
+                // This resists sharp direction changes, making corners arc gradually.
+                const bendX = this.bendingStiffness > 0
+                    ? ((prevPoint.x + nextPoint.x) * 0.5 - point.x) * this.bendingStiffness
+                    : 0;
+                const bendY = this.bendingStiffness > 0
+                    ? ((prevPoint.y + nextPoint.y) * 0.5 - point.y) * this.bendingStiffness
+                    : 0;
                 point.velocityX =
-                    (point.velocityX + springForceXPrev + springForceXNext) *
+                    (point.velocityX + springForceXPrev + springForceXNext + bendX) *
                         this.damping;
                 point.velocityY =
-                    (point.velocityY + springForceYPrev + springForceYNext) *
+                    (point.velocityY + springForceYPrev + springForceYNext + bendY) *
                         this.damping;
                 const relativeVXPrev = prevPoint.velocityX - point.velocityX;
                 const relativeVYPrev = prevPoint.velocityY - point.velocityY;
@@ -77796,11 +79113,16 @@ class BeamEffect extends projectile_1.Projectile {
                 point.x += point.velocityX;
                 point.y += point.velocityY + this.gravity;
             }
-            const segmentLength = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
-                (this.segments - 1);
+            const totalLength = this.naturalLength > 0
+                ? this.naturalLength
+                : Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+            const segmentLength = totalLength / (this.segments - 1);
             this.resetAttachmentInfluence();
             this.applyAttachmentControl(true, startX, startY, segmentLength);
             this.applyAttachmentControl(false, endX, endY, segmentLength);
+            for (const node of this.guideNodes) {
+                this.applyGuideNode(node, segmentLength);
+            }
             for (let constraintIteration = 0; constraintIteration < 2; constraintIteration++) {
                 for (let i = 0; i < this.points.length - 1; i++) {
                     const p1 = this.points[i];
@@ -79331,6 +80653,8 @@ const passageway_1 = __webpack_require__(/*! ../tile/passageway */ "./src/tile/p
 const tallSucculent_1 = __webpack_require__(/*! ../entity/object/tallSucculent */ "./src/entity/object/tallSucculent.ts");
 const chessKnightEnemy_1 = __webpack_require__(/*! ../entity/enemy/chessKnightEnemy */ "./src/entity/enemy/chessKnightEnemy.ts");
 const giantFrogEnemy_1 = __webpack_require__(/*! ../entity/enemy/giantFrogEnemy */ "./src/entity/enemy/giantFrogEnemy.ts");
+const snakeHeadEnemy_1 = __webpack_require__(/*! ../entity/enemy/snakeHeadEnemy */ "./src/entity/enemy/snakeHeadEnemy.ts");
+const wormHeadEnemy_1 = __webpack_require__(/*! ../entity/enemy/wormHeadEnemy */ "./src/entity/enemy/wormHeadEnemy.ts");
 // #endregion
 // #region Enums & Interfaces
 /**
@@ -79380,6 +80704,8 @@ var EnemyType;
     EnemyType["crate"] = "crate";
     EnemyType["chessknight"] = "chessknight";
     EnemyType["giantfrog"] = "giantfrog";
+    EnemyType["snake"] = "snake";
+    EnemyType["worm"] = "worm";
     // Add other enemy types here
 })(EnemyType = exports.EnemyType || (exports.EnemyType = {}));
 /**
@@ -79428,6 +80754,8 @@ exports.EnemyTypeMap = {
     [EnemyType.crate]: crate_1.Crate,
     [EnemyType.chessknight]: chessKnightEnemy_1.ChessKnightEnemy,
     [EnemyType.giantfrog]: giantFrogEnemy_1.GiantFrogEnemy,
+    [EnemyType.snake]: snakeHeadEnemy_1.SnakeHeadEnemy,
+    [EnemyType.worm]: wormHeadEnemy_1.WormHeadEnemy,
     // Add other enemy mappings here
 };
 var RoomType;
@@ -79633,6 +80961,10 @@ class Room {
         this._softVisVersion = 0;
         this._inlineShadeSrcKey = "";
         this._inlineShadeSrcCanvas = null;
+        this._beamShadeTempCanvas = null;
+        this._beamShadeTempCtx = null;
+        this._beamShadeSmallCanvas = null;
+        this._beamShadeSmallCtx = null;
         this.playMusic = () => {
             if (this.envType === environmentTypes_1.EnvType.FOREST) {
                 sound_1.Sound.stopMusic();
@@ -80070,7 +81402,8 @@ class Room {
                 }
                 else
                     e.tick();
-                if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded || e.lightSource))
+                if ((e.x !== bx || e.y !== by) &&
+                    (e.opaque || e.shielded || e.lightSource))
                     lightingDirty = true;
                 addCount("entityTick");
             }
@@ -81507,6 +82840,163 @@ class Room {
             tctx.drawImage(masks[fadeDir], 0, 0);
             // Blit to main ctx
             game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
+        };
+        /**
+         * Public hook for entities (especially multi-tile or chained ones like the snake)
+         * to draw the same per-tile blurred shade slice that tiles get, on TOP of their
+         * sprite. Optional drawX/drawY (in tile units) slides the slice with the entity's
+         * interpolated draw offset so the shade stays aligned with the visual sprite.
+         *
+         * When `spriteSheet`, `spriteTileX`, and `spriteTileY` are provided, the shade
+         * slice is masked by the sprite's alpha (destination-in) before being blit, so
+         * only the sprite's opaque pixels receive the overlay — transparent areas
+         * (where floor underneath is visible) are left alone instead of being darkened
+         * a second time.
+         *
+         * Caller should draw the sprite with no internal shade (shadeAmount=0), then
+         * invoke this directly after to apply the smooth lighting overlay.
+         */
+        this.applyInlineShadeOverlay = (tileX, tileY, drawX = 0, drawY = 0, spriteSheet, spriteTileX, spriteTileY) => {
+            if (!gameConstants_1.GameConstants.SHADE_ENABLED ||
+                gameConstants_1.GameConstants.SHADING_DISABLED ||
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
+                return;
+            const shadeSrc = this._inlineShadeSrcCanvas;
+            if (!shadeSrc)
+                return;
+            const sv = this.softVis[tileX]?.[tileY] ?? 0;
+            if (sv <= 0)
+                return;
+            const ts = gameConstants_1.GameConstants.TILESIZE;
+            const visualTileX = tileX - drawX;
+            const visualTileY = tileY - drawY;
+            const sx = (visualTileX + 1 - this.roomX + this.blurOffsetX) * ts;
+            const sy = (visualTileY + 1 - this.roomY + this.blurOffsetY) * ts;
+            const dx = visualTileX * ts;
+            const dy = visualTileY * ts;
+            const prevOp = game_1.Game.ctx.globalCompositeOperation;
+            const targetOp = gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
+            if (prevOp !== targetOp)
+                game_1.Game.ctx.globalCompositeOperation = targetOp;
+            // Intentionally leave globalAlpha alone — caller may have set it for a
+            // fading entity (e.g. dying clone). Forcing it to 1 would leave the shade
+            // overlay at full opacity while the sprite fades, producing a ghost shade.
+            const useMask = spriteSheet !== undefined &&
+                typeof spriteTileX === "number" &&
+                typeof spriteTileY === "number";
+            if (useMask) {
+                // Lazy-init temp canvas (reuses the shade slice temp used by fade slicing).
+                if (!this.shadeSliceTempCanvas) {
+                    this.shadeSliceTempCanvas = document.createElement("canvas");
+                    this.shadeSliceTempCanvas.width = ts;
+                    this.shadeSliceTempCanvas.height = ts;
+                    this.shadeSliceTempCtx = this.shadeSliceTempCanvas.getContext("2d");
+                }
+                const tctx = this.shadeSliceTempCtx;
+                // 1) copy the blurred shade slice for this tile into the temp canvas.
+                tctx.globalCompositeOperation = "copy";
+                tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+                // 2) keep only pixels where the sprite is opaque.
+                tctx.globalCompositeOperation = "destination-in";
+                tctx.drawImage(spriteSheet, Math.round(spriteTileX * ts), Math.round(spriteTileY * ts), ts, ts, 0, 0, ts, ts);
+                // 3) blit masked slice onto main canvas at the (animated) sprite position.
+                game_1.Game.ctx.drawImage(this.shadeSliceTempCanvas, dx, dy);
+            }
+            else {
+                game_1.Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+            }
+            if (game_1.Game.ctx.globalCompositeOperation !== prevOp)
+                game_1.Game.ctx.globalCompositeOperation = prevOp;
+        };
+        /**
+         * Applies the room's inline shade overlay over an arbitrary-sized canvas region,
+         * using maskCanvas as the alpha mask. Samples the shade as one contiguous block
+         * covering the beam area (no per-tile splits), so transitions are perfectly smooth
+         * with no tile-seam artifacts.
+         *
+         * destXpx / destYpx are the world-pixel coordinates where maskCanvas was blitted.
+         */
+        this.applyInlineShadeOverlayForCanvas = (maskCanvas, destXpx, destYpx) => {
+            if (!gameConstants_1.GameConstants.SHADE_ENABLED ||
+                gameConstants_1.GameConstants.SHADING_DISABLED ||
+                !gameConstants_1.GameConstants.SHADE_INLINE_IN_ENTITY_LAYER)
+                return;
+            const shadeSrc = this._inlineShadeSrcCanvas;
+            if (!shadeSrc)
+                return;
+            const ts = gameConstants_1.GameConstants.TILESIZE;
+            const w = maskCanvas.width;
+            const h = maskCanvas.height;
+            // Tile-aligned region covering the mask canvas
+            const minTileX = Math.floor(destXpx / ts);
+            const minTileY = Math.floor(destYpx / ts);
+            const maxTileX = Math.ceil((destXpx + w) / ts);
+            const maxTileY = Math.ceil((destYpx + h) / ts);
+            const coverW = (maxTileX - minTileX) * ts;
+            const coverH = (maxTileY - minTileY) * ts;
+            if (coverW <= 0 || coverH <= 0)
+                return;
+            // Lazy-init/resize contiguous temp canvas
+            if (!this._beamShadeTempCanvas ||
+                this._beamShadeTempCanvas.width < coverW ||
+                this._beamShadeTempCanvas.height < coverH) {
+                this._beamShadeTempCanvas = document.createElement("canvas");
+                this._beamShadeTempCanvas.width = coverW;
+                this._beamShadeTempCanvas.height = coverH;
+                this._beamShadeTempCtx = this._beamShadeTempCanvas.getContext("2d");
+            }
+            const tctx = this._beamShadeTempCtx;
+            // Shade source origin for the top-left tile of the coverage area.
+            // In buildShadeOffscreenForSlicing, tile (x,y) is stored at canvas position
+            // ((x+1 - roomX + blurOffsetX)*ts, (y+1 - roomY + blurOffsetY)*ts).
+            const shadeSrcX = (minTileX + 1 - this.roomX + this.blurOffsetX) * ts;
+            const shadeSrcY = (minTileY + 1 - this.roomY + this.blurOffsetY) * ts;
+            const numTilesX = maxTileX - minTileX;
+            const numTilesY = maxTileY - minTileY;
+            // Lazy-init small canvas (1px per tile) for tile-resolution downsampling.
+            // The shade source canvas may be unblurred (ctx.filter not always effective),
+            // so we manually downsample to tile resolution then scale back up with
+            // browser bilinear interpolation to get smooth inter-tile shade transitions.
+            if (!this._beamShadeSmallCanvas ||
+                this._beamShadeSmallCanvas.width < numTilesX ||
+                this._beamShadeSmallCanvas.height < numTilesY) {
+                this._beamShadeSmallCanvas = document.createElement("canvas");
+                this._beamShadeSmallCanvas.width = numTilesX;
+                this._beamShadeSmallCanvas.height = numTilesY;
+                this._beamShadeSmallCtx = this._beamShadeSmallCanvas.getContext("2d");
+            }
+            const sctx = this._beamShadeSmallCtx;
+            // 1a) Downsample shade to 1px per tile (one average shade value per tile)
+            sctx.globalAlpha = 1;
+            sctx.imageSmoothingEnabled = true;
+            sctx.imageSmoothingQuality = "high";
+            sctx.globalCompositeOperation = "copy";
+            sctx.drawImage(shadeSrc, shadeSrcX, shadeSrcY, coverW, coverH, 0, 0, numTilesX, numTilesY);
+            // 1b) Scale back up to full pixel size — bilinear interpolation between
+            //     tile shade values gives smooth gradients at tile boundaries.
+            tctx.globalAlpha = 1;
+            tctx.imageSmoothingEnabled = true;
+            tctx.imageSmoothingQuality = "high";
+            tctx.globalCompositeOperation = "copy";
+            tctx.drawImage(this._beamShadeSmallCanvas, 0, 0, numTilesX, numTilesY, 0, 0, coverW, coverH);
+            // 2) Mask to the beam shape. The mask canvas sits at (destXpx, destYpx) in world
+            //    pixels; the temp canvas origin is at (minTileX*ts, minTileY*ts).
+            const beamOffX = destXpx - minTileX * ts;
+            const beamOffY = destYpx - minTileY * ts;
+            tctx.imageSmoothingEnabled = false;
+            tctx.globalCompositeOperation = "destination-in";
+            tctx.drawImage(maskCanvas, beamOffX, beamOffY);
+            // 3) Blit masked shade onto Game.ctx at the tile-aligned world position
+            const prevOp = game_1.Game.ctx.globalCompositeOperation;
+            const targetOp = gameConstants_1.GameConstants.SHADE_LAYER_COMPOSITE_OPERATION;
+            if (prevOp !== targetOp)
+                game_1.Game.ctx.globalCompositeOperation = targetOp;
+            const prevAlpha = game_1.Game.ctx.globalAlpha;
+            game_1.Game.ctx.globalAlpha = prevAlpha * 1;
+            game_1.Game.ctx.drawImage(this._beamShadeTempCanvas, 0, 0, coverW, coverH, minTileX * ts, minTileY * ts, coverW, coverH);
+            game_1.Game.ctx.globalAlpha = prevAlpha;
+            if (game_1.Game.ctx.globalCompositeOperation !== prevOp)
+                game_1.Game.ctx.globalCompositeOperation = prevOp;
         };
         this.drawBloomLayer = (delta, zLayer = this.getActiveZ()) => {
             if (!this.onScreen)

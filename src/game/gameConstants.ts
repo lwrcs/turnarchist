@@ -387,6 +387,8 @@ export class GameConstants {
   static BLUR_DOWNSAMPLE_FACTOR = 8; // Blur at 1/4 size for performance (1 = full size, 4 = quarter size)
   static ENEMIES_BLOCK_LIGHT = true;
   static SHADING_DISABLED = false;
+  static SNAKE_BEAM_RENDERING = true;
+  static SNAKE_DEBUG_CENTERS = false;
 
   static USE_PNG_LEVELS = true;
 
@@ -480,6 +482,17 @@ export class GameConstants {
 
   static readonly TOGGLE_USE_OPTIMIZED_SHADING = () => {
     GameConstants.USE_OPTIMIZED_SHADING = !GameConstants.USE_OPTIMIZED_SHADING;
+  };
+
+  static readonly TOGGLE_SNAKE_BEAM_RENDERING = () => {
+    GameConstants.SNAKE_BEAM_RENDERING = !GameConstants.SNAKE_BEAM_RENDERING;
+    console.log(
+      `Snake beam rendering is now ${GameConstants.SNAKE_BEAM_RENDERING ? "enabled" : "disabled"}`,
+    );
+  };
+
+  static readonly TOGGLE_SNAKE_DEBUG_CENTERS = () => {
+    GameConstants.SNAKE_DEBUG_CENTERS = !GameConstants.SNAKE_DEBUG_CENTERS;
   };
 
   static readonly TOGGLE_ENEMIES_BLOCK_LIGHT = () => {

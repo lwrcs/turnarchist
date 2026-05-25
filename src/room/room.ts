@@ -114,6 +114,8 @@ import { Passageway } from "../tile/passageway";
 import { TallSucculent } from "../entity/object/tallSucculent";
 import { ChessKnightEnemy } from "../entity/enemy/chessKnightEnemy";
 import { GiantFrogEnemy } from "../entity/enemy/giantFrogEnemy";
+import { SnakeHeadEnemy } from "../entity/enemy/snakeHeadEnemy";
+import { WormHeadEnemy } from "../entity/enemy/wormHeadEnemy";
 
 // #endregion
 
@@ -164,6 +166,8 @@ export enum EnemyType {
   crate = "crate",
   chessknight = "chessknight",
   giantfrog = "giantfrog",
+  snake = "snake",
+  worm = "worm",
   // Add other enemy types here
 }
 
@@ -213,6 +217,8 @@ export const EnemyTypeMap: { [key in EnemyType]: EnemyStatic } = {
   [EnemyType.crate]: Crate,
   [EnemyType.chessknight]: ChessKnightEnemy,
   [EnemyType.giantfrog]: GiantFrogEnemy,
+  [EnemyType.snake]: SnakeHeadEnemy,
+  [EnemyType.worm]: WormHeadEnemy,
   // Add other enemy mappings here
 };
 
@@ -530,6 +536,10 @@ export class Room {
   private _softVisVersion: number = 0;
   private _inlineShadeSrcKey: string = "";
   private _inlineShadeSrcCanvas: HTMLCanvasElement | null = null;
+  private _beamShadeTempCanvas: HTMLCanvasElement | null = null;
+  private _beamShadeTempCtx: CanvasRenderingContext2D | null = null;
+  private _beamShadeSmallCanvas: HTMLCanvasElement | null = null;
+  private _beamShadeSmallCtx: CanvasRenderingContext2D | null = null;
 
   beginDrawProfileFrame(frameId: number, enabled: boolean): void {
     this._drawProfileEnabledThisFrame = enabled;
@@ -1779,7 +1789,10 @@ export class Room {
         if (e instanceof Enemy) addTypeMs(prof.enemyTicksByType, name, dt);
         else addTypeMs(prof.nonEnemyTicksByType, name, dt);
       } else e.tick();
-      if ((e.x !== bx || e.y !== by) && (e.opaque || e.shielded || e.lightSource))
+      if (
+        (e.x !== bx || e.y !== by) &&
+        (e.opaque || e.shielded || e.lightSource)
+      )
         lightingDirty = true;
       addCount("entityTick");
     }
@@ -3655,6 +3668,246 @@ export class Room {
     tctx.drawImage(masks[fadeDir], 0, 0);
     // Blit to main ctx
     Game.ctx.drawImage(this.shadeSliceTempCanvas as HTMLCanvasElement, dx, dy);
+  };
+
+  /**
+   * Public hook for entities (especially multi-tile or chained ones like the snake)
+   * to draw the same per-tile blurred shade slice that tiles get, on TOP of their
+   * sprite. Optional drawX/drawY (in tile units) slides the slice with the entity's
+   * interpolated draw offset so the shade stays aligned with the visual sprite.
+   *
+   * When `spriteSheet`, `spriteTileX`, and `spriteTileY` are provided, the shade
+   * slice is masked by the sprite's alpha (destination-in) before being blit, so
+   * only the sprite's opaque pixels receive the overlay — transparent areas
+   * (where floor underneath is visible) are left alone instead of being darkened
+   * a second time.
+   *
+   * Caller should draw the sprite with no internal shade (shadeAmount=0), then
+   * invoke this directly after to apply the smooth lighting overlay.
+   */
+  public applyInlineShadeOverlay = (
+    tileX: number,
+    tileY: number,
+    drawX: number = 0,
+    drawY: number = 0,
+    spriteSheet?: HTMLImageElement | HTMLCanvasElement,
+    spriteTileX?: number,
+    spriteTileY?: number,
+  ): void => {
+    if (
+      !GameConstants.SHADE_ENABLED ||
+      GameConstants.SHADING_DISABLED ||
+      !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+    )
+      return;
+    const shadeSrc = this._inlineShadeSrcCanvas;
+    if (!shadeSrc) return;
+    const sv = this.softVis[tileX]?.[tileY] ?? 0;
+    if (sv <= 0) return;
+
+    const ts = GameConstants.TILESIZE;
+    const visualTileX = tileX - drawX;
+    const visualTileY = tileY - drawY;
+    const sx = (visualTileX + 1 - this.roomX + this.blurOffsetX) * ts;
+    const sy = (visualTileY + 1 - this.roomY + this.blurOffsetY) * ts;
+    const dx = visualTileX * ts;
+    const dy = visualTileY * ts;
+
+    const prevOp = Game.ctx.globalCompositeOperation;
+    const targetOp =
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+    if (prevOp !== targetOp) Game.ctx.globalCompositeOperation = targetOp;
+    // Intentionally leave globalAlpha alone — caller may have set it for a
+    // fading entity (e.g. dying clone). Forcing it to 1 would leave the shade
+    // overlay at full opacity while the sprite fades, producing a ghost shade.
+
+    const useMask =
+      spriteSheet !== undefined &&
+      typeof spriteTileX === "number" &&
+      typeof spriteTileY === "number";
+
+    if (useMask) {
+      // Lazy-init temp canvas (reuses the shade slice temp used by fade slicing).
+      if (!this.shadeSliceTempCanvas) {
+        this.shadeSliceTempCanvas = document.createElement("canvas");
+        this.shadeSliceTempCanvas.width = ts;
+        this.shadeSliceTempCanvas.height = ts;
+        this.shadeSliceTempCtx = this.shadeSliceTempCanvas.getContext(
+          "2d",
+        ) as CanvasRenderingContext2D;
+      }
+      const tctx = this.shadeSliceTempCtx as CanvasRenderingContext2D;
+      // 1) copy the blurred shade slice for this tile into the temp canvas.
+      tctx.globalCompositeOperation = "copy";
+      tctx.drawImage(shadeSrc, sx, sy, ts, ts, 0, 0, ts, ts);
+      // 2) keep only pixels where the sprite is opaque.
+      tctx.globalCompositeOperation = "destination-in";
+      tctx.drawImage(
+        spriteSheet,
+        Math.round((spriteTileX as number) * ts),
+        Math.round((spriteTileY as number) * ts),
+        ts,
+        ts,
+        0,
+        0,
+        ts,
+        ts,
+      );
+      // 3) blit masked slice onto main canvas at the (animated) sprite position.
+      Game.ctx.drawImage(
+        this.shadeSliceTempCanvas as HTMLCanvasElement,
+        dx,
+        dy,
+      );
+    } else {
+      Game.ctx.drawImage(shadeSrc, sx, sy, ts, ts, dx, dy, ts, ts);
+    }
+
+    if (Game.ctx.globalCompositeOperation !== prevOp)
+      Game.ctx.globalCompositeOperation = prevOp;
+  };
+
+  /**
+   * Applies the room's inline shade overlay over an arbitrary-sized canvas region,
+   * using maskCanvas as the alpha mask. Samples the shade as one contiguous block
+   * covering the beam area (no per-tile splits), so transitions are perfectly smooth
+   * with no tile-seam artifacts.
+   *
+   * destXpx / destYpx are the world-pixel coordinates where maskCanvas was blitted.
+   */
+  public applyInlineShadeOverlayForCanvas = (
+    maskCanvas: HTMLCanvasElement,
+    destXpx: number,
+    destYpx: number,
+  ): void => {
+    if (
+      !GameConstants.SHADE_ENABLED ||
+      GameConstants.SHADING_DISABLED ||
+      !GameConstants.SHADE_INLINE_IN_ENTITY_LAYER
+    )
+      return;
+    const shadeSrc = this._inlineShadeSrcCanvas;
+    if (!shadeSrc) return;
+
+    const ts = GameConstants.TILESIZE;
+    const w = maskCanvas.width;
+    const h = maskCanvas.height;
+
+    // Tile-aligned region covering the mask canvas
+    const minTileX = Math.floor(destXpx / ts);
+    const minTileY = Math.floor(destYpx / ts);
+    const maxTileX = Math.ceil((destXpx + w) / ts);
+    const maxTileY = Math.ceil((destYpx + h) / ts);
+    const coverW = (maxTileX - minTileX) * ts;
+    const coverH = (maxTileY - minTileY) * ts;
+    if (coverW <= 0 || coverH <= 0) return;
+
+    // Lazy-init/resize contiguous temp canvas
+    if (
+      !this._beamShadeTempCanvas ||
+      this._beamShadeTempCanvas.width < coverW ||
+      this._beamShadeTempCanvas.height < coverH
+    ) {
+      this._beamShadeTempCanvas = document.createElement("canvas");
+      this._beamShadeTempCanvas.width = coverW;
+      this._beamShadeTempCanvas.height = coverH;
+      this._beamShadeTempCtx = this._beamShadeTempCanvas.getContext(
+        "2d",
+      ) as CanvasRenderingContext2D;
+    }
+    const tctx = this._beamShadeTempCtx!;
+
+    // Shade source origin for the top-left tile of the coverage area.
+    // In buildShadeOffscreenForSlicing, tile (x,y) is stored at canvas position
+    // ((x+1 - roomX + blurOffsetX)*ts, (y+1 - roomY + blurOffsetY)*ts).
+    const shadeSrcX = (minTileX + 1 - this.roomX + this.blurOffsetX) * ts;
+    const shadeSrcY = (minTileY + 1 - this.roomY + this.blurOffsetY) * ts;
+
+    const numTilesX = maxTileX - minTileX;
+    const numTilesY = maxTileY - minTileY;
+
+    // Lazy-init small canvas (1px per tile) for tile-resolution downsampling.
+    // The shade source canvas may be unblurred (ctx.filter not always effective),
+    // so we manually downsample to tile resolution then scale back up with
+    // browser bilinear interpolation to get smooth inter-tile shade transitions.
+    if (
+      !this._beamShadeSmallCanvas ||
+      this._beamShadeSmallCanvas.width < numTilesX ||
+      this._beamShadeSmallCanvas.height < numTilesY
+    ) {
+      this._beamShadeSmallCanvas = document.createElement("canvas");
+      this._beamShadeSmallCanvas.width = numTilesX;
+      this._beamShadeSmallCanvas.height = numTilesY;
+      this._beamShadeSmallCtx = this._beamShadeSmallCanvas.getContext(
+        "2d",
+      ) as CanvasRenderingContext2D;
+    }
+    const sctx = this._beamShadeSmallCtx!;
+
+    // 1a) Downsample shade to 1px per tile (one average shade value per tile)
+    sctx.globalAlpha = 1;
+    sctx.imageSmoothingEnabled = true;
+    (sctx as any).imageSmoothingQuality = "high";
+    sctx.globalCompositeOperation = "copy";
+    sctx.drawImage(
+      shadeSrc,
+      shadeSrcX,
+      shadeSrcY,
+      coverW,
+      coverH,
+      0,
+      0,
+      numTilesX,
+      numTilesY,
+    );
+
+    // 1b) Scale back up to full pixel size — bilinear interpolation between
+    //     tile shade values gives smooth gradients at tile boundaries.
+    tctx.globalAlpha = 1;
+    tctx.imageSmoothingEnabled = true;
+    (tctx as any).imageSmoothingQuality = "high";
+    tctx.globalCompositeOperation = "copy";
+    tctx.drawImage(
+      this._beamShadeSmallCanvas!,
+      0,
+      0,
+      numTilesX,
+      numTilesY,
+      0,
+      0,
+      coverW,
+      coverH,
+    );
+
+    // 2) Mask to the beam shape. The mask canvas sits at (destXpx, destYpx) in world
+    //    pixels; the temp canvas origin is at (minTileX*ts, minTileY*ts).
+    const beamOffX = destXpx - minTileX * ts;
+    const beamOffY = destYpx - minTileY * ts;
+    tctx.imageSmoothingEnabled = false;
+    tctx.globalCompositeOperation = "destination-in";
+    tctx.drawImage(maskCanvas, beamOffX, beamOffY);
+
+    // 3) Blit masked shade onto Game.ctx at the tile-aligned world position
+    const prevOp = Game.ctx.globalCompositeOperation;
+    const targetOp =
+      GameConstants.SHADE_LAYER_COMPOSITE_OPERATION as GlobalCompositeOperation;
+    if (prevOp !== targetOp) Game.ctx.globalCompositeOperation = targetOp;
+    const prevAlpha = Game.ctx.globalAlpha;
+    Game.ctx.globalAlpha = prevAlpha * 1;
+    Game.ctx.drawImage(
+      this._beamShadeTempCanvas!,
+      0,
+      0,
+      coverW,
+      coverH,
+      minTileX * ts,
+      minTileY * ts,
+      coverW,
+      coverH,
+    );
+    Game.ctx.globalAlpha = prevAlpha;
+    if (Game.ctx.globalCompositeOperation !== prevOp)
+      Game.ctx.globalCompositeOperation = prevOp;
   };
 
   drawBloomLayer = (delta: number, zLayer: number = this.getActiveZ()) => {

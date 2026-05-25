@@ -33,6 +33,7 @@ import { BoltcasterEnemy } from "./boltcasterEnemy";
 import { EarthWizardEnemy } from "./earthWizard";
 import { ChessKnightEnemy } from "./chessKnightEnemy";
 import { GiantFrogEnemy } from "./giantFrogEnemy";
+import { WormHeadEnemy } from "./wormHeadEnemy";
 import { SpikeTrap } from "../../tile/spiketrap";
 import { SpawnFloor } from "../../tile/spawnfloor";
 import { UpLadder } from "../../tile/upLadder";
@@ -77,6 +78,7 @@ export class Spawner extends Enemy {
     earthwizard: 23,
     chessknight: 25,
     giantfrog: 26,
+    worm: 29,
   };
 
   constructor(
@@ -474,6 +476,14 @@ export class Spawner extends Enemy {
               break;
             case 26:
               spawned = new GiantFrogEnemy(
+                this.room,
+                this.game,
+                position.x,
+                position.y,
+              );
+              break;
+            case 29:
+              spawned = new WormHeadEnemy(
                 this.room,
                 this.game,
                 position.x,

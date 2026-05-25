@@ -399,6 +399,12 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
    */
   ectomancerLinkBaseGids?: Gid[];
   ectomancerLinkGhostGids?: Gid[];
+  /** Snake head: gids of its body segments in chain order (head -> tail). */
+  snakeSegmentGids?: Gid[];
+  /** Snake segment: gid of its head. */
+  snakeHeadGid?: Gid;
+  /** Snake segment: position in the chain (0 = closest to head). */
+  snakeChainIndex?: number;
 };
 
 export type WizardTypeKind = "energy" | "fire" | "earth" | "big";
@@ -769,6 +775,9 @@ export type EnemyKind =
   | "warden"
   | "chess_knight"
   | "giant_frog"
+  | "snake_head"
+  | "snake_segment"
+  | "worm_head"
   // Props / objects (room.entities)
   | "bomb"
   | "crate"

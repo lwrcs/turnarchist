@@ -27,6 +27,14 @@ export interface BeamAttachmentControl {
   influenceDistance?: number;
 }
 
+export interface BeamGuideNode {
+  x: number;
+  y: number;
+  tPosition: number;
+  weight?: number;
+  influenceDistance?: number;
+}
+
 export class BeamEffect extends Projectile {
   // Number of points that make up the beam (higher = smoother but more expensive)
   // Range: 10-100, recommended: 30
@@ -122,7 +130,49 @@ export class BeamEffect extends Projectile {
   endAttachment?: "player" | "tile";
   startControl?: BeamAttachmentControl;
   endControl?: BeamAttachmentControl;
+  guideNodes: BeamGuideNode[] = [];
   oxygenTraversalIndex?: number;
+  /** Fixed physical length of the rope in pixels. When nonzero, overrides the head-to-tail distance calculation so the rope maintains this length regardless of endpoint positions. */
+  naturalLength: number = 0;
+  /** If nonzero, draw a second copy of the beam shifted by this many pixels in Y (use negative for upward). */
+  shadowOffsetY: number = 0;
+  /** Color for the shadow (offset) beam layer. Falls back to `color` if null. */
+  shadowBeamColor: string | null = null;
+  /** If set, draw a 1-pixel outline of this color around the combined beam shape. */
+  beamOutlineColor: string | null = null;
+  /** When false, getBrightnessAt always returns 1 (beam color is unmodulated by room lighting). Shade comes from applyInlineShadeOverlayForCanvas instead. */
+  useBrightnessSampling: boolean = true;
+  /** Resistance to direction changes along the rope. Each point is pulled toward the midpoint of its neighbours, smoothing sharp bends into gradual arcs. */
+  bendingStiffness: number = 0;
+  /** Width at the tail end of the beam (t=1). When > 0 and < lineWidth, beam tapers toward the tail. 0 = no taper. */
+  tailWidth: number = 0;
+  /** t-fraction at which tail tapering begins. 0 = linear from start; e.g. 0.75 keeps body at full width and only tapers the last 25%. */
+  tailTaperStart: number = 0;
+  /** Width at the very tip of the head (t=0). 0 = no head taper. Drives a circular curve to headNeckWidth, then widens to lineWidth. */
+  headTipWidth: number = 0;
+  /** Width at the neck dip, between the tip and the body. Only used when headTipWidth > 0. */
+  headNeckWidth: number = 0;
+  /** Fraction of the beam (from t=0) that forms the head+neck zone. */
+  headTaperLength: number = 0.25;
+  /** Per-instance canvases for the dual-layer + outline compositing pass. */
+  private _beamCompositeCanvas: HTMLCanvasElement | null = null;
+  private _beamCompositeCtx: CanvasRenderingContext2D | null = null;
+  private _beamOutlineCanvas: HTMLCanvasElement | null = null;
+  private _beamOutlineCtx: CanvasRenderingContext2D | null = null;
+  private _tileShadeSmallCanvas: HTMLCanvasElement | null = null;
+  private _tileShadeSmallCtx: CanvasRenderingContext2D | null = null;
+  private _tileShadeLargeCanvas: HTMLCanvasElement | null = null;
+  private _tileShadeLargeCtx: CanvasRenderingContext2D | null = null;
+  private _renderAccum: number = 0;
+  private _lastOriginX: number = 0;
+  private _lastOriginY: number = 0;
+  private _hasCachedFrame: boolean = false;
+  /** Cap visual redraws per second (0 = unlimited). Physics simulation is unaffected. */
+  renderFps: number = 0;
+  /** If set, draw two 1-px eye pixels at the head, perpendicular to the beam direction. */
+  eyeColor: string | null = null;
+  /** When false, stripe shading on the beam is disabled (both color layers drawn solid). */
+  showStripes: boolean = true;
   gravity: number = BeamEffect.GRAVITY;
   motionInfluence: number = BeamEffect.MOTION_INFLUENCE;
   turbulence: number = BeamEffect.TURBULENCE;
@@ -212,6 +262,67 @@ export class BeamEffect extends Projectile {
     }
   }
 
+  setGuideNodes(nodes: BeamGuideNode[]) {
+    this.guideNodes = nodes;
+  }
+
+  private applyGuideNode(node: BeamGuideNode, segmentLength: number) {
+    if (this.points.length < 2) return;
+    const anchorX =
+      node.x * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+    const anchorY =
+      node.y * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
+
+    const baseWeight = this.clamp01(node.weight ?? 0.85);
+    const influenceTiles = node.influenceDistance ?? 1.5;
+    const influenceDistancePx = influenceTiles * GameConstants.TILESIZE;
+    if (influenceDistancePx <= 0) return;
+
+    const lastIdx = this.points.length - 1;
+    const tClamped = Math.min(1, Math.max(0, node.tPosition));
+    const centerIdx = Math.round(tClamped * lastIdx);
+
+    // Pin the center point directly to the anchor (no falloff at center).
+    if (centerIdx > 0 && centerIdx < lastIdx) {
+      const prevInfluence = this.attachmentInfluence[centerIdx] ?? 0;
+      if (baseWeight > prevInfluence) {
+        this.attachmentInfluence[centerIdx] = baseWeight;
+        this.points[centerIdx].x = this.lerp(
+          this.points[centerIdx].x,
+          anchorX,
+          baseWeight,
+        );
+        this.points[centerIdx].y = this.lerp(
+          this.points[centerIdx].y,
+          anchorY,
+          baseWeight,
+        );
+      }
+    }
+
+    const maxSegments = Math.max(
+      1,
+      Math.floor(influenceDistancePx / Math.max(segmentLength, 1e-4)),
+    );
+
+    for (let i = 1; i <= maxSegments; i++) {
+      const distanceAlong = segmentLength * i;
+      const ratio = Math.min(1, distanceAlong / influenceDistancePx);
+      const falloff = Math.pow(1 - ratio, 2);
+      const weight = baseWeight * falloff;
+      if (weight <= 0) continue;
+
+      for (const idx of [centerIdx - i, centerIdx + i]) {
+        if (idx <= 0 || idx >= lastIdx) continue;
+        const prevInfluence = this.attachmentInfluence[idx] ?? 0;
+        if (weight <= prevInfluence) continue;
+        this.attachmentInfluence[idx] = weight;
+        this.points[idx].x = this.lerp(this.points[idx].x, anchorX, weight);
+        this.points[idx].y = this.lerp(this.points[idx].y, anchorY, weight);
+      }
+    }
+  }
+
   private clamp01(value: number): number {
     if (value < 0) return 0;
     if (value > 1) return 1;
@@ -231,7 +342,7 @@ export class BeamEffect extends Projectile {
   }
 
   private getBrightnessAt(px: number, py: number): number {
-    if (!this.hostRoom) return 1;
+    if (!this.hostRoom || !this.useBrightnessSampling) return 1;
     const tileX = Math.floor(px / GameConstants.TILESIZE);
     const tileY = Math.floor(py / GameConstants.TILESIZE);
 
@@ -431,6 +542,31 @@ export class BeamEffect extends Projectile {
       return;
     }
 
+    // Visual-frame throttle: simulate every frame but only redraw at renderFps.
+    if (this.renderFps > 0) {
+      this._renderAccum += delta;
+      const frameInterval = 1 / this.renderFps;
+      if (this._renderAccum < frameInterval) {
+        if (this._hasCachedFrame) this._reblitLastFrame();
+        this.prevStartX = startX;
+        this.prevStartY = startY;
+        this.prevEndX = endX;
+        this.prevEndY = endY;
+        return;
+      }
+      this._renderAccum -= frameInterval;
+    }
+
+    // Dual-layer (shadow copy) or outlined beam: compositing path
+    if (this.shadowOffsetY !== 0 || this.beamOutlineColor !== null) {
+      this._renderWithComposite(color, lineWidth);
+      this.prevStartX = startX;
+      this.prevStartY = startY;
+      this.prevEndX = endX;
+      this.prevEndY = endY;
+      return;
+    }
+
     const ctx = Game.ctx;
     const mainCanvas = ctx.canvas;
     const useOffscreen = this.alpha < 1;
@@ -549,6 +685,321 @@ export class BeamEffect extends Projectile {
     );
   }
 
+  private _getBeamBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of this.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+      if (this.shadowOffsetY !== 0) {
+        const sy = p.y + this.shadowOffsetY;
+        if (sy < minY) minY = sy;
+        if (sy > maxY) maxY = sy;
+      }
+    }
+    if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    return { minX, minY, maxX, maxY };
+  }
+
+  private _getSegmentWidth(t: number, lineWidth: number): number {
+    // Tail zone only — head steps are applied per-segment-index in _drawBeamPassToCtx.
+    if (this.tailWidth > 0 && this.tailWidth < lineWidth) {
+      const start = this.tailTaperStart;
+      if (t >= start) {
+        const f = start < 1 ? (t - start) / (1 - start) : 1;
+        return Math.max(this.tailWidth, Math.round(lineWidth + (this.tailWidth - lineWidth) * f));
+      }
+    }
+    return lineWidth;
+  }
+
+  private _drawBeamPassToCtx(
+    ctx: CanvasRenderingContext2D,
+    offX: number,
+    offY: number,
+    color: string,
+    lineWidth: number,
+    dynamicOffsetY: number = 0,
+  ): void {
+    const n = this.points.length;
+    const hasTaper = (this.tailWidth > 0 && this.tailWidth < lineWidth) || this.headTipWidth > 0;
+
+    const comps = this.getColorComponents(color);
+    const sf = 0.75;
+    const stripeColor = `rgb(${Math.round(comps.r * sf)},${Math.round(comps.g * sf)},${Math.round(comps.b * sf)})`;
+
+    let headPx = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const t = i / Math.max(1, n - 2);
+      const p1 = this.points[i];
+      const p2 = this.points[i + 1];
+      const pdx = p2.x - p1.x;
+      const pdy = p2.y - p1.y;
+      const steps = Math.max(1, Math.round(Math.max(Math.abs(pdx), Math.abs(pdy))));
+      const xInc = pdx / steps;
+      const yInc = pdy / steps;
+      let wx = p1.x;
+      let wy = p1.y;
+      for (let step = 0; step <= steps; step++) {
+        let segWidth: number;
+        if (this.headTipWidth > 0 && headPx < 3) {
+          const offsets = [4, 2, 1];
+          segWidth = Math.max(1, lineWidth - offsets[headPx]);
+        } else {
+          segWidth = hasTaper ? this._getSegmentWidth(t, lineWidth) : lineWidth;
+        }
+        const half = Math.floor(segWidth / 2);
+        const segOffY = dynamicOffsetY !== 0 && hasTaper
+          ? Math.round(dynamicOffsetY * (segWidth / lineWidth))
+          : dynamicOffsetY;
+        const cx = Math.round(wx + offX);
+        const cy = Math.round(wy + offY + segOffY);
+        ctx.fillStyle = (this.showStripes && (headPx % 6) < 3) ? stripeColor : color;
+        for (let w = 0; w < segWidth; w++) {
+          for (let h = 0; h < segWidth; h++) {
+            ctx.fillRect(cx - half + w, cy - half + h, 1, 1);
+          }
+        }
+        wx += xInc;
+        wy += yInc;
+        headPx++;
+      }
+    }
+  }
+
+  private _applyTileShadeOverlay(
+    maskCanvas: HTMLCanvasElement,
+    originX: number,
+    originY: number,
+  ): void {
+    if (!this.hostRoom) return;
+    const ts = GameConstants.TILESIZE;
+    const blurPad = 2; // extra tile padding so blur doesn't clip at canvas edge
+
+    const minTX = Math.floor(originX / ts) - blurPad;
+    const minTY = Math.floor(originY / ts) - blurPad;
+    const maxTX = Math.ceil((originX + maskCanvas.width) / ts) + blurPad;
+    const maxTY = Math.ceil((originY + maskCanvas.height) / ts) + blurPad;
+    const numTX = maxTX - minTX;
+    const numTY = maxTY - minTY;
+    if (numTX <= 0 || numTY <= 0) return;
+
+    // Small canvas: 1 px per tile — stores softVis shade alpha per tile.
+    if (
+      !this._tileShadeSmallCanvas ||
+      this._tileShadeSmallCanvas.width < numTX ||
+      this._tileShadeSmallCanvas.height < numTY
+    ) {
+      this._tileShadeSmallCanvas = document.createElement("canvas");
+      this._tileShadeSmallCanvas.width = numTX;
+      this._tileShadeSmallCanvas.height = numTY;
+      this._tileShadeSmallCtx = this._tileShadeSmallCanvas.getContext("2d")!;
+    }
+    const sCtx = this._tileShadeSmallCtx!;
+    sCtx.clearRect(0, 0, numTX, numTY);
+    for (let dtx = 0; dtx < numTX; dtx++) {
+      for (let dty = 0; dty < numTY; dty++) {
+        const sv = this.hostRoom.softVis?.[minTX + dtx]?.[minTY + dty] ?? 0;
+        if (sv <= 0) continue;
+        sCtx.globalAlpha = sv;
+        sCtx.fillStyle = "#000";
+        sCtx.fillRect(dtx, dty, 1, 1);
+      }
+    }
+    sCtx.globalAlpha = 1;
+
+    // Large canvas: full-pixel scale-up of the small canvas, blurred.
+    const largeW = numTX * ts;
+    const largeH = numTY * ts;
+    if (
+      !this._tileShadeLargeCanvas ||
+      this._tileShadeLargeCanvas.width < largeW ||
+      this._tileShadeLargeCanvas.height < largeH
+    ) {
+      this._tileShadeLargeCanvas = document.createElement("canvas");
+      this._tileShadeLargeCanvas.width = largeW;
+      this._tileShadeLargeCanvas.height = largeH;
+      this._tileShadeLargeCtx = this._tileShadeLargeCanvas.getContext("2d")!;
+    }
+    const lCtx = this._tileShadeLargeCtx!;
+    lCtx.clearRect(0, 0, largeW, largeH);
+
+    // Scale small → large with bilinear interpolation and apply blur in one pass.
+    lCtx.imageSmoothingEnabled = true;
+    (lCtx as any).imageSmoothingQuality = "high";
+    lCtx.filter = `blur(${Math.round(ts * 0.5)}px)`;
+    lCtx.drawImage(this._tileShadeSmallCanvas!, 0, 0, numTX, numTY, 0, 0, largeW, largeH);
+    lCtx.filter = "none";
+
+    // Mask to beam shape: keep only pixels where the beam canvas has pixels.
+    const beamOffX = originX - minTX * ts;
+    const beamOffY = originY - minTY * ts;
+    lCtx.imageSmoothingEnabled = false;
+    lCtx.globalCompositeOperation = "destination-in";
+    lCtx.drawImage(maskCanvas, beamOffX, beamOffY);
+    lCtx.globalCompositeOperation = "source-over";
+
+    // Blit masked shade onto Game.ctx. Do not override globalAlpha here — the
+    // caller (draw()) already set it to the entity's fading alpha, so the shade
+    // blit inherits the same fade as the beam canvases above it.
+    Game.ctx.drawImage(
+      this._tileShadeLargeCanvas!,
+      0, 0, largeW, largeH,
+      minTX * ts, minTY * ts, largeW, largeH,
+    );
+  }
+
+  private _drawBeamEyes(): void {
+    if (!this.eyeColor || this.points.length < 2) return;
+    const p0 = this.points[0];
+    const p1 = this.points[1];
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 0.001) return;
+    // Unit vector toward body from head tip.
+    const nx = dx / len;
+    const ny = dy / len;
+    // Perpendicular (side) direction.
+    const perpX = -ny;
+    const perpY = nx;
+    // 1 px into the beam from the tip centre, 1 px to each side — lands on the
+    // outer edge pixels of the 3-px-wide head zone (headPx=1 in the taper).
+    const bx = p0.x + nx;
+    const by = p0.y + ny - 5;
+    Game.ctx.fillStyle = this.eyeColor;
+    Game.ctx.fillRect(Math.round(bx + perpX * 2), Math.round(by + perpY * 2), 1, 1);
+    Game.ctx.fillRect(Math.round(bx - perpX * 2), Math.round(by - perpY * 2), 1, 1);
+  }
+
+  private _reblitLastFrame(): void {
+    if (!this._beamCompositeCanvas) return;
+    const prevOp = Game.ctx.globalCompositeOperation;
+    if (prevOp !== this.compositeOperation) {
+      Game.ctx.globalCompositeOperation = this.compositeOperation as GlobalCompositeOperation;
+    }
+    if (this.beamOutlineColor && this._beamOutlineCanvas) {
+      Game.ctx.drawImage(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+    }
+    Game.ctx.drawImage(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+    if (Game.ctx.globalCompositeOperation !== prevOp) {
+      Game.ctx.globalCompositeOperation = prevOp;
+    }
+    if (this.useBrightnessSampling) {
+      this._applyTileShadeOverlay(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+      if (this.beamOutlineColor && this._beamOutlineCanvas) {
+        this._applyTileShadeOverlay(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+      }
+    } else {
+      this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamCompositeCanvas, this._lastOriginX, this._lastOriginY);
+      if (this.beamOutlineColor && this._beamOutlineCanvas) {
+        this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamOutlineCanvas, this._lastOriginX, this._lastOriginY);
+      }
+    }
+    this._drawBeamEyes();
+  }
+
+  private _renderWithComposite(color: string, lineWidth: number): void {
+    if (this.points.length < 2) return;
+
+    const lhalf = Math.ceil(lineWidth / 2);
+    const pad = lhalf + (this.beamOutlineColor ? 1 : 0) + 1;
+    const bounds = this._getBeamBounds();
+    const originX = Math.floor(bounds.minX) - pad;
+    const originY = Math.floor(bounds.minY) - pad;
+    const cW = Math.ceil(bounds.maxX - bounds.minX) + 2 * pad + 1;
+    const cH = Math.ceil(bounds.maxY - bounds.minY) + 2 * pad + 1;
+    if (cW <= 0 || cH <= 0) return;
+
+    if (
+      !this._beamCompositeCanvas ||
+      this._beamCompositeCanvas.width < cW ||
+      this._beamCompositeCanvas.height < cH
+    ) {
+      this._beamCompositeCanvas = document.createElement("canvas");
+      this._beamCompositeCanvas.width = cW;
+      this._beamCompositeCanvas.height = cH;
+      this._beamCompositeCtx = this._beamCompositeCanvas.getContext("2d")!;
+    }
+    const cCtx = this._beamCompositeCtx!;
+    const cCanvas = this._beamCompositeCanvas!;
+
+    this._lastOriginX = originX;
+    this._lastOriginY = originY;
+    this._hasCachedFrame = true;
+
+    cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+    cCtx.globalCompositeOperation = "source-over";
+    const offX = -originX;
+    const offY = -originY;
+    this._drawBeamPassToCtx(cCtx, offX, offY, color, lineWidth);
+    if (this.shadowOffsetY !== 0) {
+      this._drawBeamPassToCtx(cCtx, offX, offY, this.shadowBeamColor ?? color, lineWidth, this.shadowOffsetY);
+    }
+
+    const prevOp = Game.ctx.globalCompositeOperation;
+    if (prevOp !== this.compositeOperation) {
+      Game.ctx.globalCompositeOperation = this.compositeOperation as GlobalCompositeOperation;
+    }
+
+    if (this.beamOutlineColor) {
+      if (
+        !this._beamOutlineCanvas ||
+        this._beamOutlineCanvas.width < cCanvas.width ||
+        this._beamOutlineCanvas.height < cCanvas.height
+      ) {
+        this._beamOutlineCanvas = document.createElement("canvas");
+        this._beamOutlineCanvas.width = cCanvas.width;
+        this._beamOutlineCanvas.height = cCanvas.height;
+        this._beamOutlineCtx = this._beamOutlineCanvas.getContext("2d")!;
+      }
+      const oCtx = this._beamOutlineCtx!;
+      const oCanvas = this._beamOutlineCanvas!;
+      oCtx.clearRect(0, 0, oCanvas.width, oCanvas.height);
+      oCtx.globalCompositeOperation = "source-over";
+      // 4-directional 1px dilation of the combined beam shape
+      oCtx.drawImage(cCanvas, -1, 0);
+      oCtx.drawImage(cCanvas, 1, 0);
+      oCtx.drawImage(cCanvas, 0, -1);
+      oCtx.drawImage(cCanvas, 0, 1);
+      // Tint with outline color
+      oCtx.globalCompositeOperation = "source-in";
+      oCtx.fillStyle = this.beamOutlineColor;
+      oCtx.fillRect(0, 0, oCanvas.width, oCanvas.height);
+      // Punch out the interior (original beam pixels)
+      oCtx.globalCompositeOperation = "destination-out";
+      oCtx.drawImage(cCanvas, 0, 0);
+      oCtx.globalCompositeOperation = "source-over";
+      // Blit outline behind beam
+      Game.ctx.drawImage(oCanvas, originX, originY);
+    }
+
+    // Blit composite beam on top
+    Game.ctx.drawImage(cCanvas, originX, originY);
+
+    if (Game.ctx.globalCompositeOperation !== prevOp) {
+      Game.ctx.globalCompositeOperation = prevOp;
+    }
+
+    // Apply room shade overlay masked to beam shape, then separately to outline ring.
+    // oCanvas has the beam interior punched out so the two masks are non-overlapping.
+    // useBrightnessSampling = true → new tile-based overlay (blurred softVis squares).
+    // useBrightnessSampling = false → legacy inline shade src canvas path.
+    if (this.useBrightnessSampling) {
+      this._applyTileShadeOverlay(cCanvas, originX, originY);
+      if (this.beamOutlineColor && this._beamOutlineCanvas) {
+        this._applyTileShadeOverlay(this._beamOutlineCanvas, originX, originY);
+      }
+    } else {
+      this.hostRoom?.applyInlineShadeOverlayForCanvas(cCanvas, originX, originY);
+      if (this.beamOutlineColor && this._beamOutlineCanvas) {
+        this.hostRoom?.applyInlineShadeOverlayForCanvas(this._beamOutlineCanvas, originX, originY);
+      }
+    }
+    this._drawBeamEyes();
+  }
+
   tick = () => {
     if (this.parent.dead) {
       this.destroy();
@@ -577,11 +1028,20 @@ export class BeamEffect extends Projectile {
 
         this.applyTurbulence(point, i);
 
+        // Bending resistance: pull each point toward the midpoint of its neighbours.
+        // This resists sharp direction changes, making corners arc gradually.
+        const bendX = this.bendingStiffness > 0
+          ? ((prevPoint.x + nextPoint.x) * 0.5 - point.x) * this.bendingStiffness
+          : 0;
+        const bendY = this.bendingStiffness > 0
+          ? ((prevPoint.y + nextPoint.y) * 0.5 - point.y) * this.bendingStiffness
+          : 0;
+
         point.velocityX =
-          (point.velocityX + springForceXPrev + springForceXNext) *
+          (point.velocityX + springForceXPrev + springForceXNext + bendX) *
           this.damping;
         point.velocityY =
-          (point.velocityY + springForceYPrev + springForceYNext) *
+          (point.velocityY + springForceYPrev + springForceYNext + bendY) *
           this.damping;
 
         const relativeVXPrev = prevPoint.velocityX - point.velocityX;
@@ -601,13 +1061,17 @@ export class BeamEffect extends Projectile {
         point.y += point.velocityY + this.gravity;
       }
 
-      const segmentLength =
-        Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)) /
-        (this.segments - 1);
+      const totalLength = this.naturalLength > 0
+        ? this.naturalLength
+        : Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+      const segmentLength = totalLength / (this.segments - 1);
 
       this.resetAttachmentInfluence();
       this.applyAttachmentControl(true, startX, startY, segmentLength);
       this.applyAttachmentControl(false, endX, endY, segmentLength);
+      for (const node of this.guideNodes) {
+        this.applyGuideNode(node, segmentLength);
+      }
 
       for (
         let constraintIteration = 0;

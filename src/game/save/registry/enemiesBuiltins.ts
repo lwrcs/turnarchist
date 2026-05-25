@@ -73,6 +73,10 @@ import { SpiderEnemy } from "../../../entity/enemy/spiderEnemy";
 import { WardenEnemy } from "../../../entity/enemy/wardenEnemy";
 import { ChessKnightEnemy } from "../../../entity/enemy/chessKnightEnemy";
 import { GiantFrogEnemy } from "../../../entity/enemy/giantFrogEnemy";
+import { SnakeHeadEnemy } from "../../../entity/enemy/snakeHeadEnemy";
+import { SnakeSegmentEnemy } from "../../../entity/enemy/snakeSegmentEnemy";
+import { WormHeadEnemy } from "../../../entity/enemy/wormHeadEnemy";
+import { AbstractSnakeHeadEnemy } from "../../../entity/enemy/abstractSnakeHeadEnemy";
 import { WizardEnemy } from "../../../entity/enemy/wizardEnemy";
 import { WizardState as WizardEnemyState } from "../../../entity/enemy/wizardEnemy";
 import { FireWizardEnemy } from "../../../entity/enemy/fireWizard";
@@ -167,6 +171,9 @@ const entityToKind = (e: Entity): EnemyKind | null => {
   if (e instanceof WardenEnemy) return "warden";
   if (e instanceof ChessKnightEnemy) return "chess_knight";
   if (e instanceof GiantFrogEnemy) return "giant_frog";
+  if (e instanceof WormHeadEnemy) return "worm_head";
+  if (e instanceof SnakeHeadEnemy) return "snake_head";
+  if (e instanceof SnakeSegmentEnemy) return "snake_segment";
   if (e instanceof Crate) return "crate";
   if (e instanceof DarkCrate) return "dark_crate";
   if (e instanceof Pot) return "pot";
@@ -249,6 +256,16 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         isEctomancer && value.links.length > 0
           ? value.links.map((l) => l.ghost.globalId)
           : undefined,
+      snakeSegmentGids:
+        value instanceof AbstractSnakeHeadEnemy && value.segments.length > 0
+          ? value.segments.map((s) => s.globalId)
+          : undefined,
+      snakeHeadGid:
+        value instanceof SnakeSegmentEnemy && value.head
+          ? value.head.globalId
+          : undefined,
+      snakeChainIndex:
+        value instanceof SnakeSegmentEnemy ? value.chainIndex : undefined,
     } satisfies BasicEnemySaveV2;
   };
 
@@ -285,6 +302,13 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       e.ghostifiedBefore = true;
     }
     if ("shieldedBefore" in value && value.shieldedBefore === true) e.shieldedBefore = true;
+    if (
+      e instanceof SnakeSegmentEnemy &&
+      "snakeChainIndex" in value &&
+      typeof value.snakeChainIndex === "number"
+    ) {
+      e.chainIndex = value.snakeChainIndex;
+    }
     e.globalId = value.gid;
     return e;
   };
@@ -602,6 +626,44 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
   registerBasic("warden", WardenEnemy);
   registerBasic("chess_knight", ChessKnightEnemy);
   registerBasic("giant_frog", GiantFrogEnemy);
+  // Snake head's constructor normally spawns its segment chain. During load, segments
+  // are restored independently and the chain is rebuilt by the post-pass in loadV2,
+  // so we suppress chain spawning by toggling __skipChainSpawn around construction.
+  register("snake_head", {
+    save: (value) => {
+      if (!(value instanceof SnakeHeadEnemy))
+        throw new Error("snake_head codec received wrong entity type");
+      return saveBasic("snake_head", value);
+    },
+    spawn: (value, room, ctx) => {
+      if (value.kind !== "snake_head")
+        throw new Error("snake_head codec spawn received wrong kind");
+      (SnakeHeadEnemy as unknown as { __skipChainSpawn: boolean }).__skipChainSpawn = true;
+      try {
+        return spawnBasic(SnakeHeadEnemy, value, room, ctx);
+      } finally {
+        (SnakeHeadEnemy as unknown as { __skipChainSpawn: boolean }).__skipChainSpawn = false;
+      }
+    },
+  });
+  register("worm_head", {
+    save: (value) => {
+      if (!(value instanceof WormHeadEnemy))
+        throw new Error("worm_head codec received wrong entity type");
+      return saveBasic("worm_head", value);
+    },
+    spawn: (value, room, ctx) => {
+      if (value.kind !== "worm_head")
+        throw new Error("worm_head codec spawn received wrong kind");
+      (WormHeadEnemy as unknown as { __skipChainSpawn: boolean }).__skipChainSpawn = true;
+      try {
+        return spawnBasic(WormHeadEnemy, value, room, ctx);
+      } finally {
+        (WormHeadEnemy as unknown as { __skipChainSpawn: boolean }).__skipChainSpawn = false;
+      }
+    },
+  });
+  registerBasic("snake_segment", SnakeSegmentEnemy);
 
   registerBasic("crate", Crate);
   registerBasic("dark_crate", DarkCrate);
