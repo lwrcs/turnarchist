@@ -212,12 +212,14 @@ export abstract class Weapon extends Equippable {
     if (!entity.isEnemy) return;
     const enemy = entity as Enemy;
 
-    // Poison/Bleed are gated by existing enemy status. Curse bonus is handled in attack().
+    // Poison/Bleed/Curse are gated so they only apply when not already active.
     const shouldApply = this.status.poison
       ? !enemy.status.poison.active
       : this.status.blood
         ? !enemy.status.bleed.active
-        : false;
+        : this.status.curse
+          ? !enemy.status.curse.active
+          : false;
 
     if (!shouldApply) return;
 

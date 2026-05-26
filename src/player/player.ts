@@ -419,7 +419,7 @@ export class Player extends Drawable {
 
   applyStatus = (
     enemy: Entity,
-    status: { poison: boolean; blood: boolean; curse: boolean },
+    status: { poison: boolean; blood: boolean; curse: boolean; ethereal: boolean },
   ) => {
     if (enemy instanceof Enemy) {
       if (status.poison) {

@@ -707,7 +707,7 @@ export class Entity extends Drawable {
 
   createDamageNumber = (
     damage: number,
-    type: "none" | "poison" | "blood" | "heal" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
   ) => {
     let color = "red";
     let outlineColor = GameConstants.OUTLINE;
@@ -719,6 +719,10 @@ export class Entity extends Drawable {
     if (type === "heal") {
       color = "#B8A4FF";
       outlineColor = GameConstants.OUTLINE;
+    }
+    if (type === "curse") {
+      color = "#CC77FF";
+      outlineColor = "#5B2BAF";
     }
     this.room.particles.push(
       new DamageNumber(this.room, this.x, this.y, damage, color, outlineColor),
@@ -1081,13 +1085,13 @@ export class Entity extends Drawable {
 
   onHurt = (
     damage: number = 1,
-    type: "none" | "poison" | "blood" | "heal" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
   ) => {};
 
   hurt = (
     playerHitBy: Player | null,
     damage: number,
-    type: "none" | "poison" | "blood" | "heal" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
   ) => {
     this.handleEnemyCase(playerHitBy);
     this.hitBy = playerHitBy ?? null;

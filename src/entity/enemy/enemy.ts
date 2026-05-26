@@ -39,6 +39,11 @@ interface EnemyStatus {
     startTick: number;
     effectTick: number;
   };
+  curse: {
+    active: boolean;
+    tickCount: number;
+    startTick: number;
+  };
 }
 
 export abstract class Enemy extends Entity {
@@ -94,6 +99,7 @@ export abstract class Enemy extends Entity {
     this.status = {
       poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
       bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
+      curse: { active: false, tickCount: 0, startTick: 0 },
     };
     this.alertRange = GameplaySettings.BASE_ENEMY_ALERT_RANGE;
     this.effectStartTick = 1;
@@ -190,12 +196,46 @@ export abstract class Enemy extends Entity {
     }
   };
 
-  /**
-   * Placeholder for "curse" weapon status. Intentionally no-op for now.
-   * This exists so WeaponCurse can be applied and routed through the same pipeline
-   * as poison/bleed without affecting gameplay yet.
-   */
-  curse = () => {};
+  curse = () => {
+    if (!this.status.curse.active) {
+      this.status.curse = { active: true, tickCount: 0, startTick: this.ticks };
+      this.shadeColor = "#2E0854";
+    }
+  };
+
+  uniqueKillBehavior = () => {
+    if (!this.status.curse.active) return;
+    for (const entity of this.room.entities) {
+      if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
+      if (entity.status.curse.active) continue;
+      const dx = Math.abs(entity.x - this.x);
+      const dy = Math.abs(entity.y - this.y);
+      if (dx <= 1 && dy <= 1) entity.curse();
+    }
+  };
+
+  tickCurse = () => {
+    if (!this.status.curse.active) return;
+    this.status.curse.tickCount++;
+    this.shadeColor = "#2E0854";
+
+    // Deal 0.5 damage every other tick, starting after 2 ticks.
+    // Spread curse to adjacent enemies on each damage tick.
+    if (
+      this.targetPlayer &&
+      this.status.curse.tickCount >= 2 &&
+      this.status.curse.tickCount % 2 === 0
+    ) {
+      this.hurt(this.targetPlayer, 0.5, "curse");
+      for (const entity of this.room.entities) {
+        if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
+        if (entity.status.curse.active) continue;
+        const dx = Math.abs(entity.x - this.x);
+        const dy = Math.abs(entity.y - this.y);
+        if (dx <= 1 && dy <= 1) entity.curse();
+      }
+    }
+  };
 
   tickPoison = () => {
     if (this.status.poison.active && this.targetPlayer) {
@@ -339,6 +379,19 @@ export abstract class Enemy extends Entity {
     this.searchPathLocalized(this.targetPlayer, disablePositions);
   };
 
+  startHurting = () => {
+    this.hurting = true;
+    this.hurtFrame += 15;
+    this.shadeColor = this.status.curse.active ? "#2E0854" : "#FF0000";
+    this.shadeMultiplier = 1.5;
+  };
+
+  stopHurting = () => {
+    this.hurting = false;
+    this.hurtFrame = 0;
+    this.shadeColor = this.status.curse.active ? "#2E0854" : "#000000";
+  };
+
   handleSkipTurns = () => {
     if (this.skipNextTurns > 0) {
       if (this.skipNextTurns === 1) this.makeHitWarnings();
@@ -350,6 +403,7 @@ export abstract class Enemy extends Entity {
   tick = () => {
     this.tickPoison();
     this.tickBleed();
+    this.tickCurse();
     if (this.ghostFrozen && !this.dead) {
       this.lastX = this.x;
       this.lastY = this.y;
@@ -1191,6 +1245,7 @@ export abstract class Enemy extends Entity {
 
   draw = (delta: number) => {
     if (!this.dead) {
+      if (this.status.curse.active && !this.hurting) this.shadeColor = "#2E0854";
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
