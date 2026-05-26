@@ -405,6 +405,12 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
   snakeHeadGid?: Gid;
   /** Snake segment: position in the chain (0 = closest to head). */
   snakeChainIndex?: number;
+  /** Active status effects on the enemy (poison, bleed, curse). */
+  enemyStatus?: {
+    poison?: { active: boolean; hitCount: number; startTick: number; effectTick: number };
+    bleed?: { active: boolean; hitCount: number; startTick: number; effectTick: number };
+    curse?: { active: boolean; tickCount: number; startTick: number };
+  };
 };
 
 export type WizardTypeKind = "energy" | "fire" | "earth" | "big";

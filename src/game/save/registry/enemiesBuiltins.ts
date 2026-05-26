@@ -266,6 +266,15 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
           : undefined,
       snakeChainIndex:
         value instanceof SnakeSegmentEnemy ? value.chainIndex : undefined,
+      enemyStatus: isEnemy && (
+        value.status.poison.active ||
+        value.status.bleed.active ||
+        value.status.curse.active
+      ) ? {
+        poison: value.status.poison.active ? { ...value.status.poison } : undefined,
+        bleed: value.status.bleed.active ? { ...value.status.bleed } : undefined,
+        curse: value.status.curse.active ? { ...value.status.curse } : undefined,
+      } : undefined,
     } satisfies BasicEnemySaveV2;
   };
 
@@ -308,6 +317,15 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       typeof value.snakeChainIndex === "number"
     ) {
       e.chainIndex = value.snakeChainIndex;
+    }
+    if (e instanceof Enemy && "enemyStatus" in value && value.enemyStatus) {
+      const s = value.enemyStatus;
+      if (s.poison) e.status.poison = { ...s.poison };
+      if (s.bleed) e.status.bleed = { ...s.bleed };
+      if (s.curse) {
+        e.status.curse = { ...s.curse };
+        e.shadeColor = "#2E0854";
+      }
     }
     e.globalId = value.gid;
     return e;

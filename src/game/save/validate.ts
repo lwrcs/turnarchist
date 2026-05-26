@@ -2268,6 +2268,44 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     snakeChainIndex = snakeChainIndexU;
   }
 
+  const enemyStatusU = get(v, "enemyStatus");
+  type EnemyStatusSave = NonNullable<import("./schema").BasicEnemySaveV2["enemyStatus"]>;
+  let enemyStatus: EnemyStatusSave | undefined = undefined;
+  if (enemyStatusU !== undefined) {
+    if (!isRecord(enemyStatusU))
+      return err({ kind: "InvalidSchema", message: "enemyStatus must be object if present", path: `${path}.enemyStatus` });
+
+    const validateStatusBlock = (
+      raw: unknown,
+      p: string,
+    ): { active: boolean; hitCount: number; startTick: number; effectTick: number } | undefined => {
+      if (raw === undefined) return undefined;
+      if (!isRecord(raw)) return undefined;
+      const active = get(raw, "active");
+      const hitCount = get(raw, "hitCount");
+      const startTick = get(raw, "startTick");
+      const effectTick = get(raw, "effectTick");
+      if (!isBoolean(active) || !isNumber(hitCount) || !isNumber(startTick) || !isNumber(effectTick)) return undefined;
+      return { active, hitCount, startTick, effectTick };
+    };
+
+    const curseRaw = get(enemyStatusU, "curse");
+    let curse: { active: boolean; tickCount: number; startTick: number } | undefined = undefined;
+    if (curseRaw !== undefined && isRecord(curseRaw)) {
+      const active = get(curseRaw, "active");
+      const tickCount = get(curseRaw, "tickCount");
+      const startTick = get(curseRaw, "startTick");
+      if (isBoolean(active) && isNumber(tickCount) && isNumber(startTick))
+        curse = { active, tickCount, startTick };
+    }
+
+    enemyStatus = {
+      poison: validateStatusBlock(get(enemyStatusU, "poison"), `${path}.enemyStatus.poison`),
+      bleed: validateStatusBlock(get(enemyStatusU, "bleed"), `${path}.enemyStatus.bleed`),
+      curse,
+    };
+  }
+
   return ok({
     kind,
     gid: gidR.value,
@@ -2300,6 +2338,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     snakeSegmentGids: snakeSegmentGidsR.value,
     snakeHeadGid,
     snakeChainIndex,
+    enemyStatus,
   });
 };
 
