@@ -4,6 +4,8 @@ import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "./usable";
 import { Weapon } from "../weapon/weapon";
+import { Pickaxe } from "../tool/pickaxe";
+import { Spellbook } from "../weapon/spellbook";
 
 export class WeaponPoison extends Usable {
   static itemName = "weapon poison";
@@ -27,7 +29,7 @@ export class WeaponPoison extends Usable {
   };
 
   useOnOther = (player: Player, other: Item) => {
-    if (other instanceof Weapon) {
+    if (other instanceof Weapon && !(other instanceof Pickaxe) && !(other instanceof Spellbook)) {
       other.applyStatus({ poison: true, blood: false, curse: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
