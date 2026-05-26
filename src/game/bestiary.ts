@@ -576,7 +576,7 @@ export class Bestiary extends BookRenderer {
       }
     }
 
-    beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, delta, beam.compositeOperation, false, true);
+    beam.render(0, 0, 0, 0, beam.color, beam.lineWidth, delta, beam.compositeOperation, false, false);
   }
 
   private drawEffectsPreview = (

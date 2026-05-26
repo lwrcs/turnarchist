@@ -95,20 +95,18 @@ export class AbstractSnakeHeadEnemy extends Enemy {
     b.tailWidth = 2;
     b.tailTaperStart = 0.75;
     b.headTipWidth = 1;
+    b.headNosePx = 8;
+    b.headPeakWidth = 8;
+    b.headNeckWidth = 3;
     b.headTaperLength = 0.0625;
     b.shadowOffsetY = -4;
     b.beamOutlineColor = "#1f2127";
-    b.gravity = 0;
-    b.turbulence = 0.03;
-    b.damping = 0.95;
-    b.springStiffness = 0.04;
-    b.springDamping = 0.06;
-    b.bendingStiffness = 0;
-    b.iterations = 8;
     b.useBrightnessSampling = true;
     b.renderFps = 15;
-    b.eyeColor = "#000000";
+    b.eyeColor = "#1f2127";
+    b.eyeSetback = 6;
     b.showStripes = this.hasStripes;
+    b.disableSimulation = true;
   }
 
   /**
@@ -475,13 +473,18 @@ export class AbstractSnakeHeadEnemy extends Enemy {
   drawTopLayer = (delta: number) => {
     this.drawableY = this.y;
     this.tickHealthBarHover();
+    const alive = this.segments.filter((s) => !s.dead);
+    const allX = [this.x, ...alive.map((s) => s.x)];
+    const allY = [this.y, ...alive.map((s) => s.y)];
+    const cx = allX.reduce((a, b) => a + b, 0) / allX.length;
+    const cy = allY.reduce((a, b) => a + b, 0) / allY.length;
     this.healthBar.draw(
       delta,
       this.health,
       this.maxHealth,
-      this.x + 0.5,
-      this.y,
-      false,
+      cx,
+      cy,
+      true,
     );
 
     if (GameConstants.SNAKE_DEBUG_CENTERS) {

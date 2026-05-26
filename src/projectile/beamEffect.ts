@@ -132,6 +132,8 @@ export class BeamEffect extends Projectile {
   endControl?: BeamAttachmentControl;
   guideNodes: BeamGuideNode[] = [];
   oxygenTraversalIndex?: number;
+  /** When true, skips spring physics entirely and places points geometrically along the guide-node polyline. Beam snaps instantly to new positions; no oscillation. */
+  disableSimulation: boolean = false;
   /** Fixed physical length of the rope in pixels. When nonzero, overrides the head-to-tail distance calculation so the rope maintains this length regardless of endpoint positions. */
   naturalLength: number = 0;
   /** If nonzero, draw a second copy of the beam shifted by this many pixels in Y (use negative for upward). */
@@ -154,6 +156,12 @@ export class BeamEffect extends Projectile {
   headNeckWidth: number = 0;
   /** Fraction of the beam (from t=0) that forms the head+neck zone. */
   headTaperLength: number = 0.25;
+  /** Pixel length of the nose taper zone (headTipWidth → headPeakWidth). Default 3 for backward compat. */
+  headNosePx: number = 3;
+  /** Maximum head width at the widest point (just after the nose). 0 = no peak (head stays ≤ lineWidth). */
+  headPeakWidth: number = 0;
+  /** Pixels along the body axis from the nose tip where eyes are placed. */
+  eyeSetback: number = 1;
   /** Per-instance canvases for the dual-layer + outline compositing pass. */
   private _beamCompositeCanvas: HTMLCanvasElement | null = null;
   private _beamCompositeCtx: CanvasRenderingContext2D | null = null;
@@ -513,25 +521,29 @@ export class BeamEffect extends Projectile {
       this.targetY * GameConstants.TILESIZE + 0.5 * GameConstants.TILESIZE;
 
     if (simulate) {
-      const startForceX =
-        (startX - this.prevStartX) * this.motionInfluence * delta;
-      const startForceY =
-        (startY - this.prevStartY) * this.motionInfluence * delta;
-      const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
-      const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
+      if (this.disableSimulation) {
+        this._repositionAlongWaypoints(startX, startY, endX, endY);
+      } else {
+        const startForceX =
+          (startX - this.prevStartX) * this.motionInfluence * delta;
+        const startForceY =
+          (startY - this.prevStartY) * this.motionInfluence * delta;
+        const endForceX = (endX - this.prevEndX) * this.motionInfluence * delta;
+        const endForceY = (endY - this.prevEndY) * this.motionInfluence * delta;
 
-      for (let i = 1; i < 4; i++) {
-        const influence = 1 - i / 4;
-        this.points[i].x += startForceX * influence;
-        this.points[i].y += startForceY * influence;
-      }
-      for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
-        const influence = 1 - (this.points.length - i) / 4;
-        this.points[i].x += endForceX * influence;
-        this.points[i].y += endForceY * influence;
-      }
+        for (let i = 1; i < 4; i++) {
+          const influence = 1 - i / 4;
+          this.points[i].x += startForceX * influence;
+          this.points[i].y += startForceY * influence;
+        }
+        for (let i = this.points.length - 4; i < this.points.length - 1; i++) {
+          const influence = 1 - (this.points.length - i) / 4;
+          this.points[i].x += endForceX * influence;
+          this.points[i].y += endForceY * influence;
+        }
 
-      this.simulateRope(startX, startY, endX, endY, delta);
+        this.simulateRope(startX, startY, endX, endY, delta);
+      }
     }
 
     if (skipDrawing) {
@@ -702,6 +714,38 @@ export class BeamEffect extends Projectile {
     return { minX, minY, maxX, maxY };
   }
 
+  private _headWidthAt(headPx: number, lineWidth: number): number | null {
+    if (this.headTipWidth <= 0) return null;
+    const nosePx = this.headNosePx;
+    const peakWidth = this.headPeakWidth > 0 ? this.headPeakWidth : lineWidth;
+    // Nose zone: headTipWidth → peakWidth over nosePx pixels.
+    if (headPx < nosePx) {
+      const f = nosePx > 1 ? headPx / (nosePx - 1) : 1;
+      return Math.max(1, Math.round(this.headTipWidth + (peakWidth - this.headTipWidth) * f));
+    }
+    // Post-nose zone: peakWidth → (optional neck dip) → lineWidth.
+    const hasNeck = this.headNeckWidth > 0 && this.headNeckWidth < peakWidth;
+    const neckPx = Math.max(2, Math.ceil(nosePx * 0.65));
+    const postOffset = headPx - nosePx;
+    if (hasNeck && postOffset < neckPx) {
+      // First half: peak → neck (linear descent).
+      const f = postOffset / neckPx;
+      return Math.max(1, Math.round(peakWidth - (peakWidth - this.headNeckWidth) * Math.sin(Math.PI * f * 0.5)));
+    }
+    // Widen from neck (or peak) back to lineWidth over the same neckPx window.
+    const riseStart = hasNeck ? neckPx : 0;
+    const riseOffset = postOffset - riseStart;
+    const risePx = Math.max(2, Math.ceil(nosePx * 0.65));
+    if (riseOffset < risePx) {
+      const fromW = hasNeck ? this.headNeckWidth : peakWidth;
+      if (fromW !== lineWidth) {
+        const f = riseOffset / risePx;
+        return Math.max(1, Math.round(fromW + (lineWidth - fromW) * Math.sin(Math.PI * f * 0.5)));
+      }
+    }
+    return null;
+  }
+
   private _getSegmentWidth(t: number, lineWidth: number): number {
     // Tail zone only — head steps are applied per-segment-index in _drawBeamPassToCtx.
     if (this.tailWidth > 0 && this.tailWidth < lineWidth) {
@@ -743,9 +787,9 @@ export class BeamEffect extends Projectile {
       let wy = p1.y;
       for (let step = 0; step <= steps; step++) {
         let segWidth: number;
-        if (this.headTipWidth > 0 && headPx < 3) {
-          const offsets = [4, 2, 1];
-          segWidth = Math.max(1, lineWidth - offsets[headPx]);
+        const headW = this._headWidthAt(headPx, lineWidth);
+        if (headW !== null) {
+          segWidth = headW;
         } else {
           segWidth = hasTaper ? this._getSegmentWidth(t, lineWidth) : lineWidth;
         }
@@ -763,6 +807,81 @@ export class BeamEffect extends Projectile {
         }
         wx += xInc;
         wy += yInc;
+        headPx++;
+      }
+    }
+  }
+
+  private _drawBeamOrientedRibbon(
+    ctx: CanvasRenderingContext2D,
+    offX: number,
+    offY: number,
+    color: string,
+    lineWidth: number,
+    dynamicOffsetY: number = 0,
+  ): void {
+    const n = this.points.length;
+    if (n < 2) return;
+    const hasTaper = (this.tailWidth > 0 && this.tailWidth < lineWidth) || this.headTipWidth > 0;
+    const comps = this.getColorComponents(color);
+    const sf = 0.75;
+    const stripeColor = `rgb(${Math.round(comps.r * sf)},${Math.round(comps.g * sf)},${Math.round(comps.b * sf)})`;
+
+    // Compute total arc length of the rendered path.
+    let totalArcLen = 0;
+    for (let i = 1; i < n; i++) {
+      const dx = this.points[i].x - this.points[i - 1].x;
+      const dy = this.points[i].y - this.points[i - 1].y;
+      totalArcLen += Math.sqrt(dx * dx + dy * dy);
+    }
+    // Two stripe bands per body segment (×2 density): interior guide nodes map 2:1 to
+    // actual segments, so (interiorCount + 1) bands per segment half-period.
+    const interiorNodes = this.guideNodes.filter(gn => gn.tPosition > 0 && gn.tPosition < 1).length;
+    const stripeHalfPeriod = Math.max(1, totalArcLen / Math.max(1, (interiorNodes + 1) * 2));
+
+    let headPx = 0;
+    let arcLen = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const t = i / Math.max(1, n - 2);
+      const p1 = this.points[i];
+      const p2 = this.points[i + 1];
+      const pdx = p2.x - p1.x;
+      const pdy = p2.y - p1.y;
+      const segLen = Math.sqrt(pdx * pdx + pdy * pdy);
+      // Perpendicular unit vector (90° CCW of tangent); integer-rounded per pixel below.
+      const perpX = segLen > 0 ? -pdy / segLen : 0;
+      const perpY = segLen > 0 ?  pdx / segLen : 1;
+
+      // ceil(segLen) ensures step size ≤ 1 px — no tangent-direction pixel rows are skipped.
+      const steps = Math.max(1, Math.ceil(segLen));
+      const xInc = pdx / steps;
+      const yInc = pdy / steps;
+      const arcInc = segLen / steps;
+      let wx = p1.x;
+      let wy = p1.y;
+      for (let step = 0; step <= steps; step++) {
+        let segWidth: number;
+        const headW = this._headWidthAt(headPx, lineWidth);
+        if (headW !== null) {
+          segWidth = headW;
+        } else {
+          segWidth = hasTaper ? this._getSegmentWidth(t, lineWidth) : lineWidth;
+        }
+        const half = Math.floor(segWidth / 2);
+        const segOffY = dynamicOffsetY !== 0 && hasTaper
+          ? Math.round(dynamicOffsetY * (segWidth / lineWidth))
+          : dynamicOffsetY;
+        const cx = Math.round(wx + offX);
+        const cy = Math.round(wy + offY + segOffY);
+        ctx.fillStyle = (this.showStripes && (Math.floor(arcLen / stripeHalfPeriod) % 2 === 0)) ? stripeColor : color;
+        // Integer-only fillRect per pixel — pixel-perfect, no canvas anti-aliasing.
+        for (let w = 0; w < segWidth; w++) {
+          const offset = w - half;
+          ctx.fillRect(cx + Math.round(perpX * offset), cy + Math.round(perpY * offset), 1, 1);
+        }
+        wx += xInc;
+        wy += yInc;
+        arcLen += arcInc;
         headPx++;
       }
     }
@@ -864,13 +983,11 @@ export class BeamEffect extends Projectile {
     // Perpendicular (side) direction.
     const perpX = -ny;
     const perpY = nx;
-    // 1 px into the beam from the tip centre, 1 px to each side — lands on the
-    // outer edge pixels of the 3-px-wide head zone (headPx=1 in the taper).
-    const bx = p0.x + nx;
-    const by = p0.y + ny - 5;
+    const bx = p0.x + nx * this.eyeSetback;
+    const by = p0.y + ny * this.eyeSetback - 5;
     Game.ctx.fillStyle = this.eyeColor;
-    Game.ctx.fillRect(Math.round(bx + perpX * 2), Math.round(by + perpY * 2), 1, 1);
-    Game.ctx.fillRect(Math.round(bx - perpX * 2), Math.round(by - perpY * 2), 1, 1);
+    Game.ctx.fillRect(Math.round(bx + perpX * 2), Math.round(by + perpY * 2), 2, 2);
+    Game.ctx.fillRect(Math.round(bx - perpX * 2), Math.round(by - perpY * 2), 2, 2);
   }
 
   private _reblitLastFrame(): void {
@@ -903,7 +1020,7 @@ export class BeamEffect extends Projectile {
   private _renderWithComposite(color: string, lineWidth: number): void {
     if (this.points.length < 2) return;
 
-    const lhalf = Math.ceil(lineWidth / 2);
+    const lhalf = Math.ceil(Math.max(lineWidth, this.headPeakWidth) / 2);
     const pad = lhalf + (this.beamOutlineColor ? 1 : 0) + 1;
     const bounds = this._getBeamBounds();
     const originX = Math.floor(bounds.minX) - pad;
@@ -933,9 +1050,12 @@ export class BeamEffect extends Projectile {
     cCtx.globalCompositeOperation = "source-over";
     const offX = -originX;
     const offY = -originY;
-    this._drawBeamPassToCtx(cCtx, offX, offY, color, lineWidth);
+    const drawPass = this.disableSimulation
+      ? this._drawBeamOrientedRibbon.bind(this)
+      : this._drawBeamPassToCtx.bind(this);
+    drawPass(cCtx, offX, offY, color, lineWidth);
     if (this.shadowOffsetY !== 0) {
-      this._drawBeamPassToCtx(cCtx, offX, offY, this.shadowBeamColor ?? color, lineWidth, this.shadowOffsetY);
+      drawPass(cCtx, offX, offY, this.shadowBeamColor ?? color, lineWidth, this.shadowOffsetY);
     }
 
     const prevOp = Game.ctx.globalCompositeOperation;
@@ -1005,6 +1125,68 @@ export class BeamEffect extends Projectile {
       this.destroy();
     }
   };
+
+  private _catmullRomEval(
+    wps: Array<{ t: number; px: number; py: number }>,
+    t: number,
+  ): { x: number; y: number } {
+    const m = wps.length;
+    if (m === 0) return { x: 0, y: 0 };
+    if (m === 1) return { x: wps[0].px, y: wps[0].py };
+    if (t <= wps[0].t) return { x: wps[0].px, y: wps[0].py };
+    if (t >= wps[m - 1].t) return { x: wps[m - 1].px, y: wps[m - 1].py };
+
+    // Find the segment [i1, i2] that straddles t
+    let i1 = 0;
+    for (let j = 0; j < m - 1; j++) {
+      if (t <= wps[j + 1].t) { i1 = j; break; }
+      i1 = j;
+    }
+    const i0 = Math.max(0, i1 - 1);
+    const i2 = Math.min(m - 1, i1 + 1);
+    const i3 = Math.min(m - 1, i1 + 2);
+
+    const p0 = wps[i0], p1 = wps[i1], p2 = wps[i2], p3 = wps[i3];
+    const span = p2.t - p1.t;
+    const u = span > 1e-8 ? (t - p1.t) / span : 0;
+    const u2 = u * u;
+    const u3 = u2 * u;
+
+    return {
+      x: 0.5 * (2 * p1.px + (-p0.px + p2.px) * u + (2 * p0.px - 5 * p1.px + 4 * p2.px - p3.px) * u2 + (-p0.px + 3 * p1.px - 3 * p2.px + p3.px) * u3),
+      y: 0.5 * (2 * p1.py + (-p0.py + p2.py) * u + (2 * p0.py - 5 * p1.py + 4 * p2.py - p3.py) * u2 + (-p0.py + 3 * p1.py - 3 * p2.py + p3.py) * u3),
+    };
+  }
+
+  private _repositionAlongWaypoints(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+  ): void {
+    const ts = GameConstants.TILESIZE;
+    const wps: { t: number; px: number; py: number }[] = [
+      { t: 0, px: startX, py: startY },
+    ];
+    const sorted = [...this.guideNodes].sort((a, b) => a.tPosition - b.tPosition);
+    for (const gn of sorted) {
+      const tc = Math.min(1, Math.max(0, gn.tPosition));
+      if (tc > 0 && tc < 1) {
+        wps.push({ t: tc, px: gn.x * ts + 0.5 * ts, py: gn.y * ts + 0.5 * ts });
+      }
+    }
+    wps.push({ t: 1, px: endX, py: endY });
+
+    const n = this.points.length;
+    for (let i = 0; i < n; i++) {
+      const t = i / Math.max(1, n - 1);
+      const pos = this._catmullRomEval(wps, t);
+      this.points[i].x = pos.x;
+      this.points[i].y = pos.y;
+      this.points[i].velocityX = 0;
+      this.points[i].velocityY = 0;
+    }
+  }
 
   private simulateRope(
     startX: number,

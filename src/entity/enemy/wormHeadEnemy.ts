@@ -25,30 +25,26 @@ export class WormHeadEnemy extends AbstractSnakeHeadEnemy {
     this.orthogonalAttack = true;
     this.diagonalAttack = true;
 
-    // No beam stripes — solid body.
-    this.hasStripes = false;
+    this.hasStripes = true;
   }
 
   protected configureBeam(b: BeamEffect): void {
-    b.color = "#2e1a0a";
-    b.shadowBeamColor = "#6b3d18";
+    b.color = "#d4a85c";
+    b.shadowBeamColor = "#c06828";
     b.lineWidth = 6;
     b.tailWidth = 3;
     b.tailTaperStart = 0.8;
     b.headTipWidth = 2;
+    b.headNosePx = 8;
+    b.headPeakWidth = 9;
+    b.headNeckWidth = 4;
     b.headTaperLength = 0.075;
     b.shadowOffsetY = -3;
-    b.beamOutlineColor = "#1a0f05";
-    b.gravity = 0;
-    b.turbulence = 0.025;
-    b.damping = 0.95;
-    b.springStiffness = 0.04;
-    b.springDamping = 0.06;
-    b.bendingStiffness = 0;
-    b.iterations = 8;
+    b.beamOutlineColor = "#1f2127";
     b.useBrightnessSampling = true;
     b.renderFps = 15;
     b.eyeColor = null;
-    b.showStripes = false;
+    b.showStripes = true;
+    b.disableSimulation = true;
   }
 }
