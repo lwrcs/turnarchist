@@ -4,7 +4,6 @@ import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 import { GameConstants } from "../game/gameConstants";
 import { Weapon } from "./weapon/weapon";
-import { WoodenShield } from "./woodenShield";
 
 export class Armor extends Equippable {
   health: number;
@@ -14,6 +13,7 @@ export class Armor extends Equippable {
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
+    this.isShield = true;
     this.health = 1;
     this.rechargeTurnCounter = -1;
     this.tileX = 5;
@@ -22,7 +22,7 @@ export class Armor extends Equippable {
   }
 
   coEquippable = (other: Equippable): boolean => {
-    if (other instanceof Armor || other instanceof WoodenShield) return false;
+    if (other.isShield) return false;
     /*
     if (other instanceof Weapon && (other as Weapon).twoHanded) {
       return false;

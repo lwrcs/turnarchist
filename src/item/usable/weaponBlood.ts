@@ -5,8 +5,6 @@ import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 import { Usable } from "./usable";
 import { Weapon } from "../weapon/weapon";
-import { Pickaxe } from "../tool/pickaxe";
-import { Spellbook } from "../weapon/spellbook";
 
 export class WeaponBlood extends Usable {
   static itemName = "cursed blood";
@@ -30,8 +28,8 @@ export class WeaponBlood extends Usable {
   };
 
   useOnOther = (player: Player, other: Item) => {
-    if (other instanceof Weapon && !(other instanceof Pickaxe) && !(other instanceof Spellbook)) {
-      other.applyStatus({ blood: true, poison: false, curse: false });
+    if (other instanceof Weapon && other.canReceiveStatusEffect) {
+      other.applyStatus({ blood: true, poison: false, curse: false, ethereal: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
         `You coat your ${other.name} in cursed blood.`,

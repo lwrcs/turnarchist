@@ -4,11 +4,11 @@ import { Room } from "../room/room";
 import { Player } from "../player/player";
 import { GameplaySettings } from "../game/gameplaySettings";
 import { Weapon } from "./weapon/weapon";
-import { Armor } from "./armor";
 
 export class Equippable extends Item {
   wielder: Player | null = null;
   equipped: boolean;
+  isShield: boolean = false;
   equipTick: boolean = false;
   useCost: number = 1;
   cooldown: number = 0;
@@ -33,7 +33,7 @@ export class Equippable extends Item {
   onUnequip = () => {};
 
   toggleEquip = () => {
-    if ((!this.broken && this.cooldown <= 0) || this instanceof Armor) {
+    if ((!this.broken && this.cooldown <= 0) || this.isShield) {
       if (!this.equipped && this.wielder?.inventory?.weapon) {
         this.previousWeapon = this.wielder.inventory.weapon;
       }

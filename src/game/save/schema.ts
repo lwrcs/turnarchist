@@ -534,6 +534,7 @@ export type WeaponStatusSaveV2 = {
   poison: boolean;
   blood: boolean;
   curse: boolean;
+  ethereal: boolean;
 };
 
 export type WeaponItemKind =
@@ -846,6 +847,7 @@ export const ITEM_KIND_VALUES_V2 = [
   "weapon_poison",
   "weapon_blood",
   "weapon_curse",
+  "weapon_ethereal",
   "spellbook_page",
   "weapon_fragments",
   "backpack",

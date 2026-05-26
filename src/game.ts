@@ -4093,7 +4093,7 @@ export class Game {
             broken: false,
           };
         case "spellbook": {
-          const status = { poison: false, blood: false, curse: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
           return {
             ...base,
             kind: "spellbook",
@@ -4120,7 +4120,7 @@ export class Game {
         case "shotgun":
         case "slingshot":
         case "pickaxe": {
-          const status = { poison: false, blood: false, curse: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
           return {
             ...base,
             kind,
@@ -4134,7 +4134,7 @@ export class Game {
           };
         }
         case "crossbow": {
-          const status = { poison: false, blood: false, curse: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
           return {
             ...base,
             kind: "crossbow",

@@ -15,7 +15,7 @@ export class WeaponCurse extends Usable {
     this.offsetY = -0.3;
     this.canUseOnOther = true;
     this.name = WeaponCurse.itemName;
-    this.description = "Can be applied to weapons.";
+    this.description = "Can be applied to weapons to deal bonus damage against shielded enemies.";
   }
 
   onUse = (player: Player) => {
@@ -28,7 +28,7 @@ export class WeaponCurse extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon) {
-      other.applyStatus({ poison: false, blood: false, curse: true });
+      other.applyStatus({ poison: false, blood: false, curse: true, ethereal: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(`You apply the curse to your ${other.name}.`);
       console.log(`weapon curse used on ${other.name}`);
@@ -36,6 +36,6 @@ export class WeaponCurse extends Usable {
   };
 
   getDescription = () => {
-    return "WEAPON CURSE\nCan be applied to weapons to deal curse damage";
+    return "WEAPON CURSE\nDeals +1 damage against occultist-shielded enemies";
   };
 }

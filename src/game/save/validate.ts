@@ -998,12 +998,15 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     const poisonU = get(statusU, "poison");
     const bloodU = get(statusU, "blood");
     const curseU = get(statusU, "curse");
+    const etherealU = get(statusU, "ethereal");
     if (!isBoolean(poisonU))
       return err({ kind: "InvalidSchema", message: "status.poison must be boolean", path: `${path}.status.poison` });
     if (!isBoolean(bloodU))
       return err({ kind: "InvalidSchema", message: "status.blood must be boolean", path: `${path}.status.blood` });
     if (!isBoolean(curseU))
       return err({ kind: "InvalidSchema", message: "status.curse must be boolean", path: `${path}.status.curse` });
+    if (!isBoolean(etherealU))
+      return err({ kind: "InvalidSchema", message: "status.ethereal must be boolean", path: `${path}.status.ethereal` });
     // spellIds is optional for backward-compat with pre-spell saves
     let spellIds: string[] = [];
     if (spellIdsU !== undefined) {
@@ -1031,7 +1034,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       broken: brokenU,
       cooldown: cooldownU,
       cooldownMax: cooldownMaxU,
-      status: { poison: poisonU, blood: bloodU, curse: curseU },
+      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
       spellIds,
       activeSpellId,
     });
@@ -1085,6 +1088,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     const poisonU = get(statusU, "poison");
     const bloodU = get(statusU, "blood");
     const curseU = get(statusU, "curse");
+    const etherealU = get(statusU, "ethereal");
     if (!isBoolean(poisonU))
       return err({
         kind: "InvalidSchema",
@@ -1102,6 +1106,12 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
         kind: "InvalidSchema",
         message: "status.curse must be boolean",
         path: `${path}.status.curse`,
+      });
+    if (!isBoolean(etherealU))
+      return err({
+        kind: "InvalidSchema",
+        message: "status.ethereal must be boolean",
+        path: `${path}.status.ethereal`,
       });
 
     if (kindR.value === "crossbow") {
@@ -1134,7 +1144,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
         broken: brokenU,
         cooldown: cooldownU,
         cooldownMax: cooldownMaxU,
-        status: { poison: poisonU, blood: bloodU, curse: curseU },
+        status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
         crossbowState: crossbowStateU,
       });
     }
@@ -1154,7 +1164,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       broken: brokenU,
       cooldown: cooldownU,
       cooldownMax: cooldownMaxU,
-      status: { poison: poisonU, blood: bloodU, curse: curseU },
+      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
     });
   }
 

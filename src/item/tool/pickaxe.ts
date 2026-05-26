@@ -15,6 +15,7 @@ export class Pickaxe extends Weapon {
     this.name = Pickaxe.itemName;
     this.description = "allows mining rocks without equipping";
     this.canMine = true;
+    this.canReceiveStatusEffect = false;
   }
 
   toggleEquip = () => {

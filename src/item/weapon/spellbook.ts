@@ -28,6 +28,7 @@ export class Spellbook extends Weapon implements RangedWeapon {
     this.tileX = 25;
     this.tileY = 0;
     this.canMine = true;
+    this.canReceiveStatusEffect = false;
     this.name = Spellbook.itemName;
     this.isTargeting = false;
     this.durability = 10;

@@ -6,7 +6,7 @@ import { SlashParticle } from "../../particle/slashParticle";
 import type { Entity } from "../../entity/entity";
 import { GameConstants } from "../../game/gameConstants";
 import { WeaponFragments } from "../usable/weaponFragments";
-import { Enemy } from "../../entity/enemy/enemy";
+import type { Enemy } from "../../entity/enemy/enemy";
 import { AttackAnimation } from "../../particle/attackAnimation";
 import { Direction } from "../../game";
 import { GameplaySettings } from "../../game/gameplaySettings";
@@ -20,12 +20,14 @@ interface WeaponStatus {
   poison: boolean;
   blood: boolean;
   curse: boolean;
+  ethereal: boolean;
 }
 
 export abstract class Weapon extends Equippable {
   game: Game;
   range: number;
   canMine: boolean;
+  canReceiveStatusEffect: boolean;
   damage: number;
   status: WeaponStatus;
   static itemName = "weapon";
@@ -65,9 +67,10 @@ export abstract class Weapon extends Equippable {
     if (level) this.game = level.game;
 
     this.canMine = false;
+    this.canReceiveStatusEffect = true;
     this.range = 1;
     this.damage = 1;
-    this.status = status || { poison: false, blood: false, curse: false };
+    this.status = status || { poison: false, blood: false, curse: false, ethereal: false };
     this.durability = 50;
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
@@ -154,7 +157,7 @@ export abstract class Weapon extends Equippable {
     this.durability = 0;
     this.equipped = false;
     this.game.pushMessage("Your weapon breaks");
-    if (this.status.poison || this.status.blood || this.status.curse) {
+    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal) {
       this.clearStatus();
     }
     this.broken = true;
@@ -196,10 +199,12 @@ export abstract class Weapon extends Equippable {
       ? "poison"
       : this.status.blood
         ? "bleed"
-        : "curse";
+        : this.status.ethereal
+          ? "ethereal"
+          : "curse";
     this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
 
-    this.status = { poison: false, blood: false, curse: false };
+    this.status = { poison: false, blood: false, curse: false, ethereal: false };
     this.statusApplicationCount = 0;
   };
 
@@ -207,27 +212,17 @@ export abstract class Weapon extends Equippable {
     if (!entity.isEnemy) return;
     const enemy = entity as Enemy;
 
-    // Poison/Bleed are gated by existing enemy status; curse is intentionally a no-op for now
-    // but still "pipes through" via Player.applyStatus.
+    // Poison/Bleed are gated by existing enemy status. Curse bonus is handled in attack().
     const shouldApply = this.status.poison
       ? !enemy.status.poison.active
       : this.status.blood
         ? !enemy.status.bleed.active
-        : this.status.curse;
+        : false;
 
     if (!shouldApply) return;
 
     if (this.wielder.applyStatus(enemy, this.status) && enemy.health > 0) {
       this.statusApplicationCount++;
-      const message = this.status.poison
-        ? `Your weapon poisons the ${enemy.name}`
-        : this.status.blood
-          ? `Your cursed weapon draws blood from the ${enemy.name}`
-          : `Your weapon curses the ${enemy.name}`;
-
-      // this.game.pushMessage(message);
-
-      // if (this.statusApplicationCount >= 10) this.clearStatus();
     }
   };
 
@@ -325,7 +320,10 @@ export abstract class Weapon extends Equippable {
 
   attack = (enemy: Entity, damage?: number) => {
     if (!this.shouldHitEntity(enemy)) return;
-    enemy.hurt(this.wielder, damage || this.damage);
+    const baseDamage = damage ?? this.damage;
+    // Ethereal bonus must be checked before hurt() since hurt() may break the shield.
+    const curseBonus = this.status.ethereal && enemy.shielded ? 1 : 0;
+    enemy.hurt(this.wielder, baseDamage + curseBonus);
     this.statusEffect(enemy);
   };
 
@@ -358,13 +356,17 @@ export abstract class Weapon extends Equippable {
   };
 
   drawStatus = (x: number, y: number) => {
-    if (this.status.poison || this.status.blood || this.status.curse) {
+    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal) {
       let tileX = 3;
       let tileY = 0;
       if (this.status.poison) tileX = 4;
       if (this.status.blood) tileX = 3;
       if (this.status.curse) {
         tileX = 17;
+        tileY = 1;
+      }
+      if (this.status.ethereal) {
+        tileX = 16;
         tileY = 1;
       }
 
@@ -388,6 +390,7 @@ export abstract class Weapon extends Equippable {
     if (this.status.poison) status.push("Poison");
     if (this.status.blood) status.push(" Bleed");
     if (this.status.curse) status.push(" Curse");
+    if (this.status.ethereal) status.push(" Ethereal");
     if (this.durability < this.durabilityMax)
       durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
     return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;
