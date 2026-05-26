@@ -47454,6 +47454,7 @@ const WEAPON_ITEM_KINDS = [
     "dagger",
     "sword",
     "spear",
+    "rapier",
     "dual_daggers",
     "greataxe",
     "warhammer",
