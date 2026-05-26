@@ -23,6 +23,7 @@ export class SpikeTrap extends Tile {
     this.frame = 0;
     this.t = 0;
     this.name = "spike trap";
+    this.drawableY = y - 1;
   }
 
   tick = () => {
@@ -69,7 +70,6 @@ export class SpikeTrap extends Tile {
   };
 
   draw = (delta: number) => {
-    //this.drawableY = this.y - 0.01;
     Game.drawTile(
       1,
       this.skin,
