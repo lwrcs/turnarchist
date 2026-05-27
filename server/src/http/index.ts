@@ -1,6 +1,7 @@
 import express from "express";
 import { getGameRouter } from "./routes/game";
 import { getClaudeRouter } from "./routes/claude";
+import { getLogRouter } from "./routes/log";
 import { loggingMiddleware } from "./middleware/logging";
 import { corsMiddleware } from "./middleware/cors";
 import { errorHandler } from "./middleware/error-handler";
@@ -17,6 +18,7 @@ const initializeRoutes = (app: express.Application) => {
   const apiRouter = express.Router();
   apiRouter.use("/game", getGameRouter());
   apiRouter.use("/claude", getClaudeRouter());
+  apiRouter.use("/log", getLogRouter());
   app.use(API_BASE_PATH, apiRouter);
 };
 
