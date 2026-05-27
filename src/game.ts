@@ -72,7 +72,7 @@ import { isTutorialHintShown, markTutorialHintShown } from "./game/tutorialPersi
 import { XPCounter } from "./gui/xpCounter";
 import { Crate } from "./entity/object/crate";
 import { Barrel } from "./entity/object/barrel";
-import { askClaude, logEntry } from "./api";
+import { askClaude } from "./api";
 
 export enum LevelState {
   IN_LEVEL,
@@ -2483,40 +2483,6 @@ export class Game {
           this.pushMessage(
             "Oracle: The vision clouds... (could not reach the Oracle)",
           );
-        }
-      })();
-      return;
-    }
-
-    if (command.startsWith("logbug ") || command === "logbug") {
-      const text = command.slice("logbug".length).trim();
-      if (!text) {
-        this.pushMessage("Usage: /logbug <description>");
-        return;
-      }
-      void (async () => {
-        try {
-          await logEntry("bug", text);
-          this.pushMessage("Bug logged.");
-        } catch {
-          this.pushMessage("Failed to log bug (is the server running?)");
-        }
-      })();
-      return;
-    }
-
-    if (command.startsWith("logidea ") || command === "logidea") {
-      const text = command.slice("logidea".length).trim();
-      if (!text) {
-        this.pushMessage("Usage: /logidea <description>");
-        return;
-      }
-      void (async () => {
-        try {
-          await logEntry("idea", text);
-          this.pushMessage("Idea logged.");
-        } catch {
-          this.pushMessage("Failed to log idea (is the server running?)");
         }
       })();
       return;

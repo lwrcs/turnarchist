@@ -18,9 +18,7 @@
       "Bash(git rm:*)",
       "Bash(head -10 grep -n \"this\\\\.game\\\\b\\\\|room\\\\.game\\\\b\\\\|= game\\\\b\" /Users/lwrcs/Documents/GitHub/witch-roguelike/src/room/room.ts)",
       "Bash(perl:*)",
-      "Bash(xargs basename -a)",
-      "Bash(npm run *)",
-      "Bash(git add *)"
+      "Bash(xargs basename -a)"
     ]
   }
 }

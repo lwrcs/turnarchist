@@ -54,11 +54,3 @@ export const askClaude = async (
   });
   return response.data.answer as string;
 };
-
-export const logEntry = async (
-  type: "bug" | "idea",
-  text: string,
-): Promise<void> => {
-  const userId = getOrCreateUserId();
-  await apiClient.post("/log", { type, text, userId });
-};
