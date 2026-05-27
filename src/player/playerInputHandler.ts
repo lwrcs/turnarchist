@@ -517,6 +517,7 @@ export class PlayerInputHandler {
         //this.player.stall();
         break;
       case InputEnum.R: {
+        if (this.player.game.chatOpen) break;
         const player = this.player;
         const needed = player.maxHealth - player.health;
         if (needed <= 0) {
