@@ -411,6 +411,8 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
     bleed?: { active: boolean; hitCount: number; startTick: number; effectTick: number };
     curse?: { active: boolean; tickCount: number; startTick: number };
   };
+  /** TombStone visual variant (0 = default, 1 = alternate). Optional for backward-compat. */
+  skinType?: number;
 };
 
 export type WizardTypeKind = "energy" | "fire" | "earth" | "big";

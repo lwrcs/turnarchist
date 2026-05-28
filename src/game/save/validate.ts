@@ -2268,6 +2268,14 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     snakeChainIndex = snakeChainIndexU;
   }
 
+  const skinTypeU = get(v, "skinType");
+  let skinType: number | undefined = undefined;
+  if (skinTypeU !== undefined) {
+    if (!isNumber(skinTypeU))
+      return err({ kind: "InvalidSchema", message: "skinType must be number if present", path: `${path}.skinType` });
+    skinType = skinTypeU;
+  }
+
   const enemyStatusU = get(v, "enemyStatus");
   type EnemyStatusSave = NonNullable<import("./schema").BasicEnemySaveV2["enemyStatus"]>;
   let enemyStatus: EnemyStatusSave | undefined = undefined;
@@ -2339,6 +2347,7 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
     snakeHeadGid,
     snakeChainIndex,
     enemyStatus,
+    skinType,
   });
 };
 

@@ -248,6 +248,7 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       ghostlyBeamParentGid: value.ghostlyBeamParentGid ?? undefined,
       ghostFrozen: value.ghostFrozen === true ? true : undefined,
       ghostifiedBefore: value.ghostifiedBefore === true ? true : undefined,
+      skinType: value instanceof TombStone ? value.skinType : undefined,
       ectomancerLinkBaseGids:
         isEctomancer && value.links.length > 0
           ? value.links.map((l) => l.base.globalId)
@@ -326,6 +327,9 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
         e.status.curse = { ...s.curse };
         e.shadeColor = "#2E0854";
       }
+    }
+    if (e instanceof TombStone && "skinType" in value && typeof value.skinType === "number") {
+      e.skinType = value.skinType;
     }
     e.globalId = value.gid;
     return e;
