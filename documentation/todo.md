@@ -38,8 +38,8 @@
 
 #### Enemies
 
-- [ ] Big wizard as forest boss
-- [ ] Bigwizard spawns 4 wizards every 16 turns
+- [x] Big wizard as forest boss
+- [x] Bigwizard spawns wizards every 8 turns
 - [ ] Add big fire/earth wizards
 - [ ] fire
 - [ ] Sand worms (enemy)
@@ -52,9 +52,9 @@
 
 #### Spells & Items
 
-- [ ] Spellbook as bigwizard drop
-- [ ] Tombstones drop spells
-- [ ] Point spell does 2 damage
+- [x] Spellbook as bigwizard drop
+- [x] Tombstones drop spells
+- [x] Point spell does 2 damage
 - [ ] Spell scroll sprites
 
 #### Status Effects

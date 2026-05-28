@@ -6,6 +6,7 @@ export type SpellPattern = {
 export abstract class Spell {
   abstract id: string;
   abstract name: string;
+  damage?: number;
   abstract getPattern(): SpellPattern;
 }
 
@@ -46,6 +47,7 @@ export class CrossSpell extends Spell {
 export class PointSpell extends Spell {
   id = "point";
   name = "Point";
+  damage = 2;
   getPattern(): SpellPattern {
     return {
       offsets: [{ dx: 0, dy: 0 }],

@@ -81,7 +81,7 @@ export class Spellbook extends Weapon implements RangedWeapon {
 
     const spell = this.pendingSpell ?? this.activeSpell;
     this.pendingSpell = null;
-    const damage = this.damage + player.magicDamageBonus;
+    const damage = (spell.damage ?? this.damage) + player.magicDamageBonus;
 
     // Set cooldown immediately so the UI reflects "casting" and prevents double-fire.
     this.cooldown = this.cooldownMax + 1;
