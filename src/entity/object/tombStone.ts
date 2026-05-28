@@ -15,6 +15,7 @@ import { Sound } from "../../sound/sound";
 import { ImageParticle } from "../../particle/imageParticle";
 import { LightSource } from "../../lighting/lightSource";
 import { SpellbookPage } from "../../item/usable/spellbookPage";
+import { WaveScroll, CrossScroll, PointScroll, PlusScroll } from "../../item/usable/scroll";
 
 export class TombStone extends Entity {
   static examineText = "A tombstone. Someone didn't make it back.";
@@ -41,10 +42,15 @@ export class TombStone extends Entity {
     //this.skinType = skinType;
     this.chainPushable = false;
     this.name = "tombstone";
+    const scrollTypes = [WaveScroll, CrossScroll, PointScroll, PlusScroll];
     let dropProb = Random.rand();
-    if (dropProb < 0.125)
+    if (dropProb < 0.05)
       this.drops.push(new Spellbook(this.room, this.x, this.y));
-    else  if (dropProb < 0.3) this.drops.push(new SpellbookPage(this.room, this.x, this.y));
+    else if (dropProb < 0.225) this.drops.push(new SpellbookPage(this.room, this.x, this.y));
+    else if (dropProb < 0.325) {
+      const ScrollClass = scrollTypes[Math.floor(Random.rand() * scrollTypes.length)];
+      this.drops.push(new ScrollClass(this.room, this.x, this.y));
+    }
     if (this.drops[0] instanceof Spellbook) this.drops[0].durability = Math.floor(Random.rand() * 5) + 5;
     else if (this.drops[0] instanceof SpellbookPage) this.drops[0].stackCount = Math.floor(Random.rand() * 3) + 1;
     this.hasBloom = true;
