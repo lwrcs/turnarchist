@@ -482,12 +482,7 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       },
     ],
     bosses: [
-      { class: BigFrogEnemy, depth: 0, weight: 1.0, big: true },
-      //{ class: ExalterEnemy, depth: 0, weight: 0.35 },
-      { class: Spawner, depth: 0, weight: 0.25 },
-      //{ class: OccultistEnemy, depth: 1, weight: 0.25, maxDepth: 4 },
-      //{ class: EctomancerEnemy, depth: 1, weight: 0.25 },
-      //{ class: WardenEnemy, depth: 5, weight: 0.35, big: true },
+      { class: BigWizardEnemy, depth: 0, weight: 1.0, big: true },
     ],
   },
   [EnvType.DESERT]: {

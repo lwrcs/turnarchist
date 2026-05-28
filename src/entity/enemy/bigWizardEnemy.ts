@@ -7,6 +7,8 @@ import { WizardFireball } from "../../projectile/wizardFireball";
 import { WizardTeleportParticle } from "../../particle/wizardTeleportParticle";
 import { GameConstants } from "../../game/gameConstants";
 import { Random } from "../../utility/random";
+import { Spellbook } from "../../item/weapon/spellbook";
+import { EnvType } from "../../constants/environmentTypes";
 
 export class BigWizardEnemy extends WizardEnemy {
   static difficulty: number = 4;
@@ -26,6 +28,17 @@ export class BigWizardEnemy extends WizardEnemy {
     this.tileY = 0;
     this.name = "big wizard";
     this.projectileColor = [80, 0, 160];
+
+    const parentDropLoot = this.dropLoot;
+    this.dropLoot = () => {
+      if (
+        this.room.envType === EnvType.FOREST &&
+        !this.drops.some((d) => d instanceof Spellbook)
+      ) {
+        this.drops.push(new Spellbook(this.room, this.x, this.y));
+      }
+      parentDropLoot();
+    };
   }
 
   protected findTeleportTarget = (

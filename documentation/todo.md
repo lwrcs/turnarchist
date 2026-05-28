@@ -36,18 +36,42 @@
 
 ### Inbox (untriaged)
 
+#### Enemies
+
+- [ ] Big wizard as forest boss
+- [ ] Bigwizard spawns 4 wizards every 16 turns
+- [ ] Add big fire/earth wizards
 - [ ] fire
-- [ ] Fences
-- [ ] Bonfire
-- [ ] Traveller
 - [ ] Sand worms (enemy)
 - [ ] Minotaur (enemy)
 - [ ] Cerberus (enemy)
 - [ ] Hydra (enemy)
 - [ ] Boogie man (enemy)
-- [ ] Lore books
+- [ ] Traveller
+- [ ] Underwater mobs
+
+#### Spells & Items
+
+- [ ] Spellbook as bigwizard drop
+- [ ] Tombstones drop spells
+- [ ] Point spell does 2 damage
+- [ ] Spell scroll sprites
+
+#### Status Effects
+
+- [ ] Plague (current curse effect)
+- [ ] Instant kill after 8 turns, curses nearby
+
+#### Level / World
+
+- [ ] Dark forest
+- [ ] Fences
+- [ ] Bonfire
 - [x] Bushes trees
 - [ ] Tall grass
+- [ ] Lore books
+
+#### Misc / Fixes
 
 - [x] Restructure caves
 - [x] Make side paths mandatory
@@ -61,7 +85,6 @@
 - [x] Make keys automatically show path on pickup
 - [x] Make keys pathfind between levels (prioritize active key)
 - [x] Make exalter the castle boss
-- [ ] Underwater mobs
 
 - [x] bishops too soon?
 - exalter change beam color?

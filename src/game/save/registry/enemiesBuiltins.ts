@@ -565,7 +565,6 @@ export const registerBuiltinEnemyCodecsV2 = (): void => {
       if (value.skipNextTurns !== undefined) w.skipNextTurns = value.skipNextTurns;
       if (value.buffed !== undefined) w.buffed = value.buffed;
       if (value.buffedBefore !== undefined) w.buffedBefore = value.buffedBefore;
-
       w.globalId = value.gid;
       return w;
     },
