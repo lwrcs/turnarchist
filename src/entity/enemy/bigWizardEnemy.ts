@@ -9,6 +9,10 @@ import { GameConstants } from "../../game/gameConstants";
 import { Random } from "../../utility/random";
 import { Spellbook } from "../../item/weapon/spellbook";
 import { EnvType } from "../../constants/environmentTypes";
+import { EnergyWizardEnemy } from "./energyWizard";
+import { EnemySpawnAnimation } from "../../projectile/enemySpawnAnimation";
+import { HitWarning } from "../../drawable/hitWarning";
+import { Sound } from "../../sound/sound";
 
 export class BigWizardEnemy extends WizardEnemy {
   static difficulty: number = 4;
@@ -21,9 +25,9 @@ export class BigWizardEnemy extends WizardEnemy {
     super(room, game, x, y, drop);
     this.w = 2;
     this.h = 2;
-    this.health = 2;
-    this.maxHealth = 2;
-    this.defaultMaxHealth = 2;
+    this.health = 6;
+    this.maxHealth = 6;
+    this.defaultMaxHealth = 6;
     this.tileX = 37;
     this.tileY = 0;
     this.name = "big wizard";
@@ -232,8 +236,39 @@ export class BigWizardEnemy extends WizardEnemy {
             this.state = WizardState.teleport;
             break;
         }
+
+        if (this.ticks % 8 === 0) {
+          this.trySpawnDiagonalWizard();
+        }
       }
     }
+    this.ticks++;
+  };
+
+  private trySpawnDiagonalWizard = (): void => {
+    const corners = [
+      { x: this.x - 1, y: this.y - 1 },
+      { x: this.x + 2, y: this.y - 1 },
+      { x: this.x - 1, y: this.y + 2 },
+      { x: this.x + 2, y: this.y + 2 },
+    ];
+
+    const valid = corners.filter(({ x, y }) => {
+      if (!this.isWithinRoomBounds(x, y)) return false;
+      const t = this.room.roomArray[x]?.[y];
+      if (!t || t.isSolid() || t.isDoor) return false;
+      return !this.room.entities.some(
+        (e) => e !== this && e.x === x && e.y === y,
+      );
+    });
+
+    if (valid.length === 0) return;
+
+    const { x, y } = valid[Math.floor(Random.rand() * valid.length)];
+    const spawned = new EnergyWizardEnemy(this.room, this.game, x, y);
+    this.room.projectiles.push(new EnemySpawnAnimation(this.room, spawned, x, y));
+    this.room.hitwarnings.push(new HitWarning(this.game, x, y, undefined, undefined, true));
+    Sound.enemySpawn();
   };
 
   draw = (delta: number) => {
