@@ -49,6 +49,7 @@ import { SkillsMenu } from "../gui/skillsMenu";
 import { SettingsMenu } from "../gui/settingsMenu";
 import { XPCounter } from "../gui/xpCounter";
 import { RangedTargetingSystem } from "../item/weapon/rangedTargetingSystem";
+import { EmeraldRing } from "../item/jewelry/emeraldRing";
 
 export enum PlayerDirection {
   DOWN,
@@ -1526,6 +1527,11 @@ export class Player extends Drawable {
 
     // Check for death
     if (this.health <= 0 && !GameConstants.DEVELOPER_MODE) {
+      const ring = this.inventory.items.find(
+        (i): i is EmeraldRing => i instanceof EmeraldRing && (i as EmeraldRing).equipped,
+      );
+      if (ring?.onDeathSave(this)) return;
+
       this.dead = true;
       // Reset death screen pagination when death occurs
       this.deathScreenPageIndex = 0;

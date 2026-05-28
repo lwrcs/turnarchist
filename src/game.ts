@@ -1631,6 +1631,31 @@ export class Game {
     }
   };
 
+  teleportPlayerToUpLadder = (player: Player): boolean => {
+    // Use the main dungeon level at the player's depth, not the current level
+    // (which may be a sidepath level like the forest).
+    const mainLevel = this.levels[player.depth];
+    if (!mainLevel?.startRoom) return false;
+
+    const targetRoom = mainLevel.startRoom;
+    const ladderPos = targetRoom.findPrimaryUpLadderCoords() ?? targetRoom.getRoomCenter();
+
+    if (this.room !== targetRoom) {
+      this.prevLevel = this.room;
+      this.prevLevel.exitLevel();
+      this.room = targetRoom;
+      this.updateLevel(targetRoom);
+      this.updateDepth(targetRoom.depth);
+      player.depth = targetRoom.depth;
+      player.roomGID = targetRoom.globalId;
+      const idx = mainLevel.rooms.indexOf(targetRoom);
+      if (idx >= 0) player.levelID = idx;
+    }
+
+    targetRoom.enterLevel(player, ladderPos);
+    return true;
+  };
+
   getRoomById = (id: string): Room | undefined => {
     return this.roomsById?.get(id);
   };
