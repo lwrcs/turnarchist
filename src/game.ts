@@ -8,7 +8,7 @@ import { Door, DoorType } from "./tile/door";
 import { Sound } from "./sound/sound";
 import { LevelConstants } from "./level/levelConstants";
 import { LevelGenerator } from "./level/levelGenerator";
-import { createCastleSidePathOptions } from "./level/sidePathManager";
+import { createCastleSidePathOptions, createDarkCastleSidePathOptions, SidePathOptions } from "./level/sidePathManager";
 import { Input, InputEnum } from "./game/input";
 import { DownLadder } from "./tile/downLadder";
 import { TextBox } from "./game/textbox";
@@ -2471,6 +2471,8 @@ export class Game {
       glacier: EnvType.GLACIER,
       dark_castle: EnvType.DARK_CASTLE,
       darkcastle: EnvType.DARK_CASTLE,
+      dark_forest: EnvType.DARK_FOREST,
+      darkforest: EnvType.DARK_FOREST,
       dark_dungeon: EnvType.DARK_DUNGEON,
       darkdungeon: EnvType.DARK_DUNGEON,
       desert: EnvType.DESERT,
@@ -3217,18 +3219,67 @@ export class Game {
         if (parsed) {
           const consumed = firstTwo === first ? 1 : 2;
           const seedInput = parts.slice(consumed).join(" ").trim();
-          // Special-case: "new castle" should spawn into the CASTLE as a sidepath
-          // (via a tiny forest staging level), not a main-path dungeon reskinned as castle.
-          if (parsed.envType === EnvType.CASTLE) {
-            const seedNumber = seedInput
-              ? this.convertSeedToNumber(seedInput)
-              : undefined;
-            this.pushMessage(
-              `Starting new CASTLE sidepath sandbox${
-                seedInput ? ` with seed: ${seedInput} (${seedNumber})` : ""
-              }`,
-            );
-            this.startCastleSidepathSandbox(seedNumber);
+          // Special-case sidepath envs: spawn directly into the sidepath via a staging room.
+          const sidepathEnvs: Partial<Record<EnvType, () => void>> = {
+            [EnvType.CASTLE]: () => this.startCastleSidepathSandbox(seedInput ? this.convertSeedToNumber(seedInput) : undefined),
+            [EnvType.DARK_CASTLE]: () => this.startSidepathSandbox({
+              stagingEnv: EnvType.DARK_FOREST, stagingDepth: 3,
+              sidepathEnv: EnvType.DARK_CASTLE,
+              sidePathOptions: createDarkCastleSidePathOptions({ locked: false }),
+              seed: seedInput ? this.convertSeedToNumber(seedInput) : undefined,
+            }),
+            [EnvType.FOREST]: () => this.startSidepathSandbox({
+              stagingEnv: EnvType.DUNGEON, stagingDepth: 1,
+              sidepathEnv: EnvType.FOREST,
+              sidePathOptions: {
+                caveRooms: 1, envType: EnvType.FOREST, locked: false,
+                mapWidth: 50, mapHeight: 50, giantRoomScale: 0.6, linearity: 0.5,
+                entranceInMainRoom: true, keyInMainRoom: true, exitInMainRoom: true,
+                organicTunnelsAvoidCenter: true, softMargin: 5,
+              },
+              seed: seedInput ? this.convertSeedToNumber(seedInput) : undefined,
+            }),
+            [EnvType.DARK_FOREST]: () => this.startSidepathSandbox({
+              stagingEnv: EnvType.DARK_DUNGEON, stagingDepth: 3,
+              sidepathEnv: EnvType.DARK_FOREST,
+              sidePathOptions: {
+                caveRooms: 1, envType: EnvType.DARK_FOREST, locked: false,
+                mapWidth: 55, mapHeight: 55, giantRoomScale: 0.6, linearity: 0.5,
+                entranceInMainRoom: true, keyInMainRoom: true, exitInMainRoom: true,
+                organicTunnelsAvoidCenter: true, softMargin: 5,
+              },
+              seed: seedInput ? this.convertSeedToNumber(seedInput) : undefined,
+            }),
+            [EnvType.CAVE]: () => this.startSidepathSandbox({
+              stagingEnv: EnvType.DUNGEON, stagingDepth: 2,
+              sidepathEnv: EnvType.CAVE,
+              sidePathOptions: {
+                caveRooms: 1, envType: EnvType.CAVE, locked: false,
+                mapWidth: 88, mapHeight: 88, linearity: 0.5, softMargin: 6,
+                giantCentralRoom: true, giantRoomScale: 0.4,
+              },
+              seed: seedInput ? this.convertSeedToNumber(seedInput) : undefined,
+            }),
+            [EnvType.SEWER]: () => this.startSidepathSandbox({
+              stagingEnv: EnvType.DUNGEON, stagingDepth: 0,
+              sidepathEnv: EnvType.SEWER,
+              sidePathOptions: {
+                caveRooms: 1, envType: EnvType.SEWER, locked: false,
+                terminal: true, noBoss: true, linearity: 0.5,
+                mapWidth: 30, mapHeight: 40, giantRoomScale: 0.6,
+                entranceInMainRoom: true, organicTunnelsAvoidCenter: true,
+                softMargin: 5, tunnelRadiusScale: 0.5, squareBrush: true,
+                angularMaze: true, tunnelMinRadius: 1, tunnelMaxRadius: 1.5,
+                maxNodeRadius: 2, minNodeSeparation: 13,
+                nodeCountTable: [5, 6, 7], enemyDensityScale: 0.2,
+              },
+              seed: seedInput ? this.convertSeedToNumber(seedInput) : undefined,
+            }),
+          };
+          const sidepathFn = sidepathEnvs[parsed.envType as EnvType];
+          if (sidepathFn) {
+            this.pushMessage(`Starting new ${getEnvTypeName(parsed.envType)} sidepath sandbox${seedInput ? ` with seed: ${seedInput}` : ""}`);
+            sidepathFn();
             return;
           }
 
@@ -4329,6 +4380,97 @@ export class Game {
     this.pushMessage(
       `Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${ITEM_KIND_VALUES_V2.length}`,
     );
+  }
+
+  private startSidepathSandbox(opts: {
+    stagingEnv: EnvType;
+    stagingDepth: number;
+    sidepathEnv: EnvType;
+    sidePathOptions: SidePathOptions;
+    seed?: number;
+  }): void {
+    const seed = Number.isFinite(opts.seed as number)
+      ? (opts.seed as number)
+      : Math.floor(Date.now() % 2147483647);
+
+    this.levelgen = new LevelGenerator();
+    this.levelgen.setSeed(seed);
+    this.levelgen.setMainPathEnvOverride(opts.stagingEnv);
+
+    const depth = opts.stagingDepth;
+    const mapGroup = 1;
+    const roomW = 21;
+    const roomH = 21;
+
+    const level = new Level(
+      this, depth, roomW, roomH, true, mapGroup, opts.stagingEnv, true,
+    );
+    level.genSource = "procedural";
+
+    const room = new Room(
+      this, 0, 0, roomW, roomH, RoomType.START,
+      depth, mapGroup, level, Random.rand, opts.stagingEnv,
+    );
+    room.id = 0;
+    room.pathId = "main";
+    room.entered = true;
+    room.active = true;
+    room.onScreen = true;
+
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const isBorder =
+          x === room.roomX || y === room.roomY ||
+          x === room.roomX + room.width - 1 || y === room.roomY + room.height - 1;
+        room.roomArray[x][y] = isBorder
+          ? new Wall(room, x, y)
+          : new Floor(room, x, y);
+      }
+    }
+
+    const lx = room.roomX + Math.floor(room.width / 2);
+    const ly = room.roomY + Math.floor(room.height / 2);
+    const dl = new DownLadder(
+      room, this, lx, ly, true,
+      opts.sidepathEnv, LockType.NONE, opts.sidePathOptions, { lockType: LockType.NONE },
+    );
+    room.roomArray[lx][ly] = dl;
+
+    level.rooms = [room];
+    level.roomsById.set(room.globalId, room);
+
+    this.levels = [];
+    this.levelsById = new Map();
+    this.levels[depth] = level;
+    this.levelsById.set(level.globalId, level);
+    this.level = level;
+
+    this.registerRooms([room]);
+    this.room = room;
+    this.currentDepth = depth;
+    this.currentPathId = "main";
+
+    const local = new Player(this, lx, ly, true);
+    local.dead = false;
+    local.depth = depth;
+    local.roomGID = room.globalId;
+    local.levelID = 0;
+    this.players = { [this.localPlayerID]: local };
+    this.offlinePlayers = {};
+    this.setPlayer();
+
+    try { room.calculateWallInfo(); } catch {}
+    try {
+      room.roomOnScreen(local);
+      room.updateLighting({ x: local.x, y: local.y });
+    } catch {}
+
+    this.levelState = LevelState.IN_LEVEL;
+    this.started = true;
+    this.startedFadeOut = true;
+    this.startMenuActive = false;
+
+    dl.onCollide(local);
   }
 
   /**

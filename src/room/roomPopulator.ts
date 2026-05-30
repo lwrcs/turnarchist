@@ -602,6 +602,9 @@ export class Populator {
       case EnvType.FOREST:
         this.populateForestEnvironment(room);
         break;
+      case EnvType.DARK_FOREST:
+        this.populateDarkForestEnvironment(room);
+        break;
       case EnvType.MAGMA_CAVE:
         this.populateMagmaCaveEnvironment(room);
         break;
@@ -1382,6 +1385,18 @@ export class Populator {
     });
 
     // ADD: Enemies after props, based on remaining space
+    this.addRandomEnemies(room);
+  }
+
+  private populateDarkForestEnvironment(room: Room) {
+    const numProps = this.getNumProps(room, 1);
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      falloffExponent: 2,
+      baseScore: 0.1,
+      maxInfluenceDistance: 12,
+      useSeedPosition: false,
+    });
+
     this.addRandomEnemies(room);
   }
 
@@ -3234,7 +3249,7 @@ export class Populator {
   populateSpawner = (room: Room, rand: () => number) => {
     const spawnTable = this.getEnemyPoolForDepth(
       Math.max(0, room.depth - 1),
-    ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25);
+    ).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25 && t !== 26);
     Spawner.add(
       room,
       room.game,
@@ -4101,6 +4116,9 @@ export class Populator {
           break;
         case EnvType.FOREST:
           room.name = "Forest";
+          break;
+        case EnvType.DARK_FOREST:
+          room.name = "Dark Forest";
           break;
         case EnvType.CASTLE:
           room.name = "Castle";

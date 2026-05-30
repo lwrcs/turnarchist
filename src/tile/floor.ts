@@ -48,6 +48,11 @@ export class Floor extends Tile {
         this.bloomColor = "#641900";
       }
     }
+    if (this.skin == SkinType.DARK_FOREST)
+      this.variation = Game.randTable(
+        [1, 1, 1, 1, 1, 1, 8, 8, 8, 9, 10, 10, 10, 10, 10, 12],
+        Random.rand,
+      );
     if (this.skin == SkinType.DARK_DUNGEON) {
       this.variation = Game.randTable(
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 9, 10, 12],

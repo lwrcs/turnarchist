@@ -121,6 +121,25 @@ function getDungeonDepthSpec(depth: number, rand?: () => number): SidePathSpec |
         },
       };
 
+    case 3:
+      return {
+        environment: EnvType.DARK_FOREST,
+        options: {
+          ...base,
+          envType: EnvType.DARK_FOREST,
+          caveRooms: 1,
+          mapWidth: 55,
+          mapHeight: 55,
+          giantRoomScale: 0.6,
+          linearity: 0.5,
+          entranceInMainRoom: true,
+          keyInMainRoom: true,
+          exitInMainRoom: true,
+          organicTunnelsAvoidCenter: true,
+          softMargin: 5,
+        },
+      };
+
     default:
       // Depth 3+: use the default env for this depth with base options
       return {
@@ -152,6 +171,12 @@ function getEnvDrivenSpec(
       return {
         environment: EnvType.CASTLE,
         options: createCastleSidePathOptions(),
+      };
+
+    case EnvType.DARK_FOREST:
+      return {
+        environment: EnvType.DARK_CASTLE,
+        options: createDarkCastleSidePathOptions(),
       };
 
     case EnvType.DARK_DUNGEON:
@@ -210,10 +235,13 @@ export function getSidePathSpecs(
 ): SidePathSpec[] {
   const specs: SidePathSpec[] = [];
 
-  // Depth-based spec (only applies to DUNGEON parent on the main path)
-  if (parentEnv === EnvType.DUNGEON) {
+  // Depth-based spec (applies to DUNGEON and DARK_DUNGEON main-path floors)
+  if (parentEnv === EnvType.DUNGEON || parentEnv === EnvType.DARK_DUNGEON) {
     const depthSpec = getDungeonDepthSpec(depth, opts?.rand);
-    if (depthSpec) specs.push(depthSpec);
+    if (depthSpec) {
+      specs.push(depthSpec);
+      return specs; // depth-based spec takes priority; skip env-driven for this depth
+    }
   }
 
   // Environment-driven spec (applies to any non-castle, non-terminal env)

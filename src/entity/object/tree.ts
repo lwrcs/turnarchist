@@ -37,6 +37,7 @@ export class Tree extends Entity {
   }
 
   onHurt = () => {
+    if (this.health === 1) this.imageParticleY = 29;
     if (this.health === 1 && Random.rand() < 0.5) {
       const apple = new Apple(this.room, this.x, this.y);
       apple.level = this.room;

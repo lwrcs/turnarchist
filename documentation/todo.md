@@ -64,12 +64,18 @@
 
 #### Level / World
 
-- [ ] Dark forest
+- [x] Dark forest
 - [ ] Fences
 - [ ] Bonfire
 - [x] Bushes trees
 - [ ] Tall grass
 - [ ] Lore books
+
+#### Backend / Account
+
+- [ ] Migrate saving and loading game and settings to server
+- [ ] Create account system
+- [ ] Create in-game stats page
 
 #### Misc / Fixes
 
@@ -77,7 +83,8 @@
 - [x] Make side paths mandatory
 - [x] Disable saving for now
 - [ ] increase xp rate of harder mobs
-- [ ] Add effects for emerald and amber rings
+- [x] Add effects for emerald rings
+- [ ] Add effects for amber rings
 - [x] Make pawns jump back when hurt
 - [ ] Fix bug with boltcaster aiming at resources
 - [x] Design castle premade levels

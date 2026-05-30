@@ -20,7 +20,9 @@
       "Bash(perl:*)",
       "Bash(xargs basename -a)",
       "Bash(sed -n '2275,2295p' /Users/lwrcs/Documents/GitHub/witch-roguelike/src/game.ts)",
-      "Bash(sed -n '3558,3575p' /Users/lwrcs/Documents/GitHub/witch-roguelike/src/game.ts)"
+      "Bash(sed -n '3558,3575p' /Users/lwrcs/Documents/GitHub/witch-roguelike/src/game.ts)",
+      "Bash(sed -n '120,135p' /Users/lwrcs/Documents/GitHub/witch-roguelike/src/game/save/registry/enemiesBuiltins.ts)",
+      "Bash(sed -n '355,375p' /Users/lwrcs/Documents/GitHub/witch-roguelike/src/game/save/registry/enemiesBuiltins.ts)"
     ]
   }
 }

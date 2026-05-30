@@ -70,6 +70,7 @@ const ENV_KINDS = [
   "flooded_cave",
   "sewer",
   "cave_pocket",
+  "dark_forest",
 ] as const satisfies readonly EnvKind[];
 
 const DIRECTION_KINDS = [
@@ -160,13 +161,20 @@ const ENEMY_KINDS = [
   "pumpkin",
   "tomb_stone",
   "sprout",
+  "dark_sprout",
   "bush",
   "small_bush",
   "lily_plant",
   "tree",
   "big_tree",
+  "dark_tree",
+  "dark_fir_tree",
+  "dark_big_tree",
+  "dark_bush",
+  "dark_shrub",
   "tall_succulent",
   "succulent",
+  "dark_succulent",
   "furnace",
   "fishing_spot",
   "mushrooms_prop",

@@ -16,6 +16,7 @@ import { ImageParticle } from "../../particle/imageParticle";
 import { LightSource } from "../../lighting/lightSource";
 import { SpellbookPage } from "../../item/usable/spellbookPage";
 import { WaveScroll, CrossScroll, PointScroll, PlusScroll } from "../../item/usable/scroll";
+import { EnvType } from "../../constants/environmentTypes";
 
 export class TombStone extends Entity {
   static examineText = "A tombstone. Someone didn't make it back.";
@@ -53,8 +54,9 @@ export class TombStone extends Entity {
     }
     if (this.drops[0] instanceof Spellbook) this.drops[0].durability = Math.floor(Random.rand() * 5) + 5;
     else if (this.drops[0] instanceof SpellbookPage) this.drops[0].stackCount = Math.floor(Random.rand() * 3) + 1;
+    const darkForest = room.envType === EnvType.DARK_FOREST;
     this.hasBloom = true;
-    this.bloomColor = "#05FF05";
+    this.bloomColor = darkForest ? "#800080" : "#05FF05";
     this.bloomAlpha = 1;
     this.softBloomAlpha = 0;
     this.imageParticleX = 0;
@@ -63,7 +65,7 @@ export class TombStone extends Entity {
       this.x + 0.5,
       this.y + 0.5,
       7,
-      [5, 150, 5],
+      darkForest ? [128, 0, 128] : [5, 150, 5],
       1,
     );
     this.addLightSource(this.lightSource);

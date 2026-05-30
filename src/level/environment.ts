@@ -87,6 +87,13 @@ import { IronResource } from "../entity/resource/ironResource";
 import { Rubble } from "../entity/object/rubble";
 import { Glowshrooms } from "../entity/object/glowshrooms";
 import { BigTree } from "../entity/object/bigTree";
+import { DarkTree } from "../entity/object/darkTree";
+import { DarkFirTree } from "../entity/object/darkFirTree";
+import { DarkBigTree } from "../entity/object/darkBigTree";
+import { DarkBush } from "../entity/object/darkBush";
+import { DarkShrub } from "../entity/object/darkShrub";
+import { DarkSprout } from "../entity/object/darkSprout";
+import { DarkSucculent } from "../entity/object/darkSucculent";
 
 // Enemy ID mapping for integration with level progression system
 export const enemyClassToId: Map<typeof Enemy, number> = new Map<
@@ -473,17 +480,8 @@ const environmentData: Record<EnvType, EnvironmentData> = {
           chance: 0.5,
         },
       },
-      {
-        class: GiantFrogEnemy,
-        weight: 0.01,
-        minDepth: 0,
-        specialSpawnLogic: "clearFloor",
-        size: { w: 4, h: 4 },
-      },
     ],
-    bosses: [
-      { class: BigWizardEnemy, depth: 0, weight: 1.0, big: true },
-    ],
+    bosses: [{ class: BigWizardEnemy, depth: 0, weight: 1.0, big: true }],
   },
   [EnvType.DESERT]: {
     props: [
@@ -852,6 +850,119 @@ const environmentData: Record<EnvType, EnvironmentData> = {
       { class: Spawner, depth: 0, weight: 0.35 },
       { class: BigWizardEnemy, depth: 1, weight: 0.25, maxDepth: 4, big: true },
     ],
+  },
+  [EnvType.DARK_FOREST]: {
+    props: [
+      { class: NullProp, weight: 2 },
+      {
+        class: TombStone,
+        weight: 1,
+        additionalParams: [1],
+        blob: { enabled: true, weight: 0.03, diameter: 5 },
+      },
+      {
+        class: TombStone,
+        weight: 1,
+        additionalParams: [0],
+        blob: { enabled: true, weight: 0.03, diameter: 5 },
+      },
+      { class: Pumpkin, weight: 0.05 },
+      {
+        class: DarkBush,
+        weight: 2,
+      },
+      { class: ZirconResource, weight: 0.001 },
+      { class: DarkSprout, weight: 0.05 },
+      { class: Mushrooms, weight: 0.05 },
+      { class: LilyPlant, weight: 0.05 },
+      { class: DarkBigTree, weight: 0.1, size: { w: 2, h: 2 } },
+      { class: Rock, weight: 0.1 },
+      { class: Chest, weight: 0.01 },
+      { class: GlowBugEnemy, weight: 0.05 },
+      {
+        class: DarkTree,
+        weight: 0.5,
+        blob: { enabled: true, weight: 0.1, diameter: 12 },
+      },
+      {
+        class: DarkFirTree,
+        weight: 1,
+        blob: { enabled: true, weight: 0.1, diameter: 12 },
+      },
+      { class: DarkSucculent, weight: 0.1 },
+      { class: DarkShrub, weight: 0.5 },
+    ],
+    enemies: [
+      {
+        class: GlowBugEnemy,
+        weight: 1.5,
+        minDepth: 0,
+        blob: {
+          enabled: true,
+          weight: 0.08,
+          diameter: 6,
+          maxBlobs: 6,
+          chance: 0.6,
+        },
+      },
+      {
+        class: FrogEnemy,
+        weight: 0.25,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.06, diameter: 7, chance: 0.5 },
+      },
+      {
+        class: BeetleEnemy,
+        weight: 0.001,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.05, diameter: 6, chance: 0.4 },
+      },
+      {
+        class: CrabEnemy,
+        weight: 0.3,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.04, diameter: 5, chance: 0.35 },
+      },
+      {
+        class: ZombieEnemy,
+        weight: 0.2,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.3 },
+      },
+      {
+        class: SkullEnemy,
+        weight: 0.1,
+        minDepth: 0,
+        blob: { enabled: true, weight: 0.03, diameter: 5, chance: 0.25 },
+      },
+      {
+        class: EnergyWizardEnemy,
+        weight: 0.05,
+        minDepth: 1,
+        blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+      },
+      {
+        class: EarthWizardEnemy,
+        weight: 0.05,
+        minDepth: 1,
+        blob: { enabled: true, weight: 0.02, diameter: 9, chance: 0.3 },
+      },
+      {
+        class: BigFrogEnemy,
+        weight: 0.01,
+        minDepth: 2,
+        specialSpawnLogic: "clearFloor",
+        size: { w: 2, h: 2 },
+        blob: {
+          enabled: true,
+          weight: 0.04,
+          diameter: 10,
+          maxBlobs: 2,
+          chance: 0.5,
+        },
+      },
+    ],
+    bosses: [{ class: BigWizardEnemy, depth: 0, weight: 1.0, big: true }],
   },
 };
 

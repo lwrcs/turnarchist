@@ -721,6 +721,9 @@ export class Room {
     if (this.envType === EnvType.CAVE_POCKET) {
       this.skin = SkinType.CAVE;
     }
+    if (this.envType === EnvType.DARK_FOREST) {
+      this.skin = SkinType.DARK_FOREST;
+    }
     /*
     if (this.type === RoomType.ROPECAVE || this.type === RoomType.CAVE) {
       this.skin = SkinType.CAVE;

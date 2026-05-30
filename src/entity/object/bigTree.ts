@@ -39,6 +39,7 @@ export class BigTree extends Entity {
   }
 
   onHurt = () => {
+    if (this.health === 1) this.imageParticleY = 29;
     if (this.health === 1) {
       for (let i = 0; i < 3; i++) {
         if (Random.rand() < 1 / 3) {

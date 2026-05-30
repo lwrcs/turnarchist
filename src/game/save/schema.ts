@@ -710,7 +710,8 @@ export type EnvKind =
   | "tutorial"
   | "flooded_cave"
   | "sewer"
-  | "cave_pocket";
+  | "cave_pocket"
+  | "dark_forest";
 
 export type DirectionKind =
   | "down"
@@ -803,11 +804,18 @@ export type EnemyKind =
   | "pumpkin"
   | "tomb_stone"
   | "sprout"
+  | "dark_sprout"
   | "bush"
   | "small_bush"
+  | "dark_bush"
+  | "dark_shrub"
+  | "dark_succulent"
   | "lily_plant"
   | "tree"
   | "big_tree"
+  | "dark_tree"
+  | "dark_fir_tree"
+  | "dark_big_tree"
   | "tall_succulent"
   | "succulent"
   | "furnace"
