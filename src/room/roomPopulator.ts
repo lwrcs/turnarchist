@@ -1703,7 +1703,7 @@ export class Populator {
 
     if (placeX !== undefined && placeY !== undefined) {
       if (!(room.roomArray[placeX]?.[placeY] instanceof Wall)) return;
-      if (hasVM(placeX, placeY)) return;
+      if (room.entities.some(e => e.x === placeX && e.y === placeY)) return;
       const dir = detectDir(placeX, placeY);
       if (dir !== null) {
         const tgt = dirTarget(placeX, placeY, dir);
@@ -1712,11 +1712,14 @@ export class Populator {
       return;
     }
 
+    const hasEntityAt = (x: number, y: number) =>
+      room.entities.some(e => e.x === x && e.y === y);
+
     const candidates: WallCandidate[] = [];
     for (let xx = room.roomX; xx < room.roomX + room.width; xx++) {
       for (let yy = room.roomY; yy < room.roomY + room.height; yy++) {
         if (!(room.roomArray[xx]?.[yy] instanceof Wall)) continue;
-        if (hasVM(xx, yy)) continue;
+        if (hasEntityAt(xx, yy)) continue;
         const dir = detectDir(xx, yy);
         if (dir === null) continue;
         const tgt = dirTarget(xx, yy, dir);
@@ -4656,7 +4659,9 @@ export class Populator {
    */
   placeVendingMachineInWall(room: Room, item?: Item): void {
     const emptyWalls = room.getEmptyWall().filter(
-      w => !room.entities.some(e => e instanceof PlacedTorch && e.x === w.x && e.y === w.y),
+      w => !room.entities.some(
+        e => (e instanceof PlacedTorch || e instanceof PlacedCandle) && e.x === w.x && e.y === w.y,
+      ),
     );
     if (emptyWalls.length === 0) return;
 
