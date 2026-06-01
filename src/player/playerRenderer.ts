@@ -1411,19 +1411,13 @@ export class PlayerRenderer {
     const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
     const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
 
-    // Tile cursor on the aim tile and all spell pattern tiles, with a TL→BR wave.
+    // Tile cursor on every pattern tile; checkerboard tiles get the inverted frame.
     const patternTiles = rt.getPatternTiles();
     const tilesToDraw = patternTiles.length > 0 ? patternTiles : [{ x: rt.targetX, y: rt.targetY }];
-    const dists = tilesToDraw.map((pt) =>
-      Math.sqrt((pt.x - rt.targetX) ** 2 + (pt.y - rt.targetY) ** 2)
-    );
-    const maxDist = Math.max(...dists) || 1;
-    // Wave front radiates outward from the aim tile over one full HitWarning cycle.
-    // Starts at -1 (before center) and ends at maxDist+1 so every ring transitions.
-    const wavePos = (HitWarning.frame / 2) * (maxDist + 2) - 1;
     for (let i = 0; i < tilesToDraw.length; i++) {
       const pt = tilesToDraw[i];
-      const animFrame = dists[i] <= wavePos ? 1 : 0;
+      const baseFrame = Math.floor(HitWarning.frame);
+      const animFrame = (pt.x + pt.y) % 2 === 0 ? baseFrame : 1 - baseFrame;
       const ptScreenX = (pt.x - this.player.x) + offsetX - 0.5 + this.player.drawX;
       const ptScreenY = (pt.y - this.player.y) + offsetY - 0.5 + this.player.drawY;
       Game.drawFX(24 + animFrame, 5, 1, 1, ptScreenX, ptScreenY, 1, 1);
