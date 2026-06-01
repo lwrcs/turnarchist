@@ -750,6 +750,9 @@ export class Game {
   static objset: HTMLImageElement;
   static mobset: HTMLImageElement;
   static playerset: HTMLImageElement;
+  static playerLayer: HTMLCanvasElement | null = null;
+  static playerLayerCtx: CanvasRenderingContext2D | null = null;
+  static helmetMaskCanvas: HTMLCanvasElement | null = null;
   static itemset: HTMLImageElement;
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
@@ -1016,6 +1019,7 @@ export class Game {
       Game.playerset.onload = () => {
         resourcesLoaded++;
         bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
+        Game.buildHelmetMask();
       };
       Game.playerset.src = playersetUrl;
       Game.itemset = new Image();
@@ -6510,6 +6514,44 @@ export class Game {
     }
     return ".".repeat(this.ellipsisFrame);
   };
+
+  /** Ensure the player compositing layer exists and matches the current canvas size. */
+  static syncPlayerLayer() {
+    const w = GameConstants.WIDTH;
+    const h = GameConstants.HEIGHT;
+    if (!Game.playerLayer) {
+      Game.playerLayer = document.createElement("canvas");
+      Game.playerLayer.width = w;
+      Game.playerLayer.height = h;
+      Game.playerLayerCtx = Game.playerLayer.getContext("2d")!;
+      Game.playerLayerCtx.imageSmoothingEnabled = false;
+    } else if (Game.playerLayer.width !== w || Game.playerLayer.height !== h) {
+      Game.playerLayer.width = w;
+      Game.playerLayer.height = h;
+      Game.playerLayerCtx!.imageSmoothingEnabled = false;
+    }
+  }
+
+  /** Build a mask canvas from playerset where magenta pixels are opaque and everything else is transparent. */
+  static buildHelmetMask() {
+    if (!Game.playerset?.complete || !Game.playerset.naturalWidth) return;
+    const mc = document.createElement("canvas");
+    mc.width = Game.playerset.naturalWidth;
+    mc.height = Game.playerset.naturalHeight;
+    const mctx = mc.getContext("2d", { willReadFrequently: true })!;
+    mctx.drawImage(Game.playerset, 0, 0);
+    const id = mctx.getImageData(0, 0, mc.width, mc.height);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 200 && d[i + 1] < 50 && d[i + 2] > 200 && d[i + 3] > 128) {
+        d[i] = 0; d[i + 1] = 0; d[i + 2] = 0; d[i + 3] = 255;
+      } else {
+        d[i + 3] = 0;
+      }
+    }
+    mctx.putImageData(id, 0, 0);
+    Game.helmetMaskCanvas = mc;
+  }
 
   /**
    * Draw a sub-rectangle from a spritesheet onto the main canvas with optional shading and fade.

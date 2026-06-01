@@ -42,9 +42,6 @@ export class PlayerRenderer {
   private frozenPoseDirection: Direction = Direction.DOWN;
   private frozenPoseAngleRad: number | null = null;
 
-  private readonly divingHelmetTileX: number = 0;
-  private readonly divingHelmetTileY: number = 12;
-
   constructor(player: Player) {
     this.player = player;
     this.jumpY = 0;
@@ -245,13 +242,33 @@ export class PlayerRenderer {
         ? this.directionFromAngle(targetingAngle)
         : player.direction;
     const tileY = renderDirection * 2;
+
+    const dX = player.x - this.drawX - this.hitX;
+    const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
+    let drawnTile = { x: tileX, y: tileY };
+
+    // When the diving helmet is equipped, redirect all player draws to an offscreen compositing
+    // layer so we can punch out base-sprite pixels (via the helmet's magenta mask) before drawing
+    // the helmet on top — without disturbing the background tiles already on the main canvas.
+    // We copy the camera transform from mainCtx so that world-coordinate draw calls land at
+    // the correct screen-space pixels inside the layer (otherwise sprites at large world coords
+    // fall outside the viewport-sized layer bounds and become invisible).
+    const mainCtx = Game.ctx;
+    if (divingHelmet && Game.helmetMaskCanvas) {
+      Game.syncPlayerLayer();
+      // Clear with identity so clearRect covers the entire layer canvas
+      Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
+      Game.playerLayerCtx!.clearRect(0, 0, Game.playerLayer!.width, Game.playerLayer!.height);
+      // Replicate camera transform so sprite draw coordinates map to screen space
+      Game.playerLayerCtx!.setTransform(mainCtx.getTransform());
+      Game.ctx = Game.playerLayerCtx!;
+    }
+
     Game.ctx.save();
-    let drewBase = false;
 
     if (this.drawSmear()) {
       const smearFrame = this.setSmearFrame();
-      const dX = player.x - this.drawX - this.hitX;
-      const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
+      drawnTile = { x: smearFrame.x, y: smearFrame.y };
       Game.drawPlayer(
         smearFrame.x,
         smearFrame.y,
@@ -267,7 +284,6 @@ export class PlayerRenderer {
         this.outlineColor(),
         this.outlineOpacity(),
       );
-      this.drawArmorLayers(smearFrame.x, smearFrame.y, renderDirection, dX, dY);
     } else if (!GameConstants.isMobile) {
       // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
       const angleRad = this.uiPoseFrozen
@@ -296,8 +312,7 @@ export class PlayerRenderer {
         if (angleDeg > 30 && angleDeg <= 60)     diagonalTile = { x: 1, y: 8 };
         if (angleDeg > 120 && angleDeg <= 150)   diagonalTile = { x: 0, y: 8 };
 
-        const dX = player.x - this.drawX - this.hitX;
-        const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
+        drawnTile = { x: diagonalTile.x, y: diagonalTile.y };
         Game.drawPlayer(
           diagonalTile.x,
           diagonalTile.y,
@@ -313,7 +328,6 @@ export class PlayerRenderer {
           this.outlineColor(),
           this.outlineOpacity(),
         );
-        this.drawArmorLayers(diagonalTile.x, diagonalTile.y, renderDirection, dX, dY);
       } else {
         this.frame += 0.1 * delta;
         if (this.frame >= 4) this.frame = 0;
@@ -322,8 +336,8 @@ export class PlayerRenderer {
           tileY,
           1,
           2,
-          player.x - this.drawX - this.hitX,
-          player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+          dX,
+          dY,
           1,
           2,
           this.shadeColor(),
@@ -332,7 +346,6 @@ export class PlayerRenderer {
           this.outlineColor(),
           this.outlineOpacity(),
         );
-        drewBase = true;
       }
     } else {
       this.frame += 0.1 * delta;
@@ -342,8 +355,8 @@ export class PlayerRenderer {
         tileY,
         1,
         2,
-        player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+        dX,
+        dY,
         1,
         2,
         this.shadeColor(),
@@ -352,19 +365,63 @@ export class PlayerRenderer {
         this.outlineColor(),
         this.outlineOpacity(),
       );
-      drewBase = true;
-    }
-    if (drewBase) {
-      this.drawArmorLayers(
-        tileX,
-        tileY,
-        renderDirection,
-        player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
-      );
     }
 
+    this.drawArmorLayers(drawnTile.x, drawnTile.y, renderDirection, dX, dY);
+
     Game.ctx.restore(); // Restore the canvas state
+
+    if (divingHelmet && Game.helmetMaskCanvas && Game.playerLayerCtx) {
+      const ts = GameConstants.TILESIZE;
+      const helmetTileX = drawnTile.x + 16;
+      const helmetTileY = drawnTile.y;
+      const px = Math.round(dX * ts);
+      const py = Math.round(dY * ts);
+
+      const applyMask = () => {
+        Game.playerLayerCtx!.globalCompositeOperation = "destination-out";
+        Game.playerLayerCtx!.drawImage(
+          Game.helmetMaskCanvas!,
+          helmetTileX * ts, helmetTileY * ts, ts, ts * 2,
+          px, py, ts, ts * 2,
+        );
+        Game.playerLayerCtx!.globalCompositeOperation = "source-over";
+      };
+
+      // First pass: punch holes in base + armor layers at magenta positions
+      applyMask();
+
+      // Draw the actual helmet sprite (magenta pixels included at this point)
+      Game.drawPlayer(
+        helmetTileX,
+        helmetTileY,
+        1,
+        2,
+        dX,
+        dY,
+        1,
+        2,
+        this.shadeColor(),
+        undefined,
+        undefined,
+        this.outlineColor(),
+        this.outlineOpacity(),
+      );
+
+      // Second pass: erase the magenta pixels that were just drawn as part of the helmet sprite
+      applyMask();
+
+      // Reset player layer transform for next frame's clearRect
+      Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
+
+      // Blit to main canvas with identity transform — the player layer is already in screen
+      // space, so we must NOT let the camera transform shift it a second time.
+      Game.ctx = mainCtx;
+      mainCtx.save();
+      mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+      mainCtx.drawImage(Game.playerLayer!, 0, 0);
+      mainCtx.restore();
+    }
   };
 
   mouseDiagonal = () => {
@@ -467,25 +524,7 @@ export class PlayerRenderer {
     if (player.inventory.getShoulderPlates() !== null) {
       drawLayer(tileX + 12);
     }
-
-    // Diving helmet overlay (columns 0–0, rows 12+)
-    if (player.inventory.divingHelmetEquipped()) {
-      Game.drawPlayer(
-        this.divingHelmetTileX,
-        this.divingHelmetTileY + renderDirection * 2,
-        1,
-        2,
-        dX,
-        dY,
-        1,
-        2,
-        shade,
-        undefined,
-        undefined,
-        outline,
-        outlineOp,
-      );
-    }
+    // Diving helmet (columns 16–19) is drawn by drawPlayerSprite after mask compositing
   };
 
   drawSmear = () => {
