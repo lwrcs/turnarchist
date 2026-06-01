@@ -73,6 +73,12 @@ export type SidepathSpecV2 = {
   pathId: string;
   /** Optional fixed room count for determinism. */
   rooms?: number;
+  /**
+   * Main-path depth this sidepath was generated for. Required to regenerate
+   * deterministically when the player has visited sidepaths on multiple depths.
+   * Optional for backward-compat with early V2 saves (defaults to current depth).
+   */
+  depth?: number;
 };
 
 /**
@@ -162,6 +168,12 @@ export type RoomDeltaV2 = {
   roomY?: number;
   pathId: string;
   mapGroup: number;
+  /**
+   * Main-path depth this room belongs to. Required to disambiguate rooms across
+   * floors when the save persists rooms from multiple depths. Optional for
+   * backward-compat with early V2 saves (defaults to current depth).
+   */
+  depth?: number;
   entered: boolean;
   active: boolean;
   onScreen: boolean;
