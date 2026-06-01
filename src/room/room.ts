@@ -5158,9 +5158,14 @@ export class Room {
     let enemies = this.entities.filter(
       (e) => e instanceof Enemy && ((e as any).z ?? 0) === activeZ,
     );
-    const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
-
-    return cleared;
+    if (enemies.length > 0) return false;
+    // Primary path: enemies just died this tick (lastEnemyCount was set before clearDeadStuff).
+    if (this.lastEnemyCount > 0) return true;
+    // Fallback: room is clear but the unlock tick was missed — check if locked guarded doors remain.
+    const hasLockedGuardedDoors = this.doors.some(
+      (d) => d.locked === true && d.type === DoorType.GUARDEDDOOR,
+    );
+    return hasLockedGuardedDoors;
   };
 
   roomCleared = () => {
