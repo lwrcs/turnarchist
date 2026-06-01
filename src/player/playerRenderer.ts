@@ -1293,17 +1293,29 @@ export class PlayerRenderer {
       }
     }
 
-    // Mana number overlapping bottom-right of the orb (coin-style outline).
-    //Game.ctx.font = "10px Tahoma";
-    //Game.ctx.textAlign = "right";
-    //Game.ctx.textBaseline = "alphabetic";
+    // Current mana number at bottom-right of orb.
     Game.fillTextOutline(
-      String(mana),
+      String(Math.floor(mana)),
       x0 + sizePx - 6,
       y0 + sizePx - 4,
       "black",
       "white",
     );
+
+    // Turns until active spell is castable; shown above the orb when waiting.
+    const weapon = this.player.inventory.weapon;
+    const spellbook = weapon instanceof Spellbook ? weapon : null;
+    const activeCost = spellbook?.activeSpell?.manaCost ?? null;
+    const turnsLeft = activeCost !== null ? Math.max(0, activeCost - mana) : 0;
+    if (turnsLeft > 0) {
+      Game.fillTextOutline(
+        String(turnsLeft),
+        x0 + sizePx - 6,
+        y0 - 2,
+        "black",
+        "white",
+      );
+    }
 
     Game.ctx.restore();
   };
@@ -1399,8 +1411,23 @@ export class PlayerRenderer {
     const screenX = (rt.targetX - this.player.x) + offsetX - 0.5 + this.player.drawX;
     const screenY = (rt.targetY - this.player.y) + offsetY - 0.5 + this.player.drawY;
 
-    // Tile cursor on the aim tile only
-    Game.drawFX(24 + Math.floor(HitWarning.frame), 5, 1, 1, screenX, screenY, 1, 1);
+    // Tile cursor on the aim tile and all spell pattern tiles, with a TL→BR wave.
+    const patternTiles = rt.getPatternTiles();
+    const tilesToDraw = patternTiles.length > 0 ? patternTiles : [{ x: rt.targetX, y: rt.targetY }];
+    const dists = tilesToDraw.map((pt) =>
+      Math.sqrt((pt.x - rt.targetX) ** 2 + (pt.y - rt.targetY) ** 2)
+    );
+    const maxDist = Math.max(...dists) || 1;
+    // Wave front radiates outward from the aim tile over one full HitWarning cycle.
+    // Starts at -1 (before center) and ends at maxDist+1 so every ring transitions.
+    const wavePos = (HitWarning.frame / 2) * (maxDist + 2) - 1;
+    for (let i = 0; i < tilesToDraw.length; i++) {
+      const pt = tilesToDraw[i];
+      const animFrame = dists[i] <= wavePos ? 1 : 0;
+      const ptScreenX = (pt.x - this.player.x) + offsetX - 0.5 + this.player.drawX;
+      const ptScreenY = (pt.y - this.player.y) + offsetY - 0.5 + this.player.drawY;
+      Game.drawFX(24 + animFrame, 5, 1, 1, ptScreenX, ptScreenY, 1, 1);
+    }
 
     // Downward-pointing yellow arrow above the target tile — pixel-drawn like the
     // vending-machine / tutorial pointer arrows (drawArrowAtApex "down" style).

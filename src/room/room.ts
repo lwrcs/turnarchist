@@ -3392,19 +3392,6 @@ export class Room {
         let computedAlpha = alpha ** factor * smoothFactor;
         computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
 
-        const localPlayer = (this.game as any)?.players?.[
-          (this.game as any)?.localPlayerID
-        ];
-        if (
-          localPlayer?.rangedTargeting?.isTargetTile(x, y) &&
-          !localPlayer?.inventory?.isOpen &&
-          !localPlayer?.menu?.open &&
-          !localPlayer?.skillsMenu?.open &&
-          !localPlayer?.bestiary?.isOpen
-        ) {
-          computedAlpha *= 0.5;
-        }
-
         let fillX = x;
         let fillY = y;
         let fillWidth = 1;

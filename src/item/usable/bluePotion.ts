@@ -37,7 +37,7 @@ export class BluePotion extends Usable {
       return;
     }
 
-    const restore = 5;
+    const restore = 10;
     for (const b of spellbooks) {
       if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - restore);
     }

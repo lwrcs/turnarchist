@@ -494,6 +494,8 @@ export class Item extends Drawable {
   } => {
     return { color: undefined, opacity: 0, desaturate: false };
   };
+  isEffectivelyOnCooldown = (): boolean => this.cooldown > 0;
+
   // Function to draw the item's icon
   drawIcon = (delta: number, x: number, y: number, opacity = 1, count?) => {
     if (GameConstants.ALPHA_ENABLED) Game.ctx.globalAlpha = opacity;
@@ -505,7 +507,7 @@ export class Item extends Drawable {
         2 /
         GameConstants.TILESIZE;
 
-    if (this.cooldown > 0) {
+    if (this.isEffectivelyOnCooldown()) {
       Game.ctx.globalAlpha = 0.35;
     }
 
