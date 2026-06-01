@@ -242,8 +242,8 @@ export class Player extends Drawable {
     this.mapToggled = true;
     this.health = GameplaySettings.STARTING_HEALTH;
     this.maxHealth = GameplaySettings.STARTING_HEALTH;
-    // Mana is used by magic weapons (e.g. Spellbook). Defaults can be tuned later.
-    this.maxMana = 10;
+    // Mana is used by magic weapons (e.g. Spellbook). Synced to spellbook cooldownMax on equip.
+    this.maxMana = 25;
     this.mana = this.maxMana;
     this.healthBar = new HealthBar();
     this.dead = false;

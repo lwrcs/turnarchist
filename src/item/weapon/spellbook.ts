@@ -8,6 +8,7 @@ import { Utils } from "../../utility/utils";
 import { Direction } from "../../game";
 import { SpellbookPage } from "../usable/spellbookPage";
 import { GameplaySettings } from "../../game/gameplaySettings";
+import { GameConstants } from "../../game/gameConstants";
 import type { RangedWeapon } from "./rangedTargetingSystem";
 import type { Player } from "../../player/player";
 import { PlusSpell, type Spell } from "./spell";
@@ -37,11 +38,57 @@ export class Spellbook extends Weapon implements RangedWeapon {
     this.degradeable = true;
     // Spellbook uses cooldown; player "mana" UI is derived from this cooldown.
     this.manaCost = 0;
-    this.cooldownMax = 10;
+    this.cooldownMax = 25;
     this.spells = [new PlusSpell()];
     this.activeSpell = this.spells[0];
     this.pendingSpell = null;
   }
+
+  isEffectivelyOnCooldown = (): boolean => {
+    const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+    return currentMana < this.activeSpell.manaCost;
+  };
+
+  // Show turns until the active spell is castable, not turns until full mana.
+  drawCooldown = (x: number, y: number) => {
+    const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+    const turnsLeft = Math.max(0, this.activeSpell.manaCost - currentMana);
+    if (turnsLeft > 0) {
+      Game.fillTextOutline(
+        turnsLeft.toString(),
+        x * GameConstants.TILESIZE + 10,
+        y * GameConstants.TILESIZE + 10,
+        GameConstants.OUTLINE,
+        "white",
+      );
+    }
+  };
+
+  // Override tick so the spellbook only counts as "on cooldown" (and unequips)
+  // when there isn't enough mana for the active spell — not just whenever cooldown > 0.
+  tick = () => {
+    if (this.cooldown > 0) {
+      this.cooldown--;
+      const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+      if (currentMana < this.activeSpell.manaCost && this.equipped) {
+        this.equipped = false;
+        const hasPreviousWeapon = this.wielder?.inventory.items.some(
+          (item) => item === this.previousWeapon,
+        );
+        if (
+          hasPreviousWeapon &&
+          this.previousWeapon !== null &&
+          this.previousWeapon.broken === false &&
+          this.previousWeapon.cooldown === 0
+        ) {
+          this.wielder.inventory.weapon = this.previousWeapon;
+          this.previousWeapon.equipped = true;
+        } else if (this.wielder) {
+          this.wielder.inventory.weapon = null;
+        }
+      }
+    }
+  };
 
   getPatternOffsets = (): Array<{ dx: number; dy: number }> => {
     return (this.pendingSpell ?? this.activeSpell).getPattern().offsets;
@@ -63,7 +110,9 @@ export class Spellbook extends Weapon implements RangedWeapon {
         this.level.game.pushMessage("Your spellbook is broken.");
         return;
       }
-      if (this.cooldown > 0) {
+      const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+      const pendingCost = (this.pendingSpell ?? this.activeSpell).manaCost;
+      if (currentMana < pendingCost) {
         this.level.game.pushMessage("Not enough mana.");
         return;
       }
@@ -74,19 +123,22 @@ export class Spellbook extends Weapon implements RangedWeapon {
   };
 
   fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
-    if (this.broken || this.cooldown > 0) return false;
+    if (this.broken) return false;
     const room = player.getRoom();
     if (!room) return false;
     const z = (player as any).z ?? 0;
 
     const spell = this.pendingSpell ?? this.activeSpell;
     this.pendingSpell = null;
+    const manaCost = spell.manaCost;
+    const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+    if (currentMana < manaCost) return false;
     const damage = (spell.damage ?? this.damage) + player.magicDamageBonus;
 
-    // Set cooldown immediately so the UI reflects "casting" and prevents double-fire.
-    this.cooldown = this.cooldownMax + 1;
+    // Spend mana (increase cooldown by spell cost); +1 so the end-of-turn tick lands correctly.
+    this.cooldown = this.cooldown + manaCost + 1;
     for (const item of player.inventory.items) {
-      if (item instanceof Spellbook) item.cooldown = item.cooldownMax + 1;
+      if (item instanceof Spellbook && item !== this) item.cooldown = item.cooldown + manaCost + 1;
     }
     player.syncManaFromSpellbookCooldowns();
 
@@ -169,8 +221,9 @@ export class Spellbook extends Weapon implements RangedWeapon {
   weaponMove = (newX: number, newY: number): boolean => {
     if (GameplaySettings.SPELLBOOK_TARGETING_ENABLED) return true;
     //if (!this.checkForCollidables(newX, newY)) return true;
-    // If we're on cooldown, treat as "out of mana" (mana bar is synced to cooldown).
-    if (this.cooldown > 0) {
+    const activeSpellCost = this.activeSpell.manaCost;
+    const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
+    if (currentMana < activeSpellCost) {
       this.level.game.pushMessage("Not enough mana.");
       return true;
     }
@@ -231,13 +284,11 @@ export class Spellbook extends Weapon implements RangedWeapon {
       this.shakeScreen(newX, newY);
       Sound.playMagic();
       this.degrade();
-      // Put spellbooks on cooldown; player mana UI reflects this.
-      // Important: set to cooldownMax+1 so the end-of-turn cooldown tick doesn't immediately
-      // "recharge" mana on the same turn as casting.
-      this.cooldown = this.cooldownMax + 1;
+      // Spend mana; +1 so the end-of-turn cooldown tick doesn't immediately recharge.
+      this.cooldown = this.cooldown + activeSpellCost + 1;
       for (let item of this.wielder.inventory.items) {
-        if (item instanceof Spellbook) {
-          item.cooldown = item.cooldownMax + 1;
+        if (item instanceof Spellbook && item !== this) {
+          item.cooldown = item.cooldown + activeSpellCost + 1;
         }
       }
       this.wielder.syncManaFromSpellbookCooldowns();

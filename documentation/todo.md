@@ -49,6 +49,7 @@
 - [ ] Boogie man (enemy)
 - [ ] Traveller
 - [ ] Underwater mobs
+- [ ] Cthulu
 
 #### Spells & Items
 
@@ -92,6 +93,7 @@
 - [x] Make keys automatically show path on pickup
 - [x] Make keys pathfind between levels (prioritize active key)
 - [x] Make exalter the castle boss
+- [ ] bioluminescent algae
 
 - [x] bishops too soon?
 - exalter change beam color?

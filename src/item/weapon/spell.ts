@@ -7,12 +7,14 @@ export abstract class Spell {
   abstract id: string;
   abstract name: string;
   damage?: number;
+  manaCost: number = 10;
   abstract getPattern(): SpellPattern;
 }
 
 export class PlusSpell extends Spell {
   id = "plus";
   name = "Plus";
+  manaCost = 10;
   getPattern(): SpellPattern {
     return {
       offsets: [
@@ -30,6 +32,7 @@ export class PlusSpell extends Spell {
 export class CrossSpell extends Spell {
   id = "cross";
   name = "Cross";
+  manaCost = 10;
   getPattern(): SpellPattern {
     return {
       offsets: [
@@ -48,6 +51,7 @@ export class PointSpell extends Spell {
   id = "point";
   name = "Point";
   damage = 2;
+  manaCost = 5;
   getPattern(): SpellPattern {
     return {
       offsets: [{ dx: 0, dy: 0 }],
@@ -59,6 +63,7 @@ export class PointSpell extends Spell {
 export class WaveSpell extends Spell {
   id = "wave";
   name = "Wave";
+  manaCost = 20;
   getPattern(): SpellPattern {
     const offsets: Array<{ dx: number; dy: number }> = [];
     const delays: number[] = [];

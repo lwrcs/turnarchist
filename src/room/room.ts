@@ -936,19 +936,21 @@ export class Room {
       //console.log("door not added");
     }
     room.roomArray[d.x][d.y] = d;
-    // Evict any wall-mounted entity (e.g. PlacedTorch) occupying this tile.
+    // Evict any wall-mounted entity occupying this tile (torch, candle, or vending machine).
+    const isWallMountedAt = (e: Entity) =>
+      e.x === d.x &&
+      e.y === d.y &&
+      (e.name === "placed_torch" ||
+        e.name === "placed_candle" ||
+        e instanceof VendingMachine);
     for (const e of room.entities) {
-      if (e.name === "placed_torch" && e.x === d.x && e.y === d.y) {
-        if ((e as any).lightSource) {
-          room.lightSources = room.lightSources.filter(
-            (ls) => ls !== (e as any).lightSource,
-          );
-        }
+      if (isWallMountedAt(e) && (e as any).lightSource) {
+        room.lightSources = room.lightSources.filter(
+          (ls) => ls !== (e as any).lightSource,
+        );
       }
     }
-    room.entities = room.entities.filter(
-      (e) => !(e.name === "placed_torch" && e.x === d.x && e.y === d.y),
-    );
+    room.entities = room.entities.filter((e) => !isWallMountedAt(e));
 
     return d;
   };
@@ -3390,19 +3392,6 @@ export class Room {
         let computedAlpha = alpha ** factor * smoothFactor;
         computedAlpha = this.applyShadeGammaAndMultiplier(computedAlpha);
 
-        const localPlayer = (this.game as any)?.players?.[
-          (this.game as any)?.localPlayerID
-        ];
-        if (
-          localPlayer?.rangedTargeting?.isTargetTile(x, y) &&
-          !localPlayer?.inventory?.isOpen &&
-          !localPlayer?.menu?.open &&
-          !localPlayer?.skillsMenu?.open &&
-          !localPlayer?.bestiary?.isOpen
-        ) {
-          computedAlpha *= 0.5;
-        }
-
         let fillX = x;
         let fillY = y;
         let fillWidth = 1;
@@ -5169,9 +5158,14 @@ export class Room {
     let enemies = this.entities.filter(
       (e) => e instanceof Enemy && ((e as any).z ?? 0) === activeZ,
     );
-    const cleared = enemies.length === 0 && this.lastEnemyCount > 0;
-
-    return cleared;
+    if (enemies.length > 0) return false;
+    // Primary path: enemies just died this tick (lastEnemyCount was set before clearDeadStuff).
+    if (this.lastEnemyCount > 0) return true;
+    // Fallback: room is clear but the unlock tick was missed — check if locked guarded doors remain.
+    const hasLockedGuardedDoors = this.doors.some(
+      (d) => d.locked === true && d.type === DoorType.GUARDEDDOOR,
+    );
+    return hasLockedGuardedDoors;
   };
 
   roomCleared = () => {

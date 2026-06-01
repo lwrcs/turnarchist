@@ -25,7 +25,7 @@ export const GATHERING_XP = {
   fishing: {
     baseMin: 100,
     baseMax: 150,
-    chanceToCatch: 0.3,
+    chanceToCatch: 0.5,
   },
   miningByNodeName: {
     rock: 5,

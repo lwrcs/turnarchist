@@ -601,6 +601,7 @@ export class GameConstants {
     GarnetRing,
     Crossbow,
     CrossbowBolt,
+    Shotgun,
     Rapier,
     Spear,
     Pickaxe,

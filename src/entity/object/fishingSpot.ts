@@ -22,7 +22,7 @@ export class FishingSpot extends Entity {
   fishCount: number = 0;
   active: boolean = false;
   startFrame: number = 0;
-  constructor(room: Room, game: Game, x: number, y: number) {
+  constructor(room: Room, game: Game, x: number, y: number, fishCountOverride?: number) {
     super(room, game, x, y);
     this.room = room;
     this.health = 1;
@@ -31,7 +31,7 @@ export class FishingSpot extends Entity {
     this.hasShadow = false;
     this.chainPushable = false;
     this.name = "fishing spot";
-    this.fishCount = Math.floor(Random.rand() * 6) - 3;
+    this.fishCount = fishCountOverride !== undefined ? fishCountOverride : Math.floor(Random.rand() * 3) + 1;
     this.active = this.fishCount > 0;
     this.startFrame = Math.floor(Random.rand() * 9);
 

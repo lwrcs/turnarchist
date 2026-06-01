@@ -211,6 +211,13 @@ export class Door extends Passageway {
 
     if (this.type === DoorType.GUARDEDDOOR) {
       this.room.checkForNoEnemies();
+      // If checkForNoEnemies just unlocked this door, allow the open to proceed.
+      if (this.type !== DoorType.GUARDEDDOOR) return true;
+      // Fallback: if the room is actually clear but the door wasn't unlocked yet, force it.
+      if (this.room.roomCleared()) {
+        this.unGuard(true);
+        return true;
+      }
       this.game.pushMessage(
         "There are still remaining foes guarding this door...",
       );
@@ -295,7 +302,7 @@ export class Door extends Passageway {
   isSolid = (): boolean => {
     if (this.locked) {
       return true;
-    } else false;
+    } else return false;
   };
 
   canCrushEnemy = (): boolean => {
