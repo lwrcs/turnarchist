@@ -1973,7 +1973,8 @@ export class Populator {
     for (let i = 0; i < numSpots; i++) {
       const { xx, yy } = edgePositions[i];
       // Sparser pools get more fish per spot; denser pools get fewer.
-      const fishCount = Math.max(1, Math.floor(3.5 - 2.5 * density + rand() * 1.5));
+      // Half the yield of sewer pools.
+      const fishCount = Math.max(1, Math.round((3.5 - 2.5 * density + rand() * 1.5) * 0.5));
       room.entities.push(new FishingSpot(room, room.game, xx, yy, fishCount));
     }
   }
