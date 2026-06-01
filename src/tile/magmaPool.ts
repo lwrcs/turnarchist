@@ -1,7 +1,6 @@
 import { Room } from "../room/room";
 import { Game } from "../game";
 import { Tile } from "./tile";
-import { FishingSpot } from "../entity/object/fishingSpot";
 import { LightSource } from "../lighting/lightSource";
 
 export class MagmaPool extends Tile {

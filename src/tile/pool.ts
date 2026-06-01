@@ -1,7 +1,6 @@
 import { Room } from "../room/room";
 import { Game } from "../game";
 import { Tile } from "./tile";
-import { FishingSpot } from "../entity/object/fishingSpot";
 
 export class Pool extends Tile {
   tileX: number;
@@ -28,11 +27,6 @@ export class Pool extends Tile {
     else if (bottomEdge) this.tileY++;
 
     this.topEdge = topEdge;
-    if (rightEdge || leftEdge || topEdge || bottomEdge) {
-      this.room.entities.push(
-        new FishingSpot(this.room, this.room.game, this.x, this.y),
-      );
-    }
   }
 
   interact = (): void => {

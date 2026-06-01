@@ -83,6 +83,7 @@ import { EmeraldResource } from "../entity/resource/emeraldResource";
 import { IronResource } from "../entity/resource/ironResource";
 import { Pool } from "../tile/pool";
 import { MagmaPool } from "../tile/magmaPool";
+import { FishingSpot } from "../entity/object/fishingSpot";
 import { WardenEnemy } from "../entity/enemy/wardenEnemy";
 import { FishingRod } from "../item/tool/fishingRod";
 import { Hammer } from "../item/tool/hammer";
@@ -1902,7 +1903,79 @@ export class Populator {
 
   private addPools(room: Room, rand: () => number) {
     if (room.underwater) return;
-    this.addRectangularTileArea(room, rand, Pool);
+
+    const w = Game.rand(2, 4, rand);
+    const h = Game.rand(2, 4, rand);
+    const xmin = room.roomX + 2;
+    const xmax = room.roomX + room.width - w - 2;
+    const ymin = room.roomY + 2;
+    const ymax = room.roomY + room.height - h - 2;
+    if (xmax < xmin || ymax < ymin) return;
+    const x = Game.rand(xmin, xmax, rand);
+    const y = Game.rand(ymin, ymax, rand);
+
+    let clear = true;
+    for (let xx = x - 1; xx < x + w + 1; xx++) {
+      for (let yy = y - 1; yy < y + h + 1; yy++) {
+        const tile = room.roomArray[xx][yy];
+        if (
+          (tile instanceof SpawnFloor && !tile.isSolid()) ||
+          tile instanceof Pool ||
+          tile instanceof Chasm
+        )
+          clear = false;
+      }
+    }
+    if (!clear) {
+      console.warn("no space for Pool");
+      return;
+    }
+
+    const edgePositions: Array<{ xx: number; yy: number }> = [];
+
+    for (let xx = x - 1; xx < x + w + 1; xx++) {
+      for (let yy = y - 1; yy < y + h + 1; yy++) {
+        if (xx === x - 1 || xx === x + w || yy === y - 1 || yy === y + h) {
+          const tile = room.roomArray[xx][yy];
+          if (
+            !(tile instanceof SpawnFloor && !tile.isSolid()) &&
+            !(tile instanceof Wall) &&
+            !(tile instanceof Pool) &&
+            !(tile instanceof Chasm)
+          )
+            room.roomArray[xx][yy] = new Floor(room, xx, yy);
+        } else {
+          const left = xx === x;
+          const right = xx === x + w - 1;
+          const top = yy === y;
+          const bottom = yy === y + h - 1;
+          room.roomArray[xx][yy] = new Pool(room, xx, yy, left, right, top, bottom);
+          if (left || right || top || bottom) {
+            edgePositions.push({ xx, yy });
+          }
+        }
+      }
+    }
+
+    // Pick a random subset of edge positions for fishing spots.
+    // Always at least 1, usually 2+, scales with pool size.
+    const totalEdge = edgePositions.length;
+    const maxSpots = Math.max(1, Math.floor(totalEdge * 0.5));
+    const numSpots = Math.min(totalEdge, 1 + Math.floor(rand() * maxSpots));
+    const density = numSpots / totalEdge;
+
+    // Fisher-Yates shuffle
+    for (let i = edgePositions.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [edgePositions[i], edgePositions[j]] = [edgePositions[j], edgePositions[i]];
+    }
+
+    for (let i = 0; i < numSpots; i++) {
+      const { xx, yy } = edgePositions[i];
+      // Sparser pools get more fish per spot; denser pools get fewer.
+      const fishCount = Math.max(1, Math.floor(3.5 - 2.5 * density + rand() * 1.5));
+      room.entities.push(new FishingSpot(room, room.game, xx, yy, fishCount));
+    }
   }
 
   private addSpikeTraps(room: Room, numSpikes: number, rand: () => number) {
@@ -4567,18 +4640,42 @@ export class Populator {
       if (poolW >= 2 && poolH >= 2) {
         const px = poolEndpoint.x - Math.floor(poolW / 2);
         const py = poolEndpoint.y - Math.floor(poolH / 2);
+        const edgePositions: Array<{ xx: number; yy: number }> = [];
         for (let dx = 0; dx < poolW; dx++) {
           for (let dy = 0; dy < poolH; dy++) {
+            const left = dx === 0;
+            const right = dx === poolW - 1;
+            const top = dy === 0;
+            const bottom = dy === poolH - 1;
             room.roomArray[px + dx][py + dy] = new Pool(
               room,
               px + dx,
               py + dy,
-              dx === 0,
-              dx === poolW - 1,
-              dy === 0,
-              dy === poolH - 1,
+              left,
+              right,
+              top,
+              bottom,
             );
+            if (left || right || top || bottom) {
+              edgePositions.push({ xx: px + dx, yy: py + dy });
+            }
           }
+        }
+
+        const totalEdge = edgePositions.length;
+        const maxSpots = Math.max(1, Math.floor(totalEdge * 0.5));
+        const numSpots = Math.min(totalEdge, 1 + Math.floor(rand() * maxSpots));
+        const density = numSpots / totalEdge;
+
+        for (let i = edgePositions.length - 1; i > 0; i--) {
+          const j = Math.floor(rand() * (i + 1));
+          [edgePositions[i], edgePositions[j]] = [edgePositions[j], edgePositions[i]];
+        }
+
+        for (let i = 0; i < numSpots; i++) {
+          const { xx, yy } = edgePositions[i];
+          const fishCount = Math.max(1, Math.floor(3.5 - 2.5 * density + rand() * 1.5));
+          room.entities.push(new FishingSpot(room, room.game, xx, yy, fishCount));
         }
       }
     }
