@@ -138,10 +138,23 @@ const reserveAndAssignGid = (
   }
 };
 
-const findGeneratedRoomCandidatesForDelta = (rooms: Room[], d: RoomDeltaV2): Room[] => {
+const findGeneratedRoomCandidatesForDelta = (
+  rooms: Room[],
+  d: RoomDeltaV2,
+  fallbackDepth?: number,
+): Room[] => {
+  // When the save records depth, restrict candidates to that depth so room coordinates
+  // can't accidentally match a room from a different floor with the same (x,y,pathId).
+  // Old saves omit depth — fall back to the save's active depth to preserve prior behavior.
+  const effectiveDepth = typeof d.depth === "number" ? d.depth : fallbackDepth;
+  const depthScoped =
+    typeof effectiveDepth === "number"
+      ? rooms.filter((r) => r.depth === effectiveDepth)
+      : rooms;
+
   // Prefer coordinate-based reassociation when available; these are stable for a given seed/depth/pathId.
   if (typeof d.roomX === "number" && typeof d.roomY === "number") {
-    const candidates = rooms.filter(
+    const candidates = depthScoped.filter(
       (r) => r.roomX === d.roomX && r.roomY === d.roomY && r.pathId === d.pathId,
     );
     if (candidates.length === 1) return candidates;
@@ -172,7 +185,7 @@ const findGeneratedRoomCandidatesForDelta = (rooms: Room[], d: RoomDeltaV2): Roo
       if (processed >= MAX_ANCHORS) break;
       processed++;
 
-      const candidates = rooms.filter(
+      const candidates = depthScoped.filter(
         (r) => r.pathId === d.pathId && r.isPositionInRoom(a.x, a.y),
       );
       if (candidates.length === 0) continue;
@@ -203,7 +216,7 @@ const findGeneratedRoomCandidatesForDelta = (rooms: Room[], d: RoomDeltaV2): Roo
   if (byAnchor) return [byAnchor];
 
   // Backward compat: older V2 saves used (roomId,mapGroup,pathId).
-  const legacyCandidates = rooms.filter(
+  const legacyCandidates = depthScoped.filter(
     (r) => r.id === d.roomId && r.mapGroup === d.mapGroup && r.pathId === d.pathId,
   );
   if (legacyCandidates.length === 1) return legacyCandidates;
@@ -214,7 +227,7 @@ const findGeneratedRoomCandidatesForDelta = (rooms: Room[], d: RoomDeltaV2): Roo
   }
 
   // Resilience: if mapGroup drifted (e.g., due to generation order changes), fall back to id+pathId.
-  const byIdCandidates = rooms.filter((r) => r.id === d.roomId && r.pathId === d.pathId);
+  const byIdCandidates = depthScoped.filter((r) => r.id === d.roomId && r.pathId === d.pathId);
   if (byIdCandidates.length === 1) return byIdCandidates;
   if (byIdCandidates.length > 1) {
     const ordered = byIdCandidates.slice();
@@ -424,9 +437,12 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
               enemyDensityScale: optsSave.enemyDensityScale,
             };
 
+      // Key by (depth, pathId) so sidepaths on different floors don't collide.
       // First write wins (stable); multiple ladders could point to the same sidepath.
-      if (!sidepathGenOverrides.has(pid)) {
-        sidepathGenOverrides.set(pid, {
+      const linkedDepth = typeof linkedDelta.depth === "number" ? linkedDelta.depth : save.worldSpec.depth;
+      const key = `${linkedDepth}:${pid}`;
+      if (!sidepathGenOverrides.has(key)) {
+        sidepathGenOverrides.set(key, {
           env: envKindToEnvType(ts.environment),
           opts: optsRuntime,
         });
@@ -434,12 +450,13 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     }
   }
 
-  // Ensure sidepaths exist (deterministic by pathId + room count where available).
+  // Ensure sidepaths exist (deterministic by pathId + depth + room count where available).
   for (const sp of save.worldSpec.sidepaths) {
+    const spDepth = typeof sp.depth === "number" ? sp.depth : save.worldSpec.depth;
     // Sidepath generation no longer overwrites `game.rooms`; capture the linkedRoom and merge
-    // its level's rooms into the active level.
+    // its level's rooms into the depth's main-path level.
     let linkedRoom: Room | undefined = undefined;
-    const override = sidepathGenOverrides.get(sp.pathId);
+    const override = sidepathGenOverrides.get(`${spDepth}:${sp.pathId}`);
     const env = override?.env ?? envKindToEnvType(save.worldSpec.env);
     // If we found the ladder in the saved tiles, use its opts exactly (even if undefined —
     // opts=undefined means the original was generated with no constraints, and we must
@@ -448,10 +465,10 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     const opts: SidePathOptions | undefined =
       override !== undefined
         ? override.opts
-        : inferSidepathOptsFallback(env, save.worldSpec.depth, sp.rooms);
+        : inferSidepathOptsFallback(env, spDepth, sp.rooms);
     await game.levelgen.generate(
       game,
-      save.worldSpec.depth,
+      spDepth,
       true,
       (r) => {
         linkedRoom = r ?? undefined;
@@ -464,14 +481,35 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
 
     const generatedSideRooms =
       linkedRoom?.level?.rooms?.filter((r) => r.pathId === sp.pathId) ?? [];
-    const existing = new Set(activeLevel.rooms.map((r) => r.globalId));
+    const mergeLevel = game.levels[spDepth] ?? activeLevel;
+    const existing = new Set(mergeLevel.rooms.map((r) => r.globalId));
     for (const r of generatedSideRooms) {
-      if (!existing.has(r.globalId)) activeLevel.rooms.push(r);
+      if (!existing.has(r.globalId)) mergeLevel.rooms.push(r);
     }
   }
 
   // Set active room list and rebuild map.
   game.rooms = activeLevel.rooms;
+
+  // Cross-depth room registry for the rest of the load. The save's deltas can reference
+  // rooms on prior floors (this is the whole point of multi-depth persistence), but
+  // game.rooms only ever holds the active level. Build a global view here.
+  const allRooms: Room[] = [];
+  for (const lvl of game.levels) {
+    if (lvl?.rooms) {
+      for (const r of lvl.rooms) {
+        if (r) allRooms.push(r);
+      }
+    }
+  }
+  const allRoomsById = new Map<string, Room>(allRooms.map((r) => [r.globalId, r]));
+  const roomsByDepth = new Map<number, Room[]>();
+  for (const r of allRooms) {
+    const bucket = roomsByDepth.get(r.depth);
+    if (bucket) bucket.push(r);
+    else roomsByDepth.set(r.depth, [r]);
+  }
+  const roomsAtDepth = (d: number): Room[] => roomsByDepth.get(d) ?? game.rooms;
 
   // Align generated room globalIds to saved roomGids using deterministic locator (roomId+mapGroup+pathId).
   const usedGeneratedRooms = new Set<Room>();
@@ -485,17 +523,21 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     }
     seenSaveRoomGids.add(rd.roomGid);
 
-    const candidates = findGeneratedRoomCandidatesForDelta(game.rooms, rd).filter(
-      (r) => !usedGeneratedRooms.has(r),
-    );
+    const candidates = findGeneratedRoomCandidatesForDelta(
+      allRooms,
+      rd,
+      save.worldSpec.depth,
+    ).filter((r) => !usedGeneratedRooms.has(r));
     const candidate = candidates[0];
     if (!candidate) {
       return err({
         kind: "MissingReference",
-        message: `Could not find UNUSED generated room for saved roomGid=${rd.roomGid} roomId=${rd.roomId} mapGroup=${rd.mapGroup} pathId=${rd.pathId} roomX=${String(rd.roomX)} roomY=${String(rd.roomY)} candidates=${candidates.length}`,
+        message: `Could not find UNUSED generated room for saved roomGid=${rd.roomGid} roomId=${rd.roomId} mapGroup=${rd.mapGroup} pathId=${rd.pathId} depth=${String(rd.depth)} roomX=${String(rd.roomX)} roomY=${String(rd.roomY)} candidates=${candidates.length}`,
       });
     }
     usedGeneratedRooms.add(candidate);
+    // Update allRoomsById to reflect the gid swap on the candidate room.
+    allRoomsById.delete(candidate.globalId);
     const gidRes = reserveAndAssignGid(
       candidate,
       rd.roomGid,
@@ -504,8 +546,11 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       assignedGidByObj,
     );
     if (!gidRes.ok) return gidRes;
+    allRoomsById.set(candidate.globalId, candidate);
   }
 
+  // Active level's room map (used by gameplay code post-load). Cross-depth lookups during
+  // delta application use the local `allRoomsById` instead.
   game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
 
   const entitiesByGid = new Map<string, Entity>();
@@ -514,7 +559,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
 
   // Apply per-room deltas: flags, tiles, items, entities.
   for (const rd of save.delta.rooms) {
-    const room = game.roomsById.get(rd.roomGid);
+    const room = allRoomsById.get(rd.roomGid);
     if (!room) {
       return err({ kind: "MissingReference", message: `Room not found for gid=${rd.roomGid}` });
     }
@@ -564,12 +609,16 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       let applyRoom: Room = room;
       let t = applyRoom.roomArray[ts.x]?.[ts.y];
 
+      // Scope cross-room searches to the target room's depth so a delta on floor 0 never
+      // matches a tile on floor 1.
+      const sameDepthRooms = roomsAtDepth(room.depth);
+
       const findNearestDownLadder = (
         wantSidePath: boolean,
         wantKeyId?: number,
       ): { room: Room; tile: DownLadder } | null => {
         let best: { room: Room; tile: DownLadder; dist: number } | null = null;
-        for (const r of game.rooms) {
+        for (const r of sameDepthRooms) {
           for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
             for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
               const tt = r.roomArray[x]?.[y];
@@ -592,7 +641,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
         y: number,
         predicate: (tile: Tile) => tile is T,
       ): { room: Room; tile: T } | null => {
-        for (const r of game.rooms) {
+        for (const r of sameDepthRooms) {
           const tt = r.roomArray[x]?.[y];
           if (!tt) continue;
           if (!predicate(tt)) continue;
@@ -622,7 +671,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       if (ts.kind === "down_ladder" && !(t instanceof DownLadder)) {
         // First, if the saved coordinate is still a DownLadder but belongs to a different room (global coords),
         // re-target this tile apply to that room.
-        for (const r of game.rooms) {
+        for (const r of sameDepthRooms) {
           const tt = r.roomArray[ts.x]?.[ts.y];
           if (tt instanceof DownLadder) {
             applyRoom = r;
@@ -764,7 +813,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       }
       if (ts.kind === "up_ladder" && !(t instanceof UpLadder)) {
         // If the saved coordinate is an UpLadder but belongs to a different room, re-target apply.
-        for (const r of game.rooms) {
+        for (const r of sameDepthRooms) {
           const tt = r.roomArray[ts.x]?.[ts.y];
           if (tt instanceof UpLadder) {
             applyRoom = r;
@@ -1259,7 +1308,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     }
   }
   if (savedSideDownLadderGids.size > 0) {
-    for (const r of game.rooms) {
+    for (const r of allRooms) {
       for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
         for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
           const tt = r.roomArray[x]?.[y];
@@ -1281,7 +1330,7 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   const downByGid = new Map<string, DownLadder>();
   const upByGid = new Map<string, UpLadder>();
 
-  for (const r of game.rooms) {
+  for (const r of allRooms) {
     for (let x = r.roomX - 1; x < r.roomX + r.width + 1; x++) {
       for (let y = r.roomY - 1; y < r.roomY + r.height + 1; y++) {
         const t = r.roomArray[x]?.[y];
@@ -1316,14 +1365,14 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       if (ts.kind === "down_ladder") {
         const dl = downByGid.get(ts.gid);
         if (dl && ts.linkedRoomGid) {
-          const linkedRoom = game.roomsById.get(ts.linkedRoomGid);
+          const linkedRoom = allRoomsById.get(ts.linkedRoomGid);
           if (linkedRoom) dl.linkedRoom = linkedRoom;
         }
       }
       if (ts.kind === "up_ladder") {
         const ul = upByGid.get(ts.gid);
         if (ul && ts.linkedRoomGid) {
-          const linkedRoom = game.roomsById.get(ts.linkedRoomGid);
+          const linkedRoom = allRoomsById.get(ts.linkedRoomGid);
           if (linkedRoom) ul.linkedRoom = linkedRoom;
         }
       }
@@ -1360,13 +1409,16 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
       p.lightBrightness = ps.light.brightness;
     }
 
-    const room = game.roomsById.get(ps.roomGid);
+    const room = allRoomsById.get(ps.roomGid);
     if (!room) {
       return err({ kind: "MissingReference", message: `Player room not found gid=${ps.roomGid}` });
     }
-    p.levelID = game.rooms.indexOf(room);
+    // levelID is an index into the player's current level's rooms array. For offline players
+    // sitting on a different floor, scope to that level rather than the active one.
+    const levelRooms = room.level?.rooms ?? game.rooms;
+    p.levelID = levelRooms.indexOf(room);
     p.roomGID = room.globalId;
-    p.depth = save.worldSpec.depth;
+    p.depth = room.depth;
 
     // Inventory: restore layout + set slots by index (supported kinds only).
     p.inventory.isOpen = ps.inventory.isOpen;

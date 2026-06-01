@@ -440,6 +440,7 @@ const validateWorldSpecV2 = (v: unknown, path: string): Result<WorldSpecV2> => {
     }
     const pathId = get(sp, "pathId");
     const roomsU = get(sp, "rooms");
+    const depthU = get(sp, "depth");
     if (!isString(pathId) || pathId.length === 0) {
       return err({
         kind: "InvalidSchema",
@@ -454,9 +455,18 @@ const validateWorldSpecV2 = (v: unknown, path: string): Result<WorldSpecV2> => {
         path: `${spPath}.rooms`,
       });
     }
+    if (depthU !== undefined && !isNumber(depthU)) {
+      return err({
+        kind: "InvalidSchema",
+        message: "depth must be a number if present",
+        path: `${spPath}.depth`,
+      });
+    }
     const rooms: number | undefined =
       roomsU === undefined ? undefined : isNumber(roomsU) ? roomsU : undefined;
-    sidepathOut.push({ pathId, rooms });
+    const depth: number | undefined =
+      depthU === undefined ? undefined : isNumber(depthU) ? depthU : undefined;
+    sidepathOut.push({ pathId, rooms, depth });
   }
 
   let mainPathPlan: WorldSpecV2["mainPathPlan"] | undefined = undefined;
@@ -1271,6 +1281,13 @@ const validateRoomDeltaV2 = (v: unknown, path: string): Result<RoomDeltaV2> => {
       return err({ kind: "InvalidSchema", message: "roomY must be number if present", path: `${path}.roomY` });
     roomY = roomYU;
   }
+  const depthU = get(v, "depth");
+  let depth: number | undefined = undefined;
+  if (depthU !== undefined) {
+    if (!isNumber(depthU))
+      return err({ kind: "InvalidSchema", message: "depth must be number if present", path: `${path}.depth` });
+    depth = depthU;
+  }
 
   const tilesU = get(v, "tiles");
   const enemiesU = get(v, "enemies");
@@ -1339,6 +1356,7 @@ const validateRoomDeltaV2 = (v: unknown, path: string): Result<RoomDeltaV2> => {
     roomY,
     pathId,
     mapGroup,
+    depth,
     entered,
     active,
     onScreen,
