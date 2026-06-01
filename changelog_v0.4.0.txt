@@ -1,0 +1,160 @@
+6/1/2026 – v0.4.0 is out!
+
+A big one — catching up from v0.3.1. New environments, new enemies, a spell + mana system, skills, smithing, armor, a bestiary, a sewer sidepath, diving, vending, right-click menus, color-coded keys, save/load v2, desktop builds, and a long list of fixes.
+
+## New Major Features
+
+🪄 **Spell system** – cast spells via spellbooks and spell scrolls. New SpellBeam animations and a dedicated targeting UI. Scrolls drop from tombstones and wizards.
+🔮 **Mana system** – reworked mana with a dedicated mana bar. Mana potions added (stackable).
+📈 **Skills + skills menu** – full skill system with a menu, balancing tweaks, and weapon skill requirements.
+📖 **Bestiary** – browse encountered enemies with healthbars, hit warnings, beam previews, themes, vertical view, touch scrolling, and fading. Right-click any enemy → "View in Bestiary."
+🔨 **Smithing interface** – dedicated smithing menu with improved appearance.
+🛡️ **Armor system** – chestplate, shoulder plates, gauntlets, backplate added.
+🏛️ **Pre-designed Castle** – hand-built castle structure. Final castle room holds the mainpath key. Castle bosses are now guarded.
+🛒 **Vending machine** – purchase items in-world (with cost adjustments).
+💎 **XP crystals** – pick up XP as crystals.
+🖱️ **Right-click context menus** – desktop + mobile. Attack enemies, examine items, interact with pushables, default actions in inventory, plus submenus.
+🚇 **Sewer sidepath** – brand new sidepath environment with its own structure and tunnels.
+🌲 **Dark Forest** – dark variant biome with dark fir trees, dark grass, dark plants, and matching particles.
+💾 **Save/Load v2** – fully reworked saving. Autosaves periodically, handles iOS background, restores curses/bleed/poison/shielded state/castle boss rooms, includes a roundtrip validator. Save/load is back on!
+
+## Gameplay Changes
+
+🍎 Added berries. Tree apple drops adjusted; big trees now drop apples more reliably.
+🗝️ Color-coded keys and doors – tell them apart at a glance.
+🧭 Keys now pathfind between floors. Key path auto-enables when picked up.
+🕯️ Press L to place or pick up torches and candles. Early floors use candles instead of torches.
+🔢 Quickbar number hotkeys.
+🍽️ Auto-eat button (with eat-button fix).
+🐀 Big wizards now spawn smaller wizards. Wizards drop spell scrolls.
+👑 Removed kings, queens, and chess knights from spawner pools.
+🪨 Cave pockets added. Cave ore adjustments. Removed some enemies from cave biome.
+⛏️ Pickaxe mining behavior changed; pickaxes can no longer apply bleed/poison.
+🪦 Spell scrolls drop from tombstones. Drop rates and notifications tweaked.
+🪙 Coins now auto-pickup from chests.
+🪻 Bigfrog frogs drop poison.
+🐸 Frogosis – giant frogs summon smaller frogs.
+🐌 Pawns retreat when hit.
+🛡️ Hardened guarded-door enemy checks.
+🔧 Bars now require 1 ore to smith.
+📦 Mana potions stackable.
+🧪 Weapon skill level requirements lowered.
+🎒 Quickbar auto-resizes; inventory grid is now adaptive with a fixed-width lock.
+🧠 New setting: slow inputs near enemies.
+⚙️ Settings menu now uses a sidebar/topbar layout.
+📕 ArmoryBook and SpellbookReader added; in-game Book Library.
+🏰 Dark Castle now structured like the Castle.
+🌳 Restructured caves to match forest layout style.
+🌲 Reworked forest sidepath.
+✨ Iron ore added.
+🦴 Spawners no longer spawn chess knights from regular pools.
+
+## Combat + Item Changes
+
+⚔️ **Rapier** added — new weapon.
+🗡️ Dual daggers are now non-degradable.
+🏹 **Crossbow intercept** – crossbow now intercepts targets in line of fire.
+🎯 **Crossbow targeting** UI added.
+🧿 **Cursed weapons** – cursed weapons apply a curse that spreads to nearby enemies and deals damage.
+💧 **Ethereal water** weapon effect – cuts through occultist shields, ignoring them.
+💍 Garnet Ring reworked – now lowers max health to 1 (was +1 melee damage in v0.3.1).
+💚 Emerald Ring effect fixed (and now saves correctly).
+📜 Spellbook targeting overhauled – tile cursor, mana indicator, toggle with number keys, mobile-friendly.
+✨ Point spell deals 2 damage.
+🗣️ Weapon descriptions added.
+
+## New Enemies
+
+🌿 **Earth Wizard** – wizard variant with a different attack pattern.
+🐀 **Rats** – afraid of light, deal 0.5 damage.
+♞ **Chess Knight** – full new enemy with alternate corner attacks.
+🐸 **Giant Frog** – appears in forests, summons smaller frogs (frogosis).
+🧙 **Big Wizard** – appears in forests, summons wizards, casts fireballs that explode.
+👻 **Ectomancer** – new caster enemy.
+🐍 **Snakes** – new enemy with full bestiary entry.
+
+## Environments
+
+🚇 Sewer sidepath added (fishing rod drops here).
+🌲 Dark Forest biome – dark fir trees, dark grass, dark plants, dark big trees, dark particles.
+🏰 Castle is now pre-designed with a structured layout. Main path requires a castle key. Castle bosses are guarded.
+🏯 Dark Castle restructured to match Castle layout.
+🌊 Underwater dimension – diving mechanics, oxygen lines, bubbles, underwater music, underwater post-processing, underwater light sources, kelp, glowshrooms.
+🪨 Cave pockets and tunneling layouts. Caves restructured to match forest style.
+🌳 Big trees added to forests.
+🚪 Straight tunnel carving for cleaner connections.
+
+## UI & Menus
+
+📖 Bestiary – full new system (themes, healthbars, hit warnings, vertical view, touch scroll, fading, enemy state toggles, beam previews).
+🖱️ Right-click context menus – desktop + mobile, with submenus and entity/item examine texts.
+🔍 Right-click "View in Bestiary" on any enemy.
+⚙️ Redesigned settings menu (sidebar/topbar).
+📕 Spellbook Reader, Armory Book, Book Library.
+🛠️ Smithing interface with improved menu appearance.
+🎒 Adaptive inventory grid + auto-resizable quickbar.
+🔢 Quickbar number hotkeys.
+🏷️ Item examine texts, entity descriptions.
+🧭 Pointer messages – directional pointers to objectives.
+❗ Alert messages – new popup alert system.
+❓ Help pages added for mobile and desktop.
+❤️ Enemy healthbar shows on mouse hover (with delay; mobile-friendly; hover timer tuned).
+🔮 Mana bar appearance tuned.
+🗺️ Map fix – now shows correctly in side paths.
+🗝️ Color-coded keys in inventory and on doors.
+🎞️ Fading inventory and bestiary. Fade-in for icons and hit warnings.
+🚪 Downladder/upladder screen-fade transitions.
+🥾 Boot loading renderer added.
+
+## Performance
+
+⚡ A* path caching, passive entity skip, lighting optimizations.
+🧮 A* grid cap excludes the enemy's own start tile.
+🎨 Drawhelper improved performance.
+🧱 Optimized enemies for large rooms.
+🖌️ Improved inline shading performance + fade cache invalidation.
+✨ WebGL blur render cache fix.
+🌸 Bloom error fix.
+🖥️ Canvas-breaking fix + debug commands.
+
+## Bug Fixes
+
+💾 Save/load fixes: shielded state, hit warnings, castle boss room, chest sprite, tombstone draw on death, downladders that are unlocked, stats/sidepath options, missing item names, fade transition draw order, transition fade normalization.
+🎯 Hit warning fixes: creation, corner arrow sprites (many iterations), enemy hit warnings not updating, rats not making hit warnings, big hit warnings, north-facing hit warning suppression removed.
+🧙 Wizard fixes: bigwizard behavior, bigwizard fireball animation + explosion, wizard fixes in bestiary.
+🐸 Beetle jump animation fix.
+🩹 Occultist beam validation, lighting bug, range, unshield when out of range.
+🏹 Boltcaster hurt bug fixed.
+🗡️ Rapier validation fixed.
+🔒 Key path routing through locked doors fixed.
+🪜 Dark castle downladder-to-nowhere fixed.
+📜 Level up messages no longer stack.
+🪨 Big enemies fixed (multiple).
+👀 See-through alpha for wide entities.
+🕯️ Light source bug fixed; placed torches on doors fixed; mobile door light bug fixed.
+🧱 Spike trap draw bug fixed.
+🎯 Spellbook breaking, targeting toggle with numbers, mobile targeting all fixed.
+🗑️ Drop candidate picking fixed.
+📱 Mobile right-click / drag interfering with input fixed; right-click drag item bug on mobile fixed.
+🪦 Tombstone death drawing fixed.
+🧮 Use-item box drawing fixed.
+🦴 Big knight fixed; enemies hit by other enemies fixed.
+🔧 Weapon equip level gate fixed.
+🧊 Pushing animation fixed; castle door floor sprite fixed.
+🐀 Frog behavior, animate-to-inventory on dropped items, enemy environment tweaks.
+🔇 Removed reverb from music.
+🟫 Block multiple torches on the same tile.
+🚪 Prevent torches on tunnel doors.
+🌳 Fixed dark fir tree sprite and weird offset on objset.
+🎨 Item and player sprite sheet updates; armor sprites; tileset updates.
+
+## Developer / Misc
+
+🧪 Testlevel debug command.
+🧰 Save/load V2 roundtrip validator and coverage tooling.
+🐛 Z-debug disabled.
+🛠️ Refactor: consolidated sidepath progression config into a single source of truth.
+
+---
+
+Enjoy the update! 🧙‍♀️

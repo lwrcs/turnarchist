@@ -75,7 +75,7 @@ import {
 import { EmeraldRing } from "../item/jewelry/emeraldRing";
 
 export class GameConstants {
-  static readonly VERSION = "Alpha v0.3.2"; //"v0.6.3";
+  static readonly VERSION = "Alpha v0.4.0"; //"v0.6.3";
   static DEVELOPER_MODE = false;
   static CLAUDE_ENABLED = false;
   static INVENTORY_SNAP_COLS = false;
@@ -607,6 +607,10 @@ export class GameConstants {
     Pickaxe,
     Lantern,
     DivingHelmet,
+    ChestPlate,
+    Backplate,
+    Gauntlets,
+    ShoulderPlates,
     WeaponBlood,
     Scythe,
     Sword,

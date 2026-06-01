@@ -235,9 +235,7 @@ export class PlayerRenderer {
     }
 
     const divingHelmet = player.inventory.divingHelmetEquipped();
-    const tileX = divingHelmet
-      ? this.divingHelmetTileX
-      : 1 + Math.floor(this.frame);
+    const tileX = Math.floor(this.frame);
     const targetingAngle = player.rangedTargeting?.active
       ? player.rangedTargeting.getAngleRad()
       : null;
@@ -246,20 +244,21 @@ export class PlayerRenderer {
       : targetingAngle !== null
         ? this.directionFromAngle(targetingAngle)
         : player.direction;
-    const tileY = divingHelmet
-      ? this.divingHelmetTileY + renderDirection * 2
-      : 8 + renderDirection * 2;
-    Game.ctx.save(); // Save the current canvas state
-    const divingHelmetOffsetY = divingHelmet ? 2 : 0;
+    const tileY = renderDirection * 2;
+    Game.ctx.save();
+    let drewBase = false;
 
     if (this.drawSmear()) {
-      Game.drawMob(
-        this.setSmearFrame().x,
-        this.setSmearFrame().y,
+      const smearFrame = this.setSmearFrame();
+      const dX = player.x - this.drawX - this.hitX;
+      const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
+      Game.drawPlayer(
+        smearFrame.x,
+        smearFrame.y,
         1,
         2,
-        player.x - this.drawX - this.hitX,
-        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+        dX,
+        dY,
         1,
         2,
         this.shadeColor(),
@@ -268,6 +267,7 @@ export class PlayerRenderer {
         this.outlineColor(),
         this.outlineOpacity(),
       );
+      this.drawArmorLayers(smearFrame.x, smearFrame.y, renderDirection, dX, dY);
     } else if (!GameConstants.isMobile) {
       // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
       const angleRad = this.uiPoseFrozen
@@ -289,24 +289,22 @@ export class PlayerRenderer {
           (angleDeg > -60 && angleDeg < -30));
 
       if (isDiagonal && angleDeg !== null) {
-        let diagonalTile = { x: 1, y: 18 };
+        let diagonalTile = { x: 0, y: 8 };
 
-        if (angleDeg > -150 && angleDeg <= -120)
-          diagonalTile = { x: 3, y: 18 + divingHelmetOffsetY };
-        if (angleDeg > -60 && angleDeg <= -30)
-          diagonalTile = { x: 4, y: 18 + divingHelmetOffsetY };
-        if (angleDeg > 30 && angleDeg <= 60)
-          diagonalTile = { x: 2, y: 18 + divingHelmetOffsetY };
-        if (angleDeg > 120 && angleDeg <= 150)
-          diagonalTile = { x: 1, y: 18 + divingHelmetOffsetY };
+        if (angleDeg > -150 && angleDeg <= -120) diagonalTile = { x: 2, y: 8 };
+        if (angleDeg > -60 && angleDeg <= -30)   diagonalTile = { x: 3, y: 8 };
+        if (angleDeg > 30 && angleDeg <= 60)     diagonalTile = { x: 1, y: 8 };
+        if (angleDeg > 120 && angleDeg <= 150)   diagonalTile = { x: 0, y: 8 };
 
-        Game.drawMob(
+        const dX = player.x - this.drawX - this.hitX;
+        const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
+        Game.drawPlayer(
           diagonalTile.x,
           diagonalTile.y,
           1,
           2,
-          player.x - this.drawX - this.hitX,
-          player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+          dX,
+          dY,
           1,
           2,
           this.shadeColor(),
@@ -315,10 +313,11 @@ export class PlayerRenderer {
           this.outlineColor(),
           this.outlineOpacity(),
         );
+        this.drawArmorLayers(diagonalTile.x, diagonalTile.y, renderDirection, dX, dY);
       } else {
         this.frame += 0.1 * delta;
         if (this.frame >= 4) this.frame = 0;
-        Game.drawMob(
+        Game.drawPlayer(
           tileX,
           tileY,
           1,
@@ -333,11 +332,12 @@ export class PlayerRenderer {
           this.outlineColor(),
           this.outlineOpacity(),
         );
+        drewBase = true;
       }
     } else {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
-      Game.drawMob(
+      Game.drawPlayer(
         tileX,
         tileY,
         1,
@@ -352,9 +352,16 @@ export class PlayerRenderer {
         this.outlineColor(),
         this.outlineOpacity(),
       );
+      drewBase = true;
     }
-    if (player.inventory.getArmor() && player.inventory.getArmor().health > 0) {
-      // TODO draw armor
+    if (drewBase) {
+      this.drawArmorLayers(
+        tileX,
+        tileY,
+        renderDirection,
+        player.x - this.drawX - this.hitX,
+        player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ,
+      );
     }
 
     Game.ctx.restore(); // Restore the canvas state
@@ -414,6 +421,73 @@ export class PlayerRenderer {
     return normalized < 0 ? normalized + 360 : normalized;
   };
 
+  private drawArmorLayers = (
+    tileX: number,
+    tileY: number,
+    renderDirection: Direction,
+    dX: number,
+    dY: number,
+  ) => {
+    const player = this.player;
+    const shade = this.shadeColor();
+    const outline = this.outlineColor();
+    const outlineOp = this.outlineOpacity();
+
+    const drawLayer = (overlayTileX: number) => {
+      Game.drawPlayer(
+        overlayTileX,
+        tileY,
+        1,
+        2,
+        dX,
+        dY,
+        1,
+        2,
+        shade,
+        undefined,
+        undefined,
+        outline,
+        outlineOp,
+      );
+    };
+
+    // Chest/back (columns 4–7): chestplate when facing down/right/left, backplate when facing up
+    const chestPlate = player.inventory.getChestPlate();
+    const backplate = player.inventory.getBackplate();
+    if (renderDirection === Direction.UP ? backplate !== null : chestPlate !== null) {
+      drawLayer(tileX + 4);
+    }
+
+    // Gauntlets (columns 8–11)
+    if (player.inventory.getGauntlets() !== null) {
+      drawLayer(tileX + 8);
+    }
+
+    // Shoulder plates (columns 12–15)
+    if (player.inventory.getShoulderPlates() !== null) {
+      drawLayer(tileX + 12);
+    }
+
+    // Diving helmet overlay (columns 0–0, rows 12+)
+    if (player.inventory.divingHelmetEquipped()) {
+      Game.drawPlayer(
+        this.divingHelmetTileX,
+        this.divingHelmetTileY + renderDirection * 2,
+        1,
+        2,
+        dX,
+        dY,
+        1,
+        2,
+        shade,
+        undefined,
+        undefined,
+        outline,
+        outlineOp,
+      );
+    }
+  };
+
   drawSmear = () => {
     if (this.player.direction === this.player.lastDirection) return false;
     let t = 100;
@@ -432,38 +506,38 @@ export class PlayerRenderer {
   };
 
   setSmearFrame = () => {
-    let tile = { x: 1, y: 18 };
+    // All smear frames are on playerset at tileY=8 (row just below the 4 walk rows).
+    // x is 0-indexed: 0=down-left, 1=down-right, 2=up-left, 3=up-right.
+    // Opposite-direction transitions borrow a walk frame as a mid-phase (tileY = direction * 2).
+    let tile = { x: 0, y: 8 };
     const timeSince = Date.now() - this.player.movement.lastChangeDirectionTime;
     const t = 50;
-
-    const divingHelmet = this.player.inventory.divingHelmetEquipped();
-    tile.y = divingHelmet ? 20 : 18;
 
     if (
       (this.player.direction === Direction.UP &&
         this.player.lastDirection === Direction.LEFT) ||
       (this.player.direction === Direction.LEFT &&
+        this.player.lastDirection === Direction.UP)
+    ) {
+      tile.x = 2;
+      return tile;
+    }
+    if (
+      (this.player.direction === Direction.UP &&
+        this.player.lastDirection === Direction.RIGHT) ||
+      (this.player.direction === Direction.RIGHT &&
         this.player.lastDirection === Direction.UP)
     ) {
       tile.x = 3;
       return tile;
     }
     if (
-      (this.player.direction === Direction.UP &&
-        this.player.lastDirection === Direction.RIGHT) ||
-      (this.player.direction === Direction.RIGHT &&
-        this.player.lastDirection === Direction.UP)
-    ) {
-      tile.x = 4;
-      return tile;
-    }
-    if (
       (this.player.direction === Direction.DOWN &&
         this.player.lastDirection === Direction.RIGHT) ||
       (this.player.direction === Direction.RIGHT &&
         this.player.lastDirection === Direction.DOWN)
     ) {
-      tile.x = 2;
+      tile.x = 1;
       return tile;
     }
     if (
@@ -472,73 +546,46 @@ export class PlayerRenderer {
       (this.player.direction === Direction.LEFT &&
         this.player.lastDirection === Direction.DOWN)
     ) {
-      tile.x = 1;
+      tile.x = 0;
       return tile;
     }
     if (
       this.player.direction === Direction.DOWN &&
       this.player.lastDirection === Direction.UP
     ) {
-      if (timeSince < t) tile.x = 3;
-      if (timeSince >= t && timeSince < t * 2) {
-        tile.x = 1;
-        tile.y = 14;
-        if (divingHelmet) {
-          tile.x = 0;
-          tile.y = 18;
-        }
-      }
-      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
+      if (timeSince < t) tile.x = 2;
+      if (timeSince >= t && timeSince < t * 2) { tile.x = 1; tile.y = 6; } // LEFT walk row
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 0;
       return tile;
     }
     if (
       this.player.direction === Direction.LEFT &&
       this.player.lastDirection === Direction.RIGHT
     ) {
-      if (timeSince < t) tile.x = 2;
-      if (timeSince >= t && timeSince < t * 2) {
-        tile.x = 1;
-        tile.y = 8;
-        if (divingHelmet) {
-          tile.x = 0;
-          tile.y = 12;
-        }
-      }
-      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
+      if (timeSince < t) tile.x = 1;
+      if (timeSince >= t && timeSince < t * 2) { tile.x = 1; tile.y = 0; } // DOWN walk row
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 0;
       return tile;
     }
     if (
       this.player.direction === Direction.UP &&
       this.player.lastDirection === Direction.DOWN
     ) {
-      if (timeSince < t) tile.x = 2;
-      if (timeSince >= t && timeSince < t * 2) {
-        tile.x = 1;
-        tile.y = 12;
-        if (divingHelmet) {
-          tile.x = 0;
-          tile.y = 16;
-        }
-      }
-      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 4;
+      if (timeSince < t) tile.x = 1;
+      if (timeSince >= t && timeSince < t * 2) { tile.x = 1; tile.y = 4; } // RIGHT walk row
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 3;
       return tile;
     }
     if (
       this.player.direction === Direction.RIGHT &&
       this.player.lastDirection === Direction.LEFT
     ) {
-      if (timeSince < t) tile.x = 1;
-      if (timeSince >= t && timeSince < t * 2) {
-        tile.x = 1;
-        tile.y = 8;
-        if (divingHelmet) {
-          tile.x = 0;
-          tile.y = 12;
-        }
-      }
-      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 2;
+      if (timeSince < t) tile.x = 0;
+      if (timeSince >= t && timeSince < t * 2) { tile.x = 1; tile.y = 0; } // DOWN walk row
+      if (timeSince >= t * 2 && timeSince < t * 3) tile.x = 1;
       return tile;
     }
+    return tile;
   };
 
   draw = (delta: number) => {

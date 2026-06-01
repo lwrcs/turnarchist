@@ -62,6 +62,7 @@ import { BootLoadingRenderer } from "./boot/bootLoadingRenderer";
 import tilesetUrl = require("../res/tileset.png");
 import objsetUrl = require("../res/objset.png");
 import mobsetUrl = require("../res/mobset.png");
+import playersetUrl = require("../res/playerset.png");
 import itemsetUrl = require("../res/itemset.png");
 import fxsetUrl = require("../res/fxset.png");
 import fontUrl = require("../res/font.png");
@@ -732,7 +733,7 @@ export class Game {
   hasRecordedStats: boolean = false;
   loadedFromSaveFile: boolean = false;
   // Reference package.json
-  version = "0.3.2";
+  version = "0.4.0";
 
   static inputReceived = false;
 
@@ -748,6 +749,7 @@ export class Game {
   static tileset: HTMLImageElement;
   static objset: HTMLImageElement;
   static mobset: HTMLImageElement;
+  static playerset: HTMLImageElement;
   static itemset: HTMLImageElement;
   static fxset: HTMLImageElement;
   static fontsheet: HTMLImageElement;
@@ -981,7 +983,7 @@ export class Game {
       Game.text_rendering_canvases = {};
 
       let resourcesLoaded = 0;
-      const NUM_RESOURCES = 6;
+      const NUM_RESOURCES = 7;
 
       // Boot loading renderer: uses the game's pixel font once available, but is independent of Game.
       const bootLoading = new BootLoadingRenderer(
@@ -1010,6 +1012,12 @@ export class Game {
         bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
       };
       Game.mobset.src = mobsetUrl;
+      Game.playerset = new Image();
+      Game.playerset.onload = () => {
+        resourcesLoaded++;
+        bootLoading.setProgress(resourcesLoaded, NUM_RESOURCES);
+      };
+      Game.playerset.src = playersetUrl;
       Game.itemset = new Image();
       Game.itemset.onload = () => {
         resourcesLoaded++;
@@ -1331,6 +1339,7 @@ export class Game {
       if (Game.tileset) Game.tileset.src = tilesetUrl;
       if (Game.objset) Game.objset.src = objsetUrl;
       if (Game.mobset) Game.mobset.src = mobsetUrl;
+      if (Game.playerset) Game.playerset.src = playersetUrl;
       if (Game.itemset) Game.itemset.src = itemsetUrl;
       if (Game.fxset) Game.fxset.src = fxsetUrl;
       if (Game.fontsheet) Game.fontsheet.src = fontUrl;
@@ -7008,6 +7017,56 @@ export class Game {
   ) => {
     Game.drawHelper(
       Game.mobset,
+      sX,
+      sY,
+      sW,
+      sH,
+      dX,
+      dY,
+      dW,
+      dH,
+      shadeColor,
+      shadeOpacity,
+      true,
+      fadeDir,
+      outlineColor,
+      outlineOpacity,
+      outlineOffset,
+      outlineManhattan,
+      colorOverlay,
+      colorOverlayOpacity,
+      colorOverlayDesaturate,
+      dottedOutline,
+    );
+  };
+
+  /**
+   * Draw a player sprite from the dedicated player sheet. Convenience wrapper.
+   * Uses entity=true so the player uses entity shade quantization.
+   */
+  static drawPlayer = (
+    sX: number,
+    sY: number,
+    sW: number,
+    sH: number,
+    dX: number,
+    dY: number,
+    dW: number,
+    dH: number,
+    shadeColor = "black",
+    shadeOpacity = 0,
+    fadeDir?: "left" | "right" | "up" | "down",
+    outlineColor?: string,
+    outlineOpacity: number = 0,
+    outlineOffset: number = 0,
+    outlineManhattan: boolean = false,
+    colorOverlay?: string,
+    colorOverlayOpacity: number = 0,
+    colorOverlayDesaturate: boolean = false,
+    dottedOutline: boolean = false,
+  ) => {
+    Game.drawHelper(
+      Game.playerset,
       sX,
       sY,
       sW,
