@@ -50,8 +50,9 @@ export class DivingHelmet extends Equippable {
   };
 
   coEquippable = (other: Equippable): boolean => {
-    // Only prevent multiple diving helmets from being active at once.
-    return !(other instanceof DivingHelmet);
+    if (other instanceof DivingHelmet) return false;
+    if (other.name === "helmet") return false;
+    return true;
   };
 
   hasAir = (): boolean => {

@@ -67,6 +67,7 @@ import { Backplate } from "../../../item/backplate";
 import { Gauntlets } from "../../../item/gauntlets";
 import { ShoulderPlates } from "../../../item/shoulderPlates";
 import { ChestPlate } from "../../../item/chestPlate";
+import { Helmet } from "../../../item/helmet";
 import { CrossbowBolt } from "../../../item/weapon/crossbowBolt";
 import { GodStone } from "../../../item/godStone";
 import { Scroll } from "../../../item/usable/scroll";
@@ -154,6 +155,7 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof Gauntlets) return "gauntlets";
   if (item instanceof ShoulderPlates) return "shoulder_plates";
   if (item instanceof ChestPlate) return "chest_plate";
+  if (item instanceof Helmet) return "helmet";
   if (item instanceof CrossbowBolt) return "crossbow_bolt";
   if (item instanceof GodStone) return "god_stone";
   if (item instanceof GoldRing) return "gold_ring";
@@ -299,6 +301,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
     "gauntlets",
     "shoulder_plates",
     "chest_plate",
+    "helmet",
     "crossbow_bolt",
     "god_stone",
   ] as const satisfies readonly GenericItemKind[];
@@ -435,6 +438,9 @@ export const registerBuiltinItemCodecsV2 = (): void => {
             break;
           case "chest_plate":
             item = new ChestPlate(room, value.x, value.y);
+            break;
+          case "helmet":
+            item = new Helmet(room, value.x, value.y);
             break;
           case "crossbow_bolt":
             item = new CrossbowBolt(room, value.x, value.y);

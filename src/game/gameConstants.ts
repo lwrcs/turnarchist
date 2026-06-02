@@ -64,6 +64,7 @@ import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 import { IronBar } from "../item/resource/ironBar";
 import { WeaponCurse } from "../item/usable/weaponCurse";
+import { Helmet } from "../item/helmet";
 import { WeaponPlague } from "../item/usable/weaponPlague";
 import { WeaponEthereal } from "../item/usable/weaponEthereal";
 import { BluePotion } from "../item/usable/bluePotion";
@@ -608,6 +609,7 @@ export class GameConstants {
     Pickaxe,
     Lantern,
     DivingHelmet,
+    Helmet,
     ChestPlate,
     Backplate,
     Gauntlets,

@@ -155,6 +155,7 @@ import { Backplate } from "../../item/backplate";
 import { Gauntlets } from "../../item/gauntlets";
 import { ShoulderPlates } from "../../item/shoulderPlates";
 import { ChestPlate } from "../../item/chestPlate";
+import { Helmet } from "../../item/helmet";
 import { CrossbowBolt } from "../../item/weapon/crossbowBolt";
 import { GodStone } from "../../item/godStone";
 
@@ -406,6 +407,7 @@ export function populateTestRoom(room: Room, game: Game, clearFirst = false): vo
     [Gauntlets, "gauntlets"],
     [ShoulderPlates, "shoulder_plates"],
     [ChestPlate, "chest_plate"],
+    [Helmet, "helmet"],
     [CrossbowBolt, "crossbow_bolt"],
     [GodStone, "god_stone"],
     [GoldRing, "gold_ring"],

@@ -931,6 +931,7 @@ export const ITEM_KIND_VALUES_V2 = [
   "gauntlets",
   "shoulder_plates",
   "chest_plate",
+  "helmet",
   // ammo
   "crossbow_bolt",
   // dev items

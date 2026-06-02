@@ -232,6 +232,8 @@ export class PlayerRenderer {
     }
 
     const divingHelmet = player.inventory.divingHelmetEquipped();
+    const regularHelmet = player.inventory.getHelmet();
+    const needsHelmetCompositing = (divingHelmet || regularHelmet !== null) && !!Game.helmetMaskCanvas;
     const tileX = Math.floor(this.frame);
     const targetingAngle = player.rangedTargeting?.active
       ? player.rangedTargeting.getAngleRad()
@@ -254,7 +256,7 @@ export class PlayerRenderer {
     // the correct screen-space pixels inside the layer (otherwise sprites at large world coords
     // fall outside the viewport-sized layer bounds and become invisible).
     const mainCtx = Game.ctx;
-    if (divingHelmet && Game.helmetMaskCanvas) {
+    if (needsHelmetCompositing) {
       Game.syncPlayerLayer();
       // Clear with identity so clearRect covers the entire layer canvas
       Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
@@ -371,9 +373,10 @@ export class PlayerRenderer {
 
     Game.ctx.restore(); // Restore the canvas state
 
-    if (divingHelmet && Game.helmetMaskCanvas && Game.playerLayerCtx) {
+    if (needsHelmetCompositing && Game.playerLayerCtx) {
       const ts = GameConstants.TILESIZE;
-      const helmetTileX = drawnTile.x + 16;
+      const helmetColOffset = divingHelmet ? 16 : 20;
+      const helmetTileX = drawnTile.x + helmetColOffset;
       const helmetTileY = drawnTile.y;
       const px = Math.round(dX * ts);
       const py = Math.round(dY * ts);
@@ -524,7 +527,7 @@ export class PlayerRenderer {
     if (player.inventory.getShoulderPlates() !== null) {
       drawLayer(tileX + 12);
     }
-    // Diving helmet (columns 16–19) is drawn by drawPlayerSprite after mask compositing
+    // Diving helmet (columns 16–19) and helmet (columns 20–23) are drawn by drawPlayerSprite after mask compositing
   };
 
   drawSmear = () => {

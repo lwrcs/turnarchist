@@ -24,6 +24,7 @@ import { Backplate } from "../item/backplate";
 import { Gauntlets } from "../item/gauntlets";
 import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
+import { Helmet } from "../item/helmet";
 import { statsTracker } from "../game/stats";
 import { computeXpCrystalXp } from "../game/skillBalance";
 import { XPPopup } from "../particle/xpPopup";
@@ -865,6 +866,14 @@ export class Inventory {
     return (
       this.items.find(
         (i): i is ChestPlate => i instanceof ChestPlate && i.equipped,
+      ) || null
+    );
+  };
+
+  getHelmet = (): Helmet | null => {
+    return (
+      this.items.find(
+        (i): i is Helmet => i instanceof Helmet && i.equipped,
       ) || null
     );
   };
