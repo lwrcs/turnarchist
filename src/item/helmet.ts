@@ -7,7 +7,7 @@ export class Helmet extends Equippable {
 
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 11;
+    this.tileX = 20;
     this.tileY = 4;
     this.stackable = false;
     this.name = Helmet.itemName;
