@@ -1017,6 +1017,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     const bloodU = get(statusU, "blood");
     const curseU = get(statusU, "curse");
     const etherealU = get(statusU, "ethereal");
+    const plagueU = get(statusU, "plague");
     if (!isBoolean(poisonU))
       return err({ kind: "InvalidSchema", message: "status.poison must be boolean", path: `${path}.status.poison` });
     if (!isBoolean(bloodU))
@@ -1025,6 +1026,8 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       return err({ kind: "InvalidSchema", message: "status.curse must be boolean", path: `${path}.status.curse` });
     if (!isBoolean(etherealU))
       return err({ kind: "InvalidSchema", message: "status.ethereal must be boolean", path: `${path}.status.ethereal` });
+    if (!isBoolean(plagueU))
+      return err({ kind: "InvalidSchema", message: "status.plague must be boolean", path: `${path}.status.plague` });
     // spellIds is optional for backward-compat with pre-spell saves
     let spellIds: string[] = [];
     if (spellIdsU !== undefined) {
@@ -1052,7 +1055,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       broken: brokenU,
       cooldown: cooldownU,
       cooldownMax: cooldownMaxU,
-      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
+      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU, plague: plagueU },
       spellIds,
       activeSpellId,
     });
@@ -1107,6 +1110,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
     const bloodU = get(statusU, "blood");
     const curseU = get(statusU, "curse");
     const etherealU = get(statusU, "ethereal");
+    const plagueU = get(statusU, "plague");
     if (!isBoolean(poisonU))
       return err({
         kind: "InvalidSchema",
@@ -1130,6 +1134,12 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
         kind: "InvalidSchema",
         message: "status.ethereal must be boolean",
         path: `${path}.status.ethereal`,
+      });
+    if (!isBoolean(plagueU))
+      return err({
+        kind: "InvalidSchema",
+        message: "status.plague must be boolean",
+        path: `${path}.status.plague`,
       });
 
     if (kindR.value === "crossbow") {
@@ -1162,7 +1172,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
         broken: brokenU,
         cooldown: cooldownU,
         cooldownMax: cooldownMaxU,
-        status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
+        status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU, plague: plagueU },
         crossbowState: crossbowStateU,
       });
     }
@@ -1182,7 +1192,7 @@ const validateItemSaveV2 = (v: unknown, path: string): Result<ItemSaveV2> => {
       broken: brokenU,
       cooldown: cooldownU,
       cooldownMax: cooldownMaxU,
-      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU },
+      status: { poison: poisonU, blood: bloodU, curse: curseU, ethereal: etherealU, plague: plagueU },
     });
   }
 
@@ -2333,10 +2343,21 @@ const validateEnemySaveV2 = (v: unknown, path: string): Result<EnemySaveV2> => {
         curse = { active, tickCount, startTick };
     }
 
+    const plagueRaw = get(enemyStatusU, "plague");
+    let plague: { active: boolean; tickCount: number; startTick: number } | undefined = undefined;
+    if (plagueRaw !== undefined && isRecord(plagueRaw)) {
+      const active = get(plagueRaw, "active");
+      const tickCount = get(plagueRaw, "tickCount");
+      const startTick = get(plagueRaw, "startTick");
+      if (isBoolean(active) && isNumber(tickCount) && isNumber(startTick))
+        plague = { active, tickCount, startTick };
+    }
+
     enemyStatus = {
       poison: validateStatusBlock(get(enemyStatusU, "poison"), `${path}.enemyStatus.poison`),
       bleed: validateStatusBlock(get(enemyStatusU, "bleed"), `${path}.enemyStatus.bleed`),
       curse,
+      plague,
     };
   }
 

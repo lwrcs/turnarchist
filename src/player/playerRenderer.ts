@@ -1423,7 +1423,8 @@ export class PlayerRenderer {
       this.player.skillsMenu?.open ||
       this.player.contextMenu?.open ||
       this.player.inputHandler.mostRecentMoveInput === "keyboard" ||
-      GameConstants.isMobile
+      GameConstants.isMobile ||
+      this.player.rangedTargeting?.active
     )
       return;
     Game.ctx.save(); // Save the current canvas state
@@ -1463,7 +1464,7 @@ export class PlayerRenderer {
     const screenY = (target.y - this.player.y) + offsetY - 0.5 + this.player.drawY + target.drawY;
 
     Game.drawFX(
-      24 + Math.floor(HitWarning.frame),
+      25,
       5,
       1,
       1,
@@ -1502,11 +1503,9 @@ export class PlayerRenderer {
     const tilesToDraw = patternTiles.length > 0 ? patternTiles : [{ x: rt.targetX, y: rt.targetY }];
     for (let i = 0; i < tilesToDraw.length; i++) {
       const pt = tilesToDraw[i];
-      const baseFrame = Math.floor(HitWarning.frame);
-      const animFrame = (pt.x + pt.y) % 2 === 0 ? baseFrame : 1 - baseFrame;
       const ptScreenX = (pt.x - this.player.x) + offsetX - 0.5 + this.player.drawX;
       const ptScreenY = (pt.y - this.player.y) + offsetY - 0.5 + this.player.drawY;
-      Game.drawFX(24 + animFrame, 5, 1, 1, ptScreenX, ptScreenY, 1, 1);
+      Game.drawFX(25, 5, 1, 1, ptScreenX, ptScreenY, 1, 1);
     }
 
     // Downward-pointing yellow arrow above the target tile — pixel-drawn like the

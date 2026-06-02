@@ -4184,7 +4184,7 @@ export class Game {
             broken: false,
           };
         case "spellbook": {
-          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false, plague: false } as const;
           return {
             ...base,
             kind: "spellbook",
@@ -4211,7 +4211,7 @@ export class Game {
         case "shotgun":
         case "slingshot":
         case "pickaxe": {
-          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false, plague: false } as const;
           return {
             ...base,
             kind,
@@ -4225,7 +4225,7 @@ export class Game {
           };
         }
         case "crossbow": {
-          const status = { poison: false, blood: false, curse: false, ethereal: false } as const;
+          const status = { poison: false, blood: false, curse: false, ethereal: false, plague: false } as const;
           return {
             ...base,
             kind: "crossbow",
@@ -6603,6 +6603,8 @@ export class Game {
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
     dottedOutline: boolean = false,
+    tintColor?: string,
+    tintOpacity: number = 0,
   ) => {
     const _prof = Game._drawHelperProfileEnabled;
     const _t0 = _prof ? performance.now() : 0;
@@ -6667,6 +6669,12 @@ export class Game {
       const ovColor = quantizeHexColor(colorOverlay, shadeColorLevels);
       key += `,colov=${ovColor}:${Math.max(0, Math.min(1, ovOpacity))}`;
       if (colorOverlayDesaturate) key += `,colovDesat=1`;
+    }
+    if (tintColor && tintOpacity > 0) {
+      const tLevels = Math.max(shadeLevel, 12);
+      const tOpacity = Math.round(tintOpacity * tLevels) / Math.max(tLevels, 1);
+      const tColor = quantizeHexColor(tintColor, shadeColorLevels);
+      key += `,tint=${tColor}:${Math.max(0, Math.min(1, tOpacity))}`;
     }
 
     const _isHit = !!Game.shade_canvases[key];
@@ -6809,6 +6817,18 @@ export class Game {
           shCtx.fillStyle = grad;
           shCtx.fillRect(0, 0, w, h);
         }
+      }
+
+      // 4.5) Optional tint overlay — semi-transparent color over sprite pixels only
+      if (tintColor && tintOpacity > 0) {
+        const tLevels = Math.max(shadeLevel, 12);
+        const tOp = Math.round(tintOpacity * tLevels) / Math.max(tLevels, 1);
+        shCtx.globalAlpha = Math.max(0, Math.min(1, tOp));
+        shCtx.globalCompositeOperation = "source-atop";
+        shCtx.fillStyle = tintColor;
+        shCtx.fillRect(0, 0, Game.shade_canvases[key].width, Game.shade_canvases[key].height);
+        shCtx.globalAlpha = 1.0;
+        shCtx.globalCompositeOperation = "source-over";
       }
 
       // 5) Optional colored outline behind the sprite
@@ -7056,6 +7076,8 @@ export class Game {
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
     dottedOutline: boolean = false,
+    tintColor?: string,
+    tintOpacity: number = 0,
   ) => {
     Game.drawHelper(
       Game.mobset,
@@ -7079,6 +7101,8 @@ export class Game {
       colorOverlayOpacity,
       colorOverlayDesaturate,
       dottedOutline,
+      tintColor,
+      tintOpacity,
     );
   };
 
@@ -7106,6 +7130,8 @@ export class Game {
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
     dottedOutline: boolean = false,
+    tintColor?: string,
+    tintOpacity: number = 0,
   ) => {
     Game.drawHelper(
       Game.playerset,
@@ -7129,6 +7155,8 @@ export class Game {
       colorOverlayOpacity,
       colorOverlayDesaturate,
       dottedOutline,
+      tintColor,
+      tintOpacity,
     );
   };
 

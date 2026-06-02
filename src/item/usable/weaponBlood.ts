@@ -29,7 +29,7 @@ export class WeaponBlood extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon && other.canReceiveStatusEffect) {
-      other.applyStatus({ blood: true, poison: false, curse: false, ethereal: false });
+      other.applyStatus({ blood: true, poison: false, curse: false, ethereal: false, plague: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(
         `You coat your ${other.name} in cursed blood.`,

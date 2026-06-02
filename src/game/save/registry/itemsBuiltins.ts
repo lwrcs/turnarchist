@@ -16,6 +16,7 @@ import { WeaponPoison } from "../../../item/usable/weaponPoison";
 import { WeaponBlood } from "../../../item/usable/weaponBlood";
 import { WeaponCurse } from "../../../item/usable/weaponCurse";
 import { WeaponEthereal } from "../../../item/usable/weaponEthereal";
+import { WeaponPlague } from "../../../item/usable/weaponPlague";
 import { Spellbook } from "../../../item/weapon/spellbook";
 import { Dagger } from "../../../item/weapon/dagger";
 import { Sword } from "../../../item/weapon/sword";
@@ -109,6 +110,7 @@ const itemToKind = (item: Item): ItemKind | null => {
   if (item instanceof WeaponBlood) return "weapon_blood";
   if (item instanceof WeaponCurse) return "weapon_curse";
   if (item instanceof WeaponEthereal) return "weapon_ethereal";
+  if (item instanceof WeaponPlague) return "weapon_plague";
   if (item instanceof Scroll) return "scroll";
   if (item instanceof Spellbook) return "spellbook";
   if (item instanceof SpellbookPage) return "spellbook_page";
@@ -271,6 +273,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
     "weapon_blood",
     "weapon_curse",
     "weapon_ethereal",
+    "weapon_plague",
     "spellbook_page",
     "weapon_fragments",
     "coal",
@@ -354,6 +357,9 @@ export const registerBuiltinItemCodecsV2 = (): void => {
             break;
           case "weapon_ethereal":
             item = new WeaponEthereal(room, value.x, value.y);
+            break;
+          case "weapon_plague":
+            item = new WeaponPlague(room, value.x, value.y);
             break;
           case "spellbook_page":
             item = new SpellbookPage(room, value.x, value.y, value.stackCount);
@@ -663,6 +669,7 @@ export const registerBuiltinItemCodecsV2 = (): void => {
       blood: w.status.blood,
       curse: w.status.curse,
       ethereal: w.status.ethereal,
+      plague: w.status.plague,
     };
   };
 

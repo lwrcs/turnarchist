@@ -196,6 +196,8 @@ export class Entity extends Drawable {
   };
   softShadeColor: string;
   shadeColor: string;
+  tintColor: string = "";
+  tintOpacity: number = 0;
   dying: boolean;
   dyingFrame: number;
   alpha: number;
@@ -707,7 +709,7 @@ export class Entity extends Drawable {
 
   createDamageNumber = (
     damage: number,
-    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" | "plague" = "none",
   ) => {
     let color = "red";
     let outlineColor = GameConstants.OUTLINE;
@@ -723,6 +725,10 @@ export class Entity extends Drawable {
     if (type === "curse") {
       color = "#CC77FF";
       outlineColor = "#5B2BAF";
+    }
+    if (type === "plague") {
+      color = "#222222";
+      outlineColor = "black";
     }
     this.room.particles.push(
       new DamageNumber(this.room, this.x, this.y, damage, color, outlineColor),
@@ -832,6 +838,8 @@ export class Entity extends Drawable {
     colorOverlayOpacity: number = 0,
     colorOverlayDesaturate: boolean = false,
     dottedOutline: boolean = false,
+    tintColor?: string,
+    tintOpacity: number = 0,
   ): void {
     if (this.isKeyboardTarget() || this.isRangedTarget()) {
       outlineColor = "yellow";
@@ -842,6 +850,8 @@ export class Entity extends Drawable {
       colorOverlayOpacity = Math.max(colorOverlayOpacity, Entity.GHOSTLY_TINT_OPACITY);
       colorOverlayDesaturate = true;
     }
+    const effectiveTintColor = tintColor ?? (this.tintOpacity > 0 ? this.tintColor : undefined);
+    const effectiveTintOpacity = tintColor !== undefined ? tintOpacity : this.tintOpacity;
     const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
     Game.drawMob(
       sX,
@@ -863,6 +873,8 @@ export class Entity extends Drawable {
       colorOverlayOpacity,
       colorOverlayDesaturate,
       dottedOutline,
+      effectiveTintColor,
+      effectiveTintOpacity,
     );
   }
 
@@ -1085,13 +1097,13 @@ export class Entity extends Drawable {
 
   onHurt = (
     damage: number = 1,
-    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" | "plague" = "none",
   ) => {};
 
   hurt = (
     playerHitBy: Player | null,
     damage: number,
-    type: "none" | "poison" | "blood" | "heal" | "curse" = "none",
+    type: "none" | "poison" | "blood" | "heal" | "curse" | "plague" = "none",
   ) => {
     this.handleEnemyCase(playerHitBy);
     this.hitBy = playerHitBy ?? null;

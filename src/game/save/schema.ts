@@ -422,6 +422,7 @@ export type BasicEnemySaveV2 = EnemySaveEnvelopeV2 & {
     poison?: { active: boolean; hitCount: number; startTick: number; effectTick: number };
     bleed?: { active: boolean; hitCount: number; startTick: number; effectTick: number };
     curse?: { active: boolean; tickCount: number; startTick: number };
+    plague?: { active: boolean; tickCount: number; startTick: number };
   };
   /** TombStone visual variant (0 = default, 1 = alternate). Optional for backward-compat. */
   skinType?: number;
@@ -555,6 +556,7 @@ export type WeaponStatusSaveV2 = {
   blood: boolean;
   curse: boolean;
   ethereal: boolean;
+  plague: boolean;
 };
 
 export type WeaponItemKind =
@@ -876,6 +878,7 @@ export const ITEM_KIND_VALUES_V2 = [
   "weapon_blood",
   "weapon_curse",
   "weapon_ethereal",
+  "weapon_plague",
   "spellbook_page",
   "weapon_fragments",
   "backpack",

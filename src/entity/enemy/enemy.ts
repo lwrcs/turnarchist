@@ -44,6 +44,11 @@ interface EnemyStatus {
     tickCount: number;
     startTick: number;
   };
+  plague: {
+    active: boolean;
+    tickCount: number;
+    startTick: number;
+  };
 }
 
 export abstract class Enemy extends Entity {
@@ -100,6 +105,7 @@ export abstract class Enemy extends Entity {
       poison: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
       bleed: { active: false, hitCount: 0, startTick: 0, effectTick: 0 },
       curse: { active: false, tickCount: 0, startTick: 0 },
+      plague: { active: false, tickCount: 0, startTick: 0 },
     };
     this.alertRange = GameplaySettings.BASE_ENEMY_ALERT_RANGE;
     this.effectStartTick = 1;
@@ -204,13 +210,23 @@ export abstract class Enemy extends Entity {
   };
 
   uniqueKillBehavior = () => {
-    if (!this.status.curse.active) return;
-    for (const entity of this.room.entities) {
-      if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
-      if (entity.status.curse.active) continue;
-      const dx = Math.abs(entity.x - this.x);
-      const dy = Math.abs(entity.y - this.y);
-      if (dx <= 1 && dy <= 1) entity.curse();
+    if (this.status.curse.active) {
+      for (const entity of this.room.entities) {
+        if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
+        if (entity.status.curse.active) continue;
+        const dx = Math.abs(entity.x - this.x);
+        const dy = Math.abs(entity.y - this.y);
+        if (dx <= 1 && dy <= 1) entity.curse();
+      }
+    }
+    if (this.status.plague.active) {
+      for (const entity of this.room.entities) {
+        if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
+        if (entity.status.plague.active) continue;
+        const dx = Math.abs(entity.x - this.x);
+        const dy = Math.abs(entity.y - this.y);
+        if (dx <= 1 && dy <= 1) entity.plague();
+      }
     }
   };
 
@@ -233,6 +249,34 @@ export abstract class Enemy extends Entity {
         const dx = Math.abs(entity.x - this.x);
         const dy = Math.abs(entity.y - this.y);
         if (dx <= 1 && dy <= 1) entity.curse();
+      }
+    }
+  };
+
+  plague = () => {
+    if (!this.status.plague.active) {
+      this.status.plague = { active: true, tickCount: 0, startTick: this.ticks };
+      this.tintColor = "#000000";
+      this.tintOpacity = 0.5;
+    }
+  };
+
+  tickPlague = () => {
+    if (!this.status.plague.active) return;
+    this.status.plague.tickCount++;
+
+    if (
+      this.targetPlayer &&
+      this.status.plague.tickCount >= 2 &&
+      this.status.plague.tickCount % 2 === 0
+    ) {
+      this.hurt(this.targetPlayer, 0.5, "plague");
+      for (const entity of this.room.entities) {
+        if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
+        if (entity.status.plague.active) continue;
+        const dx = Math.abs(entity.x - this.x);
+        const dy = Math.abs(entity.y - this.y);
+        if (dx <= 1 && dy <= 1) entity.plague();
       }
     }
   };
@@ -404,6 +448,7 @@ export abstract class Enemy extends Entity {
     this.tickPoison();
     this.tickBleed();
     this.tickCurse();
+    this.tickPlague();
     if (this.ghostFrozen && !this.dead) {
       this.lastX = this.x;
       this.lastY = this.y;
@@ -1246,6 +1291,8 @@ export abstract class Enemy extends Entity {
   draw = (delta: number) => {
     if (!this.dead) {
       if (this.status.curse.active && !this.hurting) this.shadeColor = "#2E0854";
+      if (this.status.plague.active) { this.tintColor = "#000000"; this.tintOpacity = 0.5; }
+      else { this.tintColor = ""; this.tintOpacity = 0; }
       this.updateDrawXY(delta);
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;

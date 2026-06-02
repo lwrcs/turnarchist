@@ -21,6 +21,7 @@ interface WeaponStatus {
   blood: boolean;
   curse: boolean;
   ethereal: boolean;
+  plague: boolean;
 }
 
 export abstract class Weapon extends Equippable {
@@ -70,7 +71,7 @@ export abstract class Weapon extends Equippable {
     this.canReceiveStatusEffect = true;
     this.range = 1;
     this.damage = 1;
-    this.status = status || { poison: false, blood: false, curse: false, ethereal: false };
+    this.status = status || { poison: false, blood: false, curse: false, ethereal: false, plague: false };
     this.durability = 50;
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
@@ -157,7 +158,7 @@ export abstract class Weapon extends Equippable {
     this.durability = 0;
     this.equipped = false;
     this.game.pushMessage("Your weapon breaks");
-    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal) {
+    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal || this.status.plague) {
       this.clearStatus();
     }
     this.broken = true;
@@ -201,10 +202,12 @@ export abstract class Weapon extends Equippable {
         ? "bleed"
         : this.status.ethereal
           ? "ethereal"
-          : "curse";
+          : this.status.plague
+            ? "plague"
+            : "curse";
     this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
 
-    this.status = { poison: false, blood: false, curse: false, ethereal: false };
+    this.status = { poison: false, blood: false, curse: false, ethereal: false, plague: false };
     this.statusApplicationCount = 0;
   };
 
@@ -219,7 +222,9 @@ export abstract class Weapon extends Equippable {
         ? !enemy.status.bleed.active
         : this.status.curse
           ? !enemy.status.curse.active
-          : false;
+          : this.status.plague
+            ? !enemy.status.plague.active
+            : false;
 
     if (!shouldApply) return;
 
@@ -358,7 +363,7 @@ export abstract class Weapon extends Equippable {
   };
 
   drawStatus = (x: number, y: number) => {
-    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal) {
+    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal || this.status.plague) {
       let tileX = 3;
       let tileY = 0;
       if (this.status.poison) tileX = 4;
@@ -369,6 +374,10 @@ export abstract class Weapon extends Equippable {
       }
       if (this.status.ethereal) {
         tileX = 16;
+        tileY = 1;
+      }
+      if (this.status.plague) {
+        tileX = 18;
         tileY = 1;
       }
 
@@ -393,6 +402,7 @@ export abstract class Weapon extends Equippable {
     if (this.status.blood) status.push(" Bleed");
     if (this.status.curse) status.push(" Curse");
     if (this.status.ethereal) status.push(" Ethereal");
+    if (this.status.plague) status.push(" Plague");
     if (this.durability < this.durabilityMax)
       durability = ` Durability: ${this.durability}/${this.durabilityMax}`;
     return `${this.name}${broken}\n${status.join(", ")}\n${durability}\n${this.description}\ndamage: ${this.damage}`;

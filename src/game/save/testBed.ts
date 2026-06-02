@@ -108,6 +108,7 @@ import { Shrooms } from "../../item/usable/shrooms";
 import { WeaponPoison } from "../../item/usable/weaponPoison";
 import { WeaponBlood } from "../../item/usable/weaponBlood";
 import { WeaponCurse } from "../../item/usable/weaponCurse";
+import { WeaponPlague } from "../../item/usable/weaponPlague";
 import { Spellbook } from "../../item/weapon/spellbook";
 import { Dagger } from "../../item/weapon/dagger";
 import { Sword } from "../../item/weapon/sword";
@@ -363,6 +364,7 @@ export function populateTestRoom(room: Room, game: Game, clearFirst = false): vo
     [WeaponPoison, "weapon_poison"],
     [WeaponBlood, "weapon_blood"],
     [WeaponCurse, "weapon_curse"],
+    [WeaponPlague, "weapon_plague"],
     [SpellbookPage, "spellbook_page"],
     [WeaponFragments, "weapon_fragments"],
     [Coal, "coal"],

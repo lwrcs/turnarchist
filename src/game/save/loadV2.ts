@@ -1528,11 +1528,30 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     game.offlinePlayers[id] = pr.value;
   }
 
-  // Set active room to local player's room if present.
+  // Set active room/level to the local player's actual room. When the player saved inside
+  // a sidepath, their room lives in the sidepath's Level — not the main-path active level —
+  // so we resolve by globalId rather than indexing into game.rooms (which only holds the
+  // main level's rooms). game.level/game.rooms/game.roomsById/game.currentDepth all have
+  // to follow the player's room to keep the floor name, drawing, and ticking consistent.
   const local = game.players[game.localPlayerID];
   if (local) {
-    const room = game.rooms[local.levelID];
-    if (room) game.room = room;
+    const playerRoom = allRoomsById.get(local.roomGID);
+    if (playerRoom) {
+      game.room = playerRoom;
+      if (playerRoom.level) {
+        game.level = playerRoom.level;
+        if (Array.isArray(playerRoom.level.rooms)) {
+          game.rooms = playerRoom.level.rooms;
+          game.roomsById = new Map(game.rooms.map((r) => [r.globalId, r]));
+        }
+      }
+      game.currentDepth = playerRoom.depth;
+      // Keep player.levelID consistent with the level array we just installed.
+      local.levelID = game.rooms.indexOf(playerRoom);
+    } else {
+      const room = game.rooms[local.levelID];
+      if (room) game.room = room;
+    }
   }
 
   // Restore enemy AI "awake/aggro" state now that players exist.

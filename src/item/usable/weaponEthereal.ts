@@ -26,7 +26,7 @@ export class WeaponEthereal extends Usable {
 
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon && other.canReceiveStatusEffect) {
-      other.applyStatus({ poison: false, blood: false, curse: false, ethereal: true });
+      other.applyStatus({ poison: false, blood: false, curse: false, ethereal: true, plague: false });
       player.inventory.removeItem(this);
       this.level.game.pushMessage(`You coat your ${other.name} in ethereal water.`);
     }

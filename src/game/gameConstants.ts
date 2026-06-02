@@ -64,6 +64,7 @@ import { ShoulderPlates } from "../item/shoulderPlates";
 import { ChestPlate } from "../item/chestPlate";
 import { IronBar } from "../item/resource/ironBar";
 import { WeaponCurse } from "../item/usable/weaponCurse";
+import { WeaponPlague } from "../item/usable/weaponPlague";
 import { WeaponEthereal } from "../item/usable/weaponEthereal";
 import { BluePotion } from "../item/usable/bluePotion";
 import {
@@ -616,6 +617,7 @@ export class GameConstants {
     Sword,
     DualDagger,
     WeaponCurse,
+    WeaponPlague,
     WeaponEthereal,
     WaveScroll,
     CrossScroll,

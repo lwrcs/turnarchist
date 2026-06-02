@@ -15,6 +15,7 @@ import { DualDagger } from "./weapon/dualdagger";
 import { WeaponPoison } from "./usable/weaponPoison";
 import { WeaponBlood } from "./usable/weaponBlood";
 import { WeaponCurse } from "./usable/weaponCurse";
+import { WeaponPlague } from "./usable/weaponPlague";
 import { GoldOre } from "./resource/goldOre";
 import { Stone } from "./resource/stone";
 import { Pickaxe } from "./tool/pickaxe";
@@ -101,6 +102,7 @@ export const ItemTypeMap: { [key: string]: typeof Item } = {
   weaponpoison: WeaponPoison,
   weaponblood: WeaponBlood,
   weaponcurse: WeaponCurse,
+  weaponplague: WeaponPlague,
 
   coin: Coin,
   meleeXpCrystal: MeleeXpCrystal,
@@ -304,6 +306,7 @@ export class DropTable {
     //{ itemType: "weaponpoison", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponblood", dropRate: 100, category: ["consumable"] },
     { itemType: "weaponcurse", dropRate: 200, category: ["consumable"] },
+    { itemType: "weaponplague", dropRate: 200, category: ["consumable"] },
 
     // Common items
     { itemType: "coin", dropRate: 10, category: ["coin"] }, // Always drops

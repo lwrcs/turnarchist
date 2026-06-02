@@ -245,7 +245,7 @@ function itemFP(item: Item): ItemFP {
   // Item-type-specific state
   if (item instanceof Weapon) {
     const s = item.status;
-    stateStr += `,wPoison=${s?.poison ? 1 : 0},wBlood=${s?.blood ? 1 : 0},wCurse=${s?.curse ? 1 : 0}`;
+    stateStr += `,wPoison=${s?.poison ? 1 : 0},wBlood=${s?.blood ? 1 : 0},wCurse=${s?.curse ? 1 : 0},wPlague=${s?.plague ? 1 : 0}`;
   }
   if (item instanceof Crossbow) {
     stateStr += `,cbState=${item.state}`;
