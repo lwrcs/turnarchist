@@ -45,14 +45,23 @@ export type WorldSpecV2 = {
   /** Generator version string; bump when generation meaningfully changes. */
   genVersion: string;
 
-  /** Current depth to generate up to / load into. */
+  /** Current depth the player was on when saving (used to select the active level on load). */
   depth: number;
+
+  /**
+   * Deepest main-path floor that was generated during this run.
+   * May be greater than `depth` when the player has visited lower floors then returned to a
+   * shallower one before saving. The load loop regenerates 0..maxGeneratedDepth so that rooms
+   * on all visited floors can be matched.  Optional for backward-compat — older saves that lack
+   * this field fall back to `depth`.
+   */
+  maxGeneratedDepth?: number;
 
   /** Environment selection for the current depth (main path). */
   env: EnvKind;
 
   /**
-   * Generation plan for main path floors 0..depth.
+   * Generation plan for main path floors 0..maxGeneratedDepth (or 0..depth on older saves).
    * Optional for backward-compat with early V2 saves.
    */
   mainPathPlan?: Array<MainPathGenPlanV2>;

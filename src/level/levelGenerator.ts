@@ -164,7 +164,7 @@ export class LevelGenerator {
     skipPopulation = false, // Add this parameter
     pathId?: string,
     opts?: SidePathOptions,
-    genOverride?: { forcePngUrl?: string; forceProcedural?: boolean },
+    genOverride?: { forcePngUrl?: string; forceProcedural?: boolean; pngAttemptedBeforeFallback?: boolean },
   ) => {
     // Initialize components with game instance
     if (!this.partitionGenerator) {
@@ -248,6 +248,8 @@ export class LevelGenerator {
             `Forced PNG generation failed for depth=${depth} pngUrl=${genOverride.forcePngUrl}`,
           );
         }
+        // Clear so the level is recorded as "procedural", not "png"
+        selectedPngUrl = undefined;
         if (!pngUrl) {
           console.warn(
             `No PNG levels found for depth ${depth}, falling back to procedural generation`,
@@ -256,6 +258,8 @@ export class LevelGenerator {
           console.warn(
             "PNG generation failed, falling back to procedural generation",
           );
+          // selectRandomLevelForDepth() consumed one rand() — reset to keep procedural layout reproducible
+          Random.setState(((this.seed + depth) ^ pathHash) >>> 0);
         }
         partitions = await this.partitionGenerator.generateDungeonPartitions(
           game,
@@ -305,6 +309,12 @@ export class LevelGenerator {
             await this.partitionGenerator.generateCavePartitions(opts);
         }
       } else {
+        // Old-save compat: if the original run attempted PNG then fell back to procedural,
+        // selectRandomLevelForDepth() consumed one rand() before we reached this else branch.
+        // Replay that consume so the procedural partition layout matches the original.
+        if (genOverride?.pngAttemptedBeforeFallback) {
+          Random.rand();
+        }
         partitions = await this.partitionGenerator.generateDungeonPartitions(
           game,
           this.levelParams.mapWidth,
@@ -423,6 +433,8 @@ export class LevelGenerator {
       this.game.registerRooms(rooms);
       // Keep game.level in sync for convenience lookups
       this.game.level = this.game.levels[depth] || this.game.level;
+      console.log(`[levelgen debug] generated depth=${depth} pid=${pid} rooms=${rooms.length} mapGroup=${mapGroup} game.levels.length=${this.game.levels.length}`);
+      rooms.slice(0, 3).forEach((r) => console.log(`  room: depth=${r.depth} pathId=${r.pathId} roomX=${r.roomX} roomY=${r.roomY} mapGroup=${r.mapGroup}`));
     }
 
     // Do NOT auto-generate sidepath caves here.

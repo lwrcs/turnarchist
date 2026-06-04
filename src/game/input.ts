@@ -64,6 +64,7 @@ export const Input = {
     Input.downListener();
   },
   spaceListener: function () {},
+  spaceUpListener: function () {},
   leftSwipeListener: function () {},
   rightSwipeListener: function () {},
   upSwipeListener: function () {},
@@ -259,6 +260,7 @@ export const Input = {
       this.lastPressKey = 0;
     }
     if (event.code === Input.M) Input.mUpListener();
+    if (event.code === Input.SPACE) Input.spaceUpListener();
   },
 
   mouseLeftClickListener: function (x: number, y: number) {

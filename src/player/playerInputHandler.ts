@@ -81,6 +81,13 @@ export class PlayerInputHandler {
     Input.commaListener = () => this.handleInput(InputEnum.COMMA);
     Input.periodListener = () => this.handleInput(InputEnum.PERIOD);
     Input.enterListener = () => this.handleInput(InputEnum.ENTER);
+    // spaceListener fires from onKeydown's switch(event.code) — only on real keypresses,
+    // never from the game's custom KEY_REPEAT_TIME loop (fake events have no .code).
+    Input.spaceListener = () => this.handleInput(InputEnum.SPACE);
+    Input.spaceUpListener = () => {
+      const inv = this.player.inventory;
+      if (inv) inv.keyboardSpaceUp();
+    };
     Input.tapListener = () => this.handleTap();
     Input.mouseMoveListener = () => this.handleInput(InputEnum.MOUSE_MOVE);
     Input.mouseRightClickListeners.push((x: number, y: number) =>
@@ -501,6 +508,35 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Inventory-open keyboard intercept: arrows navigate the grid, space uses/drag-holds,
+    // escape cancels an in-progress keyboard drag. Other input falls through.
+    const invKB = this.player.inventory;
+    if (invKB?.isOpen) {
+      switch (input) {
+        case InputEnum.LEFT:
+          if (!invKB.isDragging) { invKB.mostRecentInput = "keyboard"; invKB.left(); }
+          return;
+        case InputEnum.RIGHT:
+          if (!invKB.isDragging) { invKB.mostRecentInput = "keyboard"; invKB.right(); }
+          return;
+        case InputEnum.UP:
+          if (!invKB.isDragging) { invKB.mostRecentInput = "keyboard"; invKB.up(); }
+          return;
+        case InputEnum.DOWN:
+          if (!invKB.isDragging) { invKB.mostRecentInput = "keyboard"; invKB.down(); }
+          return;
+        case InputEnum.SPACE:
+          invKB.keyboardSpaceDown();
+          return;
+        case InputEnum.ESCAPE:
+          if (invKB._isKeyboardDragging) {
+            invKB.keyboardDragCancel();
+            return;
+          }
+          break;
+      }
+    }
+
     switch (input) {
       case InputEnum.I: {
         const inv = this.player.inventory;
@@ -600,51 +636,16 @@ export class PlayerInputHandler {
           break;
         }
 
-        if (
-          player.inventory.isOpen ||
-          player.game.levelState === LevelState.IN_LEVEL
-        ) {
-          if (player.menu?.open || player.skillsMenu?.open || player.isAnyBookOpen) break;
-
-          this.validateKeyboardTarget();
-          if (this.keyboardTarget) {
-            this.openKeyboardContextMenuForEntity(this.keyboardTarget);
-          }
-        }
+        // Quickbar (inventory closed): tap to use/equip selected slot, hold to drag.
+        this.player.inventory?.keyboardSpaceDown();
         break;
       case InputEnum.COMMA:
         this.setMostRecentInput("keyboard");
-        if (GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
-          this.validateKeyboardTarget();
-          if (!this.keyboardTarget) {
-            // First press: pick nearest enemy
-            const nearest = this.getSortedEnemies();
-            this.keyboardTarget = nearest[0] ?? null;
-          } else {
-            // Cycle left (decreasing x) in position-sorted list
-            const list = this.getEnemiesByPosition();
-            if (list.length === 0) break;
-            const idx = list.indexOf(this.keyboardTarget);
-            this.keyboardTarget = list[(idx <= 0 ? list.length : idx) - 1];
-          }
-        }
+        this.player.inventory.leftQuickbar();
         break;
       case InputEnum.PERIOD:
         this.setMostRecentInput("keyboard");
-        if (GameplaySettings.KEYBOARD_TARGETING_ENABLED) {
-          this.validateKeyboardTarget();
-          if (!this.keyboardTarget) {
-            // First press: pick nearest enemy
-            const nearest = this.getSortedEnemies();
-            this.keyboardTarget = nearest[0] ?? null;
-          } else {
-            // Cycle right (increasing x) in position-sorted list
-            const list = this.getEnemiesByPosition();
-            if (list.length === 0) break;
-            const idx = list.indexOf(this.keyboardTarget);
-            this.keyboardTarget = list[(idx + 1) % list.length];
-          }
-        }
+        this.player.inventory.rightQuickbar();
         break;
       case InputEnum.LEFT_CLICK:
         // Speed up camera animation on click
@@ -2175,9 +2176,6 @@ export class PlayerInputHandler {
       case "S":
       case "ARROWDOWN":
         this.handleInput(InputEnum.DOWN);
-        break;
-      case " ":
-        this.handleInput(InputEnum.SPACE);
         break;
       case "I":
         this.handleInput(InputEnum.I);

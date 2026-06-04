@@ -78,6 +78,14 @@
 - [ ] Create account system
 - [ ] Create in-game stats page
 
+#### Balance
+
+- [ ] Nerf plague (status effect)
+- [ ] Make magma caves sidepath available the floor after dark forest / dark castle
+- [ ] Reduce iron ore count in caves and cave pockets
+- [ ] Increase gem count in cave pockets
+- [ ] Review boss distribution across levels
+
 #### Misc / Fixes
 
 - [x] Restructure caves
