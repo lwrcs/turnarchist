@@ -24,6 +24,7 @@ export class Greataxe extends Weapon {
     this.durabilityMax = 25;
     this.useCost = 5;
     this.twoHanded = true;
+    this.degradeable = false;
   }
 
   hitSound = () => {
@@ -35,10 +36,10 @@ export class Greataxe extends Weapon {
     let hp = this.wielder?.health / this.wielder?.maxHealth;
     let damage = 1;
 
-    if (hp <= 1) damage = 1;
-    if (hp <= 0.75) damage = 2;
+    if (hp <= 1) damage = 2;
+    if (hp <= 0.75) damage = 3;
     if (hp <= 0.5) damage = 4;
-    if (hp <= 0.25) damage = 8;
+    if (hp <= 0.25) damage = 5;
     return damage;
   };
 
