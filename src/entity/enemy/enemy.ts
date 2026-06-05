@@ -258,6 +258,10 @@ export abstract class Enemy extends Entity {
       this.status.plague = { active: true, tickCount: 0, startTick: this.ticks };
       this.tintColor = "#000000";
       this.tintOpacity = 0.5;
+      if (!this.seenPlayer) {
+        const p = this.nearestPlayer();
+        if (p !== false) this.handleSeenPlayer(p[1]);
+      }
     }
   };
 
@@ -265,12 +269,13 @@ export abstract class Enemy extends Entity {
     if (!this.status.plague.active) return;
     this.status.plague.tickCount++;
 
+    const player = this.targetPlayer ?? (() => { const p = this.nearestPlayer(); return p !== false ? p[1] : null; })();
     if (
-      this.targetPlayer &&
-      this.status.plague.tickCount >= 2 &&
-      this.status.plague.tickCount % 2 === 0
+      player &&
+      this.status.plague.tickCount >= 4 &&
+      this.status.plague.tickCount % 4 === 0
     ) {
-      this.hurt(this.targetPlayer, 0.5, "plague");
+      this.hurt(player, 0.5, "plague");
       for (const entity of this.room.entities) {
         if (!(entity instanceof Enemy) || entity === this || entity.dead) continue;
         if (entity.status.plague.active) continue;

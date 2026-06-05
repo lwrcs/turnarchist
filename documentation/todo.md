@@ -95,7 +95,7 @@
 - [x] Add effects for emerald rings
 - [ ] Add effects for amber rings
 - [x] Make pawns jump back when hurt
-- [ ] Fix bug with boltcaster aiming at resources
+- [x] Fix bug with boltcaster aiming at resources
 - [x] Design castle premade levels
 - [ ] Make castle doors entrance
 - [x] Make keys automatically show path on pickup
@@ -107,7 +107,7 @@
 - exalter change beam color?
 - [x] up arrow hitwarning not displaying?
 - unclear if could hit queen and take damage
-- hover over enemies to reveal healthbar
+- [x] hover over enemies to reveal healthbar
 - mushroom message to not eat unclear
 - new enemy encounter bestiary arrow
 - show what floor you're on not only in starting/exit rooms
