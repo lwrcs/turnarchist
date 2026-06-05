@@ -228,7 +228,8 @@ export class PlayerInputHandler {
     Input.equalsListener = () => this.handleInput(InputEnum.EQUALS);
     Input.minusListener = () => this.handleInput(InputEnum.MINUS);
     Input.escapeListener = () => this.handleInput(InputEnum.ESCAPE);
-    Input.fListener = () => this.handleInput(InputEnum.F);
+    // F is dispatched via handleKeyboardKey (mirroring I) — wiring fListener here
+    // would cause a double-fire on real keydown events.
     Input.rListener = () => this.handleInput(InputEnum.R);
     Input.wheelListener = (deltaY: number) => this.handleMouseWheel(deltaY);
   }
@@ -538,7 +539,8 @@ export class PlayerInputHandler {
     }
 
     switch (input) {
-      case InputEnum.I: {
+      case InputEnum.I:
+      case InputEnum.F: {
         const inv = this.player.inventory;
         this.player.actionProcessor.process({
           type: inv.isOpen ? "CloseInventory" : "OpenInventory",
@@ -547,10 +549,6 @@ export class PlayerInputHandler {
       }
       case InputEnum.Q:
         this.player.actionProcessor.process({ type: "InventoryDrop" });
-        break;
-      case InputEnum.F:
-        //this.player.game.newGame();
-        //this.player.stall();
         break;
       case InputEnum.R: {
         if (this.player.game.chatOpen) break;
@@ -2179,6 +2177,9 @@ export class PlayerInputHandler {
         break;
       case "I":
         this.handleInput(InputEnum.I);
+        break;
+      case "F":
+        this.handleInput(InputEnum.F);
         break;
       case "Q":
         this.handleInput(InputEnum.Q);
