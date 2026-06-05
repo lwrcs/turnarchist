@@ -1201,6 +1201,7 @@ export class PlayerRenderer {
     if (this.player.settingsMenu?.open) this.player.settingsMenu.draw(delta);
     else if (this.player.menu.open) this.player.menu.draw(delta);
     this.player.contextMenu?.draw(delta);
+    this.player.screenMessage?.draw(delta);
     Game.ctx.restore();
   };
 

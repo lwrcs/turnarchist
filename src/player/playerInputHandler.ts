@@ -423,6 +423,14 @@ export class PlayerInputHandler {
       }
     }
 
+    // Screen message is modal — any input closes it except scale keys.
+    if (this.player.screenMessage?.open) {
+      if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
+      if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
+      if (input !== InputEnum.MOUSE_MOVE) { this.player.screenMessage.close(); return; }
+      return;
+    }
+
     // Context menu is modal while open.
     if (this.player.contextMenu?.open) {
       const cm = this.player.contextMenu;
@@ -829,6 +837,7 @@ export class PlayerInputHandler {
   }
 
   private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity, fromKeyboard = false) {
+    if (this.player.screenMessage?.open) { this.player.screenMessage.close(); return; }
     if (!targetEntity) this.setMostRecentInput("mouse");
     const player = this.player;
     const menu = player.contextMenu;
@@ -1131,7 +1140,7 @@ export class PlayerInputHandler {
             label: "Examine",
             targetName,
             onClick: () => {
-              player.game.pushMessage(examine);
+              player.screenMessage.show(examine);
             },
           });
         }
@@ -1311,7 +1320,7 @@ export class PlayerInputHandler {
           label: "Examine",
           targetName,
           onClick: () => {
-            player.game.pushMessage(ex);
+            player.screenMessage.show(ex);
           },
         });
       }
@@ -1370,7 +1379,7 @@ export class PlayerInputHandler {
             label: "Examine",
             targetName,
             onClick: () => {
-              player.game.pushMessage(ex);
+              player.screenMessage.show(ex);
             },
           });
         }
@@ -1534,6 +1543,8 @@ export class PlayerInputHandler {
   };
 
   handleMouseDown(x: number, y: number, button: number) {
+    if (this.player.screenMessage?.open) { this.player.screenMessage.close(); return; }
+
     if (button !== 0) return; // Only handle left mouse button
 
     const player = this.player;

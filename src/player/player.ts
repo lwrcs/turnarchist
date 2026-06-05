@@ -31,6 +31,7 @@ import { SpellbookReader } from "../gui/spellbookReader";
 import { BookLibrary } from "../gui/bookLibrary";
 import { ArmoryBook, ARMORY_WEAPONS } from "../gui/armoryBook";
 import { ContextMenu } from "../gui/contextMenu";
+import { ScreenMessage } from "../gui/screenMessage";
 import { PlayerInputHandler } from "./playerInputHandler";
 import { PlayerActionProcessor } from "./playerActionProcessor";
 import { PlayerMovement } from "./playerMovement";
@@ -199,6 +200,7 @@ export class Player extends Drawable {
     );
   }
   contextMenu: ContextMenu = new ContextMenu();
+  screenMessage: ScreenMessage = new ScreenMessage();
   /**
    * When the context menu opens, we snapshot the current mouse angle so the player
    * can keep rendering the same diagonal mouse-facing sprite while the menu is open.
