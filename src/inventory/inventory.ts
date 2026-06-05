@@ -6,6 +6,7 @@ import { Armor } from "../item/armor";
 import { Coin } from "../item/coin";
 import { XpCrystal } from "../item/xpCrystal";
 import { Weapon } from "../item/weapon/weapon";
+import { Spellbook } from "../item/weapon/spellbook";
 import { Room } from "../room/room";
 import { Usable } from "../item/usable/usable";
 import { Player } from "../player/player";
@@ -1024,6 +1025,9 @@ export class Inventory {
         if (!this.isValidSlot(i)) continue;
         if (this.items[i] === null) {
           this.items[i] = item;
+          if (item instanceof Spellbook && this.player.inventory) {
+            this.player.syncSpellbooksFromKnownSpells();
+          }
           // If quickbar was already full before this insertion and we're past startup,
           // prompt the user to open inventory (first time only)
           if (this.initializedItems && preQuickbarFull) {

@@ -119,7 +119,19 @@ export class Spellbook extends Weapon implements RangedWeapon {
       rt?.start(this);
       return;
     }
-    super.toggleEquip();
+    if (!this.broken && this.cooldown <= 0) {
+      if (!this.equipped && this.wielder?.inventory?.weapon) {
+        this.previousWeapon = this.wielder.inventory.weapon;
+      }
+      this.equipped = !this.equipped;
+      if (this.equipped) this.onEquip();
+      else this.onUnequip();
+    } else if (this.broken) {
+      this.equipped = false;
+      this.level.game.pushMessage("Your spellbook is broken.");
+    } else if (this.cooldown > 0) {
+      this.level.game.pushMessage("Cooldown: " + this.cooldown);
+    }
   };
 
   fireAtTarget = (player: Player, tx: number, ty: number): boolean => {

@@ -3,6 +3,8 @@ import { Player } from "../../player/player";
 import { Usable } from "./usable";
 import { Spellbook } from "../weapon/spellbook";
 import { CrossSpell, PointSpell, PlusSpell, WaveSpell, type Spell } from "../weapon/spell";
+import { SpellbookPage } from "./spellbookPage";
+import { Random } from "../../utility/random";
 
 export class Scroll extends Usable {
   spell: Spell;
@@ -31,10 +33,23 @@ export class Scroll extends Usable {
     }
     const alreadyKnown = player.knownSpells.includes(this.spell.id);
     if (alreadyKnown) {
+      const pageCount = Math.ceil(Random.rand() * 3);
+      const existingPages = player.inventory.items.find((i) => i instanceof SpellbookPage) as SpellbookPage | undefined;
+      if (existingPages) {
+        existingPages.stackCount += pageCount;
+        player.inventory.removeItem(this);
+      } else {
+        const pages = new SpellbookPage(this.level, this.x, this.y, pageCount);
+        const idx = player.inventory.items.indexOf(this);
+        if (idx !== -1) {
+          player.inventory.items[idx] = pages;
+        } else {
+          player.inventory.addItem(pages);
+        }
+      }
       player.game.pushMessage(
-        `Your spellbook already contains the ${this.spell.name} spell.`,
+        `You already know the ${this.spell.name} spell. The scroll crumbles into ${pageCount} spellbook page${pageCount > 1 ? "s" : ""}.`,
       );
-      player.inventory.removeItem(this);
       return;
     }
     player.addKnownSpell(this.spell.id);
