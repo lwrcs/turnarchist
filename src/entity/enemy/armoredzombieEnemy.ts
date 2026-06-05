@@ -5,6 +5,8 @@ import { Player } from "../../player/player";
 import { GenericParticle } from "../../particle/genericParticle";
 import { Item } from "../../item/item";
 import { Enemy } from "./enemy";
+import { Helmet } from "../../item/helmet";
+import { Random } from "../../utility/random";
 import { astar } from "../../utility/astarclass";
 import { SpikeTrap } from "../../tile/spiketrap";
 
@@ -38,6 +40,14 @@ export class ArmoredzombieEnemy extends Enemy {
 
     if (drop) this.drop = drop;
     this.getDrop(["weapon", "equipment", "consumable", "tool", "coin"]);
+
+    const parentDropLoot = this.dropLoot;
+    this.dropLoot = () => {
+      if (Random.rand() < 0.05 && !this.drops.some((d) => d instanceof Helmet)) {
+        this.drops.push(new Helmet(this.room, this.x, this.y));
+      }
+      parentDropLoot();
+    };
   }
 
   hit = (): number => {

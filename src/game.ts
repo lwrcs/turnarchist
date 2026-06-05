@@ -1644,6 +1644,11 @@ export class Game {
     }
   };
 
+  setActiveRoom = (room: Room) => {
+    this.room = room;
+    this.updateLevel(room);
+  };
+
   teleportPlayerToUpLadder = (player: Player): boolean => {
     // Use the current level's start room so sidepath players land in the sidepath's
     // own entry room (ROPECAVE) rather than the main dungeon's start room.
@@ -1656,10 +1661,9 @@ export class Game {
     if (this.room !== targetRoom) {
       this.prevLevel = this.room;
       this.prevLevel.exitLevel();
-      this.room = targetRoom;
-      // Sync currentPathId before updateLevel so drawRooms doesn't skip the new room.
+      // Sync currentPathId before setActiveRoom so drawRooms doesn't skip the new room.
       this.currentPathId = targetRoom.pathId || "main";
-      this.updateLevel(targetRoom);
+      this.setActiveRoom(targetRoom);
       this.updateDepth(targetRoom.depth);
       player.depth = targetRoom.depth;
       player.roomGID = targetRoom.globalId;
@@ -1691,8 +1695,7 @@ export class Game {
   setCurrentRoomById = (id: string): Room | undefined => {
     const room = this.roomsById.get(id);
     if (room) {
-      this.room = room;
-      this.updateLevel(room);
+      this.setActiveRoom(room);
     }
     return room;
   };
@@ -1949,7 +1952,7 @@ export class Game {
       this.prevLevel.exitLevel();
 
       //this.level.exitLevel();
-      this.room = door.room;
+      this.setActiveRoom(door.room);
 
       door.room.enterLevelThroughDoor(player, door, side);
 
@@ -3428,8 +3431,7 @@ export class Game {
         if (this.room !== targetRoom) {
           this.prevLevel = this.room;
           this.prevLevel.exitLevel();
-          this.room = targetRoom;
-          this.updateLevel(targetRoom);
+          this.setActiveRoom(targetRoom);
           this.updateDepth(targetRoom.depth);
           player.depth = targetRoom.depth;
           player.roomGID = targetRoom.globalId;
@@ -3478,8 +3480,7 @@ export class Game {
         if (this.room !== targetRoom) {
           this.prevLevel = this.room;
           this.prevLevel.exitLevel();
-          this.room = targetRoom;
-          this.updateLevel(targetRoom);
+          this.setActiveRoom(targetRoom);
           this.updateDepth(targetRoom.depth);
           player.depth = targetRoom.depth;
           player.roomGID = targetRoom.globalId;
@@ -3528,8 +3529,7 @@ export class Game {
         if (this.room !== targetRoom) {
           this.prevLevel = this.room;
           this.prevLevel.exitLevel();
-          this.room = targetRoom;
-          this.updateLevel(targetRoom);
+          this.setActiveRoom(targetRoom);
           this.updateDepth(targetRoom.depth);
           player.depth = targetRoom.depth;
           player.roomGID = targetRoom.globalId;
@@ -4109,10 +4109,8 @@ export class Game {
     this.levelsById = new Map();
     this.levels[depth] = level;
     this.levelsById.set(level.globalId, level);
-    this.level = level;
 
-    this.registerRooms([room]);
-    this.room = room;
+    this.setActiveRoom(room);
     this.currentDepth = depth;
     this.currentPathId = "main";
 
@@ -4458,10 +4456,8 @@ export class Game {
     this.levelsById = new Map();
     this.levels[depth] = level;
     this.levelsById.set(level.globalId, level);
-    this.level = level;
 
-    this.registerRooms([room]);
-    this.room = room;
+    this.setActiveRoom(room);
     this.currentDepth = depth;
     this.currentPathId = "main";
 
@@ -4578,10 +4574,8 @@ export class Game {
     this.levelsById = new Map();
     this.levels[depth] = level;
     this.levelsById.set(level.globalId, level);
-    this.level = level;
 
-    this.registerRooms([room]);
-    this.room = room;
+    this.setActiveRoom(room);
     this.currentDepth = depth;
     this.currentPathId = "main";
 
@@ -5556,7 +5550,7 @@ export class Game {
           if (this.transitioningLadder) {
             // this.prevLevel = this.room;
             // this.room.exitLevel();
-            this.room = this.transitioningLadder.linkedRoom;
+            this.setActiveRoom(this.transitioningLadder.linkedRoom);
 
             // this.players[this.localPlayerID].levelID = this.room.id;
             this.room.enterLevel(this.players[this.localPlayerID]);

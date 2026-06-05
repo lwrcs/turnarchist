@@ -7,6 +7,8 @@ import { SpikeTrap } from "../../tile/spiketrap";
 import { ImageParticle } from "../../particle/imageParticle";
 import { Enemy } from "./enemy";
 import { Sound } from "../../sound/sound";
+import { Helmet } from "../../item/helmet";
+import { Random } from "../../utility/random";
 
 export class ArmoredSkullEnemy extends Enemy {
   frame: number;
@@ -43,6 +45,14 @@ export class ArmoredSkullEnemy extends Enemy {
     this.armored = true;
     if (drop) this.drop = drop;
     this.getDrop(["weapon", "consumable", "tool", "coin"]);
+
+    const parentDropLoot = this.dropLoot;
+    this.dropLoot = () => {
+      if (Random.rand() < 0.05 && !this.drops.some((d) => d instanceof Helmet)) {
+        this.drops.push(new Helmet(this.room, this.x, this.y));
+      }
+      parentDropLoot();
+    };
   }
 
   hit = (): number => {

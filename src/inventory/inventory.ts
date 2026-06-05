@@ -78,7 +78,14 @@ export class Inventory {
   private _isDragging: boolean = false;
   private _dragStartItem: Item | null = null;
   private _dragStartSlot: number | null = null;
+  _isKeyboardDragging: boolean = false;
+  private _keyboardDragSourceSlot: number | null = null;
+  private _spaceDownAtMs: number | null = null;
+  private _skipNextSpaceUseOnUp: boolean = false;
+  private _spaceHoldTimer: ReturnType<typeof setTimeout> | null = null;
   private itemEquipAnimations: Map<Item, number> = new Map();
+  private _itemVisualPos: Map<Item, { vx: number; vy: number }> = new Map();
+  private _grabbedItemVisualPos: { vx: number; vy: number } | null = null;
   foundItems: Item[] = [];
 
   dragEndTime: number = Date.now();
@@ -101,6 +108,9 @@ export class Inventory {
 
   // Fixed number of usable inventory slots, independent of grid dimensions.
   static readonly INVENTORY_CAPACITY = 25;
+
+  // Shorter hold threshold for keyboard drag so it feels responsive on key-repeat hardware.
+  static readonly KEYBOARD_HOLD_THRESH = 150;
 
   static computeQuickbarCols(screenW: number): number {
     return Math.max(5, Math.min(10, Math.round(screenW / 3) + 1));
@@ -268,6 +278,10 @@ export class Inventory {
     if (this.selY > 0) {
       this.selY = 0;
     }
+    this.clearSpaceHoldTimer();
+    if (this._isKeyboardDragging) {
+      this.keyboardDragCancel();
+    }
     this.usingItem = null;
     this.usingItemIndex = null;
     this._isDragging = false;
@@ -275,6 +289,9 @@ export class Inventory {
     this._dragStartItem = null;
     this.dragStartMouseX = null;
     this.dragStartMouseY = null;
+    this._spaceDownAtMs = null;
+    this._skipNextSpaceUseOnUp = false;
+    this._itemVisualPos.clear();
 
     // Dismiss any inventory-related tip (e.g., "open inventory" pointer)
     try {
@@ -322,6 +339,32 @@ export class Inventory {
     return this.overlayCanvasCtx;
   };
 
+  private getSlotDrawPx(idx: number): { x: number; y: number } | null {
+    if (!this.isValidSlot(idx)) return null;
+    if (!this.isOpen) {
+      // Quickbar-only view: only the first quickbarCols slots are visible.
+      if (idx < 0 || idx >= this.quickbarCols) return null;
+      const rect = this.getQuickbarSlotRect(idx);
+      if (!rect) return null;
+      return {
+        x: rect.x + rect.w / 2 - 0.5 * GameConstants.TILESIZE,
+        y: rect.y + rect.h / 2 - 0.5 * GameConstants.TILESIZE,
+      };
+    }
+    const xIdx = idx % this.cols;
+    const yIdx = Math.floor(idx / this.cols);
+    const s = 18, b = 2, g = -2;
+    const stride = s + 2 * b + g;
+    const width = this.cols * stride - g;
+    const height = this.rows * stride - g;
+    const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+    const startY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height);
+    return {
+      x: startX + xIdx * stride + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE,
+      y: startY + yIdx * stride + b + Math.floor(0.5 * s) - 0.5 * GameConstants.TILESIZE,
+    };
+  }
+
   private clampSelToValid() {
     const idx = this.selX + this.selY * this.cols;
     if (!this.isValidSlot(idx)) {
@@ -332,32 +375,42 @@ export class Inventory {
     this._mouseOverPhantom = false;
   }
 
-  left = () => {
-    if (this.selX > 0) {
-      this.selX--;
-      this.clampSelToValid();
+  private stepHorizontal(dir: number) {
+    if (this.cols <= 0) return;
+    let x = this.selX;
+    for (let guard = 0; guard < this.cols; guard++) {
+      x = ((x + dir) % this.cols + this.cols) % this.cols;
+      if (this.isValidSlot(x + this.selY * this.cols)) break;
     }
+    this.selX = x;
+    this._mouseOverPhantom = false;
+  }
+
+  private stepVertical(dir: number) {
+    if (this.rows <= 0) return;
+    let y = this.selY;
+    for (let guard = 0; guard < this.rows; guard++) {
+      y = ((y + dir) % this.rows + this.rows) % this.rows;
+      if (this.isValidSlot(this.selX + y * this.cols)) break;
+    }
+    this.selY = y;
+    this._mouseOverPhantom = false;
+  }
+
+  left = () => {
+    this.stepHorizontal(-1);
   };
 
   right = () => {
-    if (this.selX < this.cols - 1) {
-      this.selX++;
-      this.clampSelToValid();
-    }
+    this.stepHorizontal(1);
   };
 
   up = () => {
-    if (this.selY > 0) {
-      this.selY--;
-      this.clampSelToValid();
-    }
+    this.stepVertical(-1);
   };
 
   down = () => {
-    if (this.selY < this.rows - 1) {
-      this.selY++;
-      this.clampSelToValid();
-    }
+    this.stepVertical(1);
   };
 
   space = () => {
@@ -463,15 +516,25 @@ export class Inventory {
     return false;
   };
 
+  private stepQuickbar(dir: number) {
+    if (this.quickbarCols <= 0) return;
+    const cur = this.selX + this.selY * this.cols;
+    const inQuickbar = cur >= 0 && cur < this.quickbarCols;
+    const start = inQuickbar ? cur : 0;
+    const next = ((start + dir) % this.quickbarCols + this.quickbarCols) % this.quickbarCols;
+    this.selX = next % this.cols;
+    this.selY = Math.floor(next / this.cols);
+    this._mouseOverPhantom = false;
+  }
+
   leftQuickbar = () => {
     this.mostRecentInput = "keyboard";
-
-    this.left();
+    this.stepQuickbar(-1);
   };
 
   rightQuickbar = () => {
     this.mostRecentInput = "keyboard";
-    this.right();
+    this.stepQuickbar(1);
   };
 
   spaceQuickbar = () => {
@@ -480,6 +543,10 @@ export class Inventory {
   };
 
   mouseMove = () => {
+    // Any mouse activity during a keyboard hold cancels it and returns the item to its source.
+    if (this._isKeyboardDragging) {
+      this.keyboardDragCancel();
+    }
     const { x, y } = MouseCursor.getInstance().getPosition();
     const bounds = this.isPointInInventoryBounds(x, y);
 
@@ -503,8 +570,10 @@ export class Inventory {
           this._mouseOverPhantom = true;
         } else {
           this._mouseOverPhantom = false;
-          this.selX = candidateX;
-          this.selY = candidateY;
+          if (!this._isKeyboardDragging) {
+            this.selX = candidateX;
+            this.selY = candidateY;
+          }
         }
       } else {
         // Quickbar: candidate is a flat index (0..quickbarCols-1); convert to inventory grid.
@@ -513,8 +582,10 @@ export class Inventory {
           Math.min(Math.floor((x - bounds.startX) / (s + 2 * b + g)), this.quickbarCols - 1),
         );
         this._mouseOverPhantom = false;
-        this.selX = qIdx % this.cols;
-        this.selY = Math.floor(qIdx / this.cols);
+        if (!this._isKeyboardDragging) {
+          this.selX = qIdx % this.cols;
+          this.selY = Math.floor(qIdx / this.cols);
+        }
       }
     } else {
       this._mouseOverPhantom = false;
@@ -575,6 +646,116 @@ export class Inventory {
     this._dragStartSlot = null;
     this.dragStartMouseX = null;
     this.dragStartMouseY = null;
+  };
+
+  private clearSpaceHoldTimer = () => {
+    if (this._spaceHoldTimer !== null) {
+      clearTimeout(this._spaceHoldTimer);
+      this._spaceHoldTimer = null;
+    }
+  };
+
+  keyboardSpaceDown = () => {
+    this.mostRecentInput = "keyboard";
+    // Already dragging from a sustained hold — ignore additional key-repeat presses.
+    if (this._isKeyboardDragging) return;
+    this._spaceDownAtMs = Date.now();
+    this.clearSpaceHoldTimer();
+    this._spaceHoldTimer = setTimeout(() => {
+      this._spaceHoldTimer = null;
+      this.keyboardDragStart();
+    }, Inventory.KEYBOARD_HOLD_THRESH);
+  };
+
+  keyboardSpaceUp = () => {
+    const hadKeyDown = this._spaceDownAtMs !== null;
+    this._spaceDownAtMs = null;
+    this.clearSpaceHoldTimer();
+    // If a drag is active, release places the item in the currently selected slot.
+    if (this._isKeyboardDragging) {
+      this.keyboardDragPlace();
+      this._skipNextSpaceUseOnUp = false;
+      return;
+    }
+    if (this._skipNextSpaceUseOnUp) {
+      this._skipNextSpaceUseOnUp = false;
+      return;
+    }
+    if (hadKeyDown) {
+      this.itemUse();
+    }
+  };
+
+  keyboardDragStart = () => {
+    if (this._isKeyboardDragging) return;
+    if (this.grabbedItem !== null) return;
+    if (this.usingItem) return;
+    const idx = this.selX + this.selY * this.cols;
+    if (!this.isValidSlot(idx)) return;
+    const item = this.items[idx];
+    if (item === null) return;
+    this._isKeyboardDragging = true;
+    this._keyboardDragSourceSlot = idx;
+    this.grabbedItem = item;
+    this.items[idx] = null;
+    const srcPx = this.getSlotDrawPx(idx);
+    this._grabbedItemVisualPos = srcPx ? { vx: srcPx.x, vy: srcPx.y } : null;
+    // The release that follows this hold should not fire itemUse.
+    this._skipNextSpaceUseOnUp = true;
+  };
+
+  keyboardDragPlace = () => {
+    if (!this._isKeyboardDragging || this.grabbedItem === null) {
+      this._isKeyboardDragging = false;
+      this._keyboardDragSourceSlot = null;
+      return;
+    }
+    const targetSlot = this.selX + this.selY * this.cols;
+    if (!this.isValidSlot(targetSlot)) {
+      this.keyboardDragCancel();
+      return;
+    }
+    // Transfer visual pos so placed item animates from current grab position to target slot.
+    if (this._grabbedItemVisualPos !== null) {
+      this._itemVisualPos.set(this.grabbedItem, { ...this._grabbedItemVisualPos });
+    }
+    // placeItemInSlot uses _dragStartSlot for swap semantics.
+    const prevDragStart = this._dragStartSlot;
+    this._dragStartSlot = this._keyboardDragSourceSlot;
+    this.placeItemInSlot(targetSlot);
+    this._dragStartSlot = prevDragStart;
+    this._isKeyboardDragging = false;
+    this._keyboardDragSourceSlot = null;
+    this._grabbedItemVisualPos = null;
+  };
+
+  keyboardDragCancel = () => {
+    this.clearSpaceHoldTimer();
+    if (!this._isKeyboardDragging) return;
+    if (
+      this.grabbedItem !== null &&
+      this._keyboardDragSourceSlot !== null &&
+      this.items[this._keyboardDragSourceSlot] === null
+    ) {
+      // Transfer visual pos so item animates from grab position back to source slot.
+      if (this._grabbedItemVisualPos !== null) {
+        this._itemVisualPos.set(this.grabbedItem, { ...this._grabbedItemVisualPos });
+      }
+      this.items[this._keyboardDragSourceSlot] = this.grabbedItem;
+    }
+    this.grabbedItem = null;
+    this._isKeyboardDragging = false;
+    this._keyboardDragSourceSlot = null;
+    this._grabbedItemVisualPos = null;
+    this._spaceDownAtMs = null;
+    this._skipNextSpaceUseOnUp = false;
+  };
+
+  checkForKeyboardDragStart = () => {
+    if (this._spaceDownAtMs === null) return;
+    if (this._isKeyboardDragging) return;
+    if (Date.now() - this._spaceDownAtMs < Inventory.KEYBOARD_HOLD_THRESH) return;
+    this.keyboardDragStart();
   };
 
   moveItemToSlot = (
@@ -641,12 +822,47 @@ export class Inventory {
 
   drawDraggedItem = (delta: number) => {
     if (this.grabbedItem === null) return;
-    // Draw above everything else; isolate canvas state.
     Game.ctx.save();
-    const { x, y } = MouseCursor.getInstance().getPosition();
-
-    const drawX = Math.round(x - 0.5 * GameConstants.TILESIZE);
-    const drawY = Math.round(y - 0.5 * GameConstants.TILESIZE);
+    let centerX: number;
+    let centerY: number;
+    if (this._isKeyboardDragging) {
+      const targetIdx = this.selX + this.selY * this.cols;
+      const targetPx = this.getSlotDrawPx(targetIdx);
+      if (targetPx !== null && this._grabbedItemVisualPos !== null) {
+        const ANIM_RATE = 0.3;
+        const lerpFactor = 1 - Math.pow(1 - ANIM_RATE, delta);
+        const SNAP_PX = 0.5;
+        const vp = this._grabbedItemVisualPos;
+        const dx = targetPx.x - vp.vx;
+        const dy = targetPx.y - vp.vy;
+        if (Math.abs(dx) < SNAP_PX && Math.abs(dy) < SNAP_PX) {
+          vp.vx = targetPx.x;
+          vp.vy = targetPx.y;
+        } else {
+          vp.vx += dx * lerpFactor;
+          vp.vy += dy * lerpFactor;
+        }
+        centerX = vp.vx + 0.5 * GameConstants.TILESIZE;
+        centerY = vp.vy + 0.5 * GameConstants.TILESIZE;
+      } else if (targetPx !== null) {
+        centerX = targetPx.x + 0.5 * GameConstants.TILESIZE;
+        centerY = targetPx.y + 0.5 * GameConstants.TILESIZE;
+      } else {
+        const s = 18, b = 2, g = -2, stride = s + 2 * b + g;
+        const width = this.cols * stride - g;
+        const height = this.rows * stride - g;
+        const startX = Math.round(0.5 * GameConstants.WIDTH - 0.5 * width);
+        const startY = Math.round(0.5 * GameConstants.HEIGHT - 0.5 * height);
+        centerX = startX + this.selX * stride + b + s / 2;
+        centerY = startY + this.selY * stride + b + s / 2;
+      }
+    } else {
+      const pos = MouseCursor.getInstance().getPosition();
+      centerX = pos.x;
+      centerY = pos.y;
+    }
+    const drawX = Math.round(centerX - 0.5 * GameConstants.TILESIZE);
+    const drawY = Math.round(centerY - 0.5 * GameConstants.TILESIZE);
     const drawXScaled = drawX / GameConstants.TILESIZE;
     const drawYScaled = drawY / GameConstants.TILESIZE;
     this.grabbedItem.drawIcon(delta, drawXScaled, drawYScaled);
@@ -655,6 +871,15 @@ export class Inventory {
 
   drop = () => {
     if (!this.isOpen) return;
+    if (this._isKeyboardDragging && this.grabbedItem !== null) {
+      const sourceSlot = this._keyboardDragSourceSlot ?? this.selX + this.selY * this.cols;
+      this.dropItem(this.grabbedItem, sourceSlot);
+      this.grabbedItem = null;
+      this._isKeyboardDragging = false;
+      this._keyboardDragSourceSlot = null;
+      this._skipNextSpaceUseOnUp = false;
+      return;
+    }
     let index = this.selX + this.selY * this.cols;
     if (index < 0 || index >= this.items.length) return;
     const item = this.items[index];
@@ -1414,57 +1639,41 @@ export class Inventory {
           const yOff = Math.round(s * (1 - this.equipAnimAmount[idx]));
           Game.ctx.fillRect(slotX + b, slotY + b + yOff, s, s - yOff);
 
-          if (idx < this.items.length && this.items[idx] !== null) {
-            const drawX = Math.round(
-              0.5 * GameConstants.WIDTH -
-                0.5 * width +
-                xIdx * (s + 2 * b + g) +
-                b +
-                Math.floor(0.5 * s) -
-                0.5 * GameConstants.TILESIZE,
-            );
-            const drawY = Math.round(
-              0.5 * GameConstants.HEIGHT -
-                0.5 * height +
-                yIdx * (s + 2 * b + g) +
-                b +
-                Math.floor(0.5 * s) -
-                0.5 * GameConstants.TILESIZE,
-            );
-            this.items[idx]?.drawIcon(delta, drawX / GameConstants.TILESIZE, drawY / GameConstants.TILESIZE);
-          }
+          // Items are drawn in the animated pass below; skip here to avoid ghosting.
         }
       }
 
-      // No size-scaling animation; draw selection immediately.
+      // Animated item pass: each item smoothly interpolates to its current logical slot.
+      // Speed is proportional to remaining distance (exponential decay), frame-rate independent.
       {
+        const ANIM_RATE = 0.3; // fraction of gap closed per frame at 60 fps
+        const lerpFactor = 1 - Math.pow(1 - ANIM_RATE, delta);
+        const SNAP_PX = 0.5; // stop animating once this close
+
         this.items.forEach((item, idx) => {
           if (item === null) return;
           if (!this.isValidSlot(idx)) return;
-          const x = idx % this.cols;
-          const y = Math.floor(idx / this.cols);
 
-          const drawX = Math.round(
-            0.5 * GameConstants.WIDTH -
-              0.5 * width +
-              x * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE,
-          );
-          const drawY = Math.round(
-            0.5 * GameConstants.HEIGHT -
-              0.5 * height +
-              y * (s + 2 * b + g) +
-              b +
-              Math.floor(0.5 * s) -
-              0.5 * GameConstants.TILESIZE,
-          );
+          const logical = this.getSlotDrawPx(idx);
+          if (!logical) return;
 
-          const drawXScaled = drawX / GameConstants.TILESIZE;
-          const drawYScaled = drawY / GameConstants.TILESIZE;
+          let vp = this._itemVisualPos.get(item);
+          if (!vp) {
+            vp = { vx: logical.x, vy: logical.y };
+            this._itemVisualPos.set(item, vp);
+          }
 
-          item.drawIcon(delta, drawXScaled, drawYScaled);
+          const dx = logical.x - vp.vx;
+          const dy = logical.y - vp.vy;
+          if (Math.abs(dx) < SNAP_PX && Math.abs(dy) < SNAP_PX) {
+            vp.vx = logical.x;
+            vp.vy = logical.y;
+          } else {
+            vp.vx += dx * lerpFactor;
+            vp.vy += dy * lerpFactor;
+          }
+
+          item.drawIcon(delta, vp.vx / GameConstants.TILESIZE, vp.vy / GameConstants.TILESIZE);
         });
 
         // Draw selection box and related elements only if mouse is in bounds
@@ -1811,6 +2020,10 @@ export class Inventory {
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {
+    // Any mouse click during a keyboard hold cancels it and returns the item to its source.
+    if (this._isKeyboardDragging) {
+      this.keyboardDragCancel();
+    }
     if (
       this.player.menu.open ||
       this.player.settingsMenu?.open ||
@@ -1911,6 +2124,12 @@ export class Inventory {
 
     if (isValidDropZone) {
       if (this._isDragging && this.grabbedItem !== null) {
+        // Set visual pos to cursor so the placed item animates from cursor to target slot.
+        const cursorPos = MouseCursor.getInstance().getPosition();
+        this._itemVisualPos.set(this.grabbedItem, {
+          vx: cursorPos.x - 0.5 * GameConstants.TILESIZE,
+          vy: cursorPos.y - 0.5 * GameConstants.TILESIZE,
+        });
         // We were dragging, place the item
         const targetSlot = this.selX + this.selY * this.cols;
         this.placeItemInSlot(targetSlot);

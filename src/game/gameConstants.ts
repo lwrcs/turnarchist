@@ -615,6 +615,8 @@ export class GameConstants {
     Gauntlets,
     ShoulderPlates,
     WeaponBlood,
+    Greataxe,
+    GarnetRing,
     Scythe,
     Sword,
     DualDagger,
