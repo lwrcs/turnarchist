@@ -10,7 +10,7 @@ export class WeaponEthereal extends Usable {
   static examineText = "Water drawn from a ghost's tears. It seeps through magical barriers.";
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
-    this.tileX = 16;
+    this.tileX = 17;
     this.tileY = 4;
     this.offsetY = -0.3;
     this.canUseOnOther = true;

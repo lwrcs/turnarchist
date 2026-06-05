@@ -373,7 +373,7 @@ export abstract class Weapon extends Equippable {
         tileY = 1;
       }
       if (this.status.ethereal) {
-        tileX = 16;
+        tileX = 20;
         tileY = 1;
       }
       if (this.status.plague) {
