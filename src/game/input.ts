@@ -34,6 +34,7 @@ export enum InputEnum {
   F,
   ENTER,
   R,
+  C,
 }
 
 export const Input = {
@@ -79,6 +80,7 @@ export const Input = {
   fListener: function () {},
   enterListener: function () {},
   rListener: function () {},
+  cListener: function () {},
   wheelListener: function (deltaY: number) {},
   mouseLeftClickListeners: [],
   mouseRightClickListeners: [],
@@ -148,6 +150,7 @@ export const Input = {
   F: "KeyF",
   ENTER: "Enter",
   R: "KeyR",
+  C: "KeyC",
 
   rawMouseX: 0,
   rawMouseY: 0,
@@ -249,6 +252,9 @@ export const Input = {
         break;
       case Input.R:
         Input.rListener();
+        break;
+      case Input.C:
+        Input.cListener();
         break;
     }
   },

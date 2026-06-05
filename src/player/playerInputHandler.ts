@@ -81,6 +81,7 @@ export class PlayerInputHandler {
     Input.commaListener = () => this.handleInput(InputEnum.COMMA);
     Input.periodListener = () => this.handleInput(InputEnum.PERIOD);
     Input.enterListener = () => this.handleInput(InputEnum.ENTER);
+    Input.cListener = () => this.handleInput(InputEnum.C);
     // spaceListener fires from onKeydown's switch(event.code) — only on real keypresses,
     // never from the game's custom KEY_REPEAT_TIME loop (fake events have no .code).
     Input.spaceListener = () => this.handleInput(InputEnum.SPACE);
@@ -427,6 +428,8 @@ export class PlayerInputHandler {
       const cm = this.player.contextMenu;
       switch (input) {
         case InputEnum.ESCAPE:
+        case InputEnum.C:
+          cm.close();
           this.clearKeyboardTarget();
           return;
         case InputEnum.UP:
@@ -536,6 +539,14 @@ export class PlayerInputHandler {
           }
           break;
       }
+    }
+
+    if (input === InputEnum.C && invKB) {
+      const menu = this.player.contextMenu;
+      if (menu?.open) { menu.close(); return; }
+      const center = invKB.getSelectedSlotCenter();
+      if (center) this.handleMouseRightClickAt(center.x, center.y, undefined, true);
+      return;
     }
 
     switch (input) {
@@ -817,7 +828,7 @@ export class PlayerInputHandler {
     this.handleMouseRightClickAt(px, py, entity);
   }
 
-  private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity) {
+  private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity, fromKeyboard = false) {
     if (!targetEntity) this.setMostRecentInput("mouse");
     const player = this.player;
     const menu = player.contextMenu;
@@ -843,7 +854,7 @@ export class PlayerInputHandler {
         player.skillsMenu?.open ||
         player.isAnyBookOpen
       ) {
-        menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
+        menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }], fromKeyboard);
         return;
       }
 
@@ -852,8 +863,8 @@ export class PlayerInputHandler {
         const inInvButton = inv.isPointInInventoryButton(x, y);
         const inQuickbar = inv.isPointInQuickbarBounds(x, y).inBounds;
         const inInventoryPanel = inv.isPointInInventoryBounds(x, y).inBounds;
-        if (!inInvButton && !inQuickbar && !inInventoryPanel) {
-          menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }]);
+        if (!inInvButton && !inQuickbar && !inInventoryPanel && !fromKeyboard) {
+          menu.openAt(x, y, [{ label: "Cancel", onClick: () => {} }], fromKeyboard);
           return;
         }
       }
@@ -912,7 +923,7 @@ export class PlayerInputHandler {
         onClick: () => player.bookLibrary?.toggleOpen(),
       });
       items.push({ label: "Cancel", onClick: () => {} });
-      menu.openAt(x, y, items);
+      menu.openAt(x, y, items, fromKeyboard);
       return;
     }
     if (player.inventory.isPointInInventoryButton(x, y)) {
@@ -921,7 +932,7 @@ export class PlayerInputHandler {
         onClick: () => player.inventory.toggleOpen(),
       });
       items.push({ label: "Cancel", onClick: () => {} });
-      menu.openAt(x, y, items);
+      menu.openAt(x, y, items, fromKeyboard);
       return;
     }
     if (Menu.isPointInOpenMenuButtonBounds(x, y)) {
@@ -930,7 +941,7 @@ export class PlayerInputHandler {
         onClick: () => player.settingsMenu.toggleOpen(),
       });
       items.push({ label: "Cancel", onClick: () => {} });
-      menu.openAt(x, y, items);
+      menu.openAt(x, y, items, fromKeyboard);
       return;
     }
 
@@ -1128,7 +1139,7 @@ export class PlayerInputHandler {
 
       // Always include cancel as the final option.
       items.push({ label: "Cancel", onClick: () => {} });
-      menu.openAt(x, y, items);
+      menu.openAt(x, y, items, fromKeyboard);
       return;
     }
 
@@ -1503,7 +1514,7 @@ export class PlayerInputHandler {
     items.push({ label: "Cancel", onClick: () => {
       if (targetEntity) this.clearKeyboardTarget();
     }});
-    menu.openAt(x, y, items, !!targetEntity);
+    menu.openAt(x, y, items, !!targetEntity || fromKeyboard);
   }
 
   isMouseOverUI = (): boolean => {

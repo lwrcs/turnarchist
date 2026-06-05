@@ -821,6 +821,13 @@ export class Inventory {
     this.grabbedItem = null;
   };
 
+  getSelectedSlotCenter = (): { x: number; y: number } | null => {
+    const idx = this.selX + this.selY * this.cols;
+    const px = this.getSlotDrawPx(idx);
+    if (!px) return null;
+    return { x: px.x + 0.5 * GameConstants.TILESIZE, y: px.y + 0.5 * GameConstants.TILESIZE };
+  };
+
   drawDraggedItem = (delta: number) => {
     if (this.grabbedItem === null) return;
     Game.ctx.save();
@@ -861,6 +868,10 @@ export class Inventory {
       const pos = MouseCursor.getInstance().getPosition();
       centerX = pos.x;
       centerY = pos.y;
+    }
+    if (this._isKeyboardDragging) {
+      const shakeOffset = Math.floor(Date.now() / 100) % 2 === 1 ? 0.0325 * GameConstants.TILESIZE : 0;
+      centerX += shakeOffset;
     }
     const drawX = Math.round(centerX - 0.5 * GameConstants.TILESIZE);
     const drawY = Math.round(centerY - 0.5 * GameConstants.TILESIZE);

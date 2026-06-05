@@ -1852,9 +1852,6 @@ export class Game {
           }
           return;
 
-        case "C":
-          this.chatOpen = true;
-          return;
 
         case "P":
           if (this.photoMode) {
