@@ -148,6 +148,18 @@ export class SettingsMenu {
         name: "Game",
         items: [
           {
+            label: "Sidepath Confirmation",
+            kind: "toggle",
+            getState: () => GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION,
+            onActivate: () => {
+              GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION = !GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION;
+              this.game.pushMessage(
+                `Sidepath confirmation is now ${GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION ? "enabled" : "disabled"}`,
+              );
+              this.saveSettings();
+            },
+          },
+          {
             label: "Crossbow Intercept",
             kind: "toggle",
             getState: () => GameplaySettings.CROSSBOW_LINE_INTERCEPT,

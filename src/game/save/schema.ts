@@ -163,6 +163,9 @@ export type WorldDeltaV2 = {
 
   /** Enemy type diversity tracker for room population (optional for backward-compat). */
   encounteredEnemies?: number[];
+
+  /** Set of sidepath IDs the player has already entered (optional for backward-compat). */
+  visitedSidepaths?: string[];
 };
 
 export type RoomDeltaV2 = {

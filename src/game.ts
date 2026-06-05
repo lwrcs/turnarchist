@@ -762,6 +762,7 @@ export class Game {
   startedFadeOut: boolean;
   screenShakeActive: boolean;
   encounteredEnemies: Array<number>;
+  visitedSidepaths: Set<string>;
   paused: boolean;
   /**
    * True while a save is being loaded and the Game instance is temporarily in an inconsistent state
@@ -1177,6 +1178,7 @@ export class Game {
           this.screenShakeActive = false;
           this.levels = [];
           this.encounteredEnemies = [];
+          this.visitedSidepaths = new Set();
 
           this.newGame();
 
@@ -1786,6 +1788,7 @@ export class Game {
     }
     this.currentDepth = 0;
     this.encounteredEnemies = [];
+    this.visitedSidepaths = new Set();
     this.levels = [];
     this.hasRecordedStats = false;
     this.loadedFromSaveFile = false;

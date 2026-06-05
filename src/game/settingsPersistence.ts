@@ -15,6 +15,7 @@ type Settings = {
   screenShake?: boolean;
   slowInputsNearEnemies?: boolean;
   crossbowLineIntercept?: boolean;
+  sidepathEntryConfirmation?: boolean;
 };
 
 export const saveSettings = (game: Game) => {
@@ -27,6 +28,7 @@ export const saveSettings = (game: Game) => {
     screenShake: GameConstants.SCREEN_SHAKE_ENABLED,
     slowInputsNearEnemies: GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
     crossbowLineIntercept: GameplaySettings.CROSSBOW_LINE_INTERCEPT,
+    sidepathEntryConfirmation: GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION,
   };
   setCookie(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -58,6 +60,9 @@ export const loadSettings = (game: Game) => {
     }
     if (typeof s.crossbowLineIntercept === "boolean") {
       GameplaySettings.CROSSBOW_LINE_INTERCEPT = s.crossbowLineIntercept;
+    }
+    if (typeof s.sidepathEntryConfirmation === "boolean") {
+      GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION = s.sidepathEntryConfirmation;
     }
   } catch (e) {
     console.warn("Failed to parse settings cookie", e);

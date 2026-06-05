@@ -1668,6 +1668,9 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
   if (save.delta.encounteredEnemies) {
     game.encounteredEnemies = save.delta.encounteredEnemies.slice();
   }
+  if (save.delta.visitedSidepaths) {
+    game.visitedSidepaths = new Set(save.delta.visitedSidepaths);
+  }
 
   // Restore gameplay RNG state AFTER regeneration and object reconstruction.
   // Generation itself reseeds per depth/path; we only want to continue the run deterministically.

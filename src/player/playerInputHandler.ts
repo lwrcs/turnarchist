@@ -423,11 +423,11 @@ export class PlayerInputHandler {
       }
     }
 
-    // Screen message is modal — any input closes it except scale keys.
+    // Screen message is modal — delegate to its own key handler (handles buttons, nav, close).
     if (this.player.screenMessage?.open) {
       if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
       if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
-      if (input !== InputEnum.MOUSE_MOVE) { this.player.screenMessage.close(); return; }
+      this.player.screenMessage.handleKey(input);
       return;
     }
 
@@ -1543,7 +1543,10 @@ export class PlayerInputHandler {
   };
 
   handleMouseDown(x: number, y: number, button: number) {
-    if (this.player.screenMessage?.open) { this.player.screenMessage.close(); return; }
+    if (this.player.screenMessage?.open) {
+      if (button === 0) { this.player.screenMessage.handleMouseDown(x, y); return; }
+      return;
+    }
 
     if (button !== 0) return; // Only handle left mouse button
 

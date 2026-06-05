@@ -574,7 +574,14 @@ const validateWorldDeltaV2 = (v: unknown, path: string): Result<WorldDeltaV2> =>
     encounteredEnemies = encU as number[];
   }
 
-  return ok({ players, offlinePlayers, rooms, stats, encounteredEnemies });
+  // Optional: visitedSidepaths (array of string). Old saves won't have it.
+  let visitedSidepaths: string[] | undefined;
+  const vsU = get(v, "visitedSidepaths");
+  if (Array.isArray(vsU) && vsU.every((s) => isString(s))) {
+    visitedSidepaths = vsU as string[];
+  }
+
+  return ok({ players, offlinePlayers, rooms, stats, encounteredEnemies, visitedSidepaths });
 };
 
 const validateStatsSaveV2 = (v: Record<string, unknown>): StatsSaveV2 | null => {

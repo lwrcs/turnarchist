@@ -120,6 +120,8 @@ export class GameplaySettings {
 
   static readonly MAX_DEPTH_FOR_SIDEPATHS = 3;
 
+  static SIDEPATH_ENTRY_CONFIRMATION = true;
+
   // === ENEMY POOL SETTINGS ===
 
   // Enemy Type Progression

@@ -14,6 +14,7 @@ import { Lockable, LockType } from "./lockable";
 import { Key } from "../item/key";
 import { Passageway } from "./passageway";
 import { SidePathManager, SidePathOptions } from "../level/sidePathManager";
+import { GameplaySettings } from "../game/gameplaySettings";
 
 export class DownLadder extends Passageway {
   linkedRoom: Room;
@@ -92,6 +93,69 @@ export class DownLadder extends Passageway {
 
   // Linking logic is handled by SidePathManager
 
+  private computePathId = (): string => {
+    const parentPid: string = (this.game as any).currentPathId || "main";
+    const roomAnchor = `${this.room.depth}:${this.room.roomX},${this.room.roomY}`;
+    const tileAnchor = `${this.x},${this.y}`;
+    return `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
+  };
+
+  private getSidepathDialogText = (): string => {
+    switch (this.environment) {
+      case EnvType.FOREST:
+        return "A rope descends into the lush forest below.";
+      case EnvType.DARK_FOREST:
+        return "A rope descends into the dark forest below.";
+      case EnvType.CAVE:
+        return "A rope descends into the cave below.";
+      case EnvType.CAVE_POCKET:
+        return "A rope descends into a hidden hollow below.";
+      case EnvType.CASTLE:
+        return "A rope descends into the castle below.";
+      case EnvType.DARK_CASTLE:
+        return "A rope descends into the cursed castle below.";
+      case EnvType.GLACIER:
+        return "A rope descends into the frozen glacier below.";
+      case EnvType.DESERT:
+        return "A rope descends into the desert ruins below.";
+      case EnvType.SEWER:
+        return "A rope descends into the sewer below.";
+      case EnvType.MAGMA_CAVE:
+        return "A rope descends into the magma cave below.";
+      default:
+        return "A rope descends into the unknown below.";
+    }
+  };
+
+  private doEnterLevel = (visitedPathId?: string) => {
+    this.game.beginPreLevelGenFade(async () => {
+      globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
+      await this.generate();
+      globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
+
+      // Switch active path to this ladder's sidepath before transitioning
+      this.sidePathManager.switchToPathBeforeTransition(this);
+
+      // We can now allow the normal ladder loading screen to render.
+      this.game.endPreLevelGenBlackout();
+
+      for (const i in this.game.players) {
+        const pl = this.game.players[i];
+        pl.anchorOxygenLineToTile(this.room, this.x, this.y, {
+          kind: "downLadder",
+          angle: Math.PI / 2,
+        });
+        pl.getOxygenLine()?.update(true);
+        this.game.changeLevelThroughLadder(this.game.players[i], this);
+      }
+
+      // Mark as visited using the ID captured at collision time (before any path switching).
+      if (visitedPathId) {
+        this.game.visitedSidepaths.add(visitedPathId);
+      }
+    });
+  };
+
   onCollide = (player: Player) => {
     let allPlayersHere = true;
     for (const i in this.game.players) {
@@ -104,28 +168,30 @@ export class DownLadder extends Passageway {
       }
     }
     if (allPlayersHere) {
-      // Begin fading immediately before starting potentially heavy generation work.
-      this.game.beginPreLevelGenFade(async () => {
-        globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
-        await this.generate();
-        globalEventBus.emit(EVENTS.LEVEL_GENERATION_COMPLETED, {});
-
-        // Switch active path to this ladder's sidepath before transitioning
-        this.sidePathManager.switchToPathBeforeTransition(this);
-
-        // We can now allow the normal ladder loading screen to render.
-        this.game.endPreLevelGenBlackout();
-
-        for (const i in this.game.players) {
-          const pl = this.game.players[i];
-          pl.anchorOxygenLineToTile(this.room, this.x, this.y, {
-            kind: "downLadder",
-            angle: Math.PI / 2,
-          });
-          pl.getOxygenLine()?.update(true);
-          this.game.changeLevelThroughLadder(this.game.players[i], this);
+      // Show first-visit confirmation for unlocked sidepaths
+      if (GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION && this.isSidePath && !this.lockable.isLocked()) {
+        const pathId = this.computePathId();
+        if (!this.game.visitedSidepaths.has(pathId)) {
+          player.screenMessage.show(
+            this.getSidepathDialogText(),
+            [
+              {
+                text: "Travel",
+                onClick: () => {
+                  player.screenMessage.close();
+                  this.doEnterLevel(pathId);
+                },
+              },
+              {
+                text: "Cancel",
+                onClick: () => player.screenMessage.close(),
+              },
+            ],
+          );
+          return;
         }
-      });
+      }
+      this.doEnterLevel();
     } else {
       if (player === this.game.players[this.game.localPlayerID])
         this.game.pushMessage("all players must be present");
