@@ -41,6 +41,8 @@ export class PlayerRenderer {
   private uiPoseFrozen: boolean = false;
   private frozenPoseDirection: Direction = Direction.DOWN;
   private frozenPoseAngleRad: number | null = null;
+  private outlineWorkCanvas: HTMLCanvasElement | null = null;
+  private outlineWorkCtx: CanvasRenderingContext2D | null = null;
 
   constructor(player: Player) {
     this.player = player;
@@ -249,22 +251,17 @@ export class PlayerRenderer {
     const dY = player.y - 1.45 - this.drawY - this.jumpY - this.hitY - this.drawZ;
     let drawnTile = { x: tileX, y: tileY };
 
-    // When the diving helmet is equipped, redirect all player draws to an offscreen compositing
-    // layer so we can punch out base-sprite pixels (via the helmet's magenta mask) before drawing
-    // the helmet on top — without disturbing the background tiles already on the main canvas.
-    // We copy the camera transform from mainCtx so that world-coordinate draw calls land at
-    // the correct screen-space pixels inside the layer (otherwise sprites at large world coords
-    // fall outside the viewport-sized layer bounds and become invisible).
+    // Render the player (base sprite + armor + helmet) into an offscreen layer so we can apply
+    // a single composite alpha (for the hurt fade) and derive a single composite outline (for
+    // the buff/garnet-ring glow) around the silhouette — instead of per-sprite outlines on each
+    // armor layer. We copy the camera transform so world-coordinate draw calls land at the
+    // correct screen-space pixels inside the layer.
     const mainCtx = Game.ctx;
-    if (needsHelmetCompositing) {
-      Game.syncPlayerLayer();
-      // Clear with identity so clearRect covers the entire layer canvas
-      Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
-      Game.playerLayerCtx!.clearRect(0, 0, Game.playerLayer!.width, Game.playerLayer!.height);
-      // Replicate camera transform so sprite draw coordinates map to screen space
-      Game.playerLayerCtx!.setTransform(mainCtx.getTransform());
-      Game.ctx = Game.playerLayerCtx!;
-    }
+    Game.syncPlayerLayer();
+    Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
+    Game.playerLayerCtx!.clearRect(0, 0, Game.playerLayer!.width, Game.playerLayer!.height);
+    Game.playerLayerCtx!.setTransform(mainCtx.getTransform());
+    Game.ctx = Game.playerLayerCtx!;
 
     Game.ctx.save();
 
@@ -272,19 +269,8 @@ export class PlayerRenderer {
       const smearFrame = this.setSmearFrame();
       drawnTile = { x: smearFrame.x, y: smearFrame.y };
       Game.drawPlayer(
-        smearFrame.x,
-        smearFrame.y,
-        1,
-        2,
-        dX,
-        dY,
-        1,
-        2,
+        smearFrame.x, smearFrame.y, 1, 2, dX, dY, 1, 2,
         this.shadeColor(),
-        undefined,
-        undefined,
-        this.outlineColor(),
-        this.outlineOpacity(),
       );
     } else if (!GameConstants.isMobile) {
       // While any overlay UI is open, freeze the diagonal mouse-angle pose at the moment it opened.
@@ -316,62 +302,29 @@ export class PlayerRenderer {
 
         drawnTile = { x: diagonalTile.x, y: diagonalTile.y };
         Game.drawPlayer(
-          diagonalTile.x,
-          diagonalTile.y,
-          1,
-          2,
-          dX,
-          dY,
-          1,
-          2,
+          diagonalTile.x, diagonalTile.y, 1, 2, dX, dY, 1, 2,
           this.shadeColor(),
-          undefined,
-          undefined,
-          this.outlineColor(),
-          this.outlineOpacity(),
         );
       } else {
         this.frame += 0.1 * delta;
         if (this.frame >= 4) this.frame = 0;
         Game.drawPlayer(
-          tileX,
-          tileY,
-          1,
-          2,
-          dX,
-          dY,
-          1,
-          2,
+          tileX, tileY, 1, 2, dX, dY, 1, 2,
           this.shadeColor(),
-          undefined,
-          undefined,
-          this.outlineColor(),
-          this.outlineOpacity(),
         );
       }
     } else {
       this.frame += 0.1 * delta;
       if (this.frame >= 4) this.frame = 0;
       Game.drawPlayer(
-        tileX,
-        tileY,
-        1,
-        2,
-        dX,
-        dY,
-        1,
-        2,
+        tileX, tileY, 1, 2, dX, dY, 1, 2,
         this.shadeColor(),
-        undefined,
-        undefined,
-        this.outlineColor(),
-        this.outlineOpacity(),
       );
     }
 
     this.drawArmorLayers(drawnTile.x, drawnTile.y, renderDirection, dX, dY);
 
-    Game.ctx.restore(); // Restore the canvas state
+    Game.ctx.restore();
 
     if (needsHelmetCompositing && Game.playerLayerCtx) {
       const ts = GameConstants.TILESIZE;
@@ -396,35 +349,100 @@ export class PlayerRenderer {
 
       // Draw the actual helmet sprite (magenta pixels included at this point)
       Game.drawPlayer(
-        helmetTileX,
-        helmetTileY,
-        1,
-        2,
-        dX,
-        dY,
-        1,
-        2,
+        helmetTileX, helmetTileY, 1, 2, dX, dY, 1, 2,
         this.shadeColor(),
-        undefined,
-        undefined,
-        this.outlineColor(),
-        this.outlineOpacity(),
       );
 
       // Second pass: erase the magenta pixels that were just drawn as part of the helmet sprite
       applyMask();
-
-      // Reset player layer transform for next frame's clearRect
-      Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
-
-      // Blit to main canvas with identity transform — the player layer is already in screen
-      // space, so we must NOT let the camera transform shift it a second time.
-      Game.ctx = mainCtx;
-      mainCtx.save();
-      mainCtx.setTransform(1, 0, 0, 1, 0, 0);
-      mainCtx.drawImage(Game.playerLayer!, 0, 0);
-      mainCtx.restore();
     }
+
+    // Reset player layer transform for next frame's clearRect
+    Game.playerLayerCtx!.setTransform(1, 0, 0, 1, 0, 0);
+
+    // Restore Game.ctx and blit composite to main canvas with the hurt fade alpha and (separately)
+    // the buff outline around the composite silhouette.
+    Game.ctx = mainCtx;
+    const outlineColor = this.outlineColor();
+    const outlineOpacity = this.outlineOpacity();
+    const fadeAlpha = this.computeFlashAlpha();
+
+    mainCtx.save();
+    mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+    // Outline drawn first so it sits behind the composite player on the main canvas.
+    if (outlineOpacity > 0) {
+      this.blitCompositeOutline(mainCtx, outlineColor, outlineOpacity);
+    }
+    if (fadeAlpha > 0) {
+      mainCtx.globalAlpha = fadeAlpha;
+      mainCtx.drawImage(Game.playerLayer!, 0, 0);
+      mainCtx.globalAlpha = 1;
+    }
+    mainCtx.restore();
+  };
+
+  private computeFlashAlpha = (): number => {
+    if (!this.flashing) return 1;
+    // Mirror the rate of the old on/off toggle (period 2 in `flashingFrame` units) but as a
+    // smooth cosine fade between 1 and 0.
+    return 0.5 + 0.5 * Math.cos(this.flashingFrame * Math.PI);
+  };
+
+  private syncOutlineWorkCanvas = () => {
+    const layer = Game.playerLayer;
+    if (!layer) return;
+    if (!this.outlineWorkCanvas) {
+      this.outlineWorkCanvas = document.createElement("canvas");
+      this.outlineWorkCanvas.width = layer.width;
+      this.outlineWorkCanvas.height = layer.height;
+      this.outlineWorkCtx = this.outlineWorkCanvas.getContext("2d");
+      if (this.outlineWorkCtx) this.outlineWorkCtx.imageSmoothingEnabled = false;
+    } else if (
+      this.outlineWorkCanvas.width !== layer.width ||
+      this.outlineWorkCanvas.height !== layer.height
+    ) {
+      this.outlineWorkCanvas.width = layer.width;
+      this.outlineWorkCanvas.height = layer.height;
+      if (this.outlineWorkCtx) this.outlineWorkCtx.imageSmoothingEnabled = false;
+    }
+  };
+
+  private blitCompositeOutline = (
+    mainCtx: CanvasRenderingContext2D,
+    color: string,
+    opacity: number,
+  ) => {
+    this.syncOutlineWorkCanvas();
+    const layer = Game.playerLayer;
+    const out = this.outlineWorkCanvas;
+    const oCtx = this.outlineWorkCtx;
+    if (!layer || !out || !oCtx) return;
+
+    oCtx.setTransform(1, 0, 0, 1, 0, 0);
+    oCtx.globalAlpha = 1;
+    oCtx.globalCompositeOperation = "source-over";
+    oCtx.clearRect(0, 0, out.width, out.height);
+
+    // Dilate the composite silhouette by 1px in all 8 directions.
+    const r = 1;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        oCtx.drawImage(layer, dx, dy);
+      }
+    }
+    // Subtract the original silhouette to leave just the ring around the player.
+    oCtx.globalCompositeOperation = "destination-out";
+    oCtx.drawImage(layer, 0, 0);
+    // Tint the ring with the outline color.
+    oCtx.globalCompositeOperation = "source-in";
+    oCtx.globalAlpha = Math.max(0, Math.min(1, opacity));
+    oCtx.fillStyle = color;
+    oCtx.fillRect(0, 0, out.width, out.height);
+    oCtx.globalCompositeOperation = "source-over";
+    oCtx.globalAlpha = 1;
+
+    mainCtx.drawImage(out, 0, 0);
   };
 
   mouseDiagonal = () => {
@@ -490,24 +508,11 @@ export class PlayerRenderer {
   ) => {
     const player = this.player;
     const shade = this.shadeColor();
-    const outline = this.outlineColor();
-    const outlineOp = this.outlineOpacity();
 
     const drawLayer = (overlayTileX: number) => {
       Game.drawPlayer(
-        overlayTileX,
-        tileY,
-        1,
-        2,
-        dX,
-        dY,
-        1,
-        2,
+        overlayTileX, tileY, 1, 2, dX, dY, 1, 2,
         shade,
-        undefined,
-        undefined,
-        outline,
-        outlineOp,
       );
     };
 
@@ -641,9 +646,9 @@ export class PlayerRenderer {
       Shadow.draw(player.x - this.drawX, player.y - this.drawY, 1, 1);
       //this.drawTileCursor(delta);
 
-      if (!this.flashing || Math.floor(this.flashingFrame) % 2 === 0) {
-        this.drawPlayerSprite(delta);
-      }
+      // Hurt flash is now applied as a smooth alpha fade inside drawPlayerSprite via the
+      // offscreen composite blit, so always call drawPlayerSprite when the player is alive.
+      this.drawPlayerSprite(delta);
     }
     this.drawSpellBeam(delta);
     Game.ctx.restore();
