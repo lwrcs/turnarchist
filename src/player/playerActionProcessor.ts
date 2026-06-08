@@ -1,6 +1,5 @@
 import { Player } from "./player";
-import { PlayerAction } from "./playerAction";
-import { Game } from "../game";
+import type { GameAction } from "./playerAction";
 
 export class PlayerActionProcessor {
   private player: Player;
@@ -9,101 +8,100 @@ export class PlayerActionProcessor {
     this.player = player;
   }
 
-  process(action: PlayerAction) {
-    // Record the action for replay
-    try {
-      (this.player.game as any).replayManager?.recordAction(action);
-    } catch {}
+  process(action: GameAction) {
     switch (action.type) {
+      // --- Directional / world actions ---
+      // Record only if movement.move() confirms the input was productive (executed or queued).
+      // Inputs that arrive while on cooldown AND the queue is full/locked are silently dropped;
+      // recording them would cause replay to play back moves that never happened during recording.
       case "Move":
-        this.player.movement.move(
-          action.direction,
-          action.targetX,
-          action.targetY,
-        );
-        break;
-
-      case "MouseMove":
-        this.player.movement.moveMouse(
-          action.direction,
-          action.targetX,
-          action.targetY,
-        );
-        break;
-      case "OpenInventory":
-        this.player.inventory.open();
-        break;
-
-      case "CloseInventory":
-        this.player.inventory.close();
-        break;
-
-      case "InventoryLeft":
-        this.player.inventory.leftQuickbar();
-        break;
-
-      case "InventoryRight":
-        this.player.inventory.rightQuickbar();
-        break;
-
-      case "InventoryUse":
-        this.player.inventory.spaceQuickbar();
-        break;
-
-      case "InventoryDrop":
-        this.player.inventory.drop();
-        break;
-
-      case "InventorySelect": {
-        const inv = this.player.inventory;
-        const idx = Math.max(0, Math.min(action.index, inv.totalCapacity() - 1));
-        inv.selX = idx % inv.cols;
-        inv.selY = Math.floor(idx / inv.cols);
-        inv.spaceQuickbar();
-        break;
-      }
-      case "InventoryMove": {
-        const from = Math.max(
-          0,
-          Math.min(
-            action.fromIndex,
-            this.player.inventory.cols *
-              (this.player.inventory.rows +
-                (this.player.inventory as any).expansion) -
-              1,
-          ),
-        );
-        const to = Math.max(
-          0,
-          Math.min(
-            action.toIndex,
-            this.player.inventory.cols *
-              (this.player.inventory.rows +
-                (this.player.inventory as any).expansion) -
-              1,
-          ),
-        );
-        const item = this.player.inventory.items[from];
-        if (item) {
-          const existing = this.player.inventory.items[to];
-          this.player.inventory.items[from] = existing;
-          this.player.inventory.items[to] = item;
+      case "Attack":
+      case "BumpInteract":
+      case "TileInteract": {
+        const productive = this.player.movement.move(action.direction, action.targetX, action.targetY);
+        if (productive) {
+          try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
         }
         break;
       }
 
+      case "Wait":
+        // Advance the room turn without moving. No-op for human play; used by AI harness.
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        try {
+          (this.player as any).getRoom?.()?.tick?.(this.player);
+        } catch {}
+        break;
+
+      // --- Ranged / spell ---
+      case "CastSpell":
+      case "FireRanged": {
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        const rt = this.player.rangedTargeting;
+        if (rt) {
+          if (!rt.active) {
+            // During replay the targeting UI isn't running — start it with the equipped weapon.
+            const weapon = this.player.inventory?.weapon;
+            if (weapon && typeof (weapon as any).fireAtTarget === "function") {
+              rt.start(weapon as any);
+            }
+          }
+          rt.targetX = action.targetX;
+          rt.targetY = action.targetY;
+          rt.fire();
+        }
+        break;
+      }
+
+      // --- Inventory (slot-direct, cursor-independent) ---
+      case "UseItem":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        this.player.inventory.itemUseAt(action.slotIndex);
+        break;
+
+      case "UseItemOn":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        this.player.inventory.itemUseOnAt(action.fromSlot, action.toSlot);
+        break;
+
+      case "DropItem":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        this.player.inventory.dropItemAt(action.slotIndex);
+        break;
+
+      case "MoveItem":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        this.player.inventory.swapSlots(action.fromSlot, action.toSlot);
+        break;
+
+      case "VendingMachineBuy":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
+        this.player.openVendingMachine?.space();
+        break;
+
       case "Restart":
+        try { (this.player.game as any).replayManager?.recordAction(action); } catch {}
         this.player.restart();
         break;
 
-      case "Attack":
-        // TODO: Route to PlayerCombat module once it's ready
-        console.warn("Attack action received but not yet implemented.");
+      case "AutoPickup": {
+        // Replay path: find the deferred-autopickup item by position+kind and pick it up.
+        // During normal play this action is never routed here — it's recorded directly from
+        // the chest-reveal timer and the timer calls autoPickup() itself.
+        try {
+          const room = (this.player as any).getRoom?.();
+          if (!room) break;
+          const item = room.items?.find?.(
+            (i: any) =>
+              i.x === action.itemX && i.y === action.itemY && i.name === action.itemKind,
+          );
+          if (item) {
+            (item as any).inChest = false;
+            item.onPickup(this.player);
+          }
+        } catch {}
         break;
-
-      case "Interact":
-        this.player.tryMove(action.target.x, action.target.y); // will replace with cleaner interaction API later
-        break;
+      }
     }
   }
 }

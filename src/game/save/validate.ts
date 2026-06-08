@@ -15,6 +15,7 @@ import type {
   PlayerSaveV2,
   ProjectileKind,
   ProjectileSaveV2,
+  ReplaySaveV2,
   RoomDeltaV2,
   SaveV2,
   SaveVersion,
@@ -382,12 +383,92 @@ export const validateSaveV2 = (v: unknown): Result<SaveV2> => {
     meta = { build, savedAtMs, developerMode };
   }
 
+  const replayU = get(v, "replay");
+  let replay: ReplaySaveV2 | undefined = undefined;
+  if (replayU !== undefined) {
+    const replayR = validateReplaySaveV2(replayU, "$.replay");
+    if (isErr(replayR)) return err(replayR.error);
+    replay = replayR.value;
+  }
+
   return ok({
     saveVersion: SAVE_VERSION,
     meta,
     worldSpec: worldSpecR.value,
     delta: deltaR.value,
+    replay,
   });
+};
+
+const validateReplaySaveV2 = (v: unknown, path: string): Result<ReplaySaveV2> => {
+  if (!isRecord(v)) {
+    return err({
+      kind: "InvalidSchema",
+      message: "replay must be an object",
+      path,
+    });
+  }
+  const seedU = get(v, "seed");
+  if (!isNumber(seedU)) {
+    return err({
+      kind: "InvalidSchema",
+      message: "replay.seed must be a number",
+      path: `${path}.seed`,
+    });
+  }
+  const startMsU = get(v, "startMs");
+  if (!isNumber(startMsU)) {
+    return err({
+      kind: "InvalidSchema",
+      message: "replay.startMs must be a number",
+      path: `${path}.startMs`,
+    });
+  }
+  const recordingU = get(v, "recording");
+  if (!isBoolean(recordingU)) {
+    return err({
+      kind: "InvalidSchema",
+      message: "replay.recording must be a boolean",
+      path: `${path}.recording`,
+    });
+  }
+  const actionsU = get(v, "actions");
+  if (!Array.isArray(actionsU)) {
+    return err({
+      kind: "InvalidSchema",
+      message: "replay.actions must be an array",
+      path: `${path}.actions`,
+    });
+  }
+  const actions: ReplaySaveV2["actions"] = [];
+  for (let i = 0; i < actionsU.length; i++) {
+    const entry = actionsU[i];
+    if (!isRecord(entry)) {
+      return err({
+        kind: "InvalidSchema",
+        message: "replay.actions entry must be an object",
+        path: `${path}.actions[${i}]`,
+      });
+    }
+    const t = get(entry, "t");
+    if (!isNumber(t)) {
+      return err({
+        kind: "InvalidSchema",
+        message: "replay.actions entry must have numeric t",
+        path: `${path}.actions[${i}].t`,
+      });
+    }
+    const action = get(entry, "action");
+    if (!isRecord(action)) {
+      return err({
+        kind: "InvalidSchema",
+        message: "replay.actions entry must have action object",
+        path: `${path}.actions[${i}].action`,
+      });
+    }
+    actions.push({ t, action });
+  }
+  return ok({ seed: seedU, startMs: startMsU, recording: recordingU, actions });
 };
 
 const validateWorldSpecV2 = (v: unknown, path: string): Result<WorldSpecV2> => {

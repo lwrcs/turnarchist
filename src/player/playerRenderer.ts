@@ -1,5 +1,6 @@
 import { Direction, Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
+import { GameplaySettings } from "../game/gameplaySettings";
 import { HitWarning } from "../drawable/hitWarning";
 import { LevelConstants } from "../level/levelConstants";
 import { MouseCursor } from "../gui/mouseCursor";
@@ -43,6 +44,7 @@ export class PlayerRenderer {
   private frozenPoseAngleRad: number | null = null;
   private outlineWorkCanvas: HTMLCanvasElement | null = null;
   private outlineWorkCtx: CanvasRenderingContext2D | null = null;
+  private deathButtonHoverAnims: number[] = [0, 0];
 
   constructor(player: Player) {
     this.player = player;
@@ -1019,17 +1021,16 @@ export class PlayerRenderer {
         enemyLines.push(`${enemy} x${count}`);
       });
 
-      // Line after enemy counts: Restart instruction
-      let restartButton = "Press space or click to restart";
-      if (GameConstants.isMobile) restartButton = "Tap to restart";
-      const lineHeight = Game.letter_height + 2; // Adjust spacing as needed
+      const lineHeight = Game.letter_height + 2;
 
-      // Reserve bottom area for restart + feedback button + margins
-      const restartAreaHeight = lineHeight * 2; // restart text + small spacing
-      const feedbackButtonHeight = 16; // from LinkButton
+      // Reserve bottom area for action buttons + feedback button + margins
+      const deathButtonH = 14;
+      const deathButtonPadX = 12;
+      const deathButtonGap = 8;
+      const feedbackButtonHeight = 16;
       const bottomMargin = 10;
       const reservedBottomHeight =
-        restartAreaHeight + feedbackButtonHeight + bottomMargin + 8; // extra padding
+        deathButtonH + 8 + feedbackButtonHeight + bottomMargin + 8;
 
       // Compute available vertical space for content between top margin and reserved bottom
       const topMargin = 20;
@@ -1095,18 +1096,84 @@ export class PlayerRenderer {
         Game.fillText(indicator, GameConstants.WIDTH / 2 - w / 2, y);
       }
 
-      // Draw the restart button above the feedback button
-      const restartTextWidth = Game.measureText(restartButton).width;
-      const restartY = GameConstants.HEIGHT - reservedBottomHeight + 4;
-      Game.fillText(
-        restartButton,
-        GameConstants.WIDTH / 2 - restartTextWidth / 2,
-        restartY,
+      // Build action buttons for death screen
+      const replayMgr = (this.player.game as any).replayManager;
+      const showReplay =
+        GameplaySettings.REPLAY_ON_DEATH && replayMgr?.hasRecordedActions?.();
+      type DeathButtonDef = { text: string; action: "replay" | "newgame" };
+      const buttonDefs: DeathButtonDef[] = showReplay
+        ? [
+            { text: "Watch Replay", action: "replay" },
+            { text: "New Game", action: "newgame" },
+          ]
+        : [{ text: "New Game", action: "newgame" }];
+
+      const buttonWidths = buttonDefs.map(
+        (b) =>
+          Math.round(Game.measureText(b.text).width) + deathButtonPadX * 2,
       );
+      let totalBtnW = buttonWidths.reduce((a, w) => a + w, 0);
+      totalBtnW += deathButtonGap * (buttonDefs.length - 1);
+
+      const btnStartY = GameConstants.HEIGHT - reservedBottomHeight + 4;
+      let bx = Math.round(GameConstants.WIDTH / 2 - totalBtnW / 2);
+
+      const cursor = MouseCursor.getInstance().getPosition();
+      const selectedBtn = this.player.deathScreenSelectedButton;
+      const usingKeyboard = this.player.deathScreenUsingKeyboard;
+
+      const newRects: Array<{ x: number; y: number; w: number; h: number; action: "replay" | "newgame" }> = [];
+      while (this.deathButtonHoverAnims.length < buttonDefs.length) {
+        this.deathButtonHoverAnims.push(0);
+      }
+
+      for (let i = 0; i < buttonDefs.length; i++) {
+        const bw = buttonWidths[i];
+        const hovered =
+          cursor.x >= bx &&
+          cursor.x <= bx + bw &&
+          cursor.y >= btnStartY &&
+          cursor.y <= btnStartY + deathButtonH;
+        const active = usingKeyboard ? selectedBtn === i : hovered;
+        const target = active ? 1 : 0;
+        this.deathButtonHoverAnims[i] +=
+          0.3 * delta * (target - this.deathButtonHoverAnims[i]);
+        this.deathButtonHoverAnims[i] = Math.max(
+          0,
+          Math.min(1, this.deathButtonHoverAnims[i]),
+        );
+
+        const growPx = Math.round(3 * this.deathButtonHoverAnims[i]);
+        const rx = bx - growPx;
+        const ry = btnStartY - growPx;
+        const rw = bw + 2 * growPx;
+        const rh = deathButtonH + 2 * growPx;
+
+        Game.ctx.fillStyle = active
+          ? "rgba(75, 75, 75, 0.7)"
+          : "rgba(100, 100, 100, 0.5)";
+        Game.ctx.fillRect(rx, ry, rw, rh);
+
+        Game.ctx.fillStyle = "rgba(255, 255, 0, 1)";
+        const tw = Game.measureText(buttonDefs[i].text).width;
+        const tx = Math.round(rx + (rw - tw) / 2);
+        const ty = Math.round(ry + (rh - Game.letter_height) / 2);
+        Game.fillText(buttonDefs[i].text, tx, ty);
+
+        newRects.push({
+          x: bx,
+          y: btnStartY,
+          w: bw,
+          h: deathButtonH,
+          action: buttonDefs[i].action,
+        });
+        bx += bw + deathButtonGap;
+      }
+      this.player.deathScreenButtonRects = newRects;
 
       // Draw feedback button at the very bottom reserved area
       if (this.player.game.feedbackButton) {
-        const feedbackY = restartY + lineHeight + 6;
+        const feedbackY = btnStartY + deathButtonH + 8;
 
         const textWidth = Game.measureText(
           this.player.game.feedbackButton.text,

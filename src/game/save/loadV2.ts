@@ -1672,6 +1672,14 @@ export const loadSaveV2 = async (game: Game, save: SaveV2): Promise<Result<void>
     game.visitedSidepaths = new Set(save.delta.visitedSidepaths);
   }
 
+  if (save.replay) {
+    try {
+      game.replayManager?.restore?.(save.replay);
+    } catch (e) {
+      console.warn("Failed to restore replay buffer:", e);
+    }
+  }
+
   // Restore gameplay RNG state AFTER regeneration and object reconstruction.
   // Generation itself reseeds per depth/path; we only want to continue the run deterministically.
   Random.setState(save.worldSpec.rngState);

@@ -4743,6 +4743,14 @@ export class Room {
         5,
       );
       Game.ctx.font = old;
+
+      // Replay indicator: shown below room name while a replay is playing.
+      if ((this.game as any).replayManager?.isReplaying()) {
+        const hint = GameConstants.isMobile ? "tap to exit replay" : "press any key to exit replay";
+        Game.ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+        const hw = Game.measureText(hint).width;
+        Game.fillText(hint, Math.round(GameConstants.WIDTH / 2 - hw / 2), 5 + Game.letter_height + 3);
+      }
     }
     Game.ctx.restore();
   };

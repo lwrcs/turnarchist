@@ -1203,6 +1203,9 @@ export class Game {
               const room = player?.getRoom?.() ?? self.room ?? self.rooms[0];
               populateTestRoom(room, self, clearFirst);
             };
+            (window as any).__devReplayStats = () => {
+              return self.replayManager.getStats();
+            };
           }
 
           // Defer pointer initialization until first IN_LEVEL frame
@@ -1812,7 +1815,7 @@ export class Game {
 
     this.levelState = LevelState.LEVEL_GENERATION;
     // Begin replay recording with this seed and capture a base state when ready
-    this.replayManager.beginRecording(gs.seed, this);
+    this.replayManager.beginRecording(gs.seed);
   };
 
   private startFreshWorld(seed?: number) {
@@ -1826,7 +1829,7 @@ export class Game {
       loadSettings(this);
     } catch {}
     this.levelState = LevelState.LEVEL_GENERATION;
-    this.replayManager.beginRecording(gs.seed, this);
+    this.replayManager.beginRecording(gs.seed);
   }
 
   keyDownListener = (key: string) => {
@@ -4481,6 +4484,8 @@ export class Game {
     this.startedFadeOut = true;
     this.startMenuActive = false;
 
+    this.replayManager.beginRecording(seed);
+
     dl.onCollide(local);
   }
 
@@ -4602,6 +4607,8 @@ export class Game {
     this.started = true;
     this.startedFadeOut = true;
     this.startMenuActive = false;
+
+    this.replayManager.beginRecording(seed);
 
     this.pushMessage("Entering castle sidepath...");
     dl.onCollide(local);

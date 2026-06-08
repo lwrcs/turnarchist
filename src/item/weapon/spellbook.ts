@@ -150,7 +150,8 @@ export class Spellbook extends Weapon implements RangedWeapon {
     // Spend mana (increase cooldown by spell cost); +1 so the end-of-turn tick lands correctly.
     this.cooldown = this.cooldown + manaCost + 1;
     for (const item of player.inventory.items) {
-      if (item instanceof Spellbook && item !== this) item.cooldown = item.cooldown + manaCost + 1;
+      if (item instanceof Spellbook && item !== this)
+        item.cooldown = item.cooldown + manaCost + 1;
     }
     player.syncManaFromSpellbookCooldowns();
 
@@ -164,7 +165,12 @@ export class Spellbook extends Weapon implements RangedWeapon {
         if (room.isSolidAt(px, py, z)) continue;
         room.projectiles.push(new PlayerFireball(player, px, py, delays[i]));
         for (const e of room.entities) {
-          if (e.pointIn(px, py) && e.destroyable && !e.pushable && (e.z ?? 0) === z) {
+          if (
+            e.pointIn(px, py) &&
+            e.destroyable &&
+            !e.pushable &&
+            (e.z ?? 0) === z
+          ) {
             e.hurt(player, damage);
           }
         }

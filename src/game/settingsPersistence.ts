@@ -16,6 +16,7 @@ type Settings = {
   slowInputsNearEnemies?: boolean;
   crossbowLineIntercept?: boolean;
   sidepathEntryConfirmation?: boolean;
+  replayOnDeath?: boolean;
 };
 
 export const saveSettings = (game: Game) => {
@@ -29,6 +30,7 @@ export const saveSettings = (game: Game) => {
     slowInputsNearEnemies: GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
     crossbowLineIntercept: GameplaySettings.CROSSBOW_LINE_INTERCEPT,
     sidepathEntryConfirmation: GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION,
+    replayOnDeath: GameplaySettings.REPLAY_ON_DEATH,
   };
   setCookie(SETTINGS_KEY, JSON.stringify(s), 180);
 };
@@ -63,6 +65,9 @@ export const loadSettings = (game: Game) => {
     }
     if (typeof s.sidepathEntryConfirmation === "boolean") {
       GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION = s.sidepathEntryConfirmation;
+    }
+    if (typeof s.replayOnDeath === "boolean") {
+      GameplaySettings.REPLAY_ON_DEATH = s.replayOnDeath;
     }
   } catch (e) {
     console.warn("Failed to parse settings cookie", e);

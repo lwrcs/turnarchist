@@ -194,8 +194,8 @@ export class GameConstants {
   static readonly POINTER_BOB_PERIOD_MS = 1200; // ms
   static readonly POINTER_FADE_TIME = 500; // ms fade-out for dismissed pointers
   static ANIMATION_SPEED = 1;
-  static readonly REPLAY_STEP_MS = 10; // base time between replayed inputs
-  static readonly REPLAY_COMPUTER_TURN_DELAY = 10; // extra wait after computer turn completes during replay
+  static readonly REPLAY_STEP_MS = 165; // base time between replayed inputs (~1/3 normal speed)
+  static readonly REPLAY_COMPUTER_TURN_DELAY = 30; // extra wait after computer turn completes during replay
   static REPLAY_DEBUG = false; // enable verbose replay logging
 
   static readonly DEFAULTWIDTH = GameConstants.TILESIZE;

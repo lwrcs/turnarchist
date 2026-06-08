@@ -97,11 +97,17 @@ export class XpCrystal extends Item {
 
     this.chestRevealPickupTimeoutId = window.setTimeout(() => {
       this.chestRevealPickupTimeoutId = null;
+      // During replay the step sequence handles pickup via a recorded AutoPickup action;
+      // suppress the wall-clock timer so we don't double-pick-up.
+      const replayMgr = (this.level?.game as any)?.replayManager;
+      if (replayMgr?.isReplaying?.()) return;
       if (this.pickedUp) return;
       if (this.level !== this.level.game.room) return;
 
       // Stop treating it as "in chest" so the pickup animation isn't offset strangely.
       this.inChest = false;
+      // Record before executing so the replay can reproduce this deferred pickup.
+      try { replayMgr?.recordAction?.({ type: "AutoPickup", itemX: this.x, itemY: this.y, itemKind: this.name }); } catch {}
       this.autoPickup();
     }, 750);
   };

@@ -141,6 +141,9 @@ export class Player extends Drawable {
   // Death screen pagination state
   deathScreenPageIndex: number;
   deathScreenPageCount: number;
+  deathScreenSelectedButton: number;
+  deathScreenUsingKeyboard: boolean;
+  deathScreenButtonRects: Array<{ x: number; y: number; w: number; h: number; action: "replay" | "newgame" }>;
 
   private renderer: PlayerRenderer;
   private oxygenLine: OxygenLine;
@@ -302,6 +305,9 @@ export class Player extends Drawable {
     this.cooldownRemaining = 0;
     this.deathScreenPageIndex = 0;
     this.deathScreenPageCount = 1;
+    this.deathScreenSelectedButton = 0;
+    this.deathScreenUsingKeyboard = false;
+    this.deathScreenButtonRects = [];
     this.hasBloom = true;
   }
 
@@ -615,12 +621,7 @@ export class Player extends Drawable {
     if (!GameConstants.MOVE_WITH_MOUSE) return;
     const moveData = this.canMoveWithMouse();
     if (moveData !== null) {
-      this.actionProcessor.process({
-        type: "MouseMove",
-        direction: moveData.direction,
-        targetX: moveData.x,
-        targetY: moveData.y,
-      });
+      this.inputHandler.dispatchDirectionalAction(moveData.direction, moveData.x, moveData.y);
     }
   };
 
@@ -1027,9 +1028,11 @@ export class Player extends Drawable {
   restart = () => {
     this.dead = false;
     this.game.newGame();
-    // Reset pagination on restart
     this.deathScreenPageIndex = 0;
     this.deathScreenPageCount = 1;
+    this.deathScreenSelectedButton = 0;
+    this.deathScreenUsingKeyboard = false;
+    this.deathScreenButtonRects = [];
   };
 
   beginPushMoveInputLock = (entities: Entity[]): void => {
@@ -1539,9 +1542,11 @@ export class Player extends Drawable {
       if (ring?.onDeathSave(this)) return;
 
       this.dead = true;
-      // Reset death screen pagination when death occurs
       this.deathScreenPageIndex = 0;
       this.deathScreenPageCount = 1;
+      this.deathScreenSelectedButton = 0;
+      this.deathScreenUsingKeyboard = false;
+      this.deathScreenButtonRects = [];
     }
   };
 

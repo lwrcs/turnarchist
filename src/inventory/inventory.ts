@@ -683,7 +683,13 @@ export class Inventory {
       return;
     }
     if (hadKeyDown) {
-      this.itemUse();
+      const slotIndex = this.selX + this.selY * this.cols;
+      const item = this.items[slotIndex];
+      if (item !== null && (this.player as any).actionProcessor) {
+        (this.player as any).actionProcessor.process({ type: "UseItem", slotIndex });
+      } else {
+        this.itemUse();
+      }
     }
   };
 
@@ -917,6 +923,41 @@ export class Inventory {
 
   dropFromInventory = () => {
     // Intentionally left blank or implement if needed
+  };
+
+  // ---------------------------------------------------------------------------
+  // Slot-direct bypass methods (used by PlayerActionProcessor for replay)
+  // These skip cursor/UI state so actions can be executed by slot index alone.
+  // ---------------------------------------------------------------------------
+
+  itemUseAt = (slotIndex: number): void => {
+    this.selX = slotIndex % this.cols;
+    this.selY = Math.floor(slotIndex / this.cols);
+    this.itemUse();
+  };
+
+  itemUseOnAt = (fromSlot: number, toSlot: number): void => {
+    const fromItem = this.items[fromSlot];
+    const toItem   = this.items[toSlot];
+    if (fromItem instanceof Usable && fromItem.canUseOnOther && toItem) {
+      fromItem.useOnOther(this.player, toItem);
+    }
+  };
+
+  dropItemAt = (slotIndex: number): void => {
+    const item = this.items[slotIndex];
+    if (!item) return;
+    this.dropItem(item, slotIndex);
+  };
+
+  swapSlots = (from: number, to: number): void => {
+    const bounds = this.items.length;
+    if (from < 0 || from >= bounds || to < 0 || to >= bounds) return;
+    const item = this.items[from];
+    if (!item) return;
+    const existing     = this.items[to];
+    this.items[from]   = existing;
+    this.items[to]     = item;
   };
 
   hasItem = <T extends Item>(itemType: new (...args: any[]) => T): T | null => {
@@ -2150,7 +2191,17 @@ export class Inventory {
         this.placeItemInSlot(targetSlot);
       } else if (this._dragStartItem !== null) {
         // We had an item but weren't dragging (quick click)
-        this.itemUse();
+        const slotIndex = this.selX + this.selY * this.cols;
+        const ap = (this.player as any).actionProcessor;
+        if (this.usingItem && this.usingItemIndex !== null) {
+          ap?.process({ type: "UseItemOn", fromSlot: this.usingItemIndex, toSlot: slotIndex });
+          this.usingItem = null;
+          this.usingItemIndex = null;
+        } else if (ap) {
+          ap.process({ type: "UseItem", slotIndex });
+        } else {
+          this.itemUse();
+        }
       }
     } else if (this.grabbedItem !== null) {
       // Drop the item in the world
@@ -2189,9 +2240,9 @@ export class Inventory {
       const fromIdx = this._dragStartSlot ?? targetSlot;
       const toIdx = targetSlot;
       (this.game as any).replayManager?.recordAction({
-        type: "InventoryMove",
-        fromIndex: fromIdx,
-        toIndex: toIdx,
+        type: "MoveItem",
+        fromSlot: fromIdx,
+        toSlot: toIdx,
       });
     } catch {}
 

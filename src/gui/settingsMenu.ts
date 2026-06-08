@@ -160,6 +160,18 @@ export class SettingsMenu {
             },
           },
           {
+            label: "Replay on Death",
+            kind: "toggle",
+            getState: () => GameplaySettings.REPLAY_ON_DEATH,
+            onActivate: () => {
+              GameplaySettings.REPLAY_ON_DEATH = !GameplaySettings.REPLAY_ON_DEATH;
+              this.game.pushMessage(
+                `Replay on death is now ${GameplaySettings.REPLAY_ON_DEATH ? "enabled" : "disabled"}`,
+              );
+              this.saveSettings();
+            },
+          },
+          {
             label: "Crossbow Intercept",
             kind: "toggle",
             getState: () => GameplaySettings.CROSSBOW_LINE_INTERCEPT,

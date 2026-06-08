@@ -121,6 +121,7 @@ export class GameplaySettings {
   static readonly MAX_DEPTH_FOR_SIDEPATHS = 3;
 
   static SIDEPATH_ENTRY_CONFIRMATION = true;
+  static REPLAY_ON_DEATH = false;
 
   // === ENEMY POOL SETTINGS ===
 

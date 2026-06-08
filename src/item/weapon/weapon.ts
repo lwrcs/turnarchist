@@ -71,7 +71,13 @@ export abstract class Weapon extends Equippable {
     this.canReceiveStatusEffect = true;
     this.range = 1;
     this.damage = 1;
-    this.status = status || { poison: false, blood: false, curse: false, ethereal: false, plague: false };
+    this.status = status || {
+      poison: false,
+      blood: false,
+      curse: false,
+      ethereal: false,
+      plague: false,
+    };
     this.durability = 50;
     this.durabilityMax = 50;
     this.statusApplicationCount = 0;
@@ -158,7 +164,13 @@ export abstract class Weapon extends Equippable {
     this.durability = 0;
     this.equipped = false;
     this.game.pushMessage("Your weapon breaks");
-    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal || this.status.plague) {
+    if (
+      this.status.poison ||
+      this.status.blood ||
+      this.status.curse ||
+      this.status.ethereal ||
+      this.status.plague
+    ) {
       this.clearStatus();
     }
     this.broken = true;
@@ -207,7 +219,13 @@ export abstract class Weapon extends Equippable {
             : "curse";
     this.game.pushMessage(`Your ${this.name}'s ${status} effect dries up`);
 
-    this.status = { poison: false, blood: false, curse: false, ethereal: false, plague: false };
+    this.status = {
+      poison: false,
+      blood: false,
+      curse: false,
+      ethereal: false,
+      plague: false,
+    };
     this.statusApplicationCount = 0;
   };
 
@@ -318,7 +336,13 @@ export abstract class Weapon extends Equippable {
     if (!p) return null;
     const dx = targetX - p.x;
     const dy = targetY - p.y;
-    if (dx !== 0 && dy !== 0 && !GameplaySettings.DIAGONAL_ATTACKING && !this.allowsDiagonalAttack) return null;
+    if (
+      dx !== 0 &&
+      dy !== 0 &&
+      !GameplaySettings.DIAGONAL_ATTACKING &&
+      !this.allowsDiagonalAttack
+    )
+      return null;
     if (dx === 0 && dy === 0) return null;
     const sx = dx === 0 ? 0 : dx > 0 ? 1 : -1;
     const sy = dy === 0 ? 0 : dy > 0 ? 1 : -1;
@@ -363,7 +387,13 @@ export abstract class Weapon extends Equippable {
   };
 
   drawStatus = (x: number, y: number) => {
-    if (this.status.poison || this.status.blood || this.status.curse || this.status.ethereal || this.status.plague) {
+    if (
+      this.status.poison ||
+      this.status.blood ||
+      this.status.curse ||
+      this.status.ethereal ||
+      this.status.plague
+    ) {
       let tileX = 3;
       let tileY = 0;
       if (this.status.poison) tileX = 4;
@@ -578,7 +608,9 @@ export abstract class Weapon extends Equippable {
     // If we apply normal damage *and* crush, we can end up cloning two different death animations.
     // In this case, let `crush()` be the only kill path.
     const willCrushStart =
-      !!behindTile && (behindTile.canCrushEnemy?.() || enemyEnd) && chain.length === 0;
+      !!behindTile &&
+      (behindTile.canCrushEnemy?.() || enemyEnd) &&
+      chain.length === 0;
     if (willCrushStart) {
       enemy.crush(dx, dy);
       this.applyHitDelay(true);
@@ -648,7 +680,9 @@ export abstract class Weapon extends Equippable {
     // Avoid mana gating on normal movement attempts:
     // `Player.tryMove()` calls `weaponMove()` even when walking into empty tiles, so only
     // charge mana if we'd actually hit something.
-    const targets = this.getEntitiesAt(targetX, targetY).filter((e) => !e.pushable);
+    const targets = this.getEntitiesAt(targetX, targetY).filter(
+      (e) => !e.pushable,
+    );
     if (targets.length === 0) {
       this.applyHitDelay(false);
       return false;

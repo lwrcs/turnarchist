@@ -30,11 +30,11 @@ export class PlayerMovement {
     }
   }
 
-  move(direction: Direction, targetX?: number, targetY?: number): void {
-    if (!(direction in Direction) || !this.player) return;
+  move(direction: Direction, targetX?: number, targetY?: number): boolean {
+    if (!(direction in Direction) || !this.player) return false;
 
     const coords = this.getTargetCoords(direction, targetX, targetY);
-    if (!coords) return;
+    if (!coords) return false;
     const { x, y } = coords;
 
     if (this.canMove()) {
@@ -45,10 +45,12 @@ export class PlayerMovement {
       this.player.lastDirection = this.player.direction;
       this.player.direction = this.toCardinalDirection(direction);
       this.player.tryMove(x, y);
+      return true;
     } else {
       if (!this.enemyTurnInputLockActive()) {
-        this.queueMove(x, y, direction);
+        return this.queueMove(x, y, direction);
       }
+      return false;
     }
   }
 
@@ -122,7 +124,6 @@ export class PlayerMovement {
 
   canMove(): boolean {
     if (this.player.busyAnimating) return false;
-    if (this.inventoryClosedRecently()) return false;
     if (this.enemyTurnInputLockActive()) return false;
 
     const now = Date.now();
@@ -144,7 +145,6 @@ export class PlayerMovement {
 
   canQueue(): boolean {
     if (this.player.busyAnimating) return false;
-    if (this.inventoryClosedRecently()) return false;
     if (this.enemyTurnInputLockActive()) return false;
     const now = Date.now();
     let cooldown = GameConstants.MOVEMENT_QUEUE_COOLDOWN;
@@ -164,12 +164,13 @@ export class PlayerMovement {
     return false;
   }
 
-  queueMove(x: number, y: number, direction: Direction) {
-    if (!this.canQueue()) return;
-    if (x === undefined || y === undefined || this.moveQueue.length > 0) return;
+  queueMove(x: number, y: number, direction: Direction): boolean {
+    if (!this.canQueue()) return false;
+    if (x === undefined || y === undefined || this.moveQueue.length > 0) return false;
 
     this.moveQueue.push({ x, y, direction });
     this.startQueueProcessing();
+    return true;
   }
 
   private handleMoveLoop({

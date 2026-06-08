@@ -57,6 +57,14 @@ export class Chest extends Entity {
       return;
     }
 
+    // Second hit: end the animation immediately so pickup is deterministic
+    // (animation progress is wall-clock based and non-deterministic for replay).
+    if (this.opening) {
+      this.opening = false;
+      this.tileX = 6;
+      this.tileY = 2;
+    }
+
     if (this.health !== 2) return;
 
     // Try to pick up items

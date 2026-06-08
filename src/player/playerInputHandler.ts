@@ -25,6 +25,10 @@ import { Fish } from "../item/usable/fish";
 import { GreenPotion } from "../item/usable/greenPotion";
 import { Shrooms } from "../item/usable/shrooms";
 import { Berries } from "../item/usable/berries";
+import type { GameAction } from "./playerAction";
+import { DownLadder } from "../tile/downLadder";
+import { UpLadder } from "../tile/upLadder";
+import { Door } from "../tile/door";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -109,6 +113,7 @@ export class PlayerInputHandler {
       if (bookLibrary && bookLibrary.handleTouchStart(x, y)) return true;
       if (armoryBook && armoryBook.handleTouchStart(x, y)) return true;
       return (
+        Boolean(this.player.screenMessage?.open) ||
         inventory.isPointInInventoryButton(x, y) ||
         inventory.isPointInQuickbarBounds(x, y).inBounds ||
         (inventory.isOpen &&
@@ -250,6 +255,17 @@ export class PlayerInputHandler {
     }
     if (this.player.busyAnimating) return;
 
+    // Replay is active: block all game input. Any key/click exits the replay.
+    const replayMgr = (this.player.game as any).replayManager;
+    if (replayMgr?.isReplaying()) {
+      if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
+      if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
+      if (input === InputEnum.MOUSE_MOVE) return;
+      replayMgr.cancelReplay();
+      this.player.game.newGame();
+      return;
+    }
+
     // Block input during level transitions, except for mouse movement
     if (
       (this.player.game.levelState === LevelState.TRANSITIONING ||
@@ -372,7 +388,7 @@ export class PlayerInputHandler {
         case InputEnum.SPACE:
         case InputEnum.ENTER:
           // Don't fire or close inventory when inventory is open — swallow silently.
-          if (!invOpen) rt.fire();
+          if (!invOpen) this.fireRangedAction(rt);
           return;
         case InputEnum.ESCAPE:
           rt.stop();
@@ -395,7 +411,7 @@ export class PlayerInputHandler {
               rt.stop();
               return;
             }
-            rt.fire();
+            this.fireRangedAction(rt);
             return;
           }
           break;
@@ -560,15 +576,18 @@ export class PlayerInputHandler {
     switch (input) {
       case InputEnum.I:
       case InputEnum.F: {
-        const inv = this.player.inventory;
-        this.player.actionProcessor.process({
-          type: inv.isOpen ? "CloseInventory" : "OpenInventory",
-        });
+        // UI-only toggle — does not advance game state, not recorded.
+        this.player.inventory.toggleOpen();
         break;
       }
-      case InputEnum.Q:
-        this.player.actionProcessor.process({ type: "InventoryDrop" });
+      case InputEnum.Q: {
+        const inv = this.player.inventory;
+        const slotIndex = inv.selX + inv.selY * inv.cols;
+        if (inv.items[slotIndex]) {
+          this.player.actionProcessor.process({ type: "DropItem", slotIndex });
+        }
         break;
+      }
       case InputEnum.R: {
         if (this.player.game.chatOpen) break;
         const player = this.player;
@@ -579,28 +598,34 @@ export class PlayerInputHandler {
         }
         const bigFoodClasses = [Apple, Fish, GreenPotion];
         const smallFoodClasses = [Shrooms, Berries];
-        const tryEat = (classes: (new (...args: any[]) => any)[]): boolean => {
+        const findFood = (classes: (new (...args: any[]) => any)[]): number => {
           for (const cls of classes) {
             const item = player.inventory.hasItem(cls);
             if (item) {
-              item.onUse(player);
-              return true;
+              const idx = player.inventory.items.indexOf(item);
+              if (idx !== -1) return idx;
             }
           }
-          return false;
+          return -1;
         };
-        let ate: boolean;
+        let slotIndex: number;
         if (player.health <= 1) {
-          ate = tryEat(bigFoodClasses) || tryEat(smallFoodClasses);
+          slotIndex = findFood(bigFoodClasses);
+          if (slotIndex === -1) slotIndex = findFood(smallFoodClasses);
         } else {
-          ate = tryEat(smallFoodClasses) || tryEat(bigFoodClasses);
+          slotIndex = findFood(smallFoodClasses);
+          if (slotIndex === -1) slotIndex = findFood(bigFoodClasses);
         }
-        if (!ate) player.game.pushMessage("You have no food.");
+        if (slotIndex !== -1) {
+          player.actionProcessor.process({ type: "UseItem", slotIndex });
+        } else {
+          player.game.pushMessage("You have no food.");
+        }
         break;
       }
       case InputEnum.LEFT:
         if (this.player.dead) {
-          this.navigateDeathScreen(-1);
+          this.navigateDeathScreenLeft();
           break;
         }
         this.handleDirectionKey(Direction.LEFT);
@@ -608,7 +633,7 @@ export class PlayerInputHandler {
 
       case InputEnum.RIGHT:
         if (this.player.dead) {
-          this.navigateDeathScreen(1);
+          this.navigateDeathScreenRight();
           break;
         }
         this.handleDirectionKey(Direction.RIGHT);
@@ -616,7 +641,7 @@ export class PlayerInputHandler {
 
       case InputEnum.UP:
         if (this.player.dead) {
-          this.navigateDeathScreen(-1);
+          this.navigateDeathScreenLeft();
           break;
         }
         this.handleDirectionKey(Direction.UP);
@@ -624,7 +649,7 @@ export class PlayerInputHandler {
 
       case InputEnum.DOWN:
         if (this.player.dead) {
-          this.navigateDeathScreen(1);
+          this.navigateDeathScreenRight();
           break;
         }
         this.handleDirectionKey(Direction.DOWN);
@@ -641,7 +666,7 @@ export class PlayerInputHandler {
         if (player.game.chatOpen) return;
 
         if (player.dead) {
-          player.restart();
+          this.activateSelectedDeathButton();
           return;
         }
 
@@ -649,7 +674,7 @@ export class PlayerInputHandler {
           this.player.openVendingMachine &&
           this.player.openVendingMachine.open
         ) {
-          this.player.openVendingMachine.space();
+          this.player.actionProcessor.process({ type: "VendingMachineBuy" });
           break;
         }
 
@@ -679,7 +704,7 @@ export class PlayerInputHandler {
         );
         break;
       case InputEnum.MOUSE_MOVE:
-        //when mouse moves
+        if (this.player.dead) this.player.deathScreenUsingKeyboard = false;
         this.setMostRecentInput("mouse");
         this.player.inventory.mouseMove();
 
@@ -781,10 +806,11 @@ export class PlayerInputHandler {
   handleNumKey = (num: number) => {
     if (this.player.menu.open || this.player.settingsMenu?.open) return;
     this.setMostRecentInput("keyboard");
-    this.player.actionProcessor.process({
-      type: "InventorySelect",
-      index: num - 1,
-    });
+    const slotIndex = num - 1;
+    const item = this.player.inventory.items[slotIndex];
+    if (item !== null && item !== undefined) {
+      this.player.actionProcessor.process({ type: "UseItem", slotIndex });
+    }
   };
 
   private getSortedEnemies(): Entity[] {
@@ -837,6 +863,8 @@ export class PlayerInputHandler {
   }
 
   private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity, fromKeyboard = false) {
+    const _replayMgr = (this.player.game as any).replayManager;
+    if (_replayMgr?.isReplaying()) { _replayMgr.cancelReplay(); this.player.game.newGame(); return; }
     if (this.player.screenMessage?.open) { this.player.screenMessage.close(); return; }
     if (!targetEntity) this.setMostRecentInput("mouse");
     const player = this.player;
@@ -1191,15 +1219,12 @@ export class PlayerInputHandler {
               player.game.pushMessage("Enemy out of range.");
               return;
             }
-            // Face the enemy; turning is free, but some weapon logic depends on direction.
-            const dx = entity.x - player.x;
-            const dy = entity.y - player.y;
-            if (Math.abs(dx) > Math.abs(dy)) {
-              player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
-            } else if (dy !== 0) {
-              player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
-            }
-            weapon.weaponMove(input.x, input.y);
+            const dx = input.x - player.x;
+            const dy = input.y - player.y;
+            const dir = Math.abs(dx) > Math.abs(dy)
+              ? (dx > 0 ? Direction.RIGHT : Direction.LEFT)
+              : (dy > 0 ? Direction.DOWN : Direction.UP);
+            player.actionProcessor.process({ type: "Attack", direction: dir, targetX: input.x, targetY: input.y });
           },
         });
 
@@ -1235,8 +1260,12 @@ export class PlayerInputHandler {
             label: "Push",
             targetName,
             onClick: () => {
-              // Reuse the existing push logic in `Player.tryMove()`.
-              player.tryMove(entity.x, entity.y);
+              const dx = entity.x - player.x;
+              const dy = entity.y - player.y;
+              const dir = Math.abs(dx) >= Math.abs(dy)
+                ? (dx >= 0 ? Direction.RIGHT : Direction.LEFT)
+                : (dy >= 0 ? Direction.DOWN : Direction.UP);
+              player.inputHandler.dispatchDirectionalAction(dir, entity.x, entity.y);
             },
           });
         } else if (primary === "Interact") {
@@ -1249,7 +1278,12 @@ export class PlayerInputHandler {
               player.game.pushMessage("You can't reach that.");
             },
             onClick: () => {
-              entity.interact?.(player);
+              const dx = entity.x - player.x;
+              const dy = entity.y - player.y;
+              const dir = Math.abs(dx) >= Math.abs(dy)
+                ? (dx >= 0 ? Direction.RIGHT : Direction.LEFT)
+                : (dy >= 0 ? Direction.DOWN : Direction.UP);
+              player.inputHandler.dispatchDirectionalAction(dir, entity.x, entity.y);
             },
           });
         } else if (primary === "Hit") {
@@ -1285,8 +1319,12 @@ export class PlayerInputHandler {
             onClick: () => {
               if (isBlockedPushableHit) {
                 if (!inReach) return;
-                // Reuse the existing "blocked pushable" behavior path.
-                player.tryMove(entity.x, entity.y);
+                const dx = entity.x - player.x;
+                const dy = entity.y - player.y;
+                const dir = Math.abs(dx) >= Math.abs(dy)
+                  ? (dx >= 0 ? Direction.RIGHT : Direction.LEFT)
+                  : (dy >= 0 ? Direction.DOWN : Direction.UP);
+                player.inputHandler.dispatchDirectionalAction(dir, entity.x, entity.y);
                 return;
               }
 
@@ -1299,15 +1337,12 @@ export class PlayerInputHandler {
                 player.game.pushMessage("Target out of range.");
                 return;
               }
-              // Face the target for consistent weapon animation/logic.
-              const dx = entity.x - player.x;
-              const dy = entity.y - player.y;
-              if (Math.abs(dx) > Math.abs(dy)) {
-                player.direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
-              } else if (dy !== 0) {
-                player.direction = dy > 0 ? Direction.DOWN : Direction.UP;
-              }
-              weapon.weaponMove(input.x, input.y);
+              const dx = input.x - player.x;
+              const dy = input.y - player.y;
+              const dir = Math.abs(dx) > Math.abs(dy)
+                ? (dx > 0 ? Direction.RIGHT : Direction.LEFT)
+                : (dy > 0 ? Direction.DOWN : Direction.UP);
+              player.actionProcessor.process({ type: "Attack", direction: dir, targetX: input.x, targetY: input.y });
             },
           });
         }
@@ -1543,6 +1578,16 @@ export class PlayerInputHandler {
   };
 
   handleMouseDown(x: number, y: number, button: number) {
+    // Replay active: left-click exits the replay (right-click handled by handleMouseRightClickAt).
+    const _replayMgr = (this.player.game as any).replayManager;
+    if (_replayMgr?.isReplaying()) {
+      if (button === 0) {
+        _replayMgr.cancelReplay();
+        this.player.game.newGame();
+      }
+      return;
+    }
+
     if (this.player.screenMessage?.open) {
       if (button === 0) { this.player.screenMessage.handleMouseDown(x, y); return; }
       return;
@@ -1562,7 +1607,7 @@ export class PlayerInputHandler {
         console.log("[SpellMouseDown] mobile targeting active — deferring to handleTap");
         return;
       }
-      player.rangedTargeting.fire();
+      this.fireRangedAction(player.rangedTargeting);
       Input.mouseDownHandled = true;
       return;
     }
@@ -1749,7 +1794,7 @@ export class PlayerInputHandler {
           player.openVendingMachine,
         )
       ) {
-        player.openVendingMachine.space();
+        player.actionProcessor.process({ type: "VendingMachineBuy" });
       } else {
         player.openVendingMachine.close();
       }
@@ -1870,7 +1915,7 @@ export class PlayerInputHandler {
           player.openVendingMachine,
         )
       ) {
-        player.openVendingMachine.space();
+        player.actionProcessor.process({ type: "VendingMachineBuy" });
       } else {
         player.openVendingMachine.close();
         this.setMostRecentInput("mouse");
@@ -1924,6 +1969,14 @@ export class PlayerInputHandler {
       return;
     }
 
+    // Replay active: any tap exits the replay.
+    const _replayMgr = (this.player.game as any).replayManager;
+    if (_replayMgr?.isReplaying()) {
+      _replayMgr.cancelReplay();
+      this.player.game.newGame();
+      return;
+    }
+
     if (this.player.dead) {
       this.handleDeathScreenInput(Input.mouseX, Input.mouseY);
       return;
@@ -1936,6 +1989,11 @@ export class PlayerInputHandler {
       } else {
         this.player.game.startedFadeOut = true;
       }
+      return;
+    }
+
+    if (this.player.screenMessage?.open) {
+      this.player.screenMessage.handleMouseDown(Input.mouseX, Input.mouseY);
       return;
     }
 
@@ -2032,7 +2090,7 @@ export class PlayerInputHandler {
         this.player.openVendingMachine,
       );
       if (isInVMUI) {
-        this.player.openVendingMachine.space();
+        this.player.actionProcessor.process({ type: "VendingMachineBuy" });
         return;
       } else if (!isInVMUI) {
         this.player.openVendingMachine.close();
@@ -2080,14 +2138,14 @@ export class PlayerInputHandler {
         if (sameTile && this.mobileAimTileX !== null) {
           this.mobileAimTileX = null;
           this.mobileAimTileY = null;
-          rt.fire();
+          this.fireRangedAction(rt);
         } else {
           this.mobileAimTileX = newX;
           this.mobileAimTileY = newY;
         }
       } else {
         rt.syncToMouse();
-        rt.fire();
+        this.fireRangedAction(rt);
       }
     }
   }
@@ -2241,26 +2299,67 @@ export class PlayerInputHandler {
     return Direction.DOWN_RIGHT;
   }
 
+  private resolveDirectionalAction(targetX: number, targetY: number, dir: Direction): GameAction | null {
+    const room = this.player.getRoom?.();
+    if (room) {
+      for (const e of room.entities) {
+        if ((e as any).z !== (this.player as any).z) continue;
+        if (!(this.player as any).tryCollide(e, targetX, targetY)) continue;
+        if (e.dead) continue;
+        if ((e as any).pushable)     return { type: "Move",         direction: dir, targetX, targetY };
+        if ((e as any).interactable) return { type: "BumpInteract", direction: dir, targetX, targetY };
+        return { type: "Attack", direction: dir, targetX, targetY };
+      }
+      const tile = room.roomArray?.[targetX]?.[targetY];
+      if (tile instanceof DownLadder || tile instanceof UpLadder || tile instanceof Door) {
+        return { type: "TileInteract", direction: dir, targetX, targetY };
+      }
+      // Solid tile with no living entity: wall/pool bump is a pure no-op — don't record it.
+      if (tile?.isSolid?.()) return null;
+    }
+    return { type: "Move", direction: dir, targetX, targetY };
+  }
+
+  dispatchDirectionalAction(dir: Direction, targetX: number, targetY: number): void {
+    // Guard against UI races: a mouse click that closes the inventory must not also fire movement.
+    // This check belongs here (human-input layer) rather than in canMove() so that replay
+    // playback, which calls movement.move() through the action processor, is never blocked by it.
+    if (this.player.movement.inventoryClosedRecently()) return;
+    const action = this.resolveDirectionalAction(targetX, targetY, dir);
+    if (action === null) {
+      // Solid tile bump: let the game handle it (screen shake, etc.) without recording.
+      this.player.movement.move(dir, targetX, targetY);
+      return;
+    }
+    this.player.actionProcessor.process(action);
+  }
+
+  private fireRangedAction(rt: { targetX: number; targetY: number; getWeapon(): any }): void {
+    const weapon = rt.getWeapon();
+    const tx = rt.targetX;
+    const ty = rt.targetY;
+    if (weapon instanceof Spellbook) {
+      this.player.actionProcessor.process({
+        type: "CastSpell",
+        spellId: weapon.activeSpell?.id ?? "unknown",
+        targetX: tx,
+        targetY: ty,
+      });
+    } else {
+      this.player.actionProcessor.process({ type: "FireRanged", targetX: tx, targetY: ty });
+    }
+  }
+
   private processCardinalMove(dir: Direction): void {
     const dx = dir === Direction.LEFT ? -1 : dir === Direction.RIGHT ? 1 : 0;
     const dy = dir === Direction.UP ? -1 : dir === Direction.DOWN ? 1 : 0;
-    this.player.actionProcessor.process({
-      type: "Move",
-      direction: dir,
-      targetX: this.player.x + dx,
-      targetY: this.player.y + dy,
-    });
+    this.dispatchDirectionalAction(dir, this.player.x + dx, this.player.y + dy);
   }
 
   private processDiagonalMove(dir: Direction): void {
     const dx = dir === Direction.UP_LEFT || dir === Direction.DOWN_LEFT ? -1 : 1;
     const dy = dir === Direction.UP_LEFT || dir === Direction.UP_RIGHT ? -1 : 1;
-    this.player.actionProcessor.process({
-      type: "Move",
-      direction: dir,
-      targetX: this.player.x + dx,
-      targetY: this.player.y + dy,
-    });
+    this.dispatchDirectionalAction(dir, this.player.x + dx, this.player.y + dy);
   }
 
   private hasDiagonalTarget(dir: Direction): boolean {
@@ -2387,6 +2486,23 @@ export class PlayerInputHandler {
   private handleDeathScreenInput(x: number, y: number) {
     if (this.isInteractingWithFeedbackButton(x, y)) {
       this.player.game.feedbackButton.onClick();
+      return;
+    }
+    // Hit-test the styled action buttons rendered by playerRenderer
+    for (const rect of this.player.deathScreenButtonRects || []) {
+      if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
+        this.activateDeathButton(rect.action);
+        return;
+      }
+    }
+  }
+
+  private activateDeathButton(action: "replay" | "newgame") {
+    const replayMgr = (this.player.game as any).replayManager;
+    const hasRecorded = replayMgr?.hasRecordedActions?.();
+    console.log("[replay] activateDeathButton", { action, hasRecorded, stats: replayMgr?.getStats?.() });
+    if (action === "replay" && hasRecorded) {
+      replayMgr.replay(this.player.game);
     } else {
       this.player.restart();
     }
@@ -2399,13 +2515,50 @@ export class PlayerInputHandler {
     );
   }
 
-  private navigateDeathScreen(delta: number) {
+  private navigateDeathScreenLeft() {
     this.setMostRecentInput("keyboard");
+    const rects = this.player.deathScreenButtonRects || [];
+    if (rects.length > 1) {
+      this.player.deathScreenUsingKeyboard = true;
+      this.player.deathScreenSelectedButton = Math.max(
+        0,
+        (this.player.deathScreenSelectedButton || 0) - 1,
+      );
+      return;
+    }
     const totalPages = Math.max(1, this.player.deathScreenPageCount || 1);
     if (totalPages <= 1) return;
     const current = this.player.deathScreenPageIndex || 0;
-    let next = (current + delta) % totalPages;
-    if (next < 0) next += totalPages;
+    let next = (current - 1 + totalPages) % totalPages;
     this.player.deathScreenPageIndex = next;
+  }
+
+  private navigateDeathScreenRight() {
+    this.setMostRecentInput("keyboard");
+    const rects = this.player.deathScreenButtonRects || [];
+    if (rects.length > 1) {
+      this.player.deathScreenUsingKeyboard = true;
+      this.player.deathScreenSelectedButton = Math.min(
+        rects.length - 1,
+        (this.player.deathScreenSelectedButton || 0) + 1,
+      );
+      return;
+    }
+    const totalPages = Math.max(1, this.player.deathScreenPageCount || 1);
+    if (totalPages <= 1) return;
+    const current = this.player.deathScreenPageIndex || 0;
+    let next = (current + 1) % totalPages;
+    this.player.deathScreenPageIndex = next;
+  }
+
+  private activateSelectedDeathButton() {
+    const rects = this.player.deathScreenButtonRects || [];
+    const idx = this.player.deathScreenSelectedButton || 0;
+    if (rects.length > 0 && idx < rects.length) {
+      this.activateDeathButton(rects[idx].action);
+      return;
+    }
+    // Fallback: no buttons rendered yet (first frame), use default action
+    this.handleDeathScreenInput(Input.mouseX, Input.mouseY);
   }
 }

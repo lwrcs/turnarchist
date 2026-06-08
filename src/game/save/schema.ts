@@ -22,6 +22,20 @@ export type SaveV2 = {
   meta?: SaveMeta;
   worldSpec: WorldSpecV2;
   delta: WorldDeltaV2;
+  /** Replay buffer (optional). Captures inputs for deterministic playback. */
+  replay?: ReplaySaveV2;
+};
+
+/**
+ * Replay buffer state, persisted alongside the game so playback survives reload.
+ * `actions` are JSON-serializable GameAction objects, kept as opaque records here
+ * to avoid coupling save schema to the action union shape.
+ */
+export type ReplaySaveV2 = {
+  seed: number;
+  startMs: number;
+  recording: boolean;
+  actions: Array<{ t: number; action: Record<string, unknown> }>;
 };
 
 export type SaveMeta = {
