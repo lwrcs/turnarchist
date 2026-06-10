@@ -164,6 +164,44 @@ export class Item extends Drawable {
     this.setDrawOffset();
   };
 
+  // Snap an item from "mid-reveal out of a chest" to the same resting state it
+  // would naturally settle into once the reveal animation completes — bobbing in
+  // place at chestOffsetY=-0.5 with sineAnimateFactor=1. Called when the chest
+  // is destroyed before reveal finishes so non-picked-up items don't get stuck
+  // mid-rise or pop into existence underground.
+  forceCompleteChestReveal = () => {
+    if (this.chestOffsetY === -0.5 && this.sineAnimateFactor >= 1 && this.alpha >= 1) {
+      // Already at the natural completion state — nothing to do.
+      this.inChest = false;
+      return;
+    }
+    this.inChest = false;
+    this.chestOffsetY = -0.5;
+    this.alpha = 1;
+    this.sineAnimateFactor = 1;
+  };
+
+  // Snap an in-chest item out of its float-up reveal and straight into the
+  // fly-to-inventory animation. Called when a chest is force-destroyed before
+  // the wall-clock reveal has completed — keeps visuals coherent without
+  // letting them drive logical state.
+  forceBeginFlyToInventory = () => {
+    if (!this.inChest) return;
+    if (!this.pickedUp) return;
+    if (this.animateToInventory !== true) return;
+    if (!this.player) return;
+    this.inChest = false;
+    this.chestOffsetY = -0.5;
+    this.alpha = 1;
+    this.sineAnimateFactor = 1;
+    this.animStartX = this.x;
+    this.animStartY = this.y;
+    this.animTargetX = this.player.x;
+    this.animTargetY = this.player.y;
+    this.animT = 0;
+    this.animStartDistance = null;
+  };
+
   // Function to play sound when item is picked up
   pickupSound = () => {
     let delay = 0;
@@ -183,12 +221,19 @@ export class Item extends Drawable {
     if (!this.pickedUp) {
       this.startY = player.y;
 
+      // Preserve the alpha-rising "reveal" state if the item is still floating up out
+      // of a chest — the float-up reveal animation uses `alpha < 1` as its on-ramp.
+      // For non-chest pickups, snap to fully visible as before.
+      if (!this.inChest) this.alpha = 1;
       this.drawableY = this.y;
-      this.alpha = 1;
       this.pickedUp = player.inventory.addItem(this);
       if (this.pickedUp) {
-        // Initialize lerp-to-inventory animation
-        if (this.animateToInventory === true) {
+        // Initialize lerp-to-inventory animation. Skip when the item is still
+        // visually in a chest — the fly-to-inventory anim will be initialized in
+        // draw() when the float-up reveal completes (so animStartX/Y and the
+        // player position snapshot match the moment the fly begins, not the
+        // moment of logical pickup).
+        if (this.animateToInventory === true && !this.inChest) {
           this.animStartX = this.x;
           this.animStartY = this.y;
           this.animTargetX = this.player.x;
@@ -303,7 +348,11 @@ export class Item extends Drawable {
   // Function to draw the item
   draw = (delta: number) => {
     Game.ctx.save();
-    if (!this.pickedUp) {
+    // Items logically picked up from a chest still play their float-up reveal here
+    // until the reveal completes — only then do they hand off to drawAboveShading
+    // (fly-to-inventory) or drawTopLayer (fade up). This lets the logical pickup
+    // be instant (action-driven, deterministic) while the visual stays unchanged.
+    if (!this.pickedUp || this.inChest) {
       Game.ctx.globalAlpha = this.alpha;
       if (this.alpha < 1) this.alpha += 0.01 * delta;
       this.drawableY = this.y;
@@ -316,6 +365,21 @@ export class Item extends Drawable {
       }
       if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
         this.sineAnimateFactor += 0.2 * delta;
+      // When the reveal is visually complete, transition out of the in-chest state
+      // so drawAboveShading / drawTopLayer can take over. For items already
+      // logically picked up, this is where we initialize the fly-to-inventory
+      // animation (snapshotting the player's current position).
+      if (this.inChest && this.chestOffsetY <= -0.5 && this.sineAnimateFactor >= 1) {
+        this.inChest = false;
+        if (this.pickedUp && this.animateToInventory === true && this.player) {
+          this.animStartX = this.x;
+          this.animStartY = this.y;
+          this.animTargetX = this.player.x;
+          this.animTargetY = this.player.y;
+          this.animT = 0;
+          this.animStartDistance = null;
+        }
+      }
       if (this.scaleFactor > 0) {
         this.scaleFactor *= 0.5 ** delta;
         if (this.scaleFactor < 0.01) this.scaleFactor = 0;
@@ -370,7 +434,7 @@ export class Item extends Drawable {
 
   drawAboveShading = (delta: number) => {
     const baseAlpha = Game.ctx.globalAlpha;
-    if (this.pickedUp) {
+    if (this.pickedUp && !this.inChest) {
       if (this.animateToInventory === true && this.player) {
         // Lerp towards the inventory button with ease-out
         const speed = 0.025 * delta; // slower overall speed
@@ -446,7 +510,7 @@ export class Item extends Drawable {
 
   // Function to draw the top layer of the item
   drawTopLayer = (delta: number) => {
-    if (this.pickedUp) {
+    if (this.pickedUp && !this.inChest) {
       if (this.animateToInventory === false) {
         this.pickupOffsetY += (4.5 - this.pickupOffsetY) * 0.1 * delta;
       } else return;

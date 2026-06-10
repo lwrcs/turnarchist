@@ -25,7 +25,6 @@ export class XpCrystal extends Item {
   static examineText = "A crystal of condensed experience.";
 
   readonly crystalType: XpCrystalType;
-  private chestRevealPickupTimeoutId: number | null = null;
 
   private orbitT: number;
   private orbit: readonly OrbitSpec[];
@@ -90,28 +89,6 @@ export class XpCrystal extends Item {
     return false;
   };
 
-  queueAutoPickupAfterChestReveal = () => {
-    // Items dropped from chests intentionally do NOT auto-pickup immediately (see Entity.dropLoot()).
-    // For XP crystals, we want: float-up reveal first, then animate-to-inventory pickup.
-    if (this.chestRevealPickupTimeoutId !== null) return;
-
-    this.chestRevealPickupTimeoutId = window.setTimeout(() => {
-      this.chestRevealPickupTimeoutId = null;
-      // During replay the step sequence handles pickup via a recorded AutoPickup action;
-      // suppress the wall-clock timer so we don't double-pick-up.
-      const replayMgr = (this.level?.game as any)?.replayManager;
-      if (replayMgr?.isReplaying?.()) return;
-      if (this.pickedUp) return;
-      if (this.level !== this.level.game.room) return;
-
-      // Stop treating it as "in chest" so the pickup animation isn't offset strangely.
-      this.inChest = false;
-      // Record before executing so the replay can reproduce this deferred pickup.
-      try { replayMgr?.recordAction?.({ type: "AutoPickup", itemX: this.x, itemY: this.y, itemKind: this.name }); } catch {}
-      this.autoPickup();
-    }, 750);
-  };
-
   private drawOrbitSprites = (
     centerX: number,
     centerY: number,
@@ -147,7 +124,10 @@ export class XpCrystal extends Item {
 
   draw = (delta: number) => {
     Game.ctx.save();
-    if (!this.pickedUp) {
+    // Mirrors Item.draw: keep playing the float-up reveal even when the crystal
+    // has been logically picked up from a chest, until the reveal completes and
+    // drawAboveShading takes over the fly-to-inventory animation.
+    if (!this.pickedUp || this.inChest) {
       Game.ctx.globalAlpha = this.alpha;
       if (this.alpha < 1) this.alpha += 0.01 * delta;
       this.drawableY = this.y;
@@ -157,6 +137,17 @@ export class XpCrystal extends Item {
       }
       if (this.sineAnimateFactor < 1 && this.chestOffsetY < -0.45)
         this.sineAnimateFactor += 0.2 * delta;
+      if (this.inChest && this.chestOffsetY <= -0.5 && this.sineAnimateFactor >= 1) {
+        this.inChest = false;
+        if (this.pickedUp && this.animateToInventory === true && this.player) {
+          this.animStartX = this.x;
+          this.animStartY = this.y;
+          this.animTargetX = this.player.x;
+          this.animTargetY = this.player.y;
+          this.animT = 0;
+          this.animStartDistance = null;
+        }
+      }
 
       if (this.scaleFactor > 0) {
         this.scaleFactor *= 0.5 ** delta;
@@ -193,7 +184,7 @@ export class XpCrystal extends Item {
 
   drawAboveShading = (delta: number) => {
     const baseAlpha = Game.ctx.globalAlpha;
-    if (this.pickedUp) {
+    if (this.pickedUp && !this.inChest) {
       if (this.animateToInventory === true && this.player) {
         // Lerp towards the inventory button with ease-out.
         const speed = 0.025 * delta;

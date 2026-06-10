@@ -1,7 +1,6 @@
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
 import { Room } from "../room/room";
-import { Random } from "../utility/random";
 import { Particle } from "./particle";
 
 export class DamageNumber extends Particle {
@@ -31,7 +30,7 @@ export class DamageNumber extends Particle {
     else this.color = "red";
     if (outlineColor) this.outlineColor = outlineColor;
     else this.outlineColor = GameConstants.OUTLINE;
-    this.xoffset = Random.rand() * 0.2;
+    this.xoffset = Math.random() * 0.2;
   }
   getXoffset = () => {
     if (this.room.particles.length > 0) {

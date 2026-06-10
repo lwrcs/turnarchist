@@ -2509,9 +2509,49 @@ export class Game {
     return { envType, wordsConsumed: 1 };
   };
 
-  commandHandler = (command: string): void => {
+  // Commands whose effects mutate game state in ways the replay must reproduce
+  // (entity spawns, item drops, kills, testbed population). Recorded via the action
+  // processor as a Command action so replay can re-issue them at the right step.
+  private static readonly REPLAYABLE_COMMAND_PREFIXES = [
+    "populate",
+    "spawn",
+    "kill",
+    "killall",
+    "bomb",
+  ];
+
+  private isReplayableCommand(command: string): boolean {
+    const trimmed = command.trim();
+    return Game.REPLAYABLE_COMMAND_PREFIXES.some(
+      (p) => trimmed === p || trimmed.startsWith(p + " "),
+    );
+  }
+
+  commandHandler = (command: string, skipRecord: boolean = false): void => {
     command = command.toLowerCase();
     let enabled = "";
+
+    // For replayable commands (state-mutating), route through the action processor so
+    // the command is captured in the recording and can be re-issued in lockstep with
+    // movement actions during replay. The action processor handler will re-call this
+    // method with skipRecord=true to avoid recursion.
+    if (!skipRecord && this.isReplayableCommand(command)) {
+      const player = this.players?.[this.localPlayerID];
+      console.log(
+        "[command] routing replayable command:",
+        command,
+        "player?",
+        !!player,
+        "actionProcessor?",
+        !!player?.actionProcessor,
+        "recording?",
+        this.replayManager?.isRecording?.(),
+      );
+      if (player?.actionProcessor) {
+        player.actionProcessor.process({ type: "Command", command });
+        return;
+      }
+    }
 
     if (command.startsWith("ask ")) {
       if (!GameConstants.CLAUDE_ENABLED) return;
@@ -3872,6 +3912,25 @@ export class Game {
           console.error("Test save error:", error);
         }
         break;
+      case "populate":
+      case "populate testbed":
+      case "testbed": {
+        try {
+          const { populateTestRoom } = require("./game/save/testBed");
+          const player = this.players?.[this.localPlayerID];
+          const room = player?.getRoom?.() ?? this.room;
+          if (!room) {
+            this.pushMessage("No active room to populate.");
+            break;
+          }
+          populateTestRoom(room, this, /* clearFirst */ false);
+          this.pushMessage("Test bed populated.");
+        } catch (err: any) {
+          this.pushMessage("populate failed: " + (err?.message ?? err));
+          console.error("[populate] failed:", err);
+        }
+        break;
+      }
       default:
         if (command.startsWith("spawn ")) {
           const spawnArg = command.slice(6).trim();

@@ -2,7 +2,6 @@ import { Room } from "../room/room";
 import { Particle } from "./particle";
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
-import { Random } from "../utility/random";
 
 export class GenericParticle extends Particle {
   level: Room;
@@ -36,15 +35,15 @@ export class GenericParticle extends Particle {
           cx,
           cy,
           0,
-          Random.rand() * 0.5 + 0.3,
+          Math.random() * 0.5 + 0.3,
           0,
           0,
           0,
           color,
           0,
           10000000,
-          tx + Random.rand() - 0.5,
-          ty + Random.rand() - 0.5,
+          tx + Math.random() - 0.5,
+          ty + Math.random() - 0.5,
           0,
         ),
       );
@@ -61,13 +60,13 @@ export class GenericParticle extends Particle {
       level.particles.push(
         new GenericParticle(
           level,
-          cx + Random.rand() * 0.05 - 0.025,
-          cy + Random.rand() * 0.05 - 0.025,
-          Random.rand() * 0.5,
+          cx + Math.random() * 0.05 - 0.025,
+          cy + Math.random() * 0.05 - 0.025,
+          Math.random() * 0.5,
           0.0625 * (i + 8),
-          0.025 * (Random.rand() * 2 - 1),
-          0.025 * (Random.rand() * 2 - 1),
-          0.2 * (Random.rand() - 1),
+          0.025 * (Math.random() * 2 - 1),
+          0.025 * (Math.random() * 2 - 1),
+          0.2 * (Math.random() - 1),
           color,
           0,
         ),

@@ -889,9 +889,15 @@ export class Inventory {
 
   drop = () => {
     if (!this.isOpen) return;
+    const ap = (this.player as any).actionProcessor;
     if (this._isKeyboardDragging && this.grabbedItem !== null) {
       const sourceSlot = this._keyboardDragSourceSlot ?? this.selX + this.selY * this.cols;
-      this.dropItem(this.grabbedItem, sourceSlot);
+      // The keyboard-drag path holds the item in `grabbedItem` and leaves the slot
+      // null. dropItemAt expects the item to be present in items[slotIndex], so
+      // restore it before routing through the action processor.
+      this.items[sourceSlot] = this.grabbedItem;
+      if (ap) ap.process({ type: "DropItem", slotIndex: sourceSlot });
+      else this.dropItem(this.grabbedItem, sourceSlot);
       this.grabbedItem = null;
       this._isKeyboardDragging = false;
       this._keyboardDragSourceSlot = null;
@@ -902,7 +908,8 @@ export class Inventory {
     if (index < 0 || index >= this.items.length) return;
     const item = this.items[index];
     if (item === null) return;
-    this.dropItem(item, index);
+    if (ap) ap.process({ type: "DropItem", slotIndex: index });
+    else this.dropItem(item, index);
   };
 
   dropItem = (item: Item, index: number) => {
@@ -2204,11 +2211,16 @@ export class Inventory {
         }
       }
     } else if (this.grabbedItem !== null) {
-      // Drop the item in the world
-      this.dropItem(this.grabbedItem, this._dragStartSlot);
-
+      // Drag-out-of-bounds drop. The drag took the item out of `items[_dragStartSlot]`
+      // (set to null) and into `grabbedItem`. dropItemAt reads from items[slotIndex],
+      // so restore it there first, then route through the action processor so the
+      // drop is recorded for replay.
+      const sourceSlot = this._dragStartSlot;
+      this.items[sourceSlot] = this.grabbedItem;
+      const ap = (this.player as any).actionProcessor;
+      if (ap) ap.process({ type: "DropItem", slotIndex: sourceSlot });
+      else this.dropItem(this.grabbedItem, sourceSlot);
       this.grabbedItem = null;
-      this.items[this._dragStartSlot] = null;
       this.dragEndTime = Date.now();
     }
 

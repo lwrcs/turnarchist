@@ -28,6 +28,14 @@ export class ScreenMessage {
   private readonly buttonGap = 8;
   private readonly buttonPadX = 12;
   private readonly buttonMarginTop = 10;
+  // Dialog box rect captured by draw() — used by handleMouseDown to decide whether
+  // a tap that missed every button should dismiss the prompt or be ignored. Tapping
+  // inside the dialog (just missed the button) should NOT close; tapping outside
+  // closes for messages without buttons or as an explicit dismiss for prompts.
+  private boxX = 0;
+  private boxY = 0;
+  private boxW = 0;
+  private boxH = 0;
 
   show = (text: string, buttons?: Array<{ text: string; onClick: () => void }>) => {
     this.lines = this.computeLines(text);
@@ -42,6 +50,10 @@ export class ScreenMessage {
     this.selectedButton = this.buttons.length > 0 ? 0 : -1;
     this.usingKeyboard = false;
     this.open = true;
+    // Pre-compute layout so handleMouseDown works even before the first draw —
+    // otherwise a fast tap immediately after show() hits buttons whose x/y are
+    // still at their init value of 0.
+    this.layout();
   };
 
   close = () => {
@@ -52,13 +64,37 @@ export class ScreenMessage {
   };
 
   handleMouseDown = (x: number, y: number): void => {
+    // Make sure button rects are current. layout() is cheap and idempotent —
+    // safer than relying on the most recent draw() having run.
+    this.layout();
+
     for (const b of this.buttons) {
-      if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
+      if (
+        x >= b.x &&
+        x <= b.x + b.width &&
+        y >= b.y &&
+        y <= b.y + b.height
+      ) {
         b.onClick();
         return;
       }
     }
-    this.close();
+
+    // Don't dismiss on a near-miss inside the dialog — only on a tap clearly
+    // outside the box. For prompts without buttons (plain examine text), any
+    // tap still closes since the whole point is tap-to-dismiss.
+    if (this.buttons.length === 0) {
+      this.close();
+      return;
+    }
+    const insideBox =
+      x >= this.boxX &&
+      x <= this.boxX + this.boxW &&
+      y >= this.boxY &&
+      y <= this.boxY + this.boxH;
+    if (!insideBox) {
+      this.close();
+    }
   };
 
   handleKey = (input: InputEnum): boolean => {
@@ -114,17 +150,42 @@ export class ScreenMessage {
     return result;
   };
 
-  draw = (delta: number) => {
-    if (!this.open) return;
-
+  // Pure layout: compute boxX/Y/W/H and each button's x/y. Has no rendering side
+  // effects, so it can be called from show() (so tap handling works before the
+  // first draw) and from handleMouseDown (so a hit-test never reads stale rects).
+  private layout = () => {
     const totalTextH = this.lines.length * this.lineH;
     const buttonAreaH = this.buttons.length > 0
       ? this.buttonMarginTop + this.buttonH + this.padY
       : 0;
-    const boxW = GameConstants.WIDTH - this.marginX * 2;
-    const boxH = totalTextH + this.padY * 2 + buttonAreaH;
-    const boxX = this.marginX;
-    const boxY = Math.round((GameConstants.HEIGHT - boxH) / 2);
+    this.boxW = GameConstants.WIDTH - this.marginX * 2;
+    this.boxH = totalTextH + this.padY * 2 + buttonAreaH;
+    this.boxX = this.marginX;
+    this.boxY = Math.round((GameConstants.HEIGHT - this.boxH) / 2);
+
+    if (this.buttons.length > 0) {
+      const buttonY = this.boxY + this.padY + totalTextH + this.buttonMarginTop;
+      let totalButtonW = 0;
+      for (const b of this.buttons) totalButtonW += b.width;
+      totalButtonW += this.buttonGap * (this.buttons.length - 1);
+      let bx = Math.round(GameConstants.WIDTH / 2 - totalButtonW / 2);
+      for (const b of this.buttons) {
+        b.x = bx;
+        b.y = buttonY;
+        bx += b.width + this.buttonGap;
+      }
+    }
+  };
+
+  draw = (delta: number) => {
+    if (!this.open) return;
+
+    this.layout();
+    const totalTextH = this.lines.length * this.lineH;
+    const boxX = this.boxX;
+    const boxY = this.boxY;
+    const boxW = this.boxW;
+    const boxH = this.boxH;
 
     Game.ctx.save();
     Game.ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
@@ -139,20 +200,8 @@ export class ScreenMessage {
     }
 
     if (this.buttons.length > 0) {
-      const buttonY = boxY + this.padY + totalTextH + this.buttonMarginTop;
-      let totalButtonW = 0;
-      for (const b of this.buttons) totalButtonW += b.width;
-      totalButtonW += this.buttonGap * (this.buttons.length - 1);
-      let bx = Math.round(GameConstants.WIDTH / 2 - totalButtonW / 2);
-
       const cursor = MouseCursor.getInstance().getPosition();
 
-      // Resolve positions first, then check hover state for all buttons before animating.
-      for (const b of this.buttons) {
-        b.x = bx;
-        b.y = buttonY;
-        bx += b.width + this.buttonGap;
-      }
       for (let i = 0; i < this.buttons.length; i++) {
         const b = this.buttons[i];
 

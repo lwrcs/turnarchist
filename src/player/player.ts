@@ -1074,21 +1074,24 @@ export class Player extends Drawable {
     return true;
   };
 
-  tryMove = (x: number, y: number) => {
+  // Returns true if the call mutated game state (moved player, attacked, ticked the room,
+  // unlocked a door/ladder, etc.) — i.e. the action was "productive" for recording purposes.
+  // Returns false for early-return guards and wall-bump-style no-ops.
+  tryMove = (x: number, y: number): boolean => {
     if (
       this.busyAnimating ||
       this.game.levelState === LevelState.TRANSITIONING ||
       this.game.levelState === LevelState.TRANSITIONING_LADDER
     )
-      return;
+      return false;
     // TODO don't move if hit by enemy
     this.getRoom().catchUp();
     //this.game.room.catchUp();
     if (!this.game.room) {
       console.warn("oi bruv, game.room isn't even there!");
-      return;
+      return false;
     }
-    if (this.dead) return;
+    if (this.dead) return false;
 
     let collide = false;
 
@@ -1108,10 +1111,8 @@ export class Player extends Drawable {
       this.inventory.hasWeapon() &&
       !this.inventory.getWeapon().weaponMove(x, y)
     ) {
-      //for (let h of this.game.levels[this.levelID].hitwarnings) {
-      //if (newMove instanceof HitWarning)
-      return;
-      //}
+      // weaponMove returned false → weapon hit something. State changed.
+      return true;
     } else if (!this.inventory.hasWeapon()) {
       this.game.pushMessage("No weapon equipped.");
     }
@@ -1170,7 +1171,7 @@ export class Player extends Drawable {
               this.hitShake(this.x, this.y, e.x, e.y);
 
               this.getRoom().tick(this);
-              return;
+              return true;
             }
           } else {
             if (this.getRoom() === this.game.room) Sound.push();
@@ -1216,15 +1217,17 @@ export class Player extends Drawable {
             this.move(x, y);
             this.moveDistance++;
             this.getRoom().tick(this);
-            return;
+            return true;
           }
         } else {
-          // if we're trying to hit an enemy, check if it's destroyable
+          // Non-pushable entity at target.
           if (!e.dead) {
-            if (e.interactable) e.interact(this);
-            //this.actionTab.actionState = ActionState.ATTACK;
-            //sets the action tab state to Attack
-            return;
+            if (e.interactable) {
+              e.interact(this);
+              return true;
+            }
+            // Blocked by non-interactable entity — no state change.
+            return false;
           }
         }
       }
@@ -1232,15 +1235,15 @@ export class Player extends Drawable {
     let other = this.getRoom()?.roomArray?.[x]?.[y];
     if (!other) {
       console.warn("oi bruv, tile to check for collision isn't even there!");
-      return;
+      return false;
     }
     if (!this.getRoom()) {
       console.warn("oi bruv, room to check for collision isn't even there!");
-      return;
+      return false;
     }
     if (!this.getRoom().roomArray) {
       console.warn("oi bruv, level to check for collision isn't even there!");
-      return;
+      return false;
     }
     if (!this.getRoom().isSolidAt(x, y, this.z)) {
       if (other instanceof UpLadder || other instanceof DownLadder) {
@@ -1252,10 +1255,11 @@ export class Player extends Drawable {
             other.lockable.unlock(this);
             other.addLightSource();
             this.game.room.updateLighting();
+            return true;
           } else {
             Sound.playLocked();
+            return false;
           }
-          return;
         }
       }
       this.move(x, y);
@@ -1271,21 +1275,26 @@ export class Player extends Drawable {
         )
       )
         this.getRoom().tick(this);
+      return true;
     } else {
       if (other instanceof Door) {
         // Doors are only accessible/interactable from the same z-layer.
         if ((other.z ?? 0) !== this.z) {
           this.shakeScreen(this.x, this.y, x, y);
-          return;
+          return false;
         }
         this.shakeScreen(this.x, this.y, x, y);
 
         if (other.canUnlock(this)) {
           other.unlock(this);
+          return true;
         } else {
           Sound.playLocked();
+          return false;
         }
       }
+      // Wall bump on non-door solid tile.
+      return false;
     }
   };
 

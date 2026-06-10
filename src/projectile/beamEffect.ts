@@ -4,7 +4,6 @@ import { GameConstants } from "../game/gameConstants";
 import { Particle } from "../particle/particle";
 import { Projectile } from "./projectile";
 import { Room } from "../room/room";
-import { Random } from "../utility/random";
 import { IdGenerator } from "../globalStateManager/IdGenerator";
 import { Door } from "../tile/door";
 import { Player } from "../player/player";
@@ -672,7 +671,10 @@ export class BeamEffect extends Projectile {
         oldY: startY + (endY - startY) * t,
         velocityX: 0,
         velocityY: 0,
-        angle: Random.rand() * Math.PI * 2,
+        // Use Math.random instead of seeded Random so beam-particle jitter doesn't
+        // advance game-state RNG (sound-style decoupling). The initial angle is
+        // purely visual and never affects gameplay.
+        angle: Math.random() * Math.PI * 2,
       });
     }
     return points;

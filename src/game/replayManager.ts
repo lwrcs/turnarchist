@@ -1,8 +1,31 @@
 import { Game, LevelState } from "../game";
 import { GameConstants } from "./gameConstants";
+import { GameplaySettings } from "./gameplaySettings";
 import type { GameAction } from "../player/playerAction";
 
-type DivergenceKind = "precondition" | "behavioral";
+type DivergenceKind = "behavioral";
+
+interface ActionOutcome {
+  playerX: number;
+  playerY: number;
+  // turnCount, roomTurn, playerHealth are captured only for actions that go through
+  // tryMove → catchUp (currently Directional). For other action types (UseItem,
+  // DropItem, CastSpell, etc.) these are wall-clock-timing-dependent — recording
+  // and replay can capture different values even when game state has not actually
+  // diverged. Omitting them avoids false-positive divergence reports; any real
+  // state divergence will surface at the next Directional action's outcome.
+  turnCount?: number;
+  roomTurn?: number;
+  playerHealth?: number;
+}
+
+interface RecordedAction {
+  t: number;
+  action: GameAction;
+  // Post-action snapshot captured during recording. Replay compares against this
+  // for true state-fidelity validation (instead of guessing from action.type).
+  outcome?: ActionOutcome;
+}
 
 interface DivergenceRecord {
   step: number;
@@ -15,6 +38,8 @@ interface DivergenceRecord {
   turnAfter: number | undefined;
   canMoveBefore: boolean | undefined;
   moved: boolean;
+  expectedOutcome?: ActionOutcome;
+  actualOutcome?: ActionOutcome;
 }
 
 interface ReplayReport {
@@ -26,10 +51,7 @@ interface ReplayReport {
 }
 
 const COOLDOWN_GATED_ACTIONS = new Set<GameAction["type"]>([
-  "Move",
-  "Attack",
-  "BumpInteract",
-  "TileInteract",
+  "Directional",
   "Wait",
   "CastSpell",
   "FireRanged",
@@ -50,42 +72,8 @@ function isReplayReady(game: Game): boolean {
   );
 }
 
-function validatePrecondition(action: GameAction, player: any): string | null {
-  const room = player.getRoom?.();
-  if (!room) return null;
-  switch (action.type) {
-    // Attack has no useful precondition: the recorded targetX/Y is the input/swing tile
-    // (which may be adjacent for melee but intermediate for long-reach weapons like spears),
-    // and what actually matters is whether weapon.weaponMove() hits anything. That's caught
-    // by the behavioral check post-process: a successful attack means the player did NOT move
-    // and the turn advanced; a missed attack means the player walked into the empty tile.
-    case "BumpInteract": {
-      const hasTarget = room.entities.some(
-        (e: any) => e.x === action.targetX && e.y === action.targetY && e.interactable,
-      );
-      if (!hasTarget)
-        return `BumpInteract at (${action.targetX},${action.targetY}): no interactable entity`;
-      break;
-    }
-    case "Move": {
-      const blockedByEntity = room.entities.some(
-        (e: any) =>
-          e.x === action.targetX &&
-          e.y === action.targetY &&
-          !e.dead &&
-          e.collidable !== false &&
-          !e.pushable,
-      );
-      if (blockedByEntity)
-        return `Move to (${action.targetX},${action.targetY}): blocked by non-pushable entity`;
-      break;
-    }
-  }
-  return null;
-}
-
 export class ReplayManager {
-  private actions: Array<{ t: number; action: GameAction }> = [];
+  private actions: RecordedAction[] = [];
   private startMs = 0;
   private recording = false;
   private replaying = false;
@@ -104,7 +92,7 @@ export class ReplayManager {
     seed: number;
     startMs: number;
     recording: boolean;
-    actions: Array<{ t: number; action: Record<string, unknown> }>;
+    actions: Array<{ t: number; action: Record<string, unknown>; outcome?: ActionOutcome }>;
   } | null {
     if (this.seed === undefined) return null;
     return {
@@ -114,6 +102,7 @@ export class ReplayManager {
       actions: this.actions.map((a) => ({
         t: a.t,
         action: a.action as unknown as Record<string, unknown>,
+        outcome: a.outcome,
       })),
     };
   }
@@ -122,7 +111,7 @@ export class ReplayManager {
     seed: number;
     startMs: number;
     recording: boolean;
-    actions: Array<{ t: number; action: Record<string, unknown> }>;
+    actions: Array<{ t: number; action: Record<string, unknown>; outcome?: ActionOutcome }>;
   } | undefined | null) {
     if (!data) return;
     this.seed = data.seed;
@@ -132,6 +121,7 @@ export class ReplayManager {
     this.actions = data.actions.map((a) => ({
       t: a.t,
       action: a.action as unknown as GameAction,
+      outcome: a.outcome,
     }));
   }
 
@@ -176,12 +166,17 @@ export class ReplayManager {
     this.recording = true;
   }
 
-  recordAction(action: GameAction) {
+  recordAction(action: GameAction, outcome?: ActionOutcome) {
     if (!this.recording || this.replaying) return;
-    this.actions.push({ t: Date.now() - this.startMs, action });
+    this.actions.push({ t: Date.now() - this.startMs, action, outcome });
   }
 
-  replay(game: Game, stepMs: number = GameConstants.REPLAY_STEP_MS) {
+  replay(
+    game: Game,
+    stepMs: number = GameplaySettings.FAST_REPLAYS
+      ? GameConstants.REPLAY_STEP_MS_FAST
+      : GameConstants.REPLAY_STEP_MS,
+  ) {
     console.log("[replay] replay() called", { replaying: this.replaying, actions: this.actions.length, seed: this.seed });
     if (this.replaying) return;
     this.replaying = true;
@@ -300,38 +295,6 @@ export class ReplayManager {
             canMove: canMoveNow,
           });
 
-          const warning = validatePrecondition(action, local);
-          if (warning) {
-            console.warn(`[replay] divergence at step ${i + 1}: ${warning}`);
-            divergences.push({
-              step: i + 1,
-              action,
-              playerBefore: { x: beforeX, y: beforeY },
-              playerAfter: { x: beforeX, y: beforeY },
-              turnBefore,
-              turnAfter: turnBefore,
-              canMoveBefore: canMoveNow,
-              moved: false,
-              kind: "precondition",
-              reason: warning,
-            });
-            halted = true;
-            finishReplay(i + 1);
-            return;
-          }
-
-          // Snapshot pushable presence before process() — roomBefore and roomAfter reference
-          // the same object (mutated in place), so we must read this before the action runs.
-          const targetHadPushable =
-            action.type === "Move" &&
-            roomBefore?.entities?.some(
-              (e: any) =>
-                e.x === action.targetX &&
-                e.y === action.targetY &&
-                !e.dead &&
-                (e as any).pushable === true,
-            ) === true;
-
           local.menu.open = false;
           local.dead = false;
           local.inventory.close();
@@ -342,24 +305,11 @@ export class ReplayManager {
           const roomAfter = (local as any).getRoom?.();
           const turnAfter = roomAfter?.turn;
           const turnCountAfter = (local as any).turnCount;
-          const turnCountAdvanced =
-            typeof turnCountBefore === "number" &&
-            typeof turnCountAfter === "number" &&
-            turnCountAfter > turnCountBefore;
-          // A turn was consumed if EITHER the player's turn counter incremented
-          // (the cleanest signal: monotonic, set in finishTick) OR the room flipped
-          // into computerTurn (set by room.tick before the computer turn runs).
-          const turnAdvanced =
-            turnCountAdvanced ||
-            (typeof turnBefore === "number" &&
-              typeof turnAfter === "number" &&
-              turnAfter !== turnBefore);
           console.log("[replay] step end", {
             index: i + 1,
             type: action.type,
             after: { x: afterX, y: afterY },
             moved,
-            turnAdvanced,
             turnCountDelta:
               typeof turnCountAfter === "number" &&
               typeof turnCountBefore === "number"
@@ -367,77 +317,80 @@ export class ReplayManager {
                 : undefined,
           });
 
-          let behavioralReason: string | null = null;
-          switch (action.type) {
-            case "Move": {
-              if (afterX !== action.targetX || afterY !== action.targetY) {
-                // Push outcomes (chain-push, crush, blocked chain) are too complex to
-                // predict reliably — accept any result when a pushable was at the target.
-                if (targetHadPushable) break;
-                // Some failed Move recordings are NOT divergences — both recording
-                // and replay produced the same "did not move" outcome for legit reasons:
-                //   - Wall-bumps: target tile is solid.
-                //   - Blocked by any entity (alive or dead, any kind): a crab corpse
-                //     hasn't been cleaned up yet, a pushable that can't be pushed,
-                //     an interactable that returned early, etc. Precondition already
-                //     catches the alive non-pushable case explicitly.
-                const targetTile = roomAfter?.roomArray?.[action.targetX]?.[action.targetY];
-                const targetIsSolid = targetTile?.isSolid?.() === true;
-                const entityAtTarget = roomAfter?.entities?.some(
-                  (e: any) =>
-                    e.x === action.targetX && e.y === action.targetY,
-                );
-                if (!targetIsSolid && !entityAtTarget) {
-                  behavioralReason = `Move did not reach target tile (${action.targetX},${action.targetY}); ended at (${afterX},${afterY})`;
-                }
-              }
-              break;
+          // State-fidelity check: if the recording captured a post-action snapshot
+          // (player position + turn count + room.turn + health after this action),
+          // compare it to the replay's state. Any mismatch is a real divergence —
+          // game state actually diverged between recording and replay, regardless
+          // of what label the action carries. Old recordings without an `outcome`
+          // field skip this check and replay without behavioral validation.
+          //
+          // Why roomTurn matters: an action that ticks the room in recording but
+          // not in replay (or vice versa) produces identical player position + turn
+          // count at outcome time — the cascade only surfaces a step later when the
+          // catch-up runs differently. Comparing roomTurn catches the divergence at
+          // the originating step.
+          const expectedOutcome = actions[i].outcome;
+          if (expectedOutcome) {
+            // Build the actual snapshot to match the shape of the expected outcome.
+            // Fields the recording omitted (e.g. turnCount for non-Directional actions)
+            // are skipped here too so the comparison naturally ignores them.
+            const actualOutcome: ActionOutcome = {
+              playerX: afterX,
+              playerY: afterY,
+            };
+            if (expectedOutcome.turnCount !== undefined) actualOutcome.turnCount = turnCountAfter;
+            if (expectedOutcome.roomTurn !== undefined) actualOutcome.roomTurn = roomAfter?.turn;
+            if (expectedOutcome.playerHealth !== undefined) actualOutcome.playerHealth = (local as any).health;
+            const mismatches: string[] = [];
+            if (
+              expectedOutcome.playerX !== actualOutcome.playerX ||
+              expectedOutcome.playerY !== actualOutcome.playerY
+            ) {
+              mismatches.push(
+                `player=(${expectedOutcome.playerX},${expectedOutcome.playerY})→(${actualOutcome.playerX},${actualOutcome.playerY})`,
+              );
             }
-            case "Attack": {
-              // A successful attack: weapon.weaponMove() hit a target, returned false,
-              // tryMove bailed → player stayed put AND the attack ticked the room.
-              // Two failure modes:
-              //   1. Player moved → the swing tile was empty, tryMove walked into it.
-              //   2. Player didn't move and the turn didn't advance → swing was blocked
-              //      by a wall and nothing was hit.
-              if (moved) {
-                behavioralReason = `Attack at (${action.targetX},${action.targetY}) missed: player moved to (${afterX},${afterY}) instead of attacking`;
-              } else if (!turnAdvanced) {
-                behavioralReason = `Attack at (${action.targetX},${action.targetY}) had no effect (player did not move, turn did not advance)`;
-              }
-              break;
+            if (
+              expectedOutcome.turnCount !== undefined &&
+              expectedOutcome.turnCount !== actualOutcome.turnCount
+            ) {
+              mismatches.push(`turnCount=${expectedOutcome.turnCount}→${actualOutcome.turnCount}`);
             }
-            case "BumpInteract": {
-              // BumpInteract outcomes vary by entity:
-              //   - Vending machine: opens UI, does NOT advance a turn.
-              //   - Locked door: shake/unlock, may not advance a turn.
-              //   - Some interactables: tick the room.
-              // The only reliable failure signal is: did the player walk into the tile?
-              // If the player stayed put, the interactable absorbed the bump (success).
-              // If the player moved, the interactable wasn't there (target drifted).
-              if (moved) {
-                behavioralReason = `BumpInteract at (${action.targetX},${action.targetY}) missed: player moved to (${afterX},${afterY}) instead of interacting`;
-              }
-              break;
+            if (
+              expectedOutcome.roomTurn !== undefined &&
+              expectedOutcome.roomTurn !== actualOutcome.roomTurn
+            ) {
+              mismatches.push(`roomTurn=${expectedOutcome.roomTurn}→${actualOutcome.roomTurn}`);
             }
-          }
-          if (behavioralReason) {
-            console.warn(`[replay] behavioral divergence at step ${i + 1}: ${behavioralReason}`);
-            divergences.push({
-              step: i + 1,
-              action,
-              playerBefore: { x: beforeX, y: beforeY },
-              playerAfter: { x: afterX, y: afterY },
-              turnBefore,
-              turnAfter,
-              canMoveBefore: canMoveNow,
-              moved,
-              kind: "behavioral",
-              reason: behavioralReason,
-            });
-            halted = true;
-            finishReplay(i + 1);
-            return;
+            if (
+              expectedOutcome.playerHealth !== undefined &&
+              expectedOutcome.playerHealth !== actualOutcome.playerHealth
+            ) {
+              mismatches.push(
+                `playerHealth=${expectedOutcome.playerHealth}→${actualOutcome.playerHealth}`,
+              );
+            }
+            if (mismatches.length > 0) {
+              const reason = `State divergence at step ${i + 1}: ${mismatches.join(", ")}`;
+              console.warn(`[replay] ${reason}`);
+              divergences.push({
+                step: i + 1,
+                action,
+                playerBefore: { x: beforeX, y: beforeY },
+                playerAfter: { x: afterX, y: afterY },
+                turnBefore,
+                turnAfter,
+                canMoveBefore: canMoveNow,
+                moved,
+                kind: "behavioral",
+                reason,
+                expectedOutcome,
+                actualOutcome,
+              });
+              halted = true;
+              finishReplay(i + 1);
+              return;
+            }
           }
         } catch (e) {
           // swallow to avoid interrupting playback
@@ -447,7 +400,11 @@ export class ReplayManager {
         let nextDelay = minDelay;
         try {
           const room = (local as any).getRoom?.();
-          if (room?.turn === 1) nextDelay += GameConstants.REPLAY_COMPUTER_TURN_DELAY;
+          if (room?.turn === 1) {
+            nextDelay += GameplaySettings.FAST_REPLAYS
+              ? GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST
+              : GameConstants.REPLAY_COMPUTER_TURN_DELAY;
+          }
         } catch {}
         i++;
         if (this.timer) window.clearTimeout(this.timer);

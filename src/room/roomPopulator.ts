@@ -144,7 +144,6 @@ const DEFAULT_BLOB_OPTIONS: Required<
   chance: 1,
 };
 
-
 export class Populator {
   level: Level;
   medianDensity: number;
@@ -555,9 +554,7 @@ export class Populator {
       GameplaySettings.MAIN_PATH_KEY_REQUIRED === true &&
       this.level.isMainPath
     ) {
-      const castleEntryEnvs: ReadonlySet<EnvType> = new Set([
-        EnvType.FOREST,
-      ]);
+      const castleEntryEnvs: ReadonlySet<EnvType> = new Set([EnvType.FOREST]);
       let mainDown: DownLadder | null = null;
       let hasCastleChainEntry = false;
       for (const r of this.level.rooms) {
@@ -787,12 +784,13 @@ export class Populator {
     const s = new Set<string>();
     for (const e of room.entities) {
       if (e.name !== "placed_torch" && e.name !== "placed_candle") continue;
-      const tx = e.x, ty = e.y;
+      const tx = e.x,
+        ty = e.y;
       s.add(`${tx},${ty}`);
-      s.add(`${tx+1},${ty}`);
-      s.add(`${tx-1},${ty}`);
-      s.add(`${tx},${ty+1}`);
-      s.add(`${tx},${ty-1}`);
+      s.add(`${tx + 1},${ty}`);
+      s.add(`${tx - 1},${ty}`);
+      s.add(`${tx},${ty + 1}`);
+      s.add(`${tx},${ty - 1}`);
     }
     return s;
   }
@@ -827,7 +825,8 @@ export class Populator {
       (room.type === RoomType.CAVE || room.type === RoomType.BIGCAVE) &&
       room.envType !== EnvType.CASTLE &&
       this.level.environment.type !== EnvType.CASTLE
-    ) return;
+    )
+      return;
 
     // Start rooms with an upladder back (depth != 0) skip wall torches
     if (room.type === RoomType.START && room.depth !== 0) return;
@@ -856,10 +855,10 @@ export class Populator {
         torch.applyFloorPlacement();
         room.entities.push(torch);
         forbidden.add(`${x},${y}`);
-        forbidden.add(`${x+1},${y}`);
-        forbidden.add(`${x-1},${y}`);
-        forbidden.add(`${x},${y+1}`);
-        forbidden.add(`${x},${y-1}`);
+        forbidden.add(`${x + 1},${y}`);
+        forbidden.add(`${x - 1},${y}`);
+        forbidden.add(`${x},${y + 1}`);
+        forbidden.add(`${x},${y - 1}`);
       }
     }
   }
@@ -873,7 +872,9 @@ export class Populator {
       ? envData.props.filter((p) => p.class !== TombStone)
       : envData.props;
     const torchForbidden = this.torchAdjacentSet(room);
-    let tiles = room.getEmptyTiles().filter(t => !torchForbidden.has(`${t.x},${t.y}`));
+    let tiles = room
+      .getEmptyTiles()
+      .filter((t) => !torchForbidden.has(`${t.x},${t.y}`));
 
     for (let i = 0; i < numProps; i++) {
       if (tiles.length === 0) break;
@@ -943,7 +944,9 @@ export class Populator {
 
     // Convert clustered single-tile seeds into valid placements for larger footprints
     const torchForbidden = this.torchAdjacentSet(room);
-    let tiles = room.getEmptyTiles().filter(t => !torchForbidden.has(`${t.x},${t.y}`));
+    let tiles = room
+      .getEmptyTiles()
+      .filter((t) => !torchForbidden.has(`${t.x},${t.y}`));
     for (const seed of positions) {
       if (tiles.length === 0) break;
       const selectedProp = Utils.randTableWeighted(props);
@@ -1319,28 +1322,23 @@ export class Populator {
     const numProps = this.getNumProps(room);
 
     //this.addProps(room, numProps, room.envType);
-    this.addPropsWithClustering(
-      room,
-      numProps,
-      room.envType,
-      {
-        clusterTowardsWalls: true,
-        wallAdjacentOnly: true,
-        wallBandSize: 1,
-        wallDeadzone: 0,
-        wallWeight: 80,
-        seedStrategy: "bestWall",
-        baseScore: 0,
-        entityWeight: 5,
-        falloffExponent: 3,
-        maxInfluenceDistance: 1.15,
-        wallDistanceMetric: "manhattan",
-        debugEnabled: true,
-        debugCollectDetails: true,
-        debugLogToConsole: true,
-        debugTopN: 5,
-      },
-    );
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      clusterTowardsWalls: true,
+      wallAdjacentOnly: true,
+      wallBandSize: 1,
+      wallDeadzone: 0,
+      wallWeight: 80,
+      seedStrategy: "bestWall",
+      baseScore: 0,
+      entityWeight: 5,
+      falloffExponent: 3,
+      maxInfluenceDistance: 1.15,
+      wallDistanceMetric: "manhattan",
+      debugEnabled: true,
+      debugCollectDetails: true,
+      debugLogToConsole: true,
+      debugTopN: 5,
+    });
 
     // ADD: Enemies after props, based on remaining space
     this.addRandomEnemies(room);
@@ -1349,28 +1347,23 @@ export class Populator {
   private populateCavePocketEnvironment(room: Room) {
     const numProps = this.getNumProps(room);
 
-    this.addPropsWithClustering(
-      room,
-      numProps,
-      room.envType,
-      {
-        clusterTowardsWalls: true,
-        wallAdjacentOnly: true,
-        wallBandSize: 1,
-        wallDeadzone: 0,
-        wallWeight: 100,
-        seedStrategy: "bestWall",
-        baseScore: 0,
-        entityWeight: 5,
-        falloffExponent: 3,
-        maxInfluenceDistance: 1.15,
-        wallDistanceMetric: "manhattan",
-        debugEnabled: true,
-        debugCollectDetails: true,
-        debugLogToConsole: true,
-        debugTopN: 5,
-      },
-    );
+    this.addPropsWithClustering(room, numProps, room.envType, {
+      clusterTowardsWalls: true,
+      wallAdjacentOnly: true,
+      wallBandSize: 1,
+      wallDeadzone: 0,
+      wallWeight: 100,
+      seedStrategy: "bestWall",
+      baseScore: 0,
+      entityWeight: 5,
+      falloffExponent: 3,
+      maxInfluenceDistance: 1.15,
+      wallDistanceMetric: "manhattan",
+      debugEnabled: true,
+      debugCollectDetails: true,
+      debugLogToConsole: true,
+      debugTopN: 5,
+    });
 
     this.addRandomEnemies(room);
   }
@@ -1612,7 +1605,12 @@ export class Populator {
     }
   }
 
-  private addDoorPlacedTorches(room: Room, x: number, y: number, doorDir: Direction) {
+  private addDoorPlacedTorches(
+    room: Room,
+    x: number,
+    y: number,
+    doorDir: Direction,
+  ) {
     if (doorDir !== Direction.UP && doorDir !== Direction.DOWN) return;
     if (!x || !y) return;
     if (room.envType === EnvType.CAVE_POCKET) return;
@@ -1659,8 +1657,10 @@ export class Populator {
 
     type WallCandidate = { x: number; y: number; dir: Direction };
 
-    const rx = room.roomX, ry = room.roomY;
-    const rw = room.width, rh = room.height;
+    const rx = room.roomX,
+      ry = room.roomY;
+    const rw = room.width,
+      rh = room.height;
 
     const detectDir = (x: number, y: number): Direction | null => {
       // Only treat a neighbour as "room interior" when it is within the room
@@ -1669,17 +1669,37 @@ export class Populator {
       const belowInRoom = y + 1 < ry + rh;
       const aboveInRoom = y - 1 >= ry;
       const rightInRoom = x + 1 < rx + rw;
-      const leftInRoom  = x - 1 >= rx;
+      const leftInRoom = x - 1 >= rx;
 
       const below = belowInRoom ? room.roomArray[x]?.[y + 1] : undefined;
       const above = aboveInRoom ? room.roomArray[x]?.[y - 1] : undefined;
       const right = rightInRoom ? room.roomArray[x + 1]?.[y] : undefined;
-      const left  = leftInRoom  ? room.roomArray[x - 1]?.[y] : undefined;
+      const left = leftInRoom ? room.roomArray[x - 1]?.[y] : undefined;
 
-      if (below !== undefined && !(below instanceof Wall) && !(below instanceof Door)) return Direction.UP;
-      if (above !== undefined && !(above instanceof Wall) && !(above instanceof Door)) return Direction.DOWN;
-      if (right !== undefined && !(right instanceof Wall) && !(right instanceof Door)) return Direction.LEFT;
-      if (left  !== undefined && !(left  instanceof Wall) && !(left  instanceof Door)) return Direction.RIGHT;
+      if (
+        below !== undefined &&
+        !(below instanceof Wall) &&
+        !(below instanceof Door)
+      )
+        return Direction.UP;
+      if (
+        above !== undefined &&
+        !(above instanceof Wall) &&
+        !(above instanceof Door)
+      )
+        return Direction.DOWN;
+      if (
+        right !== undefined &&
+        !(right instanceof Wall) &&
+        !(right instanceof Door)
+      )
+        return Direction.LEFT;
+      if (
+        left !== undefined &&
+        !(left instanceof Wall) &&
+        !(left instanceof Door)
+      )
+        return Direction.RIGHT;
       return null;
     };
 
@@ -1695,16 +1715,22 @@ export class Populator {
       }
     };
 
-    const dirTarget = (x: number, y: number, d: Direction): { x: number; y: number } => ({
+    const dirTarget = (
+      x: number,
+      y: number,
+      d: Direction,
+    ): { x: number; y: number } => ({
       x: d === Direction.LEFT ? x + 1 : d === Direction.RIGHT ? x - 1 : x,
       y: d === Direction.UP ? y + 1 : d === Direction.DOWN ? y - 1 : y,
     });
     const hasVM = (x: number, y: number) =>
-      room.entities.some(e => e instanceof VendingMachine && e.x === x && e.y === y);
+      room.entities.some(
+        (e) => e instanceof VendingMachine && e.x === x && e.y === y,
+      );
 
     if (placeX !== undefined && placeY !== undefined) {
       if (!(room.roomArray[placeX]?.[placeY] instanceof Wall)) return;
-      if (room.entities.some(e => e.x === placeX && e.y === placeY)) return;
+      if (room.entities.some((e) => e.x === placeX && e.y === placeY)) return;
       const dir = detectDir(placeX, placeY);
       if (dir !== null) {
         const tgt = dirTarget(placeX, placeY, dir);
@@ -1714,7 +1740,7 @@ export class Populator {
     }
 
     const hasEntityAt = (x: number, y: number) =>
-      room.entities.some(e => e.x === x && e.y === y);
+      room.entities.some((e) => e.x === x && e.y === y);
 
     const candidates: WallCandidate[] = [];
     for (let xx = room.roomX; xx < room.roomX + room.width; xx++) {
@@ -1949,7 +1975,15 @@ export class Populator {
           const right = xx === x + w - 1;
           const top = yy === y;
           const bottom = yy === y + h - 1;
-          room.roomArray[xx][yy] = new Pool(room, xx, yy, left, right, top, bottom);
+          room.roomArray[xx][yy] = new Pool(
+            room,
+            xx,
+            yy,
+            left,
+            right,
+            top,
+            bottom,
+          );
           if (left || right || top || bottom) {
             edgePositions.push({ xx, yy });
           }
@@ -1967,14 +2001,20 @@ export class Populator {
     // Fisher-Yates shuffle
     for (let i = edgePositions.length - 1; i > 0; i--) {
       const j = Math.floor(rand() * (i + 1));
-      [edgePositions[i], edgePositions[j]] = [edgePositions[j], edgePositions[i]];
+      [edgePositions[i], edgePositions[j]] = [
+        edgePositions[j],
+        edgePositions[i],
+      ];
     }
 
     for (let i = 0; i < numSpots; i++) {
       const { xx, yy } = edgePositions[i];
       // Sparser pools get more fish per spot; denser pools get fewer.
       // Half the yield of sewer pools.
-      const fishCount = Math.max(1, Math.round((3.5 - 2.5 * density + rand() * 1.5) * 0.5));
+      const fishCount = Math.max(
+        1,
+        Math.round((3.5 - 2.5 * density + rand() * 1.5) * 0.5),
+      );
       room.entities.push(new FishingSpot(room, room.game, xx, yy, fishCount));
     }
   }
@@ -2757,7 +2797,9 @@ export class Populator {
     if (GameplaySettings.DEBUG_UNLOCK_ENEMY_POOLS === true) {
       return this.getEnemyPoolForDepth(depth);
     }
-    const envEnemies = environmentData[env]?.enemies ?? environmentData[this.level.environment.type].enemies;
+    const envEnemies =
+      environmentData[env]?.enemies ??
+      environmentData[this.level.environment.type].enemies;
     return envEnemies
       .map((enemy) => ({
         id: enemyClassToId.get(enemy.class),
@@ -2899,7 +2941,8 @@ export class Populator {
     // Cap at the number of empty tiles (hard limit)
     const numEnemies = Math.min(baseEnemyCount, numEmptyTiles);
     const densityScale = this.level.generationOptions?.enemyDensityScale ?? 1.0;
-    let numEnemiesToAdd = (addByIndex ? indexAdd : numEnemies * multiplier) * densityScale;
+    let numEnemiesToAdd =
+      (addByIndex ? indexAdd : numEnemies * multiplier) * densityScale;
     // Single-room levels can be huge; cap enemy count to avoid pathological slowdowns.
     if (
       GameplaySettings.DEBUG_DISABLE_ENEMY_CAPS !== true &&
@@ -3771,7 +3814,12 @@ export class Populator {
       case RoomType.BOSS:
         const bossDoor = room.getBossDoor();
         if (bossDoor) {
-          this.addDoorPlacedTorches(room, bossDoor.x, bossDoor.y, bossDoor.doorDir);
+          this.addDoorPlacedTorches(
+            room,
+            bossDoor.x,
+            bossDoor.y,
+            bossDoor.doorDir,
+          );
         }
         this.addTorchesByArea(room);
         this.addSpikeTraps(
@@ -4235,12 +4283,11 @@ export class Populator {
     // For CAVE rooms, all cave pocket downladders are valid; keep them all.
     // For other envs, keep only the first locked one (or first overall).
     const isCaveWithPockets = room.envType === EnvType.CAVE;
-    const keepSideDown =
-      isCaveWithPockets
-        ? (sideDowns[0] ?? null)
-        : (sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ??
-           sideDowns[0] ??
-           null);
+    const keepSideDown = isCaveWithPockets
+      ? (sideDowns[0] ?? null)
+      : (sideDowns.find((d) => d.t.lockable?.isLocked?.() === true) ??
+        sideDowns[0] ??
+        null);
 
     // Remove extra rope-ups
     for (let i = 1; i < ropeUps.length; i++) {
@@ -4405,21 +4452,19 @@ export class Populator {
     // For CAVE: determine how many cave pocket downladders (1-3) to place.
     // Each pocket uses a node endpoint, plus 2 more for ore pockets → need entrance + count + 2.
     const cavePocketCount =
-      room.envType === EnvType.CAVE
-        ? Game.randTable([1, 1, 2, 2, 3], rand)
-        : 0;
+      room.envType === EnvType.CAVE ? Game.randTable([1, 1, 2, 2, 3], rand) : 0;
     // Caves need: 1 entrance + cavePocketCount cave pockets.
     // Forest and Sewer both get a pool node, so need at least 4.
     const requiredConnected =
       room.envType === EnvType.CAVE
         ? Math.max(1 + cavePocketCount, requiredConnectedBase)
         : room.envType === EnvType.CAVE_POCKET
-        ? Math.max(1, requiredConnectedBase)
-        : room.envType === EnvType.FOREST
-        ? Math.max(4, requiredConnectedBase)
-        : room.envType === EnvType.SEWER
-        ? Math.max(4, requiredConnectedBase)
-        : requiredConnectedBase;
+          ? Math.max(1, requiredConnectedBase)
+          : room.envType === EnvType.FOREST
+            ? Math.max(4, requiredConnectedBase)
+            : room.envType === EnvType.SEWER
+              ? Math.max(4, requiredConnectedBase)
+              : requiredConnectedBase;
     const nodeCountTable = opts?.nodeCountTable ?? [12, 14, 16, 18, 20];
     const nodeCount = Game.randTable(nodeCountTable, rand);
     const network = room.builder.addSingleRoomSidepathMazeNetwork(rand, {
@@ -4439,8 +4484,8 @@ export class Populator {
       room.envType === EnvType.CAVE
         ? Math.max(2, 1 + cavePocketCount)
         : room.envType === EnvType.CAVE_POCKET
-        ? 1
-        : 3;
+          ? 1
+          : 3;
     const connected =
       network.connectedNodes.length >= minConnectedNodes
         ? network.connectedNodes
@@ -4455,8 +4500,10 @@ export class Populator {
     const entrance = shuffled[0] ?? null;
     // For CAVE: shuffled[1..cavePocketCount] = cave pocket endpoints (replaces key+exit).
     // For others: shuffled[1] = key, shuffled[2] = exit (unchanged).
-    const keyEndpoint = room.envType !== EnvType.CAVE ? (shuffled[1] ?? null) : null;
-    const exitEndpoint = room.envType !== EnvType.CAVE ? (shuffled[2] ?? null) : null;
+    const keyEndpoint =
+      room.envType !== EnvType.CAVE ? (shuffled[1] ?? null) : null;
+    const exitEndpoint =
+      room.envType !== EnvType.CAVE ? (shuffled[2] ?? null) : null;
     const poolEndpoint =
       (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER) &&
       network.connectedNodes.length >= 4
@@ -4670,13 +4717,21 @@ export class Populator {
 
         for (let i = edgePositions.length - 1; i > 0; i--) {
           const j = Math.floor(rand() * (i + 1));
-          [edgePositions[i], edgePositions[j]] = [edgePositions[j], edgePositions[i]];
+          [edgePositions[i], edgePositions[j]] = [
+            edgePositions[j],
+            edgePositions[i],
+          ];
         }
 
         for (let i = 0; i < numSpots; i++) {
           const { xx, yy } = edgePositions[i];
-          const fishCount = Math.max(1, Math.floor(3.5 - 2.5 * density + rand() * 1.5));
-          room.entities.push(new FishingSpot(room, room.game, xx, yy, fishCount));
+          const fishCount = Math.max(
+            1,
+            Math.floor(3.5 - 2.5 * density + rand() * 1.5),
+          );
+          room.entities.push(
+            new FishingSpot(room, room.game, xx, yy, fishCount),
+          );
         }
       }
     }
@@ -4690,7 +4745,10 @@ export class Populator {
     }
 
     // Forest and Sewer: place a fishing rod on a floor tile adjacent to the entrance.
-    if (entrance && (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER)) {
+    if (
+      entrance &&
+      (room.envType === EnvType.FOREST || room.envType === EnvType.SEWER)
+    ) {
       const adjacent = [
         { x: entrance.x + 1, y: entrance.y },
         { x: entrance.x - 1, y: entrance.y },
@@ -4744,7 +4802,11 @@ export class Populator {
 
     const extraArgs =
       boss.class === Spawner && !boss.additionalParams?.length
-        ? [this.getEnemyPoolForDepth(Math.max(0, depth)).filter((t) => t !== 7 && t !== 11 && t !== 21 && t !== 25)]
+        ? [
+            this.getEnemyPoolForDepth(Math.max(0, depth)).filter(
+              (t) => t !== 7 && t !== 11 && t !== 21 && t !== 25,
+            ),
+          ]
         : (boss.additionalParams ?? []);
     if (boss.class?.add) {
       const spawned = boss.class.add(room, room.game, x, y, ...extraArgs);
@@ -4756,11 +4818,17 @@ export class Populator {
    * Places a VendingMachine in an empty wall.
    */
   placeVendingMachineInWall(room: Room, item?: Item): void {
-    const emptyWalls = room.getEmptyWall().filter(
-      w => !room.entities.some(
-        e => (e instanceof PlacedTorch || e instanceof PlacedCandle) && e.x === w.x && e.y === w.y,
-      ),
-    );
+    const emptyWalls = room
+      .getEmptyWall()
+      .filter(
+        (w) =>
+          !room.entities.some(
+            (e) =>
+              (e instanceof PlacedTorch || e instanceof PlacedCandle) &&
+              e.x === w.x &&
+              e.y === w.y,
+          ),
+      );
     if (emptyWalls.length === 0) return;
 
     // Select a random empty wall

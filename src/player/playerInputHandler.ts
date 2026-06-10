@@ -565,7 +565,7 @@ export class PlayerInputHandler {
       }
     }
 
-    if (input === InputEnum.C && invKB) {
+    if (input === InputEnum.C && invKB && !this.player.game.chatOpen) {
       const menu = this.player.contextMenu;
       if (menu?.open) { menu.close(); return; }
       const center = invKB.getSelectedSlotCenter();
@@ -1224,7 +1224,7 @@ export class PlayerInputHandler {
             const dir = Math.abs(dx) > Math.abs(dy)
               ? (dx > 0 ? Direction.RIGHT : Direction.LEFT)
               : (dy > 0 ? Direction.DOWN : Direction.UP);
-            player.actionProcessor.process({ type: "Attack", direction: dir, targetX: input.x, targetY: input.y });
+            player.actionProcessor.process({ type: "Directional", direction: dir, targetX: input.x, targetY: input.y });
           },
         });
 
@@ -1342,7 +1342,7 @@ export class PlayerInputHandler {
               const dir = Math.abs(dx) > Math.abs(dy)
                 ? (dx > 0 ? Direction.RIGHT : Direction.LEFT)
                 : (dy > 0 ? Direction.DOWN : Direction.UP);
-              player.actionProcessor.process({ type: "Attack", direction: dir, targetX: input.x, targetY: input.y });
+              player.actionProcessor.process({ type: "Directional", direction: dir, targetX: input.x, targetY: input.y });
             },
           });
         }
@@ -2300,24 +2300,33 @@ export class PlayerInputHandler {
   }
 
   private resolveDirectionalAction(targetX: number, targetY: number, dir: Direction): GameAction | null {
+    // Returns null only for wall bumps (solid tile, no door/ladder, no living entity) —
+    // those are pure no-ops and not recordable. Otherwise the executor (tryMove) decides
+    // what the directional action actually does at execution time.
     const room = this.player.getRoom?.();
     if (room) {
+      let hasLiveEntity = false;
       for (const e of room.entities) {
         if ((e as any).z !== (this.player as any).z) continue;
         if (!(this.player as any).tryCollide(e, targetX, targetY)) continue;
         if (e.dead) continue;
-        if ((e as any).pushable)     return { type: "Move",         direction: dir, targetX, targetY };
-        if ((e as any).interactable) return { type: "BumpInteract", direction: dir, targetX, targetY };
-        return { type: "Attack", direction: dir, targetX, targetY };
+        hasLiveEntity = true;
+        break;
       }
-      const tile = room.roomArray?.[targetX]?.[targetY];
-      if (tile instanceof DownLadder || tile instanceof UpLadder || tile instanceof Door) {
-        return { type: "TileInteract", direction: dir, targetX, targetY };
+      if (!hasLiveEntity) {
+        const tile = room.roomArray?.[targetX]?.[targetY];
+        // Off-the-grid target (room edge / outside the array): not a move, not a wall
+        // bump, just no-op. Drop without dispatching so we don't queue an unreachable
+        // target that would log "tile to check for collision isn't even there!" every
+        // rAF tick until cooldown.
+        if (!tile) return null;
+        const tileIsDoorlike =
+          tile instanceof DownLadder || tile instanceof UpLadder || tile instanceof Door;
+        // Solid tile with no entity and no door/ladder is a wall bump — don't record.
+        if (tile?.isSolid?.() && !tileIsDoorlike) return null;
       }
-      // Solid tile with no living entity: wall/pool bump is a pure no-op — don't record it.
-      if (tile?.isSolid?.()) return null;
     }
-    return { type: "Move", direction: dir, targetX, targetY };
+    return { type: "Directional", direction: dir, targetX, targetY };
   }
 
   dispatchDirectionalAction(dir: Direction, targetX: number, targetY: number): void {

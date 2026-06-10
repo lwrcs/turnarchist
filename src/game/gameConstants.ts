@@ -196,6 +196,12 @@ export class GameConstants {
   static ANIMATION_SPEED = 1;
   static readonly REPLAY_STEP_MS = 165; // base time between replayed inputs (~1/3 normal speed)
   static readonly REPLAY_COMPUTER_TURN_DELAY = 30; // extra wait after computer turn completes during replay
+  // Fast-mode replay constants. Floor is set by MOVEMENT_COOLDOWN (50ms) — any less and
+  // canMove() returns false at the next step. The +5ms is slack so the catch-up retry
+  // loop doesn't fire on every step. Computer-turn delay can be 0 because catchUp()
+  // inside tryMove resolves the pending turn synchronously before the next action.
+  static readonly REPLAY_STEP_MS_FAST = 55;
+  static readonly REPLAY_COMPUTER_TURN_DELAY_FAST = 0;
   static REPLAY_DEBUG = false; // enable verbose replay logging
 
   static readonly DEFAULTWIDTH = GameConstants.TILESIZE;

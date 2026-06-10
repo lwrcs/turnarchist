@@ -121,7 +121,14 @@ export class GameplaySettings {
   static readonly MAX_DEPTH_FOR_SIDEPATHS = 3;
 
   static SIDEPATH_ENTRY_CONFIRMATION = true;
-  static REPLAY_ON_DEATH = false;
+  static REPLAY_ON_DEATH = true;
+  /**
+   * When enabled, replays play back at the maximum-safe speed (steps gated only by
+   * MOVEMENT_COOLDOWN + small slack, no extra computer-turn delay). When disabled,
+   * replays use the slower visual-friendly default (~1/3 normal speed). Catch-up
+   * inside tryMove() handles enemy turns synchronously, so fast mode stays correct.
+   */
+  static FAST_REPLAYS = true;
 
   // === ENEMY POOL SETTINGS ===
 

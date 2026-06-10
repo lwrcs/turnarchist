@@ -35,7 +35,22 @@ export type ReplaySaveV2 = {
   seed: number;
   startMs: number;
   recording: boolean;
-  actions: Array<{ t: number; action: Record<string, unknown> }>;
+  actions: Array<{
+    t: number;
+    action: Record<string, unknown>;
+    // Optional post-action snapshot used by the replay validator for state-fidelity
+    // checks. Older saves without this field still replay; just without validation.
+    // All inner fields except player position are optional — non-Directional actions
+    // omit timing-dependent fields (turnCount, roomTurn, playerHealth) because their
+    // values depend on wall-clock timing between actions rather than game state.
+    outcome?: {
+      playerX: number;
+      playerY: number;
+      turnCount?: number;
+      roomTurn?: number;
+      playerHealth?: number;
+    };
+  }>;
 };
 
 export type SaveMeta = {

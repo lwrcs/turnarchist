@@ -14,7 +14,6 @@ import { Lockable, LockType } from "./lockable";
 import { Key } from "../item/key";
 import { Passageway } from "./passageway";
 import { SidePathManager, SidePathOptions } from "../level/sidePathManager";
-import { GameplaySettings } from "../game/gameplaySettings";
 
 export class DownLadder extends Passageway {
   linkedRoom: Room;
@@ -100,6 +99,10 @@ export class DownLadder extends Passageway {
     return `sp:${parentPid}:${roomAnchor}:${tileAnchor}`;
   };
 
+  private getMainPathDialogText = (): string => {
+    return "A staircase leads down to the next floor.";
+  };
+
   private getSidepathDialogText = (): string => {
     switch (this.environment) {
       case EnvType.FOREST:
@@ -127,7 +130,15 @@ export class DownLadder extends Passageway {
     }
   };
 
-  private doEnterLevel = (visitedPathId?: string) => {
+  // Public so the replay action processor can invoke the same descent path
+  // without re-clicking the screenMessage button.
+  confirmDescent = (player: Player) => {
+    const pathId = this.isSidePath ? this.computePathId() : undefined;
+    player.screenMessage.close();
+    this.doEnterLevel(pathId);
+  };
+
+  doEnterLevel = (visitedPathId?: string) => {
     this.game.beginPreLevelGenFade(async () => {
       globalEventBus.emit(EVENTS.LEVEL_GENERATION_STARTED, {});
       await this.generate();
@@ -168,28 +179,32 @@ export class DownLadder extends Passageway {
       }
     }
     if (allPlayersHere) {
-      // Show first-visit confirmation for unlocked sidepaths
-      if (GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION && this.isSidePath && !this.lockable.isLocked()) {
-        const pathId = this.computePathId();
-        if (!this.game.visitedSidepaths.has(pathId)) {
-          player.screenMessage.show(
-            this.getSidepathDialogText(),
-            [
-              {
-                text: "Travel",
-                onClick: () => {
-                  player.screenMessage.close();
-                  this.doEnterLevel(pathId);
-                },
+      if (!this.lockable.isLocked()) {
+        const dialogText = this.isSidePath
+          ? this.getSidepathDialogText()
+          : this.getMainPathDialogText();
+        const travelText = this.isSidePath ? "Travel" : "Descend";
+        const replay = (this.game as any).replayManager;
+        player.screenMessage.show(
+          dialogText,
+          [
+            {
+              text: travelText,
+              onClick: () => {
+                try { replay?.recordAction?.({ type: "LadderConfirm" }); } catch {}
+                this.confirmDescent(player);
               },
-              {
-                text: "Cancel",
-                onClick: () => player.screenMessage.close(),
+            },
+            {
+              text: "Cancel",
+              onClick: () => {
+                try { replay?.recordAction?.({ type: "LadderCancel" }); } catch {}
+                player.screenMessage.close();
               },
-            ],
-          );
-          return;
-        }
+            },
+          ],
+        );
+        return;
       }
       this.doEnterLevel();
     } else {

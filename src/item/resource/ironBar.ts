@@ -1,16 +1,74 @@
 import { Item } from "../item";
 import { Player } from "../../player/player";
-import { Game } from "../../game";
 import { Room } from "../../room/room";
-import { TextParticle } from "../../particle/textParticle";
-import { GameConstants } from "../../game/gameConstants";
-import { GoldRing } from "../jewelry/goldRing";
 import { Sound } from "../../sound/sound";
 import { DivingHelmet } from "../divingHelmet";
 import { Backplate } from "../backplate";
 import { Gauntlets } from "../gauntlets";
 import { ShoulderPlates } from "../shoulderPlates";
 import { ChestPlate } from "../chestPlate";
+
+export type IronSmithRecipe =
+  | "chestPlate"
+  | "backplate"
+  | "shoulderPlates"
+  | "gauntlets"
+  | "divingHelmet";
+
+interface IronSmithRecipeDef {
+  label: string;
+  cost: number;
+  create: (room: Room, x: number, y: number) => Item;
+}
+
+const IRON_SMITH_RECIPES: Record<IronSmithRecipe, IronSmithRecipeDef> = {
+  chestPlate: {
+    label: "a chest plate",
+    cost: 4,
+    create: (room, x, y) => new ChestPlate(room, x, y),
+  },
+  backplate: {
+    label: "a backplate",
+    cost: 3,
+    create: (room, x, y) => new Backplate(room, x, y),
+  },
+  shoulderPlates: {
+    label: "shoulder plates",
+    cost: 2,
+    create: (room, x, y) => new ShoulderPlates(room, x, y),
+  },
+  gauntlets: {
+    label: "gauntlets",
+    cost: 2,
+    create: (room, x, y) => new Gauntlets(room, x, y),
+  },
+  divingHelmet: {
+    label: "a diving helmet",
+    cost: 2,
+    create: (room, x, y) => new DivingHelmet(room, x, y),
+  },
+};
+
+// Applies a recipe in one synchronous step. Called from the action processor for
+// both record-time (via the smith menu's onSelect) and replay-time execution, so
+// the iron-bar → armor crafting is fully captured by a single SmithRecipe action.
+export const applyIronSmithRecipe = (
+  player: Player,
+  recipe: string,
+): boolean => {
+  const def = (IRON_SMITH_RECIPES as Record<string, IronSmithRecipeDef>)[recipe];
+  if (!def) return false;
+  const bar = player.inventory.hasItem(IronBar);
+  if (!bar) return false;
+  if ((bar.stackCount ?? 0) < def.cost) return false;
+
+  player.inventory.subtractItem(bar, def.cost);
+  const room = player.getRoom();
+  player.inventory.addItem(def.create(room, player.x, player.y));
+  player.game.pushMessage(`You hammer the iron bar into ${def.label}.`);
+  Sound.playSmith();
+  return true;
+};
 
 export class IronBar extends Item {
   static itemName = "iron bar";
@@ -30,85 +88,29 @@ export class IronBar extends Item {
       return stack?.stackCount ?? 0;
     };
 
-    const craft = (label: string, item: Item, costBars: number) => {
-      player.inventory.subtractItem(this, costBars);
-      player.inventory.addItem(item);
-      this.level.game.pushMessage(`You hammer the iron bar into ${label}.`);
-      Sound.playSmith();
-    };
-
-    const cost: {
-      divingHelmet: number;
-      shoulderPlates: number;
-      chestPlate: number;
-      backplate: number;
-      gauntlets: number;
-    } = {
-      divingHelmet: 2,
-      shoulderPlates: 2,
-      chestPlate: 4,
-      backplate: 3,
-      gauntlets: 2,
-    };
-
     const barsLabel = (n: number) => `(${n} iron bar${n === 1 ? "" : "s"})`;
 
     const bars = getAvailableBars();
+
+    const optionForRecipe = (
+      recipe: IronSmithRecipe,
+      labelPrefix: string,
+    ) => ({
+      label: `${labelPrefix} ${barsLabel(IRON_SMITH_RECIPES[recipe].cost)}`,
+      enabled: bars >= IRON_SMITH_RECIPES[recipe].cost,
+      onSelect: () =>
+        player.actionProcessor.process({ type: "SmithRecipe", recipe }),
+    });
 
     player.menu.openSelectionMenu({
       title: "Smith armor",
       style: "overlay",
       options: [
-        {
-          label: `Chest plate ${barsLabel(cost.chestPlate)}`,
-          enabled: bars >= cost.chestPlate,
-          onSelect: () =>
-            craft(
-              "a chest plate",
-              new ChestPlate(this.level, this.x, this.y),
-              cost.chestPlate,
-            ),
-        },
-        {
-          label: `Backplate ${barsLabel(cost.backplate)}`,
-          enabled: bars >= cost.backplate,
-          onSelect: () =>
-            craft(
-              "a backplate",
-              new Backplate(this.level, this.x, this.y),
-              cost.backplate,
-            ),
-        },
-        {
-          label: `Shoulder plates ${barsLabel(cost.shoulderPlates)}`,
-          enabled: bars >= cost.shoulderPlates,
-          onSelect: () =>
-            craft(
-              "shoulder plates",
-              new ShoulderPlates(this.level, this.x, this.y),
-              cost.shoulderPlates,
-            ),
-        },
-        {
-          label: `Gauntlets ${barsLabel(cost.gauntlets)}`,
-          enabled: bars >= cost.gauntlets,
-          onSelect: () =>
-            craft(
-              "gauntlets",
-              new Gauntlets(this.level, this.x, this.y),
-              cost.gauntlets,
-            ),
-        },
-        {
-          label: `Diving helmet ${barsLabel(cost.divingHelmet)}`,
-          enabled: bars >= cost.divingHelmet,
-          onSelect: () =>
-            craft(
-              "a diving helmet",
-              new DivingHelmet(this.level, this.x, this.y),
-              cost.divingHelmet,
-            ),
-        },
+        optionForRecipe("chestPlate", "Chest plate"),
+        optionForRecipe("backplate", "Backplate"),
+        optionForRecipe("shoulderPlates", "Shoulder plates"),
+        optionForRecipe("gauntlets", "Gauntlets"),
+        optionForRecipe("divingHelmet", "Diving helmet"),
       ],
     });
   };

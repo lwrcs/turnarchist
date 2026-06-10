@@ -3,9 +3,19 @@ import { Direction } from "../game";
 import { GameConstants } from "../game/gameConstants";
 import { TurnState } from "../room/room";
 
+type QueueEntry = {
+  x: number;
+  y: number;
+  direction: Direction;
+  // Fires when the queued move actually executes (canMove=true and tryMove returned true).
+  // Used by the action processor to defer outcome capture to real execution time, so the
+  // recorded outcome reflects post-catchUp + post-action state (matching what replay sees).
+  onExecuted?: (actualX: number, actualY: number) => void;
+};
+
 export class PlayerMovement {
   private player: Player;
-  private moveQueue: { x: number; y: number; direction: Direction }[] = [];
+  private moveQueue: QueueEntry[] = [];
   private isProcessingQueue: boolean = false;
   private animationFrameId: number | null = null;
   private moveRange: number = 1;
@@ -30,7 +40,12 @@ export class PlayerMovement {
     }
   }
 
-  move(direction: Direction, targetX?: number, targetY?: number): boolean {
+  move(
+    direction: Direction,
+    targetX?: number,
+    targetY?: number,
+    onExecuted?: (actualX: number, actualY: number) => void,
+  ): boolean {
     if (!(direction in Direction) || !this.player) return false;
 
     const coords = this.getTargetCoords(direction, targetX, targetY);
@@ -38,40 +53,58 @@ export class PlayerMovement {
     const { x, y } = coords;
 
     if (this.canMove()) {
-      const now = Date.now();
-      this.lastMoveTime = now;
-      this.lastChangeDirectionTime = now;
+      // tryMove() reports whether it actually mutated state. We only commit cooldown
+      // and "productive" status if it did — wall bumps, busy/transition guards, and
+      // dead-player guards report false and must not advance lastMoveTime or be recorded.
       this.player.inputHandler.setMostRecentMoveInput("keyboard");
       this.player.lastDirection = this.player.direction;
       this.player.direction = this.toCardinalDirection(direction);
-      this.player.tryMove(x, y);
-      return true;
+      const productive = this.player.tryMove(x, y);
+      if (productive) {
+        const now = Date.now();
+        this.lastMoveTime = now;
+        this.lastChangeDirectionTime = now;
+        // Outcome callback fires AFTER tryMove (and its inner catchUp + room.tick).
+        // Caller captures post-execution game state — same moment in both recording
+        // (immediate path here) and replay.
+        onExecuted?.(x, y);
+      }
+      return productive;
     } else {
       if (!this.enemyTurnInputLockActive()) {
-        return this.queueMove(x, y, direction);
+        return this.queueMove(x, y, direction, onExecuted);
       }
       return false;
     }
   }
 
-  moveMouse(direction: Direction, targetX?: number, targetY?: number): void {
+  moveMouse(
+    direction: Direction,
+    targetX?: number,
+    targetY?: number,
+    onExecuted?: (actualX: number, actualY: number) => void,
+  ): boolean {
     if (!(direction in Direction) || !this.player || GameConstants.isMobile)
-      return;
+      return false;
 
     const coords = this.getTargetCoords(direction, targetX, targetY);
-    if (!coords) return;
+    if (!coords) return false;
     const { x, y } = coords;
-    if (x === undefined || y === undefined) return;
+    if (x === undefined || y === undefined) return false;
     if (this.canMove()) {
-      const now = Date.now();
-      this.lastMoveTime = now;
       this.player.inputHandler.setMostRecentMoveInput("mouse");
       this.player.direction = direction;
-      this.player.tryMove(x, y);
+      const productive = this.player.tryMove(x, y);
+      if (productive) {
+        this.lastMoveTime = Date.now();
+        onExecuted?.(x, y);
+      }
+      return productive;
     } else {
       if (!this.enemyTurnInputLockActive()) {
-        this.queueMove(x, y, direction);
+        return this.queueMove(x, y, direction, onExecuted);
       }
+      return false;
     }
   }
   //unused
@@ -164,28 +197,26 @@ export class PlayerMovement {
     return false;
   }
 
-  queueMove(x: number, y: number, direction: Direction): boolean {
+  queueMove(
+    x: number,
+    y: number,
+    direction: Direction,
+    onExecuted?: (actualX: number, actualY: number) => void,
+  ): boolean {
     if (!this.canQueue()) return false;
     if (x === undefined || y === undefined || this.moveQueue.length > 0) return false;
 
-    this.moveQueue.push({ x, y, direction });
+    this.moveQueue.push({ x, y, direction, onExecuted });
     this.startQueueProcessing();
     return true;
   }
 
-  private handleMoveLoop({
-    x,
-    y,
-    direction,
-  }: {
-    x: number;
-    y: number;
-    direction: Direction;
-  }) {
+  private handleMoveLoop(entry: QueueEntry): boolean {
+    const { x, y, direction, onExecuted } = entry;
     if (this.player.inputHandler.mostRecentMoveInput === "mouse") {
-      this.moveMouse(direction, x, y);
+      return this.moveMouse(direction, x, y, onExecuted);
     } else {
-      this.move(direction, x, y);
+      return this.move(direction, x, y, onExecuted);
     }
   }
 
@@ -212,8 +243,15 @@ export class PlayerMovement {
 
     if (now - this.lastMoveTime >= cooldown) {
       if (this.moveQueue.length > 0) {
-        const nextMove = this.moveQueue.shift();
-
+        // Always shift the entry off the queue. handleMoveLoop calls move() which
+        // re-queues internally if canMove() is transiently false (cooldown not yet
+        // elapsed, busy animation in flight) — so legitimate retries are preserved
+        // without us needing to retain the entry here. Entries that can NEVER
+        // succeed (out-of-bounds target, dead player, level transitioning) drop
+        // here, which is correct: the callback-based recording in
+        // playerActionProcessor only fires on actual execution, so a dropped entry
+        // is never recorded.
+        const nextMove = this.moveQueue.shift()!;
         this.handleMoveLoop(nextMove);
         this.lastMoveTime = now;
       } else {
