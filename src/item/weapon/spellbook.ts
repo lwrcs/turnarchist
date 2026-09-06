@@ -1,3 +1,4 @@
+import { traceSpell } from "../../game/spellDiagnostics";
 import { Game } from "../../game";
 import { Weapon } from "./weapon";
 import { Room } from "../../room/room";
@@ -135,16 +136,18 @@ export class Spellbook extends Weapon implements RangedWeapon {
   };
 
   fireAtTarget = (player: Player, tx: number, ty: number): boolean => {
-    if (this.broken) return false;
+    const castId = traceSpell(player, "book-attempt", { tx, ty, broken: this.broken, cooldown: this.cooldown, cooldownMax: this.cooldownMax });
+    if (this.broken) { traceSpell(player, "book-rejected", { castId, reason: "broken" }); return false; }
     const room = player.getRoom();
-    if (!room) return false;
+    if (!room) { traceSpell(player, "book-rejected", { castId, reason: "missing-room" }); return false; }
     const z = (player as any).z ?? 0;
 
     const spell = this.pendingSpell ?? this.activeSpell;
     this.pendingSpell = null;
     const manaCost = spell.manaCost;
     const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
-    if (currentMana < manaCost) return false;
+    traceSpell(player, "spell-selected", { castId, spell: spell.constructor.name, manaCost, currentMana });
+    if (currentMana < manaCost) { traceSpell(player, "book-rejected", { castId, reason: "insufficient-mana" }); return false; }
     const damage = (spell.damage ?? this.damage) + player.magicDamageBonus;
 
     // Spend mana (increase cooldown by spell cost); +1 so the end-of-turn tick lands correctly.
@@ -157,6 +160,7 @@ export class Spellbook extends Weapon implements RangedWeapon {
 
     // SpellBeam animates to the target; actual damage + turn advance fires on arrival.
     const beam = new SpellBeam(room, player, tx, ty, () => {
+      traceSpell(player, "effect-start", { castId, sourceRoomId: room.id, sourceDepth: room.depth });
       const { offsets, delays } = spell.getPattern();
       let anyFired = false;
       for (let i = 0; i < offsets.length; i++) {
@@ -176,15 +180,19 @@ export class Spellbook extends Weapon implements RangedWeapon {
         }
         anyFired = true;
       }
+      traceSpell(player, "pattern-resolved", { castId, anyFired, tiles: offsets.length });
       if (anyFired) {
         player.setHitXY(tx, ty);
+        traceSpell(player, "tick-before", { castId, sourceRoomTurn: room.turn });
         room.tick(player);
+        traceSpell(player, "tick-after", { castId, sourceRoomTurn: room.turn });
         this.hitSound();
         Sound.playMagic();
         this.degrade();
       }
-    });
+    }, castId);
     room.projectiles.push(beam);
+    traceSpell(player, "beam-enqueued", { castId });
 
     return true;
   };

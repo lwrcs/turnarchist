@@ -1,3 +1,4 @@
+import { traceSpell } from "../../game/spellDiagnostics";
 import type { Player } from "../../player/player";
 import { Direction } from "../../game";
 import { GameplaySettings } from "../../game/gameplaySettings";
@@ -203,6 +204,7 @@ export class RangedTargetingSystem {
 
   fire(): boolean {
     if (!this.active || !this.weapon) {
+      traceSpell(this.player, "targeting-rejected", { active: this.active, hasWeapon: !!this.weapon });
       this.stop();
       return false;
     }

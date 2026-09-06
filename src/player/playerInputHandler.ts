@@ -241,6 +241,24 @@ export class PlayerInputHandler {
   }
 
   handleInput(input: InputEnum) {
+    // Replay is active — route through the replay menu.
+    const replayMgr = (this.player.game as any).replayManager;
+    if (this.player.replayMenu?.open) {
+      if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
+      if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
+      this.player.replayMenu.inputHandler(input);
+      return;
+    }
+    if (replayMgr?.isReplaying()) {
+      if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
+      if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
+      if (input === InputEnum.MOUSE_MOVE) return;
+      // Any key opens the replay menu and pauses.
+      replayMgr.pause();
+      this.player.replayMenu?.openMenu();
+      return;
+    }
+
     // If a camera animation is active, allow inputs that should fast-forward it
     if (this.player.game.cameraAnimation.active) {
       switch (input) {
@@ -255,16 +273,7 @@ export class PlayerInputHandler {
     }
     if (this.player.busyAnimating) return;
 
-    // Replay is active: block all game input. Any key/click exits the replay.
-    const replayMgr = (this.player.game as any).replayManager;
-    if (replayMgr?.isReplaying()) {
-      if (input === InputEnum.EQUALS) { this.player.game.increaseScale(); return; }
-      if (input === InputEnum.MINUS)  { this.player.game.decreaseScale(); return; }
-      if (input === InputEnum.MOUSE_MOVE) return;
-      replayMgr.cancelReplay();
-      this.player.game.newGame();
-      return;
-    }
+
 
     // Block input during level transitions, except for mouse movement
     if (
@@ -779,12 +788,14 @@ export class PlayerInputHandler {
   }
 
   private handleMouseWheel(deltaY: number) {
+    if (this.player.game.replayManager.isReplaying()) return;
     // Only handle while in-game
     if (this.player.game.levelState !== LevelState.IN_LEVEL) return;
     if (this.player.settingsMenu?.open) {
       this.player.settingsMenu.handleWheel(deltaY);
       return;
     }
+    if (this.player.replayMenu?.open) return;
     if (this.player.skillsMenu?.open) return;
 
     // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -804,7 +815,11 @@ export class PlayerInputHandler {
   }
 
   handleNumKey = (num: number) => {
-    if (this.player.menu.open || this.player.settingsMenu?.open) return;
+    if (this.player.game.replayManager.isReplaying()) {
+      this.handleInput(InputEnum.SPACE);
+      return;
+    }
+    if (this.player.menu.open || this.player.settingsMenu?.open || this.player.replayMenu?.open) return;
     this.setMostRecentInput("keyboard");
     const slotIndex = num - 1;
     const item = this.player.inventory.items[slotIndex];
@@ -864,7 +879,8 @@ export class PlayerInputHandler {
 
   private handleMouseRightClickAt(x: number, y: number, targetEntity?: Entity, fromKeyboard = false) {
     const _replayMgr = (this.player.game as any).replayManager;
-    if (_replayMgr?.isReplaying()) { _replayMgr.cancelReplay(); this.player.game.newGame(); return; }
+    if (this.player.replayMenu?.open) return;
+    if (_replayMgr?.isReplaying()) { _replayMgr.pause(); this.player.replayMenu?.openMenu(); return; }
     if (this.player.screenMessage?.open) { this.player.screenMessage.close(); return; }
     if (!targetEntity) this.setMostRecentInput("mouse");
     const player = this.player;
@@ -1578,13 +1594,13 @@ export class PlayerInputHandler {
   };
 
   handleMouseDown(x: number, y: number, button: number) {
-    // Replay active: left-click exits the replay (right-click handled by handleMouseRightClickAt).
     const _replayMgr = (this.player.game as any).replayManager;
+    if (this.player.replayMenu?.open) {
+      if (button === 0) this.player.replayMenu.handleMouseDown(x, y);
+      return;
+    }
     if (_replayMgr?.isReplaying()) {
-      if (button === 0) {
-        _replayMgr.cancelReplay();
-        this.player.game.newGame();
-      }
+      if (button === 0) { _replayMgr.pause(); this.player.replayMenu?.openMenu(); }
       return;
     }
 
@@ -1969,11 +1985,14 @@ export class PlayerInputHandler {
       return;
     }
 
-    // Replay active: any tap exits the replay.
     const _replayMgr = (this.player.game as any).replayManager;
+    if (this.player.replayMenu?.open) {
+      this.player.replayMenu.handleMouseDown(Input.mouseX, Input.mouseY);
+      return;
+    }
     if (_replayMgr?.isReplaying()) {
-      _replayMgr.cancelReplay();
-      this.player.game.newGame();
+      _replayMgr.pause();
+      this.player.replayMenu?.openMenu();
       return;
     }
 
@@ -2350,7 +2369,8 @@ export class PlayerInputHandler {
     if (weapon instanceof Spellbook) {
       this.player.actionProcessor.process({
         type: "CastSpell",
-        spellId: weapon.activeSpell?.id ?? "unknown",
+        spellId: (weapon.pendingSpell ?? weapon.activeSpell)?.id ?? "unknown",
+        sourceSlot: this.player.inventory.items.indexOf(weapon),
         targetX: tx,
         targetY: ty,
       });

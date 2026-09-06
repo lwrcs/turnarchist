@@ -48,6 +48,7 @@ import { Random } from "../utility/random";
 import { AnchorOptions, OxygenLine } from "./oxygenLine";
 import { SkillsMenu } from "../gui/skillsMenu";
 import { SettingsMenu } from "../gui/settingsMenu";
+import { ReplayMenu } from "../gui/replayMenu";
 import { XPCounter } from "../gui/xpCounter";
 import { RangedTargetingSystem } from "../item/weapon/rangedTargetingSystem";
 import { EmeraldRing } from "../item/jewelry/emeraldRing";
@@ -118,6 +119,7 @@ export class Player extends Drawable {
   menu: Menu;
   skillsMenu: SkillsMenu;
   settingsMenu: SettingsMenu;
+  replayMenu: ReplayMenu;
   busyAnimating: boolean;
   private pushMoveInputLockActive: boolean = false;
   private pushMoveInputLockEntities: Entity[] = [];
@@ -242,6 +244,7 @@ export class Player extends Drawable {
     this.menu = new Menu(this);
     this.skillsMenu = new SkillsMenu();
     this.settingsMenu = new SettingsMenu(game);
+    this.replayMenu = new ReplayMenu(game);
     this.busyAnimating = false;
 
     this.mapToggled = true;

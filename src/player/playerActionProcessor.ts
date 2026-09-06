@@ -1,3 +1,7 @@
+import { traceSaveState } from "../game/saveDiagnostics";
+import { Spellbook } from "../item/weapon/spellbook";
+import { traceSpell } from "../game/spellDiagnostics";
+import { isActionReady } from "../game/actionReadiness";
 import { Player } from "./player";
 import type { GameAction } from "./playerAction";
 import { applyIronSmithRecipe } from "../item/resource/ironBar";
@@ -53,6 +57,7 @@ export class PlayerActionProcessor {
   }
 
   process(action: GameAction) {
+    if (!isActionReady(this.player.game)) return;
     switch (action.type) {
       // --- Directional world action ---
       // One action type covers walk/attack/push/interact/door-unlock. The executor
@@ -97,8 +102,47 @@ export class PlayerActionProcessor {
         break;
 
       // --- Ranged / spell ---
-      case "CastSpell":
+      case "CastSpell": {
+        const rt = this.player.rangedTargeting;
+        const items = this.player.inventory.items;
+        const replaying = this.player.game.replayManager.isReplaying();
+        let book: Spellbook | undefined;
+        if (action.sourceSlot !== undefined) {
+          const source = items[action.sourceSlot];
+          if (source instanceof Spellbook) book = source;
+        } else {
+          // Legacy recordings lack a slot: use their targeting book, or resolve
+          // an unambiguous book containing the recorded spell. Never use melee gear.
+          const target = rt?.getWeapon();
+          if (target instanceof Spellbook && items.includes(target) &&
+              target.spells.some(spell => spell.id === action.spellId)) book = target;
+          else {
+            const candidates = items.filter((item): item is Spellbook =>
+              item instanceof Spellbook && item.spells.some(spell => spell.id === action.spellId));
+            if (candidates.length === 1) book = candidates[0];
+          }
+        }
+        const spell = book?.spells.find(spell => spell.id === action.spellId);
+        if (!rt || !book || !spell) {
+          traceSaveState(this.player.game, "unresolved-spell-source");
+          traceSpell(this.player, "action-rejected", { action, reason: "unresolved-spell-source" });
+          if (replaying) throw new Error(`Cannot resolve spell ${action.spellId} from slot ${action.sourceSlot ?? "legacy"}`);
+          return;
+        }
+        const recordedAction: GameAction = { ...action, sourceSlot: items.indexOf(book) };
+        traceSpell(this.player, "action-attempt", { action: recordedAction });
+        // Restore the cast source independently of transient targeting UI state.
+        book.pendingSpell = spell;
+        rt.start(book);
+        rt.targetX = action.targetX;
+        rt.targetY = action.targetY;
+        const fired = rt.fire();
+        traceSpell(this.player, "action-result", { fired, action: recordedAction });
+        this.record(recordedAction);
+        break;
+      }
       case "FireRanged": {
+        traceSpell(this.player, "action-attempt", { action });
         const rt = this.player.rangedTargeting;
         if (rt) {
           if (!rt.active) {
@@ -110,8 +154,10 @@ export class PlayerActionProcessor {
           }
           rt.targetX = action.targetX;
           rt.targetY = action.targetY;
-          rt.fire();
+          const fired = rt.fire();
+          traceSpell(this.player, "action-result", { fired, action });
         }
+        if (!rt) traceSpell(this.player, "action-rejected", { reason: "missing-targeting", action });
         // Note: spells defer room.tick to the SpellBeam onComplete callback (~245ms
         // later via render loop). The outcome captured here is BEFORE that deferred
         // tick fires — but it's identical between recording and replay because both

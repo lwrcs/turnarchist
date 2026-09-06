@@ -2176,6 +2176,7 @@ export class Game {
 
   update = () => {
     this.refreshDimensions();
+    if (this.replayManager.isFinished()) return;
     Input.checkIsTapHold();
 
     // Existing key repeat (disabled during replay)

@@ -202,6 +202,8 @@ export class GameConstants {
   // inside tryMove resolves the pending turn synchronously before the next action.
   static readonly REPLAY_STEP_MS_FAST = 55;
   static readonly REPLAY_COMPUTER_TURN_DELAY_FAST = 0;
+  static readonly REPLAY_STEP_MS_SLOW = 400;
+  static readonly REPLAY_COMPUTER_TURN_DELAY_SLOW = 80;
   static REPLAY_DEBUG = false; // enable verbose replay logging
 
   static readonly DEFAULTWIDTH = GameConstants.TILESIZE;

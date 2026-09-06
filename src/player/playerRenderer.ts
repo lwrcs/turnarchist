@@ -170,11 +170,16 @@ export class PlayerRenderer {
   };
 
   enableSlowMotion = () => {
-    if (this.motionSpeed < 1 && !this.slowMotionEnabled && !this.slowMotionOverride) {
+    // Replay pacing is independent of the dual-dagger effect, which expires
+    // through updateSlowMotion on the next update.
+    const replaySlow = this.player.game.replayManager.isReplaying() &&
+      GameplaySettings.REPLAY_SPEED === "slow";
+    const slow = this.slowMotionEnabled || replaySlow;
+    if (this.motionSpeed < 1 && !slow && !this.slowMotionOverride) {
       this.motionSpeed *= 1.08;
       if (this.motionSpeed >= 1) this.motionSpeed = 1;
     }
-    if (this.slowMotionEnabled && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
+    if (slow && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
       this.motionSpeed *= 0.95;
       if (this.motionSpeed < 0.25) this.motionSpeed = 0.25;
     }
@@ -211,6 +216,7 @@ export class PlayerRenderer {
       Boolean(player.menu?.open) ||
       Boolean(player.settingsMenu?.open) ||
       Boolean(player.skillsMenu?.open) ||
+      Boolean(player.replayMenu?.open) ||
       player.isAnyBookOpen ||
       Boolean(player.inventory?.isOpen) ||
       Boolean(player.contextMenu?.open);
@@ -1268,6 +1274,7 @@ export class PlayerRenderer {
     if (this.player.settingsMenu?.open) this.player.settingsMenu.draw(delta);
     else if (this.player.menu.open) this.player.menu.draw(delta);
     this.player.contextMenu?.draw(delta);
+    this.player.replayMenu?.draw(delta);
     this.player.screenMessage?.draw(delta);
     Game.ctx.restore();
   };

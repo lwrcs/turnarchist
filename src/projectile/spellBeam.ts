@@ -1,3 +1,4 @@
+import { traceSpell } from "../game/spellDiagnostics";
 import { Game } from "../game";
 import { GameConstants } from "../game/gameConstants";
 import { Player } from "../player/player";
@@ -23,6 +24,7 @@ export class SpellBeam extends BeamEffect {
   private onComplete: () => void;
   private player: Player;
   private fired: boolean = false;
+  private diagnosticId?: number;
 
   /** Total animation duration in 60-fps frames. */
   private static readonly TOTAL_DURATION = 18;
@@ -41,10 +43,12 @@ export class SpellBeam extends BeamEffect {
     tx: number,
     ty: number,
     onComplete: () => void,
+    castId?: number,
   ) {
     super(player.x, player.y - 0.5, tx, ty, player);
     this.player = player;
     this.onComplete = onComplete;
+    this.diagnosticId = traceSpell(player, "beam-created", { tx, ty, castId });
 
     this.color = "cyan";
     this.compositeOperation = "source-over";
@@ -147,9 +151,19 @@ export class SpellBeam extends BeamEffect {
 
   private fire(): void {
     this.fired = true;
+    traceSpell(this.player, "beam-arrived", { beamId: this.diagnosticId, elapsed: this.elapsed });
     setTimeout(() => {
       this.player.busyAnimating = false;
-      if (!this.player.dead) this.onComplete();
+      traceSpell(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
+      if (!this.player.dead) {
+        try {
+          this.onComplete();
+          traceSpell(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
+        } catch (error) {
+          traceSpell(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
+          throw error;
+        }
+      }
     }, 0);
   }
 

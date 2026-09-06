@@ -544,6 +544,9 @@ export class Inventory {
   };
 
   mouseMove = () => {
+    // Inventory receives raw pointer events independently of PlayerInputHandler.
+    // Block human input here; recorded item actions still use the action processor.
+    if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open) return;
     // Any mouse activity during a keyboard hold cancels it and returns the item to its source.
     if (this._isKeyboardDragging) {
       this.keyboardDragCancel();
@@ -2083,6 +2086,9 @@ export class Inventory {
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {
+    // Inventory receives raw pointer events independently of PlayerInputHandler.
+    // Block human input here; recorded item actions still use the action processor.
+    if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open) return;
     // Any mouse click during a keyboard hold cancels it and returns the item to its source.
     if (this._isKeyboardDragging) {
       this.keyboardDragCancel();
@@ -2137,6 +2143,9 @@ export class Inventory {
    * Handle hold detection for both mouse and touch.
    */
   onHoldDetected = () => {
+    // Inventory receives raw pointer events independently of PlayerInputHandler.
+    // Block human input here; recorded item actions still use the action processor.
+    if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open) return;
     // On mobile, long-press is reserved for context menus.
     // Dragging is initiated via movement threshold in `mouseMove()`.
     if (this.player.game.isMobile) return;
@@ -2159,6 +2168,9 @@ export class Inventory {
   };
 
   handleMouseUp = (x: number, y: number, button: number) => {
+    // Inventory receives raw pointer events independently of PlayerInputHandler.
+    // Block human input here; recorded item actions still use the action processor.
+    if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open) return;
     // Always clear drag-start tracking on release (even if a modal UI is open).
     // Otherwise long-press context menu can leave a stale drag candidate.
     this.dragStartMouseX = null;

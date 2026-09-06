@@ -31612,6 +31612,8 @@ class Game {
         };
         this.update = () => {
             this.refreshDimensions();
+            if (this.replayManager.isFinished())
+                return;
             input_1.Input.checkIsTapHold();
             // Existing key repeat (disabled during replay)
             if (!this.replayManager.isReplaying()) {
@@ -36300,6 +36302,29 @@ exports.gs = new gameState_1.GameState();
 
 /***/ }),
 
+/***/ "./src/game/actionReadiness.ts":
+/*!*************************************!*\
+  !*** ./src/game/actionReadiness.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isActionReady = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+/** Live actions and playback must use the same level-transition boundary. */
+function isActionReady(game) {
+    const state = game;
+    return !game.replayManager?.isFinished() && game.levelState === game_1.LevelState.IN_LEVEL &&
+        !state.preLevelGenFadeActive && !state.preLevelGenHoldBlack &&
+        !state.preLevelGenActionStarted && !game.transitioningLadder;
+}
+exports.isActionReady = isActionReady;
+
+
+/***/ }),
+
 /***/ "./src/game/bestiary.ts":
 /*!******************************!*\
   !*** ./src/game/bestiary.ts ***!
@@ -38529,6 +38554,8 @@ GameConstants.REPLAY_COMPUTER_TURN_DELAY = 30; // extra wait after computer turn
 // inside tryMove resolves the pending turn synchronously before the next action.
 GameConstants.REPLAY_STEP_MS_FAST = 55;
 GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST = 0;
+GameConstants.REPLAY_STEP_MS_SLOW = 400;
+GameConstants.REPLAY_COMPUTER_TURN_DELAY_SLOW = 80;
 GameConstants.REPLAY_DEBUG = false; // enable verbose replay logging
 GameConstants.DEFAULTWIDTH = GameConstants.TILESIZE;
 GameConstants.DEFAULTHEIGHT = GameConstants.TILESIZE;
@@ -41496,12 +41523,11 @@ GameplaySettings.MAX_DEPTH_FOR_SIDEPATHS = 3;
 GameplaySettings.SIDEPATH_ENTRY_CONFIRMATION = true;
 GameplaySettings.REPLAY_ON_DEATH = true;
 /**
- * When enabled, replays play back at the maximum-safe speed (steps gated only by
- * MOVEMENT_COOLDOWN + small slack, no extra computer-turn delay). When disabled,
- * replays use the slower visual-friendly default (~1/3 normal speed). Catch-up
- * inside tryMove() handles enemy turns synchronously, so fast mode stays correct.
+ * Replay playback speed. "fast" is the minimum-cooldown rate (55ms/step). "normal"
+ * is the visual-friendly default (165ms/step). "slow" is an ultra-slow pace
+ * (400ms/step) that also enables the game's slow-motion rendering effect.
  */
-GameplaySettings.FAST_REPLAYS = true;
+GameplaySettings.REPLAY_SPEED = "fast";
 // === ENEMY POOL SETTINGS ===
 // Enemy Type Progression
 GameplaySettings.NEW_ENEMIES_PER_LEVEL = 2; // How many new enemy types to add per level when LIMIT_ENEMY_TYPES is true
@@ -42311,7 +42337,8 @@ exports.OneTimeEventTracker = OneTimeEventTracker;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReplayManager = void 0;
-const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const spellDiagnostics_1 = __webpack_require__(/*! ./spellDiagnostics */ "./src/game/spellDiagnostics.ts");
+const actionReadiness_1 = __webpack_require__(/*! ./actionReadiness */ "./src/game/actionReadiness.ts");
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 const COOLDOWN_GATED_ACTIONS = new Set([
@@ -42323,28 +42350,32 @@ const COOLDOWN_GATED_ACTIONS = new Set([
 const MAX_COOLDOWN_WAITS = 20;
 const LEVEL_TRANSITION_POLL_MS = 50;
 const MAX_LEVEL_TRANSITION_WAITS = 400; // ~20s
-function isReplayReady(game) {
-    const g = game;
-    return (g.levelState === game_1.LevelState.IN_LEVEL &&
-        !g.preLevelGenFadeActive &&
-        !g.preLevelGenHoldBlack &&
-        !g.preLevelGenActionStarted &&
-        !g.transitioningLadder);
-}
 class ReplayManager {
     constructor() {
+        this.diagnosticStep = 0;
         this.actions = [];
         this.startMs = 0;
         this.recording = false;
         this.replaying = false;
+        this.paused = false;
+        this.finished = false;
         this.seed = undefined;
         this.timer = null;
     }
+    isFinished() { return this.finished; }
+    clearTimer() {
+        if (this.timer !== null)
+            window.clearTimeout(this.timer);
+        this.timer = null;
+    }
     beginRecording(seed) {
+        this.clearTimer();
         this.actions = [];
         this.startMs = Date.now();
         this.recording = true;
         this.replaying = false;
+        this.paused = false;
+        this.finished = false;
         this.seed = seed;
     }
     serialize() {
@@ -42364,10 +42395,13 @@ class ReplayManager {
     restore(data) {
         if (!data)
             return;
+        this.clearTimer();
         this.seed = data.seed;
         this.startMs = data.startMs;
         this.recording = data.recording;
         this.replaying = false;
+        this.paused = false;
+        this.finished = false;
         this.actions = data.actions.map((a) => ({
             t: a.t,
             action: a.action,
@@ -42385,15 +42419,21 @@ class ReplayManager {
     isReplaying() {
         return this.replaying;
     }
+    isPaused() {
+        return this.paused;
+    }
     isRecording() {
         return this.recording;
     }
     clearRecording() {
+        this.clearTimer();
         this.actions = [];
         this.seed = undefined;
         this.startMs = 0;
         this.recording = false;
         this.replaying = false;
+        this.paused = false;
+        this.finished = false;
     }
     stopRecording() {
         this.recording = false;
@@ -42408,20 +42448,37 @@ class ReplayManager {
             window.clearTimeout(this.timer);
         this.timer = null;
         this.replaying = false;
-        this.recording = true;
+        this.paused = false;
+        this.finished = false;
+        this.recording = false;
+    }
+    /** Pause a running replay. The step loop checks this flag and suspends itself. */
+    pause() {
+        if (!this.replaying || this.paused)
+            return;
+        this.paused = true;
+        // Don't clear the timer — step() will see paused=true, reschedule at a low-
+        // frequency poll, and hold until resume() flips the flag back.
+    }
+    /** Resume a paused replay. The step loop will pick up within the next poll cycle. */
+    resume() {
+        if (!this.replaying || this.finished)
+            return;
+        this.paused = false;
+        this.finished = false;
     }
     recordAction(action, outcome) {
         if (!this.recording || this.replaying)
             return;
         this.actions.push({ t: Date.now() - this.startMs, action, outcome });
     }
-    replay(game, stepMs = gameplaySettings_1.GameplaySettings.FAST_REPLAYS
-        ? gameConstants_1.GameConstants.REPLAY_STEP_MS_FAST
-        : gameConstants_1.GameConstants.REPLAY_STEP_MS) {
+    replay(game) {
         console.log("[replay] replay() called", { replaying: this.replaying, actions: this.actions.length, seed: this.seed });
         if (this.replaying)
             return;
         this.replaying = true;
+        this.paused = false;
+        this.finished = false;
         this.recording = false;
         const actions = this.actions.slice();
         const seed = this.seed;
@@ -42432,10 +42489,12 @@ class ReplayManager {
         }
         game.pushMessage(`Replay starting with ${actions.length} actions...`);
         const startPlayback = () => {
+            if (!this.replaying)
+                return;
             const local = game.players?.[game.localPlayerID];
             console.log("[replay] startPlayback called, player:", !!local, "levelState:", game.levelState);
             if (!local) {
-                setTimeout(startPlayback, 16);
+                this.timer = window.setTimeout(startPlayback, 16);
                 return;
             }
             let i = 0;
@@ -42445,21 +42504,33 @@ class ReplayManager {
             let levelWaitStepIndex = -1;
             const divergences = [];
             let halted = false;
-            const finishReplay = (haltedAtStep) => {
+            const recentSteps = [];
+            const finishReplay = (haltedAtStep, failureReason) => {
                 if (this.timer)
                     window.clearTimeout(this.timer);
                 this.timer = null;
-                this.replaying = false;
-                this.recording = true;
+                // Keep the replay world isolated until an explicit replay/new-game choice.
+                this.replaying = true;
+                this.paused = true;
+                this.finished = true;
+                this.recording = false;
                 const report = {
                     seed,
                     totalActions: actions.length,
                     divergenceCount: divergences.length,
                     divergences,
                     finishedAt: new Date().toISOString(),
+                    status: haltedAtStep === undefined ? "completed" : "failed",
+                    failureReason,
+                    haltedAtStep,
+                    recentSteps,
+                    spellDiagnostics: (0, spellDiagnostics_1.getSpellDiagnostics)(),
+                    recordedContext: actions.slice(Math.max(0, i - 19), i + 4),
                 };
                 console.log("[replay] report", report);
                 window.lastReplayReport = report;
+                window.publishReplayReport?.(report);
+                console.log("[replay] report JSON " + JSON.stringify(report));
                 let msg;
                 if (haltedAtStep !== undefined) {
                     msg = `Replay halted at step ${haltedAtStep} of ${actions.length} — ${divergences.length} divergence(s). See window.lastReplayReport.`;
@@ -42471,17 +42542,26 @@ class ReplayManager {
                     msg = "Replay finished. No divergences.";
                 }
                 game.pushMessage(msg);
+                local.replayMenu?.openMenu();
             };
             const step = () => {
-                if (halted)
+                if (halted || !this.replaying)
                     return;
+                // Paused: hold here and poll until resumed.
+                if (this.paused) {
+                    if (this.timer)
+                        window.clearTimeout(this.timer);
+                    this.timer = window.setTimeout(step, 50);
+                    return;
+                }
                 if (i >= actions.length) {
                     finishReplay();
                     return;
                 }
                 try {
+                    this.diagnosticStep = i + 1;
                     const action = actions[i].action;
-                    if (!isReplayReady(game)) {
+                    if (!(0, actionReadiness_1.isActionReady)(game)) {
                         if (levelWaitStepIndex !== i) {
                             levelWaitStepIndex = i;
                             levelWaitsForStep = 0;
@@ -42493,7 +42573,9 @@ class ReplayManager {
                             this.timer = window.setTimeout(step, LEVEL_TRANSITION_POLL_MS);
                             return;
                         }
-                        console.warn(`[replay] step ${i + 1}: level transition did not complete after ${MAX_LEVEL_TRANSITION_WAITS} polls; proceeding anyway`);
+                        halted = true;
+                        finishReplay(i + 1, "Level transition timeout");
+                        return;
                     }
                     const beforeX = local.x;
                     const beforeY = local.y;
@@ -42515,11 +42597,23 @@ class ReplayManager {
                             this.timer = window.setTimeout(step, gameConstants_1.GameConstants.MOVEMENT_COOLDOWN + 5);
                             return;
                         }
-                        console.warn(`[replay] step ${i + 1}: exceeded ${MAX_COOLDOWN_WAITS} cooldown waits; proceeding anyway`);
+                        halted = true;
+                        finishReplay(i + 1, "Movement cooldown timeout");
+                        return;
                     }
                     const roomBefore = local.getRoom?.();
                     const turnBefore = roomBefore?.turn;
                     const turnCountBefore = local.turnCount;
+                    const diagnosticStep = {
+                        step: i + 1, action, expectedOutcome: actions[i].outcome,
+                        before: { x: beforeX, y: beforeY, health: local.health,
+                            roomId: roomBefore?.id, depth: roomBefore?.depth, turn: turnBefore, turnCount: turnCountBefore },
+                        canMove: canMoveNow, cooldownWaits: cooldownWaitsForStep, levelWaits: levelWaitsForStep,
+                        after: undefined,
+                    };
+                    recentSteps.push(diagnosticStep);
+                    if (recentSteps.length > 20)
+                        recentSteps.shift();
                     console.log("[replay] step begin", {
                         index: i + 1,
                         total: actions.length,
@@ -42530,7 +42624,6 @@ class ReplayManager {
                         canMove: canMoveNow,
                     });
                     local.menu.open = false;
-                    local.dead = false;
                     local.inventory.close();
                     local.actionProcessor.process(action);
                     const afterX = local.x;
@@ -42539,6 +42632,8 @@ class ReplayManager {
                     const roomAfter = local.getRoom?.();
                     const turnAfter = roomAfter?.turn;
                     const turnCountAfter = local.turnCount;
+                    diagnosticStep.after = { x: afterX, y: afterY, health: local.health,
+                        roomId: roomAfter?.id, depth: roomAfter?.depth, turn: turnAfter, turnCount: turnCountAfter };
                     console.log("[replay] step end", {
                         index: i + 1,
                         type: action.type,
@@ -42611,24 +42706,33 @@ class ReplayManager {
                                 actualOutcome,
                             });
                             halted = true;
-                            finishReplay(i + 1);
+                            finishReplay(i + 1, reason);
                             return;
                         }
                     }
                 }
                 catch (e) {
-                    // swallow to avoid interrupting playback
+                    halted = true;
+                    finishReplay(i + 1, `Action exception: ${e instanceof Error ? e.stack || e.message : String(e)}`);
+                    return;
                 }
                 if (halted)
                     return;
+                // Compute per-step delay from current speed setting (read each step so
+                // speed changes from the replay menu take effect immediately).
+                const speed = gameplaySettings_1.GameplaySettings.REPLAY_SPEED;
+                const stepMs = speed === "fast" ? gameConstants_1.GameConstants.REPLAY_STEP_MS_FAST :
+                    speed === "normal" ? gameConstants_1.GameConstants.REPLAY_STEP_MS :
+                        gameConstants_1.GameConstants.REPLAY_STEP_MS_SLOW;
+                const computerTurnDelay = speed === "fast" ? gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST :
+                    speed === "normal" ? gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY :
+                        gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY_SLOW;
                 const minDelay = Math.max(gameConstants_1.GameConstants.MOVEMENT_COOLDOWN + 5, stepMs);
                 let nextDelay = minDelay;
                 try {
                     const room = local.getRoom?.();
                     if (room?.turn === 1) {
-                        nextDelay += gameplaySettings_1.GameplaySettings.FAST_REPLAYS
-                            ? gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST
-                            : gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY;
+                        nextDelay += computerTurnDelay;
                     }
                 }
                 catch { }
@@ -42646,6 +42750,8 @@ class ReplayManager {
         // game.newGame calls beginRecording which resets replaying→false and clears actions;
         // re-assert replay state and restore actions so Watch Replay remains available afterwards.
         this.replaying = true;
+        this.paused = false;
+        this.finished = false;
         this.recording = false;
         this.actions = actions.slice();
         game.started = true;
@@ -42654,7 +42760,7 @@ class ReplayManager {
         const waitForReady = () => {
             if (!this.replaying)
                 return; // cancelled while waiting
-            if (isReplayReady(game)) {
+            if ((0, actionReadiness_1.isActionReady)(game)) {
                 startPlayback();
             }
             else {
@@ -51458,6 +51564,61 @@ const collectPersistedEnemies = (game, room, nowMs) => {
 
 /***/ }),
 
+/***/ "./src/game/saveDiagnostics.ts":
+/*!*************************************!*\
+  !*** ./src/game/saveDiagnostics.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.traceSaveState = void 0;
+/** Capture only game diagnostics, never the full save or player/account identifiers. */
+function traceSaveState(game, event, save) {
+    try {
+        const player = game.players?.[game.localPlayerID];
+        const inv = player?.inventory;
+        const replay = game.replayManager?.serialize();
+        const summarizeReplay = (data) => data && ({
+            seed: data.seed, recording: data.recording, startMs: data.startMs,
+            count: data.actions?.length, tail: data.actions?.slice(-8),
+        });
+        const describe = (item, slot) => item && ({
+            slot, type: item.constructor?.name, name: item.name,
+            equipped: item.equipped, broken: item.broken, durability: item.durability,
+            cooldown: item.cooldown, cooldownMax: item.cooldownMax,
+            spells: item.spells?.map((spell) => ({ id: spell.id, type: spell.constructor?.name })),
+            activeSpell: item.activeSpell?.id, pendingSpell: item.pendingSpell?.id,
+        });
+        const targeting = player?.rangedTargeting;
+        const room = player?.getRoom();
+        const savedPlayers = save?.delta?.players ?? save?.players;
+        const entry = {
+            event, at: Date.now(), saveVersion: save?.saveVersion ?? (save ? 1 : undefined),
+            savedAt: save?.meta?.savedAtMs, seed: game.levelgen?.seed,
+            player: player && { x: player.x, y: player.y, health: player.health,
+                dead: player.dead, turnCount: player.turnCount, roomId: room?.id, depth: room?.depth },
+            inventory: inv?.items.map(describe),
+            equippedSlot: inv?.items.indexOf(inv.weapon),
+            targeting: targeting && { active: targeting.active, x: targeting.targetX, y: targeting.targetY,
+                sourceSlot: inv?.items.indexOf(targeting.getWeapon()),
+                source: describe(targeting.getWeapon(), -1) },
+            replay: summarizeReplay(replay), savedReplay: summarizeReplay(save?.replay),
+            savedInventories: savedPlayers && Object.values(savedPlayers).map((p) => p.inventory),
+        };
+        window.publishSaveDiagnostic?.(entry);
+        console.log("[save-diagnostic] " + JSON.stringify(entry));
+    }
+    catch (error) {
+        console.warn("[save-diagnostic] capture failed", String(error));
+    }
+}
+exports.traceSaveState = traceSaveState;
+
+
+/***/ }),
+
 /***/ "./src/game/savePersistence.ts":
 /*!*************************************!*\
   !*** ./src/game/savePersistence.ts ***!
@@ -51468,6 +51629,7 @@ const collectPersistedEnemies = (game, room, nowMs) => {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hasCookieSave = exports.clearCookieSave = exports.loadFromCookies = exports.saveToCookies = void 0;
+const saveDiagnostics_1 = __webpack_require__(/*! ./saveDiagnostics */ "./src/game/saveDiagnostics.ts");
 const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/game/gameState.ts");
 const save_1 = __webpack_require__(/*! ./save */ "./src/game/save/index.ts");
 const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
@@ -51512,6 +51674,9 @@ const isLegacyGameState = (v) => {
 // Save
 // ---------------------------------------------------------------------------
 const saveToCookies = (game, opts) => {
+    // A replay (including its terminal screen) must never overwrite the live save.
+    if (game.replayManager.isReplaying())
+        return;
     let v2;
     try {
         v2 = (0, save_1.createSaveV2)(game);
@@ -51528,6 +51693,7 @@ const saveToCookies = (game, opts) => {
             game.pushMessage?.("Save failed.");
         return;
     }
+    (0, saveDiagnostics_1.traceSaveState)(game, "save-encoded", v2.value);
     const json = JSON.stringify(v2.value);
     const es = getElectronSave();
     if (es) {
@@ -51576,7 +51742,9 @@ const loadFromCookies = async (game) => {
         // Prefer V2.
         const parsedV2 = (0, save_1.parseSaveV2Json)(json);
         if (parsedV2.ok) {
+            (0, saveDiagnostics_1.traceSaveState)(game, "load-before", parsedV2.value);
             const lr = await (0, save_1.loadSaveV2)(game, parsedV2.value);
+            (0, saveDiagnostics_1.traceSaveState)(game, lr.ok ? "load-after" : "load-failed", parsedV2.value);
             if (lr.ok === false) {
                 console.error("V2 load failed", lr.error);
                 game.pushMessage?.("Load failed.");
@@ -51598,7 +51766,9 @@ const loadFromCookies = async (game) => {
                 return false;
             }
             const activeUsernames = [game.localPlayerID];
+            (0, saveDiagnostics_1.traceSaveState)(game, "legacy-load-before", state);
             await (0, gameState_1.loadGameState)(game, activeUsernames, state, false);
+            (0, saveDiagnostics_1.traceSaveState)(game, "legacy-load-after", state);
             game.pushMessage?.("Loaded (legacy save).");
             return true;
         }
@@ -52057,6 +52227,56 @@ function xpUntilNextLevel(xp) {
     };
 }
 exports.xpUntilNextLevel = xpUntilNextLevel;
+
+
+/***/ }),
+
+/***/ "./src/game/spellDiagnostics.ts":
+/*!**************************************!*\
+  !*** ./src/game/spellDiagnostics.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getSpellDiagnostics = exports.traceSpell = void 0;
+const events = [];
+let sequence = 0;
+/** Bounded, scalar-only trace: diagnostic failures must never affect casting. */
+function traceSpell(player, event, details = {}) {
+    try {
+        const manager = player.game.replayManager;
+        const room = player.getRoom();
+        const weapon = player.inventory?.weapon;
+        const entry = {
+            sequence: ++sequence, at: Date.now(), event,
+            mode: manager.isReplaying() ? "replay" : "live",
+            seed: manager.getStats().seed,
+            step: manager.isReplaying() ? manager.diagnosticStep : manager.getStats().count + 1,
+            roomId: room?.id, depth: room?.depth, roomTurn: room?.turn,
+            turnCount: player.turnCount, x: player.x, y: player.y,
+            health: player.health, dead: player.dead, busyAnimating: player.busyAnimating,
+            equippedWeapon: weapon?.constructor.name,
+            ...details,
+        };
+        events.push(entry);
+        // Keep separate budgets so playback cannot evict the live cast evidence.
+        const sameMode = events.filter(e => e.mode === entry.mode);
+        if (sameMode.length > 300)
+            events.splice(events.indexOf(sameMode[0]), 1);
+        console.log("[spell] " + JSON.stringify(entry));
+        return entry.sequence;
+    }
+    catch {
+        return undefined;
+    }
+}
+exports.traceSpell = traceSpell;
+function getSpellDiagnostics() {
+    return events.map(event => ({ ...event }));
+}
+exports.getSpellDiagnostics = getSpellDiagnostics;
 
 
 /***/ }),
@@ -56595,6 +56815,278 @@ PostProcessor.draw = (delta, underwater = false, cameraOrigin) => {
 
 /***/ }),
 
+/***/ "./src/gui/replayMenu.ts":
+/*!*******************************!*\
+  !*** ./src/gui/replayMenu.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplayMenu = void 0;
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
+const input_1 = __webpack_require__(/*! ../game/input */ "./src/game/input.ts");
+const mouseCursor_1 = __webpack_require__(/*! ./mouseCursor */ "./src/gui/mouseCursor.ts");
+const BUTTON_HEIGHT = 14;
+const SPACING = 2;
+const CONTENT_PADDING = 24;
+const CHECKBOX_SIZE = 7;
+const CHECKBOX_MARGIN = 4;
+class ReplayMenu {
+    constructor(game) {
+        this.open = false;
+        this.activeItemIndex = 0;
+        this.hoverAnims = [];
+        this.lastInputWasMouse = false;
+        this.openFade = null;
+        this.menuX = 0;
+        this.menuY = 0;
+        this.menuW = 0;
+        this.lastClickTime = 0;
+        this.CLICK_DEBOUNCE = 150;
+        this.game = game;
+        this.items = this.buildItems();
+        this.hoverAnims = new Array(this.items.length).fill(0);
+    }
+    get replayManager() {
+        return this.game.replayManager;
+    }
+    setSpeed(speed) {
+        gameplaySettings_1.GameplaySettings.REPLAY_SPEED = speed;
+    }
+    buildItems() {
+        return [
+            {
+                label: this.replayManager.isFinished() ? "Replay Again" : "Resume",
+                kind: "action",
+                onActivate: () => {
+                    if (this.replayManager.isFinished()) {
+                        this.forceClose();
+                        this.replayManager.cancelReplay();
+                        this.replayManager.replay(this.game);
+                    }
+                    else {
+                        this.close();
+                        this.replayManager.resume();
+                    }
+                },
+            },
+            {
+                label: "New Game",
+                kind: "action",
+                onActivate: () => {
+                    this.forceClose();
+                    this.replayManager?.cancelReplay?.();
+                    this.game.newGame();
+                },
+            },
+            {
+                label: "Slow",
+                kind: "toggle",
+                getState: () => gameplaySettings_1.GameplaySettings.REPLAY_SPEED === "slow",
+                onActivate: () => this.setSpeed("slow"),
+            },
+            {
+                label: "Normal",
+                kind: "toggle",
+                getState: () => gameplaySettings_1.GameplaySettings.REPLAY_SPEED === "normal",
+                onActivate: () => this.setSpeed("normal"),
+            },
+            {
+                label: "Fast",
+                kind: "toggle",
+                getState: () => gameplaySettings_1.GameplaySettings.REPLAY_SPEED === "fast",
+                onActivate: () => this.setSpeed("fast"),
+            },
+        ];
+    }
+    openMenu() {
+        this.items = this.buildItems();
+        this.replayManager.pause();
+        this.lastInputWasMouse = false;
+        this.open = true;
+        this.activeItemIndex = 0;
+        this.openFade = { kind: "opening", startMs: Date.now(), durationMs: 160 };
+        this.computeLayout();
+    }
+    close() {
+        if (!this.open)
+            return;
+        this.openFade = { kind: "closing", startMs: Date.now(), durationMs: 140 };
+    }
+    forceClose() {
+        this.open = false;
+        this.openFade = null;
+    }
+    openAlpha() {
+        if (!this.open)
+            return 0;
+        if (!this.openFade)
+            return 1;
+        const t = Math.max(0, Math.min(1, (Date.now() - this.openFade.startMs) / this.openFade.durationMs));
+        const ease = t * (2 - t);
+        if (this.openFade.kind === "opening") {
+            if (t >= 1)
+                this.openFade = null;
+            return ease;
+        }
+        const a = 1 - ease;
+        if (t >= 1) {
+            this.openFade = null;
+            this.open = false;
+        }
+        return a;
+    }
+    computeLayout() {
+        let maxW = 0;
+        for (const item of this.items) {
+            const w = game_1.Game.measureText(item.label).width;
+            if (w > maxW)
+                maxW = w;
+        }
+        // All items have a checkbox area even if they're "action" kind, for consistent alignment.
+        this.menuW = maxW + CONTENT_PADDING + CHECKBOX_SIZE + CHECKBOX_MARGIN * 2 + 4;
+        this.menuX = Math.round((gameConstants_1.GameConstants.WIDTH - this.menuW) / 2);
+        const totalH = this.items.length * (BUTTON_HEIGHT + SPACING) - SPACING;
+        this.menuY = Math.round((gameConstants_1.GameConstants.HEIGHT - totalH) / 2);
+    }
+    draw(delta) {
+        if (!this.open)
+            return;
+        const alpha = this.openAlpha();
+        if (alpha <= 0)
+            return;
+        const ctx = game_1.Game.ctx;
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = alpha;
+        // Scrim
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, gameConstants_1.GameConstants.WIDTH, gameConstants_1.GameConstants.HEIGHT);
+        this.computeLayout();
+        const cursor = mouseCursor_1.MouseCursor.getInstance().getPosition();
+        for (let i = 0; i < this.items.length; i++) {
+            const item = this.items[i];
+            const baseY = this.menuY + i * (BUTTON_HEIGHT + SPACING);
+            const isSelected = !this.lastInputWasMouse && this.activeItemIndex === i;
+            let hovered = false;
+            if (this.lastInputWasMouse) {
+                hovered =
+                    cursor.x >= this.menuX && cursor.x <= this.menuX + this.menuW &&
+                        cursor.y >= baseY && cursor.y <= baseY + BUTTON_HEIGHT;
+            }
+            const target = (isSelected || hovered) ? 1 : 0;
+            if (i >= this.hoverAnims.length)
+                this.hoverAnims.push(0);
+            this.hoverAnims[i] += 0.3 * delta * (target - this.hoverAnims[i]);
+            this.hoverAnims[i] = Math.max(0, Math.min(1, this.hoverAnims[i]));
+            const growPx = Math.round(1 * this.hoverAnims[i]);
+            const bx = Math.round(this.menuX - growPx);
+            const by = Math.round(baseY - growPx);
+            const bw = Math.round(this.menuW + 2 * growPx);
+            const bh = Math.round(BUTTON_HEIGHT + 2 * growPx);
+            ctx.fillStyle = (isSelected || hovered) ? "rgba(75, 75, 75, 0.5)" : "rgba(100, 100, 100, 0.5)";
+            ctx.fillRect(bx, by, bw, bh);
+            // Checkbox for toggle items (radio-style: only one speed active)
+            if (item.kind === "toggle") {
+                const checkX = Math.round(this.menuX + CHECKBOX_MARGIN);
+                const checkY = Math.round(baseY + (BUTTON_HEIGHT - CHECKBOX_SIZE) / 2);
+                ctx.fillStyle = "rgba(255, 255, 0, 1)";
+                // Border
+                ctx.fillRect(checkX, checkY, CHECKBOX_SIZE, 1);
+                ctx.fillRect(checkX, checkY + CHECKBOX_SIZE - 1, CHECKBOX_SIZE, 1);
+                ctx.fillRect(checkX, checkY, 1, CHECKBOX_SIZE);
+                ctx.fillRect(checkX + CHECKBOX_SIZE - 1, checkY, 1, CHECKBOX_SIZE);
+                // Fill if active
+                if (item.getState && item.getState()) {
+                    ctx.fillRect(checkX + 2, checkY + 2, CHECKBOX_SIZE - 4, CHECKBOX_SIZE - 4);
+                }
+            }
+            // Text — toggle items indent past checkbox; action items align to same left edge
+            ctx.fillStyle = "rgba(255, 255, 0, 1)";
+            const textStartX = this.menuX + CHECKBOX_MARGIN + CHECKBOX_SIZE + 4;
+            const textX = Math.round(item.kind === "toggle" ? textStartX : this.menuX + CHECKBOX_MARGIN);
+            const textY = Math.round(baseY + (BUTTON_HEIGHT - game_1.Game.letter_height) / 2);
+            game_1.Game.fillText(item.label, textX, textY);
+        }
+        ctx.restore();
+    }
+    inputHandler(input) {
+        if (!this.open)
+            return;
+        if (this.openFade?.kind === "closing")
+            return;
+        if (input === input_1.InputEnum.UP || input === input_1.InputEnum.DOWN) {
+            this.lastInputWasMouse = false;
+        }
+        else if (input === input_1.InputEnum.LEFT_CLICK || input === input_1.InputEnum.MOUSE_MOVE) {
+            this.lastInputWasMouse = true;
+        }
+        switch (input) {
+            case input_1.InputEnum.ESCAPE:
+                if (this.replayManager.isFinished())
+                    return;
+                this.close();
+                this.replayManager?.resume?.();
+                break;
+            case input_1.InputEnum.UP:
+                this.activeItemIndex = (this.activeItemIndex - 1 + this.items.length) % this.items.length;
+                break;
+            case input_1.InputEnum.DOWN:
+                this.activeItemIndex = (this.activeItemIndex + 1) % this.items.length;
+                break;
+            case input_1.InputEnum.SPACE:
+            case input_1.InputEnum.ENTER:
+                this.activateItem(this.activeItemIndex);
+                break;
+            case input_1.InputEnum.LEFT_CLICK: {
+                const { x, y } = mouseCursor_1.MouseCursor.getInstance().getPosition();
+                this.handleClick(x, y);
+                break;
+            }
+        }
+    }
+    handleClick(x, y) {
+        if (!this.open || this.openFade?.kind === "closing")
+            return;
+        this.computeLayout();
+        const now = Date.now();
+        if (now - this.lastClickTime < this.CLICK_DEBOUNCE)
+            return;
+        this.lastClickTime = now;
+        for (let i = 0; i < this.items.length; i++) {
+            const by = this.menuY + i * (BUTTON_HEIGHT + SPACING);
+            if (x >= this.menuX && x <= this.menuX + this.menuW &&
+                y >= by && y <= by + BUTTON_HEIGHT) {
+                this.lastInputWasMouse = true;
+                this.activeItemIndex = i;
+                this.activateItem(i);
+                return;
+            }
+        }
+        if (this.replayManager.isFinished())
+            return;
+        // Tap/click outside the menu: resume and close
+        this.close();
+        this.replayManager?.resume?.();
+    }
+    handleMouseDown(x, y) {
+        this.handleClick(x, y);
+    }
+    activateItem(index) {
+        if (index >= 0 && index < this.items.length) {
+            this.items[index].onActivate();
+        }
+    }
+}
+exports.ReplayMenu = ReplayMenu;
+
+
+/***/ }),
+
 /***/ "./src/gui/screenMessage.ts":
 /*!**********************************!*\
   !*** ./src/gui/screenMessage.ts ***!
@@ -59336,6 +59828,10 @@ class Inventory {
             this.itemUse();
         };
         this.mouseMove = () => {
+            // Inventory receives raw pointer events independently of PlayerInputHandler.
+            // Block human input here; recorded item actions still use the action processor.
+            if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open)
+                return;
             // Any mouse activity during a keyboard hold cancels it and returns the item to its source.
             if (this._isKeyboardDragging) {
                 this.keyboardDragCancel();
@@ -60610,6 +61106,10 @@ class Inventory {
             return { x, y, w, h };
         };
         this.handleMouseDown = (x, y, button) => {
+            // Inventory receives raw pointer events independently of PlayerInputHandler.
+            // Block human input here; recorded item actions still use the action processor.
+            if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open)
+                return;
             // Any mouse click during a keyboard hold cancels it and returns the item to its source.
             if (this._isKeyboardDragging) {
                 this.keyboardDragCancel();
@@ -60658,6 +61158,10 @@ class Inventory {
          * Handle hold detection for both mouse and touch.
          */
         this.onHoldDetected = () => {
+            // Inventory receives raw pointer events independently of PlayerInputHandler.
+            // Block human input here; recorded item actions still use the action processor.
+            if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open)
+                return;
             // On mobile, long-press is reserved for context menus.
             // Dragging is initiated via movement threshold in `mouseMove()`.
             if (this.player.game.isMobile)
@@ -60680,6 +61184,10 @@ class Inventory {
             }
         };
         this.handleMouseUp = (x, y, button) => {
+            // Inventory receives raw pointer events independently of PlayerInputHandler.
+            // Block human input here; recorded item actions still use the action processor.
+            if (this.game.replayManager.isReplaying() || this.player.replayMenu?.open)
+                return;
             // Always clear drag-start tracking on release (even if a modal UI is open).
             // Otherwise long-press context menu can leave a stale drag candidate.
             this.dragStartMouseX = null;
@@ -65820,6 +66328,7 @@ QuarterStaff.examineText = "A sturdy staff. Better than bare hands.";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RangedTargetingSystem = void 0;
+const spellDiagnostics_1 = __webpack_require__(/*! ../../game/spellDiagnostics */ "./src/game/spellDiagnostics.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class RangedTargetingSystem {
@@ -66010,6 +66519,7 @@ class RangedTargetingSystem {
     }
     fire() {
         if (!this.active || !this.weapon) {
+            (0, spellDiagnostics_1.traceSpell)(this.player, "targeting-rejected", { active: this.active, hasWeapon: !!this.weapon });
             this.stop();
             return false;
         }
@@ -66945,6 +67455,7 @@ exports.spellById = spellById;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Spellbook = void 0;
+const spellDiagnostics_1 = __webpack_require__(/*! ../../game/spellDiagnostics */ "./src/game/spellDiagnostics.ts");
 const game_1 = __webpack_require__(/*! ../../game */ "./src/game.ts");
 const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.ts");
 const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.ts");
@@ -67041,18 +67552,26 @@ class Spellbook extends weapon_1.Weapon {
             }
         };
         this.fireAtTarget = (player, tx, ty) => {
-            if (this.broken)
+            const castId = (0, spellDiagnostics_1.traceSpell)(player, "book-attempt", { tx, ty, broken: this.broken, cooldown: this.cooldown, cooldownMax: this.cooldownMax });
+            if (this.broken) {
+                (0, spellDiagnostics_1.traceSpell)(player, "book-rejected", { castId, reason: "broken" });
                 return false;
+            }
             const room = player.getRoom();
-            if (!room)
+            if (!room) {
+                (0, spellDiagnostics_1.traceSpell)(player, "book-rejected", { castId, reason: "missing-room" });
                 return false;
+            }
             const z = player.z ?? 0;
             const spell = this.pendingSpell ?? this.activeSpell;
             this.pendingSpell = null;
             const manaCost = spell.manaCost;
             const currentMana = Math.max(0, this.cooldownMax - this.cooldown);
-            if (currentMana < manaCost)
+            (0, spellDiagnostics_1.traceSpell)(player, "spell-selected", { castId, spell: spell.constructor.name, manaCost, currentMana });
+            if (currentMana < manaCost) {
+                (0, spellDiagnostics_1.traceSpell)(player, "book-rejected", { castId, reason: "insufficient-mana" });
                 return false;
+            }
             const damage = (spell.damage ?? this.damage) + player.magicDamageBonus;
             // Spend mana (increase cooldown by spell cost); +1 so the end-of-turn tick lands correctly.
             this.cooldown = this.cooldown + manaCost + 1;
@@ -67063,6 +67582,7 @@ class Spellbook extends weapon_1.Weapon {
             player.syncManaFromSpellbookCooldowns();
             // SpellBeam animates to the target; actual damage + turn advance fires on arrival.
             const beam = new spellBeam_1.SpellBeam(room, player, tx, ty, () => {
+                (0, spellDiagnostics_1.traceSpell)(player, "effect-start", { castId, sourceRoomId: room.id, sourceDepth: room.depth });
                 const { offsets, delays } = spell.getPattern();
                 let anyFired = false;
                 for (let i = 0; i < offsets.length; i++) {
@@ -67081,15 +67601,19 @@ class Spellbook extends weapon_1.Weapon {
                     }
                     anyFired = true;
                 }
+                (0, spellDiagnostics_1.traceSpell)(player, "pattern-resolved", { castId, anyFired, tiles: offsets.length });
                 if (anyFired) {
                     player.setHitXY(tx, ty);
+                    (0, spellDiagnostics_1.traceSpell)(player, "tick-before", { castId, sourceRoomTurn: room.turn });
                     room.tick(player);
+                    (0, spellDiagnostics_1.traceSpell)(player, "tick-after", { castId, sourceRoomTurn: room.turn });
                     this.hitSound();
                     sound_1.Sound.playMagic();
                     this.degrade();
                 }
-            });
+            }, castId);
             room.projectiles.push(beam);
+            (0, spellDiagnostics_1.traceSpell)(player, "beam-enqueued", { castId });
             return true;
         };
         this.getTargets = () => {
@@ -76011,6 +76535,7 @@ const random_1 = __webpack_require__(/*! ../utility/random */ "./src/utility/ran
 const oxygenLine_1 = __webpack_require__(/*! ./oxygenLine */ "./src/player/oxygenLine.ts");
 const skillsMenu_1 = __webpack_require__(/*! ../gui/skillsMenu */ "./src/gui/skillsMenu.ts");
 const settingsMenu_1 = __webpack_require__(/*! ../gui/settingsMenu */ "./src/gui/settingsMenu.ts");
+const replayMenu_1 = __webpack_require__(/*! ../gui/replayMenu */ "./src/gui/replayMenu.ts");
 const xpCounter_1 = __webpack_require__(/*! ../gui/xpCounter */ "./src/gui/xpCounter.ts");
 const rangedTargetingSystem_1 = __webpack_require__(/*! ../item/weapon/rangedTargetingSystem */ "./src/item/weapon/rangedTargetingSystem.ts");
 const emeraldRing_1 = __webpack_require__(/*! ../item/jewelry/emeraldRing */ "./src/item/jewelry/emeraldRing.ts");
@@ -77404,6 +77929,7 @@ class Player extends drawable_1.Drawable {
         this.menu = new menu_1.Menu(this);
         this.skillsMenu = new skillsMenu_1.SkillsMenu();
         this.settingsMenu = new settingsMenu_1.SettingsMenu(game);
+        this.replayMenu = new replayMenu_1.ReplayMenu(game);
         this.busyAnimating = false;
         this.mapToggled = true;
         this.health = gameplaySettings_1.GameplaySettings.STARTING_HEALTH;
@@ -77497,6 +78023,10 @@ Player.oxygenLineBaseOffset = 1.4;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerActionProcessor = void 0;
+const saveDiagnostics_1 = __webpack_require__(/*! ../game/saveDiagnostics */ "./src/game/saveDiagnostics.ts");
+const spellbook_1 = __webpack_require__(/*! ../item/weapon/spellbook */ "./src/item/weapon/spellbook.ts");
+const spellDiagnostics_1 = __webpack_require__(/*! ../game/spellDiagnostics */ "./src/game/spellDiagnostics.ts");
+const actionReadiness_1 = __webpack_require__(/*! ../game/actionReadiness */ "./src/game/actionReadiness.ts");
 const ironBar_1 = __webpack_require__(/*! ../item/resource/ironBar */ "./src/item/resource/ironBar.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 class PlayerActionProcessor {
@@ -77542,6 +78072,8 @@ class PlayerActionProcessor {
         catch { }
     }
     process(action) {
+        if (!(0, actionReadiness_1.isActionReady)(this.player.game))
+            return;
         switch (action.type) {
             // --- Directional world action ---
             // One action type covers walk/attack/push/interact/door-unlock. The executor
@@ -77579,8 +78111,51 @@ class PlayerActionProcessor {
                 this.record(action);
                 break;
             // --- Ranged / spell ---
-            case "CastSpell":
+            case "CastSpell": {
+                const rt = this.player.rangedTargeting;
+                const items = this.player.inventory.items;
+                const replaying = this.player.game.replayManager.isReplaying();
+                let book;
+                if (action.sourceSlot !== undefined) {
+                    const source = items[action.sourceSlot];
+                    if (source instanceof spellbook_1.Spellbook)
+                        book = source;
+                }
+                else {
+                    // Legacy recordings lack a slot: use their targeting book, or resolve
+                    // an unambiguous book containing the recorded spell. Never use melee gear.
+                    const target = rt?.getWeapon();
+                    if (target instanceof spellbook_1.Spellbook && items.includes(target) &&
+                        target.spells.some(spell => spell.id === action.spellId))
+                        book = target;
+                    else {
+                        const candidates = items.filter((item) => item instanceof spellbook_1.Spellbook && item.spells.some(spell => spell.id === action.spellId));
+                        if (candidates.length === 1)
+                            book = candidates[0];
+                    }
+                }
+                const spell = book?.spells.find(spell => spell.id === action.spellId);
+                if (!rt || !book || !spell) {
+                    (0, saveDiagnostics_1.traceSaveState)(this.player.game, "unresolved-spell-source");
+                    (0, spellDiagnostics_1.traceSpell)(this.player, "action-rejected", { action, reason: "unresolved-spell-source" });
+                    if (replaying)
+                        throw new Error(`Cannot resolve spell ${action.spellId} from slot ${action.sourceSlot ?? "legacy"}`);
+                    return;
+                }
+                const recordedAction = { ...action, sourceSlot: items.indexOf(book) };
+                (0, spellDiagnostics_1.traceSpell)(this.player, "action-attempt", { action: recordedAction });
+                // Restore the cast source independently of transient targeting UI state.
+                book.pendingSpell = spell;
+                rt.start(book);
+                rt.targetX = action.targetX;
+                rt.targetY = action.targetY;
+                const fired = rt.fire();
+                (0, spellDiagnostics_1.traceSpell)(this.player, "action-result", { fired, action: recordedAction });
+                this.record(recordedAction);
+                break;
+            }
             case "FireRanged": {
+                (0, spellDiagnostics_1.traceSpell)(this.player, "action-attempt", { action });
                 const rt = this.player.rangedTargeting;
                 if (rt) {
                     if (!rt.active) {
@@ -77592,8 +78167,11 @@ class PlayerActionProcessor {
                     }
                     rt.targetX = action.targetX;
                     rt.targetY = action.targetY;
-                    rt.fire();
+                    const fired = rt.fire();
+                    (0, spellDiagnostics_1.traceSpell)(this.player, "action-result", { fired, action });
                 }
+                if (!rt)
+                    (0, spellDiagnostics_1.traceSpell)(this.player, "action-rejected", { reason: "missing-targeting", action });
                 // Note: spells defer room.tick to the SpellBeam onComplete callback (~245ms
                 // later via render loop). The outcome captured here is BEFORE that deferred
                 // tick fires — but it's identical between recording and replay because both
@@ -77761,7 +78339,11 @@ class PlayerInputHandler {
         this.armoryBookTouchMoveHandler = null;
         this.armoryBookTouchEndHandler = null;
         this.handleNumKey = (num) => {
-            if (this.player.menu.open || this.player.settingsMenu?.open)
+            if (this.player.game.replayManager.isReplaying()) {
+                this.handleInput(input_1.InputEnum.SPACE);
+                return;
+            }
+            if (this.player.menu.open || this.player.settingsMenu?.open || this.player.replayMenu?.open)
                 return;
             this.setMostRecentInput("keyboard");
             const slotIndex = num - 1;
@@ -78002,6 +78584,36 @@ class PlayerInputHandler {
         input_1.Input.wheelListener = (deltaY) => this.handleMouseWheel(deltaY);
     }
     handleInput(input) {
+        // Replay is active — route through the replay menu.
+        const replayMgr = this.player.game.replayManager;
+        if (this.player.replayMenu?.open) {
+            if (input === input_1.InputEnum.EQUALS) {
+                this.player.game.increaseScale();
+                return;
+            }
+            if (input === input_1.InputEnum.MINUS) {
+                this.player.game.decreaseScale();
+                return;
+            }
+            this.player.replayMenu.inputHandler(input);
+            return;
+        }
+        if (replayMgr?.isReplaying()) {
+            if (input === input_1.InputEnum.EQUALS) {
+                this.player.game.increaseScale();
+                return;
+            }
+            if (input === input_1.InputEnum.MINUS) {
+                this.player.game.decreaseScale();
+                return;
+            }
+            if (input === input_1.InputEnum.MOUSE_MOVE)
+                return;
+            // Any key opens the replay menu and pauses.
+            replayMgr.pause();
+            this.player.replayMenu?.openMenu();
+            return;
+        }
         // If a camera animation is active, allow inputs that should fast-forward it
         if (this.player.game.cameraAnimation.active) {
             switch (input) {
@@ -78016,23 +78628,6 @@ class PlayerInputHandler {
         }
         if (this.player.busyAnimating)
             return;
-        // Replay is active: block all game input. Any key/click exits the replay.
-        const replayMgr = this.player.game.replayManager;
-        if (replayMgr?.isReplaying()) {
-            if (input === input_1.InputEnum.EQUALS) {
-                this.player.game.increaseScale();
-                return;
-            }
-            if (input === input_1.InputEnum.MINUS) {
-                this.player.game.decreaseScale();
-                return;
-            }
-            if (input === input_1.InputEnum.MOUSE_MOVE)
-                return;
-            replayMgr.cancelReplay();
-            this.player.game.newGame();
-            return;
-        }
         // Block input during level transitions, except for mouse movement
         if ((this.player.game.levelState === game_1.LevelState.TRANSITIONING ||
             this.player.game.levelState === game_1.LevelState.TRANSITIONING_LADDER) &&
@@ -78546,6 +79141,8 @@ class PlayerInputHandler {
         }
     }
     handleMouseWheel(deltaY) {
+        if (this.player.game.replayManager.isReplaying())
+            return;
         // Only handle while in-game
         if (this.player.game.levelState !== game_1.LevelState.IN_LEVEL)
             return;
@@ -78553,6 +79150,8 @@ class PlayerInputHandler {
             this.player.settingsMenu.handleWheel(deltaY);
             return;
         }
+        if (this.player.replayMenu?.open)
+            return;
         if (this.player.skillsMenu?.open)
             return;
         // Scroll direction: positive deltaY -> scroll down (next slot), negative -> previous
@@ -78606,9 +79205,11 @@ class PlayerInputHandler {
     }
     handleMouseRightClickAt(x, y, targetEntity, fromKeyboard = false) {
         const _replayMgr = this.player.game.replayManager;
+        if (this.player.replayMenu?.open)
+            return;
         if (_replayMgr?.isReplaying()) {
-            _replayMgr.cancelReplay();
-            this.player.game.newGame();
+            _replayMgr.pause();
+            this.player.replayMenu?.openMenu();
             return;
         }
         if (this.player.screenMessage?.open) {
@@ -79247,12 +79848,16 @@ class PlayerInputHandler {
         menu.openAt(x, y, items, !!targetEntity || fromKeyboard);
     }
     handleMouseDown(x, y, button) {
-        // Replay active: left-click exits the replay (right-click handled by handleMouseRightClickAt).
         const _replayMgr = this.player.game.replayManager;
+        if (this.player.replayMenu?.open) {
+            if (button === 0)
+                this.player.replayMenu.handleMouseDown(x, y);
+            return;
+        }
         if (_replayMgr?.isReplaying()) {
             if (button === 0) {
-                _replayMgr.cancelReplay();
-                this.player.game.newGame();
+                _replayMgr.pause();
+                this.player.replayMenu?.openMenu();
             }
             return;
         }
@@ -79564,11 +80169,14 @@ class PlayerInputHandler {
             this.player.game.cameraAnimation.fast = true;
             return;
         }
-        // Replay active: any tap exits the replay.
         const _replayMgr = this.player.game.replayManager;
+        if (this.player.replayMenu?.open) {
+            this.player.replayMenu.handleMouseDown(input_1.Input.mouseX, input_1.Input.mouseY);
+            return;
+        }
         if (_replayMgr?.isReplaying()) {
-            _replayMgr.cancelReplay();
-            this.player.game.newGame();
+            _replayMgr.pause();
+            this.player.replayMenu?.openMenu();
             return;
         }
         if (this.player.dead) {
@@ -79908,7 +80516,8 @@ class PlayerInputHandler {
         if (weapon instanceof spellbook_1.Spellbook) {
             this.player.actionProcessor.process({
                 type: "CastSpell",
-                spellId: weapon.activeSpell?.id ?? "unknown",
+                spellId: (weapon.pendingSpell ?? weapon.activeSpell)?.id ?? "unknown",
+                sourceSlot: this.player.inventory.items.indexOf(weapon),
                 targetX: tx,
                 targetY: ty,
             });
@@ -80096,6 +80705,7 @@ exports.PlayerInputHandler = PlayerInputHandler;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerMovement = void 0;
+const actionReadiness_1 = __webpack_require__(/*! ../game/actionReadiness */ "./src/game/actionReadiness.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
@@ -80120,6 +80730,11 @@ class PlayerMovement {
         this.queueHandler = () => {
             if (!this.isProcessingQueue)
                 return;
+            if (!(0, actionReadiness_1.isActionReady)(this.player.game)) {
+                this.moveQueue = [];
+                this.stopQueueProcessing();
+                return;
+            }
             const now = Date.now();
             const cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
             if (now - this.lastMoveTime >= cooldown) {
@@ -80159,6 +80774,8 @@ class PlayerMovement {
     move(direction, targetX, targetY, onExecuted) {
         if (!(direction in game_1.Direction) || !this.player)
             return false;
+        if (!(0, actionReadiness_1.isActionReady)(this.player.game))
+            return false;
         const coords = this.getTargetCoords(direction, targetX, targetY);
         if (!coords)
             return false;
@@ -80191,6 +80808,8 @@ class PlayerMovement {
     }
     moveMouse(direction, targetX, targetY, onExecuted) {
         if (!(direction in game_1.Direction) || !this.player || gameConstants_1.GameConstants.isMobile)
+            return false;
+        if (!(0, actionReadiness_1.isActionReady)(this.player.game))
             return false;
         const coords = this.getTargetCoords(direction, targetX, targetY);
         if (!coords)
@@ -80449,12 +81068,17 @@ class PlayerRenderer {
             }
         };
         this.enableSlowMotion = () => {
-            if (this.motionSpeed < 1 && !this.slowMotionEnabled && !this.slowMotionOverride) {
+            // Replay pacing is independent of the dual-dagger effect, which expires
+            // through updateSlowMotion on the next update.
+            const replaySlow = this.player.game.replayManager.isReplaying() &&
+                gameplaySettings_1.GameplaySettings.REPLAY_SPEED === "slow";
+            const slow = this.slowMotionEnabled || replaySlow;
+            if (this.motionSpeed < 1 && !slow && !this.slowMotionOverride) {
                 this.motionSpeed *= 1.08;
                 if (this.motionSpeed >= 1)
                     this.motionSpeed = 1;
             }
-            if (this.slowMotionEnabled && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
+            if (slow && this.motionSpeed > 0.25 && !this.slowMotionOverride) {
                 this.motionSpeed *= 0.95;
                 if (this.motionSpeed < 0.25)
                     this.motionSpeed = 0.25;
@@ -80479,6 +81103,7 @@ class PlayerRenderer {
             const anyOverlayOpen = Boolean(player.menu?.open) ||
                 Boolean(player.settingsMenu?.open) ||
                 Boolean(player.skillsMenu?.open) ||
+                Boolean(player.replayMenu?.open) ||
                 player.isAnyBookOpen ||
                 Boolean(player.inventory?.isOpen) ||
                 Boolean(player.contextMenu?.open);
@@ -81312,6 +81937,7 @@ class PlayerRenderer {
             else if (this.player.menu.open)
                 this.player.menu.draw(delta);
             this.player.contextMenu?.draw(delta);
+            this.player.replayMenu?.draw(delta);
             this.player.screenMessage?.draw(delta);
             game_1.Game.ctx.restore();
         };
@@ -83166,6 +83792,7 @@ exports.Projectile = Projectile;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SpellBeam = void 0;
+const spellDiagnostics_1 = __webpack_require__(/*! ../game/spellDiagnostics */ "./src/game/spellDiagnostics.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/beamEffect.ts");
 /**
@@ -83183,7 +83810,7 @@ const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/b
  *  - player.busyAnimating = true for the full duration.
  */
 class SpellBeam extends beamEffect_1.BeamEffect {
-    constructor(room, player, tx, ty, onComplete) {
+    constructor(room, player, tx, ty, onComplete, castId) {
         super(player.x, player.y - 0.5, tx, ty, player);
         this.elapsed = 0;
         this.fired = false;
@@ -83260,6 +83887,7 @@ class SpellBeam extends beamEffect_1.BeamEffect {
         };
         this.player = player;
         this.onComplete = onComplete;
+        this.diagnosticId = (0, spellDiagnostics_1.traceSpell)(player, "beam-created", { tx, ty, castId });
         this.color = "cyan";
         this.compositeOperation = "source-over";
         this.drawOnTop = true;
@@ -83278,10 +83906,20 @@ class SpellBeam extends beamEffect_1.BeamEffect {
     }
     fire() {
         this.fired = true;
+        (0, spellDiagnostics_1.traceSpell)(this.player, "beam-arrived", { beamId: this.diagnosticId, elapsed: this.elapsed });
         setTimeout(() => {
             this.player.busyAnimating = false;
-            if (!this.player.dead)
-                this.onComplete();
+            (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
+            if (!this.player.dead) {
+                try {
+                    this.onComplete();
+                    (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
+                }
+                catch (error) {
+                    (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
+                    throw error;
+                }
+            }
         }, 0);
     }
     /**

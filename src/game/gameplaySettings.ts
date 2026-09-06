@@ -123,12 +123,11 @@ export class GameplaySettings {
   static SIDEPATH_ENTRY_CONFIRMATION = true;
   static REPLAY_ON_DEATH = true;
   /**
-   * When enabled, replays play back at the maximum-safe speed (steps gated only by
-   * MOVEMENT_COOLDOWN + small slack, no extra computer-turn delay). When disabled,
-   * replays use the slower visual-friendly default (~1/3 normal speed). Catch-up
-   * inside tryMove() handles enemy turns synchronously, so fast mode stays correct.
+   * Replay playback speed. "fast" is the minimum-cooldown rate (55ms/step). "normal"
+   * is the visual-friendly default (165ms/step). "slow" is an ultra-slow pace
+   * (400ms/step) that also enables the game's slow-motion rendering effect.
    */
-  static FAST_REPLAYS = true;
+  static REPLAY_SPEED: "slow" | "normal" | "fast" = "fast";
 
   // === ENEMY POOL SETTINGS ===
 

@@ -1,3 +1,4 @@
+import { traceSaveState } from "./saveDiagnostics";
 import { Game } from "../game";
 import { createGameState, loadGameState, GameState } from "./gameState";
 import { createSaveV2, loadSaveV2, parseSaveV2Json } from "./save";
@@ -59,6 +60,8 @@ const isLegacyGameState = (v: unknown): v is GameState => {
 // ---------------------------------------------------------------------------
 
 export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
+  // A replay (including its terminal screen) must never overwrite the live save.
+  if (game.replayManager.isReplaying()) return;
   let v2;
   try {
     v2 = createSaveV2(game);
@@ -72,6 +75,7 @@ export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
     if (opts?.silent !== true) game.pushMessage?.("Save failed.");
     return;
   }
+  traceSaveState(game, "save-encoded", v2.value);
   const json = JSON.stringify(v2.value);
 
   const es = getElectronSave();
@@ -120,7 +124,9 @@ export const loadFromCookies = async (game: Game): Promise<boolean> => {
     // Prefer V2.
     const parsedV2 = parseSaveV2Json(json);
     if (parsedV2.ok) {
+      traceSaveState(game, "load-before", parsedV2.value);
       const lr = await loadSaveV2(game, parsedV2.value);
+      traceSaveState(game, lr.ok ? "load-after" : "load-failed", parsedV2.value);
       if (lr.ok === false) {
         console.error("V2 load failed", lr.error);
         game.pushMessage?.("Load failed.");
@@ -138,7 +144,9 @@ export const loadFromCookies = async (game: Game): Promise<boolean> => {
         return false;
       }
       const activeUsernames = [game.localPlayerID];
+      traceSaveState(game, "legacy-load-before", state);
       await loadGameState(game, activeUsernames, state, false);
+      traceSaveState(game, "legacy-load-after", state);
       game.pushMessage?.("Loaded (legacy save).");
       return true;
     }

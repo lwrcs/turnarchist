@@ -1,3 +1,4 @@
+import { isActionReady } from "../game/actionReadiness";
 import type { Player } from "./player";
 import { Direction } from "../game";
 import { GameConstants } from "../game/gameConstants";
@@ -48,6 +49,7 @@ export class PlayerMovement {
   ): boolean {
     if (!(direction in Direction) || !this.player) return false;
 
+    if (!isActionReady(this.player.game)) return false;
     const coords = this.getTargetCoords(direction, targetX, targetY);
     if (!coords) return false;
     const { x, y } = coords;
@@ -87,6 +89,7 @@ export class PlayerMovement {
     if (!(direction in Direction) || !this.player || GameConstants.isMobile)
       return false;
 
+    if (!isActionReady(this.player.game)) return false;
     const coords = this.getTargetCoords(direction, targetX, targetY);
     if (!coords) return false;
     const { x, y } = coords;
@@ -236,6 +239,11 @@ export class PlayerMovement {
 
   private queueHandler = () => {
     if (!this.isProcessingQueue) return;
+    if (!isActionReady(this.player.game)) {
+      this.moveQueue = [];
+      this.stopQueueProcessing();
+      return;
+    }
 
     const now = Date.now();
 

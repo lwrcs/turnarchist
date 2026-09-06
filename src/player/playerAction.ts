@@ -6,7 +6,7 @@ export type GameAction =
   // execution time. Replay validates by comparing post-action state, not the label.
   | { type: "Directional"; direction: Direction; targetX: number; targetY: number }
   | { type: "Wait" }
-  | { type: "CastSpell";   spellId: string; targetX: number; targetY: number }
+  | { type: "CastSpell";   spellId: string; sourceSlot?: number; targetX: number; targetY: number }
   | { type: "FireRanged";  targetX: number; targetY: number }
   | { type: "UseItem";     slotIndex: number }
   | { type: "UseItemOn";   fromSlot: number; toSlot: number }

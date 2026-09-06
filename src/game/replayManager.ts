@@ -1,3 +1,5 @@
+import { getSpellDiagnostics } from "./spellDiagnostics";
+import { isActionReady } from "./actionReadiness";
 import { Game, LevelState } from "../game";
 import { GameConstants } from "./gameConstants";
 import { GameplaySettings } from "./gameplaySettings";
@@ -48,6 +50,12 @@ interface ReplayReport {
   divergenceCount: number;
   divergences: DivergenceRecord[];
   finishedAt: string;
+  status: "completed" | "failed";
+  failureReason?: string;
+  haltedAtStep?: number;
+  recentSteps: unknown[];
+  spellDiagnostics: Record<string, unknown>[];
+  recordedContext: RecordedAction[];
 }
 
 const COOLDOWN_GATED_ACTIONS = new Set<GameAction["type"]>([
@@ -61,30 +69,32 @@ const MAX_COOLDOWN_WAITS = 20;
 const LEVEL_TRANSITION_POLL_MS = 50;
 const MAX_LEVEL_TRANSITION_WAITS = 400; // ~20s
 
-function isReplayReady(game: Game): boolean {
-  const g = game as any;
-  return (
-    g.levelState === LevelState.IN_LEVEL &&
-    !g.preLevelGenFadeActive &&
-    !g.preLevelGenHoldBlack &&
-    !g.preLevelGenActionStarted &&
-    !g.transitioningLadder
-  );
-}
-
 export class ReplayManager {
+  diagnosticStep = 0;
   private actions: RecordedAction[] = [];
   private startMs = 0;
   private recording = false;
   private replaying = false;
+  private paused = false;
+  private finished = false;
+
+  isFinished(): boolean { return this.finished; }
   private seed: number | undefined = undefined;
   private timer: number | null = null;
 
+  private clearTimer() {
+    if (this.timer !== null) window.clearTimeout(this.timer);
+    this.timer = null;
+  }
+
   beginRecording(seed?: number) {
+    this.clearTimer();
     this.actions = [];
     this.startMs = Date.now();
     this.recording = true;
     this.replaying = false;
+    this.paused = false;
+    this.finished = false;
     this.seed = seed;
   }
 
@@ -114,10 +124,13 @@ export class ReplayManager {
     actions: Array<{ t: number; action: Record<string, unknown>; outcome?: ActionOutcome }>;
   } | undefined | null) {
     if (!data) return;
+    this.clearTimer();
     this.seed = data.seed;
     this.startMs = data.startMs;
     this.recording = data.recording;
     this.replaying = false;
+    this.paused = false;
+    this.finished = false;
     this.actions = data.actions.map((a) => ({
       t: a.t,
       action: a.action as unknown as GameAction,
@@ -138,16 +151,23 @@ export class ReplayManager {
     return this.replaying;
   }
 
+  isPaused(): boolean {
+    return this.paused;
+  }
+
   isRecording(): boolean {
     return this.recording;
   }
 
   clearRecording() {
+    this.clearTimer();
     this.actions = [];
     this.seed = undefined;
     this.startMs = 0;
     this.recording = false;
     this.replaying = false;
+    this.paused = false;
+    this.finished = false;
   }
 
   stopRecording() {
@@ -163,7 +183,24 @@ export class ReplayManager {
     if (this.timer) window.clearTimeout(this.timer);
     this.timer = null;
     this.replaying = false;
-    this.recording = true;
+    this.paused = false;
+    this.finished = false;
+    this.recording = false;
+  }
+
+  /** Pause a running replay. The step loop checks this flag and suspends itself. */
+  pause() {
+    if (!this.replaying || this.paused) return;
+    this.paused = true;
+    // Don't clear the timer — step() will see paused=true, reschedule at a low-
+    // frequency poll, and hold until resume() flips the flag back.
+  }
+
+  /** Resume a paused replay. The step loop will pick up within the next poll cycle. */
+  resume() {
+    if (!this.replaying || this.finished) return;
+    this.paused = false;
+    this.finished = false;
   }
 
   recordAction(action: GameAction, outcome?: ActionOutcome) {
@@ -171,15 +208,12 @@ export class ReplayManager {
     this.actions.push({ t: Date.now() - this.startMs, action, outcome });
   }
 
-  replay(
-    game: Game,
-    stepMs: number = GameplaySettings.FAST_REPLAYS
-      ? GameConstants.REPLAY_STEP_MS_FAST
-      : GameConstants.REPLAY_STEP_MS,
-  ) {
+  replay(game: Game) {
     console.log("[replay] replay() called", { replaying: this.replaying, actions: this.actions.length, seed: this.seed });
     if (this.replaying) return;
     this.replaying = true;
+    this.paused = false;
+    this.finished = false;
     this.recording = false;
     const actions = this.actions.slice();
     const seed = this.seed;
@@ -191,12 +225,14 @@ export class ReplayManager {
     game.pushMessage(`Replay starting with ${actions.length} actions...`);
 
     const startPlayback = () => {
+      if (!this.replaying) return;
       const local = game.players?.[game.localPlayerID];
       console.log("[replay] startPlayback called, player:", !!local, "levelState:", game.levelState);
       if (!local) {
-        setTimeout(startPlayback, 16);
+        this.timer = window.setTimeout(startPlayback, 16);
         return;
       }
+
       let i = 0;
       let cooldownWaitsForStep = 0;
       let cooldownWaitStepIndex = -1;
@@ -204,20 +240,32 @@ export class ReplayManager {
       let levelWaitStepIndex = -1;
       const divergences: DivergenceRecord[] = [];
       let halted = false;
-      const finishReplay = (haltedAtStep?: number) => {
+      const recentSteps: unknown[] = [];
+      const finishReplay = (haltedAtStep?: number, failureReason?: string) => {
         if (this.timer) window.clearTimeout(this.timer);
         this.timer = null;
-        this.replaying = false;
-        this.recording = true;
+        // Keep the replay world isolated until an explicit replay/new-game choice.
+        this.replaying = true;
+        this.paused = true;
+        this.finished = true;
+        this.recording = false;
         const report: ReplayReport = {
           seed,
           totalActions: actions.length,
           divergenceCount: divergences.length,
           divergences,
           finishedAt: new Date().toISOString(),
+          status: haltedAtStep === undefined ? "completed" : "failed",
+          failureReason,
+          haltedAtStep,
+          recentSteps,
+          spellDiagnostics: getSpellDiagnostics(),
+          recordedContext: actions.slice(Math.max(0, i - 19), i + 4),
         };
         console.log("[replay] report", report);
         (window as any).lastReplayReport = report;
+        (window as any).publishReplayReport?.(report);
+        console.log("[replay] report JSON " + JSON.stringify(report));
         let msg: string;
         if (haltedAtStep !== undefined) {
           msg = `Replay halted at step ${haltedAtStep} of ${actions.length} — ${divergences.length} divergence(s). See window.lastReplayReport.`;
@@ -227,17 +275,27 @@ export class ReplayManager {
           msg = "Replay finished. No divergences.";
         }
         game.pushMessage(msg);
+        local.replayMenu?.openMenu();
       };
       const step = () => {
-        if (halted) return;
+        if (halted || !this.replaying) return;
+
+        // Paused: hold here and poll until resumed.
+        if (this.paused) {
+          if (this.timer) window.clearTimeout(this.timer);
+          this.timer = window.setTimeout(step, 50);
+          return;
+        }
+
         if (i >= actions.length) {
           finishReplay();
           return;
         }
         try {
+          this.diagnosticStep = i + 1;
           const action = actions[i].action;
 
-          if (!isReplayReady(game)) {
+          if (!isActionReady(game)) {
             if (levelWaitStepIndex !== i) {
               levelWaitStepIndex = i;
               levelWaitsForStep = 0;
@@ -248,9 +306,9 @@ export class ReplayManager {
               this.timer = window.setTimeout(step, LEVEL_TRANSITION_POLL_MS);
               return;
             }
-            console.warn(
-              `[replay] step ${i + 1}: level transition did not complete after ${MAX_LEVEL_TRANSITION_WAITS} polls; proceeding anyway`,
-            );
+            halted = true;
+            finishReplay(i + 1, "Level transition timeout");
+            return;
           }
 
           const beforeX = local.x;
@@ -277,14 +335,23 @@ export class ReplayManager {
               );
               return;
             }
-            console.warn(
-              `[replay] step ${i + 1}: exceeded ${MAX_COOLDOWN_WAITS} cooldown waits; proceeding anyway`,
-            );
+            halted = true;
+            finishReplay(i + 1, "Movement cooldown timeout");
+            return;
           }
 
           const roomBefore = (local as any).getRoom?.();
           const turnBefore = roomBefore?.turn;
           const turnCountBefore = (local as any).turnCount;
+          const diagnosticStep = {
+            step: i + 1, action, expectedOutcome: actions[i].outcome,
+            before: { x: beforeX, y: beforeY, health: (local as any).health,
+              roomId: roomBefore?.id, depth: roomBefore?.depth, turn: turnBefore, turnCount: turnCountBefore },
+            canMove: canMoveNow, cooldownWaits: cooldownWaitsForStep, levelWaits: levelWaitsForStep,
+            after: undefined as unknown,
+          };
+          recentSteps.push(diagnosticStep);
+          if (recentSteps.length > 20) recentSteps.shift();
           console.log("[replay] step begin", {
             index: i + 1,
             total: actions.length,
@@ -296,7 +363,6 @@ export class ReplayManager {
           });
 
           local.menu.open = false;
-          local.dead = false;
           local.inventory.close();
           local.actionProcessor.process(action);
           const afterX = local.x;
@@ -305,6 +371,8 @@ export class ReplayManager {
           const roomAfter = (local as any).getRoom?.();
           const turnAfter = roomAfter?.turn;
           const turnCountAfter = (local as any).turnCount;
+          diagnosticStep.after = { x: afterX, y: afterY, health: (local as any).health,
+            roomId: roomAfter?.id, depth: roomAfter?.depth, turn: turnAfter, turnCount: turnCountAfter };
           console.log("[replay] step end", {
             index: i + 1,
             type: action.type,
@@ -388,22 +456,35 @@ export class ReplayManager {
                 actualOutcome,
               });
               halted = true;
-              finishReplay(i + 1);
+              finishReplay(i + 1, reason);
               return;
             }
           }
         } catch (e) {
-          // swallow to avoid interrupting playback
+          halted = true;
+          finishReplay(i + 1, `Action exception: ${e instanceof Error ? e.stack || e.message : String(e)}`);
+          return;
         }
         if (halted) return;
+
+        // Compute per-step delay from current speed setting (read each step so
+        // speed changes from the replay menu take effect immediately).
+        const speed = GameplaySettings.REPLAY_SPEED;
+        const stepMs =
+          speed === "fast"  ? GameConstants.REPLAY_STEP_MS_FAST  :
+          speed === "normal" ? GameConstants.REPLAY_STEP_MS       :
+                               GameConstants.REPLAY_STEP_MS_SLOW;
+        const computerTurnDelay =
+          speed === "fast"  ? GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST  :
+          speed === "normal" ? GameConstants.REPLAY_COMPUTER_TURN_DELAY       :
+                               GameConstants.REPLAY_COMPUTER_TURN_DELAY_SLOW;
+
         const minDelay = Math.max(GameConstants.MOVEMENT_COOLDOWN + 5, stepMs);
         let nextDelay = minDelay;
         try {
           const room = (local as any).getRoom?.();
           if (room?.turn === 1) {
-            nextDelay += GameplaySettings.FAST_REPLAYS
-              ? GameConstants.REPLAY_COMPUTER_TURN_DELAY_FAST
-              : GameConstants.REPLAY_COMPUTER_TURN_DELAY;
+            nextDelay += computerTurnDelay;
           }
         } catch {}
         i++;
@@ -420,6 +501,8 @@ export class ReplayManager {
     // game.newGame calls beginRecording which resets replaying→false and clears actions;
     // re-assert replay state and restore actions so Watch Replay remains available afterwards.
     this.replaying = true;
+    this.paused = false;
+    this.finished = false;
     this.recording = false;
     this.actions = actions.slice();
     (game as any).started = true;
@@ -427,7 +510,7 @@ export class ReplayManager {
     // Poll until the level is ready (avoids event ordering race with LEVEL_GENERATION_COMPLETED).
     const waitForReady = () => {
       if (!this.replaying) return; // cancelled while waiting
-      if (isReplayReady(game)) {
+      if (isActionReady(game)) {
         startPlayback();
       } else {
         console.log("[replay] waiting for level ready, levelState:", game.levelState);
