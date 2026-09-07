@@ -29,5 +29,16 @@ export class Dagger extends Weapon {
     return !hitSomething;
   };
 
+  private readonly standardDaggerMove = this.weaponMove;
+
+  /** A lower bound for this immediate single-tile attack, not a simulated outcome. */
+  getAgentAttackTraits = () => {
+    if (!this.wielder || this.weaponMove !== this.standardDaggerMove ||
+      !this.usesStandardAttackPipeline() || this.manaCost > 0) return null;
+    const minimumDamage = this.damage + this.wielder.damageBonus;
+    return Number.isFinite(minimumDamage) && minimumDamage > 0
+      ? {pattern: "adjacent-cardinal", minimumDamage} : null;
+  };
+
   degrade = () => {};
 }

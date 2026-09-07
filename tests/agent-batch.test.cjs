@@ -144,3 +144,76 @@ test('weighted routing prefers an open detour over expensive destruction',()=>{
   v.room.entities[0]={x:1,y:0,appearance:'unidentified'};
   assert.equal(p.route(v,new Set()).direction,'down');
 });
+
+test('attacking from a warned tile loses to a known safe escape regardless of visits',()=>{
+  const p=new Policy(),v=view();v.room.hitWarnings=[{x:0,y:0,hostile:true}];
+  v.room.entities=[{x:1,y:0,isEnemy:true,collidable:true,health:2}];
+  for(const t of v.room.tiles)p.visits.set(`room:${t.x},${t.y}`,1000);
+  assert.notEqual(p.choose(v).direction,'right');
+  assert.equal(p.inspect().reason,'evade-warning');
+});
+test('clearing an obstacle on a route cannot override escaping a current warning',()=>{
+  const p=new Policy(),v=view();v.inventory=[{activeWeapon:true,traits:{baseDamage:1}}];
+  v.room.tiles[1].exit=true;v.room.entities=[{x:1,y:0,collidable:true,destroyable:true,health:1}];
+  v.room.hitWarnings=[{x:0,y:0,hostile:true}];
+  assert.notEqual(p.choose(v).direction,'right');
+});
+
+test('batch metrics preserve zero-turn chains and report earlier stalls and health loss',async()=>{
+  const agent=fakeAgent();let v=view(),n=0;
+  agent.perceive=()=>structuredClone(v);
+  agent.step=async()=>{n++;if(n===3){v.player.x=1;v.player.health=1;}
+    return {info:{recorded:true,turnDelta:n===3?1:0},terminated:false,truncated:n===3};};
+  const report=await new Runner(agent).run({seeds:[1],decisions:3});
+  const r=report.runs[0];assert.equal(r.zeroTurnDecisions,2);assert.equal(r.maxZeroTurnStreak,2);
+  assert.equal(r.maxDecisionsWithoutNewPosition,1);assert.equal(r.decisionsSinceNewPosition,0);
+  assert.equal(r.healthLost,1);assert.equal(r.status,'budget-incomplete');
+  assert.ok(r.trace.every(t=>t.policy.reason));assert.equal(report.schemaVersion,2);
+});
+
+test('a known killing blow cancels only warnings from the killed source',()=>{
+  const p=new Policy(),v=view();
+  v.inventory=[{activeWeapon:true,traits:{attackPattern:'adjacent-cardinal',minimumAttackDamage:1}}];
+  v.room.entities=[{id:'target',x:1,y:0,isEnemy:true,collidable:true,destroyable:true,
+    health:1,combat:{killDamageThreshold:1}}];
+  v.room.hitWarnings=[{x:0,y:0,hostile:true,sourceId:'target'}];
+  assert.equal(p.choose(v).direction,'right');
+  v.room.hitWarnings.push({x:0,y:0,hostile:true,sourceId:'other'});
+  assert.notEqual(p.choose(v).direction,'right');
+  v.room.hitWarnings.pop();v.room.entities[0].combat.killDamageThreshold=2;
+  assert.notEqual(p.choose(v).direction,'right');
+  v.room.entities[0].combat.killDamageThreshold=null;
+  assert.notEqual(p.choose(v).direction,'right');
+});
+
+test('pushing an object is not assumed to escape a warning when an empty tile is available',()=>{
+  const p=new Policy(),v=view();v.room.hitWarnings=[{x:0,y:0,hostile:true}];
+  v.room.entities=[{x:1,y:0,collidable:true,destroyable:true,pushable:true,health:1}];
+  p.visits.set('room:0,-1',1000);p.visits.set('room:0,1',1000);p.visits.set('room:-1,0',1000);
+  assert.notEqual(p.choose(v).direction,'right');
+});
+
+test('push escape requires a visible clear tail and supports chain-pushable occupants',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles.push({x:2,y:0,solid:false},{x:3,y:0,solid:false});
+  v.room.entities=[{x:1,y:0,pushable:true,collidable:true},{x:2,y:0,chainPushable:true,collidable:true}];
+  assert.equal(p.canPushIntoSpace(v,1,0,1,0),true);
+  v.room.tiles.find(t=>t.x===3).solid=null;
+  assert.equal(p.canPushIntoSpace(v,1,0,1,0),false);
+  v.room.tiles.find(t=>t.x===3).solid=false;v.room.entities[1].chainPushable=false;
+  assert.equal(p.canPushIntoSpace(v,1,0,1,0),false);
+});
+test('a confirmed push can escape a current warning while a blocked push cannot',()=>{
+  const p=new Policy(),v=view();v.room.hitWarnings=[{x:0,y:0,hostile:true}];
+  v.room.tiles.push({x:2,y:0,solid:false});
+  v.room.entities=[{x:1,y:0,pushable:true,collidable:true}];
+  for(const t of v.room.tiles)if(t.x!==1)p.visits.set(`room:${t.x},${t.y}`,100);
+  assert.equal(p.choose(v).direction,'right');
+  v.room.tiles.find(t=>t.x===2).solid=true;
+  assert.notEqual(p.choose(v).direction,'right');
+});
+test('routing does not pass through the far edge of a wide collider',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true}];
+  v.room.entities=[{x:1,y:-1,width:1,height:2,collidable:true,destroyable:false}];
+  assert.equal(p.route(v,new Set()),null);
+});

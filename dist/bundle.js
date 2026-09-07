@@ -11742,6 +11742,9 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                 this.hurtCallback();
             }
         };
+        this.standardSkullHurt = this.hurt;
+        this.getAgentKillDamageThreshold = () => this.hurt === this.standardSkullHurt && this.kill === this.standardKill && this.agentKillBehaviorKnown() && Number.isFinite(this.health)
+            ? Math.max(0, this.health) : null;
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -13604,6 +13607,9 @@ class BigSkullEnemy extends enemy_1.Enemy {
         };
         this.bleed = () => { };
         this.poison = () => { };
+        this.standardSkullHurt = this.hurt;
+        this.getAgentKillDamageThreshold = () => this.hurt === this.standardSkullHurt && this.kill === this.standardKill && this.agentKillBehaviorKnown() && Number.isFinite(this.health)
+            ? Math.max(0, this.health) : null;
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -17994,6 +18000,9 @@ class Enemy extends entity_1.Entity {
                 }
             }
         };
+        this.standardEnemyKillBehavior = this.uniqueKillBehavior;
+        this.standardEnemyOnHurt = this.onHurt;
+        this.getAgentKillDamageThreshold = () => this.standardKillDamageThreshold(this.standardEnemyOnHurt);
         this.stun = () => {
             if (this.stunned)
                 return;
@@ -18554,6 +18563,9 @@ class Enemy extends entity_1.Entity {
             m.pos.y = m.pos.y + top;
         }
         return moves;
+    }
+    agentKillBehaviorKnown() {
+        return this.uniqueKillBehavior === this.standardEnemyKillBehavior;
     }
     /**
      * Returns true if this enemy should skip its attack this turn because it was
@@ -21893,6 +21905,9 @@ class SkullEnemy extends enemy_1.Enemy {
                 this.hurtCallback();
             }
         };
+        this.standardSkullHurt = this.hurt;
+        this.getAgentKillDamageThreshold = () => this.hurt === this.standardSkullHurt && this.kill === this.standardKill && this.agentKillBehaviorKnown() && Number.isFinite(this.health)
+            ? Math.max(0, this.health) : null;
         this.behavior = () => {
             this.lastX = this.x;
             this.lastY = this.y;
@@ -24865,6 +24880,10 @@ class Entity extends drawable_1.Drawable {
             else
                 this.hurtCallback();
         };
+        // Capture the standard damage handlers so future overrides fail closed in previews.
+        this.standardHurt = this.hurt;
+        this.standardOnHurt = this.onHurt;
+        this.getAgentKillDamageThreshold = () => this.standardKillDamageThreshold();
         this.wander = () => {
             // Store old position to check if move was successful
             const oldX = this.x;
@@ -25147,7 +25166,9 @@ class Entity extends drawable_1.Drawable {
                 owner.notifyLinkSideDied(this);
             }
         };
+        this.standardKill = this.kill;
         this.uniqueKillBehavior = () => { };
+        this.standardUniqueKill = this.uniqueKillBehavior;
         this.updateHurtFrame = (delta) => {
             if (this.hurting) {
                 this.hurtFrame -= delta;
@@ -26088,6 +26109,15 @@ class Entity extends drawable_1.Drawable {
     drawObjWithCrush(sX, sY, sW, sH, dX, dY, dW, dH, shadeColor = "black", shadeOpacity = 0, fadeDir) {
         const rect = this.applyCrushToDrawRect({ dX, dY, dW, dH });
         game_1.Game.drawObj(sX, sY, sW, sH, rect.dX, rect.dY, rect.dW, rect.dH, shadeColor, shadeOpacity, fadeDir);
+    }
+    standardKillDamageThreshold(onHurt = this.standardOnHurt) {
+        if (this.hurt !== this.standardHurt || this.onHurt !== onHurt ||
+            this.kill !== this.standardKill || !this.agentKillBehaviorKnown() || !Number.isFinite(this.health))
+            return null;
+        return Math.max(0, this.health);
+    }
+    agentKillBehaviorKnown() {
+        return this.uniqueKillBehavior === this.standardUniqueKill;
     }
     calculateProjectileOffsets(targetX, targetY, attackLength) {
         const dx = targetX - this.x;
@@ -36393,7 +36423,7 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 5,
+        observationSchemaVersion: 6,
         actionSchemaVersion: 3,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
@@ -36621,8 +36651,8 @@ class AgentEnvironment {
             blocked: (x, y) => room.isGameplaySightBlocked(x, y),
         }, vision);
         return {
-            schemaVersion: 4, observationMode: "player-perception", vision: { ...vision },
-            contract: { ...this.contract(), observationSchemaVersion: 4, observationMode: "player-perception" },
+            schemaVersion: 5, observationMode: "player-perception", vision: { ...vision },
+            contract: { ...this.contract(), observationSchemaVersion: 5, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -36687,7 +36717,7 @@ class AgentEnvironment {
         const ladderChoice = player.screenMessage.open &&
             room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
         return {
-            schemaVersion: 5, contract: this.contract(),
+            schemaVersion: 6, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
             ...this.budgetStatus(),
@@ -36900,6 +36930,7 @@ function perceiveRoom(input, vision) {
         // No ID, species, stats, dimensions, or hidden phase survives an anonymous contact.
         return e.isEnemy ? [{ appearance: "unidentified", x: e.x, y: e.y, z: e.z }] : [];
     });
+    const identifiedIds = new Set(entities.filter(e => e.appearance === "identified").map(e => e.id));
     return {
         tiles: input.tiles.filter(t => inSight(t.x, t.y)).map(t => bright(t.x, t.y)
             ? { ...t, brightness: input.brightness(t.x, t.y) }
@@ -36909,7 +36940,8 @@ function perceiveRoom(input, vision) {
         // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
         hitWarnings: input.warnings.filter(w => w.z === player.z && inSight(w.x, w.y) &&
             (0, warningVisibility_1.isWarningVisibleAboveShade)(w, player.x, player.y))
-            .map(w => ({ x: w.x, y: w.y, z: w.z, hostile: w.hostile, directionOnly: w.directionOnly })),
+            .map(w => ({ x: w.x, y: w.y, z: w.z, hostile: w.hostile, directionOnly: w.directionOnly,
+            ...(w.sourceId && identifiedIds.has(w.sourceId) ? { sourceId: w.sourceId } : {}) })),
     };
 }
 exports.perceiveRoom = perceiveRoom;
@@ -36943,10 +36975,11 @@ function observeEntity(source) {
         health: numberOrNull(entity.health), maxHealth: numberOrNull(entity.maxHealth),
         width: numberOrNull(entity.w), height: numberOrNull(entity.h),
         isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
-        pushable: booleanOrNull(entity.pushable), destroyable: booleanOrNull(entity.destroyable),
+        pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
         interactable: booleanOrNull(entity.interactable),
         combat: {
             baseDamage: numberOrNull(entity.baseDamage),
+            killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),
             orthogonalAttack: booleanOrNull(entity.orthogonalAttack),
             diagonalAttack: booleanOrNull(entity.diagonalAttack),
             // No universal timing descriptor exists yet. Do not infer one from a species name.
@@ -36974,7 +37007,8 @@ function observeItem(item) {
             twoHanded: booleanOrNull(item.twoHanded), canMine: booleanOrNull(item.canMine),
             requiredLevel: numberOrNull(item.requiredLevel), requiredSkill: stringOrNull(item.requiredSkill),
             // Range alone does not describe a weapon's footprint. Never invent a pattern.
-            attackPattern: null,
+            attackPattern: item.getAgentAttackTraits?.()?.pattern ?? null,
+            minimumAttackDamage: numberOrNull(item.getAgentAttackTraits?.()?.minimumDamage),
             successfulAttackTurnCost: numberOrNull(item.getSuccessfulAttackTurnCost?.()),
         },
     };
@@ -66865,6 +66899,16 @@ class Dagger extends weapon_1.Weapon {
             const hitSomething = this.executeAttack(newX, newY, true, this.damage + this.wielder.damageBonus);
             return !hitSomething;
         };
+        this.standardDaggerMove = this.weaponMove;
+        /** A lower bound for this immediate single-tile attack, not a simulated outcome. */
+        this.getAgentAttackTraits = () => {
+            if (!this.wielder || this.weaponMove !== this.standardDaggerMove ||
+                !this.usesStandardAttackPipeline() || this.manaCost > 0)
+                return null;
+            const minimumDamage = this.damage + this.wielder.damageBonus;
+            return Number.isFinite(minimumDamage) && minimumDamage > 0
+                ? { pattern: "adjacent-cardinal", minimumDamage } : null;
+        };
         this.degrade = () => { };
         this.tileX = 22;
         this.tileY = 0;
@@ -68938,6 +68982,7 @@ class Weapon extends equippable_1.Equippable {
             enemy.hurt(this.wielder, baseDamage + curseBonus);
             this.statusEffect(enemy);
         };
+        this.standardAttack = this.attack;
         this.attackAnimation = (newX, newY) => {
             this.wielder.setHitXY(newX, newY);
             const room = this.wielder?.getRoom
@@ -69072,6 +69117,7 @@ class Weapon extends equippable_1.Equippable {
             this._swingHitIds.add(id);
             return true;
         };
+        this.standardShouldHitEntity = this.shouldHitEntity;
         if (level)
             this.game = level.game;
         this.canMine = false;
@@ -69121,6 +69167,12 @@ class Weapon extends equippable_1.Equippable {
         this.requiredSkill = rule.requiredSkill;
         this.requiredLevel = rule.requiredLevel;
         this.killXpMultiplier = rule.killXpMultiplier;
+    }
+    usesStandardAttackPipeline() {
+        return this.attack === this.standardAttack && this._swingHitIds === null &&
+            this.shouldHitEntity === this.standardShouldHitEntity &&
+            this.executeAttack === Weapon.prototype.executeAttack &&
+            this.getEntitiesAt === Weapon.prototype.getEntitiesAt;
     }
     // returns true if nothing was hit, false if the player should move
     getEntitiesAt(x, y) {
@@ -99916,7 +99968,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("c8cedddd4aab91238b18")
+/******/ 		__webpack_require__.h = () => ("7434f4d1d838f61e35e0")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

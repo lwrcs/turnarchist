@@ -271,7 +271,7 @@ lights, and the local active-z choice remain in Room; this is not a complete Nod
 simulation driver or a per-layer multiplayer lighting redesign.
 
 `agent.perceive()` (also the lab's Perceive button) returns a separate restricted
-snapshot, labeled player-perception with schema 4. `observe()` and `step()` still
+snapshot, labeled player-perception with schema 5. `observe()` and `step()` still
 return explicitly diagnostic observations. Do not feed those full observations
 or their history to a restricted policy. The diagnostic compatibility helper
 currently checks the diagnostic contract; preserve the perception contract AND
@@ -353,7 +353,7 @@ separately with reports; a replay envelope alone is not a frozen executable buil
 
 The policy receives only `perceive()` snapshots and recorded/turnDelta feedback.
 Diagnostic step observations and replay exports never enter the policy. Perception
-schema 4 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
+schema 5 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
 for visit tracking. Dark tile traits remain null. Inventory healing metadata is
 currently implemented for mushrooms and shares the item's actual healing value.
 The baseline plans weighted shortest routes through remembered, previously observed tiles,
@@ -377,7 +377,7 @@ result; unknown objects and indestructible colliders remain blocked. The estimat
 is not a promise of damage or an exact action count. Weighted search uses Dijkstra
 rather than unweighted breadth-first search; no unseen geometry is supplied.
 
-Diagnostic observation schema is now 5, perception schema 4, and action schema 3.
+Diagnostic observation schema is now 6, perception schema 5, and action schema 3.
 The recorded zero-turn DismissInteraction action closes ordinary screen messages,
 vending interfaces, and context menus; ladder and selection actions remain distinct.
 Visible tunnel doors expose whether they are unlocked and can be unlocked from the
@@ -400,3 +400,26 @@ extended, though the runner does not yet resume policy memory from reports.
 Timeout/execution errors stop the whole batch rather than resetting over pending
 callbacks. Only one batch per Runner can execute at a time. Snapshots are bounded;
 replay actions remain complete within the run budget.
+
+
+## Combat previews and evaluation diagnostics
+
+Restricted warnings include a source ID only while that source is identified in
+current perception. Coordinates of a hidden source remain excluded. A supported
+adjacent attack exposes a minimum damage value and a supported target exposes a
+kill threshold. The baseline can disregard that source's warnings for a confirmed
+killing blow, while preserving every other known warning. Unsupported/custom
+attack or damage handlers report unknown; base damage alone is not a guarantee.
+The first supported attack preview is the dagger's ordinary adjacent strike.
+
+Attack commands use the existing directional adapter, but resolve as attacks:
+the player stays in place even when the target dies. Walking onto that tile takes
+a subsequent action. Pushes are evaluated separately and can move the player when
+the visible chain has space. Uncertain pushes cannot be treated as guaranteed
+escapes from an under-player warning. Entity footprints and chain-pushability are
+used rather than class-name rules.
+
+Inspect batch trace displays the final 32 restricted transitions for Trace seed.
+Policy goal/reason is captured before each action. Batch report schema 2 adds
+health lost, longest stale-position streak, and zero-turn counts/streaks. These
+metrics never force a Wait or interrupt a legitimate sequence of free actions.

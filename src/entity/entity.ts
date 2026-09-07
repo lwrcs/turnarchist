@@ -1158,6 +1158,18 @@ export class Entity extends Drawable {
     } else this.hurtCallback();
   };
 
+  // Capture the standard damage handlers so future overrides fail closed in previews.
+  protected readonly standardHurt = this.hurt;
+  protected readonly standardOnHurt = this.onHurt;
+
+  protected standardKillDamageThreshold(onHurt = this.standardOnHurt): number | null {
+    if (this.hurt !== this.standardHurt || this.onHurt !== onHurt ||
+      this.kill !== this.standardKill || !this.agentKillBehaviorKnown() || !Number.isFinite(this.health)) return null;
+    return Math.max(0, this.health);
+  }
+
+  getAgentKillDamageThreshold = (): number | null => this.standardKillDamageThreshold();
+
   wander = () => {
     // Store old position to check if move was successful
     const oldX = this.x;
@@ -1485,7 +1497,13 @@ export class Entity extends Drawable {
     }
   };
 
+  protected readonly standardKill = this.kill;
+
   uniqueKillBehavior = () => {};
+  protected readonly standardUniqueKill = this.uniqueKillBehavior;
+  protected agentKillBehaviorKnown(): boolean {
+    return this.uniqueKillBehavior === this.standardUniqueKill;
+  }
 
   updateHurtFrame = (delta: number) => {
     if (this.hurting) {

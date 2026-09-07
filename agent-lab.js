@@ -31,7 +31,14 @@
       onProgress:p=>{status.textContent=`Seed ${p.seed} (${p.run}/${p.total}), decision ${p.decisions}, health ${p.health}`;},
     });
     window.lastBatchReport=report;
-    return {...report,runs:report.runs.map(({trace,replay,...summary})=>({...summary,traceFrames:trace.length,lastDecisions:trace.slice(-5).map(t=>({action:t.action,turnDelta:t.info.turnDelta,decision:t.after.decision,player:t.after.player})),replayActions:replay?.replay?.actions?.length}))};
+    return {...report,runs:report.runs.map(({trace,replay,...summary})=>({...summary,traceFrames:trace.length,lastDecisions:trace.slice(-5).map(t=>({action:t.action,policy:t.policy,turnDelta:t.info.turnDelta,decision:t.after.decision,player:t.after.player})),replayActions:replay?.replay?.actions?.length}))};
+  });
+  document.getElementById('batch-trace').onclick = () => run(() => {
+    if(!batchRunner?.report || batchRunner.running)throw new Error('Finish the batch before inspecting its trace');
+    const seed=Number(document.getElementById('trace-seed').value);
+    const entry=batchRunner.report.runs.find(item=>item.seed===seed);
+    if(!entry)throw new Error('That seed is not in the latest batch');
+    return {policy:batchRunner.report.policy,seed,status:entry.status,trace:entry.trace};
   });
   document.getElementById('batch-export').onclick = () => run(() => {
     const report=batchRunner?.report;
@@ -106,7 +113,7 @@
     const first = await agent.reset(seed, {maxSteps: 5});
     const contract = agent.contract();
     if (!contract.buildId) throw new Error('Bundled agent has no build identity');
-    if (contract.observationSchemaVersion !== 5) throw new Error('Unexpected observation schema');
+    if (contract.observationSchemaVersion !== 6) throw new Error('Unexpected observation schema');
     const perception = agent.perceive();
     if (perception.observationMode !== 'player-perception' || 'recentTransitions' in perception || 'seed' in perception) {
       throw new Error('Restricted perception leaked diagnostic envelope');

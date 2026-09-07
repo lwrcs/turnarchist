@@ -74,3 +74,14 @@ test('above-shade warning visibility preserves hostile arrows and nearby friendl
   assert.equal(visible({x:2,y:0,hostile:false,directionOnly:false},0,0),false);
   assert.equal(visible({x:1,y:0,hostile:false,directionOnly:true},0,0),false);
 });
+
+test('warning source identity is available only while its source is identified',()=>{
+  const input=source();input.brightness=()=>1;
+  input.warnings=[{x:0,y:0,z:0,sourceId:'secret-id',sourceX:2,sourceY:0,hostile:true,directionOnly:false}];
+  const known=perceiveRoom(input,DEFAULT_AGENT_VISION).hitWarnings[0];
+  assert.equal(known.sourceId,'secret-id');assert.equal(known.sourceX,undefined);
+  input.brightness=()=>0;
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).hitWarnings[0].sourceId,undefined);
+  input.brightness=()=>1;input.entities[0].x=20;
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).hitWarnings[0].sourceId,undefined);
+});

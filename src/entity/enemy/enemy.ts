@@ -1083,6 +1083,14 @@ export abstract class Enemy extends Entity {
     }
   };
 
+  private readonly standardEnemyKillBehavior = this.uniqueKillBehavior;
+  protected agentKillBehaviorKnown(): boolean {
+    return this.uniqueKillBehavior === this.standardEnemyKillBehavior;
+  }
+  private readonly standardEnemyOnHurt = this.onHurt;
+  getAgentKillDamageThreshold = (): number | null =>
+    this.standardKillDamageThreshold(this.standardEnemyOnHurt);
+
   /**
    * Returns true if this enemy should skip its attack this turn because it was
    * hit by the player. Consuming the flag here resets it so it doesn't persist.

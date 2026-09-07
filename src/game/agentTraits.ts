@@ -7,9 +7,10 @@ const stringOrNull = (value: unknown): string | null =>
   typeof value === "string" ? value : null;
 
 interface EntityTraitsSource {
+  getAgentKillDamageThreshold?: () => number | null;
   globalId?: string; x?: number; y?: number; z?: number;
   health?: number; maxHealth?: number; w?: number; h?: number;
-  isEnemy?: boolean; collidable?: boolean; pushable?: boolean;
+  isEnemy?: boolean; collidable?: boolean; pushable?: boolean; chainPushable?: boolean;
   destroyable?: boolean; interactable?: boolean; baseDamage?: number;
   orthogonalAttack?: boolean; diagonalAttack?: boolean;
 }
@@ -26,10 +27,11 @@ export function observeEntity(source: object) {
     health: numberOrNull(entity.health), maxHealth: numberOrNull(entity.maxHealth),
     width: numberOrNull(entity.w), height: numberOrNull(entity.h),
     isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
-    pushable: booleanOrNull(entity.pushable), destroyable: booleanOrNull(entity.destroyable),
+    pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
     interactable: booleanOrNull(entity.interactable),
     combat: {
       baseDamage: numberOrNull(entity.baseDamage),
+      killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),
       orthogonalAttack: booleanOrNull(entity.orthogonalAttack),
       diagonalAttack: booleanOrNull(entity.diagonalAttack),
       // No universal timing descriptor exists yet. Do not infer one from a species name.
@@ -39,6 +41,7 @@ export function observeEntity(source: object) {
 }
 
 interface ItemTraitsSource {
+  getAgentAttackTraits?: () => {pattern: string; minimumDamage: number} | null;
   getHealingAmount?: () => number;
   stackCount?: number; equipped?: boolean; canUseOnOther?: boolean;
   getUseTurnCost?: () => number | null;
@@ -69,7 +72,8 @@ export function observeItem(item: ItemTraitsSource) {
       twoHanded: booleanOrNull(item.twoHanded), canMine: booleanOrNull(item.canMine),
       requiredLevel: numberOrNull(item.requiredLevel), requiredSkill: stringOrNull(item.requiredSkill),
       // Range alone does not describe a weapon's footprint. Never invent a pattern.
-      attackPattern: null,
+      attackPattern: item.getAgentAttackTraits?.()?.pattern ?? null,
+      minimumAttackDamage: numberOrNull(item.getAgentAttackTraits?.()?.minimumDamage),
       successfulAttackTurnCost: numberOrNull(item.getSuccessfulAttackTurnCost?.()),
     },
   };

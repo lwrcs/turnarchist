@@ -200,8 +200,8 @@ export class AgentEnvironment {
       blocked: (x, y) => room.isGameplaySightBlocked(x, y),
     }, vision);
     return {
-      schemaVersion: 4, observationMode: "player-perception", vision: {...vision},
-      contract: {...this.contract(), observationSchemaVersion: 4, observationMode: "player-perception"},
+      schemaVersion: 5, observationMode: "player-perception", vision: {...vision},
+      contract: {...this.contract(), observationSchemaVersion: 5, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -263,7 +263,7 @@ export class AgentEnvironment {
     const ladderChoice = player.screenMessage.open &&
       room.roomArray[player.x]?.[player.y] instanceof DownLadder;
     return {
-      schemaVersion: 5, contract: this.contract(),
+      schemaVersion: 6, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
       seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
       ...this.budgetStatus(),

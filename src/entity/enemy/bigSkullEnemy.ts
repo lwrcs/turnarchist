@@ -117,6 +117,11 @@ export class BigSkullEnemy extends Enemy {
   bleed = () => {};
   poison = () => {};
 
+  private readonly standardSkullHurt = this.hurt;
+  getAgentKillDamageThreshold = (): number | null =>
+    this.hurt === this.standardSkullHurt && this.kill === this.standardKill && this.agentKillBehaviorKnown() && Number.isFinite(this.health)
+      ? Math.max(0, this.health) : null;
+
   behavior = () => {
     this.lastX = this.x;
     this.lastY = this.y;

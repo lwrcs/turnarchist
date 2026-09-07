@@ -6,9 +6,25 @@
 })(typeof globalThis!=='undefined'?globalThis:this, function() {
   const directions=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
   const key=(x,y)=>`${x},${y}`;
+  const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v8';
-    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.doorUses=new Map();this.goal=null;}
+    static version='explore-combat-v11';
+    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;}
+    canPushIntoSpace(view,x,y,dx,dy) {
+      const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
+      const head=view.room.entities.find(e=>occupies(e,x,y));
+      // Complex footprints/crush tails remain uncertain; confirm only a visible clear chain.
+      if(!head?.pushable||(head.width??1)!==1||(head.height??1)!==1)return false;
+      for(let steps=0;steps<=view.room.entities.length;steps++) {
+        x+=dx;y+=dy;
+        const tile=tiles.get(key(x,y));
+        if(tile?.solid!==false||tile.isDoor||tile.exit)return false;
+        const next=view.room.entities.filter(e=>occupies(e,x,y));
+        if(next.length===0)return true;
+        if(next.some(e=>e.chainPushable!==true||(e.width??1)!==1||(e.height??1)!==1))return false;
+      }
+      return false;
+    }
     route(view, threats) {
       const p=view.player,scope=view.room.id??'room';
       let map=this.maps.get(scope);
@@ -19,7 +35,9 @@
       }
       const origin=key(p.x,p.y),seen=new Set();
       const queue=[{x:p.x,y:p.y,distance:0,first:null}];
-      const occupants=new Map(view.room.entities.map(e=>[key(e.x,e.y),e]));
+      const occupants=new Map();
+      for(const e of view.room.entities)for(let x=e.x;x<e.x+Math.max(1,e.width??1);x++)
+        for(let y=e.y;y<e.y+Math.max(1,e.height??1);y++)occupants.set(key(x,y),e);
       const items=new Set(view.room.items?.map(i=>key(i.x,i.y))??[]);
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
@@ -68,7 +86,9 @@
       this.goal=selected?{scope,key:selected.key}:null;
       return selected?.action??null;
     }
+    inspect() {return {goal:this.goal?{...this.goal}:null,reason:this.reason};}
     choose(view) {
+      this.reason='interaction';
       if(view.observationMode!=='player-perception') throw new Error('Baseline requires restricted perception');
       if(view.decision==='dismissable-interaction')return {type:'DismissInteraction'};
       if(view.decision==='ladder') return {type:'LadderConfirm'};
@@ -83,14 +103,21 @@
       // Healing metadata is supplied by the item; no item/species name vocabulary.
       if(p.health<p.maxHealth) {
         const food=view.inventory.find(i=>i?.healingAmount>0&&!i.canUseOnOther&&i.useTurnCost===0);
-        if(food) return {type:'UseItem',slotIndex:food.slot};
+        if(food) {this.reason='heal';return {type:'UseItem',slotIndex:food.slot};}
       }
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const threats=new Set(view.room.hitWarnings.filter(w=>w.hostile).map(w=>key(w.x,w.y)));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
       const route=this.route(view,threats);
-      const adjacentEnemy=enemies.some(e=>Math.abs(e.x-p.x)+Math.abs(e.y-p.y)===1);
-      if(route&&!adjacentEnemy)return route;
+      const adjacentEnemy=enemies.some(e=>directions.some(([,dx,dy])=>occupies(e,p.x+dx,p.y+dy)));
+      // Attacking a blocking object can leave us on the current warning tile.
+      const routeDirection=route&&directions.find(d=>d[0]===route.direction);
+      const routeOccupant=routeDirection&&view.room.entities.find(e=>occupies(e,p.x+routeDirection[1],p.y+routeDirection[2]));
+      const routePush=routeDirection&&this.canPushIntoSpace(view,p.x+routeDirection[1],p.y+routeDirection[2],routeDirection[1],routeDirection[2]);
+      const staysForRoute=(routeOccupant?.collidable||routeOccupant?.destroyable)&&!routePush;
+      if(route&&!adjacentEnemy&&!(staysForRoute&&threats.has(key(p.x,p.y)))) {
+        this.reason='route';return route;
+      }
       let best=null;
       for(const [direction,dx,dy] of directions) {
         const x=p.x+dx,y=p.y+dy,k=key(x,y),edge=`${here}>${k}`;
@@ -98,19 +125,30 @@
         if(tile?.solid===true && !tile.isDoor) continue;
         if(tile?.traversal?.tunnel && !tile.traversal.unlocked && tile.traversal.unlockFromHere===false)continue;
         if((this.blocked.get(edge)??0)>this.tick) continue;
-        const occupant=view.room.entities.find(e=>e.x===x&&e.y===y);
+        const occupant=view.room.entities.find(e=>occupies(e,x,y));
         if(occupant?.collidable && !occupant.destroyable && !occupant.pushable && !occupant.interactable) continue;
-        const enemy=enemies.some(e=>e.x===x&&e.y===y);
+        const enemy=enemies.some(e=>occupies(e,x,y));
         const visits=this.visits.get(`${scope}:${k}`)??0;
         let score=10-3*visits-12*(this.crossings.get(edge)??0);
-        if(threats.has(k)) score-=100;
+        const pushConfirmed=occupant?.pushable&&this.canPushIntoSpace(view,x,y,dx,dy);
+        const stays=enemy||((occupant?.collidable||occupant?.destroyable)&&!pushConfirmed);
+        const destination=stays?key(p.x,p.y):k;
+        const weapon=view.inventory.find(i=>i?.activeWeapon)?.traits;
+        const threshold=occupant?.combat?.killDamageThreshold;
+        const killsSource=enemy&&occupant?.id&&occupant.destroyable&&!occupant.pushable&&
+          weapon?.attackPattern==='adjacent-cardinal'&&Number.isFinite(threshold)&&threshold>0&&
+          Number.isFinite(weapon.minimumAttackDamage)&&weapon.minimumAttackDamage>=threshold;
+        const remainingThreat=view.room.hitWarnings.some(w=>w.hostile&&(key(w.x,w.y)===destination||(occupant?.pushable&&key(w.x,w.y)===k))&&
+          !(killsSource&&w.sourceId===occupant.id));
+        const risk=remainingThreat?2:(!stays&&tile?.solid!==false&&!tile?.isDoor?1:0);
         if(enemy) score+=25;
         if(tile?.exit) score+=35;
         if(tile?.isDoor) score+=10;
         if(tile?.solid===false) score+=2;
         if(!tile || tile.kind===null) score+=1;
-        if(!best||score>best.score)best={score,action:{type:'Move',direction}};
+        if(!best||risk<best.risk||(risk===best.risk&&score>best.score))best={risk,score,action:{type:'Move',direction}};
       }
+      this.reason=best?(threats.has(key(p.x,p.y))?'evade-warning':'local-combat-exploration'):'no-move';
       return best?.action??{type:'Wait'};
     }
     feedback(before,action,after,info) {

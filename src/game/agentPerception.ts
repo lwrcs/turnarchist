@@ -49,6 +49,7 @@ export function perceiveRoom(input: {
     // No ID, species, stats, dimensions, or hidden phase survives an anonymous contact.
     return e.isEnemy ? [{appearance:"unidentified", x:e.x, y:e.y, z:e.z}] : [];
   });
+  const identifiedIds = new Set(entities.filter(e=>e.appearance === "identified").map(e=>(e as {id?: string}).id));
   return {
     tiles: input.tiles.filter(t=>inSight(t.x,t.y)).map(t=>bright(t.x,t.y)
       ? {...t, brightness:input.brightness(t.x,t.y)}
@@ -58,6 +59,7 @@ export function perceiveRoom(input: {
     // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
     hitWarnings: input.warnings.filter(w=>w.z===player.z && inSight(w.x,w.y) &&
       isWarningVisibleAboveShade(w,player.x,player.y))
-      .map(w=>({x:w.x,y:w.y,z:w.z,hostile:w.hostile,directionOnly:w.directionOnly})),
+      .map(w=>({x:w.x,y:w.y,z:w.z,hostile:w.hostile,directionOnly:w.directionOnly,
+        ...(w.sourceId && identifiedIds.has(w.sourceId) ? {sourceId:w.sourceId} : {})})),
   };
 }

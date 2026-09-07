@@ -11,7 +11,7 @@
       if(!Array.isArray(seeds)||seeds.length<1||seeds.length>50||seeds.some(s=>!Number.isInteger(s)||s<0||s>0xffffffff))throw new Error('Provide 1..50 uint32 seeds');
       if(!Number.isInteger(decisions)||decisions<1||decisions>10000)throw new Error('decisions must be 1..10000');
       this.running=true;this.stopping=false;
-      const report=this.report={schemaVersion:1,source:'programmed-policy-evaluation',policy:Policy.version,
+      const report=this.report={schemaVersion:2,source:'programmed-policy-evaluation',policy:Policy.version,
         backend:'browser',policySource:source,seeds:[...seeds],decisionsPerSeed:decisions,startedAt:new Date().toISOString(),runs:[]};
       try {
         for(const seed of seeds) {
@@ -26,20 +26,28 @@
             const visited=new Set();
             const rooms=new Set([view.room.id]);
             run.finalHealth=view.player.health;run.roomsVisited=1;run.decisionsSinceNewPosition=0;
+            run.maxDecisionsWithoutNewPosition=0;run.healthLost=0;run.zeroTurnDecisions=0;run.maxZeroTurnStreak=0;
+            let zeroTurnStreak=0;
             while(run.decisions<decisions&&!this.stopping) {
               if(view.terminated){run.status='dead';break;}
               const action=policy.choose(view);
               if(!action){run.status='unsupported-decision';break;}
+              const policyDecision=policy.inspect?.()??null;
               const result=await this.agent.step(action);
               const next=this.agent.perceive();
               policy.feedback(view,action,next,result.info);
               run.decisions++;run.turns+=result.info.turnDelta;
+              run.healthLost+=Math.max(0,view.player.health-next.player.health);
+              zeroTurnStreak=result.info.turnDelta===0?zeroTurnStreak+1:0;
+              if(result.info.turnDelta===0)run.zeroTurnDecisions++;
+              run.maxZeroTurnStreak=Math.max(run.maxZeroTurnStreak,zeroTurnStreak);
               if(result.info.recorded)run.recordedActions++;
               const position=`${next.room.id}:${next.player.x},${next.player.y},${next.player.z}`;
               run.decisionsSinceNewPosition=visited.has(position)?run.decisionsSinceNewPosition+1:0;
+              run.maxDecisionsWithoutNewPosition=Math.max(run.maxDecisionsWithoutNewPosition,run.decisionsSinceNewPosition);
               visited.add(position);rooms.add(next.room.id);run.roomsVisited=rooms.size;
               // Restricted snapshots only, bounded in the report; replay retains the action sequence.
-              run.trace.push({decision:run.decisions,action,info:{recorded:result.info.recorded,turnDelta:result.info.turnDelta},before:view,after:next});
+              run.trace.push({decision:run.decisions,action,policy:policyDecision,info:{recorded:result.info.recorded,turnDelta:result.info.turnDelta},before:view,after:next});
               if(run.trace.length>32)run.trace.shift();
               view=next;run.finalHealth=view.player.health;run.visitedPositions=visited.size;
               onProgress({seed,run:report.runs.length,total:seeds.length,decisions:run.decisions,health:view.player.health});

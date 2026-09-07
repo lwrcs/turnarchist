@@ -360,6 +360,14 @@ export abstract class Weapon extends Equippable {
     this.statusEffect(enemy);
   };
 
+  protected readonly standardAttack = this.attack;
+  protected usesStandardAttackPipeline(): boolean {
+    return this.attack === this.standardAttack && this._swingHitIds === null &&
+      this.shouldHitEntity === this.standardShouldHitEntity &&
+      this.executeAttack === Weapon.prototype.executeAttack &&
+      this.getEntitiesAt === Weapon.prototype.getEntitiesAt;
+  }
+
   attackAnimation = (newX: number, newY: number) => {
     this.wielder.setHitXY(newX, newY);
 
@@ -747,4 +755,6 @@ export abstract class Weapon extends Equippable {
     this._swingHitIds.add(id);
     return true;
   };
+  protected readonly standardShouldHitEntity = this.shouldHitEntity;
+
 }
