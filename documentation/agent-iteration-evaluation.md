@@ -118,3 +118,49 @@ distinguishing a route blocked by generated objects from an unsupported resource
 requirement, then longer combat/inventory scenarios. Training-data selection should
 consider exploration and stalled intervals alongside survival. No learned policy
 was trained in this iteration.
+
+## Room backtracking investigation
+
+The first prototype (v13) also marked an inferred return door as already used.
+That changed early exploration: seed 456 and seed 654 both died at decision 38,
+where v12 had survived 500 decisions. Seed 123 survived but still visited only
+45 positions. All three used the same build/settings and 500-decision budget.
+This prototype is not the selected baseline.
+
+V14 retains prior local door rewards and learns each directed connection only
+from an observed crossing. Backtracking is a fallback after local goals are
+exhausted. It can search through exhausted intermediate rooms for remembered
+work, while retaining local path, threat, obstacle, and tunnel constraints.
+No reverse connection is inferred from an adjacent door. Unit coverage includes
+dead ends, graph cycles, ambiguous arrival doors, non-door transitions, local-goal
+priority, threatened departures, and remembered blocked or locked passages.
+
+### Final v14 comparison
+
+All six seeds survived 500 decisions at health 2, with measured health loss 0.
+All outcomes are budget-incomplete. Each contract and vision configuration exactly
+matched the corresponding v12 report (build 7434f4d1d838f61e35e0).
+
+| Seed | Turns | Positions | Rooms | Final stale streak | Maximum stale streak |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 123 | 488 | 45 | 2 | 411 | 411 |
+| 456 | 493 | 283 | 4 | 172 | 172 |
+| 789 | 494 | 362 | 4 | 32 | 36 |
+| 321 | 497 | 402 | 3 | 46 | 46 |
+| 654 | 493 | 269 | 4 | 162 | 162 |
+| 987 | 497 | 325 | 3 | 100 | 100 |
+
+This validates survival parity in this sample, not an overall exploration gain.
+Seed 456 visited one fewer position; the other position and room counts matched
+v12. The maximum stale streak shortened from 47 to 36 on 789, and lengthened on
+123 and 456. Stale streaks alone cannot distinguish earlier exhaustion of the
+same territory from worse routing. The last 32 transitions on 123 and 456 still
+show local wandering with no selected goal, not an active backtracking loop.
+Room backtracking is now available but does not resolve these stalls.
+
+Verification: 116 tests passed; JavaScript syntax and diff whitespace checks
+passed. Both prototype and final browser reports were exported through the lab.
+The server on port 8000 was left running, and no active batch was interrupted.
+Next investigation should explain why no useful goal remains in these exhausted
+states: inspect remembered reachable passages, resource/interaction requirements,
+and frontiers that need more than ordinary movement before changing route scores.

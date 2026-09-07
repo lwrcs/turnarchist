@@ -271,3 +271,76 @@ test('resume rejects replay-history changes even if the visible state is unchang
   agent.exportReplay=()=>({replay:{actions:[]}});
   await assert.rejects(runner.resumeLast(),/Replay history changed/);
 });
+
+test('an exhausted room backtracks through a used door to remembered unfinished work',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true}];
+  p.visits.set('room:1,0',50);p.doorUses.set('room:1,0',1);
+  p.connect('room','1,0','earlier');p.roomWork.set('earlier',true);
+  assert.equal(p.choose(v).direction,'right');assert.equal(p.inspect().reason,'backtrack');
+  assert.equal(p.goal.targetRoom,'earlier');
+  p.roomWork.set('earlier',false);assert.equal(p.route(v,new Set()),null);
+});
+test('backtracking finds work through exhausted rooms without cycling or inventing links',()=>{
+  const p=new Policy();p.connect('a','1,0','b');p.connect('b','2,0','a');p.connect('b','3,0','c');
+  p.roomWork.set('c',true);
+  const first={key:'1,0',action:{type:'Move',direction:'right'}};
+  assert.equal(p.backtrack('a',[first]).targetRoom,'c');
+  assert.equal(p.backtrack('a',[]),null);
+  p.roomWork.set('c',false);assert.equal(p.backtrack('a',[first]),null);
+});
+test('crossings learn directed connections without guessing return doors',()=>{
+  const p=new Policy(),v=view(),next=view();v.room.tiles[1].isDoor=true;next.room.id='next';next.player.x=10;
+  next.room.tiles=[{x:9,y:0,solid:false,isDoor:true}];
+  p.feedback(v,{type:'Move',direction:'right'},next,{turnDelta:0});
+  assert.equal(p.connections.get('room').get('1,0'),'next');
+  assert.equal(p.connections.has('next'),false);
+  assert.equal(p.doorUses.has('next:9,0'),false);
+  next.room.id='ambiguous';next.room.tiles.push({x:11,y:0,isDoor:true});
+  p.feedback(v,{type:'Move',direction:'right'},next,{turnDelta:0});
+  assert.equal(p.connections.has('ambiguous'),false);
+});
+
+test('a dead-end visit returns to the earlier room and takes its unfinished branch',()=>{
+  const p=new Policy(),a=view(),b=view();a.room.id='a';b.room.id='b';b.player.x=10;
+  a.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true},
+    {x:-1,y:0,solid:false},{x:-2,y:0,solid:false,isDoor:true}];
+  b.room.tiles=[{x:10,y:0,solid:false},{x:9,y:0,solid:false,isDoor:true}];
+  const enter=p.choose(a);assert.equal(enter.direction,'right');
+  p.feedback(a,enter,b,{turnDelta:0});
+  const returnAction=p.choose(b);assert.equal(returnAction.direction,'left');
+  assert.equal(p.inspect().reason,'route');
+  p.feedback(b,returnAction,a,{turnDelta:0});
+  assert.equal(p.choose(a).direction,'left');assert.equal(p.goal.key,'-2,0');
+});
+test('remembered blocked intermediate passages are excluded from room backtracking',()=>{
+  const p=new Policy();p.connect('a','1,0','b');p.connect('b','2,0','c');p.roomWork.set('c',true);
+  p.obstacles.set('b',new Map([['wall',{x:2,y:0,collidable:true,destroyable:false}]]));
+  assert.equal(p.backtrack('a',[{key:'1,0'}]),null);
+});
+
+test('a non-door room transition cannot invent a reverse door link',()=>{
+  const p=new Policy(),v=view(),next=view();next.room.id='fall-destination';next.player.x=10;
+  next.room.tiles=[{x:9,y:0,isDoor:true}];
+  p.feedback(v,{type:'Move',direction:'right'},next,{turnDelta:1});
+  assert.equal(p.connections.has('fall-destination'),false);
+});
+
+test('local exploration takes priority over remembered work in another room',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true},{x:-1,y:0,solid:false}];
+  p.doorUses.set('room:1,0',1);p.connect('room','1,0','earlier');p.roomWork.set('earlier',true);
+  assert.equal(p.choose(v).direction,'left');assert.equal(p.inspect().reason,'route');
+});
+test('backtracking cannot route through a currently threatened departure door',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true}];
+  p.doorUses.set('room:1,0',1);p.connect('room','1,0','earlier');p.roomWork.set('earlier',true);
+  assert.equal(p.route(v,new Set(['1,0'])),null);
+});
+test('backtracking excludes remembered locked start-side tunnel links',()=>{
+  const p=new Policy();p.connect('a','1,0','b');p.connect('b','2,0','c');p.roomWork.set('c',true);
+  p.maps.set('b',new Map([['2,0',{isDoor:true,traversal:{tunnel:true,unlocked:false,unlockFromHere:false}}]]));
+  assert.equal(p.backtrack('a',[{key:'1,0'}]),null);
+  p.maps.get('b').get('2,0').traversal.unlocked=true;
+  assert.equal(p.backtrack('a',[{key:'1,0'}]).targetRoom,'c');
+});

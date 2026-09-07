@@ -8,8 +8,32 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v12';
-    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;}
+    static version='explore-combat-v14';
+    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
+    connect(from,door,to) {
+      if(!this.connections.has(from))this.connections.set(from,new Map());
+      this.connections.get(from).set(door,to);
+    }
+    backtrack(scope,passages) {
+      const queue=[],seen=new Set([scope]);
+      for(const passage of passages) {
+        const room=this.connections.get(scope)?.get(passage.key);
+        if(room&&!seen.has(room)){seen.add(room);queue.push({room,first:passage});}
+      }
+      for(let i=0;i<queue.length;i++) {
+        const node=queue[i];
+        if(this.roomWork.get(node.room))return {...node.first,backtrack:true,targetRoom:node.room};
+        for(const [door,room] of this.connections.get(node.room)??[]) {
+          if(seen.has(room))continue;
+          const tile=this.maps.get(node.room)?.get(door);
+          if(tile?.traversal?.tunnel&&!tile.traversal.unlocked&&tile.traversal.unlockFromHere===false)continue;
+          const [x,y]=door.split(',').map(Number);
+          if([...this.obstacles.get(node.room)?.values()??[]].some(e=>occupies(e,x,y)&&e.collidable&&!e.destroyable))continue;
+          seen.add(room);queue.push({room,first:node.first});
+        }
+      }
+      return null;
+    }
     canPushIntoSpace(view,x,y,dx,dy) {
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const head=view.room.entities.find(e=>occupies(e,x,y));
@@ -52,6 +76,7 @@
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
       let best=null,committed=null;
+      const passages=[];
       // Weighted shortest paths account for observed breakable obstacles.
       while(queue.length) {
         queue.sort((a,b)=>a.distance-b.distance);
@@ -71,7 +96,8 @@
           const utility=reward-visits;
           const score=utility-node.distance*2;
           const candidate={score,key:k,action:{type:'Move',direction:node.first}};
-          if(this.goal?.key===k)committed=candidate;
+          if(tile?.isDoor)passages.push(candidate);
+          if(this.goal?.key===k&&!this.goal.backtrack)committed=candidate;
           if(utility>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
           if(tile?.isDoor||tile?.exit)continue;
@@ -90,8 +116,10 @@
           queue.push({x,y,distance:node.distance+1+clearance,first:node.first??direction});
         }
       }
-      const selected=committed??best;
-      this.goal=selected?{scope,key:selected.key}:null;
+      this.roomWork.set(scope,!!(committed??best));
+      // Revisit known passages only to reach a room with remembered unfinished work.
+      const selected=committed??best??this.backtrack(scope,passages.sort((a,b)=>b.score-a.score));
+      this.goal=selected?{scope,key:selected.key,...(selected.backtrack?{backtrack:true,targetRoom:selected.targetRoom}:{})}:null;
       return selected?.action??null;
     }
     inspect() {return {goal:this.goal?{...this.goal}:null,reason:this.reason};}
@@ -124,7 +152,7 @@
       const routePush=routeDirection&&this.canPushIntoSpace(view,p.x+routeDirection[1],p.y+routeDirection[2],routeDirection[1],routeDirection[2]);
       const staysForRoute=(routeOccupant?.collidable||routeOccupant?.destroyable)&&!routePush;
       if(route&&!adjacentEnemy&&!(staysForRoute&&threats.has(key(p.x,p.y)))) {
-        this.reason='route';return route;
+        this.reason=this.goal?.backtrack?'backtrack':'route';return route;
       }
       let best=null;
       for(const [direction,dx,dy] of directions) {
@@ -168,6 +196,12 @@
         this.crossings.set(edge,(this.crossings.get(edge)??0)+1);
         const destination=`${before.room.id??'room'}:${key(p.x+direction[1],p.y+direction[2])}`;
         this.doorUses.set(destination,(this.doorUses.get(destination)??0)+1);
+        if(after.room.id!==before.room.id) {
+          const from=before.room.id??'room',to=after.room.id??'room';
+          const sourceDoor=before.room.tiles.find(t=>t.x===p.x+direction[1]&&t.y===p.y+direction[2]);
+          if(sourceDoor?.isDoor)this.connect(from,key(sourceDoor.x,sourceDoor.y),to);
+          // Learn the reverse edge only by crossing it; nearby doors need not lead back.
+        }
       }
       // A free hit is progress too. Only temporarily avoid unchanged failed directions.
       if(after.player.x===p.x&&after.player.y===p.y&&info.turnDelta===0&&

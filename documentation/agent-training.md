@@ -438,3 +438,18 @@ Continuation records each run's effective decision budget and a resumption histo
 The original batch budget remains metadata for the initial run. Report comparison
 uses the per-run budget when present, so an extended run is not silently compared
 against a shorter evaluation. Extending a run never injects a Wait or resets the seed.
+
+## Backtracking between rooms
+
+The baseline remembers directed door connections only after crossing those doors.
+It does not infer reverse links from nearby doors or read hidden room topology.
+When weighted local routing has no useful goal, it searches those learned links
+for a room with remembered unfinished work, then routes to a reachable first door.
+Intermediate rooms may be exhausted; graph cycles are visited once per search.
+Remembered blocked passages and locked start-side tunnel doors are excluded.
+
+Local exploration and combat retain priority. Work estimates are refreshed on
+revisiting each room, so they are a memory of prior observations, not a guarantee
+that a distant objective remains reachable. Traces identify these choices with
+reason `backtrack` and a target room. This is navigation scaffolding for the
+programmed baseline, not a learned policy or an omniscient map solver.
