@@ -7,8 +7,8 @@
   const directions=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
   const key=(x,y)=>`${x},${y}`;
   class Policy {
-    static version='explore-combat-v4';
-    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.doorUses=new Map();}
+    static version='explore-combat-v8';
+    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.doorUses=new Map();this.goal=null;}
     route(view, threats) {
       const p=view.player,scope=view.room.id??'room';
       let map=this.maps.get(scope);
@@ -17,23 +17,33 @@
       for(const tile of view.room.tiles) {
         if(tile.solid!==null&&tile.solid!==undefined)map.set(key(tile.x,tile.y),{...tile});
       }
-      const origin=key(p.x,p.y),seen=new Set([origin]);
+      const origin=key(p.x,p.y),seen=new Set();
       const queue=[{x:p.x,y:p.y,distance:0,first:null}];
       const occupants=new Map(view.room.entities.map(e=>[key(e.x,e.y),e]));
       const items=new Set(view.room.items?.map(i=>key(i.x,i.y))??[]);
-      let best=null;
-      for(let head=0;head<queue.length;head++) {
-        const node=queue[head],k=key(node.x,node.y),tile=map.get(k);
+      const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
+      if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
+      let best=null,committed=null;
+      // Weighted shortest paths account for observed breakable obstacles.
+      while(queue.length) {
+        queue.sort((a,b)=>a.distance-b.distance);
+        const node=queue.shift(),k=key(node.x,node.y),tile=map.get(k);
+        if(seen.has(k))continue;
+        seen.add(k);
         if(node.first) {
           const visits=this.visits.get(`${scope}:${k}`)??0;
           const uses=this.doorUses.get(`${scope}:${k}`)??0;
           let reward=visits===0?20:0;
           if(directions.some(([,dx,dy])=>!map.has(key(node.x+dx,node.y+dy))))reward=Math.max(reward,18);
           if(items.has(k)&&visits<3)reward=Math.max(reward,45);
-          if(tile?.isDoor)reward=Math.max(reward,35-40*uses);
-          if(tile?.exit)reward=Math.max(reward,70-40*uses);
+          // Crossing lands beyond the door, so its tile never gains ordinary visits.
+          // Passage use must replace the unvisited/frontier reward, not compete with it.
+          if(tile?.isDoor)reward=35-40*uses;
+          if(tile?.exit)reward=70-40*uses;
           const score=reward-node.distance*2-visits;
-          if(reward>0&&(!best||score>best.score))best={score,action:{type:'Move',direction:node.first}};
+          const candidate={score,key:k,action:{type:'Move',direction:node.first}};
+          if(this.goal?.key===k)committed=candidate;
+          if(score>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
           if(tile?.isDoor||tile?.exit)continue;
         }
@@ -42,13 +52,21 @@
           if(seen.has(next)||!t||(t.solid&&!t.isDoor)||threats.has(next))continue;
           if(t.traversal?.tunnel && !t.traversal.unlocked && t.traversal.unlockFromHere===false)continue;
           const occupant=occupants.get(next);
-          if(occupant&&(occupant.appearance==='unidentified'||occupant.isEnemy||occupant.collidable))continue;
+          let clearance=0;
+          if(occupant&&(occupant.appearance==='unidentified'||occupant.isEnemy))continue;
+          if(occupant?.collidable) {
+            if(!occupant.destroyable||damage<=0||!(occupant.health>0))continue;
+            // Estimate effort, then replan from the actual outcome of each attack.
+            clearance=Math.ceil(occupant.health/damage);
+          }
           const edge=`${scope}:${k}>${next}`;
           if((this.blocked.get(edge)??0)>this.tick)continue;
-          seen.add(next);queue.push({x,y,distance:node.distance+1,first:node.first??direction});
+          queue.push({x,y,distance:node.distance+1+clearance,first:node.first??direction});
         }
       }
-      return best?.action??null;
+      const selected=committed??best;
+      this.goal=selected?{scope,key:selected.key}:null;
+      return selected?.action??null;
     }
     choose(view) {
       if(view.observationMode!=='player-perception') throw new Error('Baseline requires restricted perception');
@@ -100,6 +118,7 @@
       const direction=directions.find(d=>d[0]===action.direction),p=before.player;
       const edge=`${before.room.id??'room'}:${key(p.x,p.y)}>${key(p.x+direction[1],p.y+direction[2])}`;
       if(after.room.id!==before.room.id || Math.abs(after.player.x-p.x)+Math.abs(after.player.y-p.y)>1) {
+        this.goal=null;
         this.crossings.set(edge,(this.crossings.get(edge)??0)+1);
         const destination=`${before.room.id??'room'}:${key(p.x+direction[1],p.y+direction[2])}`;
         this.doorUses.set(destination,(this.doorUses.get(destination)??0)+1);

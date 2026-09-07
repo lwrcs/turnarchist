@@ -356,13 +356,26 @@ Diagnostic step observations and replay exports never enter the policy. Percepti
 schema 4 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
 for visit tracking. Dark tile traits remain null. Inventory healing metadata is
 currently implemented for mushrooms and shares the item's actual healing value.
-The baseline plans routes through remembered, previously observed passable tiles,
+The baseline plans weighted shortest routes through remembered, previously observed tiles,
 uses visits and passage crossings to prioritize exploration, avoids temporarily
 failed directions and warning tiles, approaches adjacent enemies, eats known
 healing items, and confirms ladders. It dismisses ordinary interactions and cancels
 crafting menus. It does not yet choose upgrades, craft, cast spells, solve resource
 requirements, or learn weights. Long combat and progression performance remain
 unproven. Reports include rooms visited and decisions since reaching a new position.
+Passage scores use crossing history instead of the ordinary unvisited/frontier
+reward: crossing lands beyond a door, so standing-position visits cannot measure
+its use. Routes must also have positive scores to override local exploration; repeatedly
+visited goals eventually stop attracting the policy. Backtracking remains available
+through the local fallback policy. A chosen route destination persists until
+arrival, a passage crossing, or loss of a safe path. This prevents nearby competing
+goals from reversing the chosen direction every step; enemy combat still takes
+priority over routing. Identified non-enemy breakable objects are traversable plans
+with estimated extra clearing effort from health and active-weapon base damage.
+The policy executes ordinary Move/attack actions and replans after each observed
+result; unknown objects and indestructible colliders remain blocked. The estimate
+is not a promise of damage or an exact action count. Weighted search uses Dijkstra
+rather than unweighted breadth-first search; no unseen geometry is supplied.
 
 Diagnostic observation schema is now 5, perception schema 4, and action schema 3.
 The recorded zero-turn DismissInteraction action closes ordinary screen messages,

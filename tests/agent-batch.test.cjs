@@ -89,3 +89,58 @@ test('routing does not use unseen geometry or a blocked starting-side tunnel',()
   assert.notEqual(p.choose(v).direction,'up');
   assert.equal(p.maps.get('room').has('100,100'),false);
 });
+
+
+test('used passage cannot retain an unvisited or frontier route reward',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true},
+    {x:0,y:1,solid:false},{x:0,y:2,solid:false}];
+  p.visits.set('room:0,1',20);
+  assert.equal(p.choose(v).direction,'right');
+  const next=structuredClone(v);next.room.id='other';next.player.x=2;
+  p.feedback(v,{type:'Move',direction:'right'},next,{turnDelta:0});
+  // The unused corridor is costly locally, but it still leads to new terrain.
+  assert.equal(p.choose(v).direction,'down');
+});
+
+test('exhausted route goals yield to local exploration instead of oscillating forever',()=>{
+  const p=new Policy(),v=view();
+  for(const t of v.room.tiles)p.visits.set(`room:${t.x},${t.y}`,100);
+  assert.equal(p.route(v,new Set()),null);
+  assert.equal(p.choose(v).type,'Move');
+});
+
+test('routing commits to a destination despite a newly attractive competing goal',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},
+    {x:2,y:0,solid:false,exit:true},{x:1,y:1,solid:false}];
+  assert.equal(p.choose(v).direction,'right');
+  v.player.x=1;v.room.items=[{x:1,y:1}];
+  p.doorUses.set('room:2,0',1);
+  assert.equal(p.choose(v).direction,'right');
+  // A newly blocked goal must release the commitment immediately.
+  v.room.entities=[{x:2,y:0,collidable:true}];
+  assert.equal(p.choose(v).direction,'down');
+});
+
+test('weighted routing clears a visible breakable obstruction to reach an exit',()=>{
+  const p=new Policy(),v=view();
+  v.inventory=[{activeWeapon:true,traits:{baseDamage:1}}];
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true}];
+  v.room.entities=[{x:1,y:0,collidable:true,destroyable:true,health:2}];
+  assert.equal(p.choose(v).direction,'right');
+  const next=structuredClone(v);next.room.entities[0].health=1;
+  p.feedback(v,{type:'Move',direction:'right'},next,{turnDelta:1});
+  assert.equal(p.choose(next).direction,'right');
+  next.room.entities[0].destroyable=false;
+  assert.equal(p.route(next,new Set()),null);
+});
+test('weighted routing prefers an open detour over expensive destruction',()=>{
+  const p=new Policy(),v=view();v.inventory=[{activeWeapon:true,traits:{baseDamage:1}}];
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true},
+    {x:0,y:1,solid:false},{x:1,y:1,solid:false},{x:2,y:1,solid:false}];
+  v.room.entities=[{x:1,y:0,collidable:true,destroyable:true,health:10}];
+  assert.equal(p.choose(v).direction,'down');
+  v.room.entities[0]={x:1,y:0,appearance:'unidentified'};
+  assert.equal(p.route(v,new Set()).direction,'down');
+});
