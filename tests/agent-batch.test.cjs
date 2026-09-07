@@ -29,6 +29,7 @@ function fakeAgent(){
   let state=view(),steps=0,budget=0;const seeds=[];
   return {seeds,async reset(seed,opts){seeds.push(seed);state=view();steps=0;budget=opts.maxSteps;},
     perceive(){return structuredClone(state);},
+    extendBudget(n){budget+=n;},
     async step(action){steps++;state.player.y--;return {
       observation:new Proxy({}, {get(){throw new Error('Policy accessed diagnostic output');}}),
       terminated:false,truncated:steps>=budget,info:{turnDelta:1,recorded:true}};},
@@ -168,7 +169,7 @@ test('batch metrics preserve zero-turn chains and report earlier stalls and heal
   const r=report.runs[0];assert.equal(r.zeroTurnDecisions,2);assert.equal(r.maxZeroTurnStreak,2);
   assert.equal(r.maxDecisionsWithoutNewPosition,1);assert.equal(r.decisionsSinceNewPosition,0);
   assert.equal(r.healthLost,1);assert.equal(r.status,'budget-incomplete');
-  assert.ok(r.trace.every(t=>t.policy.reason));assert.equal(report.schemaVersion,2);
+  assert.ok(r.trace.every(t=>t.policy.reason));assert.equal(report.schemaVersion,3);
 });
 
 test('a known killing blow cancels only warnings from the killed source',()=>{
@@ -216,4 +217,57 @@ test('routing does not pass through the far edge of a wide collider',()=>{
   const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true}];
   v.room.entities=[{x:1,y:-1,width:1,height:2,collidable:true,destroyable:false}];
   assert.equal(p.route(v,new Set()),null);
+});
+
+test('a distant reachable goal stays eligible after every nearby tile was explored',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[];
+  for(let x=0;x<=30;x++){v.room.tiles.push({x,y:0,solid:false});if(x<30)p.visits.set(`room:${x},0`,50);}
+  assert.equal(p.route(v,new Set()).direction,'right');
+  assert.equal(p.goal.key,'30,0');
+});
+test('an occluded remembered blocker stays blocked until its location is seen clear',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true}];
+  v.room.entities=[{id:'machine',x:1,y:0,isEnemy:false,collidable:true,destroyable:false}];
+  assert.equal(p.route(v,new Set()),null);
+  v.room.entities=[];v.room.tiles=v.room.tiles.filter(t=>t.x!==1);
+  assert.equal(p.route(v,new Set()),null);
+  v.room.tiles.push({x:1,y:0,solid:false});
+  assert.equal(p.route(v,new Set()).direction,'right');
+});
+test('a remembered obstacle moving to a visible new position does not block its old cell',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:2,y:0,solid:false,exit:true}];
+  v.room.entities=[{id:'object',x:1,y:0,isEnemy:false,collidable:true,destroyable:false}];p.route(v,new Set());
+  v.room.entities[0].y=1;assert.equal(p.route(v,new Set()).direction,'right');
+});
+
+test('resuming preserves the action sequence and replay without resetting the seed',async()=>{
+  const one=fakeAgent(),split=fakeAgent();
+  const full=await new Runner(one).run({seeds:[123],decisions:8});
+  const runner=new Runner(split);await runner.run({seeds:[123],decisions:3});
+  const resumed=await runner.resumeLast({decisions:5});
+  assert.deepEqual(split.seeds,[123]);assert.equal(resumed.runs[0].decisions,8);
+  assert.equal(resumed.runs[0].replay.replay.actions.length,8);
+  assert.deepEqual(resumed.runs[0].trace.map(t=>t.action),full.runs[0].trace.map(t=>t.action));
+  assert.equal(resumed.runs[0].decisionBudget,8);assert.equal(resumed.runs[0].resumptions.length,1);
+});
+test('resume rejects manual state changes and invalid budgets before extending',async()=>{
+  const agent=fakeAgent(),runner=new Runner(agent);await runner.run({seeds:[1],decisions:2});
+  let extensions=0;agent.extendBudget=()=>{extensions++;};
+  await assert.rejects(runner.resumeLast({decisions:0}),/decisions/);
+  const original=agent.perceive;agent.perceive=()=>{const v=original();v.player.health=1;return v;};
+  await assert.rejects(runner.resumeLast(),/game changed/);assert.equal(extensions,0);
+});
+test('cancelled runs can resume but an execution failure cannot',async()=>{
+  const agent=fakeAgent(),runner=new Runner(agent);
+  await runner.run({seeds:[1,2],decisions:5,onProgress:()=>runner.stop()});
+  const resumed=await runner.resumeLast({decisions:2});assert.deepEqual(agent.seeds,[1]);
+  assert.equal(resumed.runs[0].decisions,3);assert.equal(resumed.runs[0].status,'budget-incomplete');
+  agent.step=async()=>{throw new Error('failure');};await runner.resumeLast({decisions:1});
+  await assert.rejects(runner.resumeLast(),/No resumable/);
+});
+
+test('resume rejects replay-history changes even if the visible state is unchanged',async()=>{
+  const agent=fakeAgent(),runner=new Runner(agent);await runner.run({seeds:[1],decisions:2});
+  agent.exportReplay=()=>({replay:{actions:[]}});
+  await assert.rejects(runner.resumeLast(),/Replay history changed/);
 });

@@ -28,3 +28,9 @@ test('unpaired and duplicate seeds cannot silently alter the matched comparison'
   const c=compareReports(a,b);assert.equal(c.pairedSeeds,0);assert.deepEqual(c.onlyBefore,[123]);assert.deepEqual(c.onlyAfter,[456]);
   b.runs.push({...b.runs[0]});assert.throws(()=>compareReports(a,b),/unique/);
 });
+
+test('a resumed run uses its own budget rather than the original batch default',()=>{
+  const a=report(),b=report();b.runs[0].decisionBudget=750;
+  assert.equal(compareReports(a,b).controlledSeeds,0);
+  a.runs[0].decisionBudget=750;assert.equal(compareReports(a,b).controlledSeeds,1);
+});

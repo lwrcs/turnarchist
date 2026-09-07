@@ -8,8 +8,8 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v11';
-    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;}
+    static version='explore-combat-v12';
+    constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;}
     canPushIntoSpace(view,x,y,dx,dy) {
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const head=view.room.entities.find(e=>occupies(e,x,y));
@@ -35,9 +35,19 @@
       }
       const origin=key(p.x,p.y),seen=new Set();
       const queue=[{x:p.x,y:p.y,distance:0,first:null}];
+      let remembered=this.obstacles.get(scope);
+      if(!remembered){remembered=new Map();this.obstacles.set(scope,remembered);}
+      const visibleTiles=new Set(view.room.tiles.filter(t=>t.solid!==null&&t.solid!==undefined).map(t=>key(t.x,t.y)));
+      const currentIds=new Map(view.room.entities.filter(e=>e.id).map(e=>[e.id,e]));
+      for(const [id,e] of remembered) {
+        const current=currentIds.get(id);
+        if((visibleTiles.has(key(e.x,e.y))&&!current)||current?.isEnemy||current?.collidable===false)remembered.delete(id);
+      }
+      for(const e of view.room.entities)if(e.id&&e.isEnemy===false&&e.collidable)remembered.set(e.id,{...e});
+      const knownEntities=[...remembered.values()].filter(e=>!currentIds.has(e.id)).concat(view.room.entities);
       const occupants=new Map();
-      for(const e of view.room.entities)for(let x=e.x;x<e.x+Math.max(1,e.width??1);x++)
-        for(let y=e.y;y<e.y+Math.max(1,e.height??1);y++)occupants.set(key(x,y),e);
+      for(const e of knownEntities)for(let x=e.x;x<e.x+Math.max(1,e.width??1);x++)
+        for(let y=e.y;y<e.y+Math.max(1,e.height??1);y++)occupants.set(key(x,y),[...(occupants.get(key(x,y))??[]),e]);
       const items=new Set(view.room.items?.map(i=>key(i.x,i.y))??[]);
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
@@ -58,10 +68,11 @@
           // Passage use must replace the unvisited/frontier reward, not compete with it.
           if(tile?.isDoor)reward=35-40*uses;
           if(tile?.exit)reward=70-40*uses;
-          const score=reward-node.distance*2-visits;
+          const utility=reward-visits;
+          const score=utility-node.distance*2;
           const candidate={score,key:k,action:{type:'Move',direction:node.first}};
           if(this.goal?.key===k)committed=candidate;
-          if(score>0&&(!best||score>best.score))best=candidate;
+          if(utility>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
           if(tile?.isDoor||tile?.exit)continue;
         }
@@ -69,14 +80,11 @@
           const x=node.x+dx,y=node.y+dy,next=key(x,y),t=map.get(next);
           if(seen.has(next)||!t||(t.solid&&!t.isDoor)||threats.has(next))continue;
           if(t.traversal?.tunnel && !t.traversal.unlocked && t.traversal.unlockFromHere===false)continue;
-          const occupant=occupants.get(next);
-          let clearance=0;
-          if(occupant&&(occupant.appearance==='unidentified'||occupant.isEnemy))continue;
-          if(occupant?.collidable) {
-            if(!occupant.destroyable||damage<=0||!(occupant.health>0))continue;
-            // Estimate effort, then replan from the actual outcome of each attack.
-            clearance=Math.ceil(occupant.health/damage);
-          }
+          const occupied=occupants.get(next)??[];
+          if(occupied.some(e=>e.appearance==='unidentified'||e.isEnemy||
+            (e.collidable&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
+          // Estimate effort, then replan from the actual outcome of each attack.
+          const clearance=occupied.reduce((cost,e)=>cost+(e.collidable?Math.ceil(e.health/damage):0),0);
           const edge=`${scope}:${k}>${next}`;
           if((this.blocked.get(edge)??0)>this.tick)continue;
           queue.push({x,y,distance:node.distance+1+clearance,first:node.first??direction});

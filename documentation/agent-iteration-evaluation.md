@@ -72,3 +72,49 @@ Validation at this checkpoint: 99 tests passed, TypeScript check with skipLibChe
 passed, Webpack compiled, and browser smoke passed with the dagger's adjacent
 pattern and minimum damage present. No active evaluation was interrupted. Report
 comparison CLI is documented in agent-report-comparison.md.
+
+## Fresh seeds and continuation validation
+
+V12's fresh-seed check used a 300-decision budget and build
+7434f4d1d838f61e35e0. All runs were budget-incomplete and were reaching new positions
+at the end; these results do not establish winning play.
+
+| Seed | Turns | Positions | Rooms | Health | Health lost | Maximum stale streak |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 101 | 290 | 97 | 4 | 1 | 1 | 111 |
+| 202 | 286 | 128 | 6 | 2 | 0 | 75 |
+| 303 | 295 | 240 | 3 | 2 | 0 | 38 |
+
+The continuation browser check ran seed 123 for 20 decisions (18 turns, 20 replay
+actions), then continued the same episode to 40 decisions (38 turns, 40 replay
+actions). A manual Wait after extending the environment's budget caused a later
+continuation request to be rejected as changed game state. Unit tests also compare
+split and uninterrupted action sequences, and reject changed replay histories.
+Final verification: 107 tests passed and JavaScript syntax checks passed. The game
+bundle remains the tested build above; navigation and runner changes are standalone.
+
+## Final six-seed navigation comparison (v12)
+
+Same game build/settings as v11, 500 decisions per seed. All six runs survived
+at health 2 with measured health loss 0. Each outcome is budget-incomplete.
+
+| Seed | Turns | Positions | Rooms | Final stale streak | Maximum stale streak |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 123 | 488 | 45 | 2 | 353 | 353 |
+| 456 | 493 | 284 | 4 | 132 | 132 |
+| 789 | 494 | 362 | 4 | 25 | 47 |
+| 321 | 497 | 402 | 3 | 46 | 46 |
+| 654 | 493 | 269 | 4 | 162 | 162 |
+| 987 | 497 | 325 | 3 | 100 | 100 |
+
+Obstacle memory and distant-goal eligibility pass their regression tests, but
+these changes did not eliminate late-run stalls. Position counts improved slightly
+on 789 and 987; the maximum stall grew on 987. Seed 123 still has only 45 visited
+positions, despite surviving. Do not present the navigation changes as a universal
+performance improvement or label stalled survivors as good training examples.
+
+Next investigation: room-level backtracking when local goals are exhausted,
+distinguishing a route blocked by generated objects from an unsupported resource
+requirement, then longer combat/inventory scenarios. Training-data selection should
+consider exploration and stalled intervals alongside survival. No learned policy
+was trained in this iteration.

@@ -25,3 +25,8 @@ aggregate death counts. Duplicate seeds are rejected rather than paired arbitrar
 Keep a fixed seed suite for comparisons and separate seeds for checking behavior
 outside that suite. Preserve exported policy source and game code/assets with
 reports before using runs as training demonstrations.
+
+
+For continued episodes, the comparer uses each run's effective `decisionBudget`
+instead of the original batch default. Reports from older versions without this
+field still use `decisionsPerSeed`.

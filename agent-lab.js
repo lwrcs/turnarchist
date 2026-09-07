@@ -21,6 +21,15 @@
     } finally { buttons.forEach(button => { button.disabled = false; }); }
   }
   let batchRunner;
+  const progress=p=>{status.textContent=`Seed ${p.seed} (${p.run}/${p.total}), decision ${p.decisions}, health ${p.health}`;};
+  const summarizeBatch=report=>{
+    window.lastBatchReport=report;
+    return {...report,runs:report.runs.map(({trace,replay,...summary})=>({...summary,traceFrames:trace.length,lastDecisions:trace.slice(-5).map(t=>({action:t.action,policy:t.policy,turnDelta:t.info.turnDelta,decision:t.after.decision,player:t.after.player})),replayActions:replay?.replay?.actions?.length}))};
+  };
+  document.getElementById('batch-resume').onclick = () => run(async () => {
+    if(!batchRunner)throw new Error('Run a baseline batch first');
+    return summarizeBatch(await batchRunner.resumeLast({decisions:Number(document.getElementById('resume-decisions').value),onProgress:progress}));
+  });
   document.getElementById('batch-stop').onclick = () => batchRunner?.stop();
   document.getElementById('batch-run').onclick = () => run(async () => {
     batchRunner = new AgentBatch.Runner(api());
@@ -28,10 +37,9 @@
     const report=await batchRunner.run({
       seeds:document.getElementById('batch-seeds').value.split(',').map(s=>s.trim()).filter(Boolean).map(Number),
       decisions:Number(document.getElementById('batch-decisions').value),
-      onProgress:p=>{status.textContent=`Seed ${p.seed} (${p.run}/${p.total}), decision ${p.decisions}, health ${p.health}`;},
+      onProgress:progress,
     });
-    window.lastBatchReport=report;
-    return {...report,runs:report.runs.map(({trace,replay,...summary})=>({...summary,traceFrames:trace.length,lastDecisions:trace.slice(-5).map(t=>({action:t.action,policy:t.policy,turnDelta:t.info.turnDelta,decision:t.after.decision,player:t.after.player})),replayActions:replay?.replay?.actions?.length}))};
+    return summarizeBatch(report);
   });
   document.getElementById('batch-trace').onclick = () => run(() => {
     if(!batchRunner?.report || batchRunner.running)throw new Error('Finish the batch before inspecting its trace');

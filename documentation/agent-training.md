@@ -365,9 +365,13 @@ requirements, or learn weights. Long combat and progression performance remain
 unproven. Reports include rooms visited and decisions since reaching a new position.
 Passage scores use crossing history instead of the ordinary unvisited/frontier
 reward: crossing lands beyond a door, so standing-position visits cannot measure
-its use. Routes must also have positive scores to override local exploration; repeatedly
-visited goals eventually stop attracting the policy. Backtracking remains available
-through the local fallback policy. A chosen route destination persists until
+its use. Goal utility must remain positive to override local exploration; travel distance
+ranks eligible goals but cannot make a distant unexplored destination ineligible.
+Repeatedly visited goals eventually stop attracting the policy. Backtracking remains available
+through the local fallback policy. Observed non-enemy blockers are remembered
+through occlusion, updated when seen at a new position, and removed when their
+previous location is visibly clear. Enemy positions are not frozen into that
+obstacle memory. A chosen route destination persists until
 arrival, a passage crossing, or loss of a safe path. This prevents nearby competing
 goals from reversing the chosen direction every step; enemy combat still takes
 priority over routing. Identified non-enemy breakable objects are traversable plans
@@ -395,8 +399,13 @@ Outcomes distinguish dead, budget-incomplete, unsupported-decision, cancelled,
 and error. No outcome claims victory or proves a seed unwinnable. Budgets count
 decisions independently of turns. Advancing to the next seed resets an incomplete
 run deliberately for bounded evaluation; its replay and trace remain in the
-report. The last run remains in the environment and its action budget can be
-extended, though the runner does not yet resume policy memory from reports.
+report. The last run remains in the environment. Continue last run adds the requested
+number of decisions while preserving the live policy, obstacle/visit memory, trace,
+metrics and replay. It accepts budget-incomplete or cancelled runs, rejects deaths
+and errors, and checks that visible state and replay history are unchanged.
+Reloading the page loses this live runner; restoring policy memory from a saved
+report is not yet supported. Unstarted seeds from a cancelled batch do not run
+automatically when continuing its last episode.
 Timeout/execution errors stop the whole batch rather than resetting over pending
 callbacks. Only one batch per Runner can execute at a time. Snapshots are bounded;
 replay actions remain complete within the run budget.
@@ -420,6 +429,12 @@ escapes from an under-player warning. Entity footprints and chain-pushability ar
 used rather than class-name rules.
 
 Inspect batch trace displays the final 32 restricted transitions for Trace seed.
-Policy goal/reason is captured before each action. Batch report schema 2 adds
+Policy goal/reason is captured before each action. Batch report schema 3 includes
 health lost, longest stale-position streak, and zero-turn counts/streaks. These
 metrics never force a Wait or interrupt a legitimate sequence of free actions.
+
+
+Continuation records each run's effective decision budget and a resumption history.
+The original batch budget remains metadata for the initial run. Report comparison
+uses the per-run budget when present, so an extended run is not silently compared
+against a shorter evaluation. Extending a run never injects a Wait or resets the seed.
