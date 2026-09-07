@@ -31431,6 +31431,8 @@ class Game {
             }
         };
         this.changeLevelThroughDoor = (player, door, side) => {
+            if (!door.linkedDoor.canTraverse(player))
+                return;
             door.linkedDoor.room.entered = true;
             // Prefer stable roomGID; maintain legacy levelID for compatibility
             player.roomGID = door.room.globalId;
@@ -36391,8 +36393,8 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 4,
-        actionSchemaVersion: 2,
+        observationSchemaVersion: 5,
+        actionSchemaVersion: 3,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
         buildId:  true ? __webpack_require__.h() : 0,
@@ -36583,7 +36585,7 @@ class AgentEnvironment {
         let turnCost = null;
         if (action.type === "Wait")
             turnCost = 1;
-        if (action.type === "MoveItem")
+        if (action.type === "MoveItem" || action.type === "DismissInteraction")
             turnCost = 0;
         if (action.type === "UseItem")
             turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
@@ -36605,6 +36607,7 @@ class AgentEnvironment {
                 ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
                 solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
                 isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
+                traversal: room.getGameplayLightTile(tile.x, tile.y)?.getTraversalTraits?.(),
                 exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder,
             })),
             entities: observation.room.entities,
@@ -36618,8 +36621,8 @@ class AgentEnvironment {
             blocked: (x, y) => room.isGameplaySightBlocked(x, y),
         }, vision);
         return {
-            schemaVersion: 3, observationMode: "player-perception", vision: { ...vision },
-            contract: { ...this.contract(), observationSchemaVersion: 3, observationMode: "player-perception" },
+            schemaVersion: 4, observationMode: "player-perception", vision: { ...vision },
+            contract: { ...this.contract(), observationSchemaVersion: 4, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -36684,7 +36687,7 @@ class AgentEnvironment {
         const ladderChoice = player.screenMessage.open &&
             room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
         return {
-            schemaVersion: 4, contract: this.contract(),
+            schemaVersion: 5, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
             ...this.budgetStatus(),
@@ -36710,15 +36713,15 @@ class AgentEnvironment {
             selectionChoices: player.menu?.getSelectionChoices() ?? null,
             // Bounded history supports temporal policies; it is not online model learning.
             recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)),
-            decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "unsupported-modal") :
-                player.openVendingMachine?.open || player.contextMenu?.open ? "unsupported-modal" :
+            decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "dismissable-interaction") :
+                player.openVendingMachine?.open || player.contextMenu?.open ? "dismissable-interaction" :
                     player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
         };
     }
     async step(input) {
         // Validate the external action before taking ownership of the episode.
         if (!input || typeof input !== "object" ||
-            !["Move", "Wait", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+            !["Move", "Wait", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
             ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
             ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
             ((input.type === "UseItemOn" || input.type === "MoveItem") &&
@@ -36741,7 +36744,8 @@ class AgentEnvironment {
             const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
             if (before.decision === "unsupported-modal" ||
                 (before.decision === "ladder") !== ladderAction ||
-                (before.decision === "selection") !== (actionInput.type === "SelectOption")) {
+                (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
+                (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
                 throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
             }
             const player = this.player();
@@ -36899,7 +36903,7 @@ function perceiveRoom(input, vision) {
     return {
         tiles: input.tiles.filter(t => inSight(t.x, t.y)).map(t => bright(t.x, t.y)
             ? { ...t, brightness: input.brightness(t.x, t.y) }
-            : { x: t.x, y: t.y, kind: null, solid: null, isDoor: null, exit: null, brightness: input.brightness(t.x, t.y) }),
+            : { x: t.x, y: t.y, kind: null, solid: null, isDoor: null, traversal: null, exit: null, brightness: input.brightness(t.x, t.y) }),
         entities,
         items: input.items.filter(i => (i.z ?? 0) === player.z && inSight(i.x, i.y) && bright(i.x, i.y)),
         // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
@@ -78321,6 +78325,8 @@ class Player extends drawable_1.Drawable {
                         }
                     }
                 }
+                if (other instanceof door_1.Door && !other.canTraverse(this))
+                    return false;
                 this.move(x, y);
                 other.onCollide(this);
                 // Z-debug per-layer stairs (z-only triggers)
@@ -79028,6 +79034,12 @@ class PlayerActionProcessor {
                 });
                 break;
             }
+            case "DismissInteraction":
+                this.player.openVendingMachine?.close();
+                this.player.contextMenu?.close();
+                this.player.screenMessage.close();
+                this.record(action);
+                break;
             case "Wait":
                 try {
                     this.player.getRoom?.()?.tick?.(this.player);
@@ -86300,16 +86312,16 @@ class Room {
             if (door instanceof door_1.Door && door.doorDir === game_1.Direction.UP) {
                 //if top door
                 door.opened = true;
-                player.moveNoSmooth(door.x, door.y + 1);
+                player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
             }
             else if (door instanceof door_1.Door && door.doorDir === game_1.Direction.DOWN) {
                 //if bottom door
-                player.moveNoSmooth(door.x, door.y - 1);
+                player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
             }
             else if (door instanceof door_1.Door &&
                 [game_1.Direction.RIGHT, game_1.Direction.LEFT].includes(door.doorDir)) {
                 // if side door
-                player.moveNoSmooth(door.x + side, door.y);
+                player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
             }
             this.onEnterRoom(player);
             const oxygenLine = player.getOxygenLine();
@@ -96911,6 +96923,7 @@ exports.Decoration = Decoration;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Door = exports.DoorType = exports.DoorDir = void 0;
+const doorTraversal_1 = __webpack_require__(/*! ./doorTraversal */ "./src/tile/doorTraversal.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const IdGenerator_1 = __webpack_require__(/*! ../globalStateManager/IdGenerator */ "./src/globalStateManager/IdGenerator.ts");
@@ -97040,8 +97053,7 @@ class Door extends passageway_1.Passageway {
             }
             if (this.type === DoorType.TUNNELDOOR &&
                 (!this.opened || !this.linkedDoor.opened)) {
-                if (this.linkedDoor === this.room.level.exitRoom.tunnelDoor ||
-                    this.startRoom) {
+                if (!this.getTraversalTraits().unlockFromHere) {
                     this.game.pushMessage("The door refuses to budge from this side.");
                     return false;
                 }
@@ -97113,7 +97125,43 @@ class Door extends passageway_1.Passageway {
         this.canCrushEnemy = () => {
             return true;
         };
+        /** Public rule descriptor: tunnel locks can only be cleared from the exit side. */
+        this.getTraversalTraits = () => ({
+            tunnel: this.type === DoorType.TUNNELDOOR,
+            unlocked: !this.locked,
+            unlockFromHere: this.type === DoorType.TUNNELDOOR
+                ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
+        });
+        this.getArrivalPosition = (side) => {
+            if (this.doorDir === game_1.Direction.UP)
+                return { x: this.x, y: this.y + 1 };
+            if (this.doorDir === game_1.Direction.DOWN)
+                return { x: this.x, y: this.y - 1 };
+            return { x: this.x + (side ?? 0), y: this.y };
+        };
+        this.canTraverse = (player) => {
+            const destination = this.linkedDoor;
+            const side = destination.room.roomX - this.room.roomX > 0 ? 1 : -1;
+            const arrival = destination.getArrivalPosition(side);
+            const checks = [
+                { room: this.room, x: this.x, y: this.y },
+                { room: destination.room, x: destination.x, y: destination.y },
+                { room: destination.room, ...arrival },
+            ];
+            for (const check of checks) {
+                const occupant = (0, doorTraversal_1.findDoorwayOccupant)(check.room.entities, check.x, check.y, player.z, player.w, player.h);
+                if (occupant) {
+                    this.game.pushMessage("The doorway is blocked.");
+                    console.warn("[door-traversal-blocked]", { room: check.room.globalId, x: check.x, y: check.y, z: player.z,
+                        occupant: occupant.globalId });
+                    return false;
+                }
+            }
+            return true;
+        };
         this.onCollide = (player) => {
+            if (!this.canTraverse(player))
+                return;
             if (!this.opened) {
                 sound_1.Sound.doorOpen();
                 if (this.doorDir === game_1.Direction.LEFT) {
@@ -97287,6 +97335,27 @@ class Door extends passageway_1.Passageway {
     }
 }
 exports.Door = Door;
+
+
+/***/ }),
+
+/***/ "./src/tile/doorTraversal.ts":
+/*!***********************************!*\
+  !*** ./src/tile/doorTraversal.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.findDoorwayOccupant = void 0;
+/** Physical doorway occupancy, independent of generation assumptions and rendering. */
+function findDoorwayOccupant(entities, x, y, z, width = 1, height = 1) {
+    return entities.find(entity => !entity.dead && entity.collidable !== false && (entity.z ?? 0) === z &&
+        x < entity.x + Math.max(1, entity.w ?? 1) && x + width > entity.x &&
+        y < entity.y + Math.max(1, entity.h ?? 1) && y + height > entity.y);
+}
+exports.findDoorwayOccupant = findDoorwayOccupant;
 
 
 /***/ }),
@@ -99847,7 +99916,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("5e2e66eb493f522aca8a")
+/******/ 		__webpack_require__.h = () => ("c8cedddd4aab91238b18")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

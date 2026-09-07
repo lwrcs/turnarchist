@@ -1,3 +1,4 @@
+import { findDoorwayOccupant } from "./doorTraversal";
 import { Player } from "../player/player";
 import { Direction, Game } from "../game";
 import { Room, RoomType } from "../room/room";
@@ -229,8 +230,7 @@ export class Door extends Passageway {
       (!this.opened || !this.linkedDoor.opened)
     ) {
       if (
-        this.linkedDoor === this.room.level.exitRoom.tunnelDoor ||
-        this.startRoom
+        !this.getTraversalTraits().unlockFromHere
       ) {
         this.game.pushMessage("The door refuses to budge from this side.");
         return false;
@@ -309,7 +309,43 @@ export class Door extends Passageway {
     return true;
   };
 
+  /** Public rule descriptor: tunnel locks can only be cleared from the exit side. */
+  getTraversalTraits = () => ({
+    tunnel: this.type === DoorType.TUNNELDOOR,
+    unlocked: !this.locked,
+    unlockFromHere: this.type === DoorType.TUNNELDOOR
+      ? !(this.startRoom || this.linkedDoor === this.room.level.exitRoom?.tunnelDoor) : null,
+  });
+
+  getArrivalPosition = (side?: number) => {
+    if (this.doorDir === Direction.UP) return {x:this.x, y:this.y+1};
+    if (this.doorDir === Direction.DOWN) return {x:this.x, y:this.y-1};
+    return {x:this.x+(side ?? 0), y:this.y};
+  };
+
+  canTraverse = (player: Player): boolean => {
+    const destination = this.linkedDoor;
+    const side = destination.room.roomX-this.room.roomX>0?1:-1;
+    const arrival = destination.getArrivalPosition(side);
+    const checks = [
+      {room:this.room,x:this.x,y:this.y},
+      {room:destination.room,x:destination.x,y:destination.y},
+      {room:destination.room,...arrival},
+    ];
+    for (const check of checks) {
+      const occupant = findDoorwayOccupant(check.room.entities,check.x,check.y,player.z,player.w,player.h);
+      if (occupant) {
+        this.game.pushMessage("The doorway is blocked.");
+        console.warn("[door-traversal-blocked]", {room:check.room.globalId,x:check.x,y:check.y,z:player.z,
+          occupant:(occupant as {globalId?:string}).globalId});
+        return false;
+      }
+    }
+    return true;
+  };
+
   onCollide = (player: Player) => {
+    if (!this.canTraverse(player)) return;
     if (!this.opened) {
       Sound.doorOpen();
       if (this.doorDir === Direction.LEFT) {

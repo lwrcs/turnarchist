@@ -1604,16 +1604,16 @@ export class Room {
     if (door instanceof Door && door.doorDir === Direction.UP) {
       //if top door
       door.opened = true;
-      player.moveNoSmooth(door.x, door.y + 1);
+      player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
     } else if (door instanceof Door && door.doorDir === Direction.DOWN) {
       //if bottom door
-      player.moveNoSmooth(door.x, door.y - 1);
+      player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
     } else if (
       door instanceof Door &&
       [Direction.RIGHT, Direction.LEFT].includes(door.doorDir)
     ) {
       // if side door
-      player.moveNoSmooth(door.x + side, door.y);
+      player.moveNoSmooth(door.getArrivalPosition(side).x, door.getArrivalPosition(side).y);
     }
     this.onEnterRoom(player);
     const oxygenLine = player.getOxygenLine();

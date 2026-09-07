@@ -24,6 +24,8 @@
             let view=this.agent.perceive();
             run.contract=view.contract;run.vision=view.vision;run.initialHealth=view.player.health;
             const visited=new Set();
+            const rooms=new Set([view.room.id]);
+            run.finalHealth=view.player.health;run.roomsVisited=1;run.decisionsSinceNewPosition=0;
             while(run.decisions<decisions&&!this.stopping) {
               if(view.terminated){run.status='dead';break;}
               const action=policy.choose(view);
@@ -33,7 +35,9 @@
               policy.feedback(view,action,next,result.info);
               run.decisions++;run.turns+=result.info.turnDelta;
               if(result.info.recorded)run.recordedActions++;
-              visited.add(`${next.room.id}:${next.player.x},${next.player.y},${next.player.z}`);
+              const position=`${next.room.id}:${next.player.x},${next.player.y},${next.player.z}`;
+              run.decisionsSinceNewPosition=visited.has(position)?run.decisionsSinceNewPosition+1:0;
+              visited.add(position);rooms.add(next.room.id);run.roomsVisited=rooms.size;
               // Restricted snapshots only, bounded in the report; replay retains the action sequence.
               run.trace.push({decision:run.decisions,action,info:{recorded:result.info.recorded,turnDelta:result.info.turnDelta},before:view,after:next});
               if(run.trace.length>32)run.trace.shift();

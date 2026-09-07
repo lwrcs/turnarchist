@@ -76,3 +76,16 @@ test('death is separate from budget truncation and trace storage stays bounded',
   assert.equal(report.runs[0].status,'dead');assert.equal(report.runs[0].trace.length,32);
   assert.equal(report.runs[0].replay.replay.actions.length,35);
 });
+
+test('routing follows a previously seen corridor to an exit rather than a local loop',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false},{x:1,y:1,solid:false},{x:1,y:2,solid:false,exit:true},{x:-1,y:0,solid:false}];
+  p.visits.set('room:1,0',10);p.visits.set('room:1,1',10);
+  assert.equal(p.choose(v).direction,'right');
+  const unseen=structuredClone(v);unseen.room.tiles=unseen.room.tiles.filter(t=>t.x!==1||t.y!==2);
+  assert.equal(p.choose(unseen).direction,'right');
+});
+test('routing does not use unseen geometry or a blocked starting-side tunnel',()=>{
+  const p=new Policy(),v=view();v.room.tiles[0]={x:0,y:-1,solid:true,isDoor:true,traversal:{tunnel:true,unlocked:false,unlockFromHere:false}};
+  assert.notEqual(p.choose(v).direction,'up');
+  assert.equal(p.maps.get('room').has('100,100'),false);
+});

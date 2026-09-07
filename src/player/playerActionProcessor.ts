@@ -94,6 +94,13 @@ export class PlayerActionProcessor {
         break;
       }
 
+      case "DismissInteraction":
+        this.player.openVendingMachine?.close();
+        this.player.contextMenu?.close();
+        this.player.screenMessage.close();
+        this.record(action);
+        break;
+
       case "Wait":
         try {
           (this.player as any).getRoom?.()?.tick?.(this.player);

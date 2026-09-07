@@ -405,3 +405,17 @@ test('diagnostic scenario reset forwards its seed, labels exports and rejects un
   await env.reset(123);
   assert.equal(env.exportReplay().diagnosticSandbox,false);
 });
+
+test('dismissible interactions close through the recorded action processor without a turn', async()=>{
+  const {env,player,actions}=setup();await env.reset(1);
+  player.openVendingMachine={open:true,close(){this.open=false;}};
+  player.contextMenu={close(){}};player.screenMessage.close=()=>{player.screenMessage.open=false;};
+  const Processor=productionMethods('src/player/playerActionProcessor.ts',['process'],{isActionReady:()=>true});
+  const processor=new Processor();processor.player=player;processor.record=action=>actions.push(action);player.actionProcessor=processor;
+  assert.equal(env.perceive ? env.observe().decision : null,'dismissable-interaction');
+  await assert.rejects(env.step({type:'Wait'}),/current decision/);
+  const result=await env.step({type:'DismissInteraction'});
+  assert.equal(result.info.turnDelta,0);assert.equal(result.info.recorded,true);
+  assert.equal(result.observation.decision,'world');
+  assert.equal(actions[0].type,'DismissInteraction');
+});

@@ -15,6 +15,7 @@ export type AgentAction =
   | Extract<GameAction, {type: "UseItem" | "UseItemOn" | "MoveItem" | "DropItem"}>
   | { type: "SelectOption"; index: number }
   | { type: "Wait" }
+  | { type: "DismissInteraction" }
   | { type: "LadderConfirm" }
   | { type: "LadderCancel" };
 
@@ -167,7 +168,7 @@ export class AgentEnvironment {
     const items = this.player().inventory.items;
     let turnCost: number | null = null;
     if (action.type === "Wait") turnCost = 1;
-    if (action.type === "MoveItem") turnCost = 0;
+    if (action.type === "MoveItem" || action.type === "DismissInteraction") turnCost = 0;
     if (action.type === "UseItem") turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
     if (action.type === "UseItemOn") turnCost = items[action.fromSlot]?.getUseOnTurnCost?.(items[action.toSlot]) ?? null;
     if (action.type === "SelectOption") turnCost = this.player().menu?.getSelectionChoices()?.[action.index]?.turnCost ?? null;
@@ -185,6 +186,7 @@ export class AgentEnvironment {
         ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
         solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
         isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
+        traversal: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getTraversalTraits?:()=>object})?.getTraversalTraits?.(),
         exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder,
       })),
       entities: observation.room.entities,
@@ -198,8 +200,8 @@ export class AgentEnvironment {
       blocked: (x, y) => room.isGameplaySightBlocked(x, y),
     }, vision);
     return {
-      schemaVersion: 3, observationMode: "player-perception", vision: {...vision},
-      contract: {...this.contract(), observationSchemaVersion: 3, observationMode: "player-perception"},
+      schemaVersion: 4, observationMode: "player-perception", vision: {...vision},
+      contract: {...this.contract(), observationSchemaVersion: 4, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -261,7 +263,7 @@ export class AgentEnvironment {
     const ladderChoice = player.screenMessage.open &&
       room.roomArray[player.x]?.[player.y] instanceof DownLadder;
     return {
-      schemaVersion: 4, contract: this.contract(),
+      schemaVersion: 5, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
       seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
       ...this.budgetStatus(),
@@ -287,8 +289,8 @@ export class AgentEnvironment {
       selectionChoices: player.menu?.getSelectionChoices() ?? null,
       // Bounded history supports temporal policies; it is not online model learning.
       recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)) as AgentTransition[],
-      decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "unsupported-modal") :
-        player.openVendingMachine?.open || player.contextMenu?.open ? "unsupported-modal" :
+      decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "dismissable-interaction") :
+        player.openVendingMachine?.open || player.contextMenu?.open ? "dismissable-interaction" :
         player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
     };
   }
@@ -296,7 +298,7 @@ export class AgentEnvironment {
   async step(input: AgentAction) {
     // Validate the external action before taking ownership of the episode.
     if (!input || typeof input !== "object" ||
-      !["Move", "Wait", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+      !["Move", "Wait", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
       ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
       ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
       ((input.type === "UseItemOn" || input.type === "MoveItem") &&
@@ -316,7 +318,8 @@ export class AgentEnvironment {
       const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
       if (before.decision === "unsupported-modal" ||
         (before.decision === "ladder") !== ladderAction ||
-        (before.decision === "selection") !== (actionInput.type === "SelectOption")) {
+        (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
+        (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
         throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
       }
       const player = this.player();

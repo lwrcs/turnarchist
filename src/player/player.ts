@@ -1265,6 +1265,7 @@ export class Player extends Drawable {
           }
         }
       }
+      if (other instanceof Door && !other.canTraverse(this)) return false;
       this.move(x, y);
       other.onCollide(this);
       // Z-debug per-layer stairs (z-only triggers)

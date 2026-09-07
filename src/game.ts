@@ -1941,6 +1941,7 @@ export class Game {
   };
 
   changeLevelThroughDoor = (player: Player, door: Door, side?: number) => {
+    if (!door.linkedDoor.canTraverse(player)) return;
     door.linkedDoor.room.entered = true;
     // Prefer stable roomGID; maintain legacy levelID for compatibility
     (player as any).roomGID = door.room.globalId;

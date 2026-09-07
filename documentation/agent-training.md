@@ -271,7 +271,7 @@ lights, and the local active-z choice remain in Room; this is not a complete Nod
 simulation driver or a per-layer multiplayer lighting redesign.
 
 `agent.perceive()` (also the lab's Perceive button) returns a separate restricted
-snapshot, labeled player-perception with schema 3. `observe()` and `step()` still
+snapshot, labeled player-perception with schema 4. `observe()` and `step()` still
 return explicitly diagnostic observations. Do not feed those full observations
 or their history to a restricted policy. The diagnostic compatibility helper
 currently checks the diagnostic contract; preserve the perception contract AND
@@ -353,15 +353,30 @@ separately with reports; a replay envelope alone is not a frozen executable buil
 
 The policy receives only `perceive()` snapshots and recorded/turnDelta feedback.
 Diagnostic step observations and replay exports never enter the policy. Perception
-schema 3 adds visible tile solidity/door/exit traits and an opaque room identifier
+schema 4 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
 for visit tracking. Dark tile traits remain null. Inventory healing metadata is
 currently implemented for mushrooms and shares the item's actual healing value.
-The baseline uses visits, temporary failed-direction avoidance, and remembered
-passage crossings, approaches adjacent enemies, penalizes warning tiles, eats
-known healing items, and confirms ladders. It cancels crafting menus rather than
-claiming a crafting strategy. It does not yet plan routes, choose upgrades, craft,
-cast spells, solve resource requirements, or learn weights. Long combat and
-progression performance remain unproven.
+The baseline plans routes through remembered, previously observed passable tiles,
+uses visits and passage crossings to prioritize exploration, avoids temporarily
+failed directions and warning tiles, approaches adjacent enemies, eats known
+healing items, and confirms ladders. It dismisses ordinary interactions and cancels
+crafting menus. It does not yet choose upgrades, craft, cast spells, solve resource
+requirements, or learn weights. Long combat and progression performance remain
+unproven. Reports include rooms visited and decisions since reaching a new position.
+
+Diagnostic observation schema is now 5, perception schema 4, and action schema 3.
+The recorded zero-turn DismissInteraction action closes ordinary screen messages,
+vending interfaces, and context menus; ladder and selection actions remain distinct.
+Visible tunnel doors expose whether they are unlocked and can be unlocked from the
+current side. Locked tunnels are exit-to-start shortcuts unlocked from the exit side;
+the policy skips them when approached from the locked start side.
+
+Door traversal checks physical occupancy at the source doorway, linked doorway,
+and destination arrival tile before moving the player or changing rooms. Living
+collidable entity footprints on the player layer block passage. Blocked attempts
+show a game message and log [door-traversal-blocked] with room, tile, and occupant
+identifiers. This runtime guard does not fix the separate generation bug that can
+place vending machines in doorways.
 
 Outcomes distinguish dead, budget-incomplete, unsupported-decision, cancelled,
 and error. No outcome claims victory or proves a seed unwinnable. Budgets count

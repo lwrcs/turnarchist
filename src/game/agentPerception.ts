@@ -31,7 +31,7 @@ export function hasTileSight(x: number, y: number, tx: number, ty: number,
 
 export function perceiveRoom(input: {
   player: {x: number; y: number; z: number};
-  tiles: {x: number; y: number; kind: string; solid?: boolean; isDoor?: boolean; exit?: boolean}[];
+  tiles: {x: number; y: number; kind: string; solid?: boolean; traversal?: object; isDoor?: boolean; exit?: boolean}[];
   entities: ReturnType<typeof observeEntity>[];
   items: (ReturnType<typeof observeItem> & {z?: number})[];
   warnings: ReturnType<typeof observeWarnings>;
@@ -52,7 +52,7 @@ export function perceiveRoom(input: {
   return {
     tiles: input.tiles.filter(t=>inSight(t.x,t.y)).map(t=>bright(t.x,t.y)
       ? {...t, brightness:input.brightness(t.x,t.y)}
-      : {x:t.x,y:t.y,kind:null,solid:null,isDoor:null,exit:null,brightness:input.brightness(t.x,t.y)}),
+      : {x:t.x,y:t.y,kind:null,solid:null,isDoor:null,traversal:null,exit:null,brightness:input.brightness(t.x,t.y)}),
     entities,
     items: input.items.filter(i=>(i.z??0)===player.z && inSight(i.x,i.y) && bright(i.x!,i.y!)),
     // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
