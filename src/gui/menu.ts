@@ -6,6 +6,21 @@ import { MouseCursor } from "../gui/mouseCursor";
 import { Player } from "../player/player";
 
 export class Menu {
+  private selectionChoices: Array<{label: string; enabled: boolean; turnCost: number | null; select: () => void}> | null = null;
+
+  getSelectionChoices() {
+    return this.open && this.selectionChoices
+      ? this.selectionChoices.map(({label, enabled, turnCost}, index) => ({index, label, enabled, turnCost})) : null;
+  }
+
+  selectChoice(index: number): boolean {
+    if (!this.open || !Number.isInteger(index)) return false;
+    const choice = this.selectionChoices?.[index];
+    if (!choice?.enabled) return false;
+    choice.select();
+    return true;
+  }
+
   buttons: guiButton[];
   closeButton: guiButton | null;
   open: boolean;
@@ -645,6 +660,7 @@ export class Menu {
 
   close() {
     this.open = false;
+    this.selectionChoices = null;
     // Allow temporary menus to restore previous state on close.
     if (this.onCloseHook) {
       const fn = this.onCloseHook;
@@ -859,6 +875,7 @@ export class Menu {
     options: Array<{
       label: string;
       onSelect: () => void;
+      turnCost?: number;
       enabled?: boolean;
       textColor?: string;
       disabledTextColor?: string;
@@ -880,6 +897,8 @@ export class Menu {
       this.positionButtons();
     };
     this.onCloseHook = restore;
+
+    this.selectionChoices = [];
 
     // Build selection buttons
     const header = new guiButton(
@@ -923,6 +942,8 @@ export class Menu {
         btn.textColor = opt.disabledTextColor ?? "rgb(170, 170, 170)";
       }
       this.addButton(btn);
+      this.selectionChoices.push({label: opt.label, enabled, turnCost: opt.turnCost ?? null,
+        select: () => btn.onClick()});
     }
 
     if (config.includeCancel !== false) {
@@ -941,6 +962,7 @@ export class Menu {
         cancelBtn.outlineColor = "rgba(255, 255, 255, 1)";
       }
       this.addButton(cancelBtn);
+      this.selectionChoices.push({label: "Cancel", enabled: true, turnCost: 0, select: () => cancelBtn.onClick()});
     }
 
     this.positionButtons();

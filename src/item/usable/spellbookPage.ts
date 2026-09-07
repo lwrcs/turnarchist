@@ -31,6 +31,8 @@ export class SpellbookPage extends Usable {
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };
 
+  getUseOnTurnCost = (_other: Item): number => 0;
+
   useOnOther = (player: Player, other: Item) => {
     if (
       other instanceof Equippable &&

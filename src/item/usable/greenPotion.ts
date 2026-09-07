@@ -13,6 +13,8 @@ export class GreenPotion extends Usable {
     this.offsetY = -0.3;
   }
 
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     player.health = Math.min(player.maxHealth, player.health + 1);
     if (this.level.game.rooms[player.levelID] === this.level.game.room)

@@ -159,7 +159,7 @@ export class PlayerActionProcessor {
         }
         if (!rt) traceSpell(this.player, "action-rejected", { reason: "missing-targeting", action });
         // Note: spells defer room.tick to the SpellBeam onComplete callback (~245ms
-        // later via render loop). The outcome captured here is BEFORE that deferred
+        // later via simulation advancement). The outcome captured here is BEFORE that deferred
         // tick fires — but it's identical between recording and replay because both
         // capture at the same synchronous point. The deferred tick's effect surfaces
         // in the NEXT action's outcome via catchUp, so any divergence there gets caught.

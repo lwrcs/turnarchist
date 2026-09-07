@@ -32,6 +32,9 @@ export class DualDagger extends Weapon {
     this.firstAttack = true;
   };
 
+  /** Cost of a successful hit in the current combo phase, not a movement preview. */
+  getSuccessfulAttackTurnCost = (): number => this.firstAttack ? 0 : 1;
+
   weaponMove = (newX: number, newY: number): boolean => {
     const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
     let flag = false;
@@ -66,7 +69,7 @@ export class DualDagger extends Weapon {
         this.wielder.levelID
       ].entities.filter((e) => !e.dead);
 
-      if (!this.firstAttack) {
+      if (this.getSuccessfulAttackTurnCost() > 0) {
         this.game.rooms[this.wielder.levelID].tick(this.wielder);
       }
 

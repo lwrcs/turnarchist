@@ -19,9 +19,13 @@ export class Shrooms extends Usable {
     this.stackable = true;
   }
 
+  getHealingAmount = (): number => 0.5;
+
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
-      player.health = Math.min(player.maxHealth, player.health + 0.5);
+      player.health = Math.min(player.maxHealth, player.health + this.getHealingAmount());
       Sound.playEat();
       if (this.stackCount > 1) {
         this.stackCount--;

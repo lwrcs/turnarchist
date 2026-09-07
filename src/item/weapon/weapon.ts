@@ -118,6 +118,8 @@ export abstract class Weapon extends Equippable {
     this.killXpMultiplier = rule.killXpMultiplier;
   }
 
+  getUseTurnCost = (): number => 0;
+
   toggleEquip = () => {
     // Respect base Equippable gating (broken/cooldown) but add skill requirements for weapons.
     const reqSkill = this.requiredSkill;

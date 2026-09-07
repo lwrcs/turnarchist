@@ -1,4 +1,5 @@
 import { traceSaveState } from "./saveDiagnostics";
+import { AGENT_MODE } from "./agentMode";
 import { Game } from "../game";
 import { createGameState, loadGameState, GameState } from "./gameState";
 import { createSaveV2, loadSaveV2, parseSaveV2Json } from "./save";
@@ -61,7 +62,7 @@ const isLegacyGameState = (v: unknown): v is GameState => {
 
 export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
   // A replay (including its terminal screen) must never overwrite the live save.
-  if (game.replayManager.isReplaying()) return;
+  if (AGENT_MODE || game.replayManager.isReplaying()) return;
   let v2;
   try {
     v2 = createSaveV2(game);
@@ -99,6 +100,7 @@ export const saveToCookies = (game: Game, opts?: { silent?: boolean }) => {
 // ---------------------------------------------------------------------------
 
 export const loadFromCookies = async (game: Game): Promise<boolean> => {
+  if (AGENT_MODE) return false;
   let json: string | null = null;
 
   const es = getElectronSave();
@@ -163,6 +165,7 @@ export const loadFromCookies = async (game: Game): Promise<boolean> => {
 // ---------------------------------------------------------------------------
 
 export const clearCookieSave = () => {
+  if (AGENT_MODE) return;
   const es = getElectronSave();
   if (es) {
     es.remove(ELECTRON_SAVE_NAME);
@@ -190,6 +193,7 @@ export const clearCookieSave = () => {
  * Used by UI before the menu is shown.
  */
 export const hasCookieSave = (): boolean => {
+  if (AGENT_MODE) return false;
   const es = getElectronSave();
   if (es) {
     try {

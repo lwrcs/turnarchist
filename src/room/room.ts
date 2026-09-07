@@ -1,3 +1,4 @@
+import { processLightRay, blendColorsArray, rgbToLuminance } from "../lighting/gameplayLighting";
 // #region imports
 import { Wall } from "../tile/wall";
 import { LevelConstants } from "../level/levelConstants";
@@ -2260,188 +2261,192 @@ export class Room {
   };
 
   updateLighting = (source?: { x: number; y: number }) => {
-    if (!this.onScreen) return;
-    // If a specific source is provided, skip lighting update if it's off-screen with buffer
-    if (source) {
+    // Gameplay in an occupied room cannot depend on zoom or camera position.
+    const occupied = Object.values(this.game.players).some(player => player.getRoom?.() === this);
+    if (!occupied && !this.onScreen) return;
+    if (!occupied && source) {
       const buffer = LevelConstants.LIGHTING_MAX_DISTANCE;
       if (!this.isTileOnScreen(source.x, source.y, buffer)) return;
     }
     if (this.isUpdatingLighting) return;
     this.isUpdatingLighting = true;
-    const activeZ = this.getActiveZ();
-
-    // Invalidate cache when lighting is updated
-    this.invalidateBlurCache();
-
-    // Start timing the initial setup
-    //console.time("updateLighting: Initial Setup");
-    this.updateDoorLightSources();
-
-    let oldVis = [];
-    let oldCol = [];
-    for (let x = this.roomX; x < this.roomX + this.width; x++) {
-      oldVis[x] = [];
-      oldCol[x] = [];
-      for (let y = this.roomY; y < this.roomY + this.height; y++) {
-        oldVis[x][y] = this.vis[x][y];
-        oldCol[x][y] = this.col[x][y];
-
-        this.vis[x][y] = 1;
-        this.col[x][y] = [1, 1, 1];
-        this.renderBuffer[x][y] = [];
-      }
-    }
-    // End timing the initial setup
-    //console.timeEnd("updateLighting: Initial Setup");
-
-    // Start timing the processing of light sources
-    //console.time("updateLighting: Process LightSources");
-    // Prune orphaned light sources. Allow a small neighborhood check so
-    // lights slightly offset from their owning tile (e.g., bottom-wall torches)
-    // are not removed incorrectly.
     try {
-      this.lightSources = this.lightSources.filter((ls) => {
-        const lx = Math.floor(ls.x);
-        const ly = Math.floor(ls.y);
-        // quick in-bounds check
-        if (
-          lx < this.roomX - 1 ||
-          lx > this.roomX + this.width ||
-          ly < this.roomY - 1 ||
-          ly > this.roomY + this.height
-        )
-          return false;
+      const activeZ = this.getActiveZ();
 
-        // keep if any nearby tile exists
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (this.roomArray[lx + dx]?.[ly + dy]) return true;
+      // Invalidate cache when lighting is updated
+      this.invalidateBlurCache();
+
+      // Start timing the initial setup
+      //console.time("updateLighting: Initial Setup");
+      this.updateDoorLightSources();
+
+      let oldVis = [];
+      let oldCol = [];
+      for (let x = this.roomX; x < this.roomX + this.width; x++) {
+        oldVis[x] = [];
+        oldCol[x] = [];
+        for (let y = this.roomY; y < this.roomY + this.height; y++) {
+          oldVis[x][y] = this.vis[x][y];
+          oldCol[x][y] = this.col[x][y];
+
+          this.vis[x][y] = 1;
+          this.col[x][y] = [1, 1, 1];
+          this.renderBuffer[x][y] = [];
+        }
+      }
+      // End timing the initial setup
+      //console.timeEnd("updateLighting: Initial Setup");
+
+      // Start timing the processing of light sources
+      //console.time("updateLighting: Process LightSources");
+      // Prune orphaned light sources. Allow a small neighborhood check so
+      // lights slightly offset from their owning tile (e.g., bottom-wall torches)
+      // are not removed incorrectly.
+      try {
+        this.lightSources = this.lightSources.filter((ls) => {
+          const lx = Math.floor(ls.x);
+          const ly = Math.floor(ls.y);
+          // quick in-bounds check
+          if (
+            lx < this.roomX - 1 ||
+            lx > this.roomX + this.width ||
+            ly < this.roomY - 1 ||
+            ly > this.roomY + this.height
+          )
+            return false;
+
+          // keep if any nearby tile exists
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              if (this.roomArray[lx + dx]?.[ly + dy]) return true;
+            }
+          }
+          return false;
+        });
+      } catch {}
+
+      // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
+      if (GameConstants.ENEMIES_BLOCK_LIGHT) {
+        const set = new Set<string>();
+        for (const e of this.entities) {
+          // Z: entities block light regardless of the light source's z-layer.
+          // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
+          if ((e as any).opaque) {
+            const w = Math.max(1, (e as any).w || 1);
+            const h = Math.max(1, (e as any).h || 1);
+            for (let dx = 0; dx < w; dx++) {
+              for (let dy = 0; dy < h; dy++) {
+                set.add(`${e.x + dx},${e.y + dy}`);
+              }
+            }
           }
         }
-        return false;
-      });
-    } catch {}
+        this.opaqueEntityPositions = set;
+      } else {
+        this.opaqueEntityPositions = undefined;
+      }
 
-    // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
-    if (GameConstants.ENEMIES_BLOCK_LIGHT) {
-      const set = new Set<string>();
-      for (const e of this.entities) {
-        // Z: entities block light regardless of the light source's z-layer.
-        // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
-        if ((e as any).opaque && this.isTileOnScreen(e.x, e.y, 7)) {
-          const w = Math.max(1, (e as any).w || 1);
-          const h = Math.max(1, (e as any).h || 1);
-          for (let dx = 0; dx < w; dx++) {
-            for (let dy = 0; dy < h; dy++) {
-              set.add(`${e.x + dx},${e.y + dy}`);
+      for (const l of this.lightSources) {
+        if (l.shouldUpdate()) {
+          for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
+            this.castTintAtAngle(
+              i,
+              l.x,
+              l.y,
+              l.r,
+              l.c,
+              l.b * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+              l.falloffDecay,
+            ); // RGB color in sRGB
+          }
+        }
+      }
+      //console.timeEnd("updateLighting: Process LightSources");
+      //console.time("updateLighting: Process Players");
+      this.setLightingAngleStep();
+
+      let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
+
+      for (const p in this.game.players) {
+        let player = this.game.players[p];
+        if ((player as any).getRoom?.() === this) {
+          if ((player?.z ?? 0) !== activeZ) continue;
+          let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
+          let lightBrightness = 5;
+          if (player.lightEquipped) {
+            lightColor = player.lightColor;
+            lightBrightness = player.lightBrightness;
+          }
+
+          const playerFov = this.getPlayerLightingFov(player);
+          const facingAngle =
+            playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
+              ? this.getPlayerFacingAngle(player)
+              : null;
+
+          if (
+            playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
+            facingAngle !== null
+          ) {
+            this.castDirectionalPlayerLight(
+              player,
+              facingAngle,
+              playerFov,
+              lightingAngleStep,
+              lightColor,
+              lightBrightness,
+              player.lightFalloffDecay,
+            );
+          } else {
+            for (let i = 0; i < 360; i += lightingAngleStep) {
+              this.castTintAtAngle(
+                i,
+                player.x + 0.5,
+                player.y + 0.5,
+                LevelConstants.LIGHTING_MAX_DISTANCE,
+                lightColor,
+                lightBrightness *
+                  LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
+                player.lightFalloffDecay,
+              );
             }
           }
         }
       }
-      this.opaqueEntityPositions = set;
-    } else {
-      this.opaqueEntityPositions = undefined;
-    }
+      // End timing the processing of player lighting
+      //console.timeEnd("updateLighting: Process Players");
 
-    for (const l of this.lightSources) {
-      if (l.shouldUpdate()) {
-        for (let i = 0; i < 360; i += LevelConstants.LIGHTING_ANGLE_STEP) {
-          this.castTintAtAngle(
-            i,
-            l.x,
-            l.y,
-            l.r,
-            l.c,
-            l.b * LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
-            l.falloffDecay,
-          ); // RGB color in sRGB
+      // Start timing the blending of colors
+      //console.time("updateLighting: Blend Colors Array");
+      const roomX = this.roomX;
+      const roomY = this.roomY;
+      const width = this.width;
+      const height = this.height;
+      const renderBuffer = this.renderBuffer;
+
+      for (let x = roomX; x < roomX + width; x++) {
+        for (let y = roomY; y < roomY + height; y++) {
+          this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
         }
       }
-    }
-    //console.timeEnd("updateLighting: Process LightSources");
-    //console.time("updateLighting: Process Players");
-    this.setLightingAngleStep();
+      // End timing the blending of colors
+      //console.timeEnd("updateLighting: Blend Colors Array");
 
-    let lightingAngleStep = LevelConstants.LIGHTING_ANGLE_STEP;
-
-    for (const p in this.game.players) {
-      let player = this.game.players[p];
-      if ((player as any).getRoom?.() === this) {
-        if ((player?.z ?? 0) !== activeZ) continue;
-        let lightColor = LevelConstants.AMBIENT_LIGHT_COLOR;
-        let lightBrightness = 5;
-        if (player.lightEquipped) {
-          lightColor = player.lightColor;
-          lightBrightness = player.lightBrightness;
-        }
-
-        const playerFov = this.getPlayerLightingFov(player);
-        const facingAngle =
-          playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
-            ? this.getPlayerFacingAngle(player)
-            : null;
-
-        if (
-          playerFov < GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
-          facingAngle !== null
-        ) {
-          this.castDirectionalPlayerLight(
-            player,
-            facingAngle,
-            playerFov,
-            lightingAngleStep,
-            lightColor,
-            lightBrightness,
-            player.lightFalloffDecay,
-          );
-        } else {
-          for (let i = 0; i < 360; i += lightingAngleStep) {
-            this.castTintAtAngle(
-              i,
-              player.x + 0.5,
-              player.y + 0.5,
-              LevelConstants.LIGHTING_MAX_DISTANCE,
-              lightColor,
-              lightBrightness *
-                LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION,
-              player.lightFalloffDecay,
-            );
-          }
+      // Start timing the conversion to luminance
+      //console.time("updateLighting: Convert to Luminance");
+      for (let x = roomX; x < roomX + width; x++) {
+        for (let y = roomY; y < roomY + height; y++) {
+          this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
         }
       }
+      // End timing the conversion to luminance
+      //console.timeEnd("updateLighting: Convert to Luminance");
+      this.updateDoorLightSources();
+      // Bump lighting update version so blur cache can detect changes
+      this.lastLightingUpdate++;
+    } finally {
+      this.isUpdatingLighting = false;
     }
-    // End timing the processing of player lighting
-    //console.timeEnd("updateLighting: Process Players");
-
-    // Start timing the blending of colors
-    //console.time("updateLighting: Blend Colors Array");
-    const roomX = this.roomX;
-    const roomY = this.roomY;
-    const width = this.width;
-    const height = this.height;
-    const renderBuffer = this.renderBuffer;
-
-    for (let x = roomX; x < roomX + width; x++) {
-      for (let y = roomY; y < roomY + height; y++) {
-        this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
-      }
-    }
-    // End timing the blending of colors
-    //console.timeEnd("updateLighting: Blend Colors Array");
-
-    // Start timing the conversion to luminance
-    //console.time("updateLighting: Convert to Luminance");
-    for (let x = roomX; x < roomX + width; x++) {
-      for (let y = roomY; y < roomY + height; y++) {
-        this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
-      }
-    }
-    // End timing the conversion to luminance
-    //console.timeEnd("updateLighting: Convert to Luminance");
-    this.updateDoorLightSources();
-    // Bump lighting update version so blur cache can detect changes
-    this.lastLightingUpdate++;
-    this.isUpdatingLighting = false;
   };
 
   private castDirectionalPlayerLight = (
@@ -2618,152 +2623,39 @@ export class Room {
    * @param brightness - The brightness of the light source.
    * @param action - 'cast' to add tint, 'unCast' to remove tint.
    */
-  private processTintAtAngle = (
-    angle: number,
-    px: number,
-    py: number,
-    radius: number,
-    color: [number, number, number],
-    brightness: number,
-    falloffDecay: number = 1,
-    action: "cast" | "unCast" = "cast",
-  ) => {
-    // A light source with zero (or negative) radius casts no light at all,
-    // not even at its own origin tile.
-    if (radius <= 0) return;
-
-    const dx = Math.cos((angle * Math.PI) / 180);
-    const dy = Math.sin((angle * Math.PI) / 180);
-    // Lighting is currently computed for the local active z-layer only.
-    const activeZ = this.getActiveZ();
-
-    // Convert input color from sRGB to linear RGB
-    const linearColor: [number, number, number] = [
-      this.sRGBToLinear(color[0]),
-      this.sRGBToLinear(color[1]),
-      this.sRGBToLinear(color[2]),
-    ];
-
-    for (
-      let i = 0;
-      i <= Math.min(LevelConstants.LIGHTING_MAX_DISTANCE, radius);
-      i++
-    ) {
-      const currentX = Math.floor(px + dx * i);
-      const currentY = Math.floor(py + dy * i);
-
-      if (!this.isPositionInRoom(currentX, currentY)) return; // Outside the room
-
-      // Z-aware tile lookup for lighting blockers:
-      // - Default: tiles are shared across layers
-      // - Z_DEBUG_MODE: use the z=1 override tile map (Floor/Air) when activeZ === 1
-      let tile = this.roomArray[currentX][currentY];
-      if (GameConstants.Z_DEBUG_MODE && activeZ === 1 && this.zDebugZ1Tiles) {
-        const override = this.zDebugZ1Tiles.get(this.zKey(currentX, currentY));
-        if (override) tile = override;
-      }
-
-      // Handle i=0 separately to ensure correct intensity
-      let intensity: number;
-      // Exponential falloff with origin boost preserved
-      if (i === 0) {
-        intensity = brightness * 0.1;
-      } else {
-        intensity = brightness * Math.exp(-falloffDecay * (i - 0.25));
-      }
-      if (intensity < 0.005) intensity = 0;
-
-      if (intensity <= 0) continue;
-
-      if (!this.renderBuffer[currentX]) {
-        this.renderBuffer[currentX] = [];
-      }
-      if (!this.renderBuffer[currentX][currentY]) {
-        this.renderBuffer[currentX][currentY] = [];
-      }
-
-      // Inner walls block light explicitly and terminate the ray
-      if (tile instanceof Wall && tile.isInnerWall()) {
-        const weightedLinearColor: [number, number, number, number] = [
-          linearColor[0],
-          linearColor[1],
-          linearColor[2],
-          intensity,
-        ];
-
-        if (action === "cast") {
-          this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-        } else if (action === "unCast") {
-          this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
-            currentY
-          ].filter(
-            (colorEntry) =>
-              !(
-                Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
-              ),
-          );
-        }
-        return; // Terminate after processing the opaque wall
-      }
-
-      if (GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
-        // O(1) membership check instead of scanning entities
-        if (this.opaqueEntityPositions.has(`${currentX},${currentY}`)) {
-          //intensity = intensity * (1 - entity.opacity);
-          // Set the intensity for this tile and then terminate to create shadow effect
-          const weightedLinearColor: [number, number, number, number] = [
-            linearColor[0],
-            linearColor[1],
-            linearColor[2],
-            intensity,
-          ];
-
-          if (action === "cast") {
-            this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-          } else if (action === "unCast") {
-            this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
-              currentY
-            ].filter(
-              (colorEntry) =>
-                !(
-                  Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                  Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                  Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                  Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
-                ),
-            );
-          }
-          return; // Terminate after processing the opaque entity
-        }
-      }
-      //end processing opaque entities
-
-      const weightedLinearColor: [number, number, number, number] = [
-        linearColor[0],
-        linearColor[1],
-        linearColor[2],
-        intensity,
-      ];
-
-      if (action === "cast") {
-        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-      } else if (action === "unCast") {
-        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][
-          currentY
-        ].filter(
-          (colorEntry) =>
-            !(
-              Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-              Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-              Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-              Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001
-            ),
-        );
-      }
+  /** Same tile occlusion rule used by gameplay rays, exposed without rendering. */
+  getGameplayLightTile(x: number, y: number) {
+    if (!this.isPositionInRoom(x, y)) return undefined;
+    let tile = this.roomArray[x]?.[y];
+    if (GameConstants.Z_DEBUG_MODE && this.getActiveZ() === 1 && this.zDebugZ1Tiles) {
+      tile = this.zDebugZ1Tiles.get(this.zKey(x, y)) ?? tile;
     }
+    return tile;
+  }
+
+  isGameplayLightWall(x: number, y: number): boolean {
+    if (!this.isPositionInRoom(x, y)) return true;
+    const tile = this.getGameplayLightTile(x, y);
+    return tile instanceof Wall && tile.isInnerWall();
+  }
+
+  isGameplaySightBlocked(x: number, y: number): boolean {
+    return this.isGameplayLightWall(x, y) ||
+      !!(GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions?.has(`${x},${y}`));
+  }
+
+  private processTintAtAngle = (
+    angle: number, px: number, py: number, radius: number,
+    color: [number, number, number], brightness: number,
+    falloffDecay: number = 1, action: "cast" | "unCast" = "cast",
+  ) => {
+    processLightRay({
+      buffer: this.renderBuffer,
+      maxDistance: LevelConstants.LIGHTING_MAX_DISTANCE,
+      isPositionInRoom: (x, y) => this.isPositionInRoom(x, y),
+      isInnerWall: (x, y) => this.isGameplayLightWall(x, y),
+      opaqueEntityPositions: GameConstants.ENEMIES_BLOCK_LIGHT ? this.opaqueEntityPositions : undefined,
+    }, angle, px, py, radius, color, brightness, falloffDecay, action);
   };
 
   /**
@@ -2852,24 +2744,9 @@ export class Room {
     );
   };
 
-  private sRGBToLinear = (value: number): number => {
-    const normalized = value / 255;
-    if (normalized <= 0.04045) {
-      return normalized / 12.92;
-    } else {
-      return Math.pow((normalized + 0.055) / 1.055, 2.2);
-    }
-  };
 
-  private linearToSRGB = (value: number): number => {
-    if (value <= 0.0031308) {
-      return Math.round(12.92 * value * 255);
-    } else {
-      return Math.round(
-        (1.055 * Math.pow(value, 1 / 2.2 /*gamma*/) - 0.055) * 255,
-      );
-    }
-  };
+
+
 
   clamp = (value: number, min: number = 0, max: number = 1): number => {
     return Math.min(Math.max(value, min), max);
@@ -2897,47 +2774,9 @@ export class Room {
    * @param colors - An array of RGB tuples to blend.
    * @returns A single RGB tuple representing the blended color.
    */
-  private blendColorsArray = (
-    colors: [red: number, green: number, blue: number, alpha: number][],
-  ): [red: number, green: number, blue: number] => {
-    if (colors.length === 0) return [0, 0, 0];
+  private blendColorsArray = blendColorsArray;
 
-    // Sum all color channels in linear RGB
-    const sum = colors.reduce(
-      (accumulator, color) => [
-        accumulator[0] + color[0] * color[3],
-        accumulator[1] + color[1] * color[3],
-        accumulator[2] + color[2] * color[3],
-      ],
-      [0, 0, 0],
-    );
-
-    // Apply scaling factor to manage overall brightness
-    const scalingFactor = 0.45 * 2.5; // Adjust as needed
-    const scaledSum = [
-      sum[0] * scalingFactor,
-      sum[1] * scalingFactor,
-      sum[2] * scalingFactor,
-    ];
-
-    // Clamp each channel to [0, 1] to prevent overflow
-    const clampedSum: [number, number, number] = [
-      this.clamp(scaledSum[0], 0, 1),
-      this.clamp(scaledSum[1], 0, 1),
-      this.clamp(scaledSum[2], 0, 1),
-    ];
-    // Convert back to sRGB
-    return [
-      this.linearToSRGB(clampedSum[0]),
-      this.linearToSRGB(clampedSum[1]),
-      this.linearToSRGB(clampedSum[2]),
-    ];
-  };
-
-  rgbToLuminance = (color: [number, number, number]): number => {
-    //map to 1-0 range
-    return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
-  };
+  rgbToLuminance = rgbToLuminance;
 
   draw = (delta: number) => {
     if (!this.onScreen) return;

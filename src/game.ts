@@ -1,4 +1,6 @@
 import { GameConstants } from "./game/gameConstants";
+import { AGENT_MODE } from "./game/agentMode";
+import { advanceSimulationEffects } from "./game/simulationEffects";
 import { EnemyType, EnemyTypeMap, Room, RoomType } from "./room/room";
 import { Player } from "./player/player";
 import { Entity } from "./entity/entity";
@@ -1182,6 +1184,11 @@ export class Game {
 
           this.newGame();
 
+          if (AGENT_MODE) {
+            const { AgentEnvironment } = require("./game/agentEnvironment");
+            (window as any).agent = new AgentEnvironment(this);
+          }
+
           // Expose dev roundtrip tools on window for console access
           {
             const self = this;
@@ -2160,12 +2167,12 @@ export class Game {
     // Auto-recovery check before drawing (so caches rebuild on this same frame).
     this.maybeAutoRecoverPoisonedShadeCache();
 
-    this.draw(
-      delta *
-        GameConstants.ANIMATION_SPEED *
-        1 *
-        (this.room?.underwater ? 0.75 : 1),
-    );
+    const effectDelta = delta * GameConstants.ANIMATION_SPEED *
+      (this.room?.underwater ? 0.75 : 1);
+    if (this.levelState !== LevelState.LEVEL_GENERATION) {
+      advanceSimulationEffects(this, effectDelta);
+    }
+    this.draw(effectDelta);
 
     // Request the next frame
     window.requestAnimationFrame(this.run);
@@ -4456,6 +4463,24 @@ export class Game {
     this.pushMessage(
       `Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${ITEM_KIND_VALUES_V2.length}`,
     );
+  }
+
+  /** Fixed diagnostic presets; separate from policy step actions. */
+  startLightingSandbox(scenario: "forest" | "cave", seed: number): void {
+    const forest = scenario === "forest";
+    const env = forest ? EnvType.FOREST : EnvType.CAVE;
+    this.startSidepathSandbox({
+      stagingEnv: EnvType.DUNGEON, stagingDepth: forest ? 1 : 2,
+      sidepathEnv: env, seed,
+      sidePathOptions: forest ? {
+        caveRooms: 1, envType: env, locked: false, mapWidth: 50, mapHeight: 50,
+        giantRoomScale: 0.6, linearity: 0.5, entranceInMainRoom: true,
+        keyInMainRoom: true, exitInMainRoom: true, organicTunnelsAvoidCenter: true, softMargin: 5,
+      } : {
+        caveRooms: 1, envType: env, locked: false, mapWidth: 88, mapHeight: 88,
+        linearity: 0.5, softMargin: 6, giantCentralRoom: true, giantRoomScale: 0.4,
+      },
+    });
   }
 
   private startSidepathSandbox(opts: {

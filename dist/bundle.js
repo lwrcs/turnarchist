@@ -10089,6 +10089,7 @@ Food is your most important resource — collect it whenever you can. Health pot
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.askClaude = exports.fetchGameStats = exports.safeRecordGameStats = exports.getOrCreateUserId = exports.recordGameStats = exports.apiClient = void 0;
 const axios_1 = __webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs");
+const agentMode_1 = __webpack_require__(/*! ../game/agentMode */ "./src/game/agentMode.ts");
 const utils_1 = __webpack_require__(/*! ./utils */ "./src/api/utils.ts");
 const uuid_1 = __webpack_require__(/*! uuid */ "./node_modules/uuid/dist/index.js");
 const claudeGameContext_1 = __webpack_require__(/*! ./claudeGameContext */ "./src/api/claudeGameContext.ts");
@@ -10097,6 +10098,8 @@ exports.apiClient = axios_1.default.create({
     baseURL: (0, utils_1.getEnvironmentApiUrl)(),
 });
 const recordGameStats = async (gameStats) => {
+    if (agentMode_1.AGENT_MODE)
+        return;
     const response = await exports.apiClient.post("/game/stats", gameStats);
     return response.data;
 };
@@ -10884,6 +10887,7 @@ HealthBar.drawStatic = (args) => {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HitWarning = exports.HitWarningDirection = void 0;
+const warningVisibility_1 = __webpack_require__(/*! ./warningVisibility */ "./src/drawable/warningVisibility.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const drawable_1 = __webpack_require__(/*! ./drawable */ "./src/drawable/drawable.ts");
 const utils_1 = __webpack_require__(/*! ../utility/utils */ "./src/utility/utils.ts");
@@ -10961,6 +10965,9 @@ class HitWarning extends drawable_1.Drawable {
         };
         this.drawTopLayer = (delta) => {
             this.fadeHitwarnings(delta);
+            const observer = this.game.players[this.game.localPlayerID];
+            if (!(0, warningVisibility_1.isWarningVisibleAboveShade)({ x: this.x, y: this.y, hostile: !!this.isEnemy, directionOnly: !!this.dirOnly }, observer.x - observer.drawX, observer.y - observer.drawY))
+                return;
             const baseAlpha = game_1.Game.ctx.globalAlpha;
             game_1.Game.ctx.globalAlpha = baseAlpha * this.alpha;
             if (this.isEnemy) {
@@ -11183,6 +11190,26 @@ class Shadow {
     }
 }
 exports.Shadow = Shadow;
+
+
+/***/ }),
+
+/***/ "./src/drawable/warningVisibility.ts":
+/*!*******************************************!*\
+  !*** ./src/drawable/warningVisibility.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isWarningVisibleAboveShade = void 0;
+/** Mirrors the above-shading arrow/X presentation, independent of tile light. */
+function isWarningVisibleAboveShade(warning, playerX, playerY) {
+    return warning.hostile || (!warning.directionOnly &&
+        Math.hypot(warning.x - playerX, warning.y - playerY) < 1.999);
+}
+exports.isWarningVisibleAboveShade = isWarningVisibleAboveShade;
 
 
 /***/ }),
@@ -30408,6 +30435,8 @@ exports.ITEM_EXAMINE_TEXT = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.gs = exports.game = exports.Game = exports.ChatMessage = exports.Direction = exports.LevelState = void 0;
 const gameConstants_1 = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
+const agentMode_1 = __webpack_require__(/*! ./game/agentMode */ "./src/game/agentMode.ts");
+const simulationEffects_1 = __webpack_require__(/*! ./game/simulationEffects */ "./src/game/simulationEffects.ts");
 const room_1 = __webpack_require__(/*! ./room/room */ "./src/room/room.ts");
 const player_1 = __webpack_require__(/*! ./player/player */ "./src/player/player.ts");
 const door_1 = __webpack_require__(/*! ./tile/door */ "./src/tile/door.ts");
@@ -31601,10 +31630,12 @@ class Game {
             // Render the frame with capped delta
             // Auto-recovery check before drawing (so caches rebuild on this same frame).
             this.maybeAutoRecoverPoisonedShadeCache();
-            this.draw(delta *
-                gameConstants_1.GameConstants.ANIMATION_SPEED *
-                1 *
-                (this.room?.underwater ? 0.75 : 1));
+            const effectDelta = delta * gameConstants_1.GameConstants.ANIMATION_SPEED *
+                (this.room?.underwater ? 0.75 : 1);
+            if (this.levelState !== LevelState.LEVEL_GENERATION) {
+                (0, simulationEffects_1.advanceSimulationEffects)(this, effectDelta);
+            }
+            this.draw(effectDelta);
             // Request the next frame
             window.requestAnimationFrame(this.run);
             // Update the previous frame timestamp
@@ -34850,6 +34881,10 @@ class Game {
                     this.encounteredEnemies = [];
                     this.visitedSidepaths = new Set();
                     this.newGame();
+                    if (agentMode_1.AGENT_MODE) {
+                        const { AgentEnvironment } = __webpack_require__(/*! ./game/agentEnvironment */ "./src/game/agentEnvironment.ts");
+                        window.agent = new AgentEnvironment(this);
+                    }
                     // Expose dev roundtrip tools on window for console access
                     {
                         const self = this;
@@ -35507,6 +35542,23 @@ class Game {
         this.startedFadeOut = true;
         this.startMenuActive = false;
         this.pushMessage(`Testlevel loaded: room=${roomW}x${roomH}, entities=${enemyKinds.length}, items=${schema_1.ITEM_KIND_VALUES_V2.length}`);
+    }
+    /** Fixed diagnostic presets; separate from policy step actions. */
+    startLightingSandbox(scenario, seed) {
+        const forest = scenario === "forest";
+        const env = forest ? environmentTypes_1.EnvType.FOREST : environmentTypes_1.EnvType.CAVE;
+        this.startSidepathSandbox({
+            stagingEnv: environmentTypes_1.EnvType.DUNGEON, stagingDepth: forest ? 1 : 2,
+            sidepathEnv: env, seed,
+            sidePathOptions: forest ? {
+                caveRooms: 1, envType: env, locked: false, mapWidth: 50, mapHeight: 50,
+                giantRoomScale: 0.6, linearity: 0.5, entranceInMainRoom: true,
+                keyInMainRoom: true, exitInMainRoom: true, organicTunnelsAvoidCenter: true, softMargin: 5,
+            } : {
+                caveRooms: 1, envType: env, locked: false, mapWidth: 88, mapHeight: 88,
+                linearity: 0.5, softMargin: 6, giantCentralRoom: true, giantRoomScale: 0.4,
+            },
+        });
     }
     startSidepathSandbox(opts) {
         const seed = Number.isFinite(opts.seed)
@@ -36321,6 +36373,623 @@ function isActionReady(game) {
         !state.preLevelGenActionStarted && !game.transitioningLadder;
 }
 exports.isActionReady = isActionReady;
+
+
+/***/ }),
+
+/***/ "./src/game/agentContract.ts":
+/*!***********************************!*\
+  !*** ./src/game/agentContract.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkAgentCompatibility = exports.getAgentContract = void 0;
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
+function getAgentContract() {
+    return {
+        observationSchemaVersion: 4,
+        actionSchemaVersion: 2,
+        observationMode: "diagnostic-current-room",
+        gameVersion: gameConstants_1.GameConstants.VERSION,
+        buildId:  true ? __webpack_require__.h() : 0,
+        // Detect changes to exposed runtime settings even without rebuilding the bundle.
+        settingsId: JSON.stringify(Object.entries({ ...gameplaySettings_1.GameplaySettings,
+            developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE,
+            animationSpeed: gameConstants_1.GameConstants.ANIMATION_SPEED,
+            slowInputsNearEnemies: gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES,
+        }).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)),
+    };
+}
+exports.getAgentContract = getAgentContract;
+/** Metadata check for future checkpoint loaders. Matching metadata is not a skill test. */
+function checkAgentCompatibility(trainedOn) {
+    const current = getAgentContract();
+    const schemaCompatible = !!trainedOn &&
+        trainedOn.observationSchemaVersion === current.observationSchemaVersion &&
+        trainedOn.actionSchemaVersion === current.actionSchemaVersion &&
+        trainedOn.observationMode === current.observationMode;
+    const sameBuild = !!current.buildId && trainedOn?.buildId === current.buildId;
+    const sameSettings = trainedOn?.settingsId === current.settingsId;
+    return { schemaCompatible, sameBuild, sameSettings,
+        requiresEvaluation: !schemaCompatible || !sameBuild || !sameSettings,
+        current };
+}
+exports.checkAgentCompatibility = checkAgentCompatibility;
+
+
+/***/ }),
+
+/***/ "./src/game/agentEnvironment.ts":
+/*!**************************************!*\
+  !*** ./src/game/agentEnvironment.ts ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentEnvironment = void 0;
+const agentPerception_1 = __webpack_require__(/*! ./agentPerception */ "./src/game/agentPerception.ts");
+const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
+const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const actionReadiness_1 = __webpack_require__(/*! ./actionReadiness */ "./src/game/actionReadiness.ts");
+const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
+const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
+const agentContract_1 = __webpack_require__(/*! ./agentContract */ "./src/game/agentContract.ts");
+const agentTraits_1 = __webpack_require__(/*! ./agentTraits */ "./src/game/agentTraits.ts");
+const directions = {
+    up: [game_1.Direction.UP, 0, -1], down: [game_1.Direction.DOWN, 0, 1],
+    left: [game_1.Direction.LEFT, -1, 0], right: [game_1.Direction.RIGHT, 1, 0],
+};
+class AgentActionError extends Error {
+}
+/** Browser-backed v1. Uses real gameplay; it is not yet a deterministic Node simulator. */
+class AgentEnvironment {
+    constructor(game, timeoutMs = 15000) {
+        this.game = game;
+        this.timeoutMs = timeoutMs;
+        this.vision = { ...agentPerception_1.DEFAULT_AGENT_VISION };
+        this.scenario = "standard";
+        this.busy = false;
+        this.seed = null;
+        this.steps = 0;
+        this.maxSteps = 1000;
+        this.failure = null;
+        this.recentTransitions = [];
+    }
+    player() { return this.game.players[this.game.localPlayerID]; }
+    contract() { return (0, agentContract_1.getAgentContract)(); }
+    checkCompatibility(trainedOn) {
+        return (0, agentContract_1.checkAgentCompatibility)(trainedOn);
+    }
+    tacticalFrame() {
+        const player = this.player();
+        const room = player.getRoom();
+        return {
+            roomId: room.globalId,
+            player: { x: player.x, y: player.y, z: player.z, health: player.health,
+                mana: player.mana, turnCount: player.turnCount },
+            entities: room.entities.filter(entity => !entity.dead).map(agentTraits_1.observeEntity),
+            warnings: (0, agentTraits_1.observeWarnings)(room.hitwarnings),
+        };
+    }
+    ready() {
+        const player = this.player();
+        return !!player && (0, actionReadiness_1.isActionReady)(this.game) && !this.game.paused &&
+            !player.busyAnimating && !this.game.cameraAnimation?.active &&
+            !player.isPushMoveInputLocked?.() &&
+            player.getRoom().turn === room_1.TurnState.playerTurn &&
+            (player.dead || player.movement.canMove());
+    }
+    async settle() {
+        const deadline = performance.now() + this.timeoutMs;
+        while (!this.ready()) {
+            if (performance.now() >= deadline)
+                throw new Error("Agent step timed out; reload the agent tab before continuing");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    }
+    async exclusive(operation) {
+        if (this.busy)
+            throw new Error("Another agent operation is in progress");
+        if (this.failure)
+            throw new Error(this.failure);
+        this.busy = true;
+        try {
+            return await operation();
+        }
+        catch (error) {
+            if (!(error instanceof AgentActionError))
+                this.failure = String(error);
+            throw error;
+        }
+        finally {
+            this.busy = false;
+        }
+    }
+    async reset(seed, options = {}) {
+        if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+            throw new Error("Seed must be an unsigned 32-bit integer");
+        }
+        const scenario = options.scenario ?? "standard";
+        if (!["standard", "forest", "cave"].includes(scenario))
+            throw new Error("Unsupported diagnostic scenario");
+        const vision = (0, agentPerception_1.validateAgentVision)(options.vision ?? agentPerception_1.DEFAULT_AGENT_VISION);
+        const maxSteps = options.maxSteps ?? 1000;
+        if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > 100000) {
+            throw new Error("maxSteps must be an integer from 1 to 100000");
+        }
+        return this.exclusive(async () => {
+            // Finish the previous world's callbacks before replacing it.
+            await this.settle();
+            this.game.replayManager.cancelReplay();
+            this.game.newGame(seed);
+            await this.settle();
+            if (scenario !== "standard")
+                this.game.startLightingSandbox(scenario, seed);
+            this.scenario = scenario;
+            this.game.started = true;
+            this.game.startedFadeOut = true;
+            this.game.startMenuActive = false;
+            this.game.startMenu?.close();
+            this.seed = seed;
+            this.steps = 0;
+            this.recentTransitions = [];
+            this.maxSteps = maxSteps;
+            this.vision = vision;
+            await this.settle();
+            if (scenario !== "standard") {
+                const player = this.player();
+                if (player.screenMessage.open && player.getRoom().roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder) {
+                    player.actionProcessor.process({ type: "LadderConfirm" });
+                    await this.settle();
+                }
+            }
+            return { ...this.observe(), ready: true, canExtendBudget: true };
+        });
+    }
+    /** Runner budget only: never advances simulation or discards an unfinished turn. */
+    extendBudget(additionalSteps) {
+        if (!Number.isSafeInteger(additionalSteps) || additionalSteps < 1 ||
+            !Number.isSafeInteger(this.maxSteps + additionalSteps)) {
+            throw new Error("additionalSteps must be a positive safe integer within the total budget range");
+        }
+        if (this.busy)
+            throw new Error("Another agent operation is in progress");
+        if (this.failure)
+            throw new Error(this.failure);
+        if (this.seed === null)
+            throw new Error("Call reset(seed) first");
+        if (this.player()?.dead)
+            throw new Error("Episode ended; call reset(seed)");
+        this.maxSteps += additionalSteps;
+        return this.observe();
+    }
+    budgetStatus() {
+        const exhausted = this.steps >= this.maxSteps;
+        return {
+            truncationReason: this.failure ? "failure" : exhausted ? "action-budget" : null,
+            canExtendBudget: this.seed !== null && !this.busy && !this.failure && !this.player()?.dead,
+        };
+    }
+    /** Unknown costs stay unknown: a directional input may walk, attack, or interact. */
+    describeAction(action) {
+        const items = this.player().inventory.items;
+        let turnCost = null;
+        if (action.type === "Wait")
+            turnCost = 1;
+        if (action.type === "MoveItem")
+            turnCost = 0;
+        if (action.type === "UseItem")
+            turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
+        if (action.type === "UseItemOn")
+            turnCost = items[action.fromSlot]?.getUseOnTurnCost?.(items[action.toSlot]) ?? null;
+        if (action.type === "SelectOption")
+            turnCost = this.player().menu?.getSelectionChoices()?.[action.index]?.turnCost ?? null;
+        return { turnCost, basis: turnCost === null ? "depends-on-resolution" : "gameplay-rule" };
+    }
+    /** Restricted current perception. Never includes diagnostic history or unseen room contents. */
+    perceive(vision = this.vision) {
+        vision = (0, agentPerception_1.validateAgentVision)(vision);
+        if (this.busy)
+            throw new Error("Wait for the current operation before perceiving");
+        const observation = this.observe();
+        const room = this.player().getRoom();
+        const perceived = (0, agentPerception_1.perceiveRoom)({
+            player: observation.player, tiles: observation.room.tiles.map(tile => ({
+                ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
+                solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
+                isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
+                exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder,
+            })),
+            entities: observation.room.entities,
+            items: room.items.map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
+            warnings: observation.room.hitWarnings,
+            brightness: (x, y) => {
+                const darkness = room.vis[x]?.[y];
+                return typeof darkness === "number" && Number.isFinite(darkness)
+                    ? Math.max(0, Math.min(1, 1 - darkness)) : 0;
+            },
+            blocked: (x, y) => room.isGameplaySightBlocked(x, y),
+        }, vision);
+        return {
+            schemaVersion: 3, observationMode: "player-perception", vision: { ...vision },
+            contract: { ...this.contract(), observationSchemaVersion: 3, observationMode: "player-perception" },
+            ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
+            player: observation.player, inventory: observation.inventory,
+            decision: observation.decision, selectionChoices: observation.selectionChoices,
+            room: { id: room.globalId, ...perceived },
+        };
+    }
+    /** Explicit lab measurement, not a policy observation or step. */
+    inspectLighting(iterations = 20) {
+        if (!Number.isInteger(iterations) || iterations < 1 || iterations > 50)
+            throw new Error("iterations must be 1..50");
+        if (this.busy || !this.ready() || this.seed === null)
+            throw new Error("Wait for a ready initialized run");
+        const room = this.player().getRoom();
+        const samples = [];
+        for (let i = 0; i < iterations + 3; i++) {
+            const start = performance.now();
+            room.updateLighting();
+            const elapsed = performance.now() - start;
+            if (i >= 3)
+                samples.push(elapsed);
+        }
+        samples.sort((a, b) => a - b);
+        const start = performance.now();
+        const perception = this.perceive();
+        const perceptionMs = performance.now() - start;
+        const observation = this.observe();
+        const tiles = observation.room.tiles.map(tile => ({ ...tile,
+            color: [...(room.col[tile.x]?.[tile.y] ?? [0, 0, 0])],
+            brightness: 1 - (room.vis[tile.x]?.[tile.y] ?? 1),
+            blocked: room.isGameplaySightBlocked(tile.x, tile.y),
+        }));
+        return {
+            source: "lighting-diagnostic", scenario: this.scenario, seed: this.seed,
+            buildId: this.contract().buildId,
+            room: { width: room.width, height: room.height, sources: room.lightSources.length,
+                entities: room.entities.length, tiles },
+            milliseconds: { iterations, median: samples[Math.floor(samples.length / 2)],
+                p95: samples[Math.ceil(samples.length * .95) - 1], max: samples[samples.length - 1], perception: perceptionMs },
+            player: observation.player, perception,
+            thresholdSweep: [0.04, 0.08, 0.16].map(identificationBrightness => {
+                const view = this.perceive({ ...this.vision, identificationBrightness });
+                return { identificationBrightness,
+                    identified: view.room.entities.filter(e => e.appearance === "identified").length,
+                    anonymous: view.room.entities.filter(e => e.appearance === "unidentified").length,
+                    warnings: view.room.hitWarnings.length };
+            }),
+        };
+    }
+    observe() {
+        const player = this.player();
+        if (!player)
+            throw new Error("Game is still initializing");
+        const room = player.getRoom();
+        const tiles = [];
+        for (let x = room.roomX; x < room.roomX + room.width; x++) {
+            for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                const tile = room.roomArray[x]?.[y];
+                if (tile)
+                    tiles.push({ x, y, kind: tile.constructor.name });
+            }
+        }
+        const ladderChoice = player.screenMessage.open &&
+            room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
+        return {
+            schemaVersion: 4, contract: this.contract(),
+            backend: "browser", observationMode: "diagnostic-current-room",
+            seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+            ...this.budgetStatus(),
+            initialized: this.seed !== null,
+            ready: this.seed !== null && !this.busy && !player.dead &&
+                this.steps < this.maxSteps && !this.failure && this.ready(),
+            terminated: player.dead, truncated: this.steps >= this.maxSteps || this.failure !== null,
+            failure: this.failure, developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE,
+            player: { x: player.x, y: player.y, z: player.z, health: player.health,
+                maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
+                turnCount: player.turnCount },
+            room: { id: room.globalId, depth: room.depth, x: room.roomX, y: room.roomY,
+                width: room.width, height: room.height, tiles,
+                entities: room.entities.filter(entity => !entity.dead).map(agentTraits_1.observeEntity),
+                items: room.items.map(agentTraits_1.observeItem),
+                hitWarnings: (0, agentTraits_1.observeWarnings)(room.hitwarnings),
+            },
+            inventory: player.inventory.items.map((item, slot) => item ? {
+                ...(0, agentTraits_1.observeItem)(item), slot,
+                equipped: item.equipped === true,
+                activeWeapon: item === player.inventory.weapon,
+            } : null),
+            selectionChoices: player.menu?.getSelectionChoices() ?? null,
+            // Bounded history supports temporal policies; it is not online model learning.
+            recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)),
+            decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "unsupported-modal") :
+                player.openVendingMachine?.open || player.contextMenu?.open ? "unsupported-modal" :
+                    player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
+        };
+    }
+    async step(input) {
+        // Validate the external action before taking ownership of the episode.
+        if (!input || typeof input !== "object" ||
+            !["Move", "Wait", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+            ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
+            ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
+            ((input.type === "UseItemOn" || input.type === "MoveItem") &&
+                (!Number.isInteger(input.fromSlot) || !Number.isInteger(input.toSlot) || input.fromSlot < 0 || input.toSlot < 0)) ||
+            (input.type === "SelectOption" && (!Number.isInteger(input.index) || input.index < 0)) ||
+            (input.type === "Move" && !Object.prototype.hasOwnProperty.call(directions, input.direction))) {
+            throw new Error("Unsupported agent action");
+        }
+        const actionInput = { ...input };
+        if (this.seed === null)
+            throw new Error("Call reset(seed) first");
+        if (this.player()?.dead)
+            throw new Error("Episode ended; call reset(seed)");
+        if (this.steps >= this.maxSteps)
+            throw new Error("Action budget exhausted; call extendBudget(additionalSteps) to continue this run");
+        return this.exclusive(async () => {
+            await this.settle();
+            const before = this.observe();
+            const beforeFrame = this.tacticalFrame();
+            const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
+            if (before.decision === "unsupported-modal" ||
+                (before.decision === "ladder") !== ladderAction ||
+                (before.decision === "selection") !== (actionInput.type === "SelectOption")) {
+                throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
+            }
+            const player = this.player();
+            const items = player.inventory.items;
+            if ("slotIndex" in actionInput && !items[actionInput.slotIndex]) {
+                throw new AgentActionError("Inventory slot is empty or out of bounds");
+            }
+            if ("fromSlot" in actionInput && (!items[actionInput.fromSlot] || actionInput.toSlot >= items.length ||
+                (actionInput.type === "UseItemOn" && (!items[actionInput.toSlot] ||
+                    !items[actionInput.fromSlot].canUseOnOther)))) {
+                throw new AgentActionError("Invalid inventory source or target");
+            }
+            if (actionInput.type === "UseItem" && items[actionInput.slotIndex].canUseOnOther) {
+                throw new AgentActionError("This item needs a target; use UseItemOn");
+            }
+            let action = null;
+            if (actionInput.type === "Move") {
+                const [direction, dx, dy] = directions[actionInput.direction];
+                action = { type: "Directional", direction, targetX: player.x + dx, targetY: player.y + dy };
+            }
+            else if (actionInput.type !== "SelectOption")
+                action = actionInput;
+            const prediction = this.describeAction(actionInput);
+            const count = this.game.replayManager.getStats().count;
+            if (actionInput.type === "SelectOption") {
+                if (!player.menu.selectChoice(actionInput.index))
+                    throw new AgentActionError("Selection is disabled or unavailable");
+            }
+            else
+                player.actionProcessor.process(action);
+            this.steps++;
+            await this.settle();
+            const recorded = this.game.replayManager.getStats().count > count;
+            this.recentTransitions.push({ step: this.steps, action: actionInput, recorded,
+                before: beforeFrame, after: this.tacticalFrame() });
+            if (this.recentTransitions.length > 8)
+                this.recentTransitions.shift();
+            const observation = this.observe();
+            return { observation: { ...observation, canExtendBudget: !observation.terminated && !this.failure, ready: !observation.terminated && !observation.truncated },
+                terminated: observation.terminated, truncated: observation.truncated,
+                info: { recorded, predictedTurnCost: prediction.turnCost,
+                    turnDelta: observation.player.turnCount - before.player.turnCount } };
+        });
+    }
+    exportReplay() {
+        if (this.busy)
+            throw new Error("Wait for the current operation before exporting");
+        return JSON.parse(JSON.stringify({ schemaVersion: 2, contract: this.contract(), source: "agent-browser",
+            gameVersion: gameConstants_1.GameConstants.VERSION, observationMode: "diagnostic-current-room",
+            developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
+            diagnosticSandbox: this.scenario !== "standard",
+            settings: { ...gameplaySettings_1.GameplaySettings },
+            vision: { ...this.vision },
+            timing: { animationSpeed: gameConstants_1.GameConstants.ANIMATION_SPEED,
+                slowInputsNearEnemies: gameConstants_1.GameConstants.SLOW_INPUTS_NEAR_ENEMIES },
+            steps: this.steps, maxSteps: this.maxSteps, terminated: this.player()?.dead ?? false,
+            truncated: this.steps >= this.maxSteps || this.failure !== null,
+            ...this.budgetStatus(),
+            failure: this.failure, recentTransitions: this.recentTransitions,
+            replay: this.game.replayManager.serialize() }));
+    }
+}
+exports.AgentEnvironment = AgentEnvironment;
+
+
+/***/ }),
+
+/***/ "./src/game/agentMode.ts":
+/*!*******************************!*\
+  !*** ./src/game/agentMode.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_MODE = void 0;
+/** Opt-in at page load; ordinary play keeps its existing behavior. */
+exports.AGENT_MODE = typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("agent") === "1";
+// A dedicated agent tab accepts actions through its API, not concurrent DOM input.
+if (exports.AGENT_MODE) {
+    for (const event of ["keydown", "keyup", "mousedown", "mouseup", "mousemove",
+        "click", "dblclick", "contextmenu", "touchstart", "touchmove", "touchend", "wheel"]) {
+        window.addEventListener(event, event => event.stopImmediatePropagation(), { capture: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/game/agentPerception.ts":
+/*!*************************************!*\
+  !*** ./src/game/agentPerception.ts ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.perceiveRoom = exports.hasTileSight = exports.validateAgentVision = exports.DEFAULT_AGENT_VISION = void 0;
+const warningVisibility_1 = __webpack_require__(/*! ../drawable/warningVisibility */ "./src/drawable/warningVisibility.ts");
+exports.DEFAULT_AGENT_VISION = Object.freeze({ range: 12, identificationBrightness: 0.08 });
+function validateAgentVision(vision) {
+    if (!Number.isFinite(vision.range) || vision.range < 1 || vision.range > 100 ||
+        !Number.isFinite(vision.identificationBrightness) || vision.identificationBrightness < 0 ||
+        vision.identificationBrightness > 1)
+        throw new Error("Invalid vision range or identification brightness");
+    return { range: vision.range, identificationBrightness: vision.identificationBrightness };
+}
+exports.validateAgentVision = validateAgentVision;
+/** Supercover sight between tile centers. A blocked corner cannot reveal its diagonal. */
+function hasTileSight(x, y, tx, ty, blocked) {
+    const dx = tx - x, dy = ty - y, nx = Math.abs(dx), ny = Math.abs(dy);
+    const sx = Math.sign(dx), sy = Math.sign(dy);
+    let ix = 0, iy = 0;
+    while (ix < nx || iy < ny) {
+        const decision = (1 + 2 * ix) * ny - (1 + 2 * iy) * nx;
+        if (decision === 0) {
+            if (blocked(x + sx, y) || blocked(x, y + sy))
+                return false;
+            x += sx;
+            y += sy;
+            ix++;
+            iy++;
+        }
+        else if (decision < 0) {
+            x += sx;
+            ix++;
+        }
+        else {
+            y += sy;
+            iy++;
+        }
+        if (x === tx && y === ty)
+            return true; // The blocking tile's near face is visible.
+        if (blocked(x, y))
+            return false;
+    }
+    return true;
+}
+exports.hasTileSight = hasTileSight;
+function perceiveRoom(input, vision) {
+    const { player } = input;
+    const inSight = (x, y) => x !== null && y !== null && Number.isFinite(x) && Number.isFinite(y) &&
+        Math.hypot(x - player.x, y - player.y) <= vision.range &&
+        hasTileSight(player.x, player.y, x, y, input.blocked);
+    const bright = (x, y) => input.brightness(x, y) >= vision.identificationBrightness;
+    const entities = input.entities.filter(e => e.z === player.z && inSight(e.x, e.y)).flatMap(e => {
+        if (bright(e.x, e.y))
+            return [{ appearance: "identified", ...e }];
+        // No ID, species, stats, dimensions, or hidden phase survives an anonymous contact.
+        return e.isEnemy ? [{ appearance: "unidentified", x: e.x, y: e.y, z: e.z }] : [];
+    });
+    return {
+        tiles: input.tiles.filter(t => inSight(t.x, t.y)).map(t => bright(t.x, t.y)
+            ? { ...t, brightness: input.brightness(t.x, t.y) }
+            : { x: t.x, y: t.y, kind: null, solid: null, isDoor: null, exit: null, brightness: input.brightness(t.x, t.y) }),
+        entities,
+        items: input.items.filter(i => (i.z ?? 0) === player.z && inSight(i.x, i.y) && bright(i.x, i.y)),
+        // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
+        hitWarnings: input.warnings.filter(w => w.z === player.z && inSight(w.x, w.y) &&
+            (0, warningVisibility_1.isWarningVisibleAboveShade)(w, player.x, player.y))
+            .map(w => ({ x: w.x, y: w.y, z: w.z, hostile: w.hostile, directionOnly: w.directionOnly })),
+    };
+}
+exports.perceiveRoom = perceiveRoom;
+
+
+/***/ }),
+
+/***/ "./src/game/agentTraits.ts":
+/*!*********************************!*\
+  !*** ./src/game/agentTraits.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.observeWarnings = exports.observeItem = exports.observeEntity = void 0;
+/** Explicit, read-only feature projection. Missing values mean unknown, never zero. */
+const numberOrNull = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
+const booleanOrNull = (value) => typeof value === "boolean" ? value : null;
+const stringOrNull = (value) => typeof value === "string" ? value : null;
+function observeEntity(source) {
+    // Some subclasses promote protected base-class combat flags to public fields.
+    // This diagnostic projection reads only the explicitly listed fields.
+    const entity = source;
+    return {
+        id: stringOrNull(entity.globalId),
+        // Labels are for debugging. Policies should consume traits, not class-name vocabularies.
+        kind: entity.constructor.name,
+        x: numberOrNull(entity.x), y: numberOrNull(entity.y), z: numberOrNull(entity.z),
+        health: numberOrNull(entity.health), maxHealth: numberOrNull(entity.maxHealth),
+        width: numberOrNull(entity.w), height: numberOrNull(entity.h),
+        isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
+        pushable: booleanOrNull(entity.pushable), destroyable: booleanOrNull(entity.destroyable),
+        interactable: booleanOrNull(entity.interactable),
+        combat: {
+            baseDamage: numberOrNull(entity.baseDamage),
+            orthogonalAttack: booleanOrNull(entity.orthogonalAttack),
+            diagonalAttack: booleanOrNull(entity.diagonalAttack),
+            // No universal timing descriptor exists yet. Do not infer one from a species name.
+            movementPeriodTurns: null, attackPeriodTurns: null,
+        },
+    };
+}
+exports.observeEntity = observeEntity;
+function observeItem(item) {
+    return {
+        id: stringOrNull(item.globalId), kind: item.constructor.name,
+        name: stringOrNull(item.name), x: numberOrNull(item.x), y: numberOrNull(item.y),
+        stackCount: numberOrNull(item.stackCount),
+        healingAmount: numberOrNull(item.getHealingAmount?.()),
+        canUseOnOther: item.canUseOnOther === true,
+        useTurnCost: numberOrNull(item.getUseTurnCost?.()),
+        traits: {
+            // Base stats, not a prediction of final damage after skills, armor or status effects.
+            baseDamage: numberOrNull(item.damage), range: numberOrNull(item.range),
+            cooldown: numberOrNull(item.cooldown), cooldownMax: numberOrNull(item.cooldownMax),
+            manaCost: numberOrNull(item.manaCost), durability: numberOrNull(item.durability),
+            durabilityMax: numberOrNull(item.durabilityMax),
+            knockbackDistance: numberOrNull(item.knockbackDistance),
+            allowsDiagonalAttack: booleanOrNull(item.allowsDiagonalAttack),
+            twoHanded: booleanOrNull(item.twoHanded), canMine: booleanOrNull(item.canMine),
+            requiredLevel: numberOrNull(item.requiredLevel), requiredSkill: stringOrNull(item.requiredSkill),
+            // Range alone does not describe a weapon's footprint. Never invent a pattern.
+            attackPattern: null,
+            successfulAttackTurnCost: numberOrNull(item.getSuccessfulAttackTurnCost?.()),
+        },
+    };
+}
+exports.observeItem = observeItem;
+function observeWarnings(warnings) {
+    return warnings.filter(warning => !warning.dead).map(warning => {
+        const fields = warning.getSaveFields();
+        return {
+            x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z),
+            sourceId: stringOrNull(warning.parent?.globalId),
+            sourceX: numberOrNull(fields.eX), sourceY: numberOrNull(fields.eY),
+            hostile: fields.isEnemy, directionOnly: fields.dirOnly,
+            // Warning lifetime is not a reliable universal attack countdown.
+            resolvesInTurns: null,
+        };
+    });
+}
+exports.observeWarnings = observeWarnings;
 
 
 /***/ }),
@@ -51630,6 +52299,7 @@ exports.traceSaveState = traceSaveState;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.hasCookieSave = exports.clearCookieSave = exports.loadFromCookies = exports.saveToCookies = void 0;
 const saveDiagnostics_1 = __webpack_require__(/*! ./saveDiagnostics */ "./src/game/saveDiagnostics.ts");
+const agentMode_1 = __webpack_require__(/*! ./agentMode */ "./src/game/agentMode.ts");
 const gameState_1 = __webpack_require__(/*! ./gameState */ "./src/game/gameState.ts");
 const save_1 = __webpack_require__(/*! ./save */ "./src/game/save/index.ts");
 const cookies_1 = __webpack_require__(/*! ../utility/cookies */ "./src/utility/cookies.ts");
@@ -51675,7 +52345,7 @@ const isLegacyGameState = (v) => {
 // ---------------------------------------------------------------------------
 const saveToCookies = (game, opts) => {
     // A replay (including its terminal screen) must never overwrite the live save.
-    if (game.replayManager.isReplaying())
+    if (agentMode_1.AGENT_MODE || game.replayManager.isReplaying())
         return;
     let v2;
     try {
@@ -51718,6 +52388,8 @@ exports.saveToCookies = saveToCookies;
 // Load
 // ---------------------------------------------------------------------------
 const loadFromCookies = async (game) => {
+    if (agentMode_1.AGENT_MODE)
+        return false;
     let json = null;
     const es = getElectronSave();
     if (es) {
@@ -51788,6 +52460,8 @@ exports.loadFromCookies = loadFromCookies;
 // Clear
 // ---------------------------------------------------------------------------
 const clearCookieSave = () => {
+    if (agentMode_1.AGENT_MODE)
+        return;
     const es = getElectronSave();
     if (es) {
         es.remove(ELECTRON_SAVE_NAME);
@@ -51817,6 +52491,8 @@ exports.clearCookieSave = clearCookieSave;
  * Used by UI before the menu is shown.
  */
 const hasCookieSave = () => {
+    if (agentMode_1.AGENT_MODE)
+        return false;
     const es = getElectronSave();
     if (es) {
         try {
@@ -51933,6 +52609,35 @@ const loadSettings = (game) => {
     }
 };
 exports.loadSettings = loadSettings;
+
+
+/***/ }),
+
+/***/ "./src/game/simulationEffects.ts":
+/*!***************************************!*\
+  !*** ./src/game/simulationEffects.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.advanceSimulationEffects = void 0;
+/** Shared by the browser frame loop and a future headless simulation driver. */
+function advanceSimulationEffects(game, delta) {
+    if (!Number.isFinite(delta) || delta < 0)
+        throw new Error("Invalid simulation delta");
+    if (game.replayManager.isFinished())
+        return;
+    const rooms = new Set(Object.values(game.players).map(player => player.getRoom()));
+    // Snapshot before executing callbacks: effects spawned by an arrival begin next frame.
+    const effects = Array.from(rooms).flatMap(room => room ? [...room.projectiles] : []);
+    for (const effect of effects) {
+        if (effect && !effect.dead)
+            effect.advanceSimulation(delta);
+    }
+}
+exports.advanceSimulationEffects = advanceSimulationEffects;
 
 
 /***/ }),
@@ -55912,6 +56617,19 @@ const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/
 const mouseCursor_1 = __webpack_require__(/*! ../gui/mouseCursor */ "./src/gui/mouseCursor.ts");
 const player_1 = __webpack_require__(/*! ../player/player */ "./src/player/player.ts");
 class Menu {
+    getSelectionChoices() {
+        return this.open && this.selectionChoices
+            ? this.selectionChoices.map(({ label, enabled, turnCost }, index) => ({ index, label, enabled, turnCost })) : null;
+    }
+    selectChoice(index) {
+        if (!this.open || !Number.isInteger(index))
+            return false;
+        const choice = this.selectionChoices?.[index];
+        if (!choice?.enabled)
+            return false;
+        choice.select();
+        return true;
+    }
     getDeltaMs(delta) {
         // delta is normalized to ~60fps ticks
         return (delta * 1000) / 60;
@@ -55946,6 +56664,7 @@ class Menu {
         return { growPx, shakePx };
     }
     constructor(arg) {
+        this.selectionChoices = null;
         this.showCloseButton = true;
         this.selectionTimeoutId = null;
         this.onCloseHook = null;
@@ -55991,6 +56710,7 @@ class Menu {
                 this.positionButtons();
             };
             this.onCloseHook = restore;
+            this.selectionChoices = [];
             // Build selection buttons
             const header = new guiButton_1.guiButton(0, 0, 0, 0, config.title, () => { }, false, this);
             header.noFill = true;
@@ -56014,6 +56734,8 @@ class Menu {
                     btn.textColor = opt.disabledTextColor ?? "rgb(170, 170, 170)";
                 }
                 this.addButton(btn);
+                this.selectionChoices.push({ label: opt.label, enabled, turnCost: opt.turnCost ?? null,
+                    select: () => btn.onClick() });
             }
             if (config.includeCancel !== false) {
                 const cancelBtn = new guiButton_1.guiButton(0, 0, 0, 0, "Cancel", () => this.close(), false, this);
@@ -56022,6 +56744,7 @@ class Menu {
                     cancelBtn.outlineColor = "rgba(255, 255, 255, 1)";
                 }
                 this.addButton(cancelBtn);
+                this.selectionChoices.push({ label: "Cancel", enabled: true, turnCost: 0, select: () => cancelBtn.onClick() });
             }
             this.positionButtons();
             this.openMenu();
@@ -56416,6 +57139,7 @@ class Menu {
     }
     close() {
         this.open = false;
+        this.selectionChoices = null;
         // Allow temporary menus to restore previous state on close.
         if (this.onCloseHook) {
             const fn = this.onCloseHook;
@@ -62375,6 +63099,8 @@ class Equippable extends item_1.Item {
         };
         this.onEquip = () => { };
         this.onUnequip = () => { };
+        this.getUseTurnCost = () => gameplaySettings_1.GameplaySettings.EQUIP_USES_TURN && !this.equipped &&
+            ((!this.broken && this.cooldown <= 0) || this.isShield) ? 1 : 0;
         this.toggleEquip = () => {
             if ((!this.broken && this.cooldown <= 0) || this.isShield) {
                 if (!this.equipped && this.wielder?.inventory?.weapon) {
@@ -62610,6 +63336,9 @@ class Item extends drawable_1.Drawable {
     // Constructor for the Item class
     constructor(level, x, y, z = 0) {
         super();
+        /** Read-only action metadata. Unknown mechanics must override instead of guessing. */
+        this.getUseTurnCost = () => null;
+        this.getUseOnTurnCost = (_other) => null;
         this.group = null;
         this.degradeable = true;
         this.cooldown = 0;
@@ -64424,7 +65153,7 @@ const IRON_SMITH_RECIPES = {
 // the iron-bar → armor crafting is fully captured by a single SmithRecipe action.
 const applyIronSmithRecipe = (player, recipe) => {
     const def = IRON_SMITH_RECIPES[recipe];
-    if (!def)
+    if (!Object.prototype.hasOwnProperty.call(IRON_SMITH_RECIPES, recipe))
         return false;
     const bar = player.inventory.hasItem(IronBar);
     if (!bar)
@@ -64451,6 +65180,7 @@ class IronBar extends item_1.Item {
             const bars = getAvailableBars();
             const optionForRecipe = (recipe, labelPrefix) => ({
                 label: `${labelPrefix} ${barsLabel(IRON_SMITH_RECIPES[recipe].cost)}`,
+                turnCost: 0,
                 enabled: bars >= IRON_SMITH_RECIPES[recipe].cost,
                 onSelect: () => player.actionProcessor.process({ type: "SmithRecipe", recipe }),
             });
@@ -64708,7 +65438,11 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 const usable_1 = __webpack_require__(/*! ../usable/usable */ "./src/item/usable/usable.ts");
 const weapon_1 = __webpack_require__(/*! ../weapon/weapon */ "./src/item/weapon/weapon.ts");
 const weaponFragments_1 = __webpack_require__(/*! ../usable/weaponFragments */ "./src/item/usable/weaponFragments.ts");
+const goldBar_1 = __webpack_require__(/*! ../resource/goldBar */ "./src/item/resource/goldBar.ts");
 const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/random.ts");
+const goldOre_1 = __webpack_require__(/*! ../resource/goldOre */ "./src/item/resource/goldOre.ts");
+const ironOre_1 = __webpack_require__(/*! ../resource/ironOre */ "./src/item/resource/ironOre.ts");
+const ironBar_1 = __webpack_require__(/*! ../resource/ironBar */ "./src/item/resource/ironBar.ts");
 class Hammer extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
@@ -64721,6 +65455,8 @@ class Hammer extends usable_1.Usable {
                 sound_1.Sound.heal();
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
+        this.getUseOnTurnCost = (other) => other instanceof ironOre_1.IronOre || other instanceof ironBar_1.IronBar ||
+            other instanceof goldOre_1.GoldOre || other instanceof goldBar_1.GoldBar ? 0 : null;
         this.useOnOther = (player, other) => {
             if (other instanceof weapon_1.Weapon && other.name !== "dagger") {
                 other.disassemble();
@@ -64833,6 +65569,7 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 class Apple extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
                 player.health = Math.min(player.maxHealth, player.health + 1);
@@ -64875,6 +65612,7 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 class Berries extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
                 player.health = Math.min(player.maxHealth, player.health + 0.5);
@@ -64918,6 +65656,7 @@ const spellbook_1 = __webpack_require__(/*! ../weapon/spellbook */ "./src/item/w
 class BluePotion extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             // Mana is derived from spellbook cooldown. This potion reduces that cooldown.
             const spellbooks = [];
@@ -64985,6 +65724,7 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 class Fish extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
                 player.health = Math.min(player.maxHealth, player.health + 1);
@@ -65028,6 +65768,7 @@ const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.t
 class GreenPotion extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             player.health = Math.min(player.maxHealth, player.health + 1);
             if (this.level.game.rooms[player.levelID] === this.level.game.room)
@@ -65150,6 +65891,7 @@ const random_1 = __webpack_require__(/*! ../../utility/random */ "./src/utility/
 class Scroll extends usable_1.Usable {
     constructor(level, x, y, spell) {
         super(level, x, y);
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             const book = player.inventory.items.find((i) => i instanceof spellbook_1.Spellbook);
             if (!book) {
@@ -65273,9 +66015,11 @@ const sound_1 = __webpack_require__(/*! ../../sound/sound */ "./src/sound/sound.
 class Shrooms extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getHealingAmount = () => 0.5;
+        this.getUseTurnCost = () => 0;
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
-                player.health = Math.min(player.maxHealth, player.health + 0.5);
+                player.health = Math.min(player.maxHealth, player.health + this.getHealingAmount());
                 sound_1.Sound.playEat();
                 if (this.stackCount > 1) {
                     this.stackCount--;
@@ -65327,6 +66071,7 @@ class SpellbookPage extends usable_1.Usable {
             player.inventory.removeItem(this);
             //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
         };
+        this.getUseOnTurnCost = (_other) => 0;
         this.useOnOther = (player, other) => {
             if (other instanceof equippable_1.Equippable &&
                 other.durabilityMax - other.durability >= 1 &&
@@ -66108,6 +66853,8 @@ const weapon_1 = __webpack_require__(/*! ./weapon */ "./src/item/weapon/weapon.t
 class Dagger extends weapon_1.Weapon {
     constructor(level, x, y) {
         super(level, x, y);
+        /** executeAttack advances the room once when a hit resolves. */
+        this.getSuccessfulAttackTurnCost = () => 1;
         this.weaponMove = (newX, newY) => {
             if (this.checkForPushables(newX, newY))
                 return true;
@@ -66151,6 +66898,8 @@ class DualDagger extends weapon_1.Weapon {
         this.tickInInventory = () => {
             this.firstAttack = true;
         };
+        /** Cost of a successful hit in the current combo phase, not a movement preview. */
+        this.getSuccessfulAttackTurnCost = () => this.firstAttack ? 0 : 1;
         this.weaponMove = (newX, newY) => {
             const entities = this.getEntitiesAt(newX, newY).filter((e) => !e.pushable);
             let flag = false;
@@ -66170,7 +66919,7 @@ class DualDagger extends weapon_1.Weapon {
                     this.game.rooms[this.wielder.levelID].particles.push(new attackAnimation_1.AttackAnimation(newX, newY, "dualdagger2", this.wielder.direction));
                 }
                 this.game.rooms[this.wielder.levelID].entities = this.game.rooms[this.wielder.levelID].entities.filter((e) => !e.dead);
-                if (!this.firstAttack) {
+                if (this.getSuccessfulAttackTurnCost() > 0) {
                     this.game.rooms[this.wielder.levelID].tick(this.wielder);
                 }
                 if (this.wielder === this.game.players[this.game.localPlayerID])
@@ -67977,6 +68726,7 @@ class Weapon extends equippable_1.Equippable {
     constructor(level, x, y, status) {
         super(level, x, y);
         this._cooldownLastTurnProcessed = null;
+        this.getUseTurnCost = () => 0;
         this.toggleEquip = () => {
             // Respect base Equippable gating (broken/cooldown) but add skill requirements for weapons.
             const reqSkill = this.requiredSkill;
@@ -74698,6 +75448,181 @@ exports.SidePathManager = SidePathManager;
 
 /***/ }),
 
+/***/ "./src/lighting/gameplayLighting.ts":
+/*!******************************************!*\
+  !*** ./src/lighting/gameplayLighting.ts ***!
+  \******************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.processLightRay = exports.rgbToLuminance = exports.blendColorsArray = exports.clamp = exports.linearToSRGB = exports.sRGBToLinear = void 0;
+const sRGBToLinear = (value) => {
+    const normalized = value / 255;
+    if (normalized <= 0.04045) {
+        return normalized / 12.92;
+    }
+    else {
+        return Math.pow((normalized + 0.055) / 1.055, 2.2);
+    }
+};
+exports.sRGBToLinear = sRGBToLinear;
+const linearToSRGB = (value) => {
+    if (value <= 0.0031308) {
+        return Math.round(12.92 * value * 255);
+    }
+    else {
+        return Math.round((1.055 * Math.pow(value, 1 / 2.2 /*gamma*/) - 0.055) * 255);
+    }
+};
+exports.linearToSRGB = linearToSRGB;
+const clamp = (value, min = 0, max = 1) => {
+    return Math.min(Math.max(value, min), max);
+};
+exports.clamp = clamp;
+const blendColorsArray = (colors) => {
+    if (colors.length === 0)
+        return [0, 0, 0];
+    // Sum all color channels in linear RGB
+    const sum = colors.reduce((accumulator, color) => [
+        accumulator[0] + color[0] * color[3],
+        accumulator[1] + color[1] * color[3],
+        accumulator[2] + color[2] * color[3],
+    ], [0, 0, 0]);
+    // Apply scaling factor to manage overall brightness
+    const scalingFactor = 0.45 * 2.5; // Adjust as needed
+    const scaledSum = [
+        sum[0] * scalingFactor,
+        sum[1] * scalingFactor,
+        sum[2] * scalingFactor,
+    ];
+    // Clamp each channel to [0, 1] to prevent overflow
+    const clampedSum = [
+        (0, exports.clamp)(scaledSum[0], 0, 1),
+        (0, exports.clamp)(scaledSum[1], 0, 1),
+        (0, exports.clamp)(scaledSum[2], 0, 1),
+    ];
+    // Convert back to sRGB
+    return [
+        (0, exports.linearToSRGB)(clampedSum[0]),
+        (0, exports.linearToSRGB)(clampedSum[1]),
+        (0, exports.linearToSRGB)(clampedSum[2]),
+    ];
+};
+exports.blendColorsArray = blendColorsArray;
+const rgbToLuminance = (color) => {
+    //map to 1-0 range
+    return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
+};
+exports.rgbToLuminance = rgbToLuminance;
+const processLightRay = (context, angle, px, py, radius, color, brightness, falloffDecay = 1, action = "cast") => {
+    // A light source with zero (or negative) radius casts no light at all,
+    // not even at its own origin tile.
+    if (radius <= 0)
+        return;
+    const dx = Math.cos((angle * Math.PI) / 180);
+    const dy = Math.sin((angle * Math.PI) / 180);
+    // Lighting is currently computed for the local active z-layer only.
+    // Convert input color from sRGB to linear RGB
+    const linearColor = [
+        (0, exports.sRGBToLinear)(color[0]),
+        (0, exports.sRGBToLinear)(color[1]),
+        (0, exports.sRGBToLinear)(color[2]),
+    ];
+    for (let i = 0; i <= Math.min(context.maxDistance, radius); i++) {
+        const currentX = Math.floor(px + dx * i);
+        const currentY = Math.floor(py + dy * i);
+        if (!context.isPositionInRoom(currentX, currentY))
+            return; // Outside the room
+        // Z-aware tile lookup for lighting blockers:
+        // - Default: tiles are shared across layers
+        // - Z_DEBUG_MODE: use the z=1 override tile map (Floor/Air) when activeZ === 1
+        const blocksLight = context.isInnerWall(currentX, currentY);
+        // Handle i=0 separately to ensure correct intensity
+        let intensity;
+        // Exponential falloff with origin boost preserved
+        if (i === 0) {
+            intensity = brightness * 0.1;
+        }
+        else {
+            intensity = brightness * Math.exp(-falloffDecay * (i - 0.25));
+        }
+        if (intensity < 0.005)
+            intensity = 0;
+        if (intensity <= 0)
+            continue;
+        if (!context.buffer[currentX]) {
+            context.buffer[currentX] = [];
+        }
+        if (!context.buffer[currentX][currentY]) {
+            context.buffer[currentX][currentY] = [];
+        }
+        // Inner walls block light explicitly and terminate the ray
+        if (blocksLight) {
+            const weightedLinearColor = [
+                linearColor[0],
+                linearColor[1],
+                linearColor[2],
+                intensity,
+            ];
+            if (action === "cast") {
+                context.buffer[currentX][currentY].push(weightedLinearColor);
+            }
+            else if (action === "unCast") {
+                context.buffer[currentX][currentY] = context.buffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                    Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                    Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                    Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+            }
+            return; // Terminate after processing the opaque wall
+        }
+        if (context.opaqueEntityPositions) {
+            // O(1) membership check instead of scanning entities
+            if (context.opaqueEntityPositions.has(`${currentX},${currentY}`)) {
+                //intensity = intensity * (1 - entity.opacity);
+                // Set the intensity for this tile and then terminate to create shadow effect
+                const weightedLinearColor = [
+                    linearColor[0],
+                    linearColor[1],
+                    linearColor[2],
+                    intensity,
+                ];
+                if (action === "cast") {
+                    context.buffer[currentX][currentY].push(weightedLinearColor);
+                }
+                else if (action === "unCast") {
+                    context.buffer[currentX][currentY] = context.buffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                        Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                        Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                        Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+                }
+                return; // Terminate after processing the opaque entity
+            }
+        }
+        //end processing opaque entities
+        const weightedLinearColor = [
+            linearColor[0],
+            linearColor[1],
+            linearColor[2],
+            intensity,
+        ];
+        if (action === "cast") {
+            context.buffer[currentX][currentY].push(weightedLinearColor);
+        }
+        else if (action === "unCast") {
+            context.buffer[currentX][currentY] = context.buffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
+                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
+                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
+                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
+        }
+    }
+};
+exports.processLightRay = processLightRay;
+
+
+/***/ }),
+
 /***/ "./src/lighting/lightSource.ts":
 /*!*************************************!*\
   !*** ./src/lighting/lightSource.ts ***!
@@ -78173,7 +79098,7 @@ class PlayerActionProcessor {
                 if (!rt)
                     (0, spellDiagnostics_1.traceSpell)(this.player, "action-rejected", { reason: "missing-targeting", action });
                 // Note: spells defer room.tick to the SpellBeam onComplete callback (~245ms
-                // later via render loop). The outcome captured here is BEFORE that deferred
+                // later via simulation advancement). The outcome captured here is BEFORE that deferred
                 // tick fires — but it's identical between recording and replay because both
                 // capture at the same synchronous point. The deferred tick's effect surfaces
                 // in the NEXT action's outcome via catchUp, so any divergence there gets caught.
@@ -83759,6 +84684,8 @@ class Projectile extends drawable_1.Drawable {
         this.hitPlayer = (player) => { };
         this.hitEnemy = (enemy) => { };
         this.tick = () => { };
+        /** Advance continuous gameplay effects without requiring a renderer. Delta is in 60 Hz frames. */
+        this.advanceSimulation = (delta) => { };
         this.draw = (delta) => { };
         this.drawTopLayer = (delta) => { };
         this.globalId = IdGenerator_1.IdGenerator.generate("PROJ");
@@ -83807,18 +84734,33 @@ const beamEffect_1 = __webpack_require__(/*! ./beamEffect */ "./src/projectile/b
  *  - Ease-in (t²) reveal: starts slow, accelerates to full speed.
  *  - Tip gradient spans 1/5 of the currently-revealed arc length.
  *  - Tip width = 2.5× base, grading back via s² ease.
- *  - player.busyAnimating = true for the full duration.
+ *  - player.busyAnimating stays true until the spell arrives.
  */
 class SpellBeam extends beamEffect_1.BeamEffect {
     constructor(room, player, tx, ty, onComplete, castId) {
         super(player.x, player.y - 0.5, tx, ty, player);
         this.elapsed = 0;
         this.fired = false;
-        // Override draw: accumulate elapsed and advance physics only (no drawing yet).
+        // Gameplay time is owned by the simulation. Drawing may be skipped entirely.
+        this.advanceSimulation = (delta) => {
+            if (this.dead)
+                return;
+            if (!Number.isFinite(delta) || delta < 0)
+                throw new Error("Invalid simulation delta");
+            this.elapsed += delta;
+            const last = (this.points?.length ?? this.segments) - 1;
+            const revealCount = this.elapsed < SpellBeam.TOTAL_DURATION
+                ? Math.floor((this.elapsed / SpellBeam.TOTAL_DURATION) ** 2 * last)
+                : last;
+            if (!this.fired && revealCount >= Math.floor((2 / 3) * last))
+                this.fire();
+            if (this.elapsed >= SpellBeam.TOTAL_DURATION + SpellBeam.FADE_DURATION)
+                this.dead = true;
+        };
+        // Rope physics is visual only and does not determine spell arrival.
         this.draw = (delta) => {
             if (this.dead)
                 return;
-            this.elapsed += delta;
             this.drawableY = this.y - 0.01;
             // skipDrawing=true, simulate=true — run physics, no pixels.
             this.render(0, 0, 0, 0, this.color, SpellBeam.BASE_WIDTH, delta, this.compositeOperation, true, true);
@@ -83830,15 +84772,6 @@ class SpellBeam extends beamEffect_1.BeamEffect {
             const pts = this.points;
             if (!pts || pts.length < 2)
                 return;
-            // Fire callback when beam is 2/3 revealed (fireballs spawn before beam fully arrives).
-            if (!this.fired) {
-                const last = pts.length - 1;
-                const revealCount = this.elapsed < SpellBeam.TOTAL_DURATION
-                    ? Math.floor((this.elapsed / SpellBeam.TOTAL_DURATION) ** 2 * last)
-                    : last;
-                if (revealCount >= Math.floor((2 / 3) * last))
-                    this.fire();
-            }
             const ctx = game_1.Game.ctx;
             if (!ctx)
                 return;
@@ -83872,7 +84805,6 @@ class SpellBeam extends beamEffect_1.BeamEffect {
                 // — Fade phase: dissolve from player end → target end —
                 const fadeProg = Math.min(1, (this.elapsed - SpellBeam.TOTAL_DURATION) / SpellBeam.FADE_DURATION);
                 if (fadeProg >= 1) {
-                    this.dead = true;
                     return;
                 }
                 // Ease-out: erode from the player (start) side toward the target.
@@ -83907,20 +84839,18 @@ class SpellBeam extends beamEffect_1.BeamEffect {
     fire() {
         this.fired = true;
         (0, spellDiagnostics_1.traceSpell)(this.player, "beam-arrived", { beamId: this.diagnosticId, elapsed: this.elapsed });
-        setTimeout(() => {
-            this.player.busyAnimating = false;
-            (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
-            if (!this.player.dead) {
-                try {
-                    this.onComplete();
-                    (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
-                }
-                catch (error) {
-                    (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
-                    throw error;
-                }
+        this.player.busyAnimating = false;
+        (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
+        if (!this.player.dead) {
+            try {
+                this.onComplete();
+                (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
             }
-        }, 0);
+            catch (error) {
+                (0, spellDiagnostics_1.traceSpell)(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
+                throw error;
+            }
+        }
     }
     /**
      * Draw a range of segments from the simulated points using the same
@@ -84667,6 +85597,7 @@ exports.PropClusterer = PropClusterer;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Room = exports.WallDirection = exports.TurnState = exports.RoomType = exports.EnemyTypeMap = exports.EnemyType = void 0;
+const gameplayLighting_1 = __webpack_require__(/*! ../lighting/gameplayLighting */ "./src/lighting/gameplayLighting.ts");
 // #region imports
 const wall_1 = __webpack_require__(/*! ../tile/wall */ "./src/tile/wall.ts");
 const levelConstants_1 = __webpack_require__(/*! ../level/levelConstants */ "./src/level/levelConstants.ts");
@@ -85899,10 +86830,11 @@ class Room {
             //);
         };
         this.updateLighting = (source) => {
-            if (!this.onScreen)
+            // Gameplay in an occupied room cannot depend on zoom or camera position.
+            const occupied = Object.values(this.game.players).some(player => player.getRoom?.() === this);
+            if (!occupied && !this.onScreen)
                 return;
-            // If a specific source is provided, skip lighting update if it's off-screen with buffer
-            if (source) {
+            if (!occupied && source) {
                 const buffer = levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE;
                 if (!this.isTileOnScreen(source.x, source.y, buffer))
                     return;
@@ -85910,141 +86842,145 @@ class Room {
             if (this.isUpdatingLighting)
                 return;
             this.isUpdatingLighting = true;
-            const activeZ = this.getActiveZ();
-            // Invalidate cache when lighting is updated
-            this.invalidateBlurCache();
-            // Start timing the initial setup
-            //console.time("updateLighting: Initial Setup");
-            this.updateDoorLightSources();
-            let oldVis = [];
-            let oldCol = [];
-            for (let x = this.roomX; x < this.roomX + this.width; x++) {
-                oldVis[x] = [];
-                oldCol[x] = [];
-                for (let y = this.roomY; y < this.roomY + this.height; y++) {
-                    oldVis[x][y] = this.vis[x][y];
-                    oldCol[x][y] = this.col[x][y];
-                    this.vis[x][y] = 1;
-                    this.col[x][y] = [1, 1, 1];
-                    this.renderBuffer[x][y] = [];
-                }
-            }
-            // End timing the initial setup
-            //console.timeEnd("updateLighting: Initial Setup");
-            // Start timing the processing of light sources
-            //console.time("updateLighting: Process LightSources");
-            // Prune orphaned light sources. Allow a small neighborhood check so
-            // lights slightly offset from their owning tile (e.g., bottom-wall torches)
-            // are not removed incorrectly.
             try {
-                this.lightSources = this.lightSources.filter((ls) => {
-                    const lx = Math.floor(ls.x);
-                    const ly = Math.floor(ls.y);
-                    // quick in-bounds check
-                    if (lx < this.roomX - 1 ||
-                        lx > this.roomX + this.width ||
-                        ly < this.roomY - 1 ||
-                        ly > this.roomY + this.height)
+                const activeZ = this.getActiveZ();
+                // Invalidate cache when lighting is updated
+                this.invalidateBlurCache();
+                // Start timing the initial setup
+                //console.time("updateLighting: Initial Setup");
+                this.updateDoorLightSources();
+                let oldVis = [];
+                let oldCol = [];
+                for (let x = this.roomX; x < this.roomX + this.width; x++) {
+                    oldVis[x] = [];
+                    oldCol[x] = [];
+                    for (let y = this.roomY; y < this.roomY + this.height; y++) {
+                        oldVis[x][y] = this.vis[x][y];
+                        oldCol[x][y] = this.col[x][y];
+                        this.vis[x][y] = 1;
+                        this.col[x][y] = [1, 1, 1];
+                        this.renderBuffer[x][y] = [];
+                    }
+                }
+                // End timing the initial setup
+                //console.timeEnd("updateLighting: Initial Setup");
+                // Start timing the processing of light sources
+                //console.time("updateLighting: Process LightSources");
+                // Prune orphaned light sources. Allow a small neighborhood check so
+                // lights slightly offset from their owning tile (e.g., bottom-wall torches)
+                // are not removed incorrectly.
+                try {
+                    this.lightSources = this.lightSources.filter((ls) => {
+                        const lx = Math.floor(ls.x);
+                        const ly = Math.floor(ls.y);
+                        // quick in-bounds check
+                        if (lx < this.roomX - 1 ||
+                            lx > this.roomX + this.width ||
+                            ly < this.roomY - 1 ||
+                            ly > this.roomY + this.height)
+                            return false;
+                        // keep if any nearby tile exists
+                        for (let dx = -1; dx <= 1; dx++) {
+                            for (let dy = -1; dy <= 1; dy++) {
+                                if (this.roomArray[lx + dx]?.[ly + dy])
+                                    return true;
+                            }
+                        }
                         return false;
-                    // keep if any nearby tile exists
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dy = -1; dy <= 1; dy++) {
-                            if (this.roomArray[lx + dx]?.[ly + dy])
-                                return true;
+                    });
+                }
+                catch { }
+                // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
+                if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
+                    const set = new Set();
+                    for (const e of this.entities) {
+                        // Z: entities block light regardless of the light source's z-layer.
+                        // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
+                        if (e.opaque) {
+                            const w = Math.max(1, e.w || 1);
+                            const h = Math.max(1, e.h || 1);
+                            for (let dx = 0; dx < w; dx++) {
+                                for (let dy = 0; dy < h; dy++) {
+                                    set.add(`${e.x + dx},${e.y + dy}`);
+                                }
+                            }
                         }
                     }
-                    return false;
-                });
-            }
-            catch { }
-            // Build per-frame opaque entity set for fast membership when ENEMIES_BLOCK_LIGHT
-            if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT) {
-                const set = new Set();
-                for (const e of this.entities) {
-                    // Z: entities block light regardless of the light source's z-layer.
-                    // Lighting is still computed per active-z for tiles/players, but occluders apply across layers.
-                    if (e.opaque && this.isTileOnScreen(e.x, e.y, 7)) {
-                        const w = Math.max(1, e.w || 1);
-                        const h = Math.max(1, e.h || 1);
-                        for (let dx = 0; dx < w; dx++) {
-                            for (let dy = 0; dy < h; dy++) {
-                                set.add(`${e.x + dx},${e.y + dy}`);
+                    this.opaqueEntityPositions = set;
+                }
+                else {
+                    this.opaqueEntityPositions = undefined;
+                }
+                for (const l of this.lightSources) {
+                    if (l.shouldUpdate()) {
+                        for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
+                            this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, l.falloffDecay); // RGB color in sRGB
+                        }
+                    }
+                }
+                //console.timeEnd("updateLighting: Process LightSources");
+                //console.time("updateLighting: Process Players");
+                this.setLightingAngleStep();
+                let lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
+                for (const p in this.game.players) {
+                    let player = this.game.players[p];
+                    if (player.getRoom?.() === this) {
+                        if ((player?.z ?? 0) !== activeZ)
+                            continue;
+                        let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
+                        let lightBrightness = 5;
+                        if (player.lightEquipped) {
+                            lightColor = player.lightColor;
+                            lightBrightness = player.lightBrightness;
+                        }
+                        const playerFov = this.getPlayerLightingFov(player);
+                        const facingAngle = playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
+                            ? this.getPlayerFacingAngle(player)
+                            : null;
+                        if (playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
+                            facingAngle !== null) {
+                            this.castDirectionalPlayerLight(player, facingAngle, playerFov, lightingAngleStep, lightColor, lightBrightness, player.lightFalloffDecay);
+                        }
+                        else {
+                            for (let i = 0; i < 360; i += lightingAngleStep) {
+                                this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness *
+                                    levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, player.lightFalloffDecay);
                             }
                         }
                     }
                 }
-                this.opaqueEntityPositions = set;
-            }
-            else {
-                this.opaqueEntityPositions = undefined;
-            }
-            for (const l of this.lightSources) {
-                if (l.shouldUpdate()) {
-                    for (let i = 0; i < 360; i += levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP) {
-                        this.castTintAtAngle(i, l.x, l.y, l.r, l.c, l.b * levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, l.falloffDecay); // RGB color in sRGB
+                // End timing the processing of player lighting
+                //console.timeEnd("updateLighting: Process Players");
+                // Start timing the blending of colors
+                //console.time("updateLighting: Blend Colors Array");
+                const roomX = this.roomX;
+                const roomY = this.roomY;
+                const width = this.width;
+                const height = this.height;
+                const renderBuffer = this.renderBuffer;
+                for (let x = roomX; x < roomX + width; x++) {
+                    for (let y = roomY; y < roomY + height; y++) {
+                        this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
                     }
                 }
-            }
-            //console.timeEnd("updateLighting: Process LightSources");
-            //console.time("updateLighting: Process Players");
-            this.setLightingAngleStep();
-            let lightingAngleStep = levelConstants_1.LevelConstants.LIGHTING_ANGLE_STEP;
-            for (const p in this.game.players) {
-                let player = this.game.players[p];
-                if (player.getRoom?.() === this) {
-                    if ((player?.z ?? 0) !== activeZ)
-                        continue;
-                    let lightColor = levelConstants_1.LevelConstants.AMBIENT_LIGHT_COLOR;
-                    let lightBrightness = 5;
-                    if (player.lightEquipped) {
-                        lightColor = player.lightColor;
-                        lightBrightness = player.lightBrightness;
-                    }
-                    const playerFov = this.getPlayerLightingFov(player);
-                    const facingAngle = playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES
-                        ? this.getPlayerFacingAngle(player)
-                        : null;
-                    if (playerFov < gameConstants_1.GameConstants.DEFAULT_LIGHTING_FOV_DEGREES &&
-                        facingAngle !== null) {
-                        this.castDirectionalPlayerLight(player, facingAngle, playerFov, lightingAngleStep, lightColor, lightBrightness, player.lightFalloffDecay);
-                    }
-                    else {
-                        for (let i = 0; i < 360; i += lightingAngleStep) {
-                            this.castTintAtAngle(i, player.x + 0.5, player.y + 0.5, levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, lightColor, lightBrightness *
-                                levelConstants_1.LevelConstants.LIGHTING_ANGLE_BRIGHTNESS_COMPENSATION, player.lightFalloffDecay);
-                        }
+                // End timing the blending of colors
+                //console.timeEnd("updateLighting: Blend Colors Array");
+                // Start timing the conversion to luminance
+                //console.time("updateLighting: Convert to Luminance");
+                for (let x = roomX; x < roomX + width; x++) {
+                    for (let y = roomY; y < roomY + height; y++) {
+                        this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
                     }
                 }
+                // End timing the conversion to luminance
+                //console.timeEnd("updateLighting: Convert to Luminance");
+                this.updateDoorLightSources();
+                // Bump lighting update version so blur cache can detect changes
+                this.lastLightingUpdate++;
             }
-            // End timing the processing of player lighting
-            //console.timeEnd("updateLighting: Process Players");
-            // Start timing the blending of colors
-            //console.time("updateLighting: Blend Colors Array");
-            const roomX = this.roomX;
-            const roomY = this.roomY;
-            const width = this.width;
-            const height = this.height;
-            const renderBuffer = this.renderBuffer;
-            for (let x = roomX; x < roomX + width; x++) {
-                for (let y = roomY; y < roomY + height; y++) {
-                    this.col[x][y] = this.blendColorsArray(renderBuffer[x][y]);
-                }
+            finally {
+                this.isUpdatingLighting = false;
             }
-            // End timing the blending of colors
-            //console.timeEnd("updateLighting: Blend Colors Array");
-            // Start timing the conversion to luminance
-            //console.time("updateLighting: Convert to Luminance");
-            for (let x = roomX; x < roomX + width; x++) {
-                for (let y = roomY; y < roomY + height; y++) {
-                    this.vis[x][y] = this.rgbToLuminance(this.col[x][y]);
-                }
-            }
-            // End timing the conversion to luminance
-            //console.timeEnd("updateLighting: Convert to Luminance");
-            this.updateDoorLightSources();
-            // Bump lighting update version so blur cache can detect changes
-            this.lastLightingUpdate++;
-            this.isUpdatingLighting = false;
         };
         this.castDirectionalPlayerLight = (player, facingAngle, fovDegrees, angleStep, lightColor, lightBrightness, falloffDecay) => {
             const originX = player.x + 0.5;
@@ -86154,124 +87090,14 @@ class Room {
             this.col = this.oldCol;
             this.vis = this.oldVis;
         };
-        /**
-         * Casts or uncategorizes a tint from a light source at a specific angle.
-         *
-         * @param angle - The angle in degrees at which to cast or uncast the tint.
-         * @param px - The x-coordinate of the light source.
-         * @param py - The y-coordinate of the light source.
-         * @param radius - The radius of the light's influence.
-         * @param color - The RGB color tuple representing the tint.
-         * @param brightness - The brightness of the light source.
-         * @param action - 'cast' to add tint, 'unCast' to remove tint.
-         */
         this.processTintAtAngle = (angle, px, py, radius, color, brightness, falloffDecay = 1, action = "cast") => {
-            // A light source with zero (or negative) radius casts no light at all,
-            // not even at its own origin tile.
-            if (radius <= 0)
-                return;
-            const dx = Math.cos((angle * Math.PI) / 180);
-            const dy = Math.sin((angle * Math.PI) / 180);
-            // Lighting is currently computed for the local active z-layer only.
-            const activeZ = this.getActiveZ();
-            // Convert input color from sRGB to linear RGB
-            const linearColor = [
-                this.sRGBToLinear(color[0]),
-                this.sRGBToLinear(color[1]),
-                this.sRGBToLinear(color[2]),
-            ];
-            for (let i = 0; i <= Math.min(levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE, radius); i++) {
-                const currentX = Math.floor(px + dx * i);
-                const currentY = Math.floor(py + dy * i);
-                if (!this.isPositionInRoom(currentX, currentY))
-                    return; // Outside the room
-                // Z-aware tile lookup for lighting blockers:
-                // - Default: tiles are shared across layers
-                // - Z_DEBUG_MODE: use the z=1 override tile map (Floor/Air) when activeZ === 1
-                let tile = this.roomArray[currentX][currentY];
-                if (gameConstants_1.GameConstants.Z_DEBUG_MODE && activeZ === 1 && this.zDebugZ1Tiles) {
-                    const override = this.zDebugZ1Tiles.get(this.zKey(currentX, currentY));
-                    if (override)
-                        tile = override;
-                }
-                // Handle i=0 separately to ensure correct intensity
-                let intensity;
-                // Exponential falloff with origin boost preserved
-                if (i === 0) {
-                    intensity = brightness * 0.1;
-                }
-                else {
-                    intensity = brightness * Math.exp(-falloffDecay * (i - 0.25));
-                }
-                if (intensity < 0.005)
-                    intensity = 0;
-                if (intensity <= 0)
-                    continue;
-                if (!this.renderBuffer[currentX]) {
-                    this.renderBuffer[currentX] = [];
-                }
-                if (!this.renderBuffer[currentX][currentY]) {
-                    this.renderBuffer[currentX][currentY] = [];
-                }
-                // Inner walls block light explicitly and terminate the ray
-                if (tile instanceof wall_1.Wall && tile.isInnerWall()) {
-                    const weightedLinearColor = [
-                        linearColor[0],
-                        linearColor[1],
-                        linearColor[2],
-                        intensity,
-                    ];
-                    if (action === "cast") {
-                        this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-                    }
-                    else if (action === "unCast") {
-                        this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                            Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                            Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                            Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
-                    }
-                    return; // Terminate after processing the opaque wall
-                }
-                if (gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions) {
-                    // O(1) membership check instead of scanning entities
-                    if (this.opaqueEntityPositions.has(`${currentX},${currentY}`)) {
-                        //intensity = intensity * (1 - entity.opacity);
-                        // Set the intensity for this tile and then terminate to create shadow effect
-                        const weightedLinearColor = [
-                            linearColor[0],
-                            linearColor[1],
-                            linearColor[2],
-                            intensity,
-                        ];
-                        if (action === "cast") {
-                            this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-                        }
-                        else if (action === "unCast") {
-                            this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                                Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                                Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                                Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
-                        }
-                        return; // Terminate after processing the opaque entity
-                    }
-                }
-                //end processing opaque entities
-                const weightedLinearColor = [
-                    linearColor[0],
-                    linearColor[1],
-                    linearColor[2],
-                    intensity,
-                ];
-                if (action === "cast") {
-                    this.renderBuffer[currentX][currentY].push(weightedLinearColor);
-                }
-                else if (action === "unCast") {
-                    this.renderBuffer[currentX][currentY] = this.renderBuffer[currentX][currentY].filter((colorEntry) => !(Math.abs(colorEntry[0] - weightedLinearColor[0]) < 0.0001 &&
-                        Math.abs(colorEntry[1] - weightedLinearColor[1]) < 0.0001 &&
-                        Math.abs(colorEntry[2] - weightedLinearColor[2]) < 0.0001 &&
-                        Math.abs(colorEntry[3] - weightedLinearColor[3]) < 0.0001));
-                }
-            }
+            (0, gameplayLighting_1.processLightRay)({
+                buffer: this.renderBuffer,
+                maxDistance: levelConstants_1.LevelConstants.LIGHTING_MAX_DISTANCE,
+                isPositionInRoom: (x, y) => this.isPositionInRoom(x, y),
+                isInnerWall: (x, y) => this.isGameplayLightWall(x, y),
+                opaqueEntityPositions: gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT ? this.opaqueEntityPositions : undefined,
+            }, angle, px, py, radius, color, brightness, falloffDecay, action);
         };
         /**
          * Casts a tint from a light source at a specific angle.
@@ -86300,23 +87126,6 @@ class Room {
             this.processTintAtAngle(angle, px, py, radius, color, brightness / 3, // added this
             falloffDecay, "unCast");
         };
-        this.sRGBToLinear = (value) => {
-            const normalized = value / 255;
-            if (normalized <= 0.04045) {
-                return normalized / 12.92;
-            }
-            else {
-                return Math.pow((normalized + 0.055) / 1.055, 2.2);
-            }
-        };
-        this.linearToSRGB = (value) => {
-            if (value <= 0.0031308) {
-                return Math.round(12.92 * value * 255);
-            }
-            else {
-                return Math.round((1.055 * Math.pow(value, 1 / 2.2 /*gamma*/) - 0.055) * 255);
-            }
-        };
         this.clamp = (value, min = 0, max = 1) => {
             return Math.min(Math.max(value, min), max);
         };
@@ -86339,39 +87148,8 @@ class Room {
          * @param colors - An array of RGB tuples to blend.
          * @returns A single RGB tuple representing the blended color.
          */
-        this.blendColorsArray = (colors) => {
-            if (colors.length === 0)
-                return [0, 0, 0];
-            // Sum all color channels in linear RGB
-            const sum = colors.reduce((accumulator, color) => [
-                accumulator[0] + color[0] * color[3],
-                accumulator[1] + color[1] * color[3],
-                accumulator[2] + color[2] * color[3],
-            ], [0, 0, 0]);
-            // Apply scaling factor to manage overall brightness
-            const scalingFactor = 0.45 * 2.5; // Adjust as needed
-            const scaledSum = [
-                sum[0] * scalingFactor,
-                sum[1] * scalingFactor,
-                sum[2] * scalingFactor,
-            ];
-            // Clamp each channel to [0, 1] to prevent overflow
-            const clampedSum = [
-                this.clamp(scaledSum[0], 0, 1),
-                this.clamp(scaledSum[1], 0, 1),
-                this.clamp(scaledSum[2], 0, 1),
-            ];
-            // Convert back to sRGB
-            return [
-                this.linearToSRGB(clampedSum[0]),
-                this.linearToSRGB(clampedSum[1]),
-                this.linearToSRGB(clampedSum[2]),
-            ];
-        };
-        this.rgbToLuminance = (color) => {
-            //map to 1-0 range
-            return 1 - (0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2]) / 255;
-        };
+        this.blendColorsArray = gameplayLighting_1.blendColorsArray;
+        this.rgbToLuminance = gameplayLighting_1.rgbToLuminance;
         this.draw = (delta) => {
             if (!this.onScreen)
                 return;
@@ -89201,6 +89979,37 @@ class Room {
         if (this.isWithinEnemyInteractionRange(enemy.x, enemy.y))
             return true;
         return enemy.seenPlayer || enemy.aggro || enemy.heardPlayer;
+    }
+    /**
+     * Casts or uncategorizes a tint from a light source at a specific angle.
+     *
+     * @param angle - The angle in degrees at which to cast or uncast the tint.
+     * @param px - The x-coordinate of the light source.
+     * @param py - The y-coordinate of the light source.
+     * @param radius - The radius of the light's influence.
+     * @param color - The RGB color tuple representing the tint.
+     * @param brightness - The brightness of the light source.
+     * @param action - 'cast' to add tint, 'unCast' to remove tint.
+     */
+    /** Same tile occlusion rule used by gameplay rays, exposed without rendering. */
+    getGameplayLightTile(x, y) {
+        if (!this.isPositionInRoom(x, y))
+            return undefined;
+        let tile = this.roomArray[x]?.[y];
+        if (gameConstants_1.GameConstants.Z_DEBUG_MODE && this.getActiveZ() === 1 && this.zDebugZ1Tiles) {
+            tile = this.zDebugZ1Tiles.get(this.zKey(x, y)) ?? tile;
+        }
+        return tile;
+    }
+    isGameplayLightWall(x, y) {
+        if (!this.isPositionInRoom(x, y))
+            return true;
+        const tile = this.getGameplayLightTile(x, y);
+        return tile instanceof wall_1.Wall && tile.isInnerWall();
+    }
+    isGameplaySightBlocked(x, y) {
+        return this.isGameplayLightWall(x, y) ||
+            !!(gameConstants_1.GameConstants.ENEMIES_BLOCK_LIGHT && this.opaqueEntityPositions?.has(`${x},${y}`));
     }
     /**
      * Applies Gaussian blur to the specified offscreen canvas.
@@ -99034,6 +99843,11 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 				}
 /******/ 			}
 /******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/getFullHash */
+/******/ 	(() => {
+/******/ 		__webpack_require__.h = () => ("5e2e66eb493f522aca8a")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -1,0 +1,375 @@
+import { DEFAULT_AGENT_VISION, validateAgentVision, perceiveRoom, AgentVision } from "./agentPerception";
+import type { Game } from "../game";
+import { Direction } from "../game";
+import { TurnState } from "../room/room";
+import { DownLadder } from "../tile/downLadder";
+import { isActionReady } from "./actionReadiness";
+import { GameConstants } from "./gameConstants";
+import { GameplaySettings } from "./gameplaySettings";
+import { getAgentContract, checkAgentCompatibility, AgentContract } from "./agentContract";
+import { observeEntity, observeItem, observeWarnings } from "./agentTraits";
+import type { GameAction } from "../player/playerAction";
+
+export type AgentAction =
+  | { type: "Move"; direction: "up" | "down" | "left" | "right" }
+  | Extract<GameAction, {type: "UseItem" | "UseItemOn" | "MoveItem" | "DropItem"}>
+  | { type: "SelectOption"; index: number }
+  | { type: "Wait" }
+  | { type: "LadderConfirm" }
+  | { type: "LadderCancel" };
+
+const directions = {
+  up: [Direction.UP, 0, -1], down: [Direction.DOWN, 0, 1],
+  left: [Direction.LEFT, -1, 0], right: [Direction.RIGHT, 1, 0],
+};
+
+class AgentActionError extends Error {}
+
+interface TacticalFrame {
+  roomId: string;
+  player: { x: number; y: number; z: number; health: number; mana: number; turnCount: number };
+  entities: ReturnType<typeof observeEntity>[];
+  warnings: ReturnType<typeof observeWarnings>;
+}
+
+interface AgentTransition {
+  step: number;
+  action: AgentAction;
+  recorded: boolean;
+  before: TacticalFrame;
+  after: TacticalFrame;
+}
+
+/** Browser-backed v1. Uses real gameplay; it is not yet a deterministic Node simulator. */
+export class AgentEnvironment {
+  private vision: AgentVision = {...DEFAULT_AGENT_VISION};
+  private scenario: "standard" | "forest" | "cave" = "standard";
+  private busy = false;
+  private seed: number | null = null;
+  private steps = 0;
+  private maxSteps = 1000;
+  private failure: string | null = null;
+  private recentTransitions: AgentTransition[] = [];
+
+  constructor(private game: Game, private timeoutMs = 15000) {}
+
+  private player() { return this.game.players[this.game.localPlayerID]; }
+
+  contract() { return getAgentContract(); }
+  checkCompatibility(trainedOn: Partial<AgentContract> | null) {
+    return checkAgentCompatibility(trainedOn);
+  }
+
+  private tacticalFrame(): TacticalFrame {
+    const player = this.player();
+    const room = player.getRoom();
+    return {
+      roomId: room.globalId,
+      player: {x: player.x, y: player.y, z: player.z, health: player.health,
+        mana: player.mana, turnCount: player.turnCount},
+      entities: room.entities.filter(entity => !entity.dead).map(observeEntity),
+      warnings: observeWarnings(room.hitwarnings),
+    };
+  }
+
+  private ready(): boolean {
+    const player = this.player();
+    return !!player && isActionReady(this.game) && !this.game.paused &&
+      !player.busyAnimating && !this.game.cameraAnimation?.active &&
+      !player.isPushMoveInputLocked?.() &&
+      player.getRoom().turn === TurnState.playerTurn &&
+      (player.dead || player.movement.canMove());
+  }
+
+  private async settle(): Promise<void> {
+    const deadline = performance.now() + this.timeoutMs;
+    while (!this.ready()) {
+      if (performance.now() >= deadline) throw new Error("Agent step timed out; reload the agent tab before continuing");
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+
+  private async exclusive<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.busy) throw new Error("Another agent operation is in progress");
+    if (this.failure) throw new Error(this.failure);
+    this.busy = true;
+    try { return await operation(); }
+    catch (error) {
+      if (!(error instanceof AgentActionError)) this.failure = String(error);
+      throw error;
+    } finally { this.busy = false; }
+  }
+
+  async reset(seed: number, options: { maxSteps?: number; vision?: AgentVision; scenario?: "standard" | "forest" | "cave" } = {}) {
+    if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+      throw new Error("Seed must be an unsigned 32-bit integer");
+    }
+    const scenario = options.scenario ?? "standard";
+    if (!["standard", "forest", "cave"].includes(scenario)) throw new Error("Unsupported diagnostic scenario");
+    const vision = validateAgentVision(options.vision ?? DEFAULT_AGENT_VISION);
+    const maxSteps = options.maxSteps ?? 1000;
+    if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > 100000) {
+      throw new Error("maxSteps must be an integer from 1 to 100000");
+    }
+    return this.exclusive(async () => {
+      // Finish the previous world's callbacks before replacing it.
+      await this.settle();
+      this.game.replayManager.cancelReplay();
+      this.game.newGame(seed);
+      await this.settle();
+      if (scenario !== "standard") this.game.startLightingSandbox(scenario, seed);
+      this.scenario = scenario;
+      this.game.started = true;
+      this.game.startedFadeOut = true;
+      this.game.startMenuActive = false;
+      this.game.startMenu?.close();
+      this.seed = seed;
+      this.steps = 0;
+      this.recentTransitions = [];
+      this.maxSteps = maxSteps;
+      this.vision = vision;
+      await this.settle();
+      if (scenario !== "standard") {
+        const player = this.player();
+        if (player.screenMessage.open && player.getRoom().roomArray[player.x]?.[player.y] instanceof DownLadder) {
+          player.actionProcessor.process({type: "LadderConfirm"});
+          await this.settle();
+        }
+      }
+      return { ...this.observe(), ready: true, canExtendBudget: true };
+    });
+  }
+
+  /** Runner budget only: never advances simulation or discards an unfinished turn. */
+  extendBudget(additionalSteps: number) {
+    if (!Number.isSafeInteger(additionalSteps) || additionalSteps < 1 ||
+      !Number.isSafeInteger(this.maxSteps + additionalSteps)) {
+      throw new Error("additionalSteps must be a positive safe integer within the total budget range");
+    }
+    if (this.busy) throw new Error("Another agent operation is in progress");
+    if (this.failure) throw new Error(this.failure);
+    if (this.seed === null) throw new Error("Call reset(seed) first");
+    if (this.player()?.dead) throw new Error("Episode ended; call reset(seed)");
+    this.maxSteps += additionalSteps;
+    return this.observe();
+  }
+
+  private budgetStatus() {
+    const exhausted = this.steps >= this.maxSteps;
+    return {
+      truncationReason: this.failure ? "failure" : exhausted ? "action-budget" : null,
+      canExtendBudget: this.seed !== null && !this.busy && !this.failure && !this.player()?.dead,
+    };
+  }
+
+  /** Unknown costs stay unknown: a directional input may walk, attack, or interact. */
+  describeAction(action: AgentAction) {
+    const items = this.player().inventory.items;
+    let turnCost: number | null = null;
+    if (action.type === "Wait") turnCost = 1;
+    if (action.type === "MoveItem") turnCost = 0;
+    if (action.type === "UseItem") turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
+    if (action.type === "UseItemOn") turnCost = items[action.fromSlot]?.getUseOnTurnCost?.(items[action.toSlot]) ?? null;
+    if (action.type === "SelectOption") turnCost = this.player().menu?.getSelectionChoices()?.[action.index]?.turnCost ?? null;
+    return {turnCost, basis: turnCost === null ? "depends-on-resolution" : "gameplay-rule"};
+  }
+
+  /** Restricted current perception. Never includes diagnostic history or unseen room contents. */
+  perceive(vision: AgentVision = this.vision) {
+    vision = validateAgentVision(vision);
+    if (this.busy) throw new Error("Wait for the current operation before perceiving");
+    const observation = this.observe();
+    const room = this.player().getRoom();
+    const perceived = perceiveRoom({
+      player: observation.player, tiles: observation.room.tiles.map(tile => ({
+        ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
+        solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
+        isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
+        exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder,
+      })),
+      entities: observation.room.entities,
+      items: room.items.map(item => ({...observeItem(item), z: item.z})),
+      warnings: observation.room.hitWarnings,
+      brightness: (x, y) => {
+        const darkness = room.vis[x]?.[y];
+        return typeof darkness === "number" && Number.isFinite(darkness)
+          ? Math.max(0, Math.min(1, 1-darkness)) : 0;
+      },
+      blocked: (x, y) => room.isGameplaySightBlocked(x, y),
+    }, vision);
+    return {
+      schemaVersion: 3, observationMode: "player-perception", vision: {...vision},
+      contract: {...this.contract(), observationSchemaVersion: 3, observationMode: "player-perception"},
+      ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
+      player: observation.player, inventory: observation.inventory,
+      decision: observation.decision, selectionChoices: observation.selectionChoices,
+      room: {id: room.globalId, ...perceived},
+    };
+  }
+
+  /** Explicit lab measurement, not a policy observation or step. */
+  inspectLighting(iterations = 20) {
+    if (!Number.isInteger(iterations) || iterations < 1 || iterations > 50) throw new Error("iterations must be 1..50");
+    if (this.busy || !this.ready() || this.seed === null) throw new Error("Wait for a ready initialized run");
+    const room = this.player().getRoom();
+    const samples: number[] = [];
+    for (let i = 0; i < iterations + 3; i++) {
+      const start = performance.now();
+      room.updateLighting();
+      const elapsed = performance.now() - start;
+      if (i >= 3) samples.push(elapsed);
+    }
+    samples.sort((a,b) => a-b);
+    const start = performance.now();
+    const perception = this.perceive();
+    const perceptionMs = performance.now()-start;
+    const observation = this.observe();
+    const tiles = observation.room.tiles.map(tile => ({...tile,
+      color: [...(room.col[tile.x]?.[tile.y] ?? [0,0,0])],
+      brightness: 1-(room.vis[tile.x]?.[tile.y] ?? 1),
+      blocked: room.isGameplaySightBlocked(tile.x,tile.y),
+    }));
+    return {
+      source: "lighting-diagnostic", scenario: this.scenario, seed: this.seed,
+      buildId: this.contract().buildId,
+      room: {width: room.width, height: room.height, sources: room.lightSources.length,
+        entities: room.entities.length, tiles},
+      milliseconds: {iterations, median: samples[Math.floor(samples.length/2)],
+        p95: samples[Math.ceil(samples.length*.95)-1], max: samples[samples.length-1], perception: perceptionMs},
+      player: observation.player, perception,
+      thresholdSweep: [0.04, 0.08, 0.16].map(identificationBrightness => {
+        const view = this.perceive({...this.vision, identificationBrightness});
+        return {identificationBrightness,
+          identified: view.room.entities.filter(e => e.appearance === "identified").length,
+          anonymous: view.room.entities.filter(e => e.appearance === "unidentified").length,
+          warnings: view.room.hitWarnings.length};
+      }),
+    };
+  }
+
+  observe() {
+    const player = this.player();
+    if (!player) throw new Error("Game is still initializing");
+    const room = player.getRoom();
+    const tiles: { x: number; y: number; kind: string }[] = [];
+    for (let x = room.roomX; x < room.roomX + room.width; x++) {
+      for (let y = room.roomY; y < room.roomY + room.height; y++) {
+        const tile = room.roomArray[x]?.[y];
+        if (tile) tiles.push({ x, y, kind: tile.constructor.name });
+      }
+    }
+    const ladderChoice = player.screenMessage.open &&
+      room.roomArray[player.x]?.[player.y] instanceof DownLadder;
+    return {
+      schemaVersion: 4, contract: this.contract(),
+      backend: "browser", observationMode: "diagnostic-current-room",
+      seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+      ...this.budgetStatus(),
+      initialized: this.seed !== null,
+      ready: this.seed !== null && !this.busy && !player.dead &&
+        this.steps < this.maxSteps && !this.failure && this.ready(),
+      terminated: player.dead, truncated: this.steps >= this.maxSteps || this.failure !== null,
+      failure: this.failure, developerMode: GameConstants.DEVELOPER_MODE,
+      player: { x: player.x, y: player.y, z: player.z, health: player.health,
+        maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
+        turnCount: player.turnCount },
+      room: { id: room.globalId, depth: room.depth, x: room.roomX, y: room.roomY,
+        width: room.width, height: room.height, tiles,
+        entities: room.entities.filter(entity => !entity.dead).map(observeEntity),
+        items: room.items.map(observeItem),
+        hitWarnings: observeWarnings(room.hitwarnings),
+      },
+      inventory: player.inventory.items.map((item, slot) => item ? {
+        ...observeItem(item), slot,
+        equipped: (item as unknown as {equipped?: boolean}).equipped === true,
+        activeWeapon: item === player.inventory.weapon,
+      } : null),
+      selectionChoices: player.menu?.getSelectionChoices() ?? null,
+      // Bounded history supports temporal policies; it is not online model learning.
+      recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)) as AgentTransition[],
+      decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "unsupported-modal") :
+        player.openVendingMachine?.open || player.contextMenu?.open ? "unsupported-modal" :
+        player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
+    };
+  }
+
+  async step(input: AgentAction) {
+    // Validate the external action before taking ownership of the episode.
+    if (!input || typeof input !== "object" ||
+      !["Move", "Wait", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+      ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
+      ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
+      ((input.type === "UseItemOn" || input.type === "MoveItem") &&
+        (!Number.isInteger(input.fromSlot) || !Number.isInteger(input.toSlot) || input.fromSlot < 0 || input.toSlot < 0)) ||
+      (input.type === "SelectOption" && (!Number.isInteger(input.index) || input.index < 0)) ||
+      (input.type === "Move" && !Object.prototype.hasOwnProperty.call(directions, input.direction))) {
+      throw new Error("Unsupported agent action");
+    }
+    const actionInput = { ...input };
+    if (this.seed === null) throw new Error("Call reset(seed) first");
+    if (this.player()?.dead) throw new Error("Episode ended; call reset(seed)");
+    if (this.steps >= this.maxSteps) throw new Error("Action budget exhausted; call extendBudget(additionalSteps) to continue this run");
+    return this.exclusive(async () => {
+      await this.settle();
+      const before = this.observe();
+      const beforeFrame = this.tacticalFrame();
+      const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
+      if (before.decision === "unsupported-modal" ||
+        (before.decision === "ladder") !== ladderAction ||
+        (before.decision === "selection") !== (actionInput.type === "SelectOption")) {
+        throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
+      }
+      const player = this.player();
+      const items = player.inventory.items;
+      if ("slotIndex" in actionInput && !items[actionInput.slotIndex]) {
+        throw new AgentActionError("Inventory slot is empty or out of bounds");
+      }
+      if ("fromSlot" in actionInput && (!items[actionInput.fromSlot] || actionInput.toSlot >= items.length ||
+        (actionInput.type === "UseItemOn" && (!items[actionInput.toSlot] ||
+          !(items[actionInput.fromSlot] as unknown as {canUseOnOther?: boolean}).canUseOnOther)))) {
+        throw new AgentActionError("Invalid inventory source or target");
+      }
+      if (actionInput.type === "UseItem" && (items[actionInput.slotIndex] as unknown as {canUseOnOther?: boolean}).canUseOnOther) {
+        throw new AgentActionError("This item needs a target; use UseItemOn");
+      }
+      let action: GameAction | null = null;
+      if (actionInput.type === "Move") {
+        const [direction, dx, dy] = directions[actionInput.direction];
+        action = { type: "Directional", direction, targetX: player.x + dx, targetY: player.y + dy };
+      } else if (actionInput.type !== "SelectOption") action = actionInput;
+      const prediction = this.describeAction(actionInput);
+      const count = this.game.replayManager.getStats().count;
+      if (actionInput.type === "SelectOption") {
+        if (!player.menu.selectChoice(actionInput.index)) throw new AgentActionError("Selection is disabled or unavailable");
+      } else player.actionProcessor.process(action!);
+      this.steps++;
+      await this.settle();
+      const recorded = this.game.replayManager.getStats().count > count;
+      this.recentTransitions.push({ step: this.steps, action: actionInput, recorded,
+        before: beforeFrame, after: this.tacticalFrame() });
+      if (this.recentTransitions.length > 8) this.recentTransitions.shift();
+      const observation = this.observe();
+      return { observation: { ...observation, canExtendBudget: !observation.terminated && !this.failure, ready: !observation.terminated && !observation.truncated },
+        terminated: observation.terminated, truncated: observation.truncated,
+        info: { recorded, predictedTurnCost: prediction.turnCost,
+          turnDelta: observation.player.turnCount - before.player.turnCount } };
+    });
+  }
+
+  exportReplay() {
+    if (this.busy) throw new Error("Wait for the current operation before exporting");
+    return JSON.parse(JSON.stringify({ schemaVersion: 2, contract: this.contract(), source: "agent-browser",
+      gameVersion: GameConstants.VERSION, observationMode: "diagnostic-current-room",
+      developerMode: GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
+      diagnosticSandbox: this.scenario !== "standard",
+      settings: { ...GameplaySettings },
+      vision: {...this.vision},
+      timing: { animationSpeed: GameConstants.ANIMATION_SPEED,
+        slowInputsNearEnemies: GameConstants.SLOW_INPUTS_NEAR_ENEMIES },
+      steps: this.steps, maxSteps: this.maxSteps, terminated: this.player()?.dead ?? false,
+      truncated: this.steps >= this.maxSteps || this.failure !== null,
+      ...this.budgetStatus(),
+      failure: this.failure, recentTransitions: this.recentTransitions,
+      replay: this.game.replayManager.serialize() }));
+  }
+}

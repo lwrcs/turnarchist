@@ -51,6 +51,8 @@ export class Projectile extends Drawable {
   hitEnemy = (enemy: Entity) => {};
 
   tick = () => {};
+  /** Advance continuous gameplay effects without requiring a renderer. Delta is in 60 Hz frames. */
+  advanceSimulation = (delta: number) => {};
   draw = (delta: number) => {};
   drawTopLayer = (delta: number) => {};
 }

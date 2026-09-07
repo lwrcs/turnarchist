@@ -57,7 +57,7 @@ export const applyIronSmithRecipe = (
   recipe: string,
 ): boolean => {
   const def = (IRON_SMITH_RECIPES as Record<string, IronSmithRecipeDef>)[recipe];
-  if (!def) return false;
+  if (!Object.prototype.hasOwnProperty.call(IRON_SMITH_RECIPES, recipe)) return false;
   const bar = player.inventory.hasItem(IronBar);
   if (!bar) return false;
   if ((bar.stackCount ?? 0) < def.cost) return false;
@@ -97,6 +97,7 @@ export class IronBar extends Item {
       labelPrefix: string,
     ) => ({
       label: `${labelPrefix} ${barsLabel(IRON_SMITH_RECIPES[recipe].cost)}`,
+      turnCost: 0,
       enabled: bars >= IRON_SMITH_RECIPES[recipe].cost,
       onSelect: () =>
         player.actionProcessor.process({ type: "SmithRecipe", recipe }),

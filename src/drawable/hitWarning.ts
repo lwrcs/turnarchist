@@ -1,3 +1,4 @@
+import { isWarningVisibleAboveShade } from "./warningVisibility";
 import { Game } from "../game";
 import { Drawable } from "./drawable";
 import { Room } from "../room/room";
@@ -328,6 +329,9 @@ export class HitWarning extends Drawable {
 
   drawTopLayer = (delta: number) => {
     this.fadeHitwarnings(delta);
+    const observer = this.game.players[this.game.localPlayerID];
+    if (!isWarningVisibleAboveShade({x: this.x, y: this.y, hostile: !!this.isEnemy, directionOnly: !!this.dirOnly},
+      observer.x-observer.drawX, observer.y-observer.drawY)) return;
 
     const baseAlpha = Game.ctx.globalAlpha;
     Game.ctx.globalAlpha = baseAlpha * this.alpha;

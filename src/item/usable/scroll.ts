@@ -21,6 +21,8 @@ export class Scroll extends Usable {
     this.description = `A scroll containing the ${spell.name} spell pattern.`;
   }
 
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     const book = player.inventory.items.find(
       (i) => i instanceof Spellbook,

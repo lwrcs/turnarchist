@@ -37,6 +37,10 @@ export class Hammer extends Usable {
     //this.level.items = this.level.items.filter((x) => x !== this); // removes itself from the level
   };
 
+  getUseOnTurnCost = (other: Item): number | null =>
+    other instanceof IronOre || other instanceof IronBar ||
+    other instanceof GoldOre || other instanceof GoldBar ? 0 : null;
+
   useOnOther = (player: Player, other: Item) => {
     if (other instanceof Weapon && other.name !== "dagger") {
       other.disassemble();

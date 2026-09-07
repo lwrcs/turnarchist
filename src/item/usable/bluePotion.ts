@@ -15,6 +15,8 @@ export class BluePotion extends Usable {
     this.stackable = true;
   }
 
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     // Mana is derived from spellbook cooldown. This potion reduces that cooldown.
     const spellbooks: Spellbook[] = [];

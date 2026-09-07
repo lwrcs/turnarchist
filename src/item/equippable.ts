@@ -32,6 +32,10 @@ export class Equippable extends Item {
   onEquip = () => {};
   onUnequip = () => {};
 
+  getUseTurnCost = (): number =>
+    GameplaySettings.EQUIP_USES_TURN && !this.equipped &&
+      ((!this.broken && this.cooldown <= 0) || this.isShield) ? 1 : 0;
+
   toggleEquip = () => {
     if ((!this.broken && this.cooldown <= 0) || this.isShield) {
       if (!this.equipped && this.wielder?.inventory?.weapon) {

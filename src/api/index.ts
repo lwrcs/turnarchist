@@ -1,4 +1,5 @@
 import axios from "axios";
+import { AGENT_MODE } from "../game/agentMode";
 import type { GameStats as GameStatsType } from "@server/http/schema";
 import { getEnvironmentApiUrl } from "./utils";
 import { v4 as uuidv4 } from "uuid";
@@ -14,6 +15,7 @@ export const apiClient = axios.create({
 type GameStats = Required<GameStatsType>;
 
 export const recordGameStats = async (gameStats: GameStats) => {
+  if (AGENT_MODE) return;
   const response = await apiClient.post("/game/stats", gameStats);
   return response.data;
 };

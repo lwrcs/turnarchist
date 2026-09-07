@@ -20,6 +20,8 @@ export class Fish extends Usable {
     //this.animateToInventory = true;
   }
 
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
       player.health = Math.min(player.maxHealth, player.health + 1);

@@ -13,6 +13,9 @@ export class Dagger extends Weapon {
     this.description = "A basic but dependable weapon.";
   }
 
+  /** executeAttack advances the room once when a hit resolves. */
+  getSuccessfulAttackTurnCost = (): number => 1;
+
   weaponMove = (newX: number, newY: number): boolean => {
     if (this.checkForPushables(newX, newY)) return true;
 

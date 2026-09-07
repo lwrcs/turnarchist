@@ -17,7 +17,7 @@ import { BeamEffect } from "./beamEffect";
  *  - Ease-in (t²) reveal: starts slow, accelerates to full speed.
  *  - Tip gradient spans 1/5 of the currently-revealed arc length.
  *  - Tip width = 2.5× base, grading back via s² ease.
- *  - player.busyAnimating = true for the full duration.
+ *  - player.busyAnimating stays true until the spell arrives.
  */
 export class SpellBeam extends BeamEffect {
   private elapsed: number = 0;
@@ -69,10 +69,22 @@ export class SpellBeam extends BeamEffect {
     player.busyAnimating = true;
   }
 
-  // Override draw: accumulate elapsed and advance physics only (no drawing yet).
+  // Gameplay time is owned by the simulation. Drawing may be skipped entirely.
+  advanceSimulation = (delta: number) => {
+    if (this.dead) return;
+    if (!Number.isFinite(delta) || delta < 0) throw new Error("Invalid simulation delta");
+    this.elapsed += delta;
+    const last = (this.points?.length ?? this.segments) - 1;
+    const revealCount = this.elapsed < SpellBeam.TOTAL_DURATION
+      ? Math.floor((this.elapsed / SpellBeam.TOTAL_DURATION) ** 2 * last)
+      : last;
+    if (!this.fired && revealCount >= Math.floor((2 / 3) * last)) this.fire();
+    if (this.elapsed >= SpellBeam.TOTAL_DURATION + SpellBeam.FADE_DURATION) this.dead = true;
+  };
+
+  // Rope physics is visual only and does not determine spell arrival.
   draw = (delta: number) => {
     if (this.dead) return;
-    this.elapsed += delta;
     this.drawableY = this.y - 0.01;
     // skipDrawing=true, simulate=true — run physics, no pixels.
     this.render(0, 0, 0, 0, this.color, SpellBeam.BASE_WIDTH, delta, this.compositeOperation, true, true);
@@ -84,15 +96,6 @@ export class SpellBeam extends BeamEffect {
 
     const pts = this.points;
     if (!pts || pts.length < 2) return;
-
-    // Fire callback when beam is 2/3 revealed (fireballs spawn before beam fully arrives).
-    if (!this.fired) {
-      const last = pts.length - 1;
-      const revealCount = this.elapsed < SpellBeam.TOTAL_DURATION
-        ? Math.floor((this.elapsed / SpellBeam.TOTAL_DURATION) ** 2 * last)
-        : last;
-      if (revealCount >= Math.floor((2 / 3) * last)) this.fire();
-    }
 
     const ctx = (Game as any).ctx as CanvasRenderingContext2D;
     if (!ctx) return;
@@ -131,7 +134,6 @@ export class SpellBeam extends BeamEffect {
       const fadeProg = Math.min(1, (this.elapsed - SpellBeam.TOTAL_DURATION) / SpellBeam.FADE_DURATION);
 
       if (fadeProg >= 1) {
-        this.dead = true;
         return;
       }
 
@@ -152,19 +154,17 @@ export class SpellBeam extends BeamEffect {
   private fire(): void {
     this.fired = true;
     traceSpell(this.player, "beam-arrived", { beamId: this.diagnosticId, elapsed: this.elapsed });
-    setTimeout(() => {
-      this.player.busyAnimating = false;
-      traceSpell(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
-      if (!this.player.dead) {
-        try {
-          this.onComplete();
-          traceSpell(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
-        } catch (error) {
-          traceSpell(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
-          throw error;
-        }
+    this.player.busyAnimating = false;
+    traceSpell(this.player, "beam-callback", { beamId: this.diagnosticId, skipped: this.player.dead });
+    if (!this.player.dead) {
+      try {
+        this.onComplete();
+        traceSpell(this.player, "beam-callback-complete", { beamId: this.diagnosticId });
+      } catch (error) {
+        traceSpell(this.player, "beam-callback-error", { beamId: this.diagnosticId, error: String(error) });
+        throw error;
       }
-    }, 0);
+    }
   }
 
   /**

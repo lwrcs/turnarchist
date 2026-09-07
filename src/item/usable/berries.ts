@@ -15,6 +15,8 @@ export class Berries extends Usable {
     this.stackable = true;
   }
 
+  getUseTurnCost = (): number => 0;
+
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
       player.health = Math.min(player.maxHealth, player.health + 0.5);
