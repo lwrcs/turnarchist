@@ -30,5 +30,15 @@ class ReportTests(unittest.TestCase):
         good['rotation'],bad['rotation']=0,1
         result=summarize([good,bad])['combat-zombie']
         self.assertEqual(result['outcomesByRotation'],{0:{'cleared':1},1:{'budget-incomplete':1}})
+    def test_stationary_attack_is_not_counted_as_unrecorded(self):
+        row=self.row()
+        row['trace']=[{'action':1,'x':2,'y':3,'recorded':True,'turnDelta':1},
+                      {'action':1,'x':2,'y':3,'recorded':False,'turnDelta':0},
+                      {'action':1,'x':2,'y':3}]
+        result=summarize([row])['combat-zombie']
+        self.assertEqual(result['unrecordedDecisions'],1)
+        self.assertEqual(result['recordingStatusKnown'],2)
+        self.assertEqual(result['worldTurns'],1)
+        self.assertEqual(result['turnDeltaKnown'],2)
 
 if __name__=='__main__': unittest.main()

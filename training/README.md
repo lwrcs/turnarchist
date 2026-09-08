@@ -113,3 +113,9 @@ seed, and the random and learned policies receive the same complete plan.
 Reports include outcomes by rotation and both policy/world action counts.
 The four views are correlated tests of the same encounter, not four independent
 layouts. This evaluation option leaves checkpoint inputs and training unchanged.
+
+New traces also record the game's `recorded` and `turnDelta` results. These are
+diagnostics only, excluded from policy inputs and rewards. An attack can remain
+on the same tile and still be a recorded action; position repetition alone does
+not identify a wall bump. Report coverage counts distinguish old traces with
+missing fields from confirmed unrecorded decisions or zero-turn actions.

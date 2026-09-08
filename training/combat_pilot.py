@@ -153,7 +153,8 @@ class CombatEnv(gym.Env):
         result = self.page.evaluate('''async action => {
             const result = await window.agent.step(action);
             return {view:window.agent.perceive(), terminated:result.terminated,
-                    truncated:result.truncated, cleared:result.info.encounterCleared};
+                    truncated:result.truncated, cleared:result.info.encounterCleared,
+                    recorded:result.info.recorded, turnDelta:result.info.turnDelta};
         }''', ACTIONS[world_action(action, self.rotation)])
         next_view = result['view']
         # Only health change and the encounter result supervise reward. Disappearing
@@ -163,7 +164,8 @@ class CombatEnv(gym.Env):
         reward += -10 if dead else 10 if clear else 0
         self.frames.append(rotate_features(encode(next_view), self.rotation))
         self.trace.append({'action': int(action), 'x':next_view['player']['x'], 'y':next_view['player']['y'],
-                           'worldAction':world_action(action,self.rotation), 'health': next_view['player']['health'], 'reward': reward})
+                           'worldAction':world_action(action,self.rotation), 'health': next_view['player']['health'], 'reward': reward,
+                           'recorded':result['recorded'], 'turnDelta':result['turnDelta']})
         self.view = next_view
         self.steps += 1
         self.total_reward += reward

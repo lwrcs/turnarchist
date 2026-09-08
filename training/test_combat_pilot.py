@@ -1,7 +1,8 @@
 import copy
+from collections import deque
 import unittest
 import numpy as np
-from combat_pilot import encode, SIZE, evaluate, rotate_features, world_action
+from combat_pilot import CombatEnv, encode, SIZE, evaluate, rotate_features, world_action
 
 
 class EncodingTests(unittest.TestCase):
@@ -54,6 +55,29 @@ class RotationTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_execution_diagnostics_do_not_enter_policy_or_reward(self):
+        view=EncodingTests().view()
+        view['decision']='world'
+        results=[]
+        for recorded,turns in [(False,0),(True,1)]:
+            env=object.__new__(CombatEnv)
+            env.view=copy.deepcopy(view)
+            env.rotation=0
+            env.frames=deque([encode(view)]*2,maxlen=2)
+            env.trace=[]
+            env.steps=0
+            env.total_reward=0
+            class Page:
+                def evaluate(self,script,action):
+                    return {'view':copy.deepcopy(view),'terminated':False,'truncated':False,
+                            'cleared':False,'recorded':recorded,'turnDelta':turns}
+            env.page=Page()
+            results.append(env.step(1))
+            self.assertEqual(env.trace[0]['recorded'],recorded)
+            self.assertEqual(env.trace[0]['turnDelta'],turns)
+        np.testing.assert_array_equal(results[0][0],results[1][0])
+        self.assertEqual(results[0][1:],results[1][1:])
+
     def test_all_rotations_share_seed_and_cover_each_view(self):
         class Env:
             def __init__(self): self.plan = []
