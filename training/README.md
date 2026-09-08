@@ -88,3 +88,15 @@ python training/combat_pilot.py --rotate-frames --steps 8192 --out ~/turnarchist
 
 Use the flag for evaluation/resumption of that checkpoint too. Its encoder v2
 manifest prevents silently loading it into the unrotated v1 input contract.
+
+After an evaluation completes, summarize it with:
+
+```sh
+python training/report.py ~/turnarchist-training/pilot-001-eval
+```
+
+The report explicitly checks whether episode seeds/scenarios/rotations match,
+keeps incomplete budgets separate from clears/deaths, and reports dominant
+policy actions and distinct positions. Check action distributions by scenario:
+a dominant action can be correct for a simple fixture, but repetition without
+completion on hard fixtures deserves inspection.
