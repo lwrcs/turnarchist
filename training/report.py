@@ -17,9 +17,13 @@ def summarize(rows):
         by_rotation = defaultdict(Counter)
         for episode in episodes:
             by_rotation[episode.get('rotation',0)][episode['status']] += 1
+        clears=[e for e in episodes if e['status']=='cleared']
+        health_known=[e for e in clears if e.get('health') is not None and e.get('initialHealth') is not None]
         result[scenario] = {
             'episodes':len(episodes), 'cleared':outcomes['cleared'], 'dead':outcomes['dead'],
             'budgetIncomplete':outcomes['budget-incomplete'],
+            'healthPreservingClears':sum(e['health']>=e['initialHealth'] for e in health_known) if len(health_known)==len(clears) else None,
+            'clearHealthComparisonKnown':len(health_known),
             'otherOutcomes':{k:v for k,v in outcomes.items() if k not in ('cleared','dead','budget-incomplete')},
             'meanDecisions':sum(e['steps'] for e in episodes)/len(episodes),
             'policyActionCounts':dict(sorted(actions.items())),

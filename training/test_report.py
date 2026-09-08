@@ -43,5 +43,14 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(result['recordingStatusKnown'],2)
         self.assertEqual(result['worldTurns'],1)
         self.assertEqual(result['turnDeltaKnown'],2)
+    def test_health_preservation_requires_known_starting_health(self):
+        a,b=self.row('cleared'),self.row('cleared')
+        a.update(initialHealth=2,health=2)
+        b.update(initialHealth=2,health=1)
+        result=summarize([a,b])['combat-zombie']
+        self.assertEqual(result['healthPreservingClears'],1)
+        self.assertEqual(result['clearHealthComparisonKnown'],2)
+        del b['initialHealth']
+        self.assertIsNone(summarize([a,b])['combat-zombie']['healthPreservingClears'])
 
 if __name__=='__main__': unittest.main()

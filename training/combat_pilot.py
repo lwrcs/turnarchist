@@ -147,6 +147,7 @@ class CombatEnv(gym.Env):
             raise RuntimeError('Game contract changed during run')
         self.contract = view['contract']
         self.view = view
+        self.initial_health = view['player']['health']
         self.frames.clear()
         self.frames.extend([rotate_features(encode(view), self.rotation)] * 2)
         self.trace = []
@@ -184,7 +185,8 @@ class CombatEnv(gym.Env):
         if done or truncated:
             outcome = 'dead' if dead else 'cleared' if clear else 'budget-incomplete'
             record = {'phase':self.phase,'scenario': self.scenario, 'seed': self.game_seed, 'rotation':self.rotation, 'status': outcome,
-                      'steps': self.steps, 'reward': self.total_reward, 'health': next_view['player']['health']}
+                      'steps': self.steps, 'reward': self.total_reward, 'health': next_view['player']['health'],
+                      'initialHealth':self.initial_health}
             info.update(record)
             with (self.out/'episodes.jsonl').open('a') as f:
                 f.write(json.dumps(record)+'\n')

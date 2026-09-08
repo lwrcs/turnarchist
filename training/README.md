@@ -204,3 +204,7 @@ curriculum flag to avoid silently mislabeling training encounters as transfer.
 Evaluation and PPO continuation manifests record the source checkpoint's path,
 SHA-256, curriculum and Git identity. This links results to an exact saved model,
 even when a later run has a different curriculum or output directory.
+
+New records include starting health. Reports distinguish clears that preserve
+that health from damage trades. For older results without starting health, this
+metric stays unknown rather than assuming a starting value.

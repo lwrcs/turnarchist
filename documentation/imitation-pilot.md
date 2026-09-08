@@ -61,3 +61,16 @@ The next explicit `forward` curriculum includes armored skeletons and alert
 giants in training. Their non-alert starting arrangements are separate held-out
 fixtures. Future reports must not describe the trained giant variants as unseen
 enemies. The starter checkpoints and original transfer results remain preserved.
+
+## Expanded teacher: teacher-forward-001
+
+All 48 episodes cleared with full health, yielding 208 decisions. The six
+fixtures include both alert armored variants and both alert giants alongside
+basic skeletons/zombies. Giant-skeleton demonstrations take nine decisions and
+giant-zombie demonstrations six; armored skeletons take five. These longer
+sequences supply the repeat-dodge behavior absent from the original dataset.
+
+`imitation-forward-001` fits these examples for 2,000 epochs, reaching training
+cross-entropy 0.000141. Its separate evaluation checks all six training fixtures
+and four held-out non-alert starting arrangements in all four views. This remains
+a small fixed-fixture curriculum, not a general dungeon policy.
