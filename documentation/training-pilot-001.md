@@ -33,3 +33,18 @@ Next: evaluate random and learned policies with matched seed plans and five
 repeats per fixture, including movement traces. Use those results before changing
 reward, curriculum or observation encoding. Keep the first pilot checkpoint as
 a reference; do not overwrite it with continued training.
+
+## Matched-seed follow-up (50 episodes)
+
+Completed successfully on commit `a681b374`. Each policy ran five episodes per
+fixture. Trained clears: skeleton 5/5, zombie 5/5, armored zombie 0/5, giant
+skeleton 0/5, giant zombie 0/5. All 15 tough trained episodes were budget-incomplete.
+Random clears: 2/5, 4/5, 0/5, 1/5, 0/5 respectively; all other random episodes died.
+
+Every trained action was right. Each tough episode visited 11 positions, then
+continued choosing right. This is a fixed-direction shortcut, not evidence that
+the policy learned the dodge-and-hit strategy. The easy fixtures' fixed placement
+made the shortcut profitable. The next pilot keeps reward and gameplay unchanged
+and adds per-episode coordinate-frame rotation (encoder v2), training from scratch
+for 8,192 decisions. This specifically tests the directional shortcut, not clutter,
+resource use or new layout generalization.

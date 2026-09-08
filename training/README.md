@@ -71,3 +71,20 @@ plan across training fixtures and giant transfer fixtures. Seeds do not depend
 on how many actions earlier episodes took. Repeats still use fixed fixture
 geometry; they do not provide randomized-layout coverage. Evaluation performs
 no learning updates. Existing run directories are refused to protect results.
+
+## Coordinate-frame augmentation (encoder v2)
+
+Pilot 001's deterministic policy chose right on every action. Add
+`--rotate-frames` to train a new policy with random per-episode quarter-turns
+of the observation grid and inverse-mapped directional actions. Wait and scalar
+traits remain unchanged. Both history frames use the same rotation. This changes
+what direction the policy sees, not the real game rules or fixture geometry;
+it does not count as room-layout variation. Episode records include the rotation
+and traces distinguish policy actions from actual game actions.
+
+```sh
+python training/combat_pilot.py --rotate-frames --steps 8192 --out ~/turnarchist-training/pilot-002
+```
+
+Use the flag for evaluation/resumption of that checkpoint too. Its encoder v2
+manifest prevents silently loading it into the unrotated v1 input contract.

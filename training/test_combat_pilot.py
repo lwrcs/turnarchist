@@ -1,7 +1,7 @@
 import copy
 import unittest
 import numpy as np
-from combat_pilot import encode, SIZE, evaluate
+from combat_pilot import encode, SIZE, evaluate, rotate_features, world_action
 
 
 class EncodingTests(unittest.TestCase):
@@ -34,6 +34,24 @@ class EncodingTests(unittest.TestCase):
         encoded=encode(v)
         v['room']['entities'][0].update(width=2,height=2,health=10)
         np.testing.assert_array_equal(encoded,encode(v))
+
+class RotationTests(unittest.TestCase):
+    def test_each_action_points_to_rotated_target(self):
+        offsets=[(0,-1),(1,0),(0,1),(-1,0)]
+        for turns in range(4):
+            for world, (dx,dy) in enumerate(offsets):
+                features=np.zeros(SIZE,dtype=np.float32)
+                features[:-5].reshape(13,13,12)[6+dy,6+dx,5]=1
+                transformed=rotate_features(features,turns)[:-5].reshape(13,13,12)
+                local=(world-turns)%4
+                lx,ly=offsets[local]
+                self.assertEqual(transformed[6+ly,6+lx,5],1)
+                self.assertEqual(world_action(local,turns),world)
+            self.assertEqual(world_action(4,turns),4)
+    def test_roundtrip_preserves_features(self):
+        original=np.arange(SIZE,dtype=np.float32)
+        np.testing.assert_array_equal(original,rotate_features(rotate_features(original,1),3))
+
 
 class EvaluationTests(unittest.TestCase):
     def test_seed_plan_independent_of_episode_length(self):

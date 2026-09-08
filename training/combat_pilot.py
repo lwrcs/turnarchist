@@ -72,18 +72,29 @@ def encode(view):
     return np.concatenate((grid.ravel(), np.asarray(scalar, dtype=np.float32)))
 
 
+def rotate_features(features, turns):
+    grid = features[:-5].reshape(13, 13, 12)
+    return np.concatenate((np.rot90(grid, turns, axes=(0, 1)).ravel(), features[-5:]))
+
+
+def world_action(action, turns):
+    return (int(action) + turns) % 4 if int(action) < 4 else 4
+
+
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
 
 class CombatEnv(gym.Env):
-    def __init__(self, out, budget=64):
+    def __init__(self, out, budget=64, rotate_frames=False):
         self.out = pathlib.Path(out)
         self.out.mkdir(parents=True, exist_ok=True)
         self.action_space = gym.spaces.Discrete(len(ACTIONS))
         self.observation_space = gym.spaces.Box(0, 1, shape=(SIZE*2,), dtype=np.float32)
         self.budget = budget
+        self.rotate_frames = rotate_frames
+        self.rotation = 0
         self.episode = 0
         self.contract = None
         self.frames = deque(maxlen=2)
@@ -112,6 +123,7 @@ class CombatEnv(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         scenario = (options or {}).get('scenario', SCENARIOS[self.episode % len(SCENARIOS)])
+        self.rotation = int(self.np_random.integers(4)) if self.rotate_frames else 0
         game_seed = int(self.np_random.integers(0, 2**31))
         view = self.page.evaluate('''async ([seed, scenario, budget]) => {
             await window.agent.reset(seed, {scenario, maxSteps:budget});
@@ -122,7 +134,7 @@ class CombatEnv(gym.Env):
         self.contract = view['contract']
         self.view = view
         self.frames.clear()
-        self.frames.extend([encode(view), encode(view)])
+        self.frames.extend([rotate_features(encode(view), self.rotation)] * 2)
         self.trace = []
         self.total_reward = 0
         self.steps = 0
@@ -137,16 +149,16 @@ class CombatEnv(gym.Env):
             const result = await window.agent.step(action);
             return {view:window.agent.perceive(), terminated:result.terminated,
                     truncated:result.truncated, cleared:result.info.encounterCleared};
-        }''', ACTIONS[int(action)])
+        }''', ACTIONS[world_action(action, self.rotation)])
         next_view = result['view']
         # Only health change and the encounter result supervise reward. Disappearing
         # enemies are not kills: leaving vision cannot earn reward.
         reward = -0.01 - 3*max(0, self.view['player']['health']-next_view['player']['health'])
         dead, clear = result['terminated'], result['cleared']
         reward += -10 if dead else 10 if clear else 0
-        self.frames.append(encode(next_view))
+        self.frames.append(rotate_features(encode(next_view), self.rotation))
         self.trace.append({'action': int(action), 'x':next_view['player']['x'], 'y':next_view['player']['y'],
-                           'health': next_view['player']['health'], 'reward': reward})
+                           'worldAction':world_action(action,self.rotation), 'health': next_view['player']['health'], 'reward': reward})
         self.view = next_view
         self.steps += 1
         self.total_reward += reward
@@ -155,7 +167,7 @@ class CombatEnv(gym.Env):
         info = {}
         if done or truncated:
             outcome = 'dead' if dead else 'cleared' if clear else 'budget-incomplete'
-            record = {'scenario': self.scenario, 'seed': self.game_seed, 'status': outcome,
+            record = {'scenario': self.scenario, 'seed': self.game_seed, 'rotation':self.rotation, 'status': outcome,
                       'steps': self.steps, 'reward': self.total_reward, 'health': next_view['player']['health']}
             info.update(record)
             with (self.out/'episodes.jsonl').open('a') as f:
@@ -211,16 +223,17 @@ def main():
     mode.add_argument('--evaluate', type=pathlib.Path)
     parser.add_argument('--eval-repeats', type=int, default=1)
     parser.add_argument('--smoke', action='store_true')
+    parser.add_argument('--rotate-frames', action='store_true')
     args = parser.parse_args()
     if args.eval_repeats < 1 or args.eval_repeats > 100 or args.steps < 1:
         parser.error('Use positive steps and 1..100 evaluation repeats')
     if not args.smoke and (args.out/'manifest.json').exists():
         parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
-    env = CombatEnv(args.out, budget=64)
+    env = CombatEnv(args.out, budget=64, rotate_frames=args.rotate_frames)
     try:
         env.reset(seed=123)
-        manifest = {'encoder': ENCODER, 'reward': REWARD, 'gameContract': env.contract,
+        manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
                     'torch': torch.__version__, 'budget': 64}
