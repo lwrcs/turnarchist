@@ -250,3 +250,38 @@ Keep 456 and 654 as the hard combat regression set. No learned model was trained
 Final validation for this iteration: 123 tests passed and JavaScript syntax and
 whitespace checks passed. The game bundle was unchanged. Both combat and starter
 reports were exported; completed browser runs were retained for inspection.
+
+## Longer starter validation
+
+V17, unchanged build 205607bbd2bab9fb10c1, perception schema 6, range 12,
+brightness cutoff 0.08. Both runs had an effective 800-decision budget. Seed 606
+continued its original 200-decision episode with 600 additional decisions, retaining
+policy memory and replay history. Seed 303 ran independently from reset.
+
+| Seed | Outcome | Decisions | Turns | Positions | Rooms | Final health | Health lost | Maximum stale streak |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 303 | dead | 797 | 767 | 537 | 11 | 0 | 2.5 | 22 |
+| 606 | dead | 529 | 512 | 404 | 6 | 0 | 2 | 39 |
+
+303 is the stronger provisional starter: it reaches substantially more territory
+with a short maximum stale streak, but it did not survive the full budget. Its
+final trace contains multiple SkullEnemies and a Spawner; the fatal attack leaves
+the player on a tile threatened by multiple sources. This is a useful ordinary
+crowd-combat regression in addition to the giant-boss tests. It is not evidence
+that the entire seed is boss-free.
+
+606 remained at health 2 until decision 528, then lost one health on each of the
+last two decisions. The late encounter includes BigZombieEnemy. Keep its opening
+as a candidate for shorter episodes, but do not classify the whole seed as a
+forgiving layout. Total measured health loss can exceed starting health when
+healing occurs or a hit overkills; it is not a remaining-health calculation.
+
+Neither long episode should be labeled a win or a fully successful demonstration.
+The existing 200-decision screens remain short opening checks. 202 and 404 have
+not received longer validation in this iteration. Keep 456 and 654 as hard giant
+combat regressions, and use 303 as the leading candidate for initial short-episode
+curriculum work while retaining its later spawner encounter as a separate test.
+
+Both reports were exported and their completed tabs retained for inspection.
+No game or policy code changed, no active episode was interrupted, and port 8000
+remained running. No tests were rerun for this evaluation-only documentation update.
