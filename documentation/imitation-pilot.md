@@ -42,3 +42,22 @@ evaluation with two seeds per fixture/view for each policy. This tests whether
 the available examples can be learned more faithfully, while preserving the
 first checkpoint. New-layout coverage and a broader curriculum remain separate
 requirements regardless of training loss.
+
+## 2,000-epoch fit: imitation-002
+
+The same 48 examples reached training cross-entropy 0.00049. The 120-episode
+evaluation used two seeds per fixture/view for random, deterministic and sampled
+policies. All plans matched. Both learned policies cleared all 40 of their
+encounters: 8/8 in each fixture. The 24 basic cases preserved full health; all
+16 giant cases lost one health. There were no deaths or budget-incomplete results.
+
+The traces locate the giant damage after the first successful dodge and side hit.
+The policy then attacks again when it needs another dodge. It has copied the
+short armored-zombie sequence but has not learned to repeat the cycle for an
+enemy that survives longer and turns. This is distinct from choosing the wrong
+initial dodge direction.
+
+The next explicit `forward` curriculum includes armored skeletons and alert
+giants in training. Their non-alert starting arrangements are separate held-out
+fixtures. Future reports must not describe the trained giant variants as unseen
+enemies. The starter checkpoints and original transfer results remain preserved.

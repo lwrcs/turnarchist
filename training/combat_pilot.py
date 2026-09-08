@@ -23,6 +23,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ACTIONS = [{'type': 'Move', 'direction': d} for d in ('up', 'right', 'down', 'left')] + [{'type': 'Wait'}]
 SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-armoredzombie-alert']
 TRANSFER = ['combat-bigskull-alert', 'combat-bigzombie-alert']
+CURRICULA = {'starter': SCENARIOS,
+             'forward': SCENARIOS + ['combat-armoredskull-alert'] + TRANSFER}
+HELD_OUT = {'starter': TRANSFER,
+            'forward': ['combat-armoredskull','combat-armoredzombie','combat-bigskull','combat-bigzombie']}
 ENCODER = {'version': 1, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = 13 * 13 * 12 + 5
@@ -89,7 +93,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class CombatEnv(gym.Env):
-    def __init__(self, out, budget=64, rotate_frames=False):
+    def __init__(self, out, budget=64, rotate_frames=False, scenarios=None):
         self.out = pathlib.Path(out)
         self.out.mkdir(parents=True, exist_ok=True)
         self.action_space = gym.spaces.Discrete(len(ACTIONS))
@@ -99,6 +103,7 @@ class CombatEnv(gym.Env):
         self.rotation = 0
         self.episode = 0
         self.phase = 'unassigned'
+        self.scenarios = list(SCENARIOS if scenarios is None else scenarios)
         self.contract = None
         self.frames = deque(maxlen=2)
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
@@ -125,7 +130,7 @@ class CombatEnv(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        scenario = (options or {}).get('scenario', SCENARIOS[self.episode % len(SCENARIOS)])
+        scenario = (options or {}).get('scenario', self.scenarios[self.episode % len(self.scenarios)])
         self.rotation = int(self.np_random.integers(4)) if self.rotate_frames else 0
         game_seed = int(self.np_random.integers(0, 2**31))
         if 'rotation' in (options or {}):
@@ -206,9 +211,9 @@ class Checkpoints(BaseCallback):
         return True
 
 
-def make_training_env(out, rotate_frames):
+def make_training_env(out, rotate_frames, scenarios):
     torch.set_num_threads(1)
-    env = CombatEnv(out, rotate_frames=rotate_frames)
+    env = CombatEnv(out, rotate_frames=rotate_frames, scenarios=scenarios)
     env.phase = 'training'
     return Monitor(env)
 
@@ -254,6 +259,7 @@ def main():
     parser.add_argument('--out', type=pathlib.Path, required=True)
     parser.add_argument('--steps', type=int, default=2048)
     parser.add_argument('--envs', type=int, choices=[1,2,4], default=1)
+    parser.add_argument('--curriculum',choices=list(CURRICULA),default='starter')
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--resume', type=pathlib.Path)
     mode.add_argument('--evaluate', type=pathlib.Path)
@@ -276,13 +282,15 @@ def main():
     if not args.smoke and (args.out/'manifest.json').exists():
         parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
-    env = CombatEnv(args.out, budget=64, rotate_frames=args.rotate_frames)
+    scenarios = CURRICULA[args.curriculum]
+    transfer = HELD_OUT[args.curriculum]
+    env = CombatEnv(args.out, budget=64, rotate_frames=args.rotate_frames, scenarios=scenarios)
     parallel_env = None
     try:
         env.reset(seed=123)
         manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
-                    'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
+                    'curriculum':args.curriculum,'trainingScenarios': scenarios, 'transferScenarios': transfer,
                     'torch': torch.__version__, 'budget': 64,
                     'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs},
                     'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
@@ -295,6 +303,8 @@ def main():
                     raise ValueError('Checkpoint incompatible: '+key)
             if args.resume and old.get('execution',{}).get('environments',1) != args.envs:
                 raise ValueError('Resume requires the original number of training environments')
+            if args.evaluate and old.get('curriculum','starter') != args.curriculum:
+                raise ValueError('Evaluation must specify the checkpoint curriculum to label held-out fixtures correctly')
         (args.out/'manifest.json').write_text(json.dumps(manifest, indent=2))
         if args.smoke:
             for action in [1, 2, 3, 0]:
@@ -306,27 +316,27 @@ def main():
         if args.evaluate:
             model = PPO.load(args.evaluate, env=env, device='cpu')
             before = model.num_timesteps
-            scenarios = SCENARIOS + TRANSFER
-            random_results = evaluate(env, None, scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
-            results = evaluate(env, model, scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
+            evaluation_scenarios = scenarios + transfer
+            random_results = evaluate(env, None, evaluation_scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
+            results = evaluate(env, model, evaluation_scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
             assert model.num_timesteps == before
             (args.out/'random-evaluation.json').write_text(json.dumps(random_results, indent=2))
             (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
             if args.eval_stochastic:
-                sampled = evaluate(env, model, scenarios, repeats=args.eval_repeats,
+                sampled = evaluate(env, model, evaluation_scenarios, repeats=args.eval_repeats,
                                    all_rotations=args.eval_all_rotations, deterministic=False)
                 (args.out/'stochastic-evaluation.json').write_text(json.dumps(sampled, indent=2))
                 assert model.num_timesteps == before
             (args.out/'complete.json').write_text(json.dumps({'mode':'evaluation-only', 'checkpoint':str(args.evaluate), 'trainingSteps':before, 'time':time.time()}))
             print('Checkpoint evaluation completed without learning updates', flush=True)
             return
-        baseline = evaluate(env, None, SCENARIOS)
+        baseline = evaluate(env, None, scenarios)
         (args.out/'random-evaluation.json').write_text(json.dumps(baseline, indent=2))
         training_env = env
         env.phase = 'training'
         if args.envs > 1:
             parallel_env = SubprocVecEnv([
-                functools.partial(make_training_env,args.out/f'worker-{i}',args.rotate_frames)
+                functools.partial(make_training_env,args.out/f'worker-{i}',args.rotate_frames,scenarios)
                 for i in range(args.envs)],start_method='spawn')
             parallel_env.seed(123)
             parallel_env.reset()
@@ -343,7 +353,7 @@ def main():
         if parallel_env is not None:
             parallel_env.close()
             parallel_env = None
-        results = evaluate(env, model, SCENARIOS + TRANSFER)
+        results = evaluate(env, model, scenarios + transfer)
         (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
         (args.out/'complete.json').write_text(json.dumps({'steps':model.num_timesteps, 'time':time.time()}))
         print('Pilot completed', flush=True)

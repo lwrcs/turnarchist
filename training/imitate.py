@@ -11,7 +11,7 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from combat_pilot import ENCODER, REWARD, ROOT, SCENARIOS, SIZE
+from combat_pilot import CURRICULA, ENCODER, REWARD, ROOT, SIZE
 
 
 class SpacesOnlyEnv(gym.Env):
@@ -30,9 +30,12 @@ def load_demonstrations(directory):
     expected={**ENCODER,'version':2,'coordinateRotation':'random-quarter-turn-per-episode'}
     if manifest['encoder'] != expected or manifest['gameContract']['observationMode'] != 'player-perception':
         raise ValueError('Compatible restricted-view demonstrations required')
-    if manifest['trainingScenarios'] != SCENARIOS:
+    curriculum=manifest.get('curriculum','starter')
+    if curriculum not in CURRICULA or manifest['trainingScenarios'] != CURRICULA[curriculum]:
         raise ValueError('Keep transfer fixtures out of this warm-start dataset')
     outcomes=json.loads((directory/'outcomes.json').read_text())
+    if any(row.get('scenario') not in CURRICULA[curriculum] for row in outcomes):
+        raise ValueError('Episode outside the declared training curriculum')
     with np.load(directory/'demonstrations.npz',allow_pickle=False) as data:
         observations,actions,episodes=data['observations'],data['actions'],data['episode_ids']
     if observations.ndim != 2 or observations.shape[1] != SIZE*2:
@@ -91,6 +94,7 @@ def main():
                   'git':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                   'execution':{'environments':args.envs,'rolloutStepsPerEnvironment':256//args.envs},
                   'trainingMode':'behavior-cloning','trainingScenarios':source['trainingScenarios'],
+                  'curriculum':source.get('curriculum','starter'),
                   'teacherVersion':source['teacherVersion'],'dataset':str(args.data),
                   'datasetSha256':hashlib.sha256((args.data/'demonstrations.npz').read_bytes()).hexdigest(),
                   'epochs':args.epochs,'samples':len(x),'uniqueObservations':len(np.unique(x,axis=0)),

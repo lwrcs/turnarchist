@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from combat_pilot import CombatEnv, ENCODER, ROOT, SCENARIOS
+from combat_pilot import CombatEnv, CURRICULA, ENCODER, ROOT
 
 
 def local_action(action, rotation):
@@ -22,9 +22,10 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--repeats',type=int,default=2)
+    parser.add_argument('--curriculum',choices=list(CURRICULA),default='starter')
     args=parser.parse_args()
     if not 1 <= args.repeats <= 20:
-        parser.error('Use 1..20 repeats of the three training fixtures in four views')
+        parser.error('Use 1..20 repeats of the curriculum fixtures in four views')
     args.out.mkdir(parents=True,exist_ok=False)
     env=CombatEnv(args.out,rotate_frames=True)
     env.phase='teacher-demonstration'
@@ -35,7 +36,7 @@ def main():
         env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
         version=env.page.evaluate('() => AgentBaseline.Policy.version')
         for _ in range(args.repeats):
-            for scenario in SCENARIOS:
+            for scenario in CURRICULA[args.curriculum]:
                 episode_seed=int(rng.integers(0,2**31))
                 for rotation in range(4):
                     obs,_=env.reset(seed=episode_seed,options={'scenario':scenario,'rotation':rotation})
@@ -65,7 +66,8 @@ def main():
         manifest={'encoder':{**ENCODER,'version':2,'coordinateRotation':'random-quarter-turn-per-episode'},
                   'gameContract':env.contract,'teacherVersion':version,
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
-                  'trainingScenarios':SCENARIOS,'samples':len(actions),'episodes':len(outcomes),
+                  'curriculum':args.curriculum,'trainingScenarios':CURRICULA[args.curriculum],
+                  'samples':len(actions),'episodes':len(outcomes),
                   'limitation':'Fixed training fixtures only. Failed episodes retained for filtering; no automatic training.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))

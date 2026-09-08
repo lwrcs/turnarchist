@@ -185,3 +185,18 @@ New episode records carry a `phase` label: training, random/deterministic/sample
 evaluation, teacher demonstration, or throughput benchmark. Keep these sources
 separate when aggregating outcomes. Older unlabelled logs should not be assumed
 to contain only training episodes; initial and final evaluations may be mixed in.
+
+## Repeated forward-facing combat
+
+`--curriculum forward` explicitly adds alert armored skeletons and both alert
+giants to the three starter training fixtures. This addresses the longer
+dodge–hit–dodge cycle after an enemy survives and turns again. Once included,
+giants are no longer labeled unseen training enemies. The four non-alert armored
+and giant fixtures become held-out starting arrangements. They still use fixed
+geometry and do not establish general dungeon performance.
+
+Use the curriculum flag when collecting demonstrations, training PPO, and
+evaluating its checkpoints. Imitation inherits the dataset's declared curriculum.
+Dataset loading checks actual episode scenarios as well as the manifest; reports
+label training versus held-out fixtures. Evaluation rejects an incorrect
+curriculum flag to avoid silently mislabeling training encounters as transfer.
