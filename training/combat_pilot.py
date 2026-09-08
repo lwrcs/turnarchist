@@ -16,6 +16,8 @@ from playwright.sync_api import sync_playwright
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ACTIONS = [{'type': 'Move', 'direction': d} for d in ('up', 'right', 'down', 'left')] + [{'type': 'Wait'}]
@@ -203,6 +205,11 @@ class Checkpoints(BaseCallback):
         return True
 
 
+def make_training_env(out, rotate_frames):
+    torch.set_num_threads(1)
+    return Monitor(CombatEnv(out, rotate_frames=rotate_frames))
+
+
 def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False, deterministic=True):
     # CPU policies use torch's global sampler. Reproducible evaluation must not
     # advance the training RNG or depend on earlier evaluations' action counts.
@@ -238,6 +245,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out', type=pathlib.Path, required=True)
     parser.add_argument('--steps', type=int, default=2048)
+    parser.add_argument('--envs', type=int, choices=[1,2,4], default=1)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--resume', type=pathlib.Path)
     mode.add_argument('--evaluate', type=pathlib.Path)
@@ -255,16 +263,20 @@ def main():
         parser.error('--eval-all-rotations requires --evaluate and --rotate-frames')
     if args.eval_stochastic and not args.evaluate:
         parser.error('--eval-stochastic requires --evaluate')
+    if args.envs != 1 and (args.evaluate or args.smoke):
+        parser.error('--envs applies to training; evaluation and smoke use one environment')
     if not args.smoke and (args.out/'manifest.json').exists():
         parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
     env = CombatEnv(args.out, budget=64, rotate_frames=args.rotate_frames)
+    parallel_env = None
     try:
         env.reset(seed=123)
         manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
                     'torch': torch.__version__, 'budget': 64,
+                    'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs},
                     'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
                                    'includeStochastic':args.eval_stochastic}}
         checkpoint = args.resume or args.evaluate
@@ -273,6 +285,8 @@ def main():
             for key in ('encoder', 'reward', 'gameContract'):
                 if old[key] != manifest[key]:
                     raise ValueError('Checkpoint incompatible: '+key)
+            if args.resume and old.get('execution',{}).get('environments',1) != args.envs:
+                raise ValueError('Resume requires the original number of training environments')
         (args.out/'manifest.json').write_text(json.dumps(manifest, indent=2))
         if args.smoke:
             for action in [1, 2, 3, 0]:
@@ -300,18 +314,33 @@ def main():
             return
         baseline = evaluate(env, None, SCENARIOS)
         (args.out/'random-evaluation.json').write_text(json.dumps(baseline, indent=2))
-        model = PPO.load(args.resume, env=env, device='cpu') if args.resume else PPO(
-            'MlpPolicy', env, n_steps=256, batch_size=64, n_epochs=4,
+        training_env = env
+        if args.envs > 1:
+            parallel_env = SubprocVecEnv([
+                functools.partial(make_training_env,args.out/f'worker-{i}',args.rotate_frames)
+                for i in range(args.envs)],start_method='spawn')
+            parallel_env.seed(123)
+            parallel_env.reset()
+            if any(contract != env.contract for contract in parallel_env.get_attr('contract')):
+                raise RuntimeError('Game contracts differ between training workers')
+            training_env = parallel_env
+        model = PPO.load(args.resume, env=training_env, device='cpu') if args.resume else PPO(
+            'MlpPolicy', training_env, n_steps=256//args.envs, batch_size=64, n_epochs=4,
             learning_rate=3e-4, gamma=0.99, seed=123, device='cpu',
             policy_kwargs={'net_arch':[128,128]}, verbose=1)
         # CPU is deliberate for this small MLP; GPU availability was tested separately.
         model.learn(total_timesteps=args.steps, reset_num_timesteps=not bool(args.resume), callback=Checkpoints(args.out))
         model.save(args.out/'final')
+        if parallel_env is not None:
+            parallel_env.close()
+            parallel_env = None
         results = evaluate(env, model, SCENARIOS + TRANSFER)
         (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
         (args.out/'complete.json').write_text(json.dumps({'steps':model.num_timesteps, 'time':time.time()}))
         print('Pilot completed', flush=True)
     finally:
+        if parallel_env is not None:
+            parallel_env.close()
         env.close()
 
 if __name__ == '__main__':

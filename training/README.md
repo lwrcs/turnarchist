@@ -129,3 +129,31 @@ Compare both: a repeated deterministic choice does not by itself prove that all
 action probability has collapsed onto that direction. With two seeds and all
 four rotations, this optional third policy brings the five-fixture total to 120
 episodes. It does not make the fixed layouts independent samples.
+
+## Collection throughput
+
+`benchmark.py` measures isolated browser environments with random actions. It
+does not train a model, speed up animations, or change the game contract:
+
+```sh
+python training/benchmark.py --envs 1 --steps 128 --out ~/turnarchist-training/throughput-001
+python training/benchmark.py --envs 2 --steps 128 --out ~/turnarchist-training/throughput-002
+```
+
+Each worker has its own browser, loopback server and output directory. The report
+separates startup from collection time and verifies identical game contracts.
+Short random-action throughput is a sizing measurement, not evidence of faster
+learning or equal episode outcomes. Keep active training checkouts unchanged;
+run development benchmarks from a separate checkout.
+
+On this desktop, the initial 128-decision benchmark measured 3.41 decisions/s
+with one environment and 6.50 with two (startup excluded), while pilot 002 kept
+running separately. This is a short throughput measurement, not a learning result.
+
+Training accepts `--envs 2` or `--envs 4` for separate browser workers. The total
+rollout remains 256 decisions: each worker contributes `256 / envs` decisions
+before an update. Batch size, epochs, reward and encoder stay unchanged. Worker
+episodes and latest replays live in `worker-N` directories; root-level episode
+records belong to evaluation. Checkpoint evaluation still uses one environment.
+Resume requires the original worker count to avoid silently changing rollout
+collection. Old checkpoints without this metadata are treated as single-worker.
