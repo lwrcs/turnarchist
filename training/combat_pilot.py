@@ -33,6 +33,7 @@ HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 ENCODER = {'version': 1, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = 13 * 13 * 12 + 5
+BROWSER_RECYCLE_EPISODES = 64
 
 
 def encode(view):
@@ -113,6 +114,12 @@ class CombatEnv(gym.Env):
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.pw = sync_playwright().start()
         self.browser = self.pw.chromium.launch(headless=True, args=['--disable-background-timer-throttling'])
+        self._open_game_page()
+
+    def _open_game_page(self):
+        """Discard accumulated game/browser state only between complete episodes."""
+        if getattr(self,'context',None) is not None:
+            self.context.close()
         self.context = self.browser.new_context(viewport={'width': 960, 'height': 720}, service_workers='block')
         port = self.server.server_address[1]
         self.context.route('**/*', lambda route: route.continue_() if urlparse(route.request.url).netloc == f'127.0.0.1:{port}' else route.abort())
@@ -132,6 +139,8 @@ class CombatEnv(gym.Env):
             raise
 
     def reset(self, *, seed=None, options=None):
+        if self.episode and self.episode % BROWSER_RECYCLE_EPISODES == 0:
+            self._open_game_page()
         super().reset(seed=seed)
         scenario = (options or {}).get('scenario', self.scenarios[self.episode % len(self.scenarios)])
         self.rotation = int(self.np_random.integers(4)) if self.rotate_frames else 0
@@ -299,7 +308,8 @@ def main():
                     'curriculum':args.curriculum,'trainingScenarios': scenarios, 'transferScenarios': transfer,
                     'stressScenarios':transfer if args.curriculum=='open-combat' else [],
                     'torch': torch.__version__, 'budget': 64,
-                    'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs},
+                    'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs,
+                                  'browserRecycleEpisodes':BROWSER_RECYCLE_EPISODES},
                     'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
                                    'includeStochastic':args.eval_stochastic,'planVersion':2}}
         checkpoint = args.resume or args.evaluate

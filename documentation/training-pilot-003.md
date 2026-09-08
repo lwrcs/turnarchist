@@ -41,5 +41,39 @@ scenario, rotation and decision for trace review. Periodic snapshots include
 collected decisions before the corresponding PPO update; final checkpoints
 include the last update.
 
+## Memory interruption and recovery
+
+The reference v2 evaluation finished: deterministic clears 80/80 with 72
+full-health clears; sampled clears 79/80 with 68 full-health clears.
+
+The continuation accumulated roughly 4.8 GiB RSS per training renderer and
+eventually exhausted the dedicated Linux environment's 16 GiB RAM and 4 GiB
+swap. An additional teacher collection was interrupted with exit 130 to release
+memory; its partial output is not a usable demonstration dataset. Closing
+ComfyUI freed Windows memory but did not eliminate this separate Linux limit.
+Training advanced to 7,936 decisions, then stalled again. Graceful process
+interrupts did not release the stuck browsers; only the dedicated training
+distribution was terminated and restarted. Windows and the Mac server were not
+restarted.
+
+The 7,936-step checkpoint loads successfully with its original two-environment
+configuration; no final checkpoint was produced. A context-recycling fix now
+refreshes game pages every 64 episodes, without changing the game contract or
+policy inputs. Recovery must use a fresh output directory, preserve this run,
+and record the source checkpoint. It restarts game episodes and rollout
+collection; it is not a bit-identical continuation of the interrupted rollout.
+
+Validation passed 29 Python tests and a real-game reset/recycle comparison. The
+same seeded armored-zombie fight produced identical observations and traces,
+cleared in three decisions at full health, closed its previous page, and left
+exactly one live browser context.
+
+The recovery continuation uses a fresh `pilot-003-recovery-001` output and 2,048
+additional decisions from the saved 7,936-step model. Its nominal counter will
+therefore reach 9,984; this includes the source snapshot's pre-update collection
+count and is not a claim to have preserved the interrupted rollout. A single
+sequential job performs training, then all-view v2 evaluation and comparison
+against the completed reference evaluation. Extra demonstration jobs remain off.
+
 No final result or promotion decision has been made yet. Preserve the source
 checkpoint and use actual matched outcomes to decide the next continuation.

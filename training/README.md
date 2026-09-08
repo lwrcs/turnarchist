@@ -240,3 +240,10 @@ pairs. It checks encoder/game compatibility. It is a rehearsal diagnostic, not a
 success score: the policy may learn another valid dodge, and the dataset may
 already have been used in training. Confirm suspected regressions with real-game
 evaluation. Use an immutable copy when auditing an actively replaced checkpoint.
+
+Training browsers now replace their context every 64 episodes, at reset time.
+This discards accumulated game/page state while preserving the environment RNG,
+model, optimizer and episode sequence. Frame history is reset normally for the
+new episode; teacher collection reinjects its script into the fresh page.
+Manifests record the recycle interval. Never patch this into a running checkout;
+apply it to the next run or an explicitly recorded checkpoint recovery.

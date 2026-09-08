@@ -40,6 +40,9 @@ def main():
                 episode_seed=int(rng.integers(0,2**31))
                 for rotation in range(4):
                     obs,_=env.reset(seed=episode_seed,options={'scenario':scenario,'rotation':rotation})
+                    # A recycled browser page has no injected teacher script.
+                    if not env.page.evaluate('() => typeof AgentBaseline !== "undefined"'):
+                        env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
                     env.page.evaluate('() => { window.demoTeacher = new AgentBaseline.Policy(); }')
                     initial_health=env.view['player']['health']
                     while True:

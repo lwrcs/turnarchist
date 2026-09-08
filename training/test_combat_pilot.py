@@ -1,9 +1,10 @@
 import copy
 from collections import deque
 import unittest
+from unittest.mock import Mock
 import numpy as np
 import torch
-from combat_pilot import CombatEnv, encode, SIZE, evaluate, rotate_features, world_action
+from combat_pilot import CombatEnv, encode, SIZE, evaluate, rotate_features, world_action, BROWSER_RECYCLE_EPISODES
 
 
 class EncodingTests(unittest.TestCase):
@@ -56,6 +57,28 @@ class RotationTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_browser_recycle_keeps_seeded_reset_and_clears_frame_history(self):
+        env=object.__new__(CombatEnv)
+        env.episode=BROWSER_RECYCLE_EPISODES-1
+        env.scenarios=['combat-skull']
+        env.rotate_frames=True
+        env.frames=deque(maxlen=2)
+        env.contract=None
+        env.budget=64
+        view=EncodingTests().view()
+        view['contract']={'test':1}
+        env.page=Mock()
+        env.page.evaluate.return_value=view
+        env._open_game_page=Mock()
+        first,_=env.reset(seed=123)
+        game_seed=env.game_seed
+        env._open_game_page.assert_not_called()
+        env.frames.append(np.ones(SIZE))
+        second,_=env.reset(seed=123)
+        env._open_game_page.assert_called_once()
+        self.assertEqual(game_seed,env.game_seed)
+        np.testing.assert_array_equal(first,second)
+
     def test_shared_fixture_seeds_survive_curriculum_expansion(self):
         class Env:
             def __init__(self): self.plan=[]
