@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from report import compare, summarize
+from report import compare, compare_checkpoints, summarize
 
 class ReportTests(unittest.TestCase):
     def row(self,status='budget-incomplete'):
@@ -52,5 +52,21 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(result['clearHealthComparisonKnown'],2)
         del b['initialHealth']
         self.assertIsNone(summarize([a,b])['combat-zombie']['healthPreservingClears'])
+    def test_checkpoint_comparison_excludes_unmatched_encounters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            before,after=Path(directory)/'before',Path(directory)/'after'
+            before.mkdir(); after.mkdir()
+            a,b=self.row('cleared'),self.row('dead')
+            a['health'],b['health']=2,0
+            extra={**b,'seed':99}
+            (before/'evaluation.json').write_text(json.dumps([a]))
+            (after/'evaluation.json').write_text(json.dumps([b,extra]))
+            result=compare_checkpoints(before,after)
+            self.assertEqual(result['matchedEpisodes'],1)
+            self.assertEqual(result['unmatchedAfter'],1)
+            self.assertEqual(result['scenarios']['combat-zombie']['outcomeTransitions'],{'cleared -> dead':1})
+            self.assertEqual(result['scenarios']['combat-zombie']['meanRemainingHealthChange'],-2)
+            (after/'evaluation.json').write_text(json.dumps([b,b]))
+            with self.assertRaises(ValueError): compare_checkpoints(before,after)
 
 if __name__=='__main__': unittest.main()

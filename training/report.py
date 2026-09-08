@@ -62,8 +62,45 @@ def compare(directory):
     return result
 
 
+def compare_checkpoints(before_directory,after_directory,filename='evaluation.json'):
+    """Compare only exactly matched encounters; extra fixtures stay unmatched."""
+    contracts=[]
+    for directory in (before_directory,after_directory):
+        path=Path(directory)/'manifest.json'
+        contracts.append(json.loads(path.read_text()).get('gameContract') if path.exists() else None)
+    contract_known=all(c is not None for c in contracts)
+    if contract_known and contracts[0]!=contracts[1]:
+        raise ValueError('Checkpoint evaluations used different game contracts')
+    def indexed(directory):
+        rows=json.loads((Path(directory)/filename).read_text())
+        result={(r['scenario'],r['seed'],r.get('rotation',0)):r for r in rows}
+        if len(result)!=len(rows):
+            raise ValueError('Duplicate encounter identities make comparison ambiguous')
+        return result
+    before,after=indexed(before_directory),indexed(after_directory)
+    shared=before.keys() & after.keys()
+    groups=defaultdict(list)
+    for key in sorted(shared):
+        groups[key[0]].append((before[key],after[key]))
+    result={}
+    for scenario,pairs in groups.items():
+        transitions=Counter(a['status']+' -> '+b['status'] for a,b in pairs)
+        health=[b['health']-a['health'] for a,b in pairs if a.get('health') is not None and b.get('health') is not None]
+        result[scenario]={'matchedEpisodes':len(pairs),'outcomeTransitions':dict(transitions),
+                          'meanRemainingHealthChange':sum(health)/len(health) if health else None}
+    return {'matchedEpisodes':len(shared),'sameGameContract':True if contract_known else None,'unmatchedBefore':len(before)-len(shared),
+            'unmatchedAfter':len(after)-len(shared),'scenarios':result,
+            'limitation':'Only exact scenario/seed/rotation matches are compared; fixed fixtures do not establish broad generalization.'}
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('directory',type=Path)
+    parser.add_argument('--against',type=Path,help='Compare with an earlier checkpoint evaluation')
+    parser.add_argument('--stochastic',action='store_true',help='Use sampled results with --against')
     args=parser.parse_args()
-    print(json.dumps(compare(args.directory),indent=2))
+    if args.stochastic and not args.against:
+        parser.error('--stochastic requires --against')
+    result=(compare_checkpoints(args.against,args.directory,'stochastic-evaluation.json' if args.stochastic else 'evaluation.json')
+            if args.against else compare(args.directory))
+    print(json.dumps(result,indent=2))

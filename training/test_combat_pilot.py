@@ -56,6 +56,18 @@ class RotationTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_shared_fixture_seeds_survive_curriculum_expansion(self):
+        class Env:
+            def __init__(self): self.plan=[]
+            def reset(self,*,seed,options):
+                self.plan.append((options['scenario'],seed))
+                return np.zeros(1),{}
+            def step(self,action): return np.zeros(1),0,True,False,{}
+        before,after=Env(),Env()
+        evaluate(before,None,['a','b'],repeats=3)
+        evaluate(after,None,['new','b','a','extra'],repeats=3)
+        self.assertEqual(sorted(before.plan),sorted(p for p in after.plan if p[0] in ['a','b']))
+
     def test_sampled_evaluation_is_repeatable_and_preserves_torch_rng(self):
         class Env:
             def __init__(self): self.actions=[]; self.phase='training'

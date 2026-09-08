@@ -216,3 +216,12 @@ fixtures. Do not interpret their failure as proof the normal open-room curriculu
 failed or that starter equipment should solve every cluttered encounter.
 Changing the curriculum during an explicit PPO continuation is allowed and
 recorded in checkpoint lineage; encoder, reward and game compatibility still apply.
+
+Evaluation plan v2 keys each seed by fixture and repeat, so adding or reordering
+fixtures does not change shared encounters. Old v1 evaluation files remain valid
+within-run comparisons, but must be rerun under v2 for these curriculum-spanning
+comparisons. Use `python training/report.py AFTER --against BEFORE` (optionally
+`--stochastic`) to count exact matched outcome transitions and remaining-health
+changes. Unmatched encounters are counted separately, duplicate identities fail,
+and known mismatched game contracts reject comparison. A regression cannot be
+hidden by adding easier fixtures to the newer evaluation.

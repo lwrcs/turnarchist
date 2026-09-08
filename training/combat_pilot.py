@@ -240,9 +240,10 @@ def _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministi
     records = []
     rng = np.random.default_rng(seed)
     # Episode seeds must not depend on how many random actions previous episodes used.
-    plan_rng = np.random.default_rng(seed)
-    plan = [(scenario, int(plan_rng.integers(0, 2**31)))
-            for _ in range(repeats) for scenario in scenarios]
+    # Key seeds by fixture and repeat so adding a curriculum fixture does not
+    # change the shared encounters in a before/after checkpoint comparison.
+    plan = [(scenario, int.from_bytes(hashlib.sha256(f'{seed}:{repeat}:{scenario}'.encode()).digest()[:4],'big') % (2**31))
+            for repeat in range(repeats) for scenario in scenarios]
     plan = [(scenario, episode_seed, rotation) for scenario, episode_seed in plan
             for rotation in (range(4) if all_rotations else [None])]
     for scenario, episode_seed, rotation in plan:
@@ -300,7 +301,7 @@ def main():
                     'torch': torch.__version__, 'budget': 64,
                     'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs},
                     'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
-                                   'includeStochastic':args.eval_stochastic}}
+                                   'includeStochastic':args.eval_stochastic,'planVersion':2}}
         checkpoint = args.resume or args.evaluate
         if checkpoint:
             old = json.loads((checkpoint.parent/'manifest.json').read_text())
