@@ -86,8 +86,23 @@ def compare_checkpoints(before_directory,after_directory,filename='evaluation.js
     for scenario,pairs in groups.items():
         transitions=Counter(a['status']+' -> '+b['status'] for a,b in pairs)
         health=[b['health']-a['health'] for a,b in pairs if a.get('health') is not None and b.get('health') is not None]
+        # A higher average can hide individual regressions. Keep their encounter
+        # identities so the exact traces can be reviewed in the source files.
+        regressions=[]
+        for a,b in pairs:
+            reasons=[]
+            if a['status']=='cleared' and b['status']!='cleared':
+                reasons.append('lost-clear')
+            if a.get('health') is not None and b.get('health') is not None and b['health']<a['health']:
+                reasons.append('lower-remaining-health')
+            if reasons:
+                regressions.append({'seed':a['seed'],'rotation':a.get('rotation',0),'reasons':reasons})
         result[scenario]={'matchedEpisodes':len(pairs),'outcomeTransitions':dict(transitions),
-                          'meanRemainingHealthChange':sum(health)/len(health) if health else None}
+                          'healthComparisonsKnown':len(health),
+                          'healthImproved':sum(change>0 for change in health),
+                          'healthWorsened':sum(change<0 for change in health),
+                          'meanRemainingHealthChange':sum(health)/len(health) if health else None,
+                          'regressions':regressions}
     return {'matchedEpisodes':len(shared),'sameGameContract':True if contract_known else None,'unmatchedBefore':len(before)-len(shared),
             'unmatchedAfter':len(after)-len(shared),'scenarios':result,
             'limitation':'Only exact scenario/seed/rotation matches are compared; fixed fixtures do not establish broad generalization.'}

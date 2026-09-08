@@ -225,3 +225,18 @@ comparisons. Use `python training/report.py AFTER --against BEFORE` (optionally
 changes. Unmatched encounters are counted separately, duplicate identities fail,
 and known mismatched game contracts reject comparison. A regression cannot be
 hidden by adding easier fixtures to the newer evaluation.
+Individual health regressions include encounter identities for trace review,
+even if the average remaining health improves.
+
+Audit retention of teacher examples without launching a game or updating weights:
+
+```sh
+python training/audit_demonstrations.py --checkpoint RUN/final.zip --data DATASET
+```
+
+This reports action agreement, teacher-action probability, and disagreements by
+scenario/view/decision, both across all examples and unique observation/action
+pairs. It checks encoder/game compatibility. It is a rehearsal diagnostic, not a
+success score: the policy may learn another valid dodge, and the dataset may
+already have been used in training. Confirm suspected regressions with real-game
+evaluation. Use an immutable copy when auditing an actively replaced checkpoint.

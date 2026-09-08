@@ -69,4 +69,23 @@ class ReportTests(unittest.TestCase):
             (after/'evaluation.json').write_text(json.dumps([b,b]))
             with self.assertRaises(ValueError): compare_checkpoints(before,after)
 
+    def test_positive_mean_does_not_hide_individual_health_regression(self):
+        with tempfile.TemporaryDirectory() as directory:
+            before,after=Path(directory)/'before',Path(directory)/'after'
+            before.mkdir(); after.mkdir()
+            rows=[{**self.row('cleared'),'seed':1,'health':2},
+                  {**self.row('cleared'),'seed':2,'health':0.5}]
+            changed=[{**rows[0],'health':1.5},{**rows[1],'health':2}]
+            (before/'evaluation.json').write_text(json.dumps(rows))
+            (after/'evaluation.json').write_text(json.dumps(changed))
+            result=compare_checkpoints(before,after)['scenarios']['combat-zombie']
+            self.assertGreater(result['meanRemainingHealthChange'],0)
+            self.assertEqual(result['healthWorsened'],1)
+            self.assertEqual(result['healthImproved'],1)
+            self.assertEqual(result['regressions'][0]['seed'],1)
+            for folder,contract in [(before,{'version':1}),(after,{'version':2})]:
+                (folder/'manifest.json').write_text(json.dumps({'gameContract':contract}))
+            with self.assertRaisesRegex(ValueError,'different game contracts'):
+                compare_checkpoints(before,after)
+
 if __name__=='__main__': unittest.main()
