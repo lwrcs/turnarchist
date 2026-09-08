@@ -470,3 +470,20 @@ counts, whether a local goal exists, known passages and their reachability,
 observed blockers and traversal traits, learned destinations, and remembered work.
 This is derived from restricted observation memory. It does not reveal hidden
 room geometry or prove that an exhausted state is unwinnable.
+
+## Combat retreat space
+
+While the player's current tile is threatened, the baseline compares visible
+follow-up escape space between equally safe walking retreats before applying
+ordinary visit preferences. A follow-up tile must be known clear, outside current
+warnings, and outside every observed entity's occupied footprint; the tile being
+fled is excluded. Doors, ladders, breakables, and unknown tiles are not assumed to
+be immediate follow-up escapes. This is a preference for maneuvering space, not
+simulation of future enemy movement or a guarantee of safety.
+
+Giant enemies use their full observed width/height rectangle for occupancy and
+combat decisions. Regression tests exercise all four tiles of a 2x2 target through
+the actual Player.tryMove, dagger attack, weapon target lookup, and Entity.pointIn
+methods: each directional attack hits once, stays in place, and kills before the
+room response when sufficient damage is dealt. Nonlethal attacks retain the
+under-player warning; a confirmed kill removes only that source's threat.

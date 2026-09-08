@@ -387,3 +387,28 @@ test('ladder confirmation and return crossings teach directed room connections',
   p.roomWork.set('room',true);p.doorUses.set('side-area:1,0',2);
   assert.equal(p.choose(next).direction,'right');assert.equal(p.inspect().reason,'backtrack');
 });
+
+test('retreat from a giant prefers visible maneuvering space over a wall pocket',()=>{
+  const p=new Policy(),v=view();v.player={x:10,y:14,health:.5,maxHealth:2};
+  v.room.tiles=[];for(let x=8;x<=12;x++)for(let y=12;y<=17;y++)
+    v.room.tiles.push({x,y,solid:y===12,kind:y===12?'Wall':'Floor'});
+  v.room.entities=[{id:'giant',x:10,y:15,width:2,height:2,isEnemy:true,collidable:true,destroyable:true,health:4},
+    {id:'bush',x:9,y:13,isEnemy:false,collidable:true,destroyable:true,health:1}];
+  v.room.hitWarnings=[{x:10,y:14,hostile:true,sourceId:'giant'},{x:11,y:14,hostile:true,sourceId:'giant'}];
+  assert.equal(p.choose(v).direction,'left');
+  assert.equal(p.escapeSpace(v,10,13,new Set(['10,14','11,14'])),1);
+});
+test('all four giant tiles are attacks that stay on the current warning unless lethal',()=>{
+  for(const [x,y,px,py,direction] of [[1,1,1,0,'down'],[2,1,2,0,'down'],[1,2,0,2,'right'],[2,2,3,2,'left']]) {
+    const p=new Policy(),v=view();v.player={x:px,y:py,health:2,maxHealth:2};
+    v.room.tiles=[];for(let tx=-1;tx<=4;tx++)for(let ty=-1;ty<=4;ty++)v.room.tiles.push({x:tx,y:ty,solid:false});
+    v.inventory=[{activeWeapon:true,traits:{attackPattern:'adjacent-cardinal',minimumAttackDamage:1,baseDamage:1}}];
+    v.room.entities=[{id:'giant',x:1,y:1,width:2,height:2,isEnemy:true,collidable:true,destroyable:true,health:4,combat:{killDamageThreshold:4}}];
+    v.room.hitWarnings=[{x:px,y:py,hostile:true,sourceId:'giant'}];
+    assert.notEqual(p.choose(v).direction,direction,`nonlethal attack at ${x},${y}`);
+    v.room.entities[0].health=1;v.room.entities[0].combat.killDamageThreshold=1;
+    for(const t of v.room.tiles)if(Math.abs(t.x-px)+Math.abs(t.y-py)===1&&!(t.x===x&&t.y===y))
+      v.room.hitWarnings.push({x:t.x,y:t.y,hostile:true,sourceId:'other'});
+    assert.equal(p.choose(v).direction,direction,`lethal attack at ${x},${y}`);
+  }
+});

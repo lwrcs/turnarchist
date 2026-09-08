@@ -204,3 +204,49 @@ restored; it remains running. No active evaluation was interrupted.
 Next: combat decisions around large footprints, constrained escape routes, and
 resource use after returning from side areas. The vending-machine placement bug
 remains a separate generation fix; the agent correctly refuses that occupied door.
+
+## Giant combat audit and starter-seed screening
+
+The combat audit confirmed that the actual player/weapon target lookup uses
+Entity.pointIn across the full 2x2 footprint. Tests now exercise hits at all four
+tiles, verifying one damage application and no simultaneous player movement, for
+both lethal and nonlethal hits. No giant-specific targeting patch was necessary.
+
+V17 adds a limited preference for visible follow-up escape space between equally
+safe retreats. The focused synthetic wall-pocket regression passes; the complete
+boss encounters remain unsolved. At the same build, observation contract and
+500-decision budget, both results exactly matched v16: seed 456 died at decision
+447 (341 positions, 5 rooms), and seed 654 died at 462 (312 positions, 5 rooms).
+Do not claim this rule fixes either death. In the real 456 trace, the alternative
+retreat is also constrained, unlike the simpler synthetic regression layout.
+
+Per user guidance, giant skeleton/zombie encounters should remain hard regression
+cases rather than defining the initial training curriculum. Screen fresh seeds
+for useful early exploration and low damage/stalling. A short screening result
+is a provisional curriculum candidate, not proof of an easy complete level, no
+bosses, or a winning demonstration. Keep harder cases represented in later
+evaluation to avoid optimizing solely for forgiving layouts.
+
+### Provisional starter seeds
+
+V17, build 205607bbd2bab9fb10c1, perception schema 6, range 12 and brightness
+cutoff 0.08. All outcomes below are budget-incomplete after 200 decisions.
+
+| Seed | Turns | Positions | Rooms | Final health | Health lost | Maximum stale streak |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 101 | 192 | 154 | 4 | 1.5 | 0.5 | 7 |
+| 202 | 188 | 126 | 6 | 2 | 0 | 12 |
+| 303 | 195 | 180 | 3 | 2 | 0 | 2 |
+| 404 | 193 | 169 | 4 | 2 | 0 | 8 |
+| 505 | 188 | 115 | 6 | 1.5 | 0.5 | 10 |
+| 606 | 193 | 178 | 4 | 2 | 0 | 6 |
+
+Prioritize 303 and 606 for longer validation because they combine full health,
+substantial explored territory, and low stale streaks. Add 404 and 202 for variety;
+202 traverses more rooms but covers fewer unique positions in this budget. These
+are candidate starts under the current policy, not certified boss-free layouts.
+Keep 456 and 654 as the hard combat regression set. No learned model was trained.
+
+Final validation for this iteration: 123 tests passed and JavaScript syntax and
+whitespace checks passed. The game bundle was unchanged. Both combat and starter
+reports were exported; completed browser runs were retained for inspection.

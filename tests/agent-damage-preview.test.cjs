@@ -39,24 +39,26 @@ test('skull damage handlers advertise their threshold but future overrides do no
   }
 });
 
-test('a directional attack kills before the room ticks and never also moves the player',()=>{
+test('each giant footprint tile takes one hit before the room ticks without moving the player',()=>{
   const playerBody=members('src/player/player.ts',['tryMove']);
-  const {Player,AttackDagger}=compile(`const LevelState={TRANSITIONING:1,TRANSITIONING_LADDER:2};
+  const {Player,AttackDagger,Target}=compile(`const LevelState={TRANSITIONING:1,TRANSITIONING_LADDER:2};
     class Weapon {_swingHitIds=null;${weaponMembers}}
     export class AttackDagger extends Weapon {${daggerMembers}}
-    export class Player {${playerBody}}`);
-  for(const enemyHealth of [1,2]) {
+    export class Player {${playerBody}}
+    export class Target {${members('src/entity/entity.ts',['pointIn'])}}`);
+  for(const enemyHealth of [1,2]) for(const [tx,ty,px,py] of [[1,1,1,0],[2,1,2,0],[1,2,0,2],[2,2,3,2]]) {
     const p=new Player(),weapon=new AttackDagger();
-    const enemy={x:1,y:0,z:0,destroyable:true,collidable:true,pushable:false,health:enemyHealth,dead:false,
-      pointIn:(x,y)=>x===1&&y===0,hurt(_p,damage){this.health-=damage;this.dead=this.health<=0;}};
+    const enemy=Object.assign(new Target(),{x:1,y:1,w:2,h:2,z:0,destroyable:true,collidable:true,pushable:false,health:enemyHealth,dead:false,
+      hurt(_p,damage){this.health-=damage;this.dead=this.health<=0;}});
     const room={entities:[enemy],catchUp(){},tick(){if(!enemy.dead)p.health-=1;}};
-    Object.assign(p,{x:0,y:0,z:0,health:2,damageBonus:0,game:{room,levelState:0},getRoom:()=>room,
+    Object.assign(p,{x:px,y:py,z:0,health:2,damageBonus:0,game:{room,levelState:0},getRoom:()=>room,
       inventory:{hasWeapon:()=>true,getWeapon:()=>weapon},setHitXY(){},move(){throw new Error('Attack moved the player');}});
     Object.assign(weapon,{game:p.game,wielder:p,damage:1,manaCost:0,status:{},
       checkForPushables:()=>false,shouldHitEntity:()=>true,statusEffect(){},applyHitDelay(){},hitSound(){},
       attackAnimation(){},shakeScreen(){},degrade(){}});
-    assert.equal(p.tryMove(1,0),true);
-    assert.equal(p.x,0);assert.equal(p.y,0);
+    assert.equal(p.tryMove(tx,ty),true);
+    assert.equal(enemy.health,enemyHealth-1);
+    assert.equal(p.x,px);assert.equal(p.y,py);
     assert.equal(p.health,enemyHealth===1?2:1);
   }
 });
