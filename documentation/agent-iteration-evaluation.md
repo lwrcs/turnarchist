@@ -387,3 +387,27 @@ its 21-test environment suite rerun successfully; TypeScript and development
 bundle pass. Front retaliation in all four directions, side-hit turning,
 sleep wake-up, optional hit-stun, headless recovery and finishing are covered.
 Normal play startup was also checked in the browser without errors.
+
+### Already-alert forward-only duels — September 8
+
+Build `668a27bb0c7c5c3cfcdc`, baseline `explore-combat-v19`, testbed v4.
+Seed 123, 40-decision cap, same starting health and equipment for each:
+
+| Encounter | Decisions to clear | Final health | Health lost |
+| --- | ---: | ---: | ---: |
+| Alert armored skeleton | 5 | 2 | 0 |
+| Alert armored zombie | 3 | 2 | 0 |
+| Alert giant skeleton | 9 | 2 | 0 |
+| Alert giant zombie | 6 | 2 | 0 |
+
+All began awake and facing the player's tile. Giant warnings cover the adjacent
+left tile as well, exercising the footprint-dependent dodge. One policy handles
+all four; no species-specific attack script was added. V19 prioritizes a
+confirmed finish at equal risk over exploration incentives. A regression test
+checks a safely killable, warning-free target despite a heavily visited target
+tile and a nearby exit, and checks that another enemy's warning prevents that
+stationary finish.
+
+These are fixed open-room duels, not a natural boss-room success claim or a
+controlled v18-versus-v19 improvement measurement. Next coverage should combine
+clutter, other threats, entrance positioning and retreat opportunities.

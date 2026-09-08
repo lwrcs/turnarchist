@@ -23,10 +23,10 @@ function setup(encounter=config.combatEncounter) {
   class Player {constructor(game,x,y){Object.assign(this,{game,x,y});}}
   const EnemyTypeMap=Object.fromEntries(['skull','zombie','bigskull','bigzombie','armoredskull','armoredzombie','spawner'].map(type=>[type,{add(room,game,x,y){
     const size=type.startsWith('big')?2:1;
-    room.entities.push({type,x,y,w:size,h:size,pointIn(tx,ty){return tx>=x&&tx<x+size&&ty>=y&&ty<y+size;}});
+    room.entities.push({type,x,y,w:size,h:size,isEnemy:true,makeHitWarnings(){this.warningCalls=(this.warningCalls??0)+1;},pointIn(tx,ty){return tx>=x&&tx<x+size&&ty>=y&&ty<y+size;}});
   }}]));
   const {Game}=compile(`export class Game {${methods}}`,{
-    ...config,combatEncounter:encounter,EnvType:{DUNGEON:0},RoomType:{START:0},LevelState:{IN_LEVEL:0},Random:{rand:()=>.5},
+    ...config,Direction:{UP:1},combatEncounter:encounter,EnvType:{DUNGEON:0},RoomType:{START:0},LevelState:{IN_LEVEL:0},Random:{rand:()=>.5},
     LevelGenerator:class {setSeed(){} setMainPathEnvOverride(){}},
     Room,Level,Player,Wall,Floor:Tile,require:()=>({Bush:{add(room,game,x,y){room.entities.push({type:'bush',x,y,w:1,h:1,pointIn(tx,ty){return tx===x&&ty===y;}});}}}),LightSource:class {},EnemyTypeMap,
     DownLadder:class {constructor(){throw new Error('Combat testbed created a ladder');}}
@@ -48,8 +48,8 @@ test('all combat presets create a large enclosed room with clear complete footpr
       assert.equal(e.pointIn(player.x,player.y),false);
       assert.equal(room.entities.some(other=>other!==e&&other.pointIn(e.x,e.y)),false);
     }
-    const first=JSON.stringify(room.entities);
-    game.startCombatSandbox(scenario,123);assert.equal(JSON.stringify(game.room.entities),first);
+    const first=JSON.stringify(room.entities.map(({targetPlayer,...e})=>e));
+    game.startCombatSandbox(scenario,123);assert.equal(JSON.stringify(game.room.entities.map(({targetPlayer,...e})=>e)),first);
   }
 });
 test('unknown combat scenarios are rejected before replacing the current room',()=>{
@@ -73,4 +73,15 @@ test('obstacle encounters retain a walkable escape from the starting position',(
     }
     assert.equal(seen.has('1,1'),true,scenario);
   }
+});
+
+
+test('alert duels start facing the player with no wake grace and initialize warnings',()=>{
+ for(const scenario of config.COMBAT_SCENARIOS.filter(s=>s.endsWith('-alert'))) {
+  const game=setup();game.startCombatSandbox(scenario,123);
+  const e=game.room.entities[0],p=game.players.local;
+  assert.equal(e.seenPlayer,true);assert.equal(e.aggro,true);assert.equal(e.targetPlayer,p);
+  assert.equal(e.direction,1);assert.equal(e.alertTicks,0);assert.equal(e.warningCalls,1);
+  assert.equal(p.y,e.y-1);assert.ok(p.x>=e.x&&p.x<e.x+e.w);
+ }
 });

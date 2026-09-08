@@ -35674,6 +35674,14 @@ class Game {
                 const enemy = spawned.length === 1 ? spawned[0] : null;
                 if (!enemy)
                     throw new Error(`Combat testbed failed to spawn ${spawn.type}`);
+                if (spawn.alert) {
+                    const awake = enemy;
+                    awake.seenPlayer = true;
+                    awake.aggro = true;
+                    awake.targetPlayer = local;
+                    awake.direction = Direction.UP;
+                    awake.alertTicks = 0;
+                }
                 // Validate every occupied tile, including giant bodies, not just the anchor.
                 for (let x = enemy.x; x < enemy.x + enemy.w; x++)
                     for (let y = enemy.y; y < enemy.y + enemy.h; y++) {
@@ -35693,6 +35701,11 @@ class Game {
             room.updateLighting({ x: local.x, y: local.y });
         }
         catch { }
+        if (opts.encounter) {
+            for (const enemy of room.entities)
+                if (enemy.isEnemy)
+                    enemy.makeHitWarnings();
+        }
         this.levelState = LevelState.IN_LEVEL;
         this.started = true;
         this.startedFadeOut = true;
@@ -39127,9 +39140,10 @@ exports.CameraAnimation = CameraAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-exports.COMBAT_TESTBED_VERSION = 3;
+exports.COMBAT_TESTBED_VERSION = 4;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
     'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
+    'combat-armoredskull-alert', 'combat-armoredzombie-alert', 'combat-bigskull-alert', 'combat-bigzombie-alert',
     'combat-giant-pocket', 'combat-skull-choke'];
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
@@ -39138,6 +39152,7 @@ exports.isCombatScenario = isCombatScenario;
 function combatEncounter(scenario) {
     if (!isCombatScenario(scenario))
         throw new Error('Unsupported combat encounter');
+    const alert = scenario.endsWith('-alert');
     const pocket = scenario === 'combat-giant-pocket', choke = scenario === 'combat-skull-choke';
     const walls = [];
     if (pocket) {
@@ -39151,10 +39166,10 @@ function combatEncounter(scenario) {
             walls.push({ x: 11, y }, { x: 15, y });
     const objects = pocket ? [{ type: 'bush', x: 11, y: 11 }] : choke ?
         [{ type: 'bush', x: 12, y: 10 }, { type: 'bush', x: 14, y: 14 }] : [];
-    const names = scenario === 'combat-skull-pack' || choke ? ['skull', 'skull', 'skull'] : [pocket ? 'bigskull' : scenario.slice(7)];
+    const names = scenario === 'combat-skull-pack' || choke ? ['skull', 'skull', 'skull'] : [pocket ? 'bigskull' : scenario.slice(7).replace(/-alert$/, '')];
     return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
         player: { x: 12, y: 12 }, walls, objects,
-        enemies: names.map((type, i) => ({ type, x: pocket ? 12 : 13, y: pocket ? 13 : names.length === 1 ? 12 : 9 + i * 3 })) };
+        enemies: names.map((type, i) => ({ type, alert, x: alert ? (type.startsWith('big') ? 11 : 12) : pocket ? 12 : 13, y: alert ? 13 : pocket ? 13 : names.length === 1 ? 12 : 9 + i * 3 })) };
 }
 exports.combatEncounter = combatEncounter;
 
@@ -100075,7 +100090,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("ed64962d56570c30b5f2")
+/******/ 		__webpack_require__.h = () => ("668a27bb0c7c5c3cfcdc")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

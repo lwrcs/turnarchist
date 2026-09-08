@@ -582,3 +582,30 @@ Testbed version 3 adds the armored duels. Armored skeletons now retaliate after
 a surviving front hit, like armored zombies: their hit-triggered alert timer
 no longer grants attack immunity. Wake-up, turning, headless state, lethal hits,
 and the optional hit-stun setting still determine whether they can attack.
+
+### Alert duels and floor-one decisions
+
+Testbed v4 adds `combat-armoredskull-alert`, `combat-armoredzombie-alert`,
+`combat-bigskull-alert`, and `combat-bigzombie-alert`. Enemies start awake,
+aggroed, facing up at the adjacent player, with warnings initialized before the
+first decision. Giants put the player against their right-hand footprint tile;
+the neighboring left tile is also threatened. No wake-up grace is available.
+
+The common technique is approach, dodge out of the warning, hit from the side,
+and repeat while the enemy remains a threat. Giant footprints constrain the
+dodge direction; they do not require a separate species-specific strategy.
+Baseline v19 prefers a guaranteed finish over exploration at equal warning
+risk. This keeps a safely killable headless skeleton from being abandoned due
+to navigation visit penalties. A surviving warning from another enemy still
+makes that stationary attack unsafe. No regeneration timer or name is hardcoded.
+
+The player's broader floor-one guidance is a future evaluation requirement:
+assess boss proximity to the entrance, clutter, nearby enemies, current health,
+and available escape space together. One health alone does not mean retreat:
+a spacious encounter or distant boss can still be clearable and retreatable.
+Low health combined with an entrance-blocking boss and clutter argues for
+retreating before committing. Sewer fishing is a food fallback and can also
+prepare later floors. When implemented, measure boss progress and repeated
+fishing/retreat loops so food gathering does not become the agent's permanent
+substitute for learning combat. Neither boss commitment nor fishing is added
+by the alert-duel work.

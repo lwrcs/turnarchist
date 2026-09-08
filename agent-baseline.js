@@ -8,7 +8,7 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v18';
+    static version='explore-combat-v19';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -211,9 +211,9 @@
         const destination=stays?key(p.x,p.y):k;
         const weapon=view.inventory.find(i=>i?.activeWeapon)?.traits;
         const threshold=occupant?.combat?.killDamageThreshold;
-        const killsSource=enemy&&occupant?.id&&occupant.destroyable&&!occupant.pushable&&
+        const killsSource=!!(enemy&&occupant?.id&&occupant.destroyable&&!occupant.pushable&&
           weapon?.attackPattern==='adjacent-cardinal'&&Number.isFinite(threshold)&&threshold>0&&
-          Number.isFinite(weapon.minimumAttackDamage)&&weapon.minimumAttackDamage>=threshold;
+          Number.isFinite(weapon.minimumAttackDamage)&&weapon.minimumAttackDamage>=threshold);
         const remainingThreat=view.room.hitWarnings.some(w=>w.hostile&&(key(w.x,w.y)===destination||(occupant?.pushable&&key(w.x,w.y)===k))&&
           !(killsSource&&w.sourceId===occupant.id));
         const risk=remainingThreat?2:(!stays&&tile?.solid!==false&&!tile?.isDoor?1:0);
@@ -226,8 +226,9 @@
         const laneExit=escapeSpace!==null?this.leavesThreatLane(view,x,y):0;
         const compareEscape=risk===0&&best?.risk===0&&escapeSpace!==null&&best.escapeSpace!==null;
         if(!best||risk<best.risk||(risk===best.risk&&
-          (compareEscape&&escapeSpace!==best.escapeSpace?escapeSpace>best.escapeSpace:
-            compareEscape&&laneExit!==best.laneExit?laneExit>best.laneExit:score>best.score)))best={risk,score,escapeSpace,laneExit,action:{type:'Move',direction}};
+          (killsSource!==best.killsSource?!!killsSource:
+          compareEscape&&escapeSpace!==best.escapeSpace?escapeSpace>best.escapeSpace:
+            compareEscape&&laneExit!==best.laneExit?laneExit>best.laneExit:score>best.score)))best={risk,score,escapeSpace,laneExit,killsSource,action:{type:'Move',direction}};
       }
       this.reason=best?(threats.has(key(p.x,p.y))?'evade-warning':'local-combat-exploration'):'no-move';
       return best?.action??{type:'Wait'};

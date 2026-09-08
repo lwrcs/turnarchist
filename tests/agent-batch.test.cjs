@@ -445,3 +445,16 @@ test('equal-space retreats favor leaving an identified threatening giant lane',(
   assert.equal(p.leavesThreatLane(v,11,12),1);assert.equal(p.leavesThreatLane(v,12,11),0);
   v.room.hitWarnings.forEach(w=>delete w.sourceId);assert.equal(p.leavesThreatLane(v,11,12),0);
 });
+
+
+test('safe guaranteed finishes beat explored-tile penalties and exits, even without a warning',()=>{
+ const p=new Policy(),v=view();
+ v.inventory=[{activeWeapon:true,traits:{attackPattern:'adjacent-cardinal',minimumAttackDamage:1}}];
+ v.room.entities=[{id:'recovering',x:1,y:0,isEnemy:true,destroyable:true,health:1,combat:{killDamageThreshold:1}}];
+ v.room.tiles.find(t=>t.x===0&&t.y===-1).exit=true;
+ p.visits.set('room:1,0',100);
+ assert.equal(p.choose(v).direction,'right');
+ // Another source still threatens the player's tile: finishing is unsafe.
+ v.room.hitWarnings=[{x:0,y:0,hostile:true,sourceId:'other'}];
+ assert.notEqual(p.choose(v).direction,'right');
+});

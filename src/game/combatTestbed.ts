@@ -1,7 +1,8 @@
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-export const COMBAT_TESTBED_VERSION = 3;
+export const COMBAT_TESTBED_VERSION = 4;
 export const COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
   'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
+  'combat-armoredskull-alert', 'combat-armoredzombie-alert', 'combat-bigskull-alert', 'combat-bigzombie-alert',
   'combat-giant-pocket', 'combat-skull-choke'] as const;
 export type CombatScenario = typeof COMBAT_SCENARIOS[number];
 export type AgentScenario = 'standard' | 'forest' | 'cave' | CombatScenario;
@@ -10,6 +11,7 @@ export function isCombatScenario(value: string): value is CombatScenario {
 }
 export function combatEncounter(scenario: CombatScenario) {
   if (!isCombatScenario(scenario)) throw new Error('Unsupported combat encounter');
+  const alert=scenario.endsWith('-alert');
   const pocket=scenario==='combat-giant-pocket',choke=scenario==='combat-skull-choke';
   const walls: {x:number;y:number}[]=[];
   if(pocket) {
@@ -19,8 +21,8 @@ export function combatEncounter(scenario: CombatScenario) {
   if(choke)for(let y=8;y<=16;y++)walls.push({x:11,y},{x:15,y});
   const objects=pocket?[{type:'bush' as const,x:11,y:11}]:choke?
     [{type:'bush' as const,x:12,y:10},{type:'bush' as const,x:14,y:14}]:[];
-  const names = scenario === 'combat-skull-pack'||choke ? ['skull','skull','skull'] : [pocket?'bigskull':scenario.slice(7)];
+  const names = scenario === 'combat-skull-pack'||choke ? ['skull','skull','skull'] : [pocket?'bigskull':scenario.slice(7).replace(/-alert$/, '')];
   return {version: COMBAT_TESTBED_VERSION, width: 25, height: 25,
     player: {x: 12, y: 12}, walls, objects,
-    enemies: names.map((type, i) => ({type, x: pocket?12:13, y: pocket?13:names.length === 1 ? 12 : 9+i*3}))};
+    enemies: names.map((type, i) => ({type, alert, x: alert?(type.startsWith('big')?11:12):pocket?12:13, y: alert?13:pocket?13:names.length === 1 ? 12 : 9+i*3}))};
 }

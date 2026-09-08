@@ -4587,6 +4587,14 @@ export class Game {
         const spawned = room.entities.filter(e=>!previous.has(e));
         const enemy = spawned.length === 1 ? spawned[0] : null;
         if (!enemy) throw new Error(`Combat testbed failed to spawn ${spawn.type}`);
+        if (spawn.alert) {
+          const awake = enemy as Enemy;
+          awake.seenPlayer = true;
+          awake.aggro = true;
+          awake.targetPlayer = local;
+          awake.direction = Direction.UP;
+          awake.alertTicks = 0;
+        }
         // Validate every occupied tile, including giant bodies, not just the anchor.
         for (let x=enemy.x; x<enemy.x+enemy.w; x++) for (let y=enemy.y; y<enemy.y+enemy.h; y++) {
           if (!room.roomArray[x]?.[y] || room.roomArray[x][y].isSolid() ||
@@ -4601,6 +4609,10 @@ export class Game {
       room.roomOnScreen(local);
       room.updateLighting({ x: local.x, y: local.y });
     } catch {}
+
+    if (opts.encounter) {
+      for (const enemy of room.entities) if (enemy.isEnemy) enemy.makeHitWarnings();
+    }
 
     this.levelState = LevelState.IN_LEVEL;
     this.started = true;
