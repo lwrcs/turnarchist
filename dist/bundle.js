@@ -11823,25 +11823,21 @@ class ArmoredSkullEnemy extends enemy_1.Enemy {
                                 this.direction = game_1.Direction.UP;
                             if (oldDir == this.direction) {
                                 let hitPlayer = false;
-                                // When alertTicks > 0 the skeleton just woke from sleep this turn
-                                // (hit while sleeping sets alertTicks=2; after the first decrement it
-                                // is still 1). Allow movement but skip the attack so the player always
-                                // gets one unharmed turn after waking an armored skeleton.
-                                if (this.alertTicks === 0) {
-                                    for (const i in this.game.players) {
-                                        if (this.game.rooms[this.game.players[i].levelID] === this.room &&
-                                            this.game.players[i].x === moveX &&
-                                            this.game.players[i].y === moveY) {
-                                            if (!this.shouldSkipAttack()) {
-                                                this.game.players[i].hurt(this.hit(), this.name, {
-                                                    source: { x: this.x, y: this.y },
-                                                });
-                                                this.drawX = 0.5 * (this.x - this.game.players[i].x);
-                                                this.drawY = 0.5 * (this.y - this.game.players[i].y);
-                                                if (this.game.players[i] ===
-                                                    this.game.players[this.game.localPlayerID])
-                                                    this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
-                                            }
+                                // Alert ticks are visual feedback, not hit immunity. Sleeping enemies
+                                // still spend their first behavior turn in lookForPlayer above.
+                                for (const i in this.game.players) {
+                                    if (this.game.rooms[this.game.players[i].levelID] === this.room &&
+                                        this.game.players[i].x === moveX &&
+                                        this.game.players[i].y === moveY) {
+                                        if (!this.shouldSkipAttack()) {
+                                            this.game.players[i].hurt(this.hit(), this.name, {
+                                                source: { x: this.x, y: this.y },
+                                            });
+                                            this.drawX = 0.5 * (this.x - this.game.players[i].x);
+                                            this.drawY = 0.5 * (this.y - this.game.players[i].y);
+                                            if (this.game.players[i] ===
+                                                this.game.players[this.game.localPlayerID])
+                                                this.game.shakeScreen(10 * this.drawX, 10 * this.drawY);
                                         }
                                     }
                                 }
@@ -39131,9 +39127,9 @@ exports.CameraAnimation = CameraAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-exports.COMBAT_TESTBED_VERSION = 2;
+exports.COMBAT_TESTBED_VERSION = 3;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
-    'combat-bigzombie', 'combat-skull-pack', 'combat-spawner',
+    'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
     'combat-giant-pocket', 'combat-skull-choke'];
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
@@ -100079,7 +100075,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("4d680b42b99811a973e9")
+/******/ 		__webpack_require__.h = () => ("ed64962d56570c30b5f2")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

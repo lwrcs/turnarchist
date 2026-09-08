@@ -1,7 +1,7 @@
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-export const COMBAT_TESTBED_VERSION = 2;
+export const COMBAT_TESTBED_VERSION = 3;
 export const COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
-  'combat-bigzombie', 'combat-skull-pack', 'combat-spawner',
+  'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
   'combat-giant-pocket', 'combat-skull-choke'] as const;
 export type CombatScenario = typeof COMBAT_SCENARIOS[number];
 export type AgentScenario = 'standard' | 'forest' | 'cave' | CombatScenario;

@@ -372,3 +372,18 @@ asleep/unconscious suppression, source-aware retreat selection, occupied giant
 footprints, and a walkable exit from both obstacle layouts. All completed reports
 were exported; the wall-pocket preset was left ready. No active run was interrupted,
 and port 8000 remained running.
+
+### Armored combat checks — September 8
+
+Build `ed64962d56570c30b5f2`, baseline `explore-combat-v18`, combat testbed v3.
+Added armored skeleton/zombie presets and removed armored skeleton's alert-timer
+attack suppression after a surviving front hit. Seed 123, 40-decision cap:
+armored skeleton cleared in 4 decisions at 2 health; armored zombie cleared in 2
+at 2 health. These are initially sleeping open-room smoke checks, not evidence of
+mastery of already-alert frontal encounters. Policy behavior is unchanged.
+
+Validation: 141 tests, with the testbed export version expectation updated and
+its 21-test environment suite rerun successfully; TypeScript and development
+bundle pass. Front retaliation in all four directions, side-hit turning,
+sleep wake-up, optional hit-stun, headless recovery and finishing are covered.
+Normal play startup was also checked in the browser without errors.

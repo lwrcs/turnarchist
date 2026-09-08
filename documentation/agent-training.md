@@ -555,3 +555,30 @@ enemy threatening the player's tile. It uses observed warning source IDs and
 footprints, not enemy names or hidden future behavior. Missing source IDs give no
 lane preference. Immediate threat avoidance and confirmed lethal attacks retain
 priority. This remains a heuristic, not a guarantee against later attacks.
+
+
+### Forward-facing combat curriculum (September 8)
+
+Use `combat-armoredskull` and `combat-armoredzombie` alongside the two giant
+duels. These isolate surviving an initial hit from the additional difficulty of
+a 2x2 footprint. Training should exercise approaching from the front, dodging,
+letting the enemy advance, and attacking from the side during its turning turn.
+Choose from observed health, facing, body footprint, and hitwarnings; do not
+assume that an enemy name implies a guaranteed kill.
+
+Headless skeletons remain live targets even when they stop producing warnings.
+Finish them when safe before they regenerate; immediate threats still take
+precedence. The armored skeleton currently recovers from one health to two after
+five behavior ticks. This is a game rule to validate when versions change, not
+a permanent assumption about every skeleton.
+
+The player's demonstration on seed 1777725108 included two `spawn armoredzombie`
+commands. Save diagnostics show health falling from 2 to 1 during a stationary
+attack, then remaining at 1 through the later movement/attack sequence. These
+logs contain action outcomes but no enemy-facing snapshots, so they corroborate
+the damage sequence without independently establishing the enemy's orientation.
+
+Testbed version 3 adds the armored duels. Armored skeletons now retaliate after
+a surviving front hit, like armored zombies: their hit-triggered alert timer
+no longer grants attack immunity. Wake-up, turning, headless state, lethal hits,
+and the optional hit-stun setting still determine whether they can attack.

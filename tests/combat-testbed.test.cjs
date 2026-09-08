@@ -21,7 +21,7 @@ function setup(encounter=config.combatEncounter) {
   }
   class Level {constructor(){this.roomsById=new Map();this.globalId='level';}}
   class Player {constructor(game,x,y){Object.assign(this,{game,x,y});}}
-  const EnemyTypeMap=Object.fromEntries(['skull','zombie','bigskull','bigzombie','spawner'].map(type=>[type,{add(room,game,x,y){
+  const EnemyTypeMap=Object.fromEntries(['skull','zombie','bigskull','bigzombie','armoredskull','armoredzombie','spawner'].map(type=>[type,{add(room,game,x,y){
     const size=type.startsWith('big')?2:1;
     room.entities.push({type,x,y,w:size,h:size,pointIn(tx,ty){return tx>=x&&tx<x+size&&ty>=y&&ty<y+size;}});
   }}]));
