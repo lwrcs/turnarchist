@@ -2288,8 +2288,8 @@ export class Entity extends Drawable {
   };
 
   makeHitWarnings = (
-    hx: number = this.x,
-    hy: number = this.y,
+    hx?: number,
+    hy?: number,
     arrowsOnly: boolean = false,
     directionOverride: null | "diagonal" | "orthogonal" | "forward" = null,
   ) => {
@@ -2298,6 +2298,15 @@ export class Entity extends Drawable {
       (this.isEnemy && !(this as unknown as Enemy).seenPlayer)
     )
       return;
+    // Default telegraphs for a wide forward attack must cover both leading tiles.
+    // Explicit origins from makeBigHitWarnings bypass this dispatch.
+    if (hx === undefined && hy === undefined && this.w === 2 && this.h === 2 &&
+      this.forwardOnlyAttack && directionOverride === null && !arrowsOnly) {
+      this.makeBigHitWarnings();
+      return;
+    }
+    hx ??= this.x;
+    hy ??= this.y;
     const player: Player = this.getPlayer();
     const isPlayerOnTile = player.x === hx && player.y === hy;
     const cullFactor = isPlayerOnTile ? 0 : this.hitWarningCullFactor;

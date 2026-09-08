@@ -527,3 +527,31 @@ It is not added to restricted perception or passed to policy feedback, which
 receives only recorded/turnDelta. The runner stops without injecting another
 move or Wait, preserves the final action/replay, and cannot resume a cleared run.
 The comparison tool counts clears separately from deaths and incomplete budgets.
+
+## Obstacle combat presets
+
+Testbed version 2 adds `combat-giant-pocket` and `combat-skull-choke` without
+changing the earlier open-room geometries. The giant pocket places a giant
+skeleton south of the player, wall segments north and west, and a bush beside the
+retreat lane. The skeleton choke point uses two parallel wall segments and two
+bushes around a three-skeleton group. Both retain a walkable escape from the
+starting tile without first breaking an object; unit tests check that route
+against complete occupied footprints.
+
+Walls and object placements are included in encounter metadata. Bushes are real
+game objects with normal damage/loot behavior, loaded during setup to avoid a
+module-initialization cycle. These are controlled stress layouts inspired by
+natural-run failures, not exact reproductions of those saved world states.
+
+Default warning generation for 2x2 forward attackers now dispatches across both
+leading-edge tiles, including initial detection/hurt-triggered telegraphs. Explicit
+warning origins remain explicit, and asleep/unconscious enemies still produce no
+warnings. This repairs the same warning geometry seen by players and agents;
+attack damage and hit footprints are unchanged.
+
+Baseline v18 adds a tie-breaker between equally safe retreats with equal visible
+follow-up space: prefer leaving the current body-aligned lane of an identified
+enemy threatening the player's tile. It uses observed warning source IDs and
+footprints, not enemy names or hidden future behavior. Missing source IDs give no
+lane preference. Immediate threat avoidance and confirmed lethal attacks retain
+priority. This remains a heuristic, not a guarantee against later attacks.

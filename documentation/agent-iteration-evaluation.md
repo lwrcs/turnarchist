@@ -335,3 +335,40 @@ checks pass. Regression tests cover pending spawns/projectiles, non-combat empty
 rooms, death precedence, clear at the budget boundary, replay preservation, refusal
 to resume cleared runs, and report clear counts. Reports were exported and the
 completed trials retained. No active evaluation was interrupted.
+
+## Obstacle encounters and giant telegraph correction
+
+Testbed version 2 adds a giant wall pocket and a skeleton choke point, each with
+real walls/bushes and an initially walkable escape. The browser startup check
+caught a circular import caused by eager Bush loading; loading it at setup time
+resolved the issue before final evaluation.
+
+The pocket revealed a game warning bug: the giant's initial default warning
+covered only one tile of its two-tile attack edge. V17 stepped onto the unmarked
+neighbor and took damage. Default 2x2 forward telegraphs now cover both edge tiles
+in all four directions, while explicit origins and inactive-enemy suppression
+remain intact. This changes visible warnings, not attack footprints or damage.
+
+| Build / policy | Giant pocket | Skeleton choke point |
+| --- | --- | --- |
+| 107fe1539e3af00ed02c / v17, before telegraph fix | cleared in 9, lost 1 health | cleared in 8, no damage |
+| 4d680b42b99811a973e9 / v17, corrected telegraphs | cleared in 5, lost 1 health | cleared in 8, no damage |
+| 4d680b42b99811a973e9 / v18, retreat tie-breaker | cleared in 5, no damage | cleared in 8, no damage |
+
+These are seed 123, 150-decision budgets. The two corrected-build trials provide
+a matched policy comparison: with equal immediate safety and equal follow-up
+space, v18 prefers leaving the current lane of the visible warning source. The
+pocket's damage was eliminated without changing the enemy or player stats.
+
+Natural seed 456 was also compared at a 500-decision budget on the corrected
+build, with identical observation/settings contracts. V17 died at decision 447;
+v18 died at 448. Both explored 341 positions across 5 rooms and lost 2.5 measured
+health. This is not a meaningful survival improvement: the remaining natural-room
+trap is unresolved despite the isolated pocket improvement.
+
+Final validation: 137 tests pass, TypeScript and Webpack checks pass, and syntax/
+whitespace checks pass. Tests cover all-direction full-width warning generation,
+asleep/unconscious suppression, source-aware retreat selection, occupied giant
+footprints, and a walkable exit from both obstacle layouts. All completed reports
+were exported; the wall-pocket preset was left ready. No active run was interrupted,
+and port 8000 remained running.

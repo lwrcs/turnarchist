@@ -4569,6 +4569,18 @@ export class Game {
     this.setPlayer();
 
     if (opts.encounter) {
+      for (const wall of opts.encounter.walls) {
+        if (!room.roomArray[wall.x]?.[wall.y] || (wall.x===local.x&&wall.y===local.y))
+          throw new Error('Combat testbed has an invalid wall');
+        room.roomArray[wall.x][wall.y]=new Wall(room,wall.x,wall.y);
+      }
+      for (const object of opts.encounter.objects) {
+        if (!room.roomArray[object.x]?.[object.y] || room.roomArray[object.x][object.y].isSolid() ||
+          (object.x===local.x&&object.y===local.y) || room.entities.some(e=>e.pointIn(object.x,object.y)))
+          throw new Error('Combat testbed has an occupied object spawn');
+        const { Bush } = require("./entity/object/bush");
+        Bush.add(room,this,object.x,object.y);
+      }
       for (const spawn of opts.encounter.enemies) {
         const previous = new Set(room.entities);
         EnemyTypeMap[spawn.type as EnemyType].add(room, this, spawn.x, spawn.y);

@@ -8,7 +8,7 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v17';
+    static version='explore-combat-v18';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -49,6 +49,19 @@
         if(next.some(e=>e.chainPushable!==true||(e.width??1)!==1||(e.height??1)!==1))return false;
       }
       return false;
+    }
+    leavesThreatLane(view,x,y) {
+      const p=view.player;
+      const sources=new Set(view.room.hitWarnings.filter(w=>w.hostile&&w.x===p.x&&w.y===p.y&&w.sourceId).map(w=>w.sourceId));
+      let count=0;
+      for(const e of view.room.entities) {
+        if(!sources.has(e.id)||!e.isEnemy)continue;
+        const w=Math.max(1,e.width??1),h=Math.max(1,e.height??1);
+        // Use the visible body's current alignment, not a species behavior model.
+        if(p.x>=e.x&&p.x<e.x+w&&(p.y<e.y||p.y>=e.y+h)&&(x<e.x||x>=e.x+w))count++;
+        else if(p.y>=e.y&&p.y<e.y+h&&(p.x<e.x||p.x>=e.x+w)&&(y<e.y||y>=e.y+h))count++;
+      }
+      return count;
     }
     escapeSpace(view,x,y,threats) {
       // Count visible clear follow-up steps, excluding the tile being fled.
@@ -210,9 +223,11 @@
         if(tile?.solid===false) score+=2;
         if(!tile || tile.kind===null) score+=1;
         const escapeSpace=!stays&&threats.has(key(p.x,p.y))?this.escapeSpace(view,x,y,threats):null;
+        const laneExit=escapeSpace!==null?this.leavesThreatLane(view,x,y):0;
         const compareEscape=risk===0&&best?.risk===0&&escapeSpace!==null&&best.escapeSpace!==null;
         if(!best||risk<best.risk||(risk===best.risk&&
-          (compareEscape&&escapeSpace!==best.escapeSpace?escapeSpace>best.escapeSpace:score>best.score)))best={risk,score,escapeSpace,action:{type:'Move',direction}};
+          (compareEscape&&escapeSpace!==best.escapeSpace?escapeSpace>best.escapeSpace:
+            compareEscape&&laneExit!==best.laneExit?laneExit>best.laneExit:score>best.score)))best={risk,score,escapeSpace,laneExit,action:{type:'Move',direction}};
       }
       this.reason=best?(threats.has(key(p.x,p.y))?'evade-warning':'local-combat-exploration'):'no-move';
       return best?.action??{type:'Wait'};

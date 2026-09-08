@@ -28,7 +28,7 @@ function setup(encounter=config.combatEncounter) {
   const {Game}=compile(`export class Game {${methods}}`,{
     ...config,combatEncounter:encounter,EnvType:{DUNGEON:0},RoomType:{START:0},LevelState:{IN_LEVEL:0},Random:{rand:()=>.5},
     LevelGenerator:class {setSeed(){} setMainPathEnvOverride(){}},
-    Room,Level,Player,Wall,Floor:Tile,LightSource:class {},EnemyTypeMap,
+    Room,Level,Player,Wall,Floor:Tile,require:()=>({Bush:{add(room,game,x,y){room.entities.push({type:'bush',x,y,w:1,h:1,pointIn(tx,ty){return tx===x&&ty===y;}});}}}),LightSource:class {},EnemyTypeMap,
     DownLadder:class {constructor(){throw new Error('Combat testbed created a ladder');}}
   });
   const game=new Game();game.localPlayerID='local';game.setActiveRoom=r=>game.room=r;game.setPlayer=()=>{};
@@ -41,9 +41,9 @@ test('all combat presets create a large enclosed room with clear complete footpr
     const room=game.room,layout=config.combatEncounter(scenario),player=game.players.local;
     assert.equal(room.width,25);assert.equal(room.height,25);
     assert.equal(player.x,12);assert.equal(player.y,12);
-    assert.equal(room.entities.length,layout.enemies.length);
+    assert.equal(room.entities.length,layout.enemies.length+layout.objects.length);
     assert.equal(game.recordedSeed,123);assert.equal(room.lightSources.length,1);
-    for(let x=0;x<25;x++)for(let y=0;y<25;y++)assert.equal(room.roomArray[x][y].isSolid(),x===0||y===0||x===24||y===24);
+    for(let x=0;x<25;x++)for(let y=0;y<25;y++)assert.equal(room.roomArray[x][y].isSolid(),x===0||y===0||x===24||y===24||layout.walls.some(w=>w.x===x&&w.y===y));
     for(const e of room.entities) {
       assert.equal(e.pointIn(player.x,player.y),false);
       assert.equal(room.entities.some(other=>other!==e&&other.pointIn(e.x,e.y)),false);
@@ -60,4 +60,17 @@ test('unknown combat scenarios are rejected before replacing the current room',(
 test('a giant whose anchor is clear but body intersects a wall is rejected',()=>{
   const game=setup(scenario=>({...config.combatEncounter(scenario),enemies:[{type:'bigskull',x:23,y:12}]}));
   assert.throws(()=>game.startCombatSandbox('combat-bigskull',123),/occupied spawn footprint/);
+});
+
+test('obstacle encounters retain a walkable escape from the starting position',()=>{
+  for(const scenario of ['combat-giant-pocket','combat-skull-choke']) {
+    const game=setup();game.startCombatSandbox(scenario,123);const room=game.room;
+    const queue=[[12,12]],seen=new Set(['12,12']);
+    for(let i=0;i<queue.length;i++)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const [x,y]=[queue[i][0]+dx,queue[i][1]+dy],key=`${x},${y}`;
+      if(seen.has(key)||!room.roomArray[x]?.[y]||room.roomArray[x][y].isSolid()||room.entities.some(e=>e.pointIn(x,y)))continue;
+      seen.add(key);queue.push([x,y]);
+    }
+    assert.equal(seen.has('1,1'),true,scenario);
+  }
 });

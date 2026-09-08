@@ -62,3 +62,21 @@ test('each giant footprint tile takes one hit before the room ticks without movi
     assert.equal(p.health,enemyHealth===1?2:1);
   }
 });
+
+
+test('default 2x2 forward telegraphs cover the full leading edge in every direction',()=>{
+  const body=members('src/entity/entity.ts',['makeBigHitWarnings','makeHitWarnings']);
+  const {WarningEntity}=compile(`const Direction={LEFT:0,RIGHT:1,UP:2,DOWN:3};
+    const Utils={distance:(x,y,px,py)=>Math.hypot(x-px,y-py)};
+    class HitWarning {constructor(game,x,y){this.x=x;this.y=y;}}
+    export class WarningEntity {${body}}`);
+  for(const [direction,expected] of [[0,[[9,10],[9,11]]],[1,[[12,10],[12,11]]],[2,[[10,9],[11,9]]],[3,[[10,12],[11,12]]]]) {
+    const e=new WarningEntity();Object.assign(e,{x:10,y:10,w:2,h:2,forwardOnlyAttack:true,
+      isEnemy:true,seenPlayer:true,attackRange:1,diagonalAttackRange:1,hitWarningCullFactor:0,
+      direction,room:{hitwarnings:[]},getPlayer:()=>({x:10,y:9}),isWithinRoomBounds:()=>true,
+      occupiesTile:(x,y)=>x>=10&&x<12&&y>=10&&y<12});
+    e.makeHitWarnings();assert.deepEqual(JSON.parse(JSON.stringify(e.room.hitwarnings.map(w=>[w.x,w.y]))),expected);
+    e.room.hitwarnings=[];e.seenPlayer=false;e.makeHitWarnings();assert.equal(e.room.hitwarnings.length,0);
+    e.seenPlayer=true;e.unconscious=true;e.makeHitWarnings();assert.equal(e.room.hitwarnings.length,0);
+  }
+});

@@ -25811,10 +25811,19 @@ class Entity extends drawable_1.Drawable {
                     break;
             }
         };
-        this.makeHitWarnings = (hx = this.x, hy = this.y, arrowsOnly = false, directionOverride = null) => {
+        this.makeHitWarnings = (hx, hy, arrowsOnly = false, directionOverride = null) => {
             if (this.unconscious ||
                 (this.isEnemy && !this.seenPlayer))
                 return;
+            // Default telegraphs for a wide forward attack must cover both leading tiles.
+            // Explicit origins from makeBigHitWarnings bypass this dispatch.
+            if (hx === undefined && hy === undefined && this.w === 2 && this.h === 2 &&
+                this.forwardOnlyAttack && directionOverride === null && !arrowsOnly) {
+                this.makeBigHitWarnings();
+                return;
+            }
+            hx ?? (hx = this.x);
+            hy ?? (hy = this.y);
             const player = this.getPlayer();
             const isPlayerOnTile = player.x === hx && player.y === hy;
             const cullFactor = isPlayerOnTile ? 0 : this.hitWarningCullFactor;
@@ -35650,6 +35659,18 @@ class Game {
         this.offlinePlayers = {};
         this.setPlayer();
         if (opts.encounter) {
+            for (const wall of opts.encounter.walls) {
+                if (!room.roomArray[wall.x]?.[wall.y] || (wall.x === local.x && wall.y === local.y))
+                    throw new Error('Combat testbed has an invalid wall');
+                room.roomArray[wall.x][wall.y] = new wall_1.Wall(room, wall.x, wall.y);
+            }
+            for (const object of opts.encounter.objects) {
+                if (!room.roomArray[object.x]?.[object.y] || room.roomArray[object.x][object.y].isSolid() ||
+                    (object.x === local.x && object.y === local.y) || room.entities.some(e => e.pointIn(object.x, object.y)))
+                    throw new Error('Combat testbed has an occupied object spawn');
+                const { Bush } = __webpack_require__(/*! ./entity/object/bush */ "./src/entity/object/bush.ts");
+                Bush.add(room, this, object.x, object.y);
+            }
             for (const spawn of opts.encounter.enemies) {
                 const previous = new Set(room.entities);
                 room_1.EnemyTypeMap[spawn.type].add(room, this, spawn.x, spawn.y);
@@ -39110,9 +39131,10 @@ exports.CameraAnimation = CameraAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-exports.COMBAT_TESTBED_VERSION = 1;
+exports.COMBAT_TESTBED_VERSION = 2;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
-    'combat-bigzombie', 'combat-skull-pack', 'combat-spawner'];
+    'combat-bigzombie', 'combat-skull-pack', 'combat-spawner',
+    'combat-giant-pocket', 'combat-skull-choke'];
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
 }
@@ -39120,10 +39142,23 @@ exports.isCombatScenario = isCombatScenario;
 function combatEncounter(scenario) {
     if (!isCombatScenario(scenario))
         throw new Error('Unsupported combat encounter');
-    const names = scenario === 'combat-skull-pack' ? ['skull', 'skull', 'skull'] : [scenario.slice(7)];
+    const pocket = scenario === 'combat-giant-pocket', choke = scenario === 'combat-skull-choke';
+    const walls = [];
+    if (pocket) {
+        for (let x = 10; x <= 15; x++)
+            walls.push({ x, y: 10 });
+        for (let y = 11; y <= 16; y++)
+            walls.push({ x: 10, y });
+    }
+    if (choke)
+        for (let y = 8; y <= 16; y++)
+            walls.push({ x: 11, y }, { x: 15, y });
+    const objects = pocket ? [{ type: 'bush', x: 11, y: 11 }] : choke ?
+        [{ type: 'bush', x: 12, y: 10 }, { type: 'bush', x: 14, y: 14 }] : [];
+    const names = scenario === 'combat-skull-pack' || choke ? ['skull', 'skull', 'skull'] : [pocket ? 'bigskull' : scenario.slice(7)];
     return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
-        player: { x: 12, y: 12 },
-        enemies: names.map((type, i) => ({ type, x: 13, y: names.length === 1 ? 12 : 9 + i * 3 })) };
+        player: { x: 12, y: 12 }, walls, objects,
+        enemies: names.map((type, i) => ({ type, x: pocket ? 12 : 13, y: pocket ? 13 : names.length === 1 ? 12 : 9 + i * 3 })) };
 }
 exports.combatEncounter = combatEncounter;
 
@@ -100044,7 +100079,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("026087f1572a1d06d98e")
+/******/ 		__webpack_require__.h = () => ("4d680b42b99811a973e9")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -433,3 +433,15 @@ test('death takes priority over an inconsistent clear flag',async()=>{
   const report=await new Runner(agent).run({seeds:[1],decisions:3,scenario:'combat-skull'});
   assert.equal(report.runs[0].status,'dead');assert.equal(report.runs[0].decisions,1);
 });
+
+
+test('equal-space retreats favor leaving an identified threatening giant lane',()=>{
+  const p=new Policy(),v=view();v.player={x:12,y:12,health:2,maxHealth:2};v.room.tiles=[];
+  for(let x=10;x<=15;x++)for(let y=10;y<=16;y++)v.room.tiles.push({x,y,solid:x===10||y===10});
+  v.room.entities=[{id:'giant',x:12,y:13,width:2,height:2,isEnemy:true,collidable:true,destroyable:true,health:3},
+    {id:'bush',x:11,y:11,isEnemy:false,collidable:true,destroyable:true,health:1}];
+  v.room.hitWarnings=[{x:12,y:12,hostile:true,sourceId:'giant'},{x:13,y:12,hostile:true,sourceId:'giant'}];
+  assert.equal(p.choose(v).direction,'left');
+  assert.equal(p.leavesThreatLane(v,11,12),1);assert.equal(p.leavesThreatLane(v,12,11),0);
+  v.room.hitWarnings.forEach(w=>delete w.sourceId);assert.equal(p.leavesThreatLane(v,11,12),0);
+});
