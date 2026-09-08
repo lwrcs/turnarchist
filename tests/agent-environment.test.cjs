@@ -443,7 +443,7 @@ test('combat reset dispatches the preset and exports its reproducible setup sepa
   assert.equal(received.scenario,'combat-bigzombie');assert.equal(received.seed,42);
   assert.equal(result.encounter.width,25);assert.equal(result.encounter.enemies[0].type,'bigzombie');
   const replay=env.exportReplay();assert.equal(replay.scenario,'combat-bigzombie');
-  assert.equal(replay.encounter.version,4);assert.equal(replay.diagnosticSandbox,true);
+  assert.equal(replay.encounter.version,5);assert.equal(replay.diagnosticSandbox,true);
   assert.equal(replay.steps,0);
 });
 

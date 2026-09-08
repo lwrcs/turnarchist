@@ -10,14 +10,18 @@
   p { color: #c8c0d6; }
   button, input { font: inherit; padding: 8px 12px; margin: 3px; }
   button { cursor: pointer; }
-  iframe { border: 1px solid #514660; width: 100%; height: 580px; margin-top: 12px; }
+  iframe { display: block; box-sizing: border-box; border: 1px solid #514660; width: 100%; height: clamp(280px, 65vh, 580px); margin: 12px 0; }
+  input, select, canvas { box-sizing: border-box; max-width: 100%; }
+  label { display: inline-block; max-width: 100%; }
+  @media (max-width: 600px) { main { padding: 10px; } h1 { font-size: 20px; } }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
 </style>
 <main>
   <h1>Turnarchist agent lab</h1>
+  <iframe id="game" title="Agent game" src="./play.html?agent=1"></iframe>
   <p>Browser simulation · diagnostic room observations · run saves and player-stat uploads disabled</p>
   <label>Seed <input id="seed" type="number" value="123" min="0" max="4294967295"></label>
-  <label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option><option value="combat-skull">Combat: skeleton</option><option value="combat-zombie">Combat: zombie</option><option value="combat-bigskull">Combat: giant skeleton</option><option value="combat-bigzombie">Combat: giant zombie</option><option value="combat-armoredskull">Combat: armored skeleton</option><option value="combat-armoredzombie">Combat: armored zombie</option><option value="combat-armoredskull-alert">Combat: alert armored skeleton</option><option value="combat-armoredzombie-alert">Combat: alert armored zombie</option><option value="combat-bigskull-alert">Combat: alert giant skeleton</option><option value="combat-bigzombie-alert">Combat: alert giant zombie</option><option value="combat-skull-pack">Combat: skeleton group</option><option value="combat-spawner">Combat: spawner</option><option value="combat-giant-pocket">Combat: giant wall pocket</option><option value="combat-skull-choke">Combat: skeleton choke point</option></select></label>
+  <label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option><option value="combat-skull">Combat: skeleton</option><option value="combat-zombie">Combat: zombie</option><option value="combat-bigskull">Combat: giant skeleton</option><option value="combat-bigzombie">Combat: giant zombie</option><option value="combat-armoredskull">Combat: armored skeleton</option><option value="combat-armoredzombie">Combat: armored zombie</option><option value="combat-armoredskull-alert">Combat: alert armored skeleton</option><option value="combat-armoredzombie-alert">Combat: alert armored zombie</option><option value="combat-bigskull-alert">Combat: alert giant skeleton</option><option value="combat-bigzombie-alert">Combat: alert giant zombie</option><option value="combat-giant-clutter">Combat: giant with clutter and support</option><option value="combat-armored-clutter">Combat: armored enemies with clutter</option><option value="combat-skull-pack">Combat: skeleton group</option><option value="combat-spawner">Combat: spawner</option><option value="combat-giant-pocket">Combat: giant wall pocket</option><option value="combat-skull-choke">Combat: skeleton choke point</option></select></label>
   <button id="lighting-check">Inspect lighting</button>
   <button id="reset">Reset run</button>
   <button data-action="up">Up</button><button data-action="down">Down</button>
@@ -35,7 +39,6 @@
   <div><label>Additional decisions <input id="resume-decisions" type="number" value="250" min="1" max="10000"></label><button id="batch-resume">Continue last run</button></div>
   <div><label>Trace seed <input id="trace-seed" type="number" value="123"></label><button id="batch-trace">Inspect batch trace</button></div>
   <p id="status" role="status">Loading agent game…</p>
-  <iframe id="game" title="Agent game" src="./play.html?agent=1"></iframe>
   <canvas id="light-map" width="640" height="480" aria-label="Diagnostic lighting map"></canvas>
   <pre id="result" aria-label="Agent result"></pre>
 </main>

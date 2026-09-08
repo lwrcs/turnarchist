@@ -411,3 +411,29 @@ stationary finish.
 These are fixed open-room duels, not a natural boss-room success claim or a
 controlled v18-versus-v19 improvement measurement. Next coverage should combine
 clutter, other threats, entrance positioning and retreat opportunities.
+
+### Clutter and support enemies — September 8
+
+Testbed v5, build `8f0f8a18f1d9c5d795f8`, unchanged baseline v19.
+Both new presets have western/southern walls, two breakable bushes, a northern
+walkable escape, and a second alert armored zombie. Seed 123, 100-decision cap:
+
+- `combat-armored-clutter`: cleared in 10 decisions, health 2, no damage.
+- `combat-giant-clutter`: died in 17 decisions, health 0, two health lost;
+  reproduced a second time while collecting its trace.
+
+The giant case is retained as a failure regression. Player dodges right from
+(12,12), attacks left safely from (13,12), then retreats right because the bush
+at (13,11) blocks the next perpendicular dodge and (13,13) is warned. At
+(14,12), the approaching zombie occupies (15,12). The player goes north, clears
+the bush on decision 5, but the two enemies then maintain a formation with the
+giant below and zombie to the right. The only safe immediate walk is north,
+until the player reaches the boundary at y=1 and dies. This requires planning
+an escape before engaging, clearing obstructing terrain earlier, or considering
+a deliberate damage tradeoff; merely preferring another currently safe dodge
+cannot resolve the established formation.
+
+The lab game iframe now precedes every control, with panel-height-responsive
+sizing and constrained input/canvas widths. Browser DOM verification confirmed
+all controls are below the game. TypeScript, build and 26 affected encounter/
+environment tests pass. No policy change or boss retreat success is claimed.

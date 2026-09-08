@@ -39140,10 +39140,11 @@ exports.CameraAnimation = CameraAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-exports.COMBAT_TESTBED_VERSION = 4;
+exports.COMBAT_TESTBED_VERSION = 5;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
     'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
     'combat-armoredskull-alert', 'combat-armoredzombie-alert', 'combat-bigskull-alert', 'combat-bigzombie-alert',
+    'combat-giant-clutter', 'combat-armored-clutter',
     'combat-giant-pocket', 'combat-skull-choke'];
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
@@ -39152,6 +39153,17 @@ exports.isCombatScenario = isCombatScenario;
 function combatEncounter(scenario) {
     if (!isCombatScenario(scenario))
         throw new Error('Unsupported combat encounter');
+    if (scenario === 'combat-giant-clutter' || scenario === 'combat-armored-clutter') {
+        const giant = scenario === 'combat-giant-clutter';
+        return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
+            player: { x: 12, y: 12 },
+            // West/south clutter leaves a northern escape and space on the east.
+            walls: [...Array.from({ length: 8 }, (_, i) => ({ x: 9, y: 10 + i })),
+                ...Array.from({ length: 6 }, (_, i) => ({ x: 10 + i, y: 17 }))],
+            objects: [{ type: 'bush', x: 13, y: 11 }, { type: 'bush', x: 14, y: 14 }],
+            enemies: [{ type: giant ? 'bigskull' : 'armoredskull', x: giant ? 11 : 12, y: 13, alert: true },
+                { type: 'armoredzombie', x: 15, y: 10, alert: true }] };
+    }
     const alert = scenario.endsWith('-alert');
     const pocket = scenario === 'combat-giant-pocket', choke = scenario === 'combat-skull-choke';
     const walls = [];
@@ -100090,7 +100102,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("668a27bb0c7c5c3cfcdc")
+/******/ 		__webpack_require__.h = () => ("8f0f8a18f1d9c5d795f8")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -609,3 +609,9 @@ prepare later floors. When implemented, measure boss progress and repeated
 fishing/retreat loops so food gathering does not become the agent's permanent
 substitute for learning combat. Neither boss commitment nor fishing is added
 by the alert-duel work.
+
+Testbed v5 adds `combat-giant-clutter` and `combat-armored-clutter`: two awake
+enemies plus breakable clutter and a walkable northern escape. The giant case
+currently traps v19 despite that geometric escape. Use it to evaluate escape
+planning before a side hit; a path that is open now may become a pursuit corridor
+with no lateral exit. These are single-room scenarios, not actual door retreat.

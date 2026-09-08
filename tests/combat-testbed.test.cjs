@@ -63,7 +63,7 @@ test('a giant whose anchor is clear but body intersects a wall is rejected',()=>
 });
 
 test('obstacle encounters retain a walkable escape from the starting position',()=>{
-  for(const scenario of ['combat-giant-pocket','combat-skull-choke']) {
+  for(const scenario of ['combat-giant-pocket','combat-skull-choke','combat-giant-clutter','combat-armored-clutter']) {
     const game=setup();game.startCombatSandbox(scenario,123);const room=game.room;
     const queue=[[12,12]],seen=new Set(['12,12']);
     for(let i=0;i<queue.length;i++)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
