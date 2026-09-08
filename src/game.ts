@@ -1,3 +1,5 @@
+import { combatEncounter, CombatScenario } from "./game/combatTestbed";
+import { LightSource } from "./lighting/lightSource";
 import { GameConstants } from "./game/gameConstants";
 import { AGENT_MODE } from "./game/agentMode";
 import { advanceSimulationEffects } from "./game/simulationEffects";
@@ -4484,7 +4486,14 @@ export class Game {
     });
   }
 
+  startCombatSandbox(scenario: CombatScenario, seed: number): void {
+    const encounter = combatEncounter(scenario);
+    this.startSidepathSandbox({stagingEnv: EnvType.DUNGEON, stagingDepth: 0,
+      sidepathEnv: EnvType.DUNGEON, sidePathOptions: {}, seed, encounter});
+  }
+
   private startSidepathSandbox(opts: {
+    encounter?: ReturnType<typeof combatEncounter>;
     stagingEnv: EnvType;
     stagingDepth: number;
     sidepathEnv: EnvType;
@@ -4501,8 +4510,8 @@ export class Game {
 
     const depth = opts.stagingDepth;
     const mapGroup = 1;
-    const roomW = 21;
-    const roomH = 21;
+    const roomW = opts.encounter?.width ?? 21;
+    const roomH = opts.encounter?.height ?? 21;
 
     const level = new Level(
       this, depth, roomW, roomH, true, mapGroup, opts.stagingEnv, true,
@@ -4532,11 +4541,11 @@ export class Game {
 
     const lx = room.roomX + Math.floor(room.width / 2);
     const ly = room.roomY + Math.floor(room.height / 2);
-    const dl = new DownLadder(
+    const dl = opts.encounter ? null : new DownLadder(
       room, this, lx, ly, true,
       opts.sidepathEnv, LockType.NONE, opts.sidePathOptions, { lockType: LockType.NONE },
     );
-    room.roomArray[lx][ly] = dl;
+    if (dl) room.roomArray[lx][ly] = dl;
 
     level.rooms = [room];
     level.roomsById.set(room.globalId, room);
@@ -4559,6 +4568,22 @@ export class Game {
     this.offlinePlayers = {};
     this.setPlayer();
 
+    if (opts.encounter) {
+      for (const spawn of opts.encounter.enemies) {
+        const previous = new Set(room.entities);
+        EnemyTypeMap[spawn.type as EnemyType].add(room, this, spawn.x, spawn.y);
+        const spawned = room.entities.filter(e=>!previous.has(e));
+        const enemy = spawned.length === 1 ? spawned[0] : null;
+        if (!enemy) throw new Error(`Combat testbed failed to spawn ${spawn.type}`);
+        // Validate every occupied tile, including giant bodies, not just the anchor.
+        for (let x=enemy.x; x<enemy.x+enemy.w; x++) for (let y=enemy.y; y<enemy.y+enemy.h; y++) {
+          if (!room.roomArray[x]?.[y] || room.roomArray[x][y].isSolid() ||
+            (x===local.x&&y===local.y) || room.entities.some(e=>e!==enemy&&e.pointIn(x,y)))
+            throw new Error('Combat testbed has an occupied spawn footprint');
+        }
+      }
+      room.lightSources.push(new LightSource(lx+0.5, ly+0.5, 18, [255,255,255], 0.65));
+    }
     try { room.calculateWallInfo(); } catch {}
     try {
       room.roomOnScreen(local);
@@ -4572,7 +4597,7 @@ export class Game {
 
     this.replayManager.beginRecording(seed);
 
-    dl.onCollide(local);
+    if (dl) dl.onCollide(local);
   }
 
   /**

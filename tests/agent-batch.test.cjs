@@ -412,3 +412,10 @@ test('all four giant tiles are attacks that stay on the current warning unless l
     assert.equal(p.choose(v).direction,direction,`lethal attack at ${x},${y}`);
   }
 });
+
+test('batch reset preserves the selected combat scenario in report and reset options',async()=>{
+  const agent=fakeAgent(),original=agent.reset;let options;
+  agent.reset=async(seed,opts)=>{options=opts;return original(seed,opts);};
+  const report=await new Runner(agent).run({seeds:[123],decisions:2,scenario:'combat-bigskull'});
+  assert.equal(options.scenario,'combat-bigskull');assert.equal(report.scenario,'combat-bigskull');
+});

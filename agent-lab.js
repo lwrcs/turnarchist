@@ -33,10 +33,10 @@
   document.getElementById('batch-stop').onclick = () => batchRunner?.stop();
   document.getElementById('batch-run').onclick = () => run(async () => {
     batchRunner = new AgentBatch.Runner(api());
-    document.getElementById('scenario').value='standard';
     const report=await batchRunner.run({
       seeds:document.getElementById('batch-seeds').value.split(',').map(s=>s.trim()).filter(Boolean).map(Number),
       decisions:Number(document.getElementById('batch-decisions').value),
+      scenario:document.getElementById('scenario').value,
       onProgress:progress,
     });
     return summarizeBatch(report);

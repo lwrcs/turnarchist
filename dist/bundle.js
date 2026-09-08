@@ -30464,6 +30464,8 @@ exports.ITEM_EXAMINE_TEXT = {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.gs = exports.game = exports.Game = exports.ChatMessage = exports.Direction = exports.LevelState = void 0;
+const combatTestbed_1 = __webpack_require__(/*! ./game/combatTestbed */ "./src/game/combatTestbed.ts");
+const lightSource_1 = __webpack_require__(/*! ./lighting/lightSource */ "./src/lighting/lightSource.ts");
 const gameConstants_1 = __webpack_require__(/*! ./game/gameConstants */ "./src/game/gameConstants.ts");
 const agentMode_1 = __webpack_require__(/*! ./game/agentMode */ "./src/game/agentMode.ts");
 const simulationEffects_1 = __webpack_require__(/*! ./game/simulationEffects */ "./src/game/simulationEffects.ts");
@@ -35592,6 +35594,11 @@ class Game {
             },
         });
     }
+    startCombatSandbox(scenario, seed) {
+        const encounter = (0, combatTestbed_1.combatEncounter)(scenario);
+        this.startSidepathSandbox({ stagingEnv: environmentTypes_1.EnvType.DUNGEON, stagingDepth: 0,
+            sidepathEnv: environmentTypes_1.EnvType.DUNGEON, sidePathOptions: {}, seed, encounter });
+    }
     startSidepathSandbox(opts) {
         const seed = Number.isFinite(opts.seed)
             ? opts.seed
@@ -35601,8 +35608,8 @@ class Game {
         this.levelgen.setMainPathEnvOverride(opts.stagingEnv);
         const depth = opts.stagingDepth;
         const mapGroup = 1;
-        const roomW = 21;
-        const roomH = 21;
+        const roomW = opts.encounter?.width ?? 21;
+        const roomH = opts.encounter?.height ?? 21;
         const level = new level_1.Level(this, depth, roomW, roomH, true, mapGroup, opts.stagingEnv, true);
         level.genSource = "procedural";
         const room = new room_1.Room(this, 0, 0, roomW, roomH, room_1.RoomType.START, depth, mapGroup, level, random_1.Random.rand, opts.stagingEnv);
@@ -35622,8 +35629,9 @@ class Game {
         }
         const lx = room.roomX + Math.floor(room.width / 2);
         const ly = room.roomY + Math.floor(room.height / 2);
-        const dl = new downLadder_1.DownLadder(room, this, lx, ly, true, opts.sidepathEnv, lockable_1.LockType.NONE, opts.sidePathOptions, { lockType: lockable_1.LockType.NONE });
-        room.roomArray[lx][ly] = dl;
+        const dl = opts.encounter ? null : new downLadder_1.DownLadder(room, this, lx, ly, true, opts.sidepathEnv, lockable_1.LockType.NONE, opts.sidePathOptions, { lockType: lockable_1.LockType.NONE });
+        if (dl)
+            room.roomArray[lx][ly] = dl;
         level.rooms = [room];
         level.roomsById.set(room.globalId, room);
         this.levels = [];
@@ -35641,6 +35649,24 @@ class Game {
         this.players = { [this.localPlayerID]: local };
         this.offlinePlayers = {};
         this.setPlayer();
+        if (opts.encounter) {
+            for (const spawn of opts.encounter.enemies) {
+                const previous = new Set(room.entities);
+                room_1.EnemyTypeMap[spawn.type].add(room, this, spawn.x, spawn.y);
+                const spawned = room.entities.filter(e => !previous.has(e));
+                const enemy = spawned.length === 1 ? spawned[0] : null;
+                if (!enemy)
+                    throw new Error(`Combat testbed failed to spawn ${spawn.type}`);
+                // Validate every occupied tile, including giant bodies, not just the anchor.
+                for (let x = enemy.x; x < enemy.x + enemy.w; x++)
+                    for (let y = enemy.y; y < enemy.y + enemy.h; y++) {
+                        if (!room.roomArray[x]?.[y] || room.roomArray[x][y].isSolid() ||
+                            (x === local.x && y === local.y) || room.entities.some(e => e !== enemy && e.pointIn(x, y)))
+                            throw new Error('Combat testbed has an occupied spawn footprint');
+                    }
+            }
+            room.lightSources.push(new lightSource_1.LightSource(lx + 0.5, ly + 0.5, 18, [255, 255, 255], 0.65));
+        }
         try {
             room.calculateWallInfo();
         }
@@ -35655,7 +35681,8 @@ class Game {
         this.startedFadeOut = true;
         this.startMenuActive = false;
         this.replayManager.beginRecording(seed);
-        dl.onCollide(local);
+        if (dl)
+            dl.onCollide(local);
     }
     /**
      * Chat command: `/new castle`
@@ -36465,6 +36492,7 @@ exports.checkAgentCompatibility = checkAgentCompatibility;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentEnvironment = void 0;
+const combatTestbed_1 = __webpack_require__(/*! ./combatTestbed */ "./src/game/combatTestbed.ts");
 const agentPerception_1 = __webpack_require__(/*! ./agentPerception */ "./src/game/agentPerception.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
@@ -36550,7 +36578,7 @@ class AgentEnvironment {
             throw new Error("Seed must be an unsigned 32-bit integer");
         }
         const scenario = options.scenario ?? "standard";
-        if (!["standard", "forest", "cave"].includes(scenario))
+        if (!["standard", "forest", "cave"].includes(scenario) && !(0, combatTestbed_1.isCombatScenario)(scenario))
             throw new Error("Unsupported diagnostic scenario");
         const vision = (0, agentPerception_1.validateAgentVision)(options.vision ?? agentPerception_1.DEFAULT_AGENT_VISION);
         const maxSteps = options.maxSteps ?? 1000;
@@ -36563,7 +36591,9 @@ class AgentEnvironment {
             this.game.replayManager.cancelReplay();
             this.game.newGame(seed);
             await this.settle();
-            if (scenario !== "standard")
+            if ((0, combatTestbed_1.isCombatScenario)(scenario))
+                this.game.startCombatSandbox(scenario, seed);
+            else if (scenario !== "standard")
                 this.game.startLightingSandbox(scenario, seed);
             this.scenario = scenario;
             this.game.started = true;
@@ -36721,7 +36751,8 @@ class AgentEnvironment {
         return {
             schemaVersion: 6, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
-            seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+            seed: this.seed, scenario: this.scenario,
+            encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
             ...this.budgetStatus(),
             initialized: this.seed !== null,
             ready: this.seed !== null && !this.busy && !player.dead &&
@@ -36828,6 +36859,7 @@ class AgentEnvironment {
         return JSON.parse(JSON.stringify({ schemaVersion: 2, contract: this.contract(), source: "agent-browser",
             gameVersion: gameConstants_1.GameConstants.VERSION, observationMode: "diagnostic-current-room",
             developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
+            encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null,
             diagnosticSandbox: this.scenario !== "standard",
             settings: { ...gameplaySettings_1.GameplaySettings },
             vision: { ...this.vision },
@@ -39055,6 +39087,37 @@ class CameraAnimation {
     }
 }
 exports.CameraAnimation = CameraAnimation;
+
+
+/***/ }),
+
+/***/ "./src/game/combatTestbed.ts":
+/*!***********************************!*\
+  !*** ./src/game/combatTestbed.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
+/** Versioned, deterministic setup data. Never part of the policy's action space. */
+exports.COMBAT_TESTBED_VERSION = 1;
+exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
+    'combat-bigzombie', 'combat-skull-pack', 'combat-spawner'];
+function isCombatScenario(value) {
+    return exports.COMBAT_SCENARIOS.includes(value);
+}
+exports.isCombatScenario = isCombatScenario;
+function combatEncounter(scenario) {
+    if (!isCombatScenario(scenario))
+        throw new Error('Unsupported combat encounter');
+    const names = scenario === 'combat-skull-pack' ? ['skull', 'skull', 'skull'] : [scenario.slice(7)];
+    return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
+        player: { x: 12, y: 12 },
+        enemies: names.map((type, i) => ({ type, x: 13, y: names.length === 1 ? 12 : 9 + i * 3 })) };
+}
+exports.combatEncounter = combatEncounter;
 
 
 /***/ }),
@@ -99973,7 +100036,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("205607bbd2bab9fb10c1")
+/******/ 		__webpack_require__.h = () => ("5526a71636d0e582e5f7")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

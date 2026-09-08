@@ -17,7 +17,7 @@
   <h1>Turnarchist agent lab</h1>
   <p>Browser simulation · diagnostic room observations · run saves and player-stat uploads disabled</p>
   <label>Seed <input id="seed" type="number" value="123" min="0" max="4294967295"></label>
-  <label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option></select></label>
+  <label>Scenario <select id="scenario"><option value="standard">Standard</option><option value="forest">Forest sandbox</option><option value="cave">Cave sandbox</option><option value="combat-skull">Combat: skeleton</option><option value="combat-zombie">Combat: zombie</option><option value="combat-bigskull">Combat: giant skeleton</option><option value="combat-bigzombie">Combat: giant zombie</option><option value="combat-skull-pack">Combat: skeleton group</option><option value="combat-spawner">Combat: spawner</option></select></label>
   <button id="lighting-check">Inspect lighting</button>
   <button id="reset">Reset run</button>
   <button data-action="up">Up</button><button data-action="down">Down</button>
@@ -40,6 +40,6 @@
   <pre id="result" aria-label="Agent result"></pre>
 </main>
 <script src="./agent-baseline.js?v=17"></script>
-<script src="./agent-batch.js?v=6"></script>
-<script src="./agent-lab.js?v=13"></script>
+<script src="./agent-batch.js?v=7"></script>
+<script src="./agent-lab.js?v=14"></script>
 </html>

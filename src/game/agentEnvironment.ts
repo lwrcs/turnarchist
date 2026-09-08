@@ -1,3 +1,4 @@
+import { AgentScenario, isCombatScenario, combatEncounter } from "./combatTestbed";
 import { DEFAULT_AGENT_VISION, validateAgentVision, perceiveRoom, AgentVision } from "./agentPerception";
 import type { Game } from "../game";
 import { Direction } from "../game";
@@ -45,7 +46,7 @@ interface AgentTransition {
 /** Browser-backed v1. Uses real gameplay; it is not yet a deterministic Node simulator. */
 export class AgentEnvironment {
   private vision: AgentVision = {...DEFAULT_AGENT_VISION};
-  private scenario: "standard" | "forest" | "cave" = "standard";
+  private scenario: AgentScenario = "standard";
   private busy = false;
   private seed: number | null = null;
   private steps = 0;
@@ -102,12 +103,12 @@ export class AgentEnvironment {
     } finally { this.busy = false; }
   }
 
-  async reset(seed: number, options: { maxSteps?: number; vision?: AgentVision; scenario?: "standard" | "forest" | "cave" } = {}) {
+  async reset(seed: number, options: { maxSteps?: number; vision?: AgentVision; scenario?: AgentScenario } = {}) {
     if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
       throw new Error("Seed must be an unsigned 32-bit integer");
     }
     const scenario = options.scenario ?? "standard";
-    if (!["standard", "forest", "cave"].includes(scenario)) throw new Error("Unsupported diagnostic scenario");
+    if (!["standard", "forest", "cave"].includes(scenario) && !isCombatScenario(scenario)) throw new Error("Unsupported diagnostic scenario");
     const vision = validateAgentVision(options.vision ?? DEFAULT_AGENT_VISION);
     const maxSteps = options.maxSteps ?? 1000;
     if (!Number.isInteger(maxSteps) || maxSteps < 1 || maxSteps > 100000) {
@@ -119,7 +120,8 @@ export class AgentEnvironment {
       this.game.replayManager.cancelReplay();
       this.game.newGame(seed);
       await this.settle();
-      if (scenario !== "standard") this.game.startLightingSandbox(scenario, seed);
+      if (isCombatScenario(scenario)) this.game.startCombatSandbox(scenario, seed);
+      else if (scenario !== "standard") this.game.startLightingSandbox(scenario, seed);
       this.scenario = scenario;
       this.game.started = true;
       this.game.startedFadeOut = true;
@@ -267,7 +269,8 @@ export class AgentEnvironment {
     return {
       schemaVersion: 6, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
-      seed: this.seed, scenario: this.scenario, steps: this.steps, maxSteps: this.maxSteps,
+      seed: this.seed, scenario: this.scenario,
+      encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
       ...this.budgetStatus(),
       initialized: this.seed !== null,
       ready: this.seed !== null && !this.busy && !player.dead &&
@@ -366,6 +369,7 @@ export class AgentEnvironment {
     return JSON.parse(JSON.stringify({ schemaVersion: 2, contract: this.contract(), source: "agent-browser",
       gameVersion: GameConstants.VERSION, observationMode: "diagnostic-current-room",
       developerMode: GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
+      encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null,
       diagnosticSandbox: this.scenario !== "standard",
       settings: { ...GameplaySettings },
       vision: {...this.vision},

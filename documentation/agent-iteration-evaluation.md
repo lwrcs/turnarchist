@@ -285,3 +285,24 @@ curriculum work while retaining its later spawner encounter as a separate test.
 Both reports were exported and their completed tabs retained for inspection.
 No game or policy code changed, no active episode was interrupted, and port 8000
 remained running. No tests were rerun for this evaluation-only documentation update.
+
+## Focused combat testbed verification
+
+Added six versioned combat presets in a 25x25 enclosed starting room. Browser
+validation caught that more distant initial placements allowed exploration to
+avoid the encounter; final version 1 starts a duel adjacent to the player while
+retaining ample retreat space. Group positions remain separated.
+
+Final build 5526a71636d0e582e5f7: combat-bigskull, seed 123, 12 decisions completed
+at health 2. The restricted trace confirms actual combat: action 1 attacks right
+and reduces giant health 4 to 3; action 2 moves up; action 3 attacks down and
+reduces giant health 3 to 2. This is setup/interaction verification, not a claim
+that the baseline reliably defeats giants. The report was exported.
+
+A browser reset of combat-skull-pack confirmed a 25x25 room and exactly three
+SkullEnemies at (13,9), (13,12), and (13,15). That preset was left ready in the lab.
+129 tests pass, including all preset geometries and reset repeatability through
+the actual setup method, full-footprint collision validation, environment export
+metadata, batch scenario propagation, and scenario-aware report comparison.
+TypeScript and Webpack checks pass. No active run was interrupted; port 8000
+remains running. Existing normal-seed reports remain a separate evaluation set.

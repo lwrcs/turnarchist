@@ -54,13 +54,13 @@
       this.report.completedSeeds=this.report.runs.filter(r=>r.status!=='running').length;
       this.running=false;
     }
-    async run({seeds,decisions=100,onProgress=()=>{}}) {
+    async run({seeds,decisions=100,scenario='standard',onProgress=()=>{}}) {
       if(this.running)throw new Error('Batch already running');
       if(!Array.isArray(seeds)||seeds.length<1||seeds.length>50||seeds.some(s=>!Number.isInteger(s)||s<0||s>0xffffffff))throw new Error('Provide 1..50 uint32 seeds');
       if(!validBudget(decisions))throw new Error('decisions must be 1..10000');
       this.running=true;this.stopping=false;this.lastEpisode=null;
       const report=this.report={schemaVersion:3,source:'programmed-policy-evaluation',policy:Policy.version,
-        backend:'browser',policySource:source,seeds:[...seeds],decisionsPerSeed:decisions,startedAt:new Date().toISOString(),runs:[]};
+        backend:'browser',scenario,policySource:source,seeds:[...seeds],decisionsPerSeed:decisions,startedAt:new Date().toISOString(),runs:[]};
       try {
         for(const seed of seeds) {
           if(this.stopping)break;
@@ -68,7 +68,7 @@
           report.runs.push(run);
           try {
             this.lastEpisode=null;
-            await this.agent.reset(seed,{maxSteps:decisions});
+            await this.agent.reset(seed,{maxSteps:decisions,scenario});
             const view=this.agent.perceive();
             Object.assign(run,{contract:view.contract,vision:view.vision,initialHealth:view.player.health,
               finalHealth:view.player.health,roomsVisited:1,decisionsSinceNewPosition:0,

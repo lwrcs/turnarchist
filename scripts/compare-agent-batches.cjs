@@ -23,6 +23,7 @@ function compareReports(before, after) {
     const newRun = current.get(seed);
     if (!newRun) continue;
     const differences = [];
+    if ((before.scenario ?? 'standard') !== (after.scenario ?? 'standard')) differences.push('scenario');
     if ((oldRun.decisionBudget ?? before.decisionsPerSeed) !== (newRun.decisionBudget ?? after.decisionsPerSeed)) differences.push('decision-budget');
     if (!before.backend || before.backend !== after.backend) differences.push('backend');
     const a = oldRun.contract ?? {}, b = newRun.contract ?? {};

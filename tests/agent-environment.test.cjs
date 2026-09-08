@@ -19,6 +19,7 @@ function setup(timeoutMs = 500) {
   class DownLadder {}
   class UpLadder {}
   const {AgentEnvironment} = load('src/game/agentEnvironment.ts', {
+    './combatTestbed': load('src/game/combatTestbed.ts'),
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
     '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
     './actionReadiness': {isActionReady: game => game.levelReady},
@@ -433,4 +434,15 @@ test('identified upward ladders expose return traits without revealing dark exit
   assert.equal(identified.room.tiles[0].traversal.direction,'up');
   room.vis[2][1]=1;
   const dark=env.perceive().room.tiles[0];assert.equal(dark.exit,null);assert.equal(dark.traversal,null);
+});
+
+test('combat reset dispatches the preset and exports its reproducible setup separately from actions',async()=>{
+  const {env,game}=setup();let received;
+  game.startCombatSandbox=(scenario,seed)=>{received={scenario,seed};};
+  const result=await env.reset(42,{scenario:'combat-bigzombie',maxSteps:20});
+  assert.equal(received.scenario,'combat-bigzombie');assert.equal(received.seed,42);
+  assert.equal(result.encounter.width,25);assert.equal(result.encounter.enemies[0].type,'bigzombie');
+  const replay=env.exportReplay();assert.equal(replay.scenario,'combat-bigzombie');
+  assert.equal(replay.encounter.version,1);assert.equal(replay.diagnosticSandbox,true);
+  assert.equal(replay.steps,0);
 });

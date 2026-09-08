@@ -34,3 +34,10 @@ test('a resumed run uses its own budget rather than the original batch default',
   assert.equal(compareReports(a,b).controlledSeeds,0);
   a.runs[0].decisionBudget=750;assert.equal(compareReports(a,b).controlledSeeds,1);
 });
+
+test('combat presets cannot be compared as equivalent to standard or other encounters',()=>{
+  const a=report(),b=report();b.scenario='combat-skull';
+  assert.ok(compareReports(a,b).pairs[0].differences.includes('scenario'));
+  a.scenario='combat-zombie';assert.equal(compareReports(a,b).controlledSeeds,0);
+  a.scenario=b.scenario;assert.equal(compareReports(a,b).controlledSeeds,1);
+});

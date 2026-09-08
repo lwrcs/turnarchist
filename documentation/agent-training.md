@@ -487,3 +487,27 @@ the actual Player.tryMove, dagger attack, weapon target lookup, and Entity.point
 methods: each directional attack hits once, stays in place, and kills before the
 room response when sufficient damage is dealt. Nonlethal attacks retain the
 under-player warning; a confirmed kill removes only that source's threat.
+
+## Focused combat testbed
+
+Choose a `Combat:` entry in the agent lab's Scenario selector, then use Reset run
+for manual actions or Run baseline batch for policy evaluation. The presets are
+skeleton, zombie, giant skeleton, giant zombie, a three-skeleton group, and spawner.
+Batch runs honor the selected scenario; select Standard to evaluate natural seeds.
+
+Combat testbed version 1 is a 25x25 room with perimeter walls and a 23x23 open
+interior. The player starts at (12,12). Single enemies start at (13,12); the group
+uses (13,9), (13,12), and (13,15). Enemy construction uses the EnemyTypeMap registry
+behind `/spawn`, with fixed placement and validation of the whole footprint.
+A white room light uses the normal numerical lighting engine. Health, inventory,
+turn rules and enemy behavior are unchanged. Preset data lives in
+`src/game/combatTestbed.ts`; bump its version when changing encounter geometry.
+
+Setup happens at reset, outside the policy action space. Restricted perception
+still follows range, line-of-sight and brightness rules. Diagnostic observations
+and replay envelopes include the versioned encounter layout; replay envelopes
+remain marked diagnosticSandbox. These are testbed recordings, not standard-run
+replays or automatically successful demonstrations. Full standalone sandbox replay
+restoration is not added by this change. Batch reports include scenario, and the
+comparison tool rejects comparisons across different scenarios. Budget exhaustion
+still means incomplete; clearing an encounter is not yet a separate runner outcome.
