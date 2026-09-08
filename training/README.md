@@ -50,8 +50,12 @@ The final replay replaces the previous one to bound disk use. This pilot retains
 sandbox replay limitations documented in agent-training.md. Errors fail the run;
 never report them as deaths or silently reset over pending game callbacks.
 
-For unattended execution use a desktop tmux session, keep the desktop awake,
-and inspect its log/progress after reconnecting. The runner starts its own
+For unattended execution, keep a Windows `wsl.exe` process alive using a
+Windows scheduled task under the training user, and keep the desktop awake.
+A tmux-only launch did not survive the Windows SSH session ending on this
+machine. Pilot 001 uses the on-demand task `Turnarchist-Combat-Pilot-001`,
+with a 12-hour execution limit; it does not automatically restart after failure.
+Inspect its exit-code file and log/progress after reconnecting. The runner starts its own
 loopback-only HTTP server on an available port and isolated browser profile;
 it never touches the Mac's port-8000 server. Browser requests to external hosts
 are blocked, and service workers are disabled.
