@@ -157,3 +157,26 @@ episodes and latest replays live in `worker-N` directories; root-level episode
 records belong to evaluation. Checkpoint evaluation still uses one environment.
 Resume requires the original worker count to avoid silently changing rollout
 collection. Old checkpoints without this metadata are treated as single-worker.
+
+## Baseline demonstrations and an imitation warm start
+
+```sh
+python training/collect_teacher.py --repeats 2 --out ~/turnarchist-training/teacher-001
+python training/imitate.py --data ~/turnarchist-training/teacher-001 --envs 2 --epochs 200 --out ~/turnarchist-training/imitation-001
+```
+
+The collector runs the existing programmed baseline on the three training
+fixtures in all four views. It saves learner observations and mapped action
+labels, with separate episode outcomes. Failed and damaged runs remain in the
+raw dataset; imitation selects only completed encounters without health loss.
+Giant transfer fixtures are excluded. The teacher itself uses restricted
+perception, but has more traits and history than the small learner's encoder.
+
+The initial collection cleared 24/24 encounters with full health, producing only
+48 decisions from fixed layouts. These are tiny, repeated examples, not a broad
+demonstration corpus. Offline cross-entropy fitting initializes the policy; it
+does not generate game experience, train the value head, or freeze any layers.
+The checkpoint records zero PPO decisions and can later resume real PPO with
+its configured worker count. Low training loss is not evidence of combat skill:
+evaluate the saved checkpoint in actual games, including held-out giants, before
+deciding whether to continue from it.
