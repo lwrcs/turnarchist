@@ -8,7 +8,7 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v19';
+    static version='explore-combat-v22';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -62,6 +62,60 @@
         else if(p.y>=e.y&&p.y<e.y+h&&(p.x<e.x||p.x>=e.x+w)&&(y<e.y||y>=e.y+h))count++;
       }
       return count;
+    }
+    prepareCombatEscape(view,threats) {
+      const p=view.player;
+      if(threats.has(key(p.x,p.y)))return null;
+      const weapon=view.inventory.find(i=>i?.activeWeapon)?.traits;
+      if(weapon?.attackPattern!=='adjacent-cardinal'||!(weapon.minimumAttackDamage>0))return null;
+      const damage=weapon.minimumAttackDamage;
+      // Do not postpone a safe finish (including a recovering enemy) to prepare
+      // for another opponent. The current tile is already known unthreatened.
+      if(view.room.entities.some(e=>e.isEnemy&&e.destroyable&&!e.pushable&&
+        Number.isFinite(e.combat?.killDamageThreshold)&&e.combat.killDamageThreshold>0&&
+        damage>=e.combat.killDamageThreshold&&directions.some(([,dx,dy])=>occupies(e,p.x+dx,p.y+dy))))return null;
+      for(const enemy of view.room.entities) {
+        if(!enemy.isEnemy||!enemy.id||!view.room.hitWarnings.some(w=>w.hostile&&w.sourceId===enemy.id))continue;
+        if(!directions.some(([,dx,dy])=>occupies(enemy,p.x+dx,p.y+dy)))continue;
+        const threshold=enemy.combat?.killDamageThreshold;
+        if(Number.isFinite(threshold)&&threshold>0&&damage>=threshold)continue;
+        const width=Math.max(1,enemy.width??1),height=Math.max(1,enemy.height??1);
+        // Prepare a perpendicular exit from the visible body's lane before a
+        // surviving attack. This is geometry, not a prediction of an AI turn.
+        const candidates=directions.filter(([,dx,dy])=>{
+          const x=p.x+dx,y=p.y+dy;
+          return p.x>=enemy.x&&p.x<enemy.x+width ? x<enemy.x||x>=enemy.x+width :
+            p.y>=enemy.y&&p.y<enemy.y+height ? y<enemy.y||y>=enemy.y+height : false;
+        }).filter(([,dx,dy])=>{
+          const x=p.x+dx,y=p.y+dy,tile=view.room.tiles.find(t=>t.x===x&&t.y===y);
+          return tile?.solid===false&&!tile.isDoor&&!tile.exit&&!threats.has(key(x,y));
+        });
+        const occupants=([,dx,dy])=>view.room.entities.filter(e=>occupies(e,p.x+dx,p.y+dy));
+        if(candidates.some(d=>occupants(d).every(e=>!e.collidable&&!e.isEnemy&&e.appearance!=='unidentified')))continue;
+        for(const d of candidates) {
+          const blockers=occupants(d);
+          if(blockers.length!==1)continue;
+          const b=blockers[0],kill=b.combat?.killDamageThreshold;
+          if(b.isEnemy!==false||!b.destroyable||b.pushable||!Number.isFinite(kill)||kill<=0||damage<kill)continue;
+          const edge=`${view.room.id??'room'}:${key(p.x,p.y)}>${key(p.x+d[1],p.y+d[2])}`;
+          if((this.blocked.get(edge)??0)>this.tick)continue;
+          return {type:'Move',direction:d[0]};
+        }
+        // With a wide body, shift along its edge to make the following dodge
+        // possible. Do not keep attacking from the middle of a blocked lane.
+        const vertical=p.x>=enemy.x&&p.x<enemy.x+width;
+        const clear=(x,y)=>view.room.tiles.some(t=>t.x===x&&t.y===y&&t.solid===false&&!t.isDoor&&!t.exit)&&
+          !threats.has(key(x,y))&&!view.room.entities.some(e=>occupies(e,x,y)&&(e.collidable||e.isEnemy||e.appearance==='unidentified'));
+        for(const [direction,dx,dy] of directions) {
+          if(vertical?dy!==0:dx!==0)continue;
+          const x=p.x+dx,y=p.y+dy;
+          if(!clear(x,y))continue;
+          const nx=x+dx,ny=y+dy;
+          const outside=vertical?nx<enemy.x||nx>=enemy.x+width:ny<enemy.y||ny>=enemy.y+height;
+          if(outside&&clear(nx,ny))return {type:'Move',direction};
+        }
+      }
+      return null;
     }
     escapeSpace(view,x,y,threats) {
       // Count visible clear follow-up steps, excluding the tile being fled.
@@ -184,6 +238,8 @@
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const threats=new Set(view.room.hitWarnings.filter(w=>w.hostile).map(w=>key(w.x,w.y)));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
+      const preparation=this.prepareCombatEscape(view,threats);
+      if(preparation){this.reason='clear-combat-escape';return preparation;}
       const route=this.route(view,threats);
       const adjacentEnemy=enemies.some(e=>directions.some(([,dx,dy])=>occupies(e,p.x+dx,p.y+dy)));
       // Attacking a blocking object can leave us on the current warning tile.

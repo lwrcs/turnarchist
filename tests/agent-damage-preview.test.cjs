@@ -80,3 +80,11 @@ test('default 2x2 forward telegraphs cover the full leading edge in every direct
     e.seenPlayer=true;e.unconscious=true;e.makeHitWarnings();assert.equal(e.room.hitwarnings.length,0);
   }
 });
+
+test('bush berry-drop damage handler permits clearance estimates but changed handlers do not',()=>{
+ const body=members('src/entity/object/bush.ts',['onHurt','standardBushOnHurt','getAgentKillDamageThreshold']);
+ const {Bush}=compile(`class Entity {${entityMembers}} export class Bush extends Entity {${body}}`);
+ const bush=new Bush();bush.health=1;assert.equal(bush.getAgentKillDamageThreshold(),1);
+ bush.health=3;assert.equal(bush.getAgentKillDamageThreshold(),3);
+ bush.onHurt=()=>{};assert.equal(bush.getAgentKillDamageThreshold(),null);
+});

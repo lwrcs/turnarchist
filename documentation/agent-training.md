@@ -615,3 +615,29 @@ enemies plus breakable clutter and a walkable northern escape. The giant case
 currently traps v19 despite that geometric escape. Use it to evaluate escape
 planning before a side hit; a path that is open now may become a pursuit corridor
 with no lateral exit. These are single-room scenarios, not actual door retreat.
+
+### Escape preparation and stress-test scope
+
+Baseline v22 prepares for a surviving attack using only identified entities,
+visible warnings, footprint geometry, and conservative damage descriptors:
+
+- When the player is currently safe but has no clear perpendicular exit from
+  an adjacent threatening body's lane, clear a one-hit obstruction if possible.
+- If a wide body and another warning prevent a direct dodge, shift along the
+  body's edge when the next sideways tile is visibly clear.
+- Do not prepare while the current tile is threatened, assume an unknown
+  obstruction will break, or postpone a guaranteed safe finish on another enemy.
+
+Bushes now explicitly advertise their ordinary damage threshold; their berry
+on-hit effect does not alter survival. Modified hurt, death or on-hit handlers
+still make this threshold unknown. No new player action or hidden simulation
+state is exposed. Preparation prevents some pinning formations; it is not a
+solver for an already physically inescapable trap.
+
+Testbed v6 adds one-health variants of both clutter scenarios. The user's
+clarification is important: clutter plus armored enemies is higher-level stress
+coverage. Training alongside giants is intended to test transfer of the spacing
+strategy, not require starter gear to win every combination. Some arrangements
+may need food, stronger weapons, or retreat. Keep simple duels and these stress
+cases distinct when reporting success, and do not optimize the curriculum by
+silently removing hard failures.

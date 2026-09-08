@@ -4581,6 +4581,7 @@ export class Game {
         const { Bush } = require("./entity/object/bush");
         Bush.add(room,this,object.x,object.y);
       }
+      if (opts.encounter.player.health !== null) local.health = opts.encounter.player.health;
       for (const spawn of opts.encounter.enemies) {
         const previous = new Set(room.entities);
         EnemyTypeMap[spawn.type as EnemyType].add(room, this, spawn.x, spawn.y);

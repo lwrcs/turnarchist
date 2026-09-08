@@ -26631,6 +26631,9 @@ class Bush extends entity_1.Entity {
             if (random_1.Random.rand() < 1 / 7)
                 this.drops.push(new berries_1.Berries(this.room, this.x, this.y));
         };
+        // Dropping berries does not alter damage or survival. Changed handlers stay unknown.
+        this.standardBushOnHurt = this.onHurt;
+        this.getAgentKillDamageThreshold = () => this.standardKillDamageThreshold(this.standardBushOnHurt);
         this.draw = (delta) => {
             if (this.dead)
                 return;
@@ -35667,6 +35670,8 @@ class Game {
                 const { Bush } = __webpack_require__(/*! ./entity/object/bush */ "./src/entity/object/bush.ts");
                 Bush.add(room, this, object.x, object.y);
             }
+            if (opts.encounter.player.health !== null)
+                local.health = opts.encounter.player.health;
             for (const spawn of opts.encounter.enemies) {
                 const previous = new Set(room.entities);
                 room_1.EnemyTypeMap[spawn.type].add(room, this, spawn.x, spawn.y);
@@ -39140,11 +39145,12 @@ exports.CameraAnimation = CameraAnimation;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.combatEncounter = exports.isCombatScenario = exports.COMBAT_SCENARIOS = exports.COMBAT_TESTBED_VERSION = void 0;
 /** Versioned, deterministic setup data. Never part of the policy's action space. */
-exports.COMBAT_TESTBED_VERSION = 5;
+exports.COMBAT_TESTBED_VERSION = 6;
 exports.COMBAT_SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-bigskull',
     'combat-bigzombie', 'combat-armoredskull', 'combat-armoredzombie', 'combat-skull-pack', 'combat-spawner',
     'combat-armoredskull-alert', 'combat-armoredzombie-alert', 'combat-bigskull-alert', 'combat-bigzombie-alert',
     'combat-giant-clutter', 'combat-armored-clutter',
+    'combat-giant-clutter-low-health', 'combat-armored-clutter-low-health',
     'combat-giant-pocket', 'combat-skull-choke'];
 function isCombatScenario(value) {
     return exports.COMBAT_SCENARIOS.includes(value);
@@ -39153,10 +39159,10 @@ exports.isCombatScenario = isCombatScenario;
 function combatEncounter(scenario) {
     if (!isCombatScenario(scenario))
         throw new Error('Unsupported combat encounter');
-    if (scenario === 'combat-giant-clutter' || scenario === 'combat-armored-clutter') {
-        const giant = scenario === 'combat-giant-clutter';
+    if (scenario.startsWith('combat-giant-clutter') || scenario.startsWith('combat-armored-clutter')) {
+        const giant = scenario.startsWith('combat-giant-clutter');
         return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
-            player: { x: 12, y: 12 },
+            player: { x: 12, y: 12, health: scenario.endsWith('-low-health') ? 1 : null },
             // West/south clutter leaves a northern escape and space on the east.
             walls: [...Array.from({ length: 8 }, (_, i) => ({ x: 9, y: 10 + i })),
                 ...Array.from({ length: 6 }, (_, i) => ({ x: 10 + i, y: 17 }))],
@@ -39180,7 +39186,7 @@ function combatEncounter(scenario) {
         [{ type: 'bush', x: 12, y: 10 }, { type: 'bush', x: 14, y: 14 }] : [];
     const names = scenario === 'combat-skull-pack' || choke ? ['skull', 'skull', 'skull'] : [pocket ? 'bigskull' : scenario.slice(7).replace(/-alert$/, '')];
     return { version: exports.COMBAT_TESTBED_VERSION, width: 25, height: 25,
-        player: { x: 12, y: 12 }, walls, objects,
+        player: { x: 12, y: 12, health: null }, walls, objects,
         enemies: names.map((type, i) => ({ type, alert, x: alert ? (type.startsWith('big') ? 11 : 12) : pocket ? 12 : 13, y: alert ? 13 : pocket ? 13 : names.length === 1 ? 12 : 9 + i * 3 })) };
 }
 exports.combatEncounter = combatEncounter;
@@ -100102,7 +100108,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("8f0f8a18f1d9c5d795f8")
+/******/ 		__webpack_require__.h = () => ("64e97d177a3d948b4c36")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

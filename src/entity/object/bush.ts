@@ -28,6 +28,11 @@ export class Bush extends Entity {
       this.drops.push(new Berries(this.room, this.x, this.y));
   };
 
+  // Dropping berries does not alter damage or survival. Changed handlers stay unknown.
+  private readonly standardBushOnHurt = this.onHurt;
+  getAgentKillDamageThreshold = (): number | null =>
+    this.standardKillDamageThreshold(this.standardBushOnHurt);
+
   get type() {
     return EntityType.PROP;
   }

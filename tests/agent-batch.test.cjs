@@ -458,3 +458,42 @@ test('safe guaranteed finishes beat explored-tile penalties and exits, even with
  v.room.hitWarnings=[{x:0,y:0,hostile:true,sourceId:'other'}];
  assert.notEqual(p.choose(v).direction,'right');
 });
+
+test('prepares a blocked perpendicular escape before a surviving side hit',()=>{
+ const p=new Policy(),v=view();v.player={x:13,y:12,health:2,maxHealth:2};
+ v.room.tiles=[];for(let x=10;x<=16;x++)for(let y=10;y<=15;y++)v.room.tiles.push({x,y,solid:false});
+ v.inventory=[{activeWeapon:true,traits:{attackPattern:'adjacent-cardinal',minimumAttackDamage:1}}];
+ v.room.entities=[{id:'enemy',x:11,y:12,width:2,height:2,isEnemy:true,collidable:true,destroyable:true,health:4,combat:{killDamageThreshold:4}},
+ {id:'clutter',x:13,y:11,width:1,height:1,isEnemy:false,collidable:true,destroyable:true,health:1,combat:{killDamageThreshold:1}}];
+ v.room.hitWarnings=[{x:11,y:11,hostile:true,sourceId:'enemy'}];
+ assert.equal(p.choose(v).direction,'up');assert.equal(p.reason,'clear-combat-escape');
+ v.room.entities.push({id:'recovering',x:14,y:12,isEnemy:true,destroyable:true,combat:{killDamageThreshold:1}});
+ assert.equal(p.prepareCombatEscape(v,new Set()),null);
+ v.room.entities.pop();
+ // Unknown or multi-hit clearance cannot promise an exit next turn.
+ v.room.entities[1].combat.killDamageThreshold=null;
+ assert.notEqual(p.prepareCombatEscape(v,new Set())?.direction,'up');
+ v.room.entities[1].combat.killDamageThreshold=2;
+ assert.notEqual(p.prepareCombatEscape(v,new Set())?.direction,'up');
+ v.room.entities[1].combat.killDamageThreshold=1;
+ assert.equal(p.prepareCombatEscape(v,new Set(['13,12'])),null);
+ // Finish a killable enemy instead; an unthreatening recovering enemy also needs no prep.
+ v.room.entities[0].combat.killDamageThreshold=1;
+ assert.equal(p.prepareCombatEscape(v,new Set()),null);
+ v.room.entities[0].combat.killDamageThreshold=4;v.room.hitWarnings=[];
+ assert.equal(p.prepareCombatEscape(v,new Set()),null);
+});
+
+
+test('shifts along a wide enemy edge when the other enemy covers the direct dodge',()=>{
+ const p=new Policy(),v=view();v.player={x:13,y:11,health:1,maxHealth:2};
+ v.room.tiles=[];for(let x=10;x<=17;x++)for(let y=9;y<=15;y++)v.room.tiles.push({x,y,solid:false});
+ v.inventory=[{activeWeapon:true,traits:{attackPattern:'adjacent-cardinal',minimumAttackDamage:1}}];
+ v.room.entities=[{id:'giant',x:12,y:12,width:2,height:2,isEnemy:true,collidable:true,destroyable:true,combat:{killDamageThreshold:4}},
+ {id:'support',x:15,y:11,width:1,height:1,isEnemy:true,collidable:true,destroyable:true,combat:{killDamageThreshold:2}}];
+ v.room.hitWarnings=[{x:14,y:12,hostile:true,sourceId:'giant'},{x:14,y:11,hostile:true,sourceId:'support'}];
+ assert.equal(p.choose(v).direction,'left');
+ // A hidden or warned second step is not a promised escape.
+ v.room.tiles=v.room.tiles.filter(t=>t.x!==11||t.y!==11);
+ assert.equal(p.prepareCombatEscape(v,new Set(['14,11'])),null);
+});

@@ -41,6 +41,7 @@ test('all combat presets create a large enclosed room with clear complete footpr
     const room=game.room,layout=config.combatEncounter(scenario),player=game.players.local;
     assert.equal(room.width,25);assert.equal(room.height,25);
     assert.equal(player.x,12);assert.equal(player.y,12);
+    if(scenario.endsWith('-low-health'))assert.equal(player.health,1);
     assert.equal(room.entities.length,layout.enemies.length+layout.objects.length);
     assert.equal(game.recordedSeed,123);assert.equal(room.lightSources.length,1);
     for(let x=0;x<25;x++)for(let y=0;y<25;y++)assert.equal(room.roomArray[x][y].isSolid(),x===0||y===0||x===24||y===24||layout.walls.some(w=>w.x===x&&w.y===y));

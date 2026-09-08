@@ -437,3 +437,32 @@ The lab game iframe now precedes every control, with panel-height-responsive
 sizing and constrained input/canvas widths. Browser DOM verification confirmed
 all controls are below the game. TypeScript, build and 26 affected encounter/
 environment tests pass. No policy change or boss retreat success is claimed.
+
+### Escape preparation milestone — September 8
+
+Final policy `explore-combat-v22`, build `64e97d177a3d948b4c36`, testbed v6.
+The first preparation experiment (v20) cleared the bush, but still attacked
+before its next dodge was available and died in 16 decisions. Adding an edge
+positioning step (v21) resolved this particular pursuit trap. V22 also ensures
+that preparation cannot postpone another guaranteed safe kill.
+
+Final v22 browser checks on seed 123, 100-decision cap:
+
+| Encounter | Decisions | Initial / final health | Outcome |
+| --- | ---: | --- | --- |
+| Giant clutter, one health | 18 | 1 / 1 | Cleared |
+| Armored clutter, one health | 10 | 1 / 1 | Cleared |
+| Alert giant skeleton | 9 | 2 / 2 | Cleared |
+| Alert giant zombie | 6 | 2 / 2 | Cleared |
+| Alert armored skeleton | 5 | 2 / 2 | Cleared |
+| Alert armored zombie | 3 | 2 / 2 | Cleared |
+
+All six lost zero health. The earlier v19 giant-clutter failure used another
+build before bushes advertised their clearance threshold, so the improvement
+belongs to the combined descriptor and policy change. It is not an isolated
+policy comparison. Fixed layouts are still not evidence of natural boss-room
+mastery, nor a requirement that every higher-level armored/clutter arrangement
+be clearable without resources.
+
+Validation: all 146 tests pass on the final policy, as do TypeScript and the
+development bundle. The normal play menu loads without console errors.
