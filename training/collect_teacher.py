@@ -27,6 +27,7 @@ def main():
         parser.error('Use 1..20 repeats of the three training fixtures in four views')
     args.out.mkdir(parents=True,exist_ok=False)
     env=CombatEnv(args.out,rotate_frames=True)
+    env.phase='teacher-demonstration'
     observations,actions,episode_ids=[],[],[]
     outcomes=[]
     rng=np.random.default_rng(456)

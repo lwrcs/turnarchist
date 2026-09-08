@@ -14,7 +14,9 @@ from combat_pilot import CombatEnv
 
 def make_env(out):
     torch.set_num_threads(1)
-    return CombatEnv(out, rotate_frames=True)
+    env=CombatEnv(out, rotate_frames=True)
+    env.phase='throughput-benchmark'
+    return env
 
 
 def main():

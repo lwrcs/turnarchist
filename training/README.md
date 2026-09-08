@@ -180,3 +180,8 @@ The checkpoint records zero PPO decisions and can later resume real PPO with
 its configured worker count. Low training loss is not evidence of combat skill:
 evaluate the saved checkpoint in actual games, including held-out giants, before
 deciding whether to continue from it.
+
+New episode records carry a `phase` label: training, random/deterministic/sampled
+evaluation, teacher demonstration, or throughput benchmark. Keep these sources
+separate when aggregating outcomes. Older unlabelled logs should not be assumed
+to contain only training episodes; initial and final evaluations may be mixed in.

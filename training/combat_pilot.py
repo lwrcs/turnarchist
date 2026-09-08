@@ -98,6 +98,7 @@ class CombatEnv(gym.Env):
         self.rotate_frames = rotate_frames
         self.rotation = 0
         self.episode = 0
+        self.phase = 'unassigned'
         self.contract = None
         self.frames = deque(maxlen=2)
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
@@ -176,7 +177,7 @@ class CombatEnv(gym.Env):
         info = {}
         if done or truncated:
             outcome = 'dead' if dead else 'cleared' if clear else 'budget-incomplete'
-            record = {'scenario': self.scenario, 'seed': self.game_seed, 'rotation':self.rotation, 'status': outcome,
+            record = {'phase':self.phase,'scenario': self.scenario, 'seed': self.game_seed, 'rotation':self.rotation, 'status': outcome,
                       'steps': self.steps, 'reward': self.total_reward, 'health': next_view['player']['health']}
             info.update(record)
             with (self.out/'episodes.jsonl').open('a') as f:
@@ -207,7 +208,9 @@ class Checkpoints(BaseCallback):
 
 def make_training_env(out, rotate_frames):
     torch.set_num_threads(1)
-    return Monitor(CombatEnv(out, rotate_frames=rotate_frames))
+    env = CombatEnv(out, rotate_frames=rotate_frames)
+    env.phase = 'training'
+    return Monitor(env)
 
 
 def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False, deterministic=True):
@@ -215,7 +218,12 @@ def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False, d
     # advance the training RNG or depend on earlier evaluations' action counts.
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(seed)
-        return _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministic)
+        phase = getattr(env,'phase','unassigned')
+        env.phase = 'random-evaluation' if policy is None else 'deterministic-evaluation' if deterministic else 'sampled-evaluation'
+        try:
+            return _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministic)
+        finally:
+            env.phase = phase
 
 
 def _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministic):
@@ -315,6 +323,7 @@ def main():
         baseline = evaluate(env, None, SCENARIOS)
         (args.out/'random-evaluation.json').write_text(json.dumps(baseline, indent=2))
         training_env = env
+        env.phase = 'training'
         if args.envs > 1:
             parallel_env = SubprocVecEnv([
                 functools.partial(make_training_env,args.out/f'worker-{i}',args.rotate_frames)
