@@ -100,3 +100,16 @@ keeps incomplete budgets separate from clears/deaths, and reports dominant
 policy actions and distinct positions. Check action distributions by scenario:
 a dominant action can be correct for a simple fixture, but repetition without
 completion on hard fixtures deserves inspection.
+
+For rotated checkpoints, cover every view explicitly with `--eval-all-rotations`:
+
+```sh
+python training/combat_pilot.py --rotate-frames --evaluate ~/turnarchist-training/pilot-002/final.zip --eval-repeats 2 --eval-all-rotations --out ~/turnarchist-training/pilot-002-eval
+```
+
+This runs two seeds per fixture in each of four coordinate frames, for 40
+episodes per policy (80 total). Each group of four shares the underlying game
+seed, and the random and learned policies receive the same complete plan.
+Reports include outcomes by rotation and both policy/world action counts.
+The four views are correlated tests of the same encounter, not four independent
+layouts. This evaluation option leaves checkpoint inputs and training unchanged.

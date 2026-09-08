@@ -54,6 +54,22 @@ class RotationTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_all_rotations_share_seed_and_cover_each_view(self):
+        class Env:
+            def __init__(self): self.plan = []
+            def reset(self, *, seed, options):
+                self.plan.append((options['scenario'], seed, options['rotation']))
+                return np.zeros(1), {}
+            def step(self, action):
+                return np.zeros(1), 0, True, False, {}
+        env = Env()
+        evaluate(env, None, ['a', 'b'], repeats=2, all_rotations=True)
+        self.assertEqual(len(env.plan), 16)
+        for start in range(0,16,4):
+            group = env.plan[start:start+4]
+            self.assertEqual(len({(scenario,seed) for scenario,seed,_ in group}),1)
+            self.assertEqual([rotation for _,_,rotation in group],list(range(4)))
+
     def test_seed_plan_independent_of_episode_length(self):
         class Env:
             def __init__(self, length): self.length, self.seeds = length, []

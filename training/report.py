@@ -13,15 +13,21 @@ def summarize(rows):
     for scenario, episodes in groups.items():
         outcomes = Counter(e['status'] for e in episodes)
         actions = Counter(t['action'] for e in episodes for t in e.get('trace', []))
+        world_actions = Counter(t['worldAction'] for e in episodes for t in e.get('trace', []) if 'worldAction' in t)
+        by_rotation = defaultdict(Counter)
+        for episode in episodes:
+            by_rotation[episode.get('rotation',0)][episode['status']] += 1
         result[scenario] = {
             'episodes':len(episodes), 'cleared':outcomes['cleared'], 'dead':outcomes['dead'],
             'budgetIncomplete':outcomes['budget-incomplete'],
             'otherOutcomes':{k:v for k,v in outcomes.items() if k not in ('cleared','dead','budget-incomplete')},
             'meanDecisions':sum(e['steps'] for e in episodes)/len(episodes),
             'policyActionCounts':dict(sorted(actions.items())),
+            'worldActionCounts':dict(sorted(world_actions.items())),
             'dominantActionFraction':max(actions.values())/sum(actions.values()) if actions else None,
             'distinctPositions':[len({(t['x'],t['y']) for t in e['trace']}) if e.get('trace') else None for e in episodes],
             'rotations':dict(sorted(Counter(e.get('rotation',0) for e in episodes).items())),
+            'outcomesByRotation':{k:dict(v) for k,v in sorted(by_rotation.items())},
         }
     return result
 

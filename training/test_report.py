@@ -25,5 +25,10 @@ class ReportTests(unittest.TestCase):
             self.assertTrue(compare(d)['matchedEpisodePlan'])
     def test_unknown_outcomes_are_not_silently_dropped(self):
         self.assertEqual(summarize([self.row('error')])['combat-zombie']['otherOutcomes'],{'error':1})
+    def test_rotation_specific_failure_is_visible(self):
+        good,bad=self.row('cleared'),self.row()
+        good['rotation'],bad['rotation']=0,1
+        result=summarize([good,bad])['combat-zombie']
+        self.assertEqual(result['outcomesByRotation'],{0:{'cleared':1},1:{'budget-incomplete':1}})
 
 if __name__=='__main__': unittest.main()

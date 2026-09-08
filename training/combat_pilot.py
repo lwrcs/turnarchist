@@ -125,6 +125,11 @@ class CombatEnv(gym.Env):
         scenario = (options or {}).get('scenario', SCENARIOS[self.episode % len(SCENARIOS)])
         self.rotation = int(self.np_random.integers(4)) if self.rotate_frames else 0
         game_seed = int(self.np_random.integers(0, 2**31))
+        if 'rotation' in (options or {}):
+            rotation = options['rotation']
+            if not self.rotate_frames or rotation not in range(4):
+                raise ValueError('Explicit rotation requires rotated frames and a quarter-turn in 0..3')
+            self.rotation = int(rotation)
         view = self.page.evaluate('''async ([seed, scenario, budget]) => {
             await window.agent.reset(seed, {scenario, maxSteps:budget});
             return window.agent.perceive();
@@ -196,15 +201,20 @@ class Checkpoints(BaseCallback):
         return True
 
 
-def evaluate(env, policy, scenarios, seed=987, repeats=1):
+def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False):
     records = []
     rng = np.random.default_rng(seed)
     # Episode seeds must not depend on how many random actions previous episodes used.
     plan_rng = np.random.default_rng(seed)
     plan = [(scenario, int(plan_rng.integers(0, 2**31)))
             for _ in range(repeats) for scenario in scenarios]
-    for scenario, episode_seed in plan:
-        obs, _ = env.reset(seed=episode_seed, options={'scenario': scenario})
+    plan = [(scenario, episode_seed, rotation) for scenario, episode_seed in plan
+            for rotation in (range(4) if all_rotations else [None])]
+    for scenario, episode_seed, rotation in plan:
+        options = {'scenario': scenario}
+        if rotation is not None:
+            options['rotation'] = rotation
+        obs, _ = env.reset(seed=episode_seed, options=options)
         while True:
             action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=True)[0])
             obs, _, done, truncated, info = env.step(action)
@@ -224,9 +234,13 @@ def main():
     parser.add_argument('--eval-repeats', type=int, default=1)
     parser.add_argument('--smoke', action='store_true')
     parser.add_argument('--rotate-frames', action='store_true')
+    parser.add_argument('--eval-all-rotations', action='store_true',
+                        help='Evaluate each seed in all four views; requires --evaluate and --rotate-frames')
     args = parser.parse_args()
     if args.eval_repeats < 1 or args.eval_repeats > 100 or args.steps < 1:
         parser.error('Use positive steps and 1..100 evaluation repeats')
+    if args.eval_all_rotations and not (args.evaluate and args.rotate_frames):
+        parser.error('--eval-all-rotations requires --evaluate and --rotate-frames')
     if not args.smoke and (args.out/'manifest.json').exists():
         parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
@@ -236,7 +250,8 @@ def main():
         manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
-                    'torch': torch.__version__, 'budget': 64}
+                    'torch': torch.__version__, 'budget': 64,
+                    'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations}}
         checkpoint = args.resume or args.evaluate
         if checkpoint:
             old = json.loads((checkpoint.parent/'manifest.json').read_text())
@@ -255,8 +270,8 @@ def main():
             model = PPO.load(args.evaluate, env=env, device='cpu')
             before = model.num_timesteps
             scenarios = SCENARIOS + TRANSFER
-            random_results = evaluate(env, None, scenarios, repeats=args.eval_repeats)
-            results = evaluate(env, model, scenarios, repeats=args.eval_repeats)
+            random_results = evaluate(env, None, scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
+            results = evaluate(env, model, scenarios, repeats=args.eval_repeats, all_rotations=args.eval_all_rotations)
             assert model.num_timesteps == before
             (args.out/'random-evaluation.json').write_text(json.dumps(random_results, indent=2))
             (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
