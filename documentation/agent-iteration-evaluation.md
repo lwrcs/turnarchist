@@ -306,3 +306,32 @@ the actual setup method, full-footprint collision validation, environment export
 metadata, batch scenario propagation, and scenario-aware report comparison.
 TypeScript and Webpack checks pass. No active run was interrupted; port 8000
 remains running. Existing normal-seed reports remain a separate evaluation set.
+
+## Encounter-cleared outcomes and open-arena baseline
+
+Batch schema 4 now distinguishes encounter-cleared from death and budget
+exhaustion. The supervisor waits for settled combat with no live enemies or
+projectiles, including pending spawn animations. Natural runs cannot clear by
+emptying a room; the outcome signal does not enter policy observations/feedback.
+
+Build 026087f1572a1d06d98e, unchanged policy explore-combat-v17, testbed version 1,
+150-decision limits:
+
+| Preset | Seeds | Outcome | Decisions each | Final health | Health lost |
+| --- | --- | --- | ---: | ---: | ---: |
+| Skeleton group | 123, 456, 789 | encounter-cleared | 53 | 2 | 0 |
+| Giant skeleton | 123 | encounter-cleared | 15 | 2 | 0 |
+| Spawner | 123 | encounter-cleared | 10 | 2 | 0 |
+
+All trials stopped on completion without an extra movement or Wait. Repeated
+seeds use the same preset geometry; they establish repeatability, not independent
+layout coverage. The baseline policy was not changed or trained in this step.
+It already handles these open-room encounters, so these results do not establish
+improved natural-run survival. Next use constrained arena layouts with obstacles
+and multiple simultaneous threats to reproduce the room-level deaths.
+
+Validation: 134 tests pass, TypeScript and Webpack checks pass, and syntax/whitespace
+checks pass. Regression tests cover pending spawns/projectiles, non-combat empty
+rooms, death precedence, clear at the budget boundary, replay preservation, refusal
+to resume cleared runs, and report clear counts. Reports were exported and the
+completed trials retained. No active evaluation was interrupted.

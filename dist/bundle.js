@@ -36849,9 +36849,17 @@ class AgentEnvironment {
             const observation = this.observe();
             return { observation: { ...observation, canExtendBudget: !observation.terminated && !this.failure, ready: !observation.terminated && !observation.truncated },
                 terminated: observation.terminated, truncated: observation.truncated,
-                info: { recorded, predictedTurnCost: prediction.turnCost,
+                info: { recorded, encounterCleared: this.encounterCleared(), predictedTurnCost: prediction.turnCost,
                     turnDelta: observation.player.turnCount - before.player.turnCount } };
         });
+    }
+    encounterCleared() {
+        if (!(0, combatTestbed_1.isCombatScenario)(this.scenario) || this.player()?.dead)
+            return false;
+        const room = this.player().getRoom();
+        // Pending projectiles include enemy spawn animations and delayed attacks.
+        return !room.entities.some(e => e.isEnemy && !e.dead) &&
+            !(room.projectiles ?? []).some(p => !p.dead);
     }
     exportReplay() {
         if (this.busy)
@@ -36860,7 +36868,7 @@ class AgentEnvironment {
             gameVersion: gameConstants_1.GameConstants.VERSION, observationMode: "diagnostic-current-room",
             developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
             encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null,
-            diagnosticSandbox: this.scenario !== "standard",
+            diagnosticSandbox: this.scenario !== "standard", encounterCleared: this.encounterCleared(),
             settings: { ...gameplaySettings_1.GameplaySettings },
             vision: { ...this.vision },
             timing: { animationSpeed: gameConstants_1.GameConstants.ANIMATION_SPEED,
@@ -100036,7 +100044,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("5526a71636d0e582e5f7")
+/******/ 		__webpack_require__.h = () => ("026087f1572a1d06d98e")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

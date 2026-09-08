@@ -169,7 +169,7 @@ test('batch metrics preserve zero-turn chains and report earlier stalls and heal
   const r=report.runs[0];assert.equal(r.zeroTurnDecisions,2);assert.equal(r.maxZeroTurnStreak,2);
   assert.equal(r.maxDecisionsWithoutNewPosition,1);assert.equal(r.decisionsSinceNewPosition,0);
   assert.equal(r.healthLost,1);assert.equal(r.status,'budget-incomplete');
-  assert.ok(r.trace.every(t=>t.policy.reason));assert.equal(report.schemaVersion,3);
+  assert.ok(r.trace.every(t=>t.policy.reason));assert.equal(report.schemaVersion,4);
 });
 
 test('a known killing blow cancels only warnings from the killed source',()=>{
@@ -418,4 +418,18 @@ test('batch reset preserves the selected combat scenario in report and reset opt
   agent.reset=async(seed,opts)=>{options=opts;return original(seed,opts);};
   const report=await new Runner(agent).run({seeds:[123],decisions:2,scenario:'combat-bigskull'});
   assert.equal(options.scenario,'combat-bigskull');assert.equal(report.scenario,'combat-bigskull');
+});
+
+
+test('encounter clear stops on the final hit even at the decision budget and cannot resume',async()=>{
+  const agent=fakeAgent(),step=agent.step;agent.step=async action=>{const r=await step(action);r.info.encounterCleared=true;return r;};
+  const runner=new Runner(agent);const report=await runner.run({seeds:[1],decisions:1,scenario:'combat-skull'});
+  assert.equal(report.runs[0].status,'encounter-cleared');assert.equal(report.runs[0].replay.replay.actions.length,1);
+  await assert.rejects(()=>runner.resumeLast(),/No resumable/);
+});
+
+test('death takes priority over an inconsistent clear flag',async()=>{
+  const agent=fakeAgent(),step=agent.step;agent.step=async action=>{const r=await step(action);r.terminated=true;r.info.encounterCleared=true;return r;};
+  const report=await new Runner(agent).run({seeds:[1],decisions:3,scenario:'combat-skull'});
+  assert.equal(report.runs[0].status,'dead');assert.equal(report.runs[0].decisions,1);
 });

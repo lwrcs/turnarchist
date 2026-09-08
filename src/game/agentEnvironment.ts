@@ -359,9 +359,17 @@ export class AgentEnvironment {
       const observation = this.observe();
       return { observation: { ...observation, canExtendBudget: !observation.terminated && !this.failure, ready: !observation.terminated && !observation.truncated },
         terminated: observation.terminated, truncated: observation.truncated,
-        info: { recorded, predictedTurnCost: prediction.turnCost,
+        info: { recorded, encounterCleared: this.encounterCleared(), predictedTurnCost: prediction.turnCost,
           turnDelta: observation.player.turnCount - before.player.turnCount } };
     });
+  }
+
+  private encounterCleared(): boolean {
+    if (!isCombatScenario(this.scenario) || this.player()?.dead) return false;
+    const room = this.player().getRoom();
+    // Pending projectiles include enemy spawn animations and delayed attacks.
+    return !room.entities.some(e=>e.isEnemy&&!e.dead) &&
+      !(room.projectiles ?? []).some(p=>!p.dead);
   }
 
   exportReplay() {
@@ -370,7 +378,7 @@ export class AgentEnvironment {
       gameVersion: GameConstants.VERSION, observationMode: "diagnostic-current-room",
       developerMode: GameConstants.DEVELOPER_MODE, seed: this.seed, scenario: this.scenario,
       encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null,
-      diagnosticSandbox: this.scenario !== "standard",
+      diagnosticSandbox: this.scenario !== "standard", encounterCleared: this.encounterCleared(),
       settings: { ...GameplaySettings },
       vision: {...this.vision},
       timing: { animationSpeed: GameConstants.ANIMATION_SPEED,

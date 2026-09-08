@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Read-only comparison of exported evaluation reports; does not execute a policy. */
 const fs = require('node:fs');
-const completed = new Set(['dead', 'budget-incomplete']);
+const completed = new Set(['dead', 'budget-incomplete', 'encounter-cleared']);
 const metrics = ['decisions', 'turns', 'visitedPositions', 'roomsVisited', 'finalHealth',
   'healthLost', 'maxDecisionsWithoutNewPosition', 'zeroTurnDecisions'];
 const finite = value => typeof value === 'number' && Number.isFinite(value);
@@ -23,6 +23,7 @@ function compareReports(before, after) {
     const newRun = current.get(seed);
     if (!newRun) continue;
     const differences = [];
+    if (before.schemaVersion !== after.schemaVersion) differences.push('report-schema');
     if ((before.scenario ?? 'standard') !== (after.scenario ?? 'standard')) differences.push('scenario');
     if ((oldRun.decisionBudget ?? before.decisionsPerSeed) !== (newRun.decisionBudget ?? after.decisionsPerSeed)) differences.push('decision-budget');
     if (!before.backend || before.backend !== after.backend) differences.push('backend');
@@ -46,6 +47,8 @@ function compareReports(before, after) {
     onlyBefore: [...previous.keys()].filter(s => !current.has(s)),
     onlyAfter: [...current.keys()].filter(s => !previous.has(s)),
     // Death and budget exhaustion remain distinct; no derived metric claims a win.
+    controlledClears: {before: controlled.filter(p => p.before === 'encounter-cleared').length,
+      after: controlled.filter(p => p.after === 'encounter-cleared').length},
     controlledDeaths: {before: controlled.filter(p => p.before === 'dead').length,
       after: controlled.filter(p => p.after === 'dead').length},
     pairs,

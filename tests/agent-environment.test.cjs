@@ -446,3 +446,14 @@ test('combat reset dispatches the preset and exports its reproducible setup sepa
   assert.equal(replay.encounter.version,1);assert.equal(replay.diagnosticSandbox,true);
   assert.equal(replay.steps,0);
 });
+
+
+test('clear outcome is combat-only and waits for live enemies and pending projectiles',async()=>{
+  const {env,game,room,player}=setup();
+  await env.reset(1);assert.equal(env.exportReplay().encounterCleared,false);
+  game.startCombatSandbox=()=>{};await env.reset(1,{scenario:'combat-skull'});
+  room.entities=[{isEnemy:true,dead:false}];assert.equal(env.exportReplay().encounterCleared,false);
+  room.entities[0].dead=true;room.projectiles=[{dead:false}];assert.equal(env.exportReplay().encounterCleared,false);
+  room.projectiles[0].dead=true;assert.equal(env.exportReplay().encounterCleared,true);
+  player.dead=true;assert.equal(env.exportReplay().encounterCleared,false);
+});

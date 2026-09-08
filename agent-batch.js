@@ -21,7 +21,7 @@
           const policyDecision=policy.inspect?.()??null;
           const result=await this.agent.step(action);
           const next=this.agent.perceive();
-          policy.feedback(view,action,next,result.info);
+          policy.feedback(view,action,next,{turnDelta:result.info.turnDelta,recorded:result.info.recorded});
           run.decisions++;run.turns+=result.info.turnDelta;
           run.healthLost+=Math.max(0,view.player.health-next.player.health);
           episode.zeroTurnStreak=result.info.turnDelta===0?episode.zeroTurnStreak+1:0;
@@ -39,6 +39,7 @@
           onProgress({seed:run.seed,run:this.report.runs.length,total:this.report.seeds.length,
             decisions:run.decisions,health:view.player.health});
           if(result.terminated){run.status='dead';break;}
+          if(result.info.encounterCleared===true){run.status='encounter-cleared';break;}
           if(result.truncated){run.status='budget-incomplete';break;}
           await new Promise(resolve=>setTimeout(resolve,0));
         }
@@ -59,7 +60,7 @@
       if(!Array.isArray(seeds)||seeds.length<1||seeds.length>50||seeds.some(s=>!Number.isInteger(s)||s<0||s>0xffffffff))throw new Error('Provide 1..50 uint32 seeds');
       if(!validBudget(decisions))throw new Error('decisions must be 1..10000');
       this.running=true;this.stopping=false;this.lastEpisode=null;
-      const report=this.report={schemaVersion:3,source:'programmed-policy-evaluation',policy:Policy.version,
+      const report=this.report={schemaVersion:4,source:'programmed-policy-evaluation',policy:Policy.version,
         backend:'browser',scenario,policySource:source,seeds:[...seeds],decisionsPerSeed:decisions,startedAt:new Date().toISOString(),runs:[]};
       try {
         for(const seed of seeds) {

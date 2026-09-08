@@ -429,7 +429,7 @@ escapes from an under-player warning. Entity footprints and chain-pushability ar
 used rather than class-name rules.
 
 Inspect batch trace displays the final 32 restricted transitions for Trace seed.
-Policy goal/reason is captured before each action. Batch report schema 3 includes
+Policy goal/reason is captured before each action. Batch report schema 4 includes
 health lost, longest stale-position streak, and zero-turn counts/streaks. These
 metrics never force a Wait or interrupt a legitimate sequence of free actions.
 
@@ -510,4 +510,20 @@ remain marked diagnosticSandbox. These are testbed recordings, not standard-run
 replays or automatically successful demonstrations. Full standalone sandbox replay
 restoration is not added by this change. Batch reports include scenario, and the
 comparison tool rejects comparisons across different scenarios. Budget exhaustion
-still means incomplete; clearing an encounter is not yet a separate runner outcome.
+still means incomplete; a cleared combat encounter has its own runner outcome.
+
+
+## Encounter completion
+
+Batch report schema 4 adds `encounter-cleared`. In combat testbeds only, the
+supervisor checks the settled room after each action for live enemies and live
+projectiles (including pending enemy spawns). A living player with neither
+remaining clears the encounter; death takes priority, and a clear on the final
+allowed decision takes priority over budget exhaustion. Natural-seed runs never
+receive a clear from an empty room. This is an encounter result, not a game win.
+
+The clear signal is returned in step info and the diagnostic replay envelope.
+It is not added to restricted perception or passed to policy feedback, which
+receives only recorded/turnDelta. The runner stops without injecting another
+move or Wait, preserves the final action/replay, and cannot resume a cleared run.
+The comparison tool counts clears separately from deaths and incomplete budgets.

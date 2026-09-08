@@ -41,3 +41,18 @@ test('combat presets cannot be compared as equivalent to standard or other encou
   a.scenario='combat-zombie';assert.equal(compareReports(a,b).controlledSeeds,0);
   a.scenario=b.scenario;assert.equal(compareReports(a,b).controlledSeeds,1);
 });
+
+test('encounter clears remain distinct from death and budget exhaustion',()=>{
+  const a=report(),b=report();a.scenario=b.scenario='combat-skull-pack';
+  a.runs[0].status='dead';b.runs[0].status='encounter-cleared';
+  const result=compareReports(a,b);assert.equal(result.controlledSeeds,1);
+  assert.equal(result.controlledClears.after,1);assert.equal(result.controlledClears.before,0);
+  assert.equal(result.controlledDeaths.before,1);assert.equal(result.controlledDeaths.after,0);
+});
+
+
+test('changed outcome-report contracts prevent controlled aggregation',()=>{
+  const a=report(),b=report();a.schemaVersion=3;b.schemaVersion=4;
+  assert.ok(compareReports(a,b).pairs[0].differences.includes('report-schema'));
+  assert.equal(compareReports(a,b).controlledSeeds,0);
+});
