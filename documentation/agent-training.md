@@ -2,7 +2,8 @@
 
 Development starts on the macOS laptop. Larger simulation batches and training
 will run on the Windows 10 desktop (12700K, 32 GB RAM, RTX 3080 Ti). WSL and the
-training runtime are not configured or confirmed yet. Use repository-relative
+training runtime are configured and smoke-tested; see
+`documentation/desktop-training-setup.md`. Use repository-relative
 paths and portable commands; the two Git clones have different absolute paths.
 
 ## Target milestone
