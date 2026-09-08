@@ -466,3 +466,11 @@ be clearable without resources.
 
 Validation: all 146 tests pass on the final policy, as do TypeScript and the
 development bundle. The normal play menu loads without console errors.
+
+Natural follow-up on seed 456 with v22 / build `64e97d177a3d948b4c36`:
+500-decision cap reached alive at 0.5 health; 1.5 health lost, 8 rooms visited,
+376 distinct positions, maximum 15 decisions without a new position. Last
+five actions were navigation. Report status is `budget-incomplete`, not a win.
+The report was exported. Earlier v18 runs died around decision 448 with five
+rooms visited, but intervening engine/descriptor changes mean this is an
+encouraging historical observation rather than a controlled policy comparison.
