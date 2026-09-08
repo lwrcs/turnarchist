@@ -36469,6 +36469,7 @@ const agentPerception_1 = __webpack_require__(/*! ./agentPerception */ "./src/ga
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
+const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
 const actionReadiness_1 = __webpack_require__(/*! ./actionReadiness */ "./src/game/actionReadiness.ts");
 const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/gameConstants.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
@@ -36638,7 +36639,8 @@ class AgentEnvironment {
                 solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
                 isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
                 traversal: room.getGameplayLightTile(tile.x, tile.y)?.getTraversalTraits?.(),
-                exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder,
+                exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder ||
+                    room.getGameplayLightTile(tile.x, tile.y) instanceof upLadder_1.UpLadder,
             })),
             entities: observation.room.entities,
             items: room.items.map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
@@ -36651,8 +36653,8 @@ class AgentEnvironment {
             blocked: (x, y) => room.isGameplaySightBlocked(x, y),
         }, vision);
         return {
-            schemaVersion: 5, observationMode: "player-perception", vision: { ...vision },
-            contract: { ...this.contract(), observationSchemaVersion: 5, observationMode: "player-perception" },
+            schemaVersion: 6, observationMode: "player-perception", vision: { ...vision },
+            contract: { ...this.contract(), observationSchemaVersion: 6, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -98495,6 +98497,9 @@ class UpLadder extends passageway_1.Passageway {
                 }
             });
         };
+        this.getTraversalTraits = () => ({
+            kind: "ladder", direction: "up", unlocked: !this.lockable.isLocked(),
+        });
         this.getName = () => {
             return this.isRope ? "rope up" : "staircase up";
         };
@@ -99968,7 +99973,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("7434f4d1d838f61e35e0")
+/******/ 		__webpack_require__.h = () => ("205607bbd2bab9fb10c1")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

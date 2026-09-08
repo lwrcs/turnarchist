@@ -17,9 +17,10 @@ function load(file, dependencies) {
 
 function setup(timeoutMs = 500) {
   class DownLadder {}
+  class UpLadder {}
   const {AgentEnvironment} = load('src/game/agentEnvironment.ts', {
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
-    '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder},
+    '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
     './actionReadiness': {isActionReady: game => game.levelReady},
     './gameConstants': {GameConstants: {VERSION: 'test', DEVELOPER_MODE: false}},
     './gameplaySettings': {GameplaySettings: {STARTING_HEALTH: 10}},
@@ -44,7 +45,7 @@ function setup(timeoutMs = 500) {
     newGame(seed) { game.seed = seed; actions.length = 0; player.dead = false; },
     replayManager: {cancelReplay() {}, getStats: () => ({count: actions.length}),
       serialize: () => ({actions})}};
-  return {env: new AgentEnvironment(game, timeoutMs), game, player, room, actions, DownLadder};
+  return {env: new AgentEnvironment(game, timeoutMs), game, player, room, actions, DownLadder, UpLadder};
 }
 
 test('step returns the settled enemy response and maps movement to adjacent replay actions', async () => {
@@ -418,4 +419,18 @@ test('dismissible interactions close through the recorded action processor witho
   assert.equal(result.info.turnDelta,0);assert.equal(result.info.recorded,true);
   assert.equal(result.observation.decision,'world');
   assert.equal(actions[0].type,'DismissInteraction');
+});
+
+test('identified upward ladders expose return traits without revealing dark exits',async()=>{
+  const {env,room,UpLadder}=setup();await env.reset(456);
+  const ladder=Object.assign(new UpLadder(),{x:2,y:1,isSolid:()=>false,
+    getTraversalTraits:()=>({kind:'ladder',direction:'up',unlocked:true})});
+  room.roomArray[2][1]=ladder;room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];
+  room.isGameplaySightBlocked=()=>false;room.vis=[[],[],[]];room.vis[2][1]=0;
+  const identified=env.perceive();assert.equal(identified.schemaVersion,6);
+  assert.equal(identified.contract.observationSchemaVersion,6);
+  assert.equal(identified.room.tiles[0].exit,true);
+  assert.equal(identified.room.tiles[0].traversal.direction,'up');
+  room.vis[2][1]=1;
+  const dark=env.perceive().room.tiles[0];assert.equal(dark.exit,null);assert.equal(dark.traversal,null);
 });

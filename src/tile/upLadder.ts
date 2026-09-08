@@ -119,6 +119,10 @@ export class UpLadder extends Passageway {
     });
   };
 
+  getTraversalTraits = () => ({
+    kind: "ladder", direction: "up", unlocked: !this.lockable.isLocked(),
+  });
+
   getName = () => {
     return this.isRope ? "rope up" : "staircase up";
   };

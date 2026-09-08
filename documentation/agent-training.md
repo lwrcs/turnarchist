@@ -271,7 +271,7 @@ lights, and the local active-z choice remain in Room; this is not a complete Nod
 simulation driver or a per-layer multiplayer lighting redesign.
 
 `agent.perceive()` (also the lab's Perceive button) returns a separate restricted
-snapshot, labeled player-perception with schema 5. `observe()` and `step()` still
+snapshot, labeled player-perception with schema 6. `observe()` and `step()` still
 return explicitly diagnostic observations. Do not feed those full observations
 or their history to a restricted policy. The diagnostic compatibility helper
 currently checks the diagnostic contract; preserve the perception contract AND
@@ -353,7 +353,7 @@ separately with reports; a replay envelope alone is not a frozen executable buil
 
 The policy receives only `perceive()` snapshots and recorded/turnDelta feedback.
 Diagnostic step observations and replay exports never enter the policy. Perception
-schema 5 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
+schema 6 includes visible tile solidity/door/exit and tunnel traversal traits and an opaque room identifier
 for visit tracking. Dark tile traits remain null. Inventory healing metadata is
 currently implemented for mushrooms and shares the item's actual healing value.
 The baseline plans weighted shortest routes through remembered, previously observed tiles,
@@ -381,7 +381,7 @@ result; unknown objects and indestructible colliders remain blocked. The estimat
 is not a promise of damage or an exact action count. Weighted search uses Dijkstra
 rather than unweighted breadth-first search; no unseen geometry is supplied.
 
-Diagnostic observation schema is now 6, perception schema 5, and action schema 3.
+Diagnostic observation schema is now 6, perception schema 6, and action schema 3.
 The recorded zero-turn DismissInteraction action closes ordinary screen messages,
 vending interfaces, and context menus; ladder and selection actions remain distinct.
 Visible tunnel doors expose whether they are unlocked and can be unlocked from the
@@ -453,3 +453,20 @@ revisiting each room, so they are a memory of prior observations, not a guarante
 that a distant objective remains reachable. Traces identify these choices with
 reason `backtrack` and a target room. This is navigation scaffolding for the
 programmed baseline, not a learned policy or an omniscient map solver.
+
+
+## Return ladders and routing explanations
+
+Perception schema 6 identifies upward ladders as exits and exposes visible
+ladder direction and unlocked state through traversal traits. Darkness still
+redacts these fields. The baseline defers upward exits until local exploration
+is exhausted; locked upward exits are not planned as usable routes. Both direct
+ladder crossings and confirmed descents teach directed room connections, so a
+previously used return ladder can participate in backtracking to remembered work.
+A room change at identical coordinates is progress, not a failed movement edge.
+
+Policy traces now include a bounded navigation explanation: known/reachable tile
+counts, whether a local goal exists, known passages and their reachability,
+observed blockers and traversal traits, learned destinations, and remembered work.
+This is derived from restricted observation memory. It does not reveal hidden
+room geometry or prove that an exhausted state is unwinnable.

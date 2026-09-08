@@ -8,7 +8,7 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v14';
+    static version='explore-combat-v16';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -26,6 +26,7 @@
         for(const [door,room] of this.connections.get(node.room)??[]) {
           if(seen.has(room))continue;
           const tile=this.maps.get(node.room)?.get(door);
+          if(tile?.exit&&tile.traversal?.direction==='up'&&tile.traversal.unlocked===false)continue;
           if(tile?.traversal?.tunnel&&!tile.traversal.unlocked&&tile.traversal.unlockFromHere===false)continue;
           const [x,y]=door.split(',').map(Number);
           if([...this.obstacles.get(node.room)?.values()??[]].some(e=>occupies(e,x,y)&&e.collidable&&!e.destroyable))continue;
@@ -76,7 +77,7 @@
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
       let best=null,committed=null;
-      const passages=[];
+      const passages=[],returnExits=[];
       // Weighted shortest paths account for observed breakable obstacles.
       while(queue.length) {
         queue.sort((a,b)=>a.distance-b.distance);
@@ -92,11 +93,13 @@
           // Crossing lands beyond the door, so its tile never gains ordinary visits.
           // Passage use must replace the unvisited/frontier reward, not compete with it.
           if(tile?.isDoor)reward=35-40*uses;
-          if(tile?.exit)reward=70-40*uses;
+          const returnExit=tile?.exit&&tile.traversal?.direction==='up';
+          if(tile?.exit)reward=returnExit?0:70-40*uses;
           const utility=reward-visits;
           const score=utility-node.distance*2;
           const candidate={score,key:k,action:{type:'Move',direction:node.first}};
-          if(tile?.isDoor)passages.push(candidate);
+          if(tile?.isDoor||tile?.exit)passages.push(candidate);
+          if(returnExit&&uses===0)returnExits.push(candidate);
           if(this.goal?.key===k&&!this.goal.backtrack)committed=candidate;
           if(utility>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
@@ -106,6 +109,7 @@
           const x=node.x+dx,y=node.y+dy,next=key(x,y),t=map.get(next);
           if(seen.has(next)||!t||(t.solid&&!t.isDoor)||threats.has(next))continue;
           if(t.traversal?.tunnel && !t.traversal.unlocked && t.traversal.unlockFromHere===false)continue;
+          if(t.exit&&t.traversal?.direction==='up'&&t.traversal.unlocked===false)continue;
           const occupied=occupants.get(next)??[];
           if(occupied.some(e=>e.appearance==='unidentified'||e.isEnemy||
             (e.collidable&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
@@ -116,13 +120,25 @@
           queue.push({x,y,distance:node.distance+1+clearance,first:node.first??direction});
         }
       }
+      const passageDetails=[...map.entries()].filter(([,t])=>t.isDoor||t.exit).map(([k,t])=>({
+        key:k,exit:!!t.exit,uses:this.doorUses.get(`${scope}:${k}`)??0,
+        reachable:seen.has(k),traversal:t.traversal??null,
+        destination:this.connections.get(scope)?.get(k)??null,
+        blockers:(occupants.get(k)??[]).map(e=>({id:e.id??null,collidable:e.collidable,
+          destroyable:e.destroyable,pushable:e.pushable,health:e.health}))
+      }));
+      this.navigation={room:scope,knownTiles:map.size,reachableTiles:seen.size,
+        localGoal:!!(committed??best),passageCount:passageDetails.length,
+        passages:passageDetails.slice(0,32),
+        rememberedWork:[...this.roomWork].filter(([,work])=>work).map(([room])=>room).slice(0,32)};
       this.roomWork.set(scope,!!(committed??best));
       // Revisit known passages only to reach a room with remembered unfinished work.
-      const selected=committed??best??this.backtrack(scope,passages.sort((a,b)=>b.score-a.score));
+      const selected=committed??best??this.backtrack(scope,passages.sort((a,b)=>b.score-a.score))??
+        returnExits.sort((a,b)=>b.score-a.score)[0];
       this.goal=selected?{scope,key:selected.key,...(selected.backtrack?{backtrack:true,targetRoom:selected.targetRoom}:{})}:null;
       return selected?.action??null;
     }
-    inspect() {return {goal:this.goal?{...this.goal}:null,reason:this.reason};}
+    inspect() {return {goal:this.goal?{...this.goal}:null,reason:this.reason,navigation:this.navigation??null};}
     choose(view) {
       this.reason='interaction';
       if(view.observationMode!=='player-perception') throw new Error('Baseline requires restricted perception');
@@ -188,6 +204,15 @@
       return best?.action??{type:'Wait'};
     }
     feedback(before,action,after,info) {
+      if(action.type==='LadderConfirm'&&after.room.id!==before.room.id) {
+        const scope=before.room.id??'room',k=key(before.player.x,before.player.y);
+        if(before.room.tiles.some(t=>t.x===before.player.x&&t.y===before.player.y&&t.exit)) {
+          this.connect(scope,k,after.room.id??'room');
+          const destination=`${scope}:${k}`;
+          this.doorUses.set(destination,(this.doorUses.get(destination)??0)+1);
+        }
+        this.goal=null;
+      }
       if(action.type!=='Move')return;
       const direction=directions.find(d=>d[0]===action.direction),p=before.player;
       const edge=`${before.room.id??'room'}:${key(p.x,p.y)}>${key(p.x+direction[1],p.y+direction[2])}`;
@@ -199,12 +224,12 @@
         if(after.room.id!==before.room.id) {
           const from=before.room.id??'room',to=after.room.id??'room';
           const sourceDoor=before.room.tiles.find(t=>t.x===p.x+direction[1]&&t.y===p.y+direction[2]);
-          if(sourceDoor?.isDoor)this.connect(from,key(sourceDoor.x,sourceDoor.y),to);
+          if(sourceDoor?.isDoor||sourceDoor?.exit)this.connect(from,key(sourceDoor.x,sourceDoor.y),to);
           // Learn the reverse edge only by crossing it; nearby doors need not lead back.
         }
       }
       // A free hit is progress too. Only temporarily avoid unchanged failed directions.
-      if(after.player.x===p.x&&after.player.y===p.y&&info.turnDelta===0&&
+      if(after.room.id===before.room.id&&after.player.x===p.x&&after.player.y===p.y&&info.turnDelta===0&&
         JSON.stringify(before.room.entities)===JSON.stringify(after.room.entities)&&
         JSON.stringify(before.room.hitWarnings)===JSON.stringify(after.room.hitWarnings)) {
         this.blocked.set(`${before.room.id??'room'}:${key(p.x,p.y)}>${key(p.x+direction[1],p.y+direction[2])}`,this.tick+12);

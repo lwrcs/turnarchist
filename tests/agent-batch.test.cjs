@@ -344,3 +344,46 @@ test('backtracking excludes remembered locked start-side tunnel links',()=>{
   p.maps.get('b').get('2,0').traversal.unlocked=true;
   assert.equal(p.backtrack('a',[{key:'1,0'}]).targetRoom,'c');
 });
+
+test('routing diagnostics distinguish known blocked passages from unseen topology',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,isDoor:true},
+    {x:-1,y:0,solid:false,isDoor:true,traversal:{tunnel:true,unlocked:false,unlockFromHere:false}}];
+  v.room.entities=[{id:'blocker',x:1,y:0,isEnemy:false,collidable:true,destroyable:false}];
+  p.choose(v);
+  const diagnostic=p.inspect().navigation;
+  assert.equal(diagnostic.knownTiles,3);assert.equal(diagnostic.reachableTiles,1);
+  assert.equal(diagnostic.passages.length,2);
+  assert.equal(diagnostic.passages.find(d=>d.key==='1,0').blockers[0].id,'blocker');
+  assert.equal(diagnostic.passages.every(d=>d.destination===null&&!d.reachable),true);
+  assert.equal(diagnostic.passages.find(d=>d.key==='-1,0').traversal.unlockFromHere,false);
+});
+
+test('return ladders are deferred until local exploration is exhausted',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,exit:true,
+    traversal:{kind:'ladder',direction:'up',unlocked:true}},{x:-1,y:0,solid:false}];
+  assert.equal(p.choose(v).direction,'left');
+  p.goal=null;p.visits.set('room:-1,0',50);
+  assert.equal(p.choose(v).direction,'right');assert.equal(p.goal.key,'1,0');
+  p.goal=null;p.doorUses.set('room:1,0',1);
+  assert.equal(p.route(v,new Set()),null);
+});
+test('locked or threatened return ladders are not usable routes',()=>{
+  const p=new Policy(),v=view();v.room.tiles=[{x:0,y:0,solid:false},
+    {x:1,y:0,solid:false,exit:true,traversal:{kind:'ladder',direction:'up',unlocked:false}}];
+  assert.equal(p.route(v,new Set()),null);
+  v.room.tiles[1].traversal.unlocked=true;
+  assert.equal(p.route(v,new Set(['1,0'])),null);
+});
+test('ladder confirmation and return crossings teach directed room connections',()=>{
+  const p=new Policy(),v=view(),next=view();v.room.tiles=[{x:0,y:0,solid:false,exit:true}];
+  next.room.id='side-area';p.feedback(v,{type:'LadderConfirm'},next,{turnDelta:0});
+  assert.equal(p.connections.get('room').get('0,0'),'side-area');
+  assert.equal(p.doorUses.get('room:0,0'),1);
+  next.room.tiles=[{x:1,y:0,solid:false,exit:true,traversal:{direction:'up',unlocked:true}}];
+  p.feedback(next,{type:'Move',direction:'right'},v,{turnDelta:0});
+  assert.equal(p.connections.get('side-area').get('1,0'),'room');
+  p.roomWork.set('room',true);p.doorUses.set('side-area:1,0',2);
+  assert.equal(p.choose(next).direction,'right');assert.equal(p.inspect().reason,'backtrack');
+});

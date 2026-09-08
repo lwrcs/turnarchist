@@ -3,6 +3,7 @@ import type { Game } from "../game";
 import { Direction } from "../game";
 import { TurnState } from "../room/room";
 import { DownLadder } from "../tile/downLadder";
+import { UpLadder } from "../tile/upLadder";
 import { isActionReady } from "./actionReadiness";
 import { GameConstants } from "./gameConstants";
 import { GameplaySettings } from "./gameplaySettings";
@@ -187,7 +188,8 @@ export class AgentEnvironment {
         solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
         isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
         traversal: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getTraversalTraits?:()=>object})?.getTraversalTraits?.(),
-        exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder,
+        exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder ||
+          room.getGameplayLightTile(tile.x, tile.y) instanceof UpLadder,
       })),
       entities: observation.room.entities,
       items: room.items.map(item => ({...observeItem(item), z: item.z})),
@@ -200,8 +202,8 @@ export class AgentEnvironment {
       blocked: (x, y) => room.isGameplaySightBlocked(x, y),
     }, vision);
     return {
-      schemaVersion: 5, observationMode: "player-perception", vision: {...vision},
-      contract: {...this.contract(), observationSchemaVersion: 5, observationMode: "player-perception"},
+      schemaVersion: 6, observationMode: "player-perception", vision: {...vision},
+      contract: {...this.contract(), observationSchemaVersion: 6, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       decision: observation.decision, selectionChoices: observation.selectionChoices,

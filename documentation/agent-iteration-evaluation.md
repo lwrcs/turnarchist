@@ -164,3 +164,43 @@ The server on port 8000 was left running, and no active batch was interrupted.
 Next investigation should explain why no useful goal remains in these exhausted
 states: inspect remembered reachable passages, resource/interaction requirements,
 and frontiers that need more than ordinary movement before changing route scores.
+
+## Return-ladder investigation (September 8)
+
+V15 added routing explanations without changing action selection. At 400 decisions,
+seed 123 had 45 visited positions and seed 456 had 283. Seed 123 remembered an
+indestructible object occupying doorway (3,19), plus a reachable used doorway
+leading to territory with no remembered work. Seed 456 remembered zero passages
+in its side area. Diagnostic inspection identified an UpLadder at (106,113):
+perception classified only DownLadder as an exit, so the return route had been
+omitted from navigation. This is distinct from the vending-machine generation bug.
+
+V16 exposes upward-ladder exit/direction/unlocked traits under perception schema 6.
+It explores locally before using an upward exit, and records both confirmed
+descents and direct return crossings as connections. Regression coverage also
+prevents identical-coordinate room transitions from being blacklisted as failed
+moves. Diagnostics and action schema remain 6 and 3 respectively.
+
+Two targeted browser runs used build 205607bbd2bab9fb10c1 and a 500-decision budget:
+
+| Seed | Outcome | Decisions | Turns | Positions | Rooms | Health lost | Maximum stale streak |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 456 | dead | 447 | 432 | 341 | 5 | 2.5 | 15 |
+| 654 | dead | 462 | 447 | 312 | 5 | 2 | 27 |
+
+Both progressed beyond the old four-room stalls (v14: 283/269 positions, maximum
+stale streaks 172/162). Build and perception schema changed, so this is a targeted
+behavioral verification, not a contract-identical policy comparison. Earlier
+survival in exhausted areas did not establish combat ability: both newly advancing
+runs died. Seed 456's final trace shows a directional attack into a 2x2 BigSkullEnemy
+while the player's current tile remained threatened. Do not label these runs as
+successful training examples or claim an overall survival improvement.
+
+Validation: 121 tests pass, TypeScript --noEmit --skipLibCheck passes, Webpack
+build succeeds, and whitespace/syntax checks pass. Diagnostic and final reports
+were exported. Port 8000 was found stopped at the start of this session and was
+restored; it remains running. No active evaluation was interrupted.
+
+Next: combat decisions around large footprints, constrained escape routes, and
+resource use after returning from side areas. The vending-machine placement bug
+remains a separate generation fix; the agent correctly refuses that occupied door.
