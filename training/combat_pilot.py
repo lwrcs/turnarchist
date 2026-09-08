@@ -145,7 +145,8 @@ class CombatEnv(gym.Env):
         dead, clear = result['terminated'], result['cleared']
         reward += -10 if dead else 10 if clear else 0
         self.frames.append(encode(next_view))
-        self.trace.append({'action': int(action), 'health': next_view['player']['health'], 'reward': reward})
+        self.trace.append({'action': int(action), 'x':next_view['player']['x'], 'y':next_view['player']['y'],
+                           'health': next_view['player']['health'], 'reward': reward})
         self.view = next_view
         self.steps += 1
         self.total_reward += reward
@@ -196,7 +197,7 @@ def evaluate(env, policy, scenarios, seed=987, repeats=1):
             action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=True)[0])
             obs, _, done, truncated, info = env.step(action)
             if done or truncated:
-                records.append(info)
+                records.append({**info, 'trace':list(getattr(env, 'trace', []))})
                 break
     return records
 
