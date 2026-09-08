@@ -51,6 +51,7 @@ def compare(directory):
     if (directory/'manifest.json').exists():
         manifest=json.loads((directory/'manifest.json').read_text())
         result['scenarioRoles']={name:('training-fixture' if name in manifest.get('trainingScenarios',[]) else
+                                      'held-out-stress-fixture' if name in manifest.get('stressScenarios',[]) else
                                       'held-out-fixture' if name in manifest.get('transferScenarios',[]) else 'unclassified')
                                  for name in result['trained']}
     sampled_path = directory/'stochastic-evaluation.json'

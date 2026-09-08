@@ -208,3 +208,11 @@ even when a later run has a different curriculum or output directory.
 New records include starting health. Reports distinguish clears that preserve
 that health from damage trades. For older results without starting health, this
 metric stays unknown rather than assuming a starting value.
+
+`--curriculum open-combat` continues from forward combat with the four non-alert
+starting arrangements now included in training (ten open-room fixtures total).
+The giant pocket and skeleton choke become separately labeled held-out stress
+fixtures. Do not interpret their failure as proof the normal open-room curriculum
+failed or that starter equipment should solve every cluttered encounter.
+Changing the curriculum during an explicit PPO continuation is allowed and
+recorded in checkpoint lineage; encoder, reward and game compatibility still apply.

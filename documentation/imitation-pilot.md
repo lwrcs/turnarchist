@@ -74,3 +74,14 @@ sequences supply the repeat-dodge behavior absent from the original dataset.
 cross-entropy 0.000141. Its separate evaluation checks all six training fixtures
 and four held-out non-alert starting arrangements in all four views. This remains
 a small fixed-fixture curriculum, not a general dungeon policy.
+
+The completed expanded evaluation cleared all 40 deterministic encounters,
+36 with full health. All 24 training encounters, including the repeated giant
+cycles, preserved health. Four of the eight held-out giant fights lost one
+health. Sampled play cleared 39/40, with one death against a held-out armored
+skeleton. All sampled training fixtures also cleared at full health.
+
+This checkpoint is the starting point for continued PPO under `open-combat`,
+which adds the four non-alert arrangements to training. Their earlier results
+remain held-out evidence for this checkpoint; they are training fixtures for the
+continuation. Giant-pocket and skeleton-choke cases are separate stress tests.

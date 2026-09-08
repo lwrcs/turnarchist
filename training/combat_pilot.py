@@ -28,6 +28,8 @@ CURRICULA = {'starter': SCENARIOS,
              'forward': SCENARIOS + ['combat-armoredskull-alert'] + TRANSFER}
 HELD_OUT = {'starter': TRANSFER,
             'forward': ['combat-armoredskull','combat-armoredzombie','combat-bigskull','combat-bigzombie']}
+CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
+HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 ENCODER = {'version': 1, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = 13 * 13 * 12 + 5
@@ -294,6 +296,7 @@ def main():
         manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'curriculum':args.curriculum,'trainingScenarios': scenarios, 'transferScenarios': transfer,
+                    'stressScenarios':transfer if args.curriculum=='open-combat' else [],
                     'torch': torch.__version__, 'budget': 64,
                     'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs},
                     'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
