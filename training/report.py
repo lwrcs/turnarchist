@@ -42,8 +42,14 @@ def compare(directory):
     trained = json.loads((directory/'evaluation.json').read_text())
     key = lambda row:(row['scenario'],row['seed'],row.get('rotation',0))
     matched = [key(r) for r in random] == [key(r) for r in trained]
-    return {'matchedEpisodePlan':matched, 'random':summarize(random), 'trained':summarize(trained),
-            'limitation':'Fixed fixture geometry: repeated seeds and coordinate rotations do not establish layout generalization.'}
+    result = {'matchedEpisodePlan':matched, 'random':summarize(random), 'trained':summarize(trained),
+              'limitation':'Fixed fixture geometry: repeated seeds and coordinate rotations do not establish layout generalization.'}
+    sampled_path = directory/'stochastic-evaluation.json'
+    if sampled_path.exists():
+        sampled = json.loads(sampled_path.read_text())
+        result['stochastic'] = summarize(sampled)
+        result['matchedStochasticPlan'] = [key(r) for r in random] == [key(r) for r in sampled]
+    return result
 
 
 if __name__=='__main__':

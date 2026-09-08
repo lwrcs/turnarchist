@@ -119,3 +119,13 @@ diagnostics only, excluded from policy inputs and rewards. An attack can remain
 on the same tile and still be a recorded action; position repetition alone does
 not identify a wall bump. Report coverage counts distinguish old traces with
 missing fields from confirmed unrecorded decisions or zero-turn actions.
+
+Add `--eval-stochastic` to checkpoint evaluation to also sample actions from the
+learned policy, saving a separate `stochastic-evaluation.json`. Deterministic
+results still use the highest-probability action and remain in `evaluation.json`.
+Sampled evaluation uses the same encounter plan, with a reproducible CPU sampler
+whose random state is restored afterward. It performs no learning updates.
+Compare both: a repeated deterministic choice does not by itself prove that all
+action probability has collapsed onto that direction. With two seeds and all
+four rotations, this optional third policy brings the five-fixture total to 120
+episodes. It does not make the fixed layouts independent samples.

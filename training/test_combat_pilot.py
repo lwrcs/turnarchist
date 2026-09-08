@@ -2,6 +2,7 @@ import copy
 from collections import deque
 import unittest
 import numpy as np
+import torch
 from combat_pilot import CombatEnv, encode, SIZE, evaluate, rotate_features, world_action
 
 
@@ -55,6 +56,26 @@ class RotationTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_sampled_evaluation_is_repeatable_and_preserves_torch_rng(self):
+        class Env:
+            def __init__(self): self.actions=[]
+            def reset(self, *, seed, options): return np.zeros(1),{}
+            def step(self, action):
+                self.actions.append(action)
+                return np.zeros(1),0,True,False,{}
+        class Policy:
+            def predict(self, obs, deterministic):
+                self.deterministic=deterministic
+                return torch.randint(5,()).item(),None
+        policy=Policy()
+        a,b=Env(),Env()
+        state=torch.random.get_rng_state().clone()
+        evaluate(a,policy,['a'],repeats=20,deterministic=False)
+        self.assertFalse(policy.deterministic)
+        self.assertTrue(torch.equal(state,torch.random.get_rng_state()))
+        evaluate(b,policy,['a'],repeats=20,deterministic=False)
+        self.assertEqual(a.actions,b.actions)
+
     def test_execution_diagnostics_do_not_enter_policy_or_reward(self):
         view=EncodingTests().view()
         view['decision']='world'

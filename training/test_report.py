@@ -23,6 +23,9 @@ class ReportTests(unittest.TestCase):
             b['seed']=1
             Path(d,'evaluation.json').write_text(json.dumps([b]))
             self.assertTrue(compare(d)['matchedEpisodePlan'])
+            Path(d,'stochastic-evaluation.json').write_text(json.dumps([b]))
+            self.assertTrue(compare(d)['matchedStochasticPlan'])
+            self.assertEqual(compare(d)['stochastic']['combat-zombie']['cleared'],1)
     def test_unknown_outcomes_are_not_silently_dropped(self):
         self.assertEqual(summarize([self.row('error')])['combat-zombie']['otherOutcomes'],{'error':1})
     def test_rotation_specific_failure_is_visible(self):

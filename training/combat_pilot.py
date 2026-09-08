@@ -203,7 +203,15 @@ class Checkpoints(BaseCallback):
         return True
 
 
-def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False):
+def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False, deterministic=True):
+    # CPU policies use torch's global sampler. Reproducible evaluation must not
+    # advance the training RNG or depend on earlier evaluations' action counts.
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(seed)
+        return _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministic)
+
+
+def _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministic):
     records = []
     rng = np.random.default_rng(seed)
     # Episode seeds must not depend on how many random actions previous episodes used.
@@ -218,7 +226,7 @@ def evaluate(env, policy, scenarios, seed=987, repeats=1, all_rotations=False):
             options['rotation'] = rotation
         obs, _ = env.reset(seed=episode_seed, options=options)
         while True:
-            action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=True)[0])
+            action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=deterministic)[0])
             obs, _, done, truncated, info = env.step(action)
             if done or truncated:
                 records.append({**info, 'trace':list(getattr(env, 'trace', []))})
@@ -238,11 +246,15 @@ def main():
     parser.add_argument('--rotate-frames', action='store_true')
     parser.add_argument('--eval-all-rotations', action='store_true',
                         help='Evaluate each seed in all four views; requires --evaluate and --rotate-frames')
+    parser.add_argument('--eval-stochastic', action='store_true',
+                        help='Also evaluate sampled policy actions; requires --evaluate')
     args = parser.parse_args()
     if args.eval_repeats < 1 or args.eval_repeats > 100 or args.steps < 1:
         parser.error('Use positive steps and 1..100 evaluation repeats')
     if args.eval_all_rotations and not (args.evaluate and args.rotate_frames):
         parser.error('--eval-all-rotations requires --evaluate and --rotate-frames')
+    if args.eval_stochastic and not args.evaluate:
+        parser.error('--eval-stochastic requires --evaluate')
     if not args.smoke and (args.out/'manifest.json').exists():
         parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
@@ -253,7 +265,8 @@ def main():
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
                     'torch': torch.__version__, 'budget': 64,
-                    'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations}}
+                    'evaluation': {'repeats':args.eval_repeats, 'allRotations':args.eval_all_rotations,
+                                   'includeStochastic':args.eval_stochastic}}
         checkpoint = args.resume or args.evaluate
         if checkpoint:
             old = json.loads((checkpoint.parent/'manifest.json').read_text())
@@ -277,6 +290,11 @@ def main():
             assert model.num_timesteps == before
             (args.out/'random-evaluation.json').write_text(json.dumps(random_results, indent=2))
             (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
+            if args.eval_stochastic:
+                sampled = evaluate(env, model, scenarios, repeats=args.eval_repeats,
+                                   all_rotations=args.eval_all_rotations, deterministic=False)
+                (args.out/'stochastic-evaluation.json').write_text(json.dumps(sampled, indent=2))
+                assert model.num_timesteps == before
             (args.out/'complete.json').write_text(json.dumps({'mode':'evaluation-only', 'checkpoint':str(args.evaluate), 'trainingSteps':before, 'time':time.time()}))
             print('Checkpoint evaluation completed without learning updates', flush=True)
             return
