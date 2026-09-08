@@ -183,11 +183,15 @@ class Checkpoints(BaseCallback):
         return True
 
 
-def evaluate(env, policy, scenarios, seed=987):
+def evaluate(env, policy, scenarios, seed=987, repeats=1):
     records = []
     rng = np.random.default_rng(seed)
-    for scenario in scenarios:
-        obs, _ = env.reset(seed=int(rng.integers(0, 2**31)), options={'scenario': scenario})
+    # Episode seeds must not depend on how many random actions previous episodes used.
+    plan_rng = np.random.default_rng(seed)
+    plan = [(scenario, int(plan_rng.integers(0, 2**31)))
+            for _ in range(repeats) for scenario in scenarios]
+    for scenario, episode_seed in plan:
+        obs, _ = env.reset(seed=episode_seed, options={'scenario': scenario})
         while True:
             action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=True)[0])
             obs, _, done, truncated, info = env.step(action)
@@ -201,9 +205,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out', type=pathlib.Path, required=True)
     parser.add_argument('--steps', type=int, default=2048)
-    parser.add_argument('--resume', type=pathlib.Path)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--resume', type=pathlib.Path)
+    mode.add_argument('--evaluate', type=pathlib.Path)
+    parser.add_argument('--eval-repeats', type=int, default=1)
     parser.add_argument('--smoke', action='store_true')
     args = parser.parse_args()
+    if args.eval_repeats < 1 or args.eval_repeats > 100 or args.steps < 1:
+        parser.error('Use positive steps and 1..100 evaluation repeats')
+    if not args.smoke and (args.out/'manifest.json').exists():
+        parser.error('Output already contains a run; choose a new directory')
     torch.set_num_threads(4)
     env = CombatEnv(args.out, budget=64)
     try:
@@ -212,8 +223,9 @@ def main():
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'trainingScenarios': SCENARIOS, 'transferScenarios': TRANSFER,
                     'torch': torch.__version__, 'budget': 64}
-        if args.resume:
-            old = json.loads((args.resume.parent/'manifest.json').read_text())
+        checkpoint = args.resume or args.evaluate
+        if checkpoint:
+            old = json.loads((checkpoint.parent/'manifest.json').read_text())
             for key in ('encoder', 'reward', 'gameContract'):
                 if old[key] != manifest[key]:
                     raise ValueError('Checkpoint incompatible: '+key)
@@ -224,6 +236,18 @@ def main():
                 if done or truncated:
                     env.reset(seed=123)
             print('Real game reset/step/restricted observation smoke passed', flush=True)
+            return
+        if args.evaluate:
+            model = PPO.load(args.evaluate, env=env, device='cpu')
+            before = model.num_timesteps
+            scenarios = SCENARIOS + TRANSFER
+            random_results = evaluate(env, None, scenarios, repeats=args.eval_repeats)
+            results = evaluate(env, model, scenarios, repeats=args.eval_repeats)
+            assert model.num_timesteps == before
+            (args.out/'random-evaluation.json').write_text(json.dumps(random_results, indent=2))
+            (args.out/'evaluation.json').write_text(json.dumps(results, indent=2))
+            (args.out/'complete.json').write_text(json.dumps({'mode':'evaluation-only', 'checkpoint':str(args.evaluate), 'trainingSteps':before, 'time':time.time()}))
+            print('Checkpoint evaluation completed without learning updates', flush=True)
             return
         baseline = evaluate(env, None, SCENARIOS)
         (args.out/'random-evaluation.json').write_text(json.dumps(baseline, indent=2))

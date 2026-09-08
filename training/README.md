@@ -59,3 +59,15 @@ Inspect its exit-code file and log/progress after reconnecting. The runner start
 loopback-only HTTP server on an available port and isolated browser profile;
 it never touches the Mac's port-8000 server. Browser requests to external hosts
 are blocked, and service workers are disabled.
+
+Evaluate a saved checkpoint without further learning:
+
+```sh
+python training/combat_pilot.py --evaluate ~/turnarchist-training/pilot-001/final.zip --eval-repeats 5 --out ~/turnarchist-training/pilot-001-eval
+```
+
+This runs the random and deterministic learned policies on the same episode-seed
+plan across training fixtures and giant transfer fixtures. Seeds do not depend
+on how many actions earlier episodes took. Repeats still use fixed fixture
+geometry; they do not provide randomized-layout coverage. Evaluation performs
+no learning updates. Existing run directories are refused to protect results.

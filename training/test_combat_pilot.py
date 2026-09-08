@@ -1,7 +1,7 @@
 import copy
 import unittest
 import numpy as np
-from combat_pilot import encode, SIZE
+from combat_pilot import encode, SIZE, evaluate
 
 
 class EncodingTests(unittest.TestCase):
@@ -34,5 +34,22 @@ class EncodingTests(unittest.TestCase):
         encoded=encode(v)
         v['room']['entities'][0].update(width=2,height=2,health=10)
         np.testing.assert_array_equal(encoded,encode(v))
+
+class EvaluationTests(unittest.TestCase):
+    def test_seed_plan_independent_of_episode_length(self):
+        class Env:
+            def __init__(self, length): self.length, self.seeds = length, []
+            def reset(self, *, seed, options):
+                self.seeds.append((seed, options['scenario']))
+                self.steps = 0
+                return np.zeros(1), {}
+            def step(self, action):
+                self.steps += 1
+                return np.zeros(1), 0, self.steps == self.length, False, {}
+        short, long = Env(1), Env(7)
+        evaluate(short, None, ['a','b'], repeats=3)
+        evaluate(long, None, ['a','b'], repeats=3)
+        self.assertEqual(short.seeds, long.seeds)
+        self.assertEqual(len(short.seeds), 6)
 
 if __name__=='__main__': unittest.main()
