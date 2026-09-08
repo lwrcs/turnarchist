@@ -437,7 +437,7 @@ export class Sound {
         1,
       ); // Reduced volume
       Sound.goreSound = createHowl(
-        "res/SFX/misc Unused/gore2.mp3",
+        "res/SFX/Misc Unused/gore2.mp3",
         0.5,
         false,
         2,

@@ -1,0 +1,57 @@
+# Combat training pilot
+
+This is the first learned-policy pilot, using real browser gameplay on the
+Windows desktop under WSL. It does not replace the programmed lab policy.
+
+Activate `/home/harrison/turnarchist-training/.venv` in `TurnarchistTraining`.
+From the repository root:
+
+```sh
+python training/combat_pilot.py --smoke --out ~/turnarchist-training/pilot-smoke
+python -m unittest discover -s training -p 'test_*.py'
+python training/combat_pilot.py --steps 2048 --out ~/turnarchist-training/pilot-001
+```
+
+Use a dedicated output directory per run. For a continuation:
+
+```sh
+python training/combat_pilot.py --steps 2048 --resume ~/turnarchist-training/pilot-001/checkpoint.zip --out ~/turnarchist-training/pilot-002
+```
+
+Resume restores policy/optimizer state and starts fresh episodes. It does not
+restore the interrupted game or rollout, or promise bit-identical continuation.
+Schema, reward and game-contract mismatches reject loading. The manifest also
+records Git identity; do not change game files during a run.
+
+The observation is a 13x13 player-relative crop of **restricted** perception,
+with two frames, explicit known/unknown channels, full identified entity
+footprints, health, hitwarnings and current weapon damage/turn-cost traits.
+Enemy class names, diagnostic room data and hidden enemy counts never enter the
+policy. This initial action set contains four directional actions and Wait;
+crafting, healing, equipment changes, spells and exploration are not trained.
+No per-world-turn action cap is imposed. Episode decision budgets produce
+truncations with bootstrapping, not deaths or forced Wait actions.
+
+Reward v1: +10 for a cleared encounter, -10 for death, -3 per health lost,
+-0.01 per attempted decision. Encounter completion is a supervisor signal, not
+an input feature. An enemy leaving perception does not earn a kill reward.
+PPO uses a small 128x128 MLP on CPU; GPU functionality is verified separately.
+The browser simulation is expected to dominate early runtime.
+
+Training rotates simple skull, zombie and alert armored-zombie fixtures. Giant
+alert encounters are separate transfer evaluations. These fixtures have fixed
+geometry, so different seeds are **not** independent layout generalization.
+The initial random and final deterministic evaluations are small diagnostics,
+not robust estimates or a curriculum graduation gate.
+
+Outputs: manifest, episode JSONL, periodic checkpoint (256 decisions), final
+model, random/final evaluations, completion marker and one latest replay.
+The final replay replaces the previous one to bound disk use. This pilot retains
+sandbox replay limitations documented in agent-training.md. Errors fail the run;
+never report them as deaths or silently reset over pending game callbacks.
+
+For unattended execution use a desktop tmux session, keep the desktop awake,
+and inspect its log/progress after reconnecting. The runner starts its own
+loopback-only HTTP server on an available port and isolated browser profile;
+it never touches the Mac's port-8000 server. Browser requests to external hosts
+are blocked, and service workers are disabled.

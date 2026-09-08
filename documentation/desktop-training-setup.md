@@ -27,10 +27,11 @@ CartPole PPO check on CPU saved and reloaded a checkpoint with identical
 deterministic predictions. Results and the toy checkpoint are under
 `/home/harrison/turnarchist-training/`; they are not game training artifacts.
 
-The game-to-Python adapter, reward definition, observation/action encoding,
-training launch command and resumable game checkpoints remain to be built.
-No learned Turnarchist policy has been trained. tmux is available, but no
-independent long-running training job has been started or disconnect-tested.
+A first browser-backed game-to-Python combat pilot now lives in `training/`.
+It includes restricted observation encoding, a five-action schema, PPO training,
+reward v1, checkpoint loading with compatibility checks and small evaluations.
+See `training/README.md` for commands and limitations. This is a narrow combat
+experiment, not a complete dungeon agent or full headless simulation.
 
 Keep the desktop awake during runs. The Mac must also remain awake and
 connected for active development and SSH control. A future detached desktop

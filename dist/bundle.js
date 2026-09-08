@@ -96429,7 +96429,7 @@ Sound.loadSounds = async () => {
         Sound.underwaterMusic = createHowl("res/music/underwater1.mp3", 0.75, true, 1);
         Sound.graveSound = createHowl("res/SFX/attacks/skelespawn.mp3", 1.0, false, 2);
         Sound.ambientSound = createHowl("res/SFX/ambient/ambientDark2.mp3", 0.3, true, 1); // Reduced volume
-        Sound.goreSound = createHowl("res/SFX/misc Unused/gore2.mp3", 0.5, false, 2);
+        Sound.goreSound = createHowl("res/SFX/Misc Unused/gore2.mp3", 0.5, false, 2);
         console.log("All sounds loaded successfully");
     }
     catch (error) {
@@ -100108,7 +100108,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("64e97d177a3d948b4c36")
+/******/ 		__webpack_require__.h = () => ("0993c1a0237093fc4de7")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
