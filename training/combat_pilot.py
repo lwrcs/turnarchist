@@ -2,6 +2,7 @@
 import argparse
 from collections import deque
 import functools
+import hashlib
 import http.server
 import json
 import pathlib
@@ -298,6 +299,9 @@ def main():
         checkpoint = args.resume or args.evaluate
         if checkpoint:
             old = json.loads((checkpoint.parent/'manifest.json').read_text())
+            manifest['sourceCheckpoint'] = {'path':str(checkpoint),
+                'sha256':hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+                'curriculum':old.get('curriculum','starter'),'git':old.get('git')}
             for key in ('encoder', 'reward', 'gameContract'):
                 if old[key] != manifest[key]:
                     raise ValueError('Checkpoint incompatible: '+key)

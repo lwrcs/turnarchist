@@ -38,3 +38,28 @@ All four views share fixed fixture geometry. They test coordinate dependence,
 not independent layouts or full-dungeon generalization. Periodic checkpoints
 are saved before the current rollout's PPO update; their step counter includes
 that collected rollout. The final checkpoint includes the final update.
+
+## Final 8,192-decision checkpoint
+
+Training completed successfully with exit code 0. The separate 120-episode
+evaluation used runner `537cda55`: two seeds per fixture, all four views, and
+random/deterministic/sampled policies. All scenario/seed/rotation plans matched.
+
+| Fixture | Deterministic clears | Sampled clears | Random clears |
+| --- | ---: | ---: | ---: |
+| Skeleton | 8/8 | 7/8 | 2/8 |
+| Zombie | 8/8 | 8/8 | 7/8 |
+| Alert armored zombie | 8/8 | 6/8 | 0/8 |
+| Alert giant skeleton | 0/8 | 0/8 | 0/8 |
+| Alert giant zombie | 0/8 | 3/8 | 0/8 |
+
+Every non-clear was a death; there were no budget-incomplete results or
+unrecorded decisions. The final deterministic policy no longer selected a
+single direction universally. Rotation training improved on the interim
+shortcut, but did not produce reliable giant combat.
+
+The separately fitted `imitation-002` checkpoint cleared all encounters under
+the same evaluation plan, preserving health on basic fixtures but losing one
+health in every giant fight. See `imitation-pilot.md`. Neither experiment proves
+general dungeon skill; both use fixed arrangements. The next curriculum targets
+repeated dodge–hit cycles and labels its new held-out arrangements explicitly.

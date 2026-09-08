@@ -200,3 +200,7 @@ evaluating its checkpoints. Imitation inherits the dataset's declared curriculum
 Dataset loading checks actual episode scenarios as well as the manifest; reports
 label training versus held-out fixtures. Evaluation rejects an incorrect
 curriculum flag to avoid silently mislabeling training encounters as transfer.
+
+Evaluation and PPO continuation manifests record the source checkpoint's path,
+SHA-256, curriculum and Git identity. This links results to an exact saved model,
+even when a later run has a different curriculum or output directory.
