@@ -67,8 +67,9 @@ Published Runpod Pod listings currently include:
 
 Source: https://www.runpod.io/pricing (retrieved September 8, 2026).
 These are advertised listings, not reserved offers. Availability and CPU
-allocation must be checked at deployment; storage, transfer and taxes may add
-cost. The older-GPU 3090 listing is a plausible first benchmark candidate because
+allocation must be checked at deployment; storage and applicable taxes may add
+cost. Runpod currently lists no data ingress/egress fees in its Pod pricing
+documentation (https://docs.runpod.io/pods/pricing). The older-GPU 3090 listing is a plausible first benchmark candidate because
 this small CPU-trained policy mainly needs game simulation throughput and RAM.
 A GPU model alone does not predict the speed of its host CPU.
 
