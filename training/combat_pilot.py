@@ -5,6 +5,7 @@ import functools
 import hashlib
 import http.server
 import json
+import math
 import pathlib
 import subprocess
 import threading
@@ -30,10 +31,20 @@ HELD_OUT = {'starter': TRANSFER,
             'forward': ['combat-armoredskull','combat-armoredzombie','combat-bigskull','combat-bigzombie']}
 CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
+CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
+HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 ENCODER = {'version': 1, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = 13 * 13 * 12 + 5
 BROWSER_RECYCLE_EPISODES = 64
+
+
+def optimization_overrides(learning_rate=None, entropy_coefficient=None, target_kl=None):
+    values={'learning_rate':learning_rate,'ent_coef':entropy_coefficient,'target_kl':target_kl}
+    for name,value in values.items():
+        if value is not None and (not math.isfinite(value) or value<0 or (name!='ent_coef' and value==0)):
+            raise ValueError('Invalid optimization setting: '+name)
+    return {name:value for name,value in values.items() if value is not None}
 
 
 def encode(view):
@@ -275,6 +286,9 @@ def main():
     parser.add_argument('--steps', type=int, default=2048)
     parser.add_argument('--envs', type=int, choices=[1,2,4], default=1)
     parser.add_argument('--curriculum',choices=list(CURRICULA),default='starter')
+    parser.add_argument('--learning-rate',type=float,help='Explicit learning-rate override for training/resumption')
+    parser.add_argument('--entropy-coefficient',type=float,help='Explicit PPO exploration-bonus coefficient')
+    parser.add_argument('--target-kl',type=float,help='Set the approximate-KL early-stopping target for PPO updates')
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--resume', type=pathlib.Path)
     mode.add_argument('--evaluate', type=pathlib.Path)
@@ -286,6 +300,12 @@ def main():
     parser.add_argument('--eval-stochastic', action='store_true',
                         help='Also evaluate sampled policy actions; requires --evaluate')
     args = parser.parse_args()
+    try:
+        overrides=optimization_overrides(args.learning_rate,args.entropy_coefficient,args.target_kl)
+    except ValueError as error:
+        parser.error(str(error))
+    if overrides and (args.evaluate or args.smoke):
+        parser.error('Optimization overrides apply only to training')
     if args.eval_repeats < 1 or args.eval_repeats > 100 or args.steps < 1:
         parser.error('Use positive steps and 1..100 evaluation repeats')
     if args.eval_all_rotations and not (args.evaluate and args.rotate_frames):
@@ -306,7 +326,8 @@ def main():
         manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'curriculum':args.curriculum,'trainingScenarios': scenarios, 'transferScenarios': transfer,
-                    'stressScenarios':transfer if args.curriculum=='open-combat' else [],
+                    'stressScenarios':transfer if args.curriculum in ('open-combat','terrain-combat') else [],
+                    'optimizationOverrides':overrides,
                     'torch': torch.__version__, 'budget': 64,
                     'execution': {'environments':args.envs, 'rolloutStepsPerEnvironment':256//args.envs,
                                   'browserRecycleEpisodes':BROWSER_RECYCLE_EPISODES},
@@ -363,10 +384,14 @@ def main():
             if any(contract != env.contract for contract in parallel_env.get_attr('contract')):
                 raise RuntimeError('Game contracts differ between training workers')
             training_env = parallel_env
-        model = PPO.load(args.resume, env=training_env, device='cpu') if args.resume else PPO(
+        fresh_options={'learning_rate':3e-4,**overrides}
+        model = PPO.load(args.resume, env=training_env, device='cpu',**overrides) if args.resume else PPO(
             'MlpPolicy', training_env, n_steps=256//args.envs, batch_size=64, n_epochs=4,
-            learning_rate=3e-4, gamma=0.99, seed=123, device='cpu',
+            gamma=0.99, seed=123, device='cpu',**fresh_options,
             policy_kwargs={'net_arch':[128,128]}, verbose=1)
+        manifest['optimization']={'learningRateAtStart':float(model.lr_schedule(1.0)),
+                                  'entropyCoefficient':float(model.ent_coef),'targetKL':model.target_kl}
+        (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         # CPU is deliberate for this small MLP; GPU availability was tested separately.
         model.learn(total_timesteps=args.steps, reset_num_timesteps=not bool(args.resume), callback=Checkpoints(args.out))
         model.save(args.out/'final')

@@ -247,3 +247,16 @@ model, optimizer and episode sequence. Frame history is reset normally for the
 new episode; teacher collection reinjects its script into the fresh page.
 Manifests record the recycle interval. Never patch this into a running checkout;
 apply it to the next run or an explicitly recorded checkpoint recovery.
+
+`--curriculum terrain-combat` retains the ten open-room duels and explicitly adds
+the giant pocket and skeleton choke to training. Their earlier results remain
+held-out results only for earlier checkpoints. Giant/armored clutter with support
+enemies becomes the separately labeled stress set; starter gear is not assumed
+to solve every such layout.
+
+For controlled PPO experiments, `--learning-rate`, `--entropy-coefficient`, and
+`--target-kl` can override checkpoint optimization settings. Omission preserves
+the checkpoint settings; evaluation/smoke reject these training-only flags.
+The manifest records requested overrides and effective settings. Smaller updates
+and KL early stopping do not guarantee retention, and exploration can reduce
+short-term survival: keep reference checkpoints and compare actual gameplay.

@@ -85,3 +85,32 @@ This checkpoint is the starting point for continued PPO under `open-combat`,
 which adds the four non-alert arrangements to training. Their earlier results
 remain held-out evidence for this checkpoint; they are training fixtures for the
 continuation. Giant-pocket and skeleton-choke cases are separate stress tests.
+
+## Full open-room teacher and imitation-open-001
+
+After the PPO health regression documented in `training-pilot-003.md`,
+`teacher-open-002` collected 80/80 full-health clears across all ten open-room
+arrangements, yielding 344 decisions. The incomplete prior `teacher-open-001`
+was excluded. Fitting a separate model for 2,000 epochs reduced training loss
+from 1.5923 to 0.0000270; no PPO decisions occurred during this fit.
+
+The completed v2 evaluation ran 288 episodes and the cycle exited successfully.
+Both deterministic and sampled policies cleared all 80 open-room encounters at
+full health. Deterministic comparison against the original forward model found
+eight health improvements and no regressions in the shared 80 cases. The same
+comparison against PPO recovery found 24 health improvements in these duels.
+
+The model did worse on the 16 obstacle stress encounters. Deterministic play
+cleared 0/8 giant pockets and 4/8 skeleton chokes; sampled play cleared 1/8 pockets
+and 3/8 chokes. All other stress attempts were budget-incomplete, not victories
+or deaths. No stress clear preserved full health. PPO recovery had cleared
+16/16 deterministic and 15/16 sampled stress attempts. This is therefore a
+better open-room reference, not a universally better policy.
+
+The next controlled PPO trial initializes from this clean-duel checkpoint and
+adds pocket/choke cases as explicitly declared training fixtures. It uses a
+learning rate of 0.00003, an entropy coefficient of 0.01, and a KL early-stopping
+target of 0.01. This tests adaptation with smaller updates and exploration;
+retention must still be verified. Harder giant/armored clutter with support
+enemies remains separately labeled stress evaluation. All fixtures retain fixed
+geometry; none of these scores demonstrates arbitrary-room generalization.
