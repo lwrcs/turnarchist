@@ -33,3 +33,39 @@ all earlier training rollouts or other evaluations were free of it. The old
 random controls offered Wait and must not be treated as player-legal baselines.
 The terrain experiment using the old action space was stopped, and its
 artifacts retained as a retired-contract experiment.
+
+## Fresh four-action reference and next experiment
+
+The replacement `legal-cycle-001` completed with exit code 0 on the desktop,
+using revision `4448d789`. Fresh `teacher-legal-open-001` provided 80 episodes
+and 344 decisions. `imitation-legal-open-001` was fitted from scratch for 2000
+epochs; it did not reuse five-action weights. Its paired v2 evaluation completed
+288 episodes (two seeds per fixture, all four coordinate views, three policies).
+
+| Policy | Open clears / 80 | Open full-health clears | Obstacle clears / 16 | Obstacle full-health clears |
+| --- | ---: | ---: | ---: | ---: |
+| Deterministic learned | 80 | 80 | 4 | 0 |
+| Sampled learned | 80 | 80 | 6 | 1 |
+| Four-action random | 26 | 15 | 2 | 0 |
+
+These are fixed combat fixtures, not full-dungeon win rates. The two obstacle
+fixtures were held out of this imitation dataset.
+
+The next bounded experiment, `pilot-legal-terrain-001`, starts from this fresh
+four-action reference. It adds giant-pocket and skull-choke to the ten open
+training fixtures, with 8192 PPO decisions, two CPU workers, learning rate
+0.00003, entropy coefficient 0.01 and target KL 0.01. Browser contexts recycle
+every 64 episodes. These conservative updates are an experiment, not a guarantee
+against forgetting.
+
+The sequential desktop launcher is
+`/home/harrison/turnarchist-training/legal-terrain-cycle-001/run.sh`
+(Windows task `Turnarchist-Legal-Terrain-001`). It pins game/runtime revision
+`4448d789`, preserves the source model, and then runs a 336-episode evaluation.
+Reports compare exact shared encounters with `imitation-legal-open-001-eval-v2`,
+including individual health regressions and sampled play. Heavy giant/armored
+clutter remains separate held-out stress coverage, not a must-win requirement
+with starter equipment. No model promotion is automatic.
+
+Signal and its recurring listener are paused at the user's request. The desktop
+job runs independently; progress checks occur in chat when requested.
