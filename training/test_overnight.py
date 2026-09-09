@@ -54,5 +54,18 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(result['status'],'stopped')
         self.assertTrue(result['selectedModel'].endswith('navigation-model-001/final.zip'))
 
+class AdaptiveTests(unittest.TestCase):
+    def test_regression_rolls_back_with_smaller_updates(self):
+        from overnight import adaptive_retry
+        retry,rate=adaptive_retry(1e-5,{'regression':True},0)
+        self.assertTrue(retry)
+        self.assertEqual(rate,5e-6)
+
+    def test_neutral_patience_and_minimum(self):
+        from overnight import adaptive_retry
+        self.assertEqual(adaptive_retry(1e-5,{'regression':False},1),(False,1e-5))
+        self.assertEqual(adaptive_retry(1e-5,{'regression':False},2),(True,5e-6))
+        self.assertEqual(adaptive_retry(1.25e-6,{'regression':True},0),(True,1.25e-6))
+
 
 if __name__=='__main__': unittest.main()

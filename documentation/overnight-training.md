@@ -29,3 +29,22 @@ and stop reason. Stage logs and paired reports live beside it; training progress
 and checkpoints live in the corresponding sibling round directory. Hourly Codex
 check-ins are separate from this controller and should inspect compact status,
 stay quiet for routine progress, and pause themselves at completion or cutoff.
+
+## Adaptive continuation
+
+With `--adaptive`, the controller tries up to six sequential rounds before the
+same absolute deadline. It starts from the preserved imitation checkpoint using
+learning rate 0.00001, one third of the earlier PPO rate. A regressing candidate
+is retained for diagnosis but never becomes the next source: continuation rolls
+back to the best evaluated checkpoint and halves the learning rate. Two neutral
+rounds trigger the same adjustment. Failure at the minimum rate of 0.00000125
+ends the controller for diagnosis, avoiding identical repeated trials. Runtime
+errors and resource pressure still stop immediately. The training manifest
+records the override; the saved model retains its schedule and optimizer rate.
+
+The user has authorized hourly supervision to inspect completed experiments and
+make small, tested follow-up changes while the checkout is idle. It may then
+launch a uniquely named local experiment before the original cutoff. This is
+separate from the deterministic controller; changes must be recorded and paired
+evaluations remain required. Never mutate a running experiment or replace the
+preserved reference with a regressing candidate.

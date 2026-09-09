@@ -133,5 +133,22 @@ class DungeonTests(unittest.TestCase):
         torch.testing.assert_close(value_before,target.policy.value_net.weight)
         self.assertEqual(target.num_timesteps,0)
 
+class LearningRateOverrideTests(unittest.TestCase):
+    def test_override_survives_checkpoint_reload(self):
+        from dungeon_pilot import override_learning_rate
+        model=PPO('MlpPolicy',gym.make('CartPole-v1'),n_steps=8,batch_size=8,device='cpu')
+        try:
+            override_learning_rate(model,1e-5)
+            self.assertEqual(model.lr_schedule(.5),1e-5)
+            self.assertTrue(all(g['lr']==1e-5 for g in model.policy.optimizer.param_groups))
+            with tempfile.TemporaryDirectory() as directory:
+                path=Path(directory)/'model.zip'; model.save(path)
+                loaded=PPO.load(path,device='cpu')
+                self.assertEqual(loaded.lr_schedule(.5),1e-5)
+                self.assertEqual(loaded.learning_rate,1e-5)
+            for invalid in [0,-1,float('nan'),float('inf')]:
+                with self.assertRaises(ValueError): override_learning_rate(model,invalid)
+        finally: model.get_env().close()
+
 
 if __name__=='__main__': unittest.main()

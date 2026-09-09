@@ -252,7 +252,10 @@ def main():
     parser.add_argument('--budget',type=int,default=512)
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
+    parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     args=parser.parse_args()
+    if args.learning_rate is not None and (not 0<args.learning_rate<=.001 or not (args.resume or args.from_combat)):
+        parser.error('Learning rate must be in (0, .001] and used only for training')
     if not 1<=args.steps<=1000000 or not 1<=args.budget<=10000 or not 1<=args.eval_seeds<=32:
         parser.error('Use 1..1000000 steps, 1..10000 budget, 1..32 evaluation seeds')
     args.out.mkdir(parents=True,exist_ok=False)
@@ -301,6 +304,9 @@ def main():
                 else:
                     model=initialize_from_combat(source_path,source_manifest,env,args.envs)
                     manifest['initialization']='combat actor copied; memory columns zero; fresh value head and optimizer'
+                if args.learning_rate is not None:
+                    override_learning_rate(model,args.learning_rate)
+                manifest['optimizationOverrides']={'learningRate':args.learning_rate}
                 manifest['optimization']={'learningRateAtStart':float(model.lr_schedule(1.0)),
                                           'gamma':model.gamma,'entropyCoefficient':float(model.ent_coef),
                                           'targetKL':model.target_kl,'epochs':model.n_epochs}
@@ -330,6 +336,13 @@ def main():
         print(json.dumps(report),flush=True)
     finally:
         if env is not None: env.close()
+
+
+def override_learning_rate(model,rate):
+    if not 0<rate<=.001: raise ValueError('Invalid training learning rate')
+    model.learning_rate=rate
+    model._setup_lr_schedule()
+    for group in model.policy.optimizer.param_groups: group['lr']=rate
 
 
 def initialize_from_combat(source_path,source_manifest,env,workers):

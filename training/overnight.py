@@ -34,6 +34,12 @@ def atomic_json(path,data):
     temporary.write_text(json.dumps(data,indent=2)); temporary.replace(path)
 
 
+def adaptive_retry(rate,decision,no_gain):
+    """Rollback and reduce update size after regression or two neutral rounds."""
+    retry=decision['regression'] or no_gain>=2
+    return retry, max(1.25e-6,rate/2) if retry else rate
+
+
 def memory_ok():
     data={line.split(':')[0]:int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()}
     return data['MemAvailable']>=512*1024 and data['SwapTotal']-data['SwapFree']<2*1024*1024
@@ -45,6 +51,9 @@ def run(args):
     revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
     state={'status':'running','deadline':args.deadline,'git':revision,'phase':'starting',
            'rounds':[],'selectedModel':str(root/'navigation-model-001/final.zip')}
+    adaptive=getattr(args,'adaptive',False)
+    state['adaptive']=adaptive
+    rate=1e-5
     def save():
         state['updatedAt']=time.time(); atomic_json(job/'status.json',state)
     def execute(label,arguments):
@@ -82,20 +91,27 @@ def run(args):
         best_model=Path(state['selectedModel']); best_eval=reference
         next_model=best_model
         no_gain=0
-        for index,steps in enumerate([16384,32768,32768],1):
+        for index,steps in enumerate(([16384]+[32768]*5) if adaptive else [16384,32768,32768],1):
             if args.deadline-time.time()<3600:
                 state['stopReason']='insufficient time for another training/evaluation round'; break
             model=root/f'{args.name}-r{index}'
             evaluation=root/f'{args.name}-r{index}-eval'
             execute(f'r{index}-train',['training/dungeon_pilot.py','--resume',next_model,'--out',model,
-                                      '--envs','4','--steps',steps,'--budget','512','--eval-seeds','4'])
+                                      '--envs','4','--steps',steps,'--budget','512','--eval-seeds','4']
+                    + (['--learning-rate',rate] if adaptive else []))
             execute(f'r{index}-eval',['training/dungeon_pilot.py','--evaluate',model/'final.zip','--out',evaluation,
                                      '--envs','1','--budget','512','--eval-seeds','4'])
             comparison=report(evaluation,best_eval)
             atomic_json(job/f'r{index}-report.json',comparison)
             decision=gate(baseline,comparison)
-            state['rounds'].append({'round':index,'steps':steps,**decision,'results':comparison['policies']})
+            state['rounds'].append({'round':index,'steps':steps,'learningRateOverride':rate if adaptive else None,
+                                    **decision,'results':comparison['policies']})
             if decision['regression']:
+                if adaptive:
+                    if rate<=1.25e-6:
+                        state['stopReason']='regression at minimum learning rate; needs diagnosis'; save(); break
+                    _,rate=adaptive_retry(rate,decision,no_gain)
+                    next_model=best_model; no_gain=0; save(); continue
                 state['stopReason']='regression gate; reference preserved'; save(); break
             next_model=model/'final.zip'
             if decision['advance']:
@@ -104,6 +120,11 @@ def run(args):
             else: no_gain+=1
             save()
             if no_gain>=2:
+                if adaptive:
+                    if rate<=1.25e-6:
+                        state['stopReason']='no gain at minimum learning rate; needs diagnosis'; break
+                    _,rate=adaptive_retry(rate,decision,no_gain)
+                    next_model=best_model; no_gain=0; continue
                 state['stopReason']='two rounds without qualifying gain'; break
         # These extra four seeds were not used for the continuation gates.
         if best_eval!=reference and args.deadline-time.time()>=3600:
@@ -132,4 +153,5 @@ if __name__=='__main__':
     p.add_argument('--root',type=Path,required=True)
     p.add_argument('--name',required=True)
     p.add_argument('--deadline',type=float,required=True)
+    p.add_argument('--adaptive',action='store_true',help='Up to six trials, rolling back and lowering learning rate on regression')
     run(p.parse_args())
