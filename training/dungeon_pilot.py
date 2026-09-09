@@ -253,7 +253,11 @@ def main():
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
+    parser.add_argument('--rehearsal-navigation',type=Path)
+    parser.add_argument('--rehearsal-combat',type=Path)
     args=parser.parse_args()
+    if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
+        parser.error('Both rehearsal datasets are required and only supported for training')
     if args.learning_rate is not None and (not 0<args.learning_rate<=.001 or not (args.resume or args.from_combat)):
         parser.error('Learning rate must be in (0, .001] and used only for training')
     if not 1<=args.steps<=1000000 or not 1<=args.budget<=10000 or not 1<=args.eval_seeds<=32:
@@ -310,9 +314,14 @@ def main():
                 manifest['optimization']={'learningRateAtStart':float(model.lr_schedule(1.0)),
                                           'gamma':model.gamma,'entropyCoefficient':float(model.ent_coef),
                                           'targetKL':model.target_kl,'epochs':model.n_epochs}
+                callbacks=[Checkpoints(args.out)]
+                if args.rehearsal_navigation:
+                    from rehearsal import configure
+                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'])
+                    callbacks.append(practice)
                 model.save(args.out/'initial')
                 (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
-                model.learn(total_timesteps=args.steps,reset_num_timesteps=not bool(args.resume),callback=Checkpoints(args.out))
+                model.learn(total_timesteps=args.steps,reset_num_timesteps=not bool(args.resume),callback=callbacks)
                 model.save(args.out/'final')
                 report={'mode':'dungeon-training','steps':model.num_timesteps,
                         'trainingSeconds':time.perf_counter()-ready}

@@ -52,6 +52,8 @@ def run(args):
     state={'status':'running','deadline':args.deadline,'git':revision,'phase':'starting',
            'rounds':[],'selectedModel':str(root/'navigation-model-001/final.zip')}
     adaptive=getattr(args,'adaptive',False)
+    rehearsal=getattr(args,'rehearsal',False)
+    state['rehearsal']=rehearsal
     state['adaptive']=adaptive
     rate=1e-5
     def save():
@@ -98,7 +100,9 @@ def run(args):
             evaluation=root/f'{args.name}-r{index}-eval'
             execute(f'r{index}-train',['training/dungeon_pilot.py','--resume',next_model,'--out',model,
                                       '--envs','4','--steps',steps,'--budget','512','--eval-seeds','4']
-                    + (['--learning-rate',rate] if adaptive else []))
+                    + (['--learning-rate',rate] if adaptive else [])
+                    + (['--rehearsal-navigation',root/'navigation-data-001',
+                        '--rehearsal-combat',root/'teacher-legal-open-001'] if rehearsal else []))
             execute(f'r{index}-eval',['training/dungeon_pilot.py','--evaluate',model/'final.zip','--out',evaluation,
                                      '--envs','1','--budget','512','--eval-seeds','4'])
             comparison=report(evaluation,best_eval)
@@ -132,11 +136,11 @@ def run(args):
             for label,model in [('reference',root/'navigation-model-001/final.zip'),('candidate',best_model)]:
                 out=root/f'{args.name}-audit-{label}'
                 execute('audit-'+label,['training/dungeon_pilot.py','--evaluate',model,'--out',out,
-                                        '--envs','1','--budget','512','--eval-seeds','8'])
+                                        '--envs','1','--budget','512','--eval-seeds','16' if rehearsal else '8'])
                 audits.append(out)
             result={}
             for mode in ['deterministic','sampled','random']:
-                result[mode]={label:summary(json.loads((path/f'{mode}-evaluation.json').read_text())[4:])
+                result[mode]={label:summary(json.loads((path/f'{mode}-evaluation.json').read_text())[8 if rehearsal else 4:])
                               for label,path in zip(['reference','candidate'],audits)}
             atomic_json(job/'reserve-seed-audit.json',result)
             state['reserveAudit']='reserve-seed-audit.json'
@@ -154,4 +158,5 @@ if __name__=='__main__':
     p.add_argument('--name',required=True)
     p.add_argument('--deadline',type=float,required=True)
     p.add_argument('--adaptive',action='store_true',help='Up to six trials, rolling back and lowering learning rate on regression')
+    p.add_argument('--rehearsal',action='store_true',help='Balanced navigation/combat rehearsal between PPO rollouts; eight new audit seeds')
     run(p.parse_args())

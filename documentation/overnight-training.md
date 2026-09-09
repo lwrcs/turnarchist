@@ -48,3 +48,25 @@ launch a uniquely named local experiment before the original cutoff. This is
 separate from the deterministic controller; changes must be recorded and paired
 evaluations remain required. Never mutate a running experiment or replace the
 preserved reference with a regressing candidate.
+
+## Daytime rehearsal experiment
+
+`--adaptive --rehearsal` enables a small supervised SGD update between PPO
+rollouts, using 32 navigation and 32 combat demonstrations per practice batch.
+This is an interleaved experiment, not an implementation of a joint BC+PPO loss.
+The first rollout receives no practice update, preserving PPO's on-policy
+collection: subsequent practice occurs after the previous PPO training and
+before collecting the next rollout. Practice does not modify stored rollout
+log-probabilities or count as new environment experience. SGD is stateless,
+uses learning rate 0.001 and gradient clipping at 0.5, and leaves PPO's Adam
+moments intact. Dataset hashes and settings are recorded in the training
+manifest. Resuming restarts the demonstration sampler's fixed seed; evaluation
+uses the saved policy with no rehearsal. The current separate value network
+receives no rehearsal gradient.
+
+Navigation and combat datasets must match the live game contract and existing
+validated encoders. No rewards, helper actions or policy observations change.
+The daytime controller still starts from the original imitation checkpoint so
+its first trial can be compared to the prior PPO-only trial. All candidates are
+preserved. The audit uses 16 seeds and reports only indices 8–15, excluding the
+four selection seeds and four reserve seeds already examined overnight.
