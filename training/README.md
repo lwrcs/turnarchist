@@ -269,3 +269,50 @@ the checkpoint settings; evaluation/smoke reject these training-only flags.
 The manifest records requested overrides and effective settings. Smaller updates
 and KL early stopping do not guarantee retention, and exploration can reduce
 short-term survival: keep reference checkpoints and compare actual gameplay.
+
+## Procedural dungeon pilot
+
+`dungeon_pilot.py` is a distinct training task, not another combat fixture. The
+learner controls four directional actions in generated standard dungeons. A
+versioned helper confirms ladders, dismisses interactions, cancels selections
+when possible, and uses zero-turn healing items from exposed metadata. Those
+actions are logged separately; inventory, crafting, spells and equipment are
+not learned yet. Unsupported prompts truncate with an explicit reason.
+
+Encoder v5 appends a rotated 13x13 memory of actually visited positions to the
+two restricted combat frames. No hidden map or enemy data enters the policy.
+A 64-seed training pool and separate held-out pool are deterministically derived
+and checked for game-seed overlap. Repeated visits earn no exploration bonus.
+Reward: +0.02 first visited position, +0.5 first room, +5 per new maximum floor,
+-3 per health lost, -10 death, -0.01 per attempted game action. Floor depth is
+outcome/reward supervision only. Enemy disappearance earns nothing.
+
+The total episode budget counts helper actions too. It never forces a world
+turn or limits zero-turn preparation within a turn. Budget exhaustion remains
+incomplete, not death or victory. One learner transition can contain subsequent
+helper actions; its reward sums those actions, and PPO discounts per learner
+transition. This is an explicitly assisted pilot, not a pure primitive-action
+policy or a full-game mastery claim.
+
+```sh
+python training/dungeon_pilot.py --benchmark --envs 2 --steps 128 --budget 64 --out RUN
+python training/dungeon_pilot.py --from-combat COMBAT/final.zip --envs 2 --steps 8192 --out RUN
+python training/dungeon_pilot.py --evaluate RUN/initial.zip --envs 1 --eval-seeds 8 --out BEFORE
+python training/dungeon_pilot.py --evaluate RUN/final.zip --envs 1 --eval-seeds 8 --out AFTER
+python training/dungeon_report.py AFTER --against BEFORE
+```
+
+Combat initialization copies the actor and sets new memory-input weights to
+zero, preserving its initial action probabilities. The value head and optimizer
+start fresh because the reward changed. This is explicit transfer, not resumed
+combat PPO. Both initial and final models are saved. Evaluation runs random,
+deterministic and sampled policies on the same held-out seed/view plan, without
+updates, and reports floor progression, rooms, positions, damage and helper use.
+The helper makes no navigation choices. Compare initial and final dungeon
+models under the same budget and helper contract. Existing combat reports and
+checkpoints retain their original meaning.
+
+Use `--resume RUN/checkpoint.zip` (or `final.zip`) for a dungeon continuation.
+It restores dungeon weights and optimizer with the original worker count, checks
+encoder/reward/helper/game contracts, and starts fresh episodes and rollout.
+It is not a bit-identical continuation of an interrupted dungeon.
