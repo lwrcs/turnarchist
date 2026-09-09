@@ -102,6 +102,9 @@ export class PlayerActionProcessor {
         break;
 
       case "Wait":
+        // Historical agent recordings used this unsupported player action.
+        // Preserve playback only; live stalling must use actual gameplay/items.
+        if (!this.player.game.replayManager.isReplaying()) return;
         try {
           (this.player as any).getRoom?.()?.tick?.(this.player);
         } catch {}

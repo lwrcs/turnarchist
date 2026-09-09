@@ -74,3 +74,22 @@ test('a miss does not use the free hit; unknown weapons have no invented cost', 
   assert.equal(turns(), 0);
   assert.equal(observeItem({name: 'new mechanic'}).traits.successfulAttackTurnCost, null);
 });
+
+test('hourglass stalling consumes a limited charge and stops when exhausted', () => {
+  class Usable { constructor(){this.broken=false;} }
+  const {Hourglass}=load('src/item/usable/hourglass.ts',{'./usable':{Usable}});
+  const glass=new Hourglass({},0,0);
+  let turns=0;
+  const player={stall(){turns++;},game:{pushMessage(){}}};
+  assert.equal(observeItem(glass).useTurnCost,1);
+  for(let i=0;i<30;i++)glass.onUse(player);
+  assert.equal(turns,30);
+  assert.equal(glass.durability,0);
+  assert.equal(glass.broken,true);
+  assert.equal(observeItem(glass).useTurnCost,0);
+  glass.onUse(player);
+  assert.equal(turns,30);
+  glass.broken=false;
+  glass.onUse(player);
+  assert.equal(turns,30);
+});

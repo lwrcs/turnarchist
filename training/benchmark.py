@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
-from combat_pilot import CombatEnv
+from combat_pilot import ACTIONS, CombatEnv
 
 
 def make_env(out):
@@ -43,7 +43,7 @@ def main():
         decisions=0
         episodes=0
         while decisions < args.steps:
-            observations,rewards,dones,infos=env.step(rng.integers(5,size=args.envs))
+            observations,rewards,dones,infos=env.step(rng.integers(len(ACTIONS),size=args.envs))
             if not np.isfinite(observations).all() or not np.isfinite(rewards).all():
                 raise RuntimeError('Non-finite environment output')
             decisions += args.envs

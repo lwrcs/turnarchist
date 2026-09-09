@@ -6,13 +6,11 @@ from pathlib import Path
 
 import numpy as np
 
-from combat_pilot import CombatEnv, CURRICULA, ENCODER, ROOT
+from combat_pilot import CombatEnv, CURRICULA, ROTATED_ENCODER, ROOT
 
 
 def local_action(action, rotation):
-    if action == {'type':'Wait'}:
-        return 4
-    if action.get('type') != 'Move' or action.get('direction') not in ('up','right','down','left'):
+    if not isinstance(action,dict) or action.get('type') != 'Move' or action.get('direction') not in ('up','right','down','left'):
         raise ValueError('Teacher selected an action outside the pilot action contract')
     world=('up','right','down','left').index(action['direction'])
     return (world-rotation)%4
@@ -66,7 +64,7 @@ def main():
                             observations=np.asarray(observations,dtype=np.float32),
                             actions=np.asarray(actions,dtype=np.int64),
                             episode_ids=np.asarray(episode_ids,dtype=np.int64))
-        manifest={'encoder':{**ENCODER,'version':2,'coordinateRotation':'random-quarter-turn-per-episode'},
+        manifest={'encoder':ROTATED_ENCODER,
                   'gameContract':env.contract,'teacherVersion':version,
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
                   'curriculum':args.curriculum,'trainingScenarios':CURRICULA[args.curriculum],

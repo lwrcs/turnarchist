@@ -1,6 +1,12 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {Policy}=require('../agent-baseline.js');
+
+test('an enclosed programmed agent never invents an unrestricted Wait', () => {
+  const p=new Policy(),v=view();
+  for(const tile of v.room.tiles)tile.solid=true;
+  assert.equal(p.choose(v),null);
+});
 const {Runner}=require('../agent-batch.js');
 function view(){return {observationMode:'player-perception',contract:{observationSchemaVersion:3},vision:{range:12,identificationBrightness:.08},
   decision:'world',terminated:false,player:{x:0,y:0,z:0,health:2,maxHealth:2},inventory:[],

@@ -65,17 +65,19 @@ test('malformed actions, internal events and developer commands never execute', 
   const {env, actions} = setup();
   await env.reset(123);
   for (const action of [null, {type: 'Command', command: 'spawn zombie'},
-    {type: 'AutoPickup'}, {type: 'Restart'}, {type: 'Move', direction: '__proto__'}]) {
+    {type: 'AutoPickup'}, {type: 'Wait'}, {type: 'Restart'}, {type: 'Move', direction: '__proto__'}]) {
     await assert.rejects(env.step(action), /Unsupported agent action/);
   }
   assert.equal(actions.length, 0);
+  assert.equal(env.observe().steps, 0);
+  assert.equal(env.observe().player.turnCount, 0);
   assert.equal(env.observe().failure, null);
 });
 
 test('an in-flight step excludes other steps and reset without losing its result', async () => {
   const {env} = setup(); await env.reset(123);
-  const pending = env.step({type: 'Wait'});
-  await assert.rejects(env.step({type: 'Wait'}), /in progress/);
+  const pending = env.step({type: 'Move', direction: 'left'});
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /in progress/);
   await assert.rejects(env.reset(456), /in progress/);
   assert.equal((await pending).observation.steps, 1);
   assert.equal(env.observe().seed, 123);
@@ -83,11 +85,11 @@ test('an in-flight step excludes other steps and reset without losing its result
 
 test('step budgets truncate independently of death and reset opens a new episode', async () => {
   const {env} = setup(); await env.reset(123, {maxSteps: 1});
-  const result = await env.step({type: 'Wait'});
+  const result = await env.step({type: 'Move', direction: 'left'});
   assert.equal(result.terminated, false);
   assert.equal(result.truncated, true);
   assert.equal(result.observation.ready, false);
-  await assert.rejects(env.step({type: 'Wait'}), /Action budget exhausted/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /Action budget exhausted/);
   assert.equal((await env.reset(456)).steps, 0);
 });
 
@@ -103,7 +105,7 @@ test('wall bumps count toward the budget without claiming a recorded action', as
 test('timeouts poison the episode so late callbacks cannot contaminate a reset', async () => {
   const {env, player} = setup(15); await env.reset(1);
   player.busyAnimating = true;
-  await assert.rejects(env.step({type: 'Wait'}), /timed out/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /timed out/);
   assert.equal(env.observe().truncated, true);
   player.busyAnimating = false;
   await assert.rejects(env.reset(2), /timed out/);
@@ -113,7 +115,7 @@ test('ladder prompts require an explicit ladder choice', async () => {
   const {env, room, player, DownLadder} = setup(); await env.reset(1);
   room.roomArray[1][1] = new DownLadder(); player.screenMessage.open = true;
   assert.equal(env.observe().decision, 'ladder');
-  await assert.rejects(env.step({type: 'Wait'}), /current decision/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /current decision/);
   assert.equal(env.observe().failure, null);
   const result = await env.step({type: 'LadderConfirm'});
   assert.equal(result.info.recorded, true);
@@ -122,11 +124,11 @@ test('ladder prompts require an explicit ladder choice', async () => {
 test('death terminates independently of the step budget', async () => {
   const {env, player} = setup(); await env.reset(1);
   player.actionProcessor.process = () => { player.dead = true; };
-  const result = await env.step({type: 'Wait'});
+  const result = await env.step({type: 'Move', direction: 'left'});
   assert.equal(result.terminated, true);
   assert.equal(result.truncated, false);
   assert.equal(result.observation.ready, false);
-  await assert.rejects(env.step({type: 'Wait'}), /Episode ended/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /Episode ended/);
 });
 
 test('observations and exported actions are detached from mutable game objects', async () => {
@@ -134,7 +136,7 @@ test('observations and exported actions are detached from mutable game objects',
   room.entities.push({x: 1, y: 2, health: 4});
   const observation = env.observe(); observation.room.entities[0].health = 0;
   assert.equal(room.entities[0].health, 4);
-  await env.step({type: 'Wait'});
+  await env.step({type: 'Move', direction: 'left'});
   const replay = env.exportReplay(); replay.replay.actions.length = 0;
   assert.equal(env.exportReplay().replay.actions.length, 1);
   assert.equal(observation.observationMode, 'diagnostic-current-room');
@@ -146,7 +148,7 @@ test('bounded history preserves before/after enemy changes and clears on reset',
   room.entities.push(enemy);
   const normalProcess = player.actionProcessor.process;
   player.actionProcessor.process = action => { enemy.health++; normalProcess(action); };
-  for (let i = 0; i < 10; i++) await env.step({type: 'Wait'});
+  for (let i = 0; i < 10; i++) await env.step({type: 'Move', direction: 'left'});
   const observation = env.observe();
   assert.equal(observation.recentTransitions.length, 8);
   const last = observation.recentTransitions.at(-1);
@@ -194,7 +196,7 @@ test('a long free-action sequence pauses and resumes without spending a turn or 
   assert.equal(paused.truncationReason, 'action-budget');
   assert.equal(paused.terminated, false);
   assert.equal(paused.canExtendBudget, true);
-  await assert.rejects(env.step({type: 'Wait'}), /extendBudget/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /extendBudget/);
   const replayBefore = JSON.stringify(env.exportReplay().replay);
   const resumed = env.extendBudget(100);
   assert.equal(resumed.ready, true);
@@ -219,14 +221,14 @@ test('budget extensions reject invalid values, uninitialized, busy, failed and d
   for (const value of [0, -1, 1.5, Infinity, NaN, Number.MAX_SAFE_INTEGER]) {
     assert.throws(() => env.extendBudget(value), /positive safe integer/);
   }
-  const pending = env.step({type: 'Wait'});
+  const pending = env.step({type: 'Move', direction: 'left'});
   assert.throws(() => env.extendBudget(1), /in progress/);
   await pending;
   player.dead = true;
   assert.throws(() => env.extendBudget(1), /Episode ended/);
   player.dead = false;
   player.busyAnimating = true;
-  await assert.rejects(env.step({type: 'Wait'}), /timed out/);
+  await assert.rejects(env.step({type: 'Move', direction: 'left'}), /timed out/);
   assert.throws(() => env.extendBudget(1), /timed out/);
   assert.equal(env.observe().truncationReason, 'failure');
   assert.equal(env.observe().canExtendBudget, false);
@@ -415,7 +417,7 @@ test('dismissible interactions close through the recorded action processor witho
   const Processor=productionMethods('src/player/playerActionProcessor.ts',['process'],{isActionReady:()=>true});
   const processor=new Processor();processor.player=player;processor.record=action=>actions.push(action);player.actionProcessor=processor;
   assert.equal(env.perceive ? env.observe().decision : null,'dismissable-interaction');
-  await assert.rejects(env.step({type:'Wait'}),/current decision/);
+  await assert.rejects(env.step({type:'Move',direction:'left'}),/current decision/);
   const result=await env.step({type:'DismissInteraction'});
   assert.equal(result.info.turnDelta,0);assert.equal(result.info.recorded,true);
   assert.equal(result.observation.decision,'world');

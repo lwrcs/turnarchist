@@ -50,7 +50,7 @@ class RotationTests(unittest.TestCase):
                 lx,ly=offsets[local]
                 self.assertEqual(transformed[6+ly,6+lx,5],1)
                 self.assertEqual(world_action(local,turns),world)
-            self.assertEqual(world_action(4,turns),4)
+            with self.assertRaises(ValueError): world_action(4,turns)
     def test_roundtrip_preserves_features(self):
         original=np.arange(SIZE,dtype=np.float32)
         np.testing.assert_array_equal(original,rotate_features(rotate_features(original,1),3))
@@ -66,7 +66,7 @@ class EvaluationTests(unittest.TestCase):
         env.contract=None
         env.budget=64
         view=EncodingTests().view()
-        view['contract']={'test':1}
+        view['contract']={'actionSchemaVersion':4}
         env.page=Mock()
         env.page.evaluate.return_value=view
         env._open_game_page=Mock()

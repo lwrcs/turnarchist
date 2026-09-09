@@ -8,7 +8,7 @@
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   class Policy {
-    static version='explore-combat-v22';
+    static version='explore-combat-v23';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -287,7 +287,7 @@
             compareEscape&&laneExit!==best.laneExit?laneExit>best.laneExit:score>best.score)))best={risk,score,escapeSpace,laneExit,killsSource,action:{type:'Move',direction}};
       }
       this.reason=best?(threats.has(key(p.x,p.y))?'evade-warning':'local-combat-exploration'):'no-move';
-      return best?.action??{type:'Wait'};
+      return best?.action??null;
     }
     feedback(before,action,after,info) {
       if(action.type==='LadderConfirm'&&after.room.id!==before.room.id) {

@@ -118,7 +118,7 @@
   document.getElementById('smoke').onclick = () => run(async () => {
     const agent = api();
     const seed = Number(document.getElementById('seed').value);
-    const first = await agent.reset(seed, {maxSteps: 5});
+    const first = await agent.reset(seed, {maxSteps: 4});
     const contract = agent.contract();
     if (!contract.buildId) throw new Error('Bundled agent has no build identity');
     if (contract.observationSchemaVersion !== 6) throw new Error('Unexpected observation schema');
@@ -133,10 +133,6 @@
       const step = await agent.step({type: 'Move', direction});
       actions.push({direction, ...step.info});
       if (step.terminated || step.truncated) break;
-    }
-    if (!agent.observe().terminated && agent.observe().decision === 'world' && agent.observe().steps < 5) {
-      const step = await agent.step({type: 'Wait'});
-      actions.push({type: 'Wait', ...step.info});
     }
     const replay = agent.exportReplay();
     if (replay.replay.actions.length !== actions.filter(action => action.recorded).length) {
@@ -156,7 +152,7 @@
       }
       budgetResumed = true;
     }
-    const second = await agent.reset(seed, {maxSteps: 5});
+    const second = await agent.reset(seed, {maxSteps: 4});
     const sameInitialState = initial === JSON.stringify({player: second.player, tiles: second.room.tiles});
     if (!sameInitialState) throw new Error('Same-seed reset produced a different initial player or tile map');
     if (second.recentTransitions.length !== 0) throw new Error('Reset retained previous episode history');

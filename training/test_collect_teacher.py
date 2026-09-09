@@ -11,7 +11,7 @@ class TeacherActionTests(unittest.TestCase):
                 self.assertEqual(world_action(local_action(action,rotation),rotation),world)
 
     def test_unsupported_actions_fail_instead_of_becoming_wait(self):
-        for action in [{'type':'UseItem','slotIndex':0},{'type':'Move','direction':'diagonal'}]:
+        for action in [{'type':'Wait'},None,{'type':'UseItem','slotIndex':0},{'type':'Move','direction':'diagonal'}]:
             with self.assertRaises(ValueError):
                 local_action(action,0)
 

@@ -36486,7 +36486,7 @@ const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/
 function getAgentContract() {
     return {
         observationSchemaVersion: 6,
-        actionSchemaVersion: 3,
+        actionSchemaVersion: 4,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
         buildId:  true ? __webpack_require__.h() : 0,
@@ -36679,8 +36679,6 @@ class AgentEnvironment {
     describeAction(action) {
         const items = this.player().inventory.items;
         let turnCost = null;
-        if (action.type === "Wait")
-            turnCost = 1;
         if (action.type === "MoveItem" || action.type === "DismissInteraction")
             turnCost = 0;
         if (action.type === "UseItem")
@@ -36819,7 +36817,7 @@ class AgentEnvironment {
     async step(input) {
         // Validate the external action before taking ownership of the episode.
         if (!input || typeof input !== "object" ||
-            !["Move", "Wait", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+            !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
             ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
             ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
             ((input.type === "UseItemOn" || input.type === "MoveItem") &&
@@ -66020,8 +66018,9 @@ const usable_1 = __webpack_require__(/*! ./usable */ "./src/item/usable/usable.t
 class Hourglass extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
+        this.getUseTurnCost = () => this.broken || this.durability <= 0 ? 0 : 1;
         this.onUse = (player) => {
-            if (this.broken)
+            if (this.broken || this.durability <= 0)
                 return;
             player.stall();
             player.game.pushMessage("turn skipped");
@@ -79230,6 +79229,10 @@ class PlayerActionProcessor {
                 this.record(action);
                 break;
             case "Wait":
+                // Historical agent recordings used this unsupported player action.
+                // Preserve playback only; live stalling must use actual gameplay/items.
+                if (!this.player.game.replayManager.isReplaying())
+                    return;
                 try {
                     this.player.getRoom?.()?.tick?.(this.player);
                 }
@@ -100108,7 +100111,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("0993c1a0237093fc4de7")
+/******/ 		__webpack_require__.h = () => ("9ca58666bdc53cc8f81c")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -1,5 +1,12 @@
 # Playtesting agent and training
 
+Current action schema is **4**: unrestricted `Wait` is not a player action and
+is rejected. Earlier Wait examples below are historical descriptions of the
+retired interface. Live stalling requires actual gameplay, such as breaking an
+object or using the limited-charge hourglass through `UseItem`. The learned
+pilot currently has four directional actions only. See `player-legal-actions.md`
+for the correction, audit and checkpoint compatibility boundary.
+
 Development starts on the macOS laptop. Larger simulation batches and training
 will run on the Windows 10 desktop (12700K, 32 GB RAM, RTX 3080 Ti). WSL and the
 training runtime are configured and smoke-tested; see

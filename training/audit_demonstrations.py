@@ -9,14 +9,15 @@ import torch
 from stable_baselines3 import PPO
 
 from imitate import load_demonstrations
+from combat_pilot import ACTIONS
 
 
 def summarize_choices(probabilities, labels):
     probabilities=np.asarray(probabilities)
     labels=np.asarray(labels)
-    if probabilities.shape != (len(labels),5) or not len(labels):
-        raise ValueError('Expected nonempty five-action probabilities and aligned labels')
-    if labels.dtype.kind not in 'iu' or np.any((labels<0)|(labels>=5)):
+    if probabilities.shape != (len(labels),len(ACTIONS)) or not len(labels):
+        raise ValueError('Expected nonempty pilot-action probabilities and aligned labels')
+    if labels.dtype.kind not in 'iu' or np.any((labels<0)|(labels>=len(ACTIONS))):
         raise ValueError('Invalid teacher action labels')
     if not np.isfinite(probabilities).all() or np.any(probabilities<0) or not np.allclose(probabilities.sum(axis=1),1):
         raise ValueError('Invalid action probabilities')

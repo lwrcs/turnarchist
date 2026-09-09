@@ -27,7 +27,7 @@ The observation is a 13x13 player-relative crop of **restricted** perception,
 with two frames, explicit known/unknown channels, full identified entity
 footprints, health, hitwarnings and current weapon damage/turn-cost traits.
 Enemy class names, diagnostic room data and hidden enemy counts never enter the
-policy. This initial action set contains four directional actions and Wait;
+policy. The current action set contains only four directional actions;
 crafting, healing, equipment changes, spells and exploration are not trained.
 No per-world-turn action cap is imposed. Episode decision budgets produce
 truncations with bootstrapping, not deaths or forced Wait actions.
@@ -72,11 +72,11 @@ on how many actions earlier episodes took. Repeats still use fixed fixture
 geometry; they do not provide randomized-layout coverage. Evaluation performs
 no learning updates. Existing run directories are refused to protect results.
 
-## Coordinate-frame augmentation (encoder v2)
+## Coordinate-frame augmentation (current encoder v4)
 
 Pilot 001's deterministic policy chose right on every action. Add
 `--rotate-frames` to train a new policy with random per-episode quarter-turns
-of the observation grid and inverse-mapped directional actions. Wait and scalar
+of the observation grid and inverse-mapped directional actions. Scalar
 traits remain unchanged. Both history frames use the same rotation. This changes
 what direction the policy sees, not the real game rules or fixture geometry;
 it does not count as room-layout variation. Episode records include the rotation
@@ -86,8 +86,17 @@ and traces distinguish policy actions from actual game actions.
 python training/combat_pilot.py --rotate-frames --steps 8192 --out ~/turnarchist-training/pilot-002
 ```
 
-Use the flag for evaluation/resumption of that checkpoint too. Its encoder v2
-manifest prevents silently loading it into the unrotated v1 input contract.
+Use the flag for evaluation/resumption of that checkpoint too. Its encoder v4
+manifest prevents silently loading it into the unrotated v3 input contract.
+
+Action schema 4 removes unrestricted Wait. Player stalling requires productive
+gameplay, such as breaking an object, or actual hourglass use through `UseItem`,
+which consumes its limited durability. The four-action pilot does not yet use
+inventory, including the hourglass. Old five-action checkpoints/datasets are
+retained for historical analysis and rejected by the new encoder contract;
+collect fresh demonstrations and train a compatible four-action model. Earlier
+random controls included an invalid Wait option and must be rerun. Historical
+Wait replay events remain playback-only, never live actions.
 
 After an evaluation completes, summarize it with:
 

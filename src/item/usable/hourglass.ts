@@ -7,6 +7,7 @@ import { Usable } from "./usable";
 
 export class Hourglass extends Usable {
   static itemName = "hourglass";
+  getUseTurnCost = () => this.broken || this.durability <= 0 ? 0 : 1;
   constructor(level: Room, x: number, y: number) {
     super(level, x, y);
     this.tileX = 0;
@@ -18,7 +19,7 @@ export class Hourglass extends Usable {
   }
 
   onUse = (player: Player) => {
-    if (this.broken) return;
+    if (this.broken || this.durability <= 0) return;
     player.stall();
     player.game.pushMessage("turn skipped");
     this.durability -= 1;

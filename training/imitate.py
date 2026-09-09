@@ -11,12 +11,12 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from combat_pilot import CURRICULA, ENCODER, REWARD, ROOT, SIZE
+from combat_pilot import ACTIONS, CURRICULA, ROTATED_ENCODER, REWARD, ROOT, SIZE
 
 
 class SpacesOnlyEnv(gym.Env):
     def __init__(self):
-        self.action_space=gym.spaces.Discrete(5)
+        self.action_space=gym.spaces.Discrete(len(ACTIONS))
         self.observation_space=gym.spaces.Box(0,1,shape=(SIZE*2,),dtype=np.float32)
     def reset(self,*,seed=None,options=None):
         raise RuntimeError('Offline model construction only; no synthetic gameplay')
@@ -27,7 +27,7 @@ class SpacesOnlyEnv(gym.Env):
 def load_demonstrations(directory):
     directory=Path(directory)
     manifest=json.loads((directory/'manifest.json').read_text())
-    expected={**ENCODER,'version':2,'coordinateRotation':'random-quarter-turn-per-episode'}
+    expected=ROTATED_ENCODER
     if manifest['encoder'] != expected or manifest['gameContract']['observationMode'] != 'player-perception':
         raise ValueError('Compatible restricted-view demonstrations required')
     curriculum=manifest.get('curriculum','starter')
@@ -44,7 +44,7 @@ def load_demonstrations(directory):
         raise ValueError('Misaligned demonstration rows')
     if not np.isfinite(observations).all() or np.any((observations<0)|(observations>1)):
         raise ValueError('Invalid observation values')
-    if actions.dtype.kind not in 'iu' or np.any((actions<0)|(actions>=5)):
+    if actions.dtype.kind not in 'iu' or np.any((actions<0)|(actions>=len(ACTIONS))):
         raise ValueError('Invalid action labels')
     if episodes.dtype.kind not in 'iu' or np.any((episodes<0)|(episodes>=len(outcomes))):
         raise ValueError('Invalid episode references')

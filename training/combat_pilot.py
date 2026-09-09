@@ -22,7 +22,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ACTIONS = [{'type': 'Move', 'direction': d} for d in ('up', 'right', 'down', 'left')] + [{'type': 'Wait'}]
+ACTIONS = [{'type': 'Move', 'direction': d} for d in ('up', 'right', 'down', 'left')]
 SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-armoredzombie-alert']
 TRANSFER = ['combat-bigskull-alert', 'combat-bigzombie-alert']
 CURRICULA = {'starter': SCENARIOS,
@@ -33,7 +33,8 @@ CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
-ENCODER = {'version': 1, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
+ENCODER = {'version': 3, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
+ROTATED_ENCODER = {**ENCODER,'version':4,'coordinateRotation':'random-quarter-turn-per-episode'}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = 13 * 13 * 12 + 5
 BROWSER_RECYCLE_EPISODES = 64
@@ -99,7 +100,9 @@ def rotate_features(features, turns):
 
 
 def world_action(action, turns):
-    return (int(action) + turns) % 4 if int(action) < 4 else 4
+    if int(action)!=action or not 0 <= int(action) < len(ACTIONS):
+        raise ValueError('Unsupported pilot action; unrestricted Wait is not gameplay')
+    return (int(action) + turns) % 4
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -165,6 +168,8 @@ class CombatEnv(gym.Env):
             await window.agent.reset(seed, {scenario, maxSteps:budget});
             return window.agent.perceive();
         }''', [game_seed, scenario, self.budget])
+        if view['contract'].get('actionSchemaVersion') != 4:
+            raise RuntimeError('Player-legal action schema 4 required; rebuild the game without unrestricted Wait')
         if self.contract is not None and view['contract'] != self.contract:
             raise RuntimeError('Game contract changed during run')
         self.contract = view['contract']
@@ -272,7 +277,7 @@ def _evaluate(env, policy, scenarios, seed, repeats, all_rotations, deterministi
             options['rotation'] = rotation
         obs, _ = env.reset(seed=episode_seed, options=options)
         while True:
-            action = int(rng.integers(5)) if policy is None else int(policy.predict(obs, deterministic=deterministic)[0])
+            action = int(rng.integers(len(ACTIONS))) if policy is None else int(policy.predict(obs, deterministic=deterministic)[0])
             obs, _, done, truncated, info = env.step(action)
             if done or truncated:
                 records.append({**info, 'trace':list(getattr(env, 'trace', []))})
@@ -323,7 +328,7 @@ def main():
     parallel_env = None
     try:
         env.reset(seed=123)
-        manifest = {'encoder': ({**ENCODER, 'version':2, 'coordinateRotation':'random-quarter-turn-per-episode'} if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
+        manifest = {'encoder': (ROTATED_ENCODER if args.rotate_frames else ENCODER), 'reward': REWARD, 'gameContract': env.contract,
                     'git': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                     'curriculum':args.curriculum,'trainingScenarios': scenarios, 'transferScenarios': transfer,
                     'stressScenarios':transfer if args.curriculum in ('open-combat','terrain-combat') else [],

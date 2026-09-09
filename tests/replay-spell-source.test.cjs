@@ -72,3 +72,15 @@ test('missing or ambiguous cast sources fail explicitly without firing', () => {
   assert.throws(() => s.processor.process({type: 'CastSpell', sourceSlot: 0, spellId: 'plus', targetX: 1, targetY: 0}), /Cannot resolve spell/);
   assert.equal(s.player.casts.length, 0);
 });
+
+test('unrestricted Wait is rejected in live play but retained for historical replay', () => {
+  const s=setup();let turns=0;
+  s.player.getRoom=()=>({tick(){turns++;}});
+  s.player.game.replayManager.isReplaying=()=>false;
+  s.processor.process({type:'Wait'});
+  assert.equal(turns,0);
+  assert.equal(s.records.length,0);
+  s.player.game.replayManager.isReplaying=()=>true;
+  s.processor.process({type:'Wait'});
+  assert.equal(turns,1);
+});

@@ -7,7 +7,7 @@ declare const __webpack_hash__: string;
 export function getAgentContract() {
   return {
     observationSchemaVersion: 6,
-    actionSchemaVersion: 3,
+    actionSchemaVersion: 4,
     observationMode: "diagnostic-current-room",
     gameVersion: GameConstants.VERSION,
     buildId: typeof __webpack_hash__ === "string" ? __webpack_hash__ : null,

@@ -5,7 +5,7 @@ export type GameAction =
   // as a walk, attack, push, interact, door-unlock, etc. based on game state at
   // execution time. Replay validates by comparing post-action state, not the label.
   | { type: "Directional"; direction: Direction; targetX: number; targetY: number }
-  | { type: "Wait" }
+  | { type: "Wait" } // Legacy replay only; live stalling requires actual item/gameplay use.
   | { type: "DismissInteraction" }
   | { type: "CastSpell";   spellId: string; sourceSlot?: number; targetX: number; targetY: number }
   | { type: "FireRanged";  targetX: number; targetY: number }

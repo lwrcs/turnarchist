@@ -16,7 +16,6 @@ export type AgentAction =
   | { type: "Move"; direction: "up" | "down" | "left" | "right" }
   | Extract<GameAction, {type: "UseItem" | "UseItemOn" | "MoveItem" | "DropItem"}>
   | { type: "SelectOption"; index: number }
-  | { type: "Wait" }
   | { type: "DismissInteraction" }
   | { type: "LadderConfirm" }
   | { type: "LadderCancel" };
@@ -170,7 +169,6 @@ export class AgentEnvironment {
   describeAction(action: AgentAction) {
     const items = this.player().inventory.items;
     let turnCost: number | null = null;
-    if (action.type === "Wait") turnCost = 1;
     if (action.type === "MoveItem" || action.type === "DismissInteraction") turnCost = 0;
     if (action.type === "UseItem") turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
     if (action.type === "UseItemOn") turnCost = items[action.fromSlot]?.getUseOnTurnCost?.(items[action.toSlot]) ?? null;
@@ -303,7 +301,7 @@ export class AgentEnvironment {
   async step(input: AgentAction) {
     // Validate the external action before taking ownership of the episode.
     if (!input || typeof input !== "object" ||
-      !["Move", "Wait", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+      !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
       ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
       ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
       ((input.type === "UseItemOn" || input.type === "MoveItem") &&
