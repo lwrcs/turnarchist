@@ -17,14 +17,15 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 5, 'task': 'procedural-dungeon',
-           'memory': '169 player-relative arrival-count cells, clipped at 8, rotated with view'}
+ENCODER = {**ROTATED_ENCODER, 'version': 6, 'task': 'procedural-dungeon',
+           'memory': '169 player-relative arrival-count cells, clipped at 8, rotated with view',
+           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage']}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,
           'newRoom': .5, 'newMaximumDepth': 5, 'healthLost': -3,
           'death': -10, 'attemptedGameAction': -.01}
 HELPER = {'version': 1, 'actions': ['confirm-ladder', 'dismiss-interaction', 'cancel-selection', 'zero-turn-healing'],
           'limitation': 'No learned inventory, crafting, spell use, or equipment selection'}
-OBS_SIZE = SIZE*2 + 169
+OBS_SIZE = SIZE*2 + 169*7
 
 
 def seed_plan(namespace, count):
@@ -53,18 +54,45 @@ def helper_action(view):
     return None
 
 
+def navigation_features(view,rotation,used=()):
+    grid=np.zeros((13,13,6),dtype=np.float32)
+    px,py=view['player']['x'],view['player']['y']
+    for tile in view['room']['tiles']:
+        x,y=int(tile['x']-px+6),int(tile['y']-py+6)
+        if not (0<=x<13 and 0<=y<13): continue
+        traversal=tile.get('traversal') or {}
+        door=tile.get('isDoor') is True
+        stairs=tile.get('exit') is True
+        grid[y,x]=[door,stairs and traversal.get('direction')=='down',
+                   stairs and traversal.get('direction')=='up',
+                   (door or stairs) and traversal.get('unlocked') is False,
+                   (door or stairs) and traversal.get('unlockFromHere') is True,
+                   (view['room']['id'],tile['x'],tile['y']) in used]
+    return np.rot90(grid,rotation,axes=(0,1)).ravel().copy()
+
+
 class ExplorationMemory:
     def __init__(self, view, depth):
         self.visits=Counter({self.position(view):1})
         self.rooms={view['room']['id']}
         self.max_depth=depth
         self.initial_depth=depth
+        self.used_passages=set()
 
     @staticmethod
     def position(view):
         return (view['room']['id'],view['player']['x'],view['player']['y'])
 
-    def observe(self, before, after, depth, dead):
+    def observe(self, before, after, depth, dead, action=None):
+        if action and before['room']['id']!=after['room']['id']:
+            x,y=before['player']['x'],before['player']['y']
+            if action['type']=='Move':
+                dx,dy={'up':(0,-1),'right':(1,0),'down':(0,1),'left':(-1,0)}[action['direction']]
+                x+=dx; y+=dy
+            if action['type'] in ('Move','LadderConfirm') and any(
+                    t['x']==x and t['y']==y and (t.get('isDoor') is True or t.get('exit') is True)
+                    for t in before['room']['tiles']):
+                self.used_passages.add((before['room']['id'],x,y))
         position=self.position(after)
         new_tile=position not in self.visits
         new_room=after['room']['id'] not in self.rooms
@@ -94,7 +122,7 @@ class DungeonEnv(CombatEnv):
         self.offset=offset
 
     def observation(self):
-        return np.concatenate((*self.frames,self.memory.features(self.view,self.rotation)))
+        return np.concatenate((*self.frames,self.memory.features(self.view,self.rotation),navigation_features(self.view,self.rotation,self.memory.used_passages)))
 
     def reset(self,*,seed=None,options=None):
         # Training cycles a declared pool, independent of episode duration.
@@ -122,7 +150,7 @@ class DungeonEnv(CombatEnv):
                     recorded:result.info.recorded,turnDelta:result.info.turnDelta};
         }''',action)
         self.view=result['view']
-        reward=self.memory.observe(before,self.view,result['depth'],result['terminated'])
+        reward=self.memory.observe(before,self.view,result['depth'],result['terminated'],action)
         self.game_actions+=1
         self.assisted_actions+=int(controller=='helper')
         self.world_turns+=result['turnDelta']
@@ -132,12 +160,14 @@ class DungeonEnv(CombatEnv):
                            'x':self.view['player']['x'],'y':self.view['player']['y'],
                            'health':self.view['player']['health'],'reward':reward})
         self.trace=self.trace[-64:]
+        callback=getattr(self,'transition_callback',None)
+        if callback: callback(before,action,self.view,result)
         return reward,bool(result['terminated']),bool(result['truncated'])
 
     def step(self,action):
         if self.stop_reason: raise RuntimeError('Episode ended; reset required')
         if self.view['decision']!='world': raise RuntimeError('Learner only supports world decisions')
-        reward,done,truncated=self.execute(ACTIONS[world_action(action,self.rotation)],'learner')
+        reward,done,truncated=self.execute(ACTIONS[world_action(action,self.rotation)],getattr(self,'controller','learner'))
         self.steps+=1
         # No per-turn limit or forced tick: every helper action consumes the same
         # total episode decision budget as a directional action.

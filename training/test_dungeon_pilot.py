@@ -10,7 +10,7 @@ import torch
 
 from combat_pilot import SIZE, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
-                           OBS_SIZE, transfer_actor)
+                           OBS_SIZE, transfer_actor, navigation_features)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -54,6 +54,27 @@ class DungeonTests(unittest.TestCase):
         grid=memory.features(a,1).reshape(13,13)
         self.assertEqual(grid[5,6],1/8)
         self.assertEqual(memory.features(view(room='unknown'),0).sum(),0)
+
+    def test_navigation_marks_only_exposed_passages_and_rotates(self):
+        a=view()
+        a['room']['tiles']=[{'x':1,'y':0,'isDoor':True,'traversal':{'unlocked':False}},
+                            {'x':0,'y':1,'exit':True,'traversal':{'direction':'down'}},
+                            {'x':-1,'y':0,'kind':None,'isDoor':None,'exit':None}]
+        grid=navigation_features(a,1).reshape(13,13,6)
+        np.testing.assert_array_equal(grid[5,6],[1,0,0,1,0,0])
+        np.testing.assert_array_equal(grid[6,7],[0,1,0,0,0,0])
+        self.assertEqual(grid[7,6].sum(),0)
+
+    def test_passage_memory_requires_actual_observed_crossing(self):
+        a=view(); a['room']['tiles']=[{'x':1,'y':0,'isDoor':True,'traversal':{'unlockFromHere':True}}]
+        b=view(room='b'); memory=ExplorationMemory(a,0)
+        memory.observe(a,a,0,False,{'type':'Move','direction':'right'})
+        self.assertFalse(memory.used_passages)
+        memory.observe(a,b,0,False,{'type':'Move','direction':'right'})
+        grid=navigation_features(a,0,memory.used_passages).reshape(13,13,6)
+        self.assertEqual(grid[6,7,4],1)
+        self.assertEqual(grid[6,7,5],1)
+        self.assertNotIn(('b',1,0),memory.used_passages)
 
     def test_helper_only_uses_supported_metadata_and_never_waits(self):
         a=view(health=1)
@@ -105,7 +126,7 @@ class DungeonTests(unittest.TestCase):
         value_before=target.policy.value_net.weight.detach().clone()
         transfer_actor(target,source)
         old=torch.rand(3,SIZE*2)
-        new=torch.cat([old,torch.rand(3,169)],dim=1)
+        new=torch.cat([old,torch.rand(3,OBS_SIZE-SIZE*2)],dim=1)
         with torch.no_grad():
             torch.testing.assert_close(source.policy.get_distribution(old).distribution.logits,
                                        target.policy.get_distribution(new).distribution.logits)

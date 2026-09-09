@@ -316,3 +316,43 @@ Use `--resume RUN/checkpoint.zip` (or `final.zip`) for a dungeon continuation.
 It restores dungeon weights and optimizer with the original worker count, checks
 encoder/reward/helper/game contracts, and starts fresh episodes and rollout.
 It is not a bit-identical continuation of an interrupted dungeon.
+
+## Navigation warm start (encoder v6)
+
+The first dungeon PPO pilot stayed in one or two rooms, often oscillating or
+bumping a wall. Its combat-derived encoder also lacked explicit door/stair
+features. Encoder v6 retains combat frames and arrival memory and appends six
+rotated planes: exposed doors, down stairs, up stairs, known locked passages,
+unlocking permitted from this side, and previously crossed passages. Passage
+memory records only observed successful crossings; reverse links are not guessed.
+Redacted tiles expose none of these flags. Old v5 checkpoints are not silently
+resumed; this experiment starts from the legal combat actor with new inputs zero.
+The reward stays unchanged to isolate representation and demonstration changes.
+
+`dungeon_imitation.py collect` runs the programmed baseline on training seeds
+only and retains recorded directional navigation that changes position, has no
+perceived enemy/anonymous contact/hostile warning beforehand, and takes no damage.
+These are locally successful navigation steps, not claimed winning dungeon runs.
+Helper actions remain separate. The teacher receives restricted perception and
+its own history; it may know more history than the student's local memory.
+
+`fit` mixes 32 navigation and 32 existing successful combat examples per batch.
+Combat examples have new navigation/memory inputs padded with zeros; this is
+rehearsal, not proof of combat retention in every dungeon state. It initializes
+from the combat actor and trains a new dungeon model with no PPO experience.
+The initial actor and fitted actor are evaluated on the same held-out dungeon
+seeds before further reinforcement learning. Source models and datasets stay
+intact; checkpoint and dataset hashes are recorded.
+
+```sh
+python training/dungeon_imitation.py collect --seeds 16 --budget 256 --out DATA
+python training/dungeon_imitation.py fit --data DATA --combat-data COMBAT_DATA --from-combat COMBAT_MODEL/final.zip --updates 2000 --out MODEL
+python training/dungeon_pilot.py --evaluate MODEL/initial.zip --envs 1 --eval-seeds 4 --out BEFORE
+python training/dungeon_pilot.py --evaluate MODEL/final.zip --envs 1 --eval-seeds 4 --out AFTER
+python training/dungeon_report.py AFTER --against BEFORE
+```
+
+No dead-end bonus, hidden shortest-path target, stronger death-zone randomness,
+or repeat-door reward is introduced. Existing first-room and first-tile bonuses
+are finite per episode. The immediate question is whether the agent can learn
+to reach exits at all before further reward engineering or larger PPO budgets.
