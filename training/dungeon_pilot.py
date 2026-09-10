@@ -28,6 +28,11 @@ HELPER = {'version': 1, 'actions': ['confirm-ladder', 'dismiss-interaction', 'ca
 OBS_SIZE = SIZE*2 + 169*7
 
 
+def rejected_without_visible_effect(before,after,transition,terminal):
+    return (not terminal and not transition['recorded'] and transition['turnDelta']==0
+            and np.array_equal(before,after))
+
+
 def seed_plan(namespace, count):
     return [int.from_bytes(hashlib.sha256(f'turnarchist-dungeon-v1:{namespace}:{i}'.encode()).digest()[:4], 'big')
             for i in range(count)]
@@ -167,6 +172,7 @@ class DungeonEnv(CombatEnv):
     def step(self,action):
         if self.stop_reason: raise RuntimeError('Episode ended; reset required')
         if self.view['decision']!='world': raise RuntimeError('Learner only supports world decisions')
+        before_observation=self.observation()
         reward,done,truncated=self.execute(ACTIONS[world_action(action,self.rotation)],getattr(self,'controller','learner'))
         self.steps+=1
         # No per-turn limit or forced tick: every helper action consumes the same
@@ -196,7 +202,11 @@ class DungeonEnv(CombatEnv):
             with (self.out/'episodes.jsonl').open('a') as f: f.write(json.dumps(info)+'\n')
             replay=self.page.evaluate('() => window.agent.exportReplay()')
             (self.out/'latest-replay.json').write_text(json.dumps(replay))
-        return self.observation(),reward,done,truncated,info
+        observation=self.observation()
+        last=self.trace[-1]
+        if rejected_without_visible_effect(before_observation,observation,last,done or truncated):
+            info['rejectedAction']=int(action)
+        return observation,reward,done,truncated,info
 
 
 def transfer_actor(target,source):
@@ -255,8 +265,10 @@ def main():
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
+    parser.add_argument('--rejection-feedback',action='store_true')
     parser.add_argument('--reconfigure-workers',action='store_true',help='Explicitly resume with a new worker count and fresh rollouts')
     args=parser.parse_args()
+    if args.rejection_feedback and not args.rehearsal_navigation: parser.error('Rejection feedback requires rehearsal datasets')
     if args.reconfigure_workers and not args.resume:
         parser.error('Worker reconfiguration requires --resume')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
@@ -323,7 +335,7 @@ def main():
                 callbacks=[Checkpoints(args.out)]
                 if args.rehearsal_navigation:
                     from rehearsal import configure
-                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'])
+                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'],args.rejection_feedback)
                     callbacks.append(practice)
                 model.save(args.out/'initial')
                 (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))

@@ -56,3 +56,32 @@ class WorkerResizeTests(unittest.TestCase):
                     torch.testing.assert_close(value,loaded.policy.state_dict()[key])
         finally:
             old.close(); new.close()
+
+class RejectionTests(unittest.TestCase):
+    def test_rejected_action_probability_decreases_and_buffer_is_bounded(self):
+        model=PPO('MlpPolicy',gym.make('CartPole-v1'),n_steps=8,batch_size=8,device='cpu',seed=123)
+        model.set_logger(configure(None,[]))
+        # Positive demonstrations favor action 0; the observed rejection is action 1.
+        groups=[(np.ones((4,4),dtype=np.float32),np.zeros(4,dtype=np.int64))]*2
+        callback=Rehearsal(groups,rejection_feedback=True)
+        callback.init_callback(model); callback.on_training_start({}, {})
+        callback.locals={'infos':[{'rejectedAction':1}],'new_obs':np.ones((1,4),dtype=np.float32)}
+        for _ in range(300): callback._on_step()
+        self.assertEqual(len(callback.rejections),256)
+        x=torch.ones(1,4)
+        with torch.no_grad(): before=model.policy.get_distribution(x).distribution.probs[0,1].item()
+        callback.update()
+        with torch.no_grad(): after=model.policy.get_distribution(x).distribution.probs[0,1].item()
+        self.assertLess(after,before)
+        disabled=Rehearsal(groups); disabled.locals=callback.locals; disabled._on_step()
+        self.assertEqual(len(disabled.rejections),0)
+        model.get_env().close()
+
+    def test_only_unchanged_unrecorded_zero_turn_nonterminal_actions_qualify(self):
+        from dungeon_pilot import rejected_without_visible_effect as rejected
+        x=np.zeros(4); no_effect={'recorded':False,'turnDelta':0}
+        self.assertTrue(rejected(x,x,no_effect,False))
+        self.assertFalse(rejected(x,x,{'recorded':True,'turnDelta':0},False))
+        self.assertFalse(rejected(x,x,{'recorded':False,'turnDelta':1},False))
+        self.assertFalse(rejected(x,np.ones(4),no_effect,False))
+        self.assertFalse(rejected(x,x,no_effect,True))

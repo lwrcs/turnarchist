@@ -103,7 +103,8 @@ def run(args):
                                       '--envs',workers,'--reconfigure-workers','--steps',steps,'--budget','512','--eval-seeds','4']
                     + (['--learning-rate',rate] if adaptive else [])
                     + (['--rehearsal-navigation',root/'navigation-data-001',
-                        '--rehearsal-combat',root/'teacher-legal-open-001'] if rehearsal else []))
+                        '--rehearsal-combat',root/'teacher-legal-open-001'] if rehearsal else [])
+                    + (['--rejection-feedback'] if getattr(args,'rejection_feedback',False) else []))
             execute(f'r{index}-eval',['training/dungeon_pilot.py','--evaluate',model/'final.zip','--out',evaluation,
                                      '--envs','1','--budget','512','--eval-seeds','4'])
             comparison=report(evaluation,best_eval)
@@ -169,7 +170,9 @@ if __name__=='__main__':
     p.add_argument('--source-evaluation',type=Path)
     p.add_argument('--learning-rate',type=float,default=1e-5)
     p.add_argument('--audit-start',type=int,choices=range(4,25))
+    p.add_argument('--rejection-feedback',action='store_true')
     args=p.parse_args()
+    if args.rejection_feedback and not args.rehearsal: p.error('Rejection feedback requires rehearsal')
     if bool(args.source_model)!=bool(args.source_evaluation): p.error('Source model and evaluation must be supplied together')
     if not 1.25e-6<=args.learning_rate<=.001: p.error('Learning rate outside bounded range')
     run(args)

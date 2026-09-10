@@ -96,3 +96,24 @@ Move/DismissInteraction loops at one position. These are confirmed behaviors,
 not proof of a bug in the helper. They warrant targeted training/observation
 analysis after the current experiment; more memory or a larger GPU alone does
 not fix them.
+
+## Failed-action rehearsal
+
+`--rejection-feedback` (requires rehearsal) adds a bounded buffer of experienced
+failed directional actions. Eligibility requires an unrecorded action, zero
+world turns, identical before/after policy observations, and a nonterminal
+transition. Recorded attacks, pushes and interactions, visible changes, and
+terminal transitions are excluded. Nothing is masked or forced at inference.
+
+Between PPO rollouts, rehearsal also samples 32 of these examples and adds
+0.5 times negative log probability of choosing any alternative action. A stable
+log-sum-exp calculation avoids saturation from clamping the rejected action's
+probability. The buffer holds at most 256 examples and resets on resume; settings
+are recorded in the manifest. This is a supervised optimization experiment,
+not a changed game reward, input encoder or helper policy. Evaluation has no
+learning. Identical-observation eligibility is conservative and may miss some
+first failed actions because the two-frame history has changed.
+
+This targets observed blocked-move loops. It intentionally does not label the
+recorded Move/DismissInteraction loops as invalid: those require separate
+diagnosis and may represent legitimate interactions.
