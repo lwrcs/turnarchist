@@ -127,3 +127,19 @@ Nighttime-004 version 1 regressed after 16,384 additional steps: sampled mean
 positions 35.25 versus 74.75 in the matched nighttime-003 first round;
 deterministic positions 8.75 versus 10.25. The selected daytime checkpoint was
 preserved. Deduplication is a hypothesis to test, not evidence of improved play.
+
+
+`overnight.py --evaluation-only MODEL --source-model REFERENCE_MODEL
+--source-evaluation REFERENCE_EVAL` runs a guarded diagnostic comparison without
+training or promoting a model. It uses the reference seed count and budget and
+checks matching evaluation contracts and seed/rotation pairs before reporting.
+The same deadline, disk, memory and owned-process cleanup guards apply.
+
+Nighttime-005 finished 16,384 additional steps at roughly 25 steps/second,
+but was rejected: sampled positions 50.75, rooms 3.25, zero deaths; the selected
+daytime source remains. All four deterministic traces ended alternating between
+two rooms through a doorway (64 recorded, zero-turn actions in each tail).
+This is successful-action cycling, outside failed-action feedback's scope.
+The next diagnostic evaluates the preserved PPO-only overnight-002-r4 model
+on the same 16 seeds as the daytime rehearsal audit, emphasizing indices 8–15
+that were not used to select either model. No checkpoint is promoted by this test.

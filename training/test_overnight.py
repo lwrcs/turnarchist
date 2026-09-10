@@ -69,3 +69,31 @@ class AdaptiveTests(unittest.TestCase):
 
 
 if __name__=='__main__': unittest.main()
+
+
+class DiagnosticTests(unittest.TestCase):
+    def test_evaluation_only_never_trains_or_promotes(self):
+        import argparse,json,tempfile,time
+        from pathlib import Path
+        from unittest.mock import patch,MagicMock
+        import overnight
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); reference=root/'reference'; reference.mkdir()
+            (reference/'manifest.json').write_text(json.dumps({'budget':512,'heldOutSeeds':list(range(16))}))
+            args=argparse.Namespace(root=root,name='diagnostic',deadline=time.time()+7200,
+                source_model=root/'preserved.zip',source_evaluation=reference,evaluation_only=root/'comparison.zip')
+            proc=MagicMock(); proc.poll.return_value=0; proc.returncode=0; proc.pid=123456
+            with patch.object(overnight.subprocess,'check_output',return_value='revision'), \
+                 patch.object(overnight.subprocess,'Popen',return_value=proc) as spawn, \
+                 patch.object(overnight,'memory_ok',return_value=True), \
+                 patch.object(overnight.shutil,'disk_usage',return_value=argparse.Namespace(free=10*1024**3)), \
+                 patch.object(overnight.os,'killpg'), patch.object(overnight,'report',return_value={}):
+                overnight.run(args)
+            command=spawn.call_args.args[0]
+            self.assertIn('--evaluate',command)
+            self.assertNotIn('--resume',command)
+            self.assertEqual(command[command.index('--eval-seeds')+1],'16')
+            state=json.loads((root/'diagnostic/status.json').read_text())
+            self.assertEqual(state['selectedModel'],str(root/'preserved.zip'))
+            self.assertEqual(state['rounds'],[])
+            self.assertEqual(state['status'],'complete')
