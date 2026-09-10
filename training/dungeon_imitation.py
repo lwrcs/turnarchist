@@ -37,18 +37,25 @@ def doorway_cycle(trace):
             all(p==positions[i%2] for i,p in enumerate(positions)))
 
 
+def training_seed_slice(start,count):
+    if start<0 or count<1 or start+count>64:
+        raise ValueError('Collection seed range must stay within 64 training seeds')
+    return seed_plan('training',64)[start:start+count]
+
+
 def collect(args):
     env=DungeonEnv(args.out,budget=args.budget)
     env.controller='teacher'
     env.phase='dungeon-navigation-demonstration'
     xs,ys,outcomes=[],[],[]
+    collection_seeds=training_seed_slice(getattr(args,'seed_start',0),args.seeds)
     recovery_model=getattr(args,'recovery_model',None)
     recoveries=[]
     try:
         torch.set_num_threads(4)
         learner=PPO.load(recovery_model,device='cpu') if recovery_model else None
         source=json.loads((recovery_model.parent/'manifest.json').read_text()) if recovery_model else None
-        for episode_seed in seed_plan('training',args.seeds):
+        for episode_seed in collection_seeds:
             obs,_=env.reset(options={'episodeSeed':episode_seed})
             if source:
                 for key,expected in [('encoder',ENCODER),('reward',REWARD),('helper',HELPER),('gameContract',env.contract)]:
@@ -111,7 +118,7 @@ def collect(args):
         if not xs: raise RuntimeError('No navigation examples collected; diagnostic outcomes preserved')
         np.savez_compressed(args.out/'demonstrations.npz',observations=np.asarray(xs,dtype=np.float32),actions=np.asarray(ys,dtype=np.int64))
         manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':env.contract,
-                  'trainingSeeds':seed_plan('training',args.seeds),'samples':len(xs),
+                  'trainingSeeds':collection_seeds,'samples':len(xs),
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
                   'selection':'Recorded, changed-position directional actions without perceived threats or damage. Not whole successful runs.'}
         if recovery_model:
@@ -197,6 +204,7 @@ if __name__=='__main__':
     parser.add_argument('mode',choices=['collect','fit'])
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--seeds',type=int,default=16)
+    parser.add_argument('--seed-start',type=int,default=0)
     parser.add_argument('--budget',type=int,default=256)
     parser.add_argument('--data',type=Path)
     parser.add_argument('--combat-data',type=Path)
@@ -206,6 +214,7 @@ if __name__=='__main__':
     parser.add_argument('--updates',type=int,default=2000)
     args=parser.parse_args()
     if not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000: parser.error('Invalid experiment bounds')
+    if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
     if args.recovery_model and args.mode!='collect': parser.error('Recovery model is collection only')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
     args.out.mkdir(parents=True,exist_ok=False)

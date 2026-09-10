@@ -56,3 +56,14 @@ class DoorwayCycleTests(unittest.TestCase):
         self.assertFalse(doorway_cycle(trace))
         trace=self.trace(); trace[-1]['x']=99
         self.assertFalse(doorway_cycle(trace))
+
+
+class CollectionSeedTests(unittest.TestCase):
+    def test_new_collection_excludes_original_and_held_out_seeds(self):
+        from dungeon_imitation import training_seed_slice
+        old=training_seed_slice(0,16); new=training_seed_slice(16,48)
+        self.assertEqual(old+new,seed_plan('training',64))
+        self.assertFalse(set(old)&set(new))
+        self.assertFalse(set(new)&set(seed_plan('held-out',32)))
+        for start,count in [(-1,16),(16,49),(0,0)]:
+            with self.assertRaises(ValueError): training_seed_slice(start,count)

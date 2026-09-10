@@ -93,7 +93,7 @@ def run(args):
         if getattr(args,'collect_recovery',None):
             execute('recovery-collect',['training/dungeon_imitation.py','collect',
                     '--recovery-model',args.collect_recovery,'--out',root/f'{args.name}-data',
-                    '--seeds','16','--budget','512'])
+                    '--seeds',getattr(args,'collection_seeds',16),'--seed-start',getattr(args,'collection_start',0),'--budget','512'])
             state.update(status='complete',phase='finished',stopReason='recovery collection only; model unchanged')
             save(); return
         if getattr(args,'evaluation_only',None):
@@ -191,9 +191,12 @@ if __name__=='__main__':
     p.add_argument('--learning-rate',type=float,default=1e-5)
     p.add_argument('--audit-start',type=int,choices=range(4,25))
     p.add_argument('--rejection-feedback',action='store_true')
+    p.add_argument('--collection-seeds',type=int,choices=range(1,65),default=16)
+    p.add_argument('--collection-start',type=int,choices=range(64),default=0)
     p.add_argument('--collect-recovery',type=Path,help='Collect teacher recovery examples on training seeds without fitting a model')
     p.add_argument('--evaluation-only',type=Path,help='Evaluate this model against the supplied reference; never train or promote')
     args=p.parse_args()
+    if args.collection_start+args.collection_seeds>64: p.error('Collection range exceeds training seed pool')
     if args.evaluation_only and args.collect_recovery: p.error('Choose evaluation or collection, not both')
     if args.evaluation_only and not args.source_evaluation: p.error('Evaluation only requires an explicit source model/evaluation')
     if args.recovery_data and not args.rehearsal: p.error('Recovery data requires rehearsal')
