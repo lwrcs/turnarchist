@@ -31,3 +31,25 @@ all held-out seeds, with the same loop-prone checkpoint and collection protocol.
 It preserves the original dataset. Inspect new episode/rotation coverage, labels
 and recovery outcomes before fitting or merging datasets. Collection success is
 teacher-assisted and must not be reported as independent learner improvement.
+
+## Expanded collection results
+
+`recovery-collection-002` completed all 48 new training seeds with its model
+unchanged. The validated dataset contains 32 unique accepted examples from just
+two episodes. Three teacher interventions all left the original loop positions.
+Action counts are 9/7/7/9; accepted examples cover rotations 1 (19 rows) and 2
+(13 rows). There are no conflicting exact-observation labels and no observation
+or seed overlap with the original recovery collection. Assisted episode outcomes
+were 47 budget-incomplete and one death, not learned-policy evaluation results.
+
+Across the two separate datasets there are 123 recovery examples from five
+contributing episodes. They were not merged or used to fit another model. The
+extra collection confirms that the narrow doorway trigger yields little data
+in ordinary training rollouts; merely adding more seeds is inefficient for this
+specific curriculum. Next work should target reproducible loop states and assess
+other stagnation modes, while preserving legitimate retreat/backtracking and
+keeping training scenarios separate from unassisted evaluation. Teacher escape
+does not establish that the learner can recover independently.
+
+Both artifact sets remain preserved on the desktop. Collection is complete and
+the monitoring heartbeat is paused pending the next user-directed step.
