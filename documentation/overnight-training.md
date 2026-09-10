@@ -117,3 +117,13 @@ first failed actions because the two-frame history has changed.
 This targets observed blocked-move loops. It intentionally does not label the
 recorded Move/DismissInteraction loops as invalid: those require separate
 diagnosis and may represent legitimate interactions.
+
+
+Feedback version 2 samples unique float32 observation/action pairs uniformly,
+with a 256-pair bound and least-recently-seen eviction. Repeated identical wall
+bumps refresh one entry instead of crowding out other examples. Coefficient,
+update frequency, action eligibility and game contracts remain unchanged.
+Nighttime-004 version 1 regressed after 16,384 additional steps: sampled mean
+positions 35.25 versus 74.75 in the matched nighttime-003 first round;
+deterministic positions 8.75 versus 10.25. The selected daytime checkpoint was
+preserved. Deduplication is a hypothesis to test, not evidence of improved play.

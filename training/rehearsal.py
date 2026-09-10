@@ -1,6 +1,6 @@
 """Small demonstration updates between PPO rollouts; no evaluation-time learning."""
 import hashlib
-from collections import deque
+from collections import OrderedDict
 import numpy as np
 import torch
 from stable_baselines3.common.callbacks import BaseCallback
@@ -15,7 +15,7 @@ class Rehearsal(BaseCallback):
         self.started=False
         self.updates=0
         self.rejection_feedback=rejection_feedback
-        self.rejections=deque(maxlen=256)
+        self.rejections=OrderedDict()
 
     def _on_training_start(self):
         # Stateless SGD leaves PPO's Adam moments intact. No optimizer state to resume.
@@ -37,7 +37,8 @@ class Rehearsal(BaseCallback):
         loss=-self.model.policy.get_distribution(torch.cat(xs)).log_prob(torch.cat(ys)).mean()
         if self.rejections:
             indices=self.rng.integers(len(self.rejections),size=32)
-            samples=[self.rejections[i] for i in indices]
+            examples=list(self.rejections.values())
+            samples=[examples[i] for i in indices]
             x=torch.as_tensor(np.stack([s[0] for s in samples]),device=self.model.device)
             y=torch.as_tensor([s[1] for s in samples],dtype=torch.long,device=self.model.device)
             logits=self.model.policy.get_distribution(x).distribution.logits
@@ -60,7 +61,12 @@ class Rehearsal(BaseCallback):
         if self.rejection_feedback:
             for i,info in enumerate(self.locals.get('infos',[])):
                 if 'rejectedAction' in info:
-                    self.rejections.append((np.asarray(self.locals['new_obs'][i],dtype=np.float32).copy(),info['rejectedAction']))
+                    x=np.asarray(self.locals['new_obs'][i],dtype=np.float32).copy()
+                    action=info['rejectedAction']
+                    key=(x.tobytes(),action)
+                    self.rejections[key]=(x,action)
+                    self.rejections.move_to_end(key)
+                    if len(self.rejections)>256: self.rejections.popitem(last=False)
         return True
 
 
@@ -77,8 +83,9 @@ def configure(navigation,combat,contract,rejection_feedback=False):
     metadata={'version':1,'method':'one SGD demonstration update between PPO rollouts',
               'rate':.001,'batch':'32 navigation + 32 combat','rngSeed':123,
               'resume':'sampling RNG restarts; SGD has no momentum',
-              'rejectionFeedback':{'enabled':rejection_feedback,'version':1,'coefficient':.5,'capacity':256,
+              'rejectionFeedback':{'enabled':rejection_feedback,'version':2,'coefficient':.5,'capacity':256,
                                    'selection':'unrecorded zero-turn action with identical policy observations; nonterminal only',
+                                   'sampling':'uniform over unique float32 observation/action pairs; least recently seen eviction',
                                    'resume':'rejection buffer starts empty'},
               'datasets':{str(p):hashlib.sha256((p/'demonstrations.npz').read_bytes()).hexdigest()
                           for p in [navigation,combat]}}

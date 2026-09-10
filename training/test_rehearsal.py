@@ -67,7 +67,7 @@ class RejectionTests(unittest.TestCase):
         callback.init_callback(model); callback.on_training_start({}, {})
         callback.locals={'infos':[{'rejectedAction':1}],'new_obs':np.ones((1,4),dtype=np.float32)}
         for _ in range(300): callback._on_step()
-        self.assertEqual(len(callback.rejections),256)
+        self.assertEqual(len(callback.rejections),1)
         x=torch.ones(1,4)
         with torch.no_grad(): before=model.policy.get_distribution(x).distribution.probs[0,1].item()
         callback.update()
@@ -85,3 +85,18 @@ class RejectionTests(unittest.TestCase):
         self.assertFalse(rejected(x,x,{'recorded':False,'turnDelta':1},False))
         self.assertFalse(rejected(x,np.ones(4),no_effect,False))
         self.assertFalse(rejected(x,x,no_effect,True))
+
+    def test_unique_buffer_evicts_least_recently_seen_example(self):
+        callback=Rehearsal([],rejection_feedback=True)
+        for i in range(256):
+            callback.locals={'infos':[{'rejectedAction':0}], 'new_obs':np.full((1,4),i,dtype=np.float32)}
+            callback._on_step()
+        # Refresh zero, then add a new state. One should be evicted, not zero.
+        for i in [0,256]:
+            callback.locals={'infos':[{'rejectedAction':0}], 'new_obs':np.full((1,4),i,dtype=np.float32)}
+            callback._on_step()
+        self.assertEqual(len(callback.rejections),256)
+        states={int(x[0]) for x,a in callback.rejections.values()}
+        self.assertIn(0,states)
+        self.assertNotIn(1,states)
+        self.assertIn(256,states)
