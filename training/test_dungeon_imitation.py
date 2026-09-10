@@ -34,3 +34,25 @@ class NavigationTests(unittest.TestCase):
 
 
 if __name__=='__main__': unittest.main()
+
+
+class DoorwayCycleTests(unittest.TestCase):
+    def trace(self):
+        return [{'controller':'learner','action':{'type':'Move'},'recorded':True,'turnDelta':0,
+                 'room':'A' if i%2==0 else 'B','x':i%2,'y':2} for i in range(6)]
+
+    def test_repeated_crossing_is_detected_but_single_retreat_is_not(self):
+        from dungeon_imitation import doorway_cycle
+        self.assertTrue(doorway_cycle(self.trace()))
+        self.assertFalse(doorway_cycle(self.trace()[:2]))
+
+    def test_attacks_walls_helpers_and_same_room_motion_do_not_trigger(self):
+        from dungeon_imitation import doorway_cycle
+        for key,value in [('recorded',False),('turnDelta',1),('controller','teacher')]:
+            trace=self.trace(); trace[-1][key]=value
+            self.assertFalse(doorway_cycle(trace))
+        trace=self.trace()
+        for t in trace: t['room']='A'
+        self.assertFalse(doorway_cycle(trace))
+        trace=self.trace(); trace[-1]['x']=99
+        self.assertFalse(doorway_cycle(trace))

@@ -27,14 +27,33 @@ def navigation_example(before,after,transition):
                 (after['room']['id'],after['player']['x'],after['player']['y']))
 
 
+def doorway_cycle(trace):
+    """Six successful moves alternating two rooms; a collection trigger, not a mask."""
+    tail=trace[-6:]
+    if len(tail)!=6 or any(t['controller']!='learner' or t['action']['type']!='Move'
+                          or not t['recorded'] or t['turnDelta']!=0 for t in tail): return False
+    positions=[(t['room'],t['x'],t['y']) for t in tail]
+    return (positions[0][0]!=positions[1][0] and
+            all(p==positions[i%2] for i,p in enumerate(positions)))
+
+
 def collect(args):
     env=DungeonEnv(args.out,budget=args.budget)
     env.controller='teacher'
     env.phase='dungeon-navigation-demonstration'
     xs,ys,outcomes=[],[],[]
+    recovery_model=getattr(args,'recovery_model',None)
+    recoveries=[]
     try:
+        torch.set_num_threads(4)
+        learner=PPO.load(recovery_model,device='cpu') if recovery_model else None
+        source=json.loads((recovery_model.parent/'manifest.json').read_text()) if recovery_model else None
         for episode_seed in seed_plan('training',args.seeds):
             obs,_=env.reset(options={'episodeSeed':episode_seed})
+            if source:
+                for key,expected in [('encoder',ENCODER),('reward',REWARD),('helper',HELPER),('gameContract',env.contract)]:
+                    if source[key]!=expected: raise ValueError('Recovery checkpoint mismatch: '+key)
+            recovery_left=0; recovery=None
             if not env.page.evaluate('() => typeof AgentBaseline !== "undefined"'):
                 env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
             env.page.evaluate('() => {window.navigationTeacher=new AgentBaseline.Policy()}')
@@ -45,7 +64,20 @@ def collect(args):
             start=len(xs)
             while True:
                 before=env.view
+                # Always observe/choose once, even when the learner controls this step.
+                # Feedback below follows the executed action, never the proposed one.
                 action=env.page.evaluate('(view) => navigationTeacher.choose(view)',before)
+                if learner is not None and not recovery_left and doorway_cycle(env.trace):
+                    recovery_left=16
+                    recovery={'episodeSeed':episode_seed,'triggerAction':env.game_actions,
+                              'loopPositions':[[t['room'],t['x'],t['y']] for t in env.trace[-2:]],
+                              'escaped':False,'samples':0,'teacherSteps':0}
+                    recoveries.append(recovery)
+                teaching=learner is None or recovery_left>0
+                env.controller='teacher' if teaching else 'learner'
+                if not teaching:
+                    local,_=learner.predict(obs,deterministic=True)
+                    action={'type':'Move','direction':['up','right','down','left'][(int(local)+env.rotation)%4]}
                 if action is None:
                     outcomes.append({'seed':env.game_seed,'episodeSeed':episode_seed,'status':'teacher-unsupported',
                                      'samples':len(xs)-start,'roomsVisited':len(env.memory.rooms)})
@@ -55,24 +87,39 @@ def collect(args):
                 local=(['up','right','down','left'].index(action['direction'])-env.rotation)%4
                 transitions=[]
                 def observed_feedback(b,a,n,r):
-                    transitions.append((b,n,{'controller':'teacher' if a['type']=='Move' else 'helper',
+                    transitions.append((b,n,{'controller':env.controller if a['type']=='Move' else 'helper',
                                               'action':a,'recorded':r['recorded']}))
                     feedback(b,a,n,r)
                 env.transition_callback=observed_feedback
                 next_obs,_,done,truncated,info=env.step(local)
                 if transitions and navigation_example(*transitions[0]):
                     xs.append(obs.copy()); ys.append(local)
+                    if recovery_left: recovery['samples']+=1
+                if recovery_left:
+                    recovery_left-=1; recovery['teacherSteps']+=1
+                    position=[env.view['room']['id'],env.view['player']['x'],env.view['player']['y']]
+                    recovery['escaped'] |= position not in recovery['loopPositions']
                 obs=next_obs
                 if done or truncated:
                     outcomes.append({**info,'samples':len(xs)-start})
                     break
             print(json.dumps(outcomes[-1]),flush=True)
-        if not xs: raise RuntimeError('No navigation examples collected')
+            (args.out/'recoveries.json').write_text(json.dumps(recoveries,indent=2))
+            (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
+        (args.out/'recoveries.json').write_text(json.dumps(recoveries,indent=2))
+        (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
+        if not xs: raise RuntimeError('No navigation examples collected; diagnostic outcomes preserved')
         np.savez_compressed(args.out/'demonstrations.npz',observations=np.asarray(xs,dtype=np.float32),actions=np.asarray(ys,dtype=np.int64))
         manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':env.contract,
                   'trainingSeeds':seed_plan('training',args.seeds),'samples':len(xs),
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
                   'selection':'Recorded, changed-position directional actions without perceived threats or damage. Not whole successful runs.'}
+        if recovery_model:
+            manifest['recovery']={'version':1,'source':str(recovery_model),
+                'sourceSha256':hashlib.sha256(recovery_model.read_bytes()).hexdigest(),
+                'trigger':'six recorded zero-turn learner moves alternating two rooms',
+                'teacherStepsPerIntervention':16,'teacherHistory':'choose each learner decision; feedback on all executed actions',
+                'limitation':'Assisted collection, not unassisted evaluation; escaped means left the two loop positions'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
         (args.out/'complete.json').write_text(json.dumps({'episodes':len(outcomes),'samples':len(xs)}))
@@ -154,10 +201,12 @@ if __name__=='__main__':
     parser.add_argument('--data',type=Path)
     parser.add_argument('--combat-data',type=Path)
     parser.add_argument('--from-combat',type=Path)
+    parser.add_argument('--recovery-model',type=Path,help='Collect teacher recoveries after deterministic learner doorway cycles')
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
     args=parser.parse_args()
     if not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000: parser.error('Invalid experiment bounds')
+    if args.recovery_model and args.mode!='collect': parser.error('Recovery model is collection only')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
     args.out.mkdir(parents=True,exist_ok=False)
     (collect if args.mode=='collect' else fit)(args)

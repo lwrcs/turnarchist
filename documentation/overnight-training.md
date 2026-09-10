@@ -143,3 +143,27 @@ This is successful-action cycling, outside failed-action feedback's scope.
 The next diagnostic evaluates the preserved PPO-only overnight-002-r4 model
 on the same 16 seeds as the daytime rehearsal audit, emphasizing indices 8–15
 that were not used to select either model. No checkpoint is promoted by this test.
+
+## Learner-state doorway recovery collection
+
+`overnight.py --collect-recovery MODEL` runs a bounded 16-training-seed,
+512-action collection using `dungeon_imitation.py collect --recovery-model MODEL`.
+The deterministic learner controls the game until six recorded zero-turn moves
+alternate between two room/position pairs. A programmed teacher then controls
+16 decisions. The teacher observes/chooses at every decision from reset and
+receives feedback for every actually executed action, including helpers.
+It uses restricted perception; no hidden map or invented legal-action mask.
+
+Only teacher-controlled successful, threat-free, non-damaging navigation is kept.
+Recorded attacks and other stationary actions are excluded by the existing
+navigation filter. Rotation uses the same local/world mapping as the learner.
+Training seeds stay separate from held-out seeds. Recovery checkpoint contracts,
+source hash, teacher hash and intervention settings are recorded. Outcomes and
+recovery attempts are saved after each episode; datasets are complete only when
+the final completion marker exists. Recovery escape means leaving the original
+two positions, not survival or dungeon completion. These assisted outcomes must
+never be presented as unassisted learned-policy performance.
+
+Use a loop-prone checkpoint to gather candidate recoveries, then inspect coverage,
+label quality and retention before fitting. Existing checkpoints are not changed
+by collection. The controller's deadline/resource/STOP guards still apply.
