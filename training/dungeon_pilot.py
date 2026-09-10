@@ -250,12 +250,14 @@ def main():
     mode.add_argument('--benchmark',action='store_true')
     parser.add_argument('--steps',type=int,default=2048)
     parser.add_argument('--budget',type=int,default=512)
-    parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
+    parser.add_argument('--envs',type=int,choices=[1,2,4,8],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
     args=parser.parse_args()
+    if args.envs==8 and not args.benchmark:
+        parser.error('Eight workers currently supported only for throughput benchmarking')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
     if args.learning_rate is not None and (not 0<args.learning_rate<=.001 or not (args.resume or args.from_combat)):
