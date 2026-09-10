@@ -63,3 +63,26 @@ and a recovery curriculum needs deliberate implementation and validation.
 The hourly heartbeat is paused early rather than consuming usage while idle.
 All checkpoints remain preserved; the selected model is unchanged. Signal stays
 paused and the Mac game server is untouched.
+
+## Authorized continuation: doorway recovery dataset
+
+After the user approved continuing, nighttime-007 completed assisted collection
+on 16 training seeds using loop-prone `nighttime-005-r1/final.zip`. The selected
+checkpoint remained unchanged. Artifact directory: desktop
+`/home/harrison/turnarchist-training/nighttime-007-data`.
+
+- Seven detected doorway-cycle interventions across three episodes; all seven
+  left the original two loop positions during the teacher's 16-decision window.
+- 91 accepted, unique navigation observations; action counts 27/19/24/21.
+- All values finite; no identical observations with conflicting action labels.
+- All four observation rotations occurred across the 16 collection episodes;
+  this does not establish balanced rotation coverage within the recovery subset.
+- Assisted episode outcomes: 15 budget-incomplete, one death. These are not
+  learned-policy evaluation results, and escaping a loop is not a dungeon win.
+
+The completed dataset is a small candidate recovery set, not proof the learner
+can recover independently. Inspect its limited episode coverage before fitting;
+retain original navigation and combat examples and test unassisted held-out
+performance and retention. With less than one hour remaining before the agreed
+cutoff, no fitting run was launched. The heartbeat was paused again after this
+completed collection; all artifacts and checkpoints were preserved.
