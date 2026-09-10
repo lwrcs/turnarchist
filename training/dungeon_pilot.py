@@ -265,9 +265,11 @@ def main():
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
+    parser.add_argument('--rehearsal-recovery',type=Path)
     parser.add_argument('--rejection-feedback',action='store_true')
     parser.add_argument('--reconfigure-workers',action='store_true',help='Explicitly resume with a new worker count and fresh rollouts')
     args=parser.parse_args()
+    if args.rehearsal_recovery and not args.rehearsal_navigation: parser.error('Recovery requires original navigation and combat rehearsal')
     if args.rejection_feedback and not args.rehearsal_navigation: parser.error('Rejection feedback requires rehearsal datasets')
     if args.reconfigure_workers and not args.resume:
         parser.error('Worker reconfiguration requires --resume')
@@ -335,7 +337,7 @@ def main():
                 callbacks=[Checkpoints(args.out)]
                 if args.rehearsal_navigation:
                     from rehearsal import configure
-                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'],args.rejection_feedback)
+                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'],args.rejection_feedback,args.rehearsal_recovery)
                     callbacks.append(practice)
                 model.save(args.out/'initial')
                 (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))

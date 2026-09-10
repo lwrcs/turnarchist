@@ -111,7 +111,7 @@ def run(args):
         best_model=Path(state['selectedModel']); best_eval=reference
         next_model=best_model
         no_gain=0
-        for index,steps in enumerate(([16384]+[32768]*5) if adaptive else [16384,32768,32768],1):
+        for index,steps in enumerate((([16384]+[32768]*5) if adaptive else [16384,32768,32768])[:getattr(args,'max_rounds',6)],1):
             if args.deadline-time.time()<3600:
                 state['stopReason']='insufficient time for another training/evaluation round'; break
             model=root/f'{args.name}-r{index}'
@@ -121,7 +121,8 @@ def run(args):
                     + (['--learning-rate',rate] if adaptive else [])
                     + (['--rehearsal-navigation',root/'navigation-data-001',
                         '--rehearsal-combat',root/'teacher-legal-open-001'] if rehearsal else [])
-                    + (['--rejection-feedback'] if getattr(args,'rejection_feedback',False) else []))
+                    + (['--rejection-feedback'] if getattr(args,'rejection_feedback',False) else [])
+                    + (['--rehearsal-recovery',args.recovery_data] if getattr(args,'recovery_data',None) else []))
             execute(f'r{index}-eval',['training/dungeon_pilot.py','--evaluate',model/'final.zip','--out',evaluation,
                                      '--envs','1','--budget','512','--eval-seeds','4'])
             comparison=report(evaluation,best_eval)
@@ -182,6 +183,8 @@ if __name__=='__main__':
     p.add_argument('--deadline',type=float,required=True)
     p.add_argument('--adaptive',action='store_true',help='Up to six trials, rolling back and lowering learning rate on regression')
     p.add_argument('--rehearsal',action='store_true',help='Balanced navigation/combat rehearsal between PPO rollouts; eight new audit seeds')
+    p.add_argument('--max-rounds',type=int,choices=range(1,7),default=6)
+    p.add_argument('--recovery-data',type=Path)
     p.add_argument('--workers',type=int,choices=[4,8],default=4)
     p.add_argument('--source-model',type=Path)
     p.add_argument('--source-evaluation',type=Path)
@@ -193,6 +196,7 @@ if __name__=='__main__':
     args=p.parse_args()
     if args.evaluation_only and args.collect_recovery: p.error('Choose evaluation or collection, not both')
     if args.evaluation_only and not args.source_evaluation: p.error('Evaluation only requires an explicit source model/evaluation')
+    if args.recovery_data and not args.rehearsal: p.error('Recovery data requires rehearsal')
     if args.rejection_feedback and not args.rehearsal: p.error('Rejection feedback requires rehearsal')
     if bool(args.source_model)!=bool(args.source_evaluation): p.error('Source model and evaluation must be supplied together')
     if not 1.25e-6<=args.learning_rate<=.001: p.error('Learning rate outside bounded range')

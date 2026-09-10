@@ -100,3 +100,25 @@ class RejectionTests(unittest.TestCase):
         self.assertIn(0,states)
         self.assertNotIn(1,states)
         self.assertIn(256,states)
+
+class RecoveryTests(unittest.TestCase):
+    def test_recovery_adds_learning_beyond_original_rehearsal_without_value_update(self):
+        groups=[(np.ones((4,4),dtype=np.float32),np.zeros(4,dtype=np.int64))]*2
+        recovery=(np.full((4,4),-1,dtype=np.float32),np.ones(4,dtype=np.int64))
+        models=[PPO('MlpPolicy',gym.make('CartPole-v1'),n_steps=8,batch_size=8,device='cpu',seed=123) for _ in range(2)]
+        probe=torch.full((1,4),-1.)
+        try:
+            probabilities=[]
+            for model,extra in zip(models,[None,recovery]):
+                model.set_logger(configure(None,[]))
+                callback=Rehearsal(groups,recovery=extra)
+                callback.init_callback(model); callback.on_training_start({}, {})
+                with torch.no_grad(): value=model.policy.predict_values(probe).clone()
+                callback.update()
+                with torch.no_grad():
+                    probabilities.append(model.policy.get_distribution(probe).distribution.probs[0,1].item())
+                    torch.testing.assert_close(value,model.policy.predict_values(probe),rtol=0,atol=0)
+                self.assertEqual(len(model.policy.optimizer.state),0)
+            self.assertGreater(probabilities[1],probabilities[0])
+        finally:
+            for model in models: model.get_env().close()

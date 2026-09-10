@@ -167,3 +167,21 @@ never be presented as unassisted learned-policy performance.
 Use a loop-prone checkpoint to gather candidate recoveries, then inspect coverage,
 label quality and retention before fitting. Existing checkpoints are not changed
 by collection. The controller's deadline/resource/STOP guards still apply.
+
+## Recovery rehearsal trial
+
+`--recovery-data PATH` requires `--rehearsal` and forwards the completed recovery
+set to the learner. Each between-rollout update retains the existing mean loss
+for 32 original navigation and 32 combat examples, adding 0.25 times the mean
+loss of eight recovery examples. Original loss weights are not renormalized.
+Recovery contracts, training-seed provenance, completion marker and recovery
+metadata are checked; sample count, coefficient and dataset hash are recorded.
+No rejected-action feedback is needed for this experiment. Tests isolate the
+additional recovery gradient and verify unchanged value predictions and PPO
+optimizer state during rehearsal.
+
+`--max-rounds 1` bounds the initial trial to one 16,384-step continuation, followed
+by the ordinary unassisted evaluation and, if warranted, reserved-seed audit.
+Recovery demonstration fit alone is not a retention or generalization result.
+Keep the preserved source and compare gameplay, loop incidence and combat
+retention before treating any experimental candidate as a replacement.

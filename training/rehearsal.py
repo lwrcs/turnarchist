@@ -7,9 +7,10 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 
 class Rehearsal(BaseCallback):
-    def __init__(self,groups,rate=.001,rejection_feedback=False):
+    def __init__(self,groups,rate=.001,rejection_feedback=False,recovery=None):
         super().__init__()
         self.groups=groups
+        self.recovery=recovery
         self.rate=rate
         self.rng=np.random.default_rng(123)
         self.started=False
@@ -35,6 +36,14 @@ class Rehearsal(BaseCallback):
             xs.append(torch.as_tensor(x[indices],device=self.model.device))
             ys.append(torch.as_tensor(y[indices],dtype=torch.long,device=self.model.device))
         loss=-self.model.policy.get_distribution(torch.cat(xs)).log_prob(torch.cat(ys)).mean()
+        if self.recovery is not None:
+            x,y=self.recovery
+            indices=self.rng.integers(len(x),size=8)
+            inputs=torch.as_tensor(x[indices],device=self.model.device)
+            labels=torch.as_tensor(y[indices],dtype=torch.long,device=self.model.device)
+            recovery_loss=-self.model.policy.get_distribution(inputs).log_prob(labels).mean()
+            loss=loss+.25*recovery_loss
+            self.logger.record('rehearsal/recovery_loss',float(recovery_loss.detach()))
         if self.rejections:
             indices=self.rng.integers(len(self.rejections),size=32)
             examples=list(self.rejections.values())
@@ -70,7 +79,7 @@ class Rehearsal(BaseCallback):
         return True
 
 
-def configure(navigation,combat,contract,rejection_feedback=False):
+def configure(navigation,combat,contract,rejection_feedback=False,recovery=None):
     from dungeon_imitation import load_navigation
     from imitate import load_demonstrations
     from dungeon_pilot import OBS_SIZE
@@ -89,4 +98,13 @@ def configure(navigation,combat,contract,rejection_feedback=False):
                                    'resume':'rejection buffer starts empty'},
               'datasets':{str(p):hashlib.sha256((p/'demonstrations.npz').read_bytes()).hexdigest()
                           for p in [navigation,combat]}}
-    return Rehearsal([(x,y),(cx,cy)],rejection_feedback=rejection_feedback),metadata
+    recovery_group=None
+    if recovery is not None:
+        rx,ry,recovery_manifest=load_navigation(recovery)
+        if recovery_manifest['gameContract']!=contract or not recovery_manifest.get('recovery'):
+            raise ValueError('Recovery demonstration contract or provenance mismatch')
+        recovery_group=(rx,ry)
+        metadata['recovery']={'version':1,'samples':len(rx),'batch':8,'coefficient':.25,
+                              'selection':'completed teacher recovery collection on training seeds'}
+        metadata['datasets'][str(recovery)]=hashlib.sha256((recovery/'demonstrations.npz').read_bytes()).hexdigest()
+    return Rehearsal([(x,y),(cx,cy)],rejection_feedback=rejection_feedback,recovery=recovery_group),metadata
