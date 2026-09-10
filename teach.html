@@ -5,7 +5,7 @@
 </style></head><body><main>
 <h1>Teach a Turnarchist agent</h1>
 <div id="stage"><canvas id="board" width="650" height="650" tabindex="0" aria-label="Restricted agent view. Click to focus; arrow keys or WASD move and attack."></canvas><span id="owner-badge">No active run</span></div>
-<section id="bar" aria-label="Control ownership"><div id="owner" role="status" aria-live="polite">Ready to start</div><div id="focus">Movement controls inactive</div><div id="save">No recording yet</div><p id="message">Choose a demonstration or a watched run below.</p>
+<section id="bar" aria-label="Control ownership"><div id="owner" role="status" aria-live="polite">Ready to start</div><div id="focus">Movement controls inactive</div><div id="save">No recording yet</div><p id="message">Choose a demonstration or a watched run below.</p><p id="export-status" role="status" aria-live="polite" style="overflow-wrap:anywhere"></p>
 <div class="row"><button id="take" class="primary" disabled>Activate human controls</button><button id="return" disabled>Try agent again</button><button id="pause" disabled>Pause</button><button id="single" disabled>One agent step</button></div><div id="suggestion" role="status"></div></section>
 <p id="hint">Restricted view: @ you · red outlines are hit warnings · ? unidentified contact. Click a tile for details. Arrow keys / WASD move or attack; Space pauses. All actions are recorded locally.</p>
 <div id="objects" aria-label="Visible tile details"></div>
@@ -24,4 +24,4 @@
 <label>Saved sessions <select id="saved"></select></label><button id="refresh-saved">Refresh</button><button id="export-saved">Export saved session</button>
 </details>
 <p><a href="./agent.html">Agent diagnostics</a> · <a href="./play.html" target="_blank" rel="noopener">Ordinary play</a> (not recorded by this teaching page)</p>
-</main><div id="worlds" aria-hidden="true"></div><script src="./agent-baseline.js?v=23"></script><script src="./agent-teaching.js?v=1"></script><script src="./agent-teaching-ui.js?v=1"></script></body></html>
+</main><div id="worlds" aria-hidden="true"></div><script src="./agent-baseline.js?v=23"></script><script src="./agent-teaching.js?v=1"></script><script src="./agent-teaching-ui.js?v=2"></script></body></html>
