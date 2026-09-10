@@ -5,3 +5,4 @@ js/*
 src/serverAddress.ts
 .env
 .env.*
+.teaching-local.json

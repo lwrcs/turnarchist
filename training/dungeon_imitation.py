@@ -138,7 +138,13 @@ def load_navigation(path):
     if manifest['encoder']!=ENCODER or manifest['helper']!=HELPER or manifest['reward']!=REWARD:
         raise ValueError('Navigation contract mismatch')
     seeds=manifest['trainingSeeds']
-    if not seeds or not set(seeds)<=set(seed_plan('training',64)): raise ValueError('Dataset includes non-training seeds')
+    if manifest.get('humanDemonstrations'):
+        from teaching_data import validate_seed
+        provenance=manifest['humanDemonstrations']
+        if not seeds or provenance.get('version')!=1 or provenance.get('perceptionView')!='restricted-grid' or provenance.get('protocol')!='starter':
+            raise ValueError('Invalid human training provenance')
+        for seed in seeds: validate_seed(seed)
+    elif not seeds or not set(seeds)<=set(seed_plan('training',64)): raise ValueError('Dataset includes non-training seeds')
     if not (path/'complete.json').exists(): raise ValueError('Incomplete navigation collection')
     with np.load(path/'demonstrations.npz',allow_pickle=False) as data:
         x,y=data['observations'],data['actions']
