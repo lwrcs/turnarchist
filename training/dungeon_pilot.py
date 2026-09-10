@@ -255,9 +255,10 @@ def main():
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
+    parser.add_argument('--reconfigure-workers',action='store_true',help='Explicitly resume with a new worker count and fresh rollouts')
     args=parser.parse_args()
-    if args.envs==8 and not args.benchmark:
-        parser.error('Eight workers currently supported only for throughput benchmarking')
+    if args.reconfigure_workers and not args.resume:
+        parser.error('Worker reconfiguration requires --resume')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
     if args.learning_rate is not None and (not 0<args.learning_rate<=.001 or not (args.resume or args.from_combat)):
@@ -303,9 +304,12 @@ def main():
                 if args.resume:
                     for key in ('encoder','reward','helper'):
                         if source_manifest[key]!=manifest[key]: raise ValueError('Incompatible dungeon '+key)
-                    if source_manifest['execution']['environments']!=args.envs:
+                    if source_manifest['execution']['environments']!=args.envs and not args.reconfigure_workers:
                         raise ValueError('Resume requires original worker count')
                     model=PPO.load(source_path,env=env,device='cpu')
+                    manifest['execution']={'environments':model.n_envs,'rolloutStepsPerEnvironment':model.n_steps,
+                                           'rolloutBatchSize':model.n_envs*model.n_steps,
+                                           'workerReconfigurationRequested':args.reconfigure_workers}
                     manifest['initialization']='resume dungeon weights and optimizer; fresh episodes and rollout'
                 else:
                     model=initialize_from_combat(source_path,source_manifest,env,args.envs)

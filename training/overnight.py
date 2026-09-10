@@ -50,12 +50,13 @@ def run(args):
     repo=Path(__file__).resolve().parents[1]
     revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
     state={'status':'running','deadline':args.deadline,'git':revision,'phase':'starting',
-           'rounds':[],'selectedModel':str(root/'navigation-model-001/final.zip')}
+           'rounds':[],'selectedModel':str(getattr(args,'source_model',None) or root/'navigation-model-001/final.zip')}
+    workers=getattr(args,'workers',4)
     adaptive=getattr(args,'adaptive',False)
     rehearsal=getattr(args,'rehearsal',False)
     state['rehearsal']=rehearsal
     state['adaptive']=adaptive
-    rate=1e-5
+    rate=getattr(args,'learning_rate',1e-5)
     def save():
         state['updatedAt']=time.time(); atomic_json(job/'status.json',state)
     def execute(label,arguments):
@@ -88,7 +89,7 @@ def run(args):
                 proc.wait()
                 state.pop('childPid',None); save()
     try:
-        reference=root/'navigation-model-001-after'
+        reference=getattr(args,'source_evaluation',None) or root/'navigation-model-001-after'
         baseline=report(reference)
         best_model=Path(state['selectedModel']); best_eval=reference
         next_model=best_model
@@ -99,7 +100,7 @@ def run(args):
             model=root/f'{args.name}-r{index}'
             evaluation=root/f'{args.name}-r{index}-eval'
             execute(f'r{index}-train',['training/dungeon_pilot.py','--resume',next_model,'--out',model,
-                                      '--envs','4','--steps',steps,'--budget','512','--eval-seeds','4']
+                                      '--envs',workers,'--reconfigure-workers','--steps',steps,'--budget','512','--eval-seeds','4']
                     + (['--learning-rate',rate] if adaptive else [])
                     + (['--rehearsal-navigation',root/'navigation-data-001',
                         '--rehearsal-combat',root/'teacher-legal-open-001'] if rehearsal else []))
@@ -133,14 +134,18 @@ def run(args):
         # These extra four seeds were not used for the continuation gates.
         if best_eval!=reference and args.deadline-time.time()>=3600:
             audits=[]
-            for label,model in [('reference',root/'navigation-model-001/final.zip'),('candidate',best_model)]:
+            audit_start=getattr(args,'audit_start',None)
+            if audit_start is None: audit_start=8 if rehearsal else 4
+            audit_count=8 if rehearsal else 4
+            state['auditSeedStart']=audit_start
+            for label,model in [('reference',getattr(args,'source_model',None) or root/'navigation-model-001/final.zip'),('candidate',best_model)]:
                 out=root/f'{args.name}-audit-{label}'
                 execute('audit-'+label,['training/dungeon_pilot.py','--evaluate',model,'--out',out,
-                                        '--envs','1','--budget','512','--eval-seeds','16' if rehearsal else '8'])
+                                        '--envs','1','--budget','512','--eval-seeds',audit_start+audit_count])
                 audits.append(out)
             result={}
             for mode in ['deterministic','sampled','random']:
-                result[mode]={label:summary(json.loads((path/f'{mode}-evaluation.json').read_text())[8 if rehearsal else 4:])
+                result[mode]={label:summary(json.loads((path/f'{mode}-evaluation.json').read_text())[audit_start:])
                               for label,path in zip(['reference','candidate'],audits)}
             atomic_json(job/'reserve-seed-audit.json',result)
             state['reserveAudit']='reserve-seed-audit.json'
@@ -159,4 +164,12 @@ if __name__=='__main__':
     p.add_argument('--deadline',type=float,required=True)
     p.add_argument('--adaptive',action='store_true',help='Up to six trials, rolling back and lowering learning rate on regression')
     p.add_argument('--rehearsal',action='store_true',help='Balanced navigation/combat rehearsal between PPO rollouts; eight new audit seeds')
-    run(p.parse_args())
+    p.add_argument('--workers',type=int,choices=[4,8],default=4)
+    p.add_argument('--source-model',type=Path)
+    p.add_argument('--source-evaluation',type=Path)
+    p.add_argument('--learning-rate',type=float,default=1e-5)
+    p.add_argument('--audit-start',type=int,choices=range(4,25))
+    args=p.parse_args()
+    if bool(args.source_model)!=bool(args.source_evaluation): p.error('Source model and evaluation must be supplied together')
+    if not 1.25e-6<=args.learning_rate<=.001: p.error('Learning rate outside bounded range')
+    run(args)

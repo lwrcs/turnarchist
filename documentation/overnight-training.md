@@ -70,3 +70,29 @@ The daytime controller still starts from the original imitation checkpoint so
 its first trial can be compared to the prior PPO-only trial. All candidates are
 preserved. The audit uses 16 seeds and reports only indices 8–15, excluding the
 four selection seeds and four reserve seeds already examined overnight.
+
+## Eight-worker continuation
+
+The September 10 four/eight worker benchmark measured 14.67 versus 25.44 game
+decisions per second over 1,024 random decisions (collection time only). This
+short test suggests about 1.73x throughput, not a guarantee for long PPO runs;
+worker seed mixtures differ and startup/cache effects are excluded.
+
+`--reconfigure-workers` permits explicitly loading an existing checkpoint into
+another worker count. Its per-worker rollout length and weights are preserved;
+loading the current 64-step checkpoint into eight workers increases the rollout
+batch from 256 to 512. This is an optimization change, recorded in the manifest,
+not an identical training trajectory or a changed observation/action contract.
+Tests verify weight equality and the rebuilt rollout-buffer dimensions.
+
+The controller accepts explicit source model/evaluation, worker count, starting
+learning rate, and audit start index. Nighttime continuation starts from the
+selected daytime rehearsal candidate instead of discarding that progress.
+New independent audit seeds must exclude previously inspected seeds; start 16
+uses indices 16–23 when rehearsal is enabled. All reference artifacts remain.
+
+Existing traces show deterministic repeated blocked moves and repeated
+Move/DismissInteraction loops at one position. These are confirmed behaviors,
+not proof of a bug in the helper. They warrant targeted training/observation
+analysis after the current experiment; more memory or a larger GPU alone does
+not fix them.

@@ -36,3 +36,23 @@ class RehearsalTests(unittest.TestCase):
             self.assertEqual(callback.updates,2)
             self.assertEqual(model.num_timesteps,24)
         finally: model.get_env().close()
+
+class WorkerResizeTests(unittest.TestCase):
+    def test_loading_new_worker_count_preserves_weights_and_rollout_length(self):
+        import tempfile
+        from pathlib import Path
+        from stable_baselines3.common.vec_env import DummyVecEnv
+        old=DummyVecEnv([lambda:gym.make('CartPole-v1')]*4)
+        new=DummyVecEnv([lambda:gym.make('CartPole-v1')]*8)
+        try:
+            model=PPO('MlpPolicy',old,n_steps=64,batch_size=64,device='cpu')
+            with tempfile.TemporaryDirectory() as directory:
+                path=Path(directory)/'model'; model.save(path)
+                loaded=PPO.load(path,env=new,device='cpu')
+                self.assertEqual(loaded.n_envs,8)
+                self.assertEqual(loaded.n_steps,64)
+                self.assertEqual(loaded.rollout_buffer.observations.shape[:2],(64,8))
+                for key,value in model.policy.state_dict().items():
+                    torch.testing.assert_close(value,loaded.policy.state_dict()[key])
+        finally:
+            old.close(); new.close()
