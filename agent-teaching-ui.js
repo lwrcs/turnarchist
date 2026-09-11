@@ -58,9 +58,14 @@
   document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>guard(()=>humanAction({type:'Move',direction:b.dataset.move})));
   document.addEventListener('keydown',e=>{const s=selected;if(inputOwner!==s||s?.state!=='human')return;const target=e.target,tag=target?.tagName;if(target?.isContentEditable||['INPUT','SELECT','TEXTAREA'].includes(tag))return;
     if(e.code==='KeyI'||e.key?.toLowerCase()==='i'){e.preventDefault();e.stopPropagation();if(!e.repeat){const open=!!s.uiLayout?.().inventoryOpen;s.nativeUseSource=null;s.setInventoryOpen(!open);render();board.focus();}return;}
-    if(e.code==='Space'&&s.view?.decision==='vending'){e.preventDefault();e.stopPropagation();if(!e.repeat)guard(()=>humanAction({type:'VendingMachineBuy'}));return;}
+    if(e.code==='Space'){e.preventDefault();e.stopPropagation();if(e.repeat)return;
+      if(s.view?.decision==='vending')guard(()=>humanAction({type:'VendingMachineBuy'}));
+      else if(s.view?.decision==='ladder')guard(()=>humanAction({type:'LadderConfirm'}));
+      else if(s.view?.decision==='dismissable-interaction')guard(()=>humanAction({type:'DismissInteraction'}));
+      else if(s.view?.decision==='world'){const slot=s.uiLayout?.().selectedSlot,item=s.view.inventory?.[slot];if(item?.canUseOnOther){s.nativeUseSource=slot;s.reason=`Choose an inventory item for ${item.name||item.kind}`;s.changed();render();}else if(item)guard(()=>humanAction({type:'UseItem',slotIndex:slot}));else{text('The selected quickbar slot is empty.');}}
+      return;}
     if(e.key==='Escape'&&['vending','dismissable-interaction'].includes(s.view?.decision)){e.preventDefault();e.stopPropagation();if(!e.repeat)guard(()=>humanAction({type:'DismissInteraction'}));return;}
-    if(e.code==='Space'||e.key==='Escape'){e.preventDefault();e.stopPropagation();s.pause();inputOwner=null;render();return;}
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();s.pause();inputOwner=null;render();return;}
     if(/^[1-9]$/.test(e.key)){e.preventDefault();e.stopPropagation();if(!e.repeat)guard(()=>humanAction({type:'UseItem',slotIndex:Number(e.key)-1}));return;}
     if(s.uiLayout?.().inventoryOpen)return;
     const direction={ArrowUp:'up',w:'up',W:'up',ArrowRight:'right',d:'right',D:'right',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left'}[e.key];if(direction){e.preventDefault();e.stopPropagation();if(!e.repeat)guard(()=>humanAction({type:'Move',direction}));}

@@ -2105,7 +2105,8 @@ export class Inventory {
       }
     }
     return {width:GameConstants.WIDTH,height:GameConstants.HEIGHT,
-      inventoryOpen:this.isOpen,inventoryButton:this.getInventoryButtonRect(),slots};
+      inventoryOpen:this.isOpen,selectedSlot:this.selX + this.selY * this.cols,
+      inventoryButton:this.getInventoryButtonRect(),slots};
   };
 
   handleMouseDown = (x: number, y: number, button: number) => {

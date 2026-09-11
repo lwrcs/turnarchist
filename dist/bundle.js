@@ -62266,7 +62266,8 @@ class Inventory {
                 }
             }
             return { width: gameConstants_1.GameConstants.WIDTH, height: gameConstants_1.GameConstants.HEIGHT,
-                inventoryOpen: this.isOpen, inventoryButton: this.getInventoryButtonRect(), slots };
+                inventoryOpen: this.isOpen, selectedSlot: this.selX + this.selY * this.cols,
+                inventoryButton: this.getInventoryButtonRect(), slots };
         };
         this.handleMouseDown = (x, y, button) => {
             // Inventory receives raw pointer events independently of PlayerInputHandler.
@@ -100396,7 +100397,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("e18cba59b1b41c14b5e9")
+/******/ 		__webpack_require__.h = () => ("dcc4efff52ea33f9cbf9")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

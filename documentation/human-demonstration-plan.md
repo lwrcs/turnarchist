@@ -82,7 +82,7 @@ Reject stale predictions using session and decision sequence identifiers. Keep
 at most one action in flight; initially ignore key repeat and additional movement
 presses during that action. Never replay buffered key presses after a handoff.
 Pause on window blur/hidden tab; do not auto-resume on focus return. Typing in a
-form must not move the player. Space pauses and Escape closes an active menu or
+form must not move the player. Space uses the selected item or active interaction; Escape closes an active menu or
 pauses according to a visible, consistent binding; do not overload Escape to
 silently return control to the agent.
 
