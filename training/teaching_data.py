@@ -55,6 +55,9 @@ def convert(envelope):
     h=History(meta['initial'],meta.get('rotation',0)); baseline=equipped(meta['initial'])
     xs=[]; ys=[]; segments=[]; reasons={}; human=0
     for r in envelope['records']:
+        expected_actor={'human':'human','agent':'model','helper':'helper'}.get(r['source'])
+        if expected_actor and r.get('actor',expected_actor)!=expected_actor: raise ValueError('Action actor/source mismatch')
+        if r['source']=='rejected' and r.get('actor') and r.get('requestedSource') not in {'human','agent','helper'}: raise ValueError('Rejected action is missing its requested source')
         if r['before']['contract']!=meta['contract'] or r['after']['contract']!=meta['contract']: raise ValueError('Game contract changed within session')
         obs=h.observation().copy(); reason=None
         if r['source']=='human':

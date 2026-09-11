@@ -38,3 +38,9 @@ class TeachingTests(unittest.TestCase):
             with self.assertRaises(ValueError):validate_seed(s)
         v=self.state();v['observationMode']='diagnostic-current-room'
         with self.assertRaises(ValueError):History(v)
+
+    def test_explicit_actor_must_match_action_source(self):
+        before=self.state();after=copy.deepcopy(before);after['player']['x']+=1
+        record={'seq':1,'before':before,'after':after,'action':{'type':'Move','direction':'right'},'decisionEnd':True,'source':'human','actor':'model','segment':1,'info':{'recorded':True}}
+        data={'schemaVersion':1,'meta':{'seed':123,'initial':before,'contract':{},'rotation':0,'protocol':'starter','perceptionView':'restricted-grid'},'records':[record]}
+        with self.assertRaisesRegex(ValueError,'actor/source'):convert(data)

@@ -99,11 +99,15 @@ also stops the affected run. No fallback policy is silently substituted.
 ## Saving and training
 
 Actions save locally in this browser's IndexedDB. Export current sessions before
-clearing browser data. After reload, **Saved recordings** can export acknowledged
-records; live game continuation is not restored. Current-session export additionally
-includes the game's replay. Reload exports contain the recorded observations and
-actions, not that separate replay. Mistaken human segments can be excluded while
-preserving their original records.
+clearing browser data. Choose the repository's `training/data/teaching` directory
+with **Choose data folder**, then **Save current to data folder** writes the JSON
+there directly. Browser security requires that one explicit folder choice; the
+browser normally returns to the same folder on later visits. **Download current
+copy** remains available as a backup. After reload, **Saved recordings** can export
+acknowledged records; live game continuation is not restored. Current-session
+export additionally includes the game's replay. Reload exports contain the recorded
+observations and actions, not that separate replay. Mistaken human segments can be
+excluded while preserving their original records.
 
 Recordings stop at 10,000 total API actions, independently of world turns. There
 is no per-turn action cap. Start another recording after this session budget.
@@ -124,6 +128,14 @@ history; excluded segments and terminal actions do not become labels. Inspect th
 import report before training. Keep whole sessions and seeds together when splitting
 training/validation. This release does not implement automatic dataset balancing,
 recovery-success scoring, model training or promotion.
+
+Every export names the session's recording mode, policy type and exact policy
+identity in `meta`. Each action has an explicit `actor` (`human`, `model`, or
+`helper`), its recorder `source`, and the originally requested source if the game
+rejected it. Model actions retain the proposed action and probability vector before
+any legal-action masking; human corrections retain the immediately preceding model
+suggestion when one was available. This provenance is descriptive metadata and is
+validated separately from the action labels used for imitation.
 
 ## Learned inference
 

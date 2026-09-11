@@ -6,3 +6,4 @@ src/serverAddress.ts
 .env
 .env.*
 .teaching-local.json
+training/data/teaching/*.json

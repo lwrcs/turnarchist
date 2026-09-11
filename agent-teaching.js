@@ -3,6 +3,14 @@
   const copy=x=>JSON.parse(JSON.stringify(x));
   const position=v=>JSON.stringify([v.room.id,v.player.x,v.player.y]);
   const effect=v=>JSON.stringify([v.player,v.inventory,v.room.entities,v.room.items,v.room.hitWarnings,v.decision,v.selectionChoices]);
+  const actorFor=source=>source==='agent'?'model':source;
+  function exportEnvelope(meta,records,replay){
+    const resultMeta=copy(meta),policy=resultMeta.policy||'Unknown';
+    resultMeta.policyType=resultMeta.policyType||'unknown';
+    resultMeta.provenance=resultMeta.provenance||{actionActorField:'records[].actor',actionSourceField:'records[].source',sources:{human:'direct human input',agent:'policy/model output',helper:'policy output during a deterministic helper decision',rejected:'attempt rejected by the game; see requestedSource'},policy,policyType:resultMeta.policyType};
+    const resultRecords=copy(records).map(record=>{const requested=record.requestedSource||record.info?.requestedSource||(record.source==='rejected'?'unknown':record.source);record.requestedSource=requested;record.actor=record.actor||actorFor(requested);return record;});
+    return {schemaVersion:1,meta:resultMeta,records:resultRecords,...(replay===undefined?{}:{replay:copy(replay)})};
+  }
   function allowedDirections(v){
     if(v.decision!=='world')return [];
     const weapon=v.inventory.find(i=>i?.activeWeapon)?.traits;
@@ -39,14 +47,14 @@
     save(meta){return this.transaction('sessions',copy(meta));}
     append(id,r){return this.transaction('records',{session:id,...copy(r)});}
     async list(){const db=await this.ready;return new Promise((resolve,reject)=>{const r=db.transaction('sessions').objectStore('sessions').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-    async export(id){const db=await this.ready;const all=await this.list();const meta=all.find(s=>s.id===id);if(!meta)throw new Error('Session not found');return new Promise((resolve,reject)=>{const r=db.transaction('records').objectStore('records').getAll(IDBKeyRange.bound([id,0],[id,Number.MAX_SAFE_INTEGER]));r.onsuccess=()=>resolve({schemaVersion:1,meta,records:r.result});r.onerror=()=>reject(r.error);});}
+    async export(id){const db=await this.ready;const all=await this.list();const meta=all.find(s=>s.id===id);if(!meta)throw new Error('Session not found');return new Promise((resolve,reject)=>{const r=db.transaction('records').objectStore('records').getAll(IDBKeyRange.bound([id,0],[id,Number.MAX_SAFE_INTEGER]));r.onsuccess=()=>resolve(exportEnvelope(meta,r.result));r.onerror=()=>reject(r.error);});}
   }
   class Session {
     constructor({agent,policy,store,meta,onChange=()=>{}}){Object.assign(this,{agent,policy,store,onChange});this.meta={...meta,schemaVersion:1,events:[],excludedSegments:[]};this.records=[];this.state='ready';this.busy=false;this.generation=0;this.segment=0;this.pending=null;this.reason='';this.suggested=null;this.autoReturn=false;this.speed=500;this.uncertain=false;this.view=null;this.tailIgnore=0;}
     changed(){this.agent.setFastMode?.(this.state==='agent'&&this.speed===0);this.onChange(this);}
     uiLayout(){return this.agent.getUiLayout?.()||null;}
     async setInventoryOpen(open){if(this.state!=='human'||this.busy)return false;this.agent.setInventoryOpen?.(open);this.view=copy(this.agent.perceive());this.changed();return true;}
-    async start(mode){this.state='loading';this.changed();try{await this.agent.reset(this.meta.seed,{scenario:'standard',maxSteps:10000});this.view=copy(this.agent.perceive());this.meta.initial=this.view;this.meta.contract=this.view.contract;this.meta.mode=mode;this.meta.startedAt=new Date().toISOString();await this.policy?.reset?.(this.view,this.meta);await this.store.save(this.meta);this.state='paused';this.reason=mode==='demonstration'?'Ready: activate human controls':'Ready: start agent';this.changed();}catch(e){this.fail(e);}}
+    async start(mode){this.state='loading';this.changed();try{await this.agent.reset(this.meta.seed,{scenario:'standard',maxSteps:10000});this.view=copy(this.agent.perceive());this.meta.initial=this.view;this.meta.contract=this.view.contract;this.meta.mode=mode;this.meta.startedAt=new Date().toISOString();await this.policy?.reset?.(this.view,this.meta);this.meta.policy=this.policy?.name||this.meta.policy||'None';this.meta.policyType=this.policy?.kind||'unknown';this.meta.provenance={actionActorField:'records[].actor',actionSourceField:'records[].source',sources:{human:'direct human input',agent:'policy/model output',helper:'policy output during a deterministic helper decision',rejected:'attempt rejected by the game; see requestedSource'},policy:this.meta.policy,policyType:this.meta.policyType};await this.store.save(this.meta);this.state='paused';this.reason=mode==='demonstration'?'Ready: activate human controls':'Ready: start agent';this.changed();}catch(e){this.fail(e);}}
     fail(e){this.generation++;this.state='error';this.reason=String(e.message||e);this.changed();}
     async event(type){this.meta.events.push({type,atSeq:this.records.length,time:Date.now(),segment:this.segment});try{await this.store.save(this.meta);}catch(e){this.fail(e);return false;}return true;}
     pause(reason='Paused'){if(['finished','error'].includes(this.state))return;this.generation++;this.state='paused';this.reason=reason;this.autoDeadline=null;this.changed();}
@@ -59,6 +67,7 @@
         const prediction=await this.policy.choose(this.view);
         if(g!==this.generation||this.state!=='agent')return;
         if(!prediction?.action){this.state='help';this.reason='Agent cannot handle this choice';return;}
+        const modelDecision={action:copy(prediction.action),probabilities:prediction.probabilities?Array.from(prediction.probabilities):null};
         if(prediction.action.type==='Move'){
           const allowed=allowedDirections(this.view);
           if(!allowed.includes(prediction.action.direction)){
@@ -69,12 +78,12 @@
           }
         }
         if(this.uncertain&&prediction.probabilities&&Math.max(...prediction.probabilities)<.4&&this.records.length>this.tailIgnore){this.state='help';this.reason='Agent choices are close (not a safety score)';return;}
-        this.busy=false;await this.execute(prediction.action,helper(this.view)?'helper':'agent');
+        this.busy=false;await this.execute(prediction.action,helper(this.view)?'helper':'agent',{modelDecision});
         if(this.state==='agent'&&this.records.length>this.tailIgnore){const reason=stuck(this.records);if(reason){this.state='help';this.reason=reason;this.meta.events.push({type:'help-request',reason,atSeq:this.records.length});await this.store.save(this.meta);}}
       }catch(e){this.fail(e);}finally{this.busy=false;this.changed();}
     }
-    async human(action){if(this.state!=='human'||this.busy)return false;if(action.type==='Move'&&!allowedDirections(this.view).includes(action.direction)){this.reason='That direction is a known solid wall or this menu needs a choice.';this.changed();return false;}this.autoDeadline=null;await this.execute(action,'human');if(this.state==='human')await this.propose();return true;}
-    async execute(action,source){
+    async human(action){if(this.state!=='human'||this.busy)return false;if(action.type==='Move'&&!allowedDirections(this.view).includes(action.direction)){this.reason='That direction is a known solid wall or this menu needs a choice.';this.changed();return false;}const modelSuggestion=this.suggested?copy(this.suggested):null;this.autoDeadline=null;await this.execute(action,'human',{modelSuggestion});if(this.state==='human')await this.propose();return true;}
+    async execute(action,source,decision={}){
       if(this.busy)throw new Error('Action already in flight');
       this.busy=true;this.changed();
       this.pending=(async()=>{
@@ -84,7 +93,10 @@
           rejection=e.message;result={info:{recorded:false,turnDelta:0,rejection,requestedSource:source},terminated:false,truncated:false};
         }
         const after=copy(this.agent.perceive());
-        const record={seq:this.records.length+1,source:rejection?'rejected':source,segment:this.segment,before,after,action:copy(action),info:copy(result.info),terminated:result.terminated,truncated:result.truncated,decisionEnd:after.decision==='world'&&!helper(after),time:Date.now()};
+        const actor=actorFor(source);
+        const record={seq:this.records.length+1,source:rejection?'rejected':source,requestedSource:source,actor,segment:this.segment,before,after,action:copy(action),info:copy(result.info),terminated:result.terminated,truncated:result.truncated,decisionEnd:after.decision==='world'&&!helper(after),time:Date.now()};
+        if(decision.modelDecision)record.modelDecision=copy(decision.modelDecision);
+        if(decision.modelSuggestion)record.modelSuggestion=copy(decision.modelSuggestion);
         record.displayView=displayView;
         this.records.push(record);this.view=after;
         await this.store.append(this.meta.id,record);await this.policy?.advance?.(record);
@@ -95,10 +107,10 @@
     }
     async propose(){if(this.busy||this.state!=='human'||this.meta.mode==='demonstration')return;const seq=this.records.length,g=this.generation;try{const p=await this.policy.propose?.(this.view);if(this.state!=='human'||seq!==this.records.length||g!==this.generation)return;const last=this.records.at(-1);const clear=!stuck(this.records)&&!this.view.room.hitWarnings.some(w=>w.hostile&&w.x===this.view.player.x&&w.y===this.view.player.y);const useful=last&&(position(last.before)!==position(last.after)||effect(last.before)!==effect(last.after));const repeatsFailure=last&&!last.info.recorded&&JSON.stringify(last.action)===JSON.stringify(p?.action);this.suggested=p?.action&&clear&&useful&&!repeatsFailure?p:null;if(this.suggested&&this.autoReturn)this.autoDeadline=Date.now()+2000;this.changed();}catch(e){this.reason='Agent suggestion unavailable: '+e.message;this.changed();}}
     async finish(){this.pause('Finishing');if(this.pending)await this.pending;if(this.state==='error')return;this.state='finished';this.meta.endedAt=new Date().toISOString();await this.event('finished-by-human');this.changed();}
-    async export(){return {schemaVersion:1,meta:copy(this.meta),records:copy(this.records),replay:this.cachedReplay??(!this.busy?this.agent.exportReplay():null)};}
+    async export(){return exportEnvelope(this.meta,this.records,this.cachedReplay??(!this.busy?this.agent.exportReplay():null));}
   }
   class Baseline {
-    constructor(Policy){this.Policy=Policy;this.name='Programmed baseline';}
+    constructor(Policy){this.Policy=Policy;this.name='Programmed baseline';this.kind='programmed-baseline';}
     reset(){this.policy=new this.Policy();this.proposed=null;}
     clone(){const p=new this.Policy();Object.assign(p,structuredClone(this.policy));return p;}
     choose(v){this.proposed=this.clone();return {action:this.proposed.choose(v)};}
@@ -106,7 +118,7 @@
     propose(v){return {action:this.clone().choose(v)};}
   }
   class Remote {
-    constructor(url,token){const parsed=new URL(url);if(parsed.protocol!=='http:'||!['localhost','127.0.0.1'].includes(parsed.hostname))throw new Error('Inference must use a local HTTP service');this.url=url.replace(/\/$/,'');this.token=token;this.queue=Promise.resolve();this.id=null;this.name='Learned checkpoint';}
+    constructor(url,token){const parsed=new URL(url);if(parsed.protocol!=='http:'||!['localhost','127.0.0.1'].includes(parsed.hostname))throw new Error('Inference must use a local HTTP service');this.url=url.replace(/\/$/,'');this.token=token;this.queue=Promise.resolve();this.id=null;this.name='Learned checkpoint';this.kind='learned-checkpoint';}
     async request(path,body){const response=await fetch(this.url+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+this.token},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});const result=await response.json();if(!response.ok)throw new Error(result.error||'Inference unavailable');return result;}
     async reset(v,meta){const r=await this.request('/start',{view:v,meta});this.id=r.id;this.name=r.model;this.seq=0;meta.policy=r.model;meta.encoder=r.encoder;}
     async advance(record){const r=await this.request('/advance',{id:this.id,record});if(r.seq!==record.seq)throw new Error('Inference history mismatch');this.seq=r.seq;}
