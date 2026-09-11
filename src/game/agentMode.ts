@@ -1,6 +1,8 @@
 /** Opt-in at page load; ordinary play keeps its existing behavior. */
 export const AGENT_MODE = typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("agent") === "1";
+export let AGENT_FAST_MODE = false;
+export function setAgentFastMode(enabled: boolean) { AGENT_FAST_MODE = AGENT_MODE && enabled; }
 
 // A dedicated agent tab accepts actions through its API, not concurrent DOM input.
 if (AGENT_MODE) {

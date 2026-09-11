@@ -229,6 +229,7 @@ test('ladder blackout gates live readiness and replay until all transition flags
 test('live movement and queued movement are discarded during ladder transitions', () => {
   const context = {exports: {}, require(name) {
     if (name === '../game/actionReadiness') return loadReadiness();
+    if (name === '../game/agentMode') return {AGENT_FAST_MODE:false};
     if (name === '../game') return {Direction: {UP: 1, 1: 'UP'}};
     if (name === '../game/gameConstants') return {GameConstants: {isMobile: false}};
     if (name === '../room/room') return {TurnState: {}};

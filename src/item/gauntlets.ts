@@ -2,6 +2,7 @@ import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 
 export class Gauntlets extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "armor"]; }
   static itemName = "gauntlets";
   static examineText = "Gauntlets. Better knuckles, fewer regrets.";
 

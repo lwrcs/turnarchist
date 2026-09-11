@@ -17,7 +17,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, GRID, CENTER, visible_rooms, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 8, 'task': 'procedural-dungeon',
+ENCODER = {**ROTATED_ENCODER, 'version': 9, 'task': 'procedural-dungeon',
            'memory': '625 player-relative arrival-count cells, clipped at 8, rotated with view',
            'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning','known-door-link','arrival-dx','arrival-dy']}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,

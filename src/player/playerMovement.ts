@@ -1,4 +1,5 @@
 import { isActionReady } from "../game/actionReadiness";
+import { AGENT_FAST_MODE } from "../game/agentMode";
 import type { Player } from "./player";
 import { Direction } from "../game";
 import { GameConstants } from "../game/gameConstants";
@@ -161,6 +162,7 @@ export class PlayerMovement {
   canMove(): boolean {
     if (this.player.busyAnimating) return false;
     if (this.enemyTurnInputLockActive()) return false;
+    if (AGENT_FAST_MODE) return true;
 
     const now = Date.now();
     let cooldown = GameConstants.MOVEMENT_COOLDOWN;

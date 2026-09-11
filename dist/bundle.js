@@ -36493,7 +36493,7 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 7,
+        observationSchemaVersion: 8,
         actionSchemaVersion: 4,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
@@ -36538,6 +36538,8 @@ exports.AgentEnvironment = void 0;
 const combatTestbed_1 = __webpack_require__(/*! ./combatTestbed */ "./src/game/combatTestbed.ts");
 const agentPerception_1 = __webpack_require__(/*! ./agentPerception */ "./src/game/agentPerception.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
+const agentMemory_1 = __webpack_require__(/*! ./agentMemory */ "./src/game/agentMemory.ts");
+const agentMode_1 = __webpack_require__(/*! ./agentMode */ "./src/game/agentMode.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
 const downLadder_1 = __webpack_require__(/*! ../tile/downLadder */ "./src/tile/downLadder.ts");
 const upLadder_1 = __webpack_require__(/*! ../tile/upLadder */ "./src/tile/upLadder.ts");
@@ -36572,7 +36574,9 @@ class AgentEnvironment {
         this.contacts = new Map();
         this.contactKeys = new WeakMap();
         this.nextContactKey = 0;
+        this.memory = new agentMemory_1.AgentMemory();
     }
+    setFastMode(enabled) { (0, agentMode_1.setAgentFastMode)(enabled === true); }
     player() { return this.game.players[this.game.localPlayerID]; }
     contract() { return (0, agentContract_1.getAgentContract)(); }
     checkCompatibility(trainedOn) {
@@ -36653,6 +36657,7 @@ class AgentEnvironment {
             this.seed = seed;
             this.steps = 0;
             this.contacts.clear();
+            this.memory.clear();
             this.contactKeys = new WeakMap();
             this.nextContactKey = 0;
             this.recentTransitions = [];
@@ -36726,7 +36731,7 @@ class AgentEnvironment {
                             hazard: tile.getAgentHazardTraits?.(),
                             exit: tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder });
                 }
-            const perceived = (0, agentPerception_1.perceiveRoom)({
+            const perceived = this.memory.remember(room.globalId, (0, agentPerception_1.perceiveRoom)({
                 player: observation.player, tiles,
                 entities: room.entities.filter(e => !e.dead).map(e => {
                     const traits = (0, agentTraits_1.observeEntity)(e);
@@ -36740,7 +36745,7 @@ class AgentEnvironment {
                     }
                     return traits;
                 }),
-                items: room.items.map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
+                items: room.items.filter(item => !item.pickedUp).map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
                 warnings: (0, agentTraits_1.observeWarnings)(room.hitwarnings),
                 hazards: (room.projectiles ?? []).filter(p => !p.dead).flatMap(p => {
                     const traits = p.getAgentHazardTraits?.();
@@ -36752,7 +36757,7 @@ class AgentEnvironment {
                         ? Math.max(0, Math.min(1, 1 - darkness)) : 0;
                 },
                 blocked: (x, y) => room.isGameplaySightBlocked(x, y),
-            }, vision);
+            }, vision));
             const localIds = new Map();
             const entities = perceived.entities.map(e => {
                 const key = e.id;
@@ -36780,7 +36785,7 @@ class AgentEnvironment {
                 to: { roomId: d.linkedDoor.room.globalId, ...d.linkedDoor.getArrivalPosition(d.linkedDoor.room.roomX - room.roomX > 0 ? 1 : -1) },
                 linkedDoor: { x: d.linkedDoor.x, y: d.linkedDoor.y },
             }));
-            return { id: room.globalId, ...perceived, entities, connections, hitWarnings: [...perceived.hitWarnings.map(w => {
+            return { id: room.globalId, context: { depth: room.depth, roomType: room.type, environment: room.level?.environment?.type ?? null }, ...perceived, entities, connections, hitWarnings: [...perceived.hitWarnings.map(w => {
                         const { sourceId, ...rest } = w;
                         return sourceId && localIds.has(sourceId) ? { ...rest, sourceId: localIds.get(sourceId) } : rest;
                     }), ...perceived.hazards.filter(h => h.damage > 0).map(h => ({ x: h.x, y: h.y, z: h.z, hostile: true, directionOnly: false }))] };
@@ -36791,8 +36796,8 @@ class AgentEnvironment {
             r.roomY <= observation.player.y + Math.ceil(vision.range * .75) && r.roomY + r.height > observation.player.y - Math.ceil(vision.range * .75))
             .map(project);
         return {
-            schemaVersion: 7, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
-            contract: { ...this.contract(), observationSchemaVersion: 7, observationMode: "player-perception" },
+            schemaVersion: 8, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
+            contract: { ...this.contract(), observationSchemaVersion: 8, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             decision: observation.decision, selectionChoices: observation.selectionChoices,
@@ -36857,7 +36862,7 @@ class AgentEnvironment {
         const ladderChoice = player.screenMessage.open &&
             room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
         return {
-            schemaVersion: 7, contract: this.contract(),
+            schemaVersion: 8, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario,
             encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -36873,7 +36878,7 @@ class AgentEnvironment {
             room: { id: room.globalId, depth: room.depth, x: room.roomX, y: room.roomY,
                 width: room.width, height: room.height, tiles,
                 entities: room.entities.filter(entity => !entity.dead).map(agentTraits_1.observeEntity),
-                items: room.items.map(agentTraits_1.observeItem),
+                items: room.items.filter(item => !item.pickedUp).map(agentTraits_1.observeItem),
                 hitWarnings: (0, agentTraits_1.observeWarnings)(room.hitwarnings),
             },
             inventory: player.inventory.items.map((item, slot) => item ? {
@@ -36993,6 +36998,58 @@ exports.AgentEnvironment = AgentEnvironment;
 
 /***/ }),
 
+/***/ "./src/game/agentMemory.ts":
+/*!*********************************!*\
+  !*** ./src/game/agentMemory.ts ***!
+  \*********************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentMemory = void 0;
+/** Episode-local knowledge. Hidden combat state must never be refreshed from memory. */
+class AgentMemory {
+    constructor() {
+        this.entities = new Map();
+        this.tiles = new Map();
+    }
+    clear() { this.entities.clear(); this.tiles.clear(); }
+    remember(roomId, view) {
+        view.entities = view.entities.map(entity => {
+            if (entity.appearance === "identified") {
+                this.entities.set(entity.id, { ...entity });
+                return { ...entity, knowledge: "current" };
+            }
+            const known = this.entities.get(entity.id);
+            if (!known)
+                return entity;
+            return { ...known, ...entity, appearance: "identified", knowledge: "remembered",
+                health: null, facing: null,
+                combat: { ...known.combat, killDamageThreshold: null } };
+        });
+        view.tiles = view.tiles.map(tile => {
+            const key = `${roomId}:${tile.x},${tile.y}`;
+            if (tile.appearance === "identified") {
+                this.tiles.set(key, { ...tile });
+                return { ...tile, knowledge: "current" };
+            }
+            const known = this.tiles.get(key);
+            if (!known)
+                return tile;
+            // Remember geometry without restoring old door locks or trap phases.
+            return { ...tile, kind: known.kind, solid: tile.solid ?? known.solid,
+                isDoor: known.isDoor, exit: known.exit, appearance: "identified",
+                knowledge: "remembered" };
+        });
+        return view;
+    }
+}
+exports.AgentMemory = AgentMemory;
+
+
+/***/ }),
+
 /***/ "./src/game/agentMode.ts":
 /*!*******************************!*\
   !*** ./src/game/agentMode.ts ***!
@@ -37002,10 +37059,13 @@ exports.AgentEnvironment = AgentEnvironment;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AGENT_MODE = void 0;
+exports.setAgentFastMode = exports.AGENT_FAST_MODE = exports.AGENT_MODE = void 0;
 /** Opt-in at page load; ordinary play keeps its existing behavior. */
 exports.AGENT_MODE = typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("agent") === "1";
+exports.AGENT_FAST_MODE = false;
+function setAgentFastMode(enabled) { exports.AGENT_FAST_MODE = exports.AGENT_MODE && enabled; }
+exports.setAgentFastMode = setAgentFastMode;
 // A dedicated agent tab accepts actions through its API, not concurrent DOM input.
 if (exports.AGENT_MODE) {
     for (const event of ["keydown", "keyup", "mousedown", "mouseup", "mousemove",
@@ -37135,6 +37195,8 @@ function observeEntity(source) {
         isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
         pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
         interactable: booleanOrNull(entity.interactable),
+        isBoss: booleanOrNull(entity.isBossEnemy),
+        forwardOnlyAttack: booleanOrNull(entity.forwardOnlyAttack),
         facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
             ? { dx: [0, 0, 1, -1, 1, -1, 1, -1][entity.direction], dy: [1, -1, 0, 0, 1, -1, -1, 1][entity.direction] } : null,
         spawner: entity.getAgentSpawnTraits?.() ?? null,
@@ -37152,6 +37214,7 @@ exports.observeEntity = observeEntity;
 function observeItem(item) {
     return {
         id: stringOrNull(item.globalId), kind: item.constructor.name,
+        categories: item.getAgentCategories?.() ?? [],
         name: stringOrNull(item.name), x: numberOrNull(item.x), y: numberOrNull(item.y),
         stackCount: numberOrNull(item.stackCount),
         healingAmount: numberOrNull(item.getHealingAmount?.()),
@@ -62557,6 +62620,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Backplate = void 0;
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 class Backplate extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.coEquippable = (other) => {
@@ -62664,6 +62728,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChestPlate = void 0;
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 class ChestPlate extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.coEquippable = (other) => {
@@ -62769,6 +62834,7 @@ const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippa
  * consume or replenish air each turn.
  */
 class DivingHelmet extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => {
@@ -63340,6 +63406,7 @@ const item_1 = __webpack_require__(/*! ./item */ "./src/item/item.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameplaySettings_1 = __webpack_require__(/*! ../game/gameplaySettings */ "./src/game/gameplaySettings.ts");
 class Equippable extends item_1.Item {
+    getAgentCategories() { return [...super.getAgentCategories(), "equippable", ...(this.isShield ? ["shield"] : [])]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.wielder = null;
@@ -63430,6 +63497,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Gauntlets = void 0;
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 class Gauntlets extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.coEquippable = (other) => {
@@ -63545,6 +63613,7 @@ exports.Helmet = void 0;
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 const divingHelmet_1 = __webpack_require__(/*! ./divingHelmet */ "./src/item/divingHelmet.ts");
 class Helmet extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.getDescription = () => "HELMET\nA sturdy helmet.";
@@ -63592,6 +63661,7 @@ const events_1 = __webpack_require__(/*! ../event/events */ "./src/event/events.
 const itemExamineText_1 = __webpack_require__(/*! ../examine/itemExamineText */ "./src/examine/itemExamineText.ts");
 // Item class extends Drawable class and represents an item in the game
 class Item extends drawable_1.Drawable {
+    getAgentCategories() { return []; }
     // Constructor for the Item class
     constructor(level, x, y, z = 0) {
         super();
@@ -65622,6 +65692,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ShoulderPlates = void 0;
 const equippable_1 = __webpack_require__(/*! ./equippable */ "./src/item/equippable.ts");
 class ShoulderPlates extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "armor"]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.coEquippable = (other) => {
@@ -66373,6 +66444,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Usable = void 0;
 const item_1 = __webpack_require__(/*! ../item */ "./src/item/item.ts");
 class Usable extends item_1.Item {
+    getAgentCategories() { return [...super.getAgentCategories(), "usable", ...(this.canUseOnOther ? ["use-on"] : [])]; }
     constructor(level, x, y) {
         super(level, x, y);
         this.onUse = (player) => { };
@@ -68993,6 +69065,7 @@ const skills_1 = __webpack_require__(/*! ../../game/skills */ "./src/game/skills
 const skillBalance_1 = __webpack_require__(/*! ../../game/skillBalance */ "./src/game/skillBalance.ts");
 const stats_1 = __webpack_require__(/*! ../../game/stats */ "./src/game/stats.ts");
 class Weapon extends equippable_1.Equippable {
+    getAgentCategories() { return [...super.getAgentCategories(), "weapon"]; }
     constructor(level, x, y, status) {
         super(level, x, y);
         this._cooldownLastTurnProcessed = null;
@@ -81921,6 +81994,7 @@ exports.PlayerInputHandler = PlayerInputHandler;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PlayerMovement = void 0;
 const actionReadiness_1 = __webpack_require__(/*! ../game/actionReadiness */ "./src/game/actionReadiness.ts");
+const agentMode_1 = __webpack_require__(/*! ../game/agentMode */ "./src/game/agentMode.ts");
 const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 const gameConstants_1 = __webpack_require__(/*! ../game/gameConstants */ "./src/game/gameConstants.ts");
 const room_1 = __webpack_require__(/*! ../room/room */ "./src/room/room.ts");
@@ -82084,6 +82158,8 @@ class PlayerMovement {
             return false;
         if (this.enemyTurnInputLockActive())
             return false;
+        if (agentMode_1.AGENT_FAST_MODE)
+            return true;
         const now = Date.now();
         let cooldown = gameConstants_1.GameConstants.MOVEMENT_COOLDOWN;
         // Apply slower cooldown when enemies are nearby and setting is enabled
@@ -85946,6 +86022,7 @@ const torch_1 = __webpack_require__(/*! ../item/light/torch */ "./src/item/light
 const rookEnemy_1 = __webpack_require__(/*! ../entity/enemy/rookEnemy */ "./src/entity/enemy/rookEnemy.ts");
 const beamEffect_1 = __webpack_require__(/*! ../projectile/beamEffect */ "./src/projectile/beamEffect.ts");
 const environmentTypes_1 = __webpack_require__(/*! ../constants/environmentTypes */ "./src/constants/environmentTypes.ts");
+const agentMode_1 = __webpack_require__(/*! ../game/agentMode */ "./src/game/agentMode.ts");
 const occultistEnemy_1 = __webpack_require__(/*! ../entity/enemy/occultistEnemy */ "./src/entity/enemy/occultistEnemy.ts");
 const decoration_1 = __webpack_require__(/*! ../tile/decorations/decoration */ "./src/tile/decorations/decoration.ts");
 const bomb_1 = __webpack_require__(/*! ../entity/object/bomb */ "./src/entity/object/bomb.ts");
@@ -86836,7 +86913,7 @@ class Room {
         };
         this.update = () => {
             if (this.turn == TurnState.computerTurn) {
-                const delay = this.game.replayManager?.isReplaying?.()
+                const delay = agentMode_1.AGENT_FAST_MODE ? 0 : this.game.replayManager?.isReplaying?.()
                     ? gameConstants_1.GameConstants.REPLAY_COMPUTER_TURN_DELAY
                     : levelConstants_1.LevelConstants.COMPUTER_TURN_DELAY;
                 if (Date.now() - this.playerTurnTime >= delay) {
@@ -100202,7 +100279,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("84b5707d9e22dc002c64")
+/******/ 		__webpack_require__.h = () => ("6d25e4d038648841482e")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

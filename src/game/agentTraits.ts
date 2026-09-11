@@ -14,6 +14,7 @@ interface EntityTraitsSource {
   destroyable?: boolean; interactable?: boolean; baseDamage?: number;
   orthogonalAttack?: boolean; diagonalAttack?: boolean;
   direction?: number;
+  forwardOnlyAttack?: boolean; isBossEnemy?: boolean;
   getAgentSpawnTraits?: () => {enemyType: string};
 }
 
@@ -31,6 +32,8 @@ export function observeEntity(source: object) {
     isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
     pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
     interactable: booleanOrNull(entity.interactable),
+    isBoss: booleanOrNull(entity.isBossEnemy),
+    forwardOnlyAttack: booleanOrNull(entity.forwardOnlyAttack),
     facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
       ? {dx: [0,0,1,-1,1,-1,1,-1][entity.direction], dy: [1,-1,0,0,1,-1,-1,1][entity.direction]} : null,
     spawner: entity.getAgentSpawnTraits?.() ?? null,
@@ -46,6 +49,7 @@ export function observeEntity(source: object) {
 }
 
 interface ItemTraitsSource {
+  getAgentCategories?: () => string[];
   getAgentAttackTraits?: () => {pattern: string; minimumDamage: number} | null;
   getHealingAmount?: () => number;
   stackCount?: number; equipped?: boolean; canUseOnOther?: boolean;
@@ -61,6 +65,7 @@ interface ItemTraitsSource {
 export function observeItem(item: ItemTraitsSource) {
   return {
     id: stringOrNull(item.globalId), kind: item.constructor.name,
+    categories: item.getAgentCategories?.() ?? [],
     name: stringOrNull(item.name), x: numberOrNull(item.x), y: numberOrNull(item.y),
     stackCount: numberOrNull(item.stackCount),
     healingAmount: numberOrNull(item.getHealingAmount?.()),

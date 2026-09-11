@@ -25,6 +25,7 @@ interface WeaponStatus {
 }
 
 export abstract class Weapon extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "weapon"]; }
   game: Game;
   range: number;
   canMine: boolean;

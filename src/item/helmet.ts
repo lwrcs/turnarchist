@@ -3,6 +3,7 @@ import { Equippable } from "./equippable";
 import { DivingHelmet } from "./divingHelmet";
 
 export class Helmet extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "armor"]; }
   static itemName = "helmet";
 
   constructor(level: Room, x: number, y: number) {

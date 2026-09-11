@@ -43,7 +43,7 @@
   }
   class Session {
     constructor({agent,policy,store,meta,onChange=()=>{}}){Object.assign(this,{agent,policy,store,onChange});this.meta={...meta,schemaVersion:1,events:[],excludedSegments:[]};this.records=[];this.state='ready';this.busy=false;this.generation=0;this.segment=0;this.pending=null;this.reason='';this.suggested=null;this.autoReturn=false;this.speed=500;this.uncertain=false;this.view=null;this.tailIgnore=0;}
-    changed(){this.onChange(this);}
+    changed(){this.agent.setFastMode?.(this.state==='agent'&&this.speed===0);this.onChange(this);}
     async start(mode){this.state='loading';this.changed();try{await this.agent.reset(this.meta.seed,{scenario:'standard',maxSteps:10000});this.view=copy(this.agent.perceive());this.meta.initial=this.view;this.meta.contract=this.view.contract;this.meta.mode=mode;this.meta.startedAt=new Date().toISOString();await this.policy?.reset?.(this.view,this.meta);await this.store.save(this.meta);this.state='paused';this.reason=mode==='demonstration'?'Ready: activate human controls':'Ready: start agent';this.changed();}catch(e){this.fail(e);}}
     fail(e){this.generation++;this.state='error';this.reason=String(e.message||e);this.changed();}
     async event(type){this.meta.events.push({type,atSeq:this.records.length,time:Date.now(),segment:this.segment});try{await this.store.save(this.meta);}catch(e){this.fail(e);return false;}return true;}

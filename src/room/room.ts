@@ -74,6 +74,7 @@ import { Torch } from "../item/light/torch";
 import { RookEnemy } from "../entity/enemy/rookEnemy";
 import { BeamEffect } from "../projectile/beamEffect";
 import { EnvType } from "../constants/environmentTypes";
+import { AGENT_FAST_MODE } from "../game/agentMode";
 import { Pickaxe } from "../item/tool/pickaxe";
 import { OccultistEnemy } from "../entity/enemy/occultistEnemy";
 import { Puddle } from "../tile/decorations/puddle";
@@ -1940,7 +1941,7 @@ export class Room {
 
   update = () => {
     if (this.turn == TurnState.computerTurn) {
-      const delay = (this.game as any).replayManager?.isReplaying?.()
+      const delay = AGENT_FAST_MODE ? 0 : (this.game as any).replayManager?.isReplaying?.()
         ? GameConstants.REPLAY_COMPUTER_TURN_DELAY
         : LevelConstants.COMPUTER_TURN_DELAY;
       if (Date.now() - this.playerTurnTime >= delay) {

@@ -2,6 +2,7 @@ import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 
 export class Backplate extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "armor"]; }
   static itemName = "backplate";
   static examineText = "A backplate. Watch your back—literally.";
 

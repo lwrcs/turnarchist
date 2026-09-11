@@ -19,6 +19,8 @@ function setup(timeoutMs = 500) {
   class DownLadder {}
   class UpLadder {}
   const {AgentEnvironment} = load('src/game/agentEnvironment.ts', {
+    './agentMemory': load('src/game/agentMemory.ts', {}),
+    './agentMode': {setAgentFastMode() {}},
     './combatTestbed': load('src/game/combatTestbed.ts'),
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
     '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
@@ -55,10 +57,19 @@ test('contact IDs survive dimming and track observed motion without exposing glo
   room.entities=[{globalId:'hidden-global-a',x:0,y:1,z:0,isEnemy:true,health:4},{globalId:'hidden-global-b',x:2,y:1,z:0,isEnemy:true,health:4}];
   const first=env.perceive().room.entities;assert.equal(first[0].id,'c1');assert.equal(first[1].id,'c2');
   room.vis=Array.from({length:3},()=>[1,1,1]);
-  const dark=env.perceive().room.entities;assert.equal(dark[0].id,'c1');assert.equal(dark[0].health,undefined);assert.equal(dark[0].isEnemy,undefined);
+  const dark=env.perceive().room.entities;assert.equal(dark[0].id,'c1');assert.equal(dark[0].health,null);assert.equal(dark[0].isEnemy,true);assert.equal(dark[0].knowledge,'remembered');
   assert.equal(JSON.stringify(dark),JSON.stringify(env.perceive().room.entities));
   room.entities[0].x=1;await env.step({type:'Move',direction:'up'});
   const moved=env.perceive().room.entities[0];assert.equal(moved.id,'c1');assert.equal(moved.tracking.dx,1);assert.equal(moved.tracking.stepsSinceSeen,1);
+});
+
+test('picked-up animation residues are excluded from ground observations',async()=>{
+  const {env,room}=setup();await env.reset(123);
+  room.getGameplayLightTile=()=>null;room.isGameplaySightBlocked=()=>false;room.vis=[];
+  room.items=[{x:1,y:1,z:0,pickedUp:true,name:'Coin'},{x:1,y:1,z:0,pickedUp:true,name:'Wall torch'},
+    {x:1,y:1,z:0,pickedUp:false,name:'Available item'}];
+  assert.equal(env.observe().room.items.length,1);
+  assert.equal(env.perceive().room.items.length,1);
 });
 
 test('neighboring room data requires discovery and the same path',async()=>{
@@ -277,6 +288,7 @@ function craftingFixture() {
   player.health = 0.5; player.maxHealth = 2;
   player.stall = () => { player.turnCount++; };
   class Item {
+    getAgentCategories() { return []; }
     constructor(level, x, y) { Object.assign(this, {level, x, y, stackCount: 1, broken:false}); }
     getUseTurnCost() { return null; }
   }
@@ -451,12 +463,12 @@ test('identified upward ladders expose return traits without revealing dark exit
     getTraversalTraits:()=>({kind:'ladder',direction:'up',unlocked:true})});
   room.roomArray[2][1]=ladder;room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];
   room.isGameplaySightBlocked=()=>false;room.vis=[[],[],[]];room.vis[2][1]=0;
-  const identified=env.perceive();assert.equal(identified.schemaVersion,7);
-  assert.equal(identified.contract.observationSchemaVersion,7);
+  const identified=env.perceive();assert.equal(identified.schemaVersion,8);
+  assert.equal(identified.contract.observationSchemaVersion,8);
   assert.equal(identified.room.tiles[0].exit,true);
   assert.equal(identified.room.tiles[0].traversal.direction,'up');
   room.vis[2][1]=1;
-  const dark=env.perceive().room.tiles[0];assert.equal(dark.exit,null);assert.equal(dark.traversal,null);
+  const dark=env.perceive().room.tiles[0];assert.equal(dark.exit,true);assert.equal(dark.knowledge,'remembered');assert.equal(dark.traversal,null);
 });
 
 test('combat reset dispatches the preset and exports its reproducible setup separately from actions',async()=>{

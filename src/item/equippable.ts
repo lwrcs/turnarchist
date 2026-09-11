@@ -6,6 +6,7 @@ import { GameplaySettings } from "../game/gameplaySettings";
 import { Weapon } from "./weapon/weapon";
 
 export class Equippable extends Item {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "equippable", ...(this.isShield ? ["shield"] : [])]; }
   wielder: Player | null = null;
   equipped: boolean;
   isShield: boolean = false;

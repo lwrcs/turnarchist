@@ -2,6 +2,7 @@ import { Room } from "../room/room";
 import { Equippable } from "./equippable";
 
 export class ChestPlate extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "armor"]; }
   static itemName = "chest plate";
   static examineText = "A chest plate. Solid where it counts.";
 

@@ -36,11 +36,19 @@ HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 GRID=25
 CENTER=12
 SPAWN_TYPES=('pawn','crab','frog','zombie','skull','energywizard','charge','rook','bishop','armoredzombie','bigskull','queen','knight','bigknight','firewizard','armoredskull','mummy','spider','bigfrog','beetle','king','boltcaster','earthwizard','chessknight','giantfrog','worm')
-CHANNELS=29+len(SPAWN_TYPES)+1
-ENCODER = {'version': 5, 'radius': CENTER, 'channels': CHANNELS, 'frames': 2, 'actions': ACTIONS,
-           'perceptionSchema':7,'spawnerTypes':list(SPAWN_TYPES), 'contacts':'observed displacement and elapsed decisions',
+TRAIT_START=29+len(SPAWN_TYPES)+1
+ITEM_CATEGORIES=('equippable','usable','use-on','weapon','armor','shield')
+ROOM_TYPES=('START','DUNGEON','BOSS','BIGDUNGEON','TREASURE','FOUNTAIN','COFFIN','GRASS','PUZZLE','KEYROOM','CHESSBOARD','MAZE','CORRIDOR','SPIKECORRIDOR','UPLADDER','DOWNLADDER','SHOP','BIGCAVE','CAVE','SPAWNER','ROPEHOLE','ROPECAVE','TUTORIAL','GRAVEYARD','FOREST','ROPEUP','GEMCAVE')
+# Entity semantics (6), ground categories (6), inventory categories (6),
+# terrain memory (1), depth known/value (2), environments (16), room types (+unknown).
+CONTEXT_START=TRAIT_START+19
+CHANNELS=CONTEXT_START+2+16+len(ROOM_TYPES)+1
+ENCODER = {'version': 7, 'radius': CENTER, 'channels': CHANNELS, 'frames': 2, 'actions': ACTIONS,
+           'itemCategories':list(ITEM_CATEGORIES),'roomTypes':list(ROOM_TYPES),
+           'memory':'recognized contacts and terrain; hidden health/facing unknown',
+           'perceptionSchema':8,'spawnerTypes':list(SPAWN_TYPES), 'contacts':'observed displacement and elapsed decisions',
            'view':'25x19 rectangle padded to 25x25 for rotation'}
-ROTATED_ENCODER = {**ENCODER,'version':6,'coordinateRotation':'random-quarter-turn-per-episode'}
+ROTATED_ENCODER = {**ENCODER,'version':8,'coordinateRotation':'random-quarter-turn-per-episode'}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = GRID * GRID * CHANNELS + 5
 BROWSER_RECYCLE_EPISODES = 64
@@ -59,8 +67,8 @@ def visible_rooms(view):
 
 
 def encode(view):
-    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 7:
-        raise ValueError('Restricted perception v7 required')
+    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 8:
+        raise ValueError('Restricted perception v8 required')
     grid = np.zeros((GRID, GRID, CHANNELS), dtype=np.float32)
     px, py = view['player']['x'], view['player']['y']
     def cell(x, y):
@@ -86,9 +94,16 @@ def encode(view):
                 if c is None:
                     continue
                 # Current-room contacts take precedence at shared boundary coordinates.
-                c[3:11]=0;c[12:23]=0;c[27]=0;c[29:]=0
+                c[3:11]=0;c[12:23]=0;c[27]=0;c[29:TRAIT_START+6]=0
                 c[3] = 1  # A visible entity/contact occupies this cell.
                 c[4] = float(identified)
+                c[TRAIT_START:TRAIT_START+6]=[
+                    ent.get('knowledge')=='remembered',
+                    identified and ent.get('forwardOnlyAttack') is not None,
+                    identified and ent.get('forwardOnlyAttack') is True,
+                    identified and ent.get('isBoss') is not None,
+                    identified and ent.get('isBoss') is True,
+                    identified and ent.get('knowledge')!='remembered']
                 c[5] = float(identified and ent.get('isEnemy') is True)
                 c[6] = float(identified and ent.get('collidable') is True)
                 if identified and ent.get('health') is not None:
@@ -110,12 +125,31 @@ def encode(view):
                 tracking=ent.get('tracking')
                 if tracking:c[19:23]=[1,np.clip(tracking['dx']/GRID/2+.5,0,1),np.clip(tracking['dy']/GRID/2+.5,0,1),min(tracking['stepsSinceSeen']/8,1)]
     for room in rooms:
+        context=room.get('context') or {}
+        for tile in room['tiles']:
+            c=cell(tile['x'],tile['y'])
+            if c is None:continue
+            c[TRAIT_START+18:]=0
+            c[TRAIT_START+18]=tile.get('knowledge')=='remembered'
+            depth=context.get('depth')
+            if depth is not None:c[CONTEXT_START:CONTEXT_START+2]=[1,np.clip((depth+10)/100,0,1)]
+            environment=context.get('environment')
+            if environment is not None:c[CONTEXT_START+2+(environment if isinstance(environment,int) and 0<=environment<15 else 15)]=1
+            kind=context.get('roomType')
+            if kind is not None:c[CONTEXT_START+18+(ROOM_TYPES.index(kind) if kind in ROOM_TYPES else len(ROOM_TYPES))]=1
         for hazard in room.get('hazards',[]):
             c=cell(hazard['x'],hazard['y'])
             if c is not None and hazard.get('kind')=='enemy-spawn':c[23:25]=[1,np.clip(hazard['damage']/10,0,1)]
         for item in room.get('items',[]):
             c=cell(item['x'],item['y'])
-            if c is not None:c[25:27]=[1,item.get('appearance')=='identified']
+            if c is not None:
+                c[25:27]=[1,item.get('appearance')=='identified']
+                if item.get('appearance')=='identified':
+                    c[TRAIT_START+6:TRAIT_START+12]=np.maximum(c[TRAIT_START+6:TRAIT_START+12],[kind in item.get('categories',[]) for kind in ITEM_CATEGORIES])
+    player_cell=cell(px,py)
+    for item in view['inventory']:
+        if item:
+            player_cell[TRAIT_START+12:TRAIT_START+18]=np.maximum(player_cell[TRAIT_START+12:TRAIT_START+18],[kind in item.get('categories',[]) for kind in ITEM_CATEGORIES])
     for warning in [w for room in rooms for w in room['hitWarnings']]:
         c = cell(warning['x'], warning['y'])
         if c is not None and warning.get('hostile'):

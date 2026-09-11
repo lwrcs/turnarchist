@@ -1,5 +1,12 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
 const {Session,stuck,helper}=require('../agent-teaching.js');
+test('super fast applies only during agent control and restores timing on handoff',async()=>{
+  const {session:s,agent}=setup();const modes=[];agent.setFastMode=fast=>modes.push(fast);
+  await s.start('watch');s.speed=0;await s.resume(true);
+  assert.ok(modes.includes(true));assert.equal(modes.at(-1),false);
+  await s.take();assert.equal(modes.at(-1),false);
+  assert.equal(s.records.length,1);
+});
 const view=()=>({schemaVersion:6,observationMode:'player-perception',contract:{},decision:'world',player:{x:0,y:0,health:2,maxHealth:2},inventory:[],room:{id:'a',entities:[],items:[],hitWarnings:[],tiles:[]}});
 function setup(){let v=view();const written=[];const agent={async reset(){},perceive:()=>structuredClone(v),async step(a){v.player.x++;return {info:{recorded:true,turnDelta:1},terminated:false,truncated:false}},exportReplay:()=>({})};const store={async save(){},async append(id,r){written.push(r)}};const policy={name:'test',reset(){},choose:()=>({action:{type:'Move',direction:'right'}}),advance(){}};const session=new Session({agent,policy,store,meta:{id:'test',seed:1}});return {session,agent,store,policy,written};}
 test('human input requires explicit takeover and records provenance',async()=>{const {session:s,written}=setup();await s.start('demonstration');assert.equal(await s.human({type:'Move',direction:'right'}),false);await s.take();await s.human({type:'Move',direction:'right'});assert.equal(written.length,1);assert.equal(written[0].source,'human');assert.equal(written[0].before.player.x,0);assert.equal(written[0].after.player.x,1);assert.equal(written[0].segment,1);});

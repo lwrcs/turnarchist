@@ -7,6 +7,7 @@ import { Equippable } from "./equippable";
  * consume or replenish air each turn.
  */
 export class DivingHelmet extends Equippable {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "armor"]; }
   static itemName = "diving helmet";
 
   readonly maxAir: number;

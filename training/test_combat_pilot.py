@@ -4,18 +4,32 @@ import unittest
 from unittest.mock import Mock
 import numpy as np
 import torch
-from combat_pilot import CombatEnv, encode, SIZE, GRID, CENTER, CHANNELS, evaluate, rotate_features, world_action, BROWSER_RECYCLE_EPISODES
+from combat_pilot import CombatEnv, encode, SIZE, GRID, CENTER, CHANNELS, TRAIT_START, CONTEXT_START, evaluate, rotate_features, world_action, BROWSER_RECYCLE_EPISODES
 
 
 class EncodingTests(unittest.TestCase):
     def view(self):
-        return {'observationMode':'player-perception','schemaVersion':7,
+        return {'observationMode':'player-perception','schemaVersion':8,
                 'player':{'x':12,'y':12,'health':2},'inventory':[],
                 'room':{'tiles':[], 'entities':[], 'hitWarnings':[]}}
 
     def test_diagnostic_rejected(self):
         v=self.view(); v['observationMode']='diagnostic-current-room'
         with self.assertRaises(ValueError): encode(v)
+
+    def test_shared_traits_memory_categories_and_context_reach_policy(self):
+        v=self.view()
+        v['room']['tiles']=[{'x':12,'y':12,'knowledge':'remembered'}]
+        v['room']['context']={'depth':-1,'environment':2,'roomType':'FOREST'}
+        v['room']['entities']=[{'x':13,'y':12,'appearance':'identified','knowledge':'remembered','forwardOnlyAttack':True,'isBoss':True}]
+        v['room']['items']=[{'x':12,'y':12,'appearance':'identified','categories':['equippable','weapon']}]
+        v['inventory']=[{'categories':['usable']}]
+        grid=encode(v)[:-5].reshape(GRID,GRID,CHANNELS)
+        np.testing.assert_array_equal(grid[CENTER,CENTER+1,TRAIT_START:TRAIT_START+6],[1,1,1,1,1,0])
+        self.assertEqual(grid[CENTER,CENTER,TRAIT_START+6],1)
+        self.assertEqual(grid[CENTER,CENTER,TRAIT_START+13],1)
+        self.assertEqual(grid[CENTER,CENTER,TRAIT_START+18],1)
+        self.assertAlmostEqual(grid[CENTER,CENTER,CONTEXT_START+1],.09)
 
     def test_giant_footprint_and_label_independence(self):
         v=self.view()

@@ -1,9 +1,9 @@
 # Teaching the agent
 
-Current regression build: perception schema v7 and dungeon encoder v8 add wider
+Current regression build: perception schema v8 and dungeon encoder v9 add wider
 visibility, contact tracking, facing, neighboring rooms and spawn hazards.
 Earlier checkpoints/datasets are deliberately
-incompatible. Use the programmed baseline or demonstrations until a v8 checkpoint
+incompatible. Use the programmed baseline or demonstrations until a v9 checkpoint
 is trained and evaluated. The existing checkpoint and inference process have not
 been overwritten or silently relabeled.
 
@@ -34,6 +34,25 @@ The board deliberately draws the restricted observation as labeled tiles rather
 than the full game's artwork. Click a tile to inspect visible contents. This keeps
 unseen information out of the demonstration. It is an initial teaching interface,
 not a complete replacement for the normal game's inventory and menus.
+
+**Super fast** under Agent pace removes the between-action delay and the ordinary
+input cooldown and the enemy-turn presentation delay. Enemy turns still execute;
+animation and transition readiness still apply, and
+each action is saved before another is executed. Taking control or pausing restores
+normal input timing. The diagnostic lab also has a Super fast checkbox.
+
+Identified contacts stay recognized when they return to darkness. A dashed outline
+marks remembered identities; current health and facing become unknown. Previously
+illuminated terrain is remembered separately for each room. Fresh light updates
+that knowledge, without memory exposing current hidden trap phases or door locks.
+Memory resets with each new run and does not create contacts outside the view.
+Collected-item animations are excluded from ground items immediately on pickup.
+
+Shared traits include pushable, chain-pushable, breakable, forward-only attacks
+(turn before attacking in a new direction), and boss status. Item categories include
+equippable, usable, use-on, weapon, armor and shield. Depth, environment and room
+type are recorded. These categories, context and memory flags reach the learner's
+features; they do not prescribe goals such as collecting a particular reward.
 
 The observation covers a fixed 25×19 tile window. Dim entities and items remain
 unidentified contacts; doors remain recognizable without revealing their type or
@@ -126,7 +145,7 @@ Automated checks cover input ownership, delayed predictions, save failure,
 takeover during an action, session isolation, baseline shadow state, zero-turn
 helpers, rotation and Python feature-history parity. Browser checks cover a narrow
 390px layout, two games, recording export and learned agent → human → agent
-handoff in the earlier compatible build. Current v7/v8 checks cover recording,
+handoff in the earlier compatible build. Current v8/v9 checks cover recording,
 exports, ordinary play, vector rotation, contact identity, neighboring rooms and
 spawn damage. A controlled main-floor ladder fixture confirms the menu transition
 from depth 0 to depth 1 and a subsequent movement action; this is not an autonomous

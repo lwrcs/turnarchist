@@ -16,6 +16,7 @@ import { ITEM_EXAMINE_TEXT } from "../examine/itemExamineText";
 
 // Item class extends Drawable class and represents an item in the game
 export class Item extends Drawable {
+  getAgentCategories(): string[] { return []; }
   /** Read-only action metadata. Unknown mechanics must override instead of guessing. */
   getUseTurnCost = (): number | null => null;
   getUseOnTurnCost = (_other: Item): number | null => null;

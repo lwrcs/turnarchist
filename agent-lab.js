@@ -2,6 +2,7 @@
   const frame = document.getElementById('game');
   const status = document.getElementById('status');
   const result = document.getElementById('result');
+  document.getElementById('super-fast').onchange = event => api().setFastMode(event.target.checked);
   const buttons = Array.from(document.querySelectorAll('button'));
   const api = () => {
     const agent = frame.contentWindow.agent;

@@ -5,6 +5,7 @@ import { Sound } from "../../sound/sound";
 import { Room } from "../../room/room";
 
 export class Usable extends Item {
+  getAgentCategories(): string[] { return [...super.getAgentCategories(), "usable", ...(this.canUseOnOther ? ["use-on"] : [])]; }
   user: Player;
   canUseOnOther: boolean;
   constructor(level: Room, x: number, y: number) {
