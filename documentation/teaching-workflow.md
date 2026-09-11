@@ -106,11 +106,12 @@ also stops the affected run. No fallback policy is silently substituted.
 ## Saving and training
 
 Actions save locally in this browser's IndexedDB. Export current sessions before
-clearing browser data. Choose the repository's `training/data/teaching` directory
-with **Choose data folder**, then **Save current to data folder** writes the JSON
-there directly. Browser security requires that one explicit folder choice; the
-browser normally returns to the same folder on later visits. **Download current
-copy** remains available as a backup. After reload, **Saved recordings** can export
+clearing browser data. **Save current to training data** asks for the repository's
+`training/data/teaching` directory on first use and then writes the JSON there
+directly. Browser security requires that one explicit folder choice; the browser
+normally returns to the same folder on later visits. **Download backup** remains
+optional. **End run** only stops play because acknowledged actions are already
+saved in the browser. After reload, **Recover an older browser-saved run** can export
 acknowledged records; live game continuation is not restored. Current-session
 export additionally includes the game's replay. Reload exports contain the recorded
 observations and actions, not that separate replay. Mistaken human segments can be
