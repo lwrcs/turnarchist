@@ -36602,7 +36602,7 @@ class AgentEnvironment {
         if (!Number.isFinite(nx) || !Number.isFinite(ny) || nx < 0 || nx > 1 || ny < 0 || ny > 1)
             return null;
         const player = this.player(), inventory = player.inventory;
-        if (inventory.isOpen || this.observe().decision !== "world")
+        if (inventory.isOpen || !["world", "vending"].includes(this.observe().decision))
             return null;
         const width = gameConstants_1.GameConstants.WIDTH, height = gameConstants_1.GameConstants.HEIGHT, tileSize = gameConstants_1.GameConstants.TILESIZE;
         const dx = Math.floor((nx * width - width / 2 + tileSize / 2) / tileSize);
@@ -36988,8 +36988,8 @@ class AgentEnvironment {
             const before = this.observe();
             const beforeFrame = this.tacticalFrame();
             const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
-            const vendingAction = actionInput.type === "VendingMachineBuy" ||
-                (before.decision === "vending" && actionInput.type === "DismissInteraction");
+            const vendingAction = before.decision === "vending" &&
+                ["VendingMachineBuy", "DismissInteraction", "Move"].includes(actionInput.type);
             const dismissAction = before.decision === "dismissable-interaction" &&
                 actionInput.type === "DismissInteraction";
             if (before.decision === "unsupported-modal" ||
@@ -100396,7 +100396,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("efded8ea973436143fa3")
+/******/ 		__webpack_require__.h = () => ("e18cba59b1b41c14b5e9")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -12,7 +12,7 @@
     return {schemaVersion:1,meta:resultMeta,records:resultRecords,...(replay===undefined?{}:{replay:copy(replay)})};
   }
   function allowedDirections(v){
-    if(v.decision!=='world')return [];
+    if(!['world','vending'].includes(v.decision))return [];
     const weapon=v.inventory.find(i=>i?.activeWeapon)?.traits;
     return ['up','right','down','left'].filter((direction,index)=>{
       const [dx,dy]=[[0,-1],[1,0],[0,1],[-1,0]][index],x=v.player.x+dx,y=v.player.y+dy;

@@ -75,7 +75,7 @@ export class AgentEnvironment {
   getWorldClickAction(nx: number, ny: number): AgentAction | null {
     if(!Number.isFinite(nx)||!Number.isFinite(ny)||nx<0||nx>1||ny<0||ny>1)return null;
     const player=this.player(), inventory=player.inventory;
-    if(inventory.isOpen||this.observe().decision!=="world")return null;
+    if(inventory.isOpen||!["world","vending"].includes(this.observe().decision))return null;
     const width=GameConstants.WIDTH,height=GameConstants.HEIGHT,tileSize=GameConstants.TILESIZE;
     const dx=Math.floor((nx*width-width/2+tileSize/2)/tileSize);
     const dy=Math.floor((ny*height-height/2+tileSize/2)/tileSize);
@@ -420,8 +420,8 @@ export class AgentEnvironment {
       const before = this.observe();
       const beforeFrame = this.tacticalFrame();
       const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
-      const vendingAction=actionInput.type==="VendingMachineBuy"||
-        (before.decision==="vending"&&actionInput.type==="DismissInteraction");
+      const vendingAction=before.decision==="vending"&&
+        ["VendingMachineBuy","DismissInteraction","Move"].includes(actionInput.type);
       const dismissAction=before.decision==="dismissable-interaction"&&
         actionInput.type==="DismissInteraction";
       if (before.decision === "unsupported-modal" ||

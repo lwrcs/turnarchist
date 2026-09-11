@@ -473,14 +473,18 @@ test('vending exposes its offer and records buying separately from closing',asyn
   room.getGameplayLightTile=()=>null;room.isGameplaySightBlocked=()=>false;room.vis=[];
   player.screenMessage.close=()=>{player.screenMessage.open=false;};
   let buys=0;player.inventory.hasItemCount=()=>true;
-  player.openVendingMachine={open:true,item:{name:'health potion',stackCount:1},costItems:[{name:'coin',stackCount:9}],quantity:2,isInf:false,
+  const vending=player.openVendingMachine={open:true,item:{name:'health potion',stackCount:1},costItems:[{name:'coin',stackCount:9}],quantity:2,isInf:false,
     space(){buys++;},close(){this.open=false;player.openVendingMachine=null;}};
   const Processor=productionMethods('src/player/playerActionProcessor.ts',['process'],{isActionReady:()=>true});
   const processor=new Processor();processor.player=player;processor.record=action=>actions.push(action);player.actionProcessor=processor;
   const offered=env.perceive();assert.equal(offered.decision,'vending');assert.equal(offered.vendingMachine.item.name,'health potion');
   assert.equal(offered.vendingMachine.costs[0].stackCount,9);assert.equal(offered.vendingMachine.quantity,2);assert.equal(offered.vendingMachine.canAfford,true);
+  assert.equal(JSON.stringify(env.getWorldClickAction(.25,.5)),JSON.stringify({type:'Move',direction:'left'}));
   const bought=await env.step({type:'VendingMachineBuy'});assert.equal(buys,1);assert.equal(bought.info.turnDelta,0);assert.equal(bought.info.recorded,true);assert.equal(bought.observation.decision,'vending');
-  const closed=await env.step({type:'DismissInteraction'});assert.equal(closed.observation.decision,'world');assert.equal(actions[0].type,'VendingMachineBuy');assert.equal(actions[1].type,'DismissInteraction');
+  player.movement.move=(direction,x,y,done)=>{player.x=x;player.openVendingMachine?.close();done(x,y);};
+  const moved=await env.step({type:'Move',direction:'left'});assert.equal(moved.observation.decision,'world');assert.equal(actions[1].type,'Directional');
+  vending.open=true;player.openVendingMachine=vending;
+  const closed=await env.step({type:'DismissInteraction'});assert.equal(closed.observation.decision,'world');assert.equal(actions[0].type,'VendingMachineBuy');assert.equal(actions[2].type,'DismissInteraction');
 });
 
 test('identified upward ladders expose return traits without revealing dark exits',async()=>{
