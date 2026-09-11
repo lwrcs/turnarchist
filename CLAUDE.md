@@ -11,7 +11,7 @@ npm run build      # Production build
 npm run dev        # Start http-server on port 8080
 ```
 
-**Do not run `npm run build` manually** — a `watch` process is always running and rebuilds automatically. Serve locally with `python3 -m http.server 8000` or `npm run dev`.
+**Do not run `npm run build` manually** — a `watch` process is always running and rebuilds automatically. Serve locally with `python3 training/local_server.py`; this keeps teaching-recording saves inside `training/data/teaching`.
 
 There are no automated tests.
 

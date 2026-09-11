@@ -11,4 +11,4 @@ npm run watch
 
 Start web server
 
-`python3 -m http.server 8000`
+`python3 training/local_server.py`

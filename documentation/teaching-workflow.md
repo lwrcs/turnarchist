@@ -106,11 +106,11 @@ also stops the affected run. No fallback policy is silently substituted.
 ## Saving and training
 
 Actions save locally in this browser's IndexedDB. Export current sessions before
-clearing browser data. **Save current to training data** asks for the repository's
-`training/data/teaching` directory on first use and then writes the JSON there
-directly. Browser security requires that one explicit folder choice; the browser
-normally returns to the same folder on later visits. **Download backup** remains
-optional. **End run** only stops play because acknowledged actions are already
+clearing browser data. When the game is served by `training/local_server.py`,
+**Save current to training data** writes the JSON directly into the repository's
+`training/data/teaching` directory. Other local or hosted servers use the browser's
+directory picker when it is available. **Download backup** remains optional.
+**End run** only stops play because acknowledged actions are already
 saved in the browser. After reload, **Recover an older browser-saved run** can export
 acknowledged records; live game continuation is not restored. Current-session
 export additionally includes the game's replay. Reload exports contain the recorded
