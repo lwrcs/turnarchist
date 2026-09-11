@@ -43,12 +43,12 @@ ROOM_TYPES=('START','DUNGEON','BOSS','BIGDUNGEON','TREASURE','FOUNTAIN','COFFIN'
 # terrain memory (1), depth known/value (2), environments (16), room types (+unknown).
 CONTEXT_START=TRAIT_START+19
 CHANNELS=CONTEXT_START+2+16+len(ROOM_TYPES)+1
-ENCODER = {'version': 7, 'radius': CENTER, 'channels': CHANNELS, 'frames': 2, 'actions': ACTIONS,
+ENCODER = {'version': 8, 'radius': CENTER, 'channels': CHANNELS, 'frames': 2, 'actions': ACTIONS,
            'itemCategories':list(ITEM_CATEGORIES),'roomTypes':list(ROOM_TYPES),
            'memory':'recognized contacts and terrain; hidden health/facing unknown',
-           'perceptionSchema':8,'spawnerTypes':list(SPAWN_TYPES), 'contacts':'observed displacement and elapsed decisions',
+           'perceptionSchema':9,'spawnerTypes':list(SPAWN_TYPES), 'contacts':'observed displacement and elapsed decisions',
            'view':'25x19 rectangle padded to 25x25 for rotation'}
-ROTATED_ENCODER = {**ENCODER,'version':8,'coordinateRotation':'random-quarter-turn-per-episode'}
+ROTATED_ENCODER = {**ENCODER,'version':9,'coordinateRotation':'random-quarter-turn-per-episode'}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
 SIZE = GRID * GRID * CHANNELS + 5
 BROWSER_RECYCLE_EPISODES = 64
@@ -67,8 +67,8 @@ def visible_rooms(view):
 
 
 def encode(view):
-    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 8:
-        raise ValueError('Restricted perception v8 required')
+    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 9:
+        raise ValueError('Restricted perception v9 required')
     grid = np.zeros((GRID, GRID, CHANNELS), dtype=np.float32)
     px, py = view['player']['x'], view['player']['y']
     def cell(x, y):

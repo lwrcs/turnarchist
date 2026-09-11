@@ -29427,6 +29427,20 @@ class VendingMachine extends entity_1.Entity {
                 return `Buy ${this.item.name}`;
             return `Out of stock`;
         };
+        /** Read-only popup geometry used by the recorded teaching shell. */
+        this.getAgentUiLayout = () => {
+            if (!this.open || !this.playerOpened)
+                return { open: false, box: null };
+            const s = 18, b = 2, g = -2;
+            const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+            const height = s + 2 * b;
+            const cx = gameConstants_1.GameConstants.WIDTH / 2 +
+                (this.x - this.playerOpened.x) * gameConstants_1.GameConstants.TILESIZE;
+            const cy = gameConstants_1.GameConstants.HEIGHT / 2 +
+                (this.y - this.playerOpened.y) * gameConstants_1.GameConstants.TILESIZE -
+                2 * gameConstants_1.GameConstants.TILESIZE;
+            return { open: true, box: { x: Math.round(cx - width / 2), y: Math.round(cy - height / 2), w: Math.round(width), h: Math.round(height) } };
+        };
         this.interact = (player) => {
             if (this.isInf || this.quantity > 0) {
                 if (this.open)
@@ -36493,8 +36507,8 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 8,
-        actionSchemaVersion: 4,
+        observationSchemaVersion: 9,
+        actionSchemaVersion: 5,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
         buildId:  true ? __webpack_require__.h() : 0,
@@ -36581,6 +36595,7 @@ class AgentEnvironment {
         const player = this.player();
         return { ...player.inventory.getAgentUiLayout(),
             screenMessage: player.screenMessage.getAgentUiLayout(),
+            vendingMachine: player.openVendingMachine?.getAgentUiLayout?.() ?? { open: false, box: null },
             selectionButtons: player.menu?.getAgentSelectionButtonRects?.() ?? [] };
     }
     getWorldClickAction(nx, ny) {
@@ -36742,7 +36757,7 @@ class AgentEnvironment {
     describeAction(action) {
         const items = this.player().inventory.items;
         let turnCost = null;
-        if (action.type === "MoveItem" || action.type === "DismissInteraction")
+        if (action.type === "MoveItem" || action.type === "DismissInteraction" || action.type === "VendingMachineBuy")
             turnCost = 0;
         if (action.type === "UseItem")
             turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
@@ -36836,12 +36851,13 @@ class AgentEnvironment {
             r.roomY <= observation.player.y + Math.ceil(vision.range * .75) && r.roomY + r.height > observation.player.y - Math.ceil(vision.range * .75))
             .map(project);
         return {
-            schemaVersion: 8, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
-            contract: { ...this.contract(), observationSchemaVersion: 8, observationMode: "player-perception" },
+            schemaVersion: 9, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
+            contract: { ...this.contract(), observationSchemaVersion: 9, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             ui: { inventoryOpen: this.player().inventory.isOpen },
             decision: observation.decision, selectionChoices: observation.selectionChoices,
+            vendingMachine: observation.vendingMachine,
             room: perceived, visibleRooms,
         };
     }
@@ -36902,8 +36918,16 @@ class AgentEnvironment {
         }
         const ladderChoice = player.screenMessage.open &&
             room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
+        const vendingMachine = player.openVendingMachine?.open ? {
+            item: player.openVendingMachine.item ? (0, agentTraits_1.observeItem)(player.openVendingMachine.item) : null,
+            costs: (player.openVendingMachine.costItems ?? []).map(agentTraits_1.observeItem),
+            quantity: player.openVendingMachine.isInf ? null : player.openVendingMachine.quantity,
+            infinite: player.openVendingMachine.isInf,
+            canAfford: (player.openVendingMachine.costItems ?? []).every(item => player.inventory.hasItemCount(item)),
+            purchaseTurnCost: 0,
+        } : null;
         return {
-            schemaVersion: 8, contract: this.contract(),
+            schemaVersion: 9, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario,
             encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -36928,17 +36952,18 @@ class AgentEnvironment {
                 activeWeapon: item === player.inventory.weapon,
             } : null),
             selectionChoices: player.menu?.getSelectionChoices() ?? null,
+            vendingMachine,
             // Bounded history supports temporal policies; it is not online model learning.
             recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)),
             decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "dismissable-interaction") :
-                player.openVendingMachine?.open || player.contextMenu?.open ? "dismissable-interaction" :
+                player.openVendingMachine?.open ? "vending" : player.contextMenu?.open ? "dismissable-interaction" :
                     player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
         };
     }
     async step(input) {
         // Validate the external action before taking ownership of the episode.
         if (!input || typeof input !== "object" ||
-            !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
+            !["Move", "DismissInteraction", "VendingMachineBuy", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
             ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
             ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
             ((input.type === "UseItemOn" || input.type === "MoveItem") &&
@@ -36963,10 +36988,15 @@ class AgentEnvironment {
             const before = this.observe();
             const beforeFrame = this.tacticalFrame();
             const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
+            const vendingAction = actionInput.type === "VendingMachineBuy" ||
+                (before.decision === "vending" && actionInput.type === "DismissInteraction");
+            const dismissAction = before.decision === "dismissable-interaction" &&
+                actionInput.type === "DismissInteraction";
             if (before.decision === "unsupported-modal" ||
                 (before.decision === "ladder") !== ladderAction ||
                 (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
-                (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
+                (before.decision === "dismissable-interaction") !== dismissAction ||
+                (before.decision === "vending") !== vendingAction) {
                 throw new AgentActionError(`Cannot use ${actionInput.type} for current decision: ${before.decision}; choose the current interaction`);
             }
             const player = this.player();
@@ -100366,7 +100396,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("862f70d226f12f40e888")
+/******/ 		__webpack_require__.h = () => ("efded8ea973436143fa3")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

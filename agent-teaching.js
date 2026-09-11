@@ -2,7 +2,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.AgentTeaching=api;})(typeof globalThis!=='undefined'?globalThis:this,()=>{
   const copy=x=>JSON.parse(JSON.stringify(x));
   const position=v=>JSON.stringify([v.room.id,v.player.x,v.player.y]);
-  const effect=v=>JSON.stringify([v.player,v.inventory,v.room.entities,v.room.items,v.room.hitWarnings,v.decision,v.selectionChoices]);
+  const effect=v=>JSON.stringify([v.player,v.inventory,v.room.entities,v.room.items,v.room.hitWarnings,v.decision,v.selectionChoices,v.vendingMachine]);
   const actorFor=source=>source==='agent'?'model':source;
   function exportEnvelope(meta,records,replay){
     const resultMeta=copy(meta),policy=resultMeta.policy||'Unknown';
@@ -27,6 +27,7 @@
   function helper(v){
     if(v.decision==='ladder')return {type:'LadderConfirm'};
     if(v.decision==='dismissable-interaction')return {type:'DismissInteraction'};
+    if(v.decision==='vending')return {type:'DismissInteraction'};
     if(v.decision==='selection'){const c=v.selectionChoices?.find(c=>c.enabled&&c.label==='Cancel');return c?{type:'SelectOption',index:c.index}:null;}
     if(v.decision!=='world')return null;
     if(v.player.health<v.player.maxHealth){const i=v.inventory.find(i=>i?.healingAmount>0&&!i.canUseOnOther&&i.useTurnCost===0);if(i)return {type:'UseItem',slotIndex:i.slot};}
@@ -64,10 +65,10 @@
       if(this.busy||g!==this.generation)return;
       this.busy=true;this.changed();
       try{
-        const prediction=await this.policy.choose(this.view);
+        const automatic=helper(this.view),prediction=automatic?{action:automatic}:await this.policy.choose(this.view);
         if(g!==this.generation||this.state!=='agent')return;
         if(!prediction?.action){this.state='help';this.reason='Agent cannot handle this choice';return;}
-        const modelDecision={action:copy(prediction.action),probabilities:prediction.probabilities?Array.from(prediction.probabilities):null};
+        const modelDecision=automatic?null:{action:copy(prediction.action),probabilities:prediction.probabilities?Array.from(prediction.probabilities):null};
         if(prediction.action.type==='Move'){
           const allowed=allowedDirections(this.view);
           if(!allowed.includes(prediction.action.direction)){
@@ -78,7 +79,7 @@
           }
         }
         if(this.uncertain&&prediction.probabilities&&Math.max(...prediction.probabilities)<.4&&this.records.length>this.tailIgnore){this.state='help';this.reason='Agent choices are close (not a safety score)';return;}
-        this.busy=false;await this.execute(prediction.action,helper(this.view)?'helper':'agent',{modelDecision});
+        this.busy=false;await this.execute(prediction.action,automatic?'helper':'agent',{modelDecision});
         if(this.state==='agent'&&this.records.length>this.tailIgnore){const reason=stuck(this.records);if(reason){this.state='help';this.reason=reason;this.meta.events.push({type:'help-request',reason,atSeq:this.records.length});await this.store.save(this.meta);}}
       }catch(e){this.fail(e);}finally{this.busy=false;this.changed();}
     }

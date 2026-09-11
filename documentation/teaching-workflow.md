@@ -1,9 +1,9 @@
 # Teaching the agent
 
-Current regression build: perception schema v8 and dungeon encoder v9 add wider
-visibility, contact tracking, facing, neighboring rooms and spawn hazards.
-Earlier checkpoints/datasets are deliberately
-incompatible. Use the programmed baseline or demonstrations until a v9 checkpoint
+Current regression build: perception schema v9 and dungeon encoder v10 add wider
+visibility, contact tracking, facing, neighboring rooms, spawn hazards and explicit
+vending decisions. Earlier checkpoints/datasets are deliberately
+incompatible. Use the programmed baseline or demonstrations until a v10 checkpoint
 is trained and evaluated. The existing checkpoint and inference process have not
 been overwritten or silently relabeled.
 
@@ -38,6 +38,13 @@ Movement keys, number keys 1–9, item clicks, item-on-item use, slot drags, dro
 visible menu choices, cardinal world clicks, ranged shots and spell targets go
 through the recorder. Opening inventory is presentation state. In Agent grid,
 click a tile to inspect its visible contents.
+
+An open vending machine is a distinct decision. Its offered item, required items,
+stock, affordability and zero-turn purchase cost are recorded. In Game view, Space,
+the vending popup, or the visible Buy button records `VendingMachineBuy`; Escape or
+Close records `DismissInteraction`. The current four-direction learned policy uses
+a versioned helper to close vending machines without purchasing. Strategic buying
+remains human-demonstration data until the learned action set is expanded.
 
 **Super fast** under Agent pace removes the between-action delay and the ordinary
 input cooldown and the enemy-turn presentation delay. Enemy turns still execute;

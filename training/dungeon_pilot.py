@@ -17,14 +17,14 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, GRID, CENTER, visible_rooms, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 9, 'task': 'procedural-dungeon',
+ENCODER = {**ROTATED_ENCODER, 'version': 10, 'task': 'procedural-dungeon',
            'memory': '625 player-relative arrival-count cells, clipped at 8, rotated with view',
            'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning','known-door-link','arrival-dx','arrival-dy']}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,
           'newRoom': .5, 'newMaximumDepth': 5, 'healthLost': -3,
           'death': -10, 'attemptedGameAction': -.01}
-HELPER = {'version': 1, 'actions': ['confirm-ladder', 'dismiss-interaction', 'cancel-selection', 'zero-turn-healing'],
-          'limitation': 'No learned inventory, crafting, spell use, or equipment selection'}
+HELPER = {'version': 2, 'actions': ['confirm-ladder', 'dismiss-interaction', 'dismiss-vending', 'cancel-selection', 'zero-turn-healing'],
+          'limitation': 'Vending purchases and other inventory, crafting, spell, or equipment choices require human data and a wider learned action schema'}
 OBS_SIZE = SIZE*2 + GRID*GRID*13
 
 
@@ -47,6 +47,7 @@ def actual_seed(seed):
 def helper_action(view):
     decision=view['decision']
     if decision == 'dismissable-interaction': return {'type':'DismissInteraction'}
+    if decision == 'vending': return {'type':'DismissInteraction'}
     if decision == 'ladder': return {'type':'LadderConfirm'}
     if decision == 'selection':
         cancel=next((o for o in view.get('selectionChoices',[]) if o.get('enabled') and o.get('label')=='Cancel'),None)

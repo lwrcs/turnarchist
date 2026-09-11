@@ -196,6 +196,20 @@ export class VendingMachine extends Entity {
     );
   };
 
+  /** Read-only popup geometry used by the recorded teaching shell. */
+  getAgentUiLayout = () => {
+    if (!this.open || !this.playerOpened) return { open: false, box: null };
+    const s = 18, b = 2, g = -2;
+    const width = (this.costItems.length + 2) * (s + 2 * b + g) - g;
+    const height = s + 2 * b;
+    const cx = GameConstants.WIDTH / 2 +
+      (this.x - this.playerOpened.x) * GameConstants.TILESIZE;
+    const cy = GameConstants.HEIGHT / 2 +
+      (this.y - this.playerOpened.y) * GameConstants.TILESIZE -
+      2 * GameConstants.TILESIZE;
+    return { open: true, box: {x:Math.round(cx-width/2),y:Math.round(cy-height/2),w:Math.round(width),h:Math.round(height)} };
+  };
+
   get type() {
     return EntityType.PROP;
   }

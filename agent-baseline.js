@@ -221,6 +221,7 @@
       this.reason='interaction';
       if(view.observationMode!=='player-perception') throw new Error('Baseline requires restricted perception');
       if(view.decision==='dismissable-interaction')return {type:'DismissInteraction'};
+      if(view.decision==='vending')return {type:'DismissInteraction'};
       if(view.decision==='ladder') return {type:'LadderConfirm'};
       if(view.decision==='selection') {
         const cancel=view.selectionChoices?.find(o=>o.enabled&&o.label==='Cancel');

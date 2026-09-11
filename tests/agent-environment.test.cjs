@@ -456,8 +456,8 @@ test('diagnostic scenario reset forwards its seed, labels exports and rejects un
 
 test('dismissible interactions close through the recorded action processor without a turn', async()=>{
   const {env,player,actions}=setup();await env.reset(1);
-  player.openVendingMachine={open:true,close(){this.open=false;}};
-  player.contextMenu={close(){}};player.screenMessage.close=()=>{player.screenMessage.open=false;};
+  player.openVendingMachine=null;
+  player.contextMenu={open:true,close(){this.open=false;}};player.screenMessage.close=()=>{player.screenMessage.open=false;};
   const Processor=productionMethods('src/player/playerActionProcessor.ts',['process'],{isActionReady:()=>true});
   const processor=new Processor();processor.player=player;processor.record=action=>actions.push(action);player.actionProcessor=processor;
   assert.equal(env.perceive ? env.observe().decision : null,'dismissable-interaction');
@@ -468,14 +468,29 @@ test('dismissible interactions close through the recorded action processor witho
   assert.equal(actions[0].type,'DismissInteraction');
 });
 
+test('vending exposes its offer and records buying separately from closing',async()=>{
+  const {env,player,room,actions}=setup();await env.reset(5499);
+  room.getGameplayLightTile=()=>null;room.isGameplaySightBlocked=()=>false;room.vis=[];
+  player.screenMessage.close=()=>{player.screenMessage.open=false;};
+  let buys=0;player.inventory.hasItemCount=()=>true;
+  player.openVendingMachine={open:true,item:{name:'health potion',stackCount:1},costItems:[{name:'coin',stackCount:9}],quantity:2,isInf:false,
+    space(){buys++;},close(){this.open=false;player.openVendingMachine=null;}};
+  const Processor=productionMethods('src/player/playerActionProcessor.ts',['process'],{isActionReady:()=>true});
+  const processor=new Processor();processor.player=player;processor.record=action=>actions.push(action);player.actionProcessor=processor;
+  const offered=env.perceive();assert.equal(offered.decision,'vending');assert.equal(offered.vendingMachine.item.name,'health potion');
+  assert.equal(offered.vendingMachine.costs[0].stackCount,9);assert.equal(offered.vendingMachine.quantity,2);assert.equal(offered.vendingMachine.canAfford,true);
+  const bought=await env.step({type:'VendingMachineBuy'});assert.equal(buys,1);assert.equal(bought.info.turnDelta,0);assert.equal(bought.info.recorded,true);assert.equal(bought.observation.decision,'vending');
+  const closed=await env.step({type:'DismissInteraction'});assert.equal(closed.observation.decision,'world');assert.equal(actions[0].type,'VendingMachineBuy');assert.equal(actions[1].type,'DismissInteraction');
+});
+
 test('identified upward ladders expose return traits without revealing dark exits',async()=>{
   const {env,room,UpLadder}=setup();await env.reset(456);
   const ladder=Object.assign(new UpLadder(),{x:2,y:1,isSolid:()=>false,
     getTraversalTraits:()=>({kind:'ladder',direction:'up',unlocked:true})});
   room.roomArray[2][1]=ladder;room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];
   room.isGameplaySightBlocked=()=>false;room.vis=[[],[],[]];room.vis[2][1]=0;
-  const identified=env.perceive();assert.equal(identified.schemaVersion,8);
-  assert.equal(identified.contract.observationSchemaVersion,8);
+  const identified=env.perceive();assert.equal(identified.schemaVersion,9);
+  assert.equal(identified.contract.observationSchemaVersion,9);
   assert.equal(identified.room.tiles[0].exit,true);
   assert.equal(identified.room.tiles[0].traversal.direction,'up');
   room.vis[2][1]=1;

@@ -19,6 +19,7 @@ export type AgentAction =
   | Extract<GameAction, {type: "UseItem" | "UseItemOn" | "MoveItem" | "DropItem"}>
   | { type: "SelectOption"; index: number }
   | { type: "DismissInteraction" }
+  | { type: "VendingMachineBuy" }
   | { type: "LadderConfirm" }
   | { type: "LadderCancel" }
   | Extract<GameAction, {type:"FireRanged" | "CastSpell"}>;
@@ -68,6 +69,7 @@ export class AgentEnvironment {
     const player=this.player();
     return {...player.inventory.getAgentUiLayout(),
       screenMessage:player.screenMessage.getAgentUiLayout(),
+      vendingMachine:player.openVendingMachine?.getAgentUiLayout?.()??{open:false,box:null},
       selectionButtons:player.menu?.getAgentSelectionButtonRects?.()??[]};
   }
   getWorldClickAction(nx: number, ny: number): AgentAction | null {
@@ -215,7 +217,7 @@ export class AgentEnvironment {
   describeAction(action: AgentAction) {
     const items = this.player().inventory.items;
     let turnCost: number | null = null;
-    if (action.type === "MoveItem" || action.type === "DismissInteraction") turnCost = 0;
+    if (action.type === "MoveItem" || action.type === "DismissInteraction" || action.type === "VendingMachineBuy") turnCost = 0;
     if (action.type === "UseItem") turnCost = items[action.slotIndex]?.getUseTurnCost?.() ?? null;
     if (action.type === "UseItemOn") turnCost = items[action.fromSlot]?.getUseOnTurnCost?.(items[action.toSlot]) ?? null;
     if (action.type === "SelectOption") turnCost = this.player().menu?.getSelectionChoices()?.[action.index]?.turnCost ?? null;
@@ -286,12 +288,13 @@ export class AgentEnvironment {
       r.roomY<=observation.player.y+Math.ceil(vision.range*.75) && r.roomY+r.height>observation.player.y-Math.ceil(vision.range*.75))
       .map(project);
     return {
-      schemaVersion: 8, observationMode: "player-perception", vision: {...vision,halfWidth:vision.range,halfHeight:Math.ceil(vision.range*.75)},
-      contract: {...this.contract(), observationSchemaVersion: 8, observationMode: "player-perception"},
+      schemaVersion: 9, observationMode: "player-perception", vision: {...vision,halfWidth:vision.range,halfHeight:Math.ceil(vision.range*.75)},
+      contract: {...this.contract(), observationSchemaVersion: 9, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       ui: {inventoryOpen:this.player().inventory.isOpen},
       decision: observation.decision, selectionChoices: observation.selectionChoices,
+      vendingMachine: observation.vendingMachine,
       room: perceived, visibleRooms,
     };
   }
@@ -349,8 +352,16 @@ export class AgentEnvironment {
     }
     const ladderChoice = player.screenMessage.open &&
       room.roomArray[player.x]?.[player.y] instanceof DownLadder;
+    const vendingMachine=player.openVendingMachine?.open?{
+      item:player.openVendingMachine.item?observeItem(player.openVendingMachine.item):null,
+      costs:(player.openVendingMachine.costItems??[]).map(observeItem),
+      quantity:player.openVendingMachine.isInf?null:player.openVendingMachine.quantity,
+      infinite:player.openVendingMachine.isInf,
+      canAfford:(player.openVendingMachine.costItems??[]).every(item=>player.inventory.hasItemCount(item)),
+      purchaseTurnCost:0,
+    }:null;
     return {
-      schemaVersion: 8, contract: this.contract(),
+      schemaVersion: 9, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
       seed: this.seed, scenario: this.scenario,
       encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -375,10 +386,11 @@ export class AgentEnvironment {
         activeWeapon: item === player.inventory.weapon,
       } : null),
       selectionChoices: player.menu?.getSelectionChoices() ?? null,
+      vendingMachine,
       // Bounded history supports temporal policies; it is not online model learning.
       recentTransitions: JSON.parse(JSON.stringify(this.recentTransitions)) as AgentTransition[],
       decision: player.screenMessage.open ? (ladderChoice ? "ladder" : "dismissable-interaction") :
-        player.openVendingMachine?.open || player.contextMenu?.open ? "dismissable-interaction" :
+        player.openVendingMachine?.open ? "vending" : player.contextMenu?.open ? "dismissable-interaction" :
         player.menu?.open ? (player.menu.getSelectionChoices() ? "selection" : "unsupported-modal") : "world",
     };
   }
@@ -386,7 +398,7 @@ export class AgentEnvironment {
   async step(input: AgentAction) {
     // Validate the external action before taking ownership of the episode.
     if (!input || typeof input !== "object" ||
-      !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
+      !["Move", "DismissInteraction", "VendingMachineBuy", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
       ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
       ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
       ((input.type === "UseItemOn" || input.type === "MoveItem") &&
@@ -408,10 +420,15 @@ export class AgentEnvironment {
       const before = this.observe();
       const beforeFrame = this.tacticalFrame();
       const ladderAction = actionInput.type === "LadderConfirm" || actionInput.type === "LadderCancel";
+      const vendingAction=actionInput.type==="VendingMachineBuy"||
+        (before.decision==="vending"&&actionInput.type==="DismissInteraction");
+      const dismissAction=before.decision==="dismissable-interaction"&&
+        actionInput.type==="DismissInteraction";
       if (before.decision === "unsupported-modal" ||
         (before.decision === "ladder") !== ladderAction ||
         (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
-        (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
+        (before.decision === "dismissable-interaction") !== dismissAction ||
+        (before.decision === "vending") !== vendingAction) {
         throw new AgentActionError(`Cannot use ${actionInput.type} for current decision: ${before.decision}; choose the current interaction`);
       }
       const player = this.player();

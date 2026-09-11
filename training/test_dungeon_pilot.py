@@ -14,7 +14,7 @@ from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_pl
 
 
 def view(x=0,y=0,room='a',health=2):
-    return {'observationMode':'player-perception','schemaVersion':8,
+    return {'observationMode':'player-perception','schemaVersion':9,
             'decision':'world','player':{'x':x,'y':y,'z':0,'health':health,'maxHealth':2},
             'inventory':[], 'room':{'id':room,'tiles':[],'entities':[],'hitWarnings':[]}}
 
@@ -104,6 +104,8 @@ class DungeonTests(unittest.TestCase):
         self.assertIsNone(helper_action(a))
         a['decision']='ladder'
         self.assertEqual(helper_action(a),{'type':'LadderConfirm'})
+        a['decision']='vending'
+        self.assertEqual(helper_action(a),{'type':'DismissInteraction'})
         a['decision']='unsupported-modal'
         self.assertIsNone(helper_action(a))
 

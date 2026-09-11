@@ -35,6 +35,7 @@ test('baseline uses traits for healing and combat, and handles ladder choices',(
   v.inventory=[];v.room.entities=[{x:1,y:0,isEnemy:true,health:1}];
   assert.deepEqual(p.choose(v),{type:'Move',direction:'right'});
   v.decision='ladder';assert.deepEqual(p.choose(v),{type:'LadderConfirm'});
+  v.decision='vending';assert.deepEqual(p.choose(v),{type:'DismissInteraction'});
   v.decision='unsupported-modal';assert.equal(p.choose(v),null);
 });
 test('free successful attacks do not blacklist their direction; unchanged bumps do',()=>{
