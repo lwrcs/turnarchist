@@ -76,13 +76,14 @@
       if(this.busy)throw new Error('Action already in flight');
       this.busy=true;this.changed();
       this.pending=(async()=>{
-        const before=copy(this.view);let result,rejection=null;
+        const before=copy(this.view),displayView=source==='human'?(this.displayView||'grid'):null;let result,rejection=null;
         try{result=await this.agent.step(action);}catch(e){
           if(e.code!=='AGENT_ACTION_REJECTED')throw new Error('Game action failed; export this session before starting a new one: '+e.message);
           rejection=e.message;result={info:{recorded:false,turnDelta:0,rejection,requestedSource:source},terminated:false,truncated:false};
         }
         const after=copy(this.agent.perceive());
         const record={seq:this.records.length+1,source:rejection?'rejected':source,segment:this.segment,before,after,action:copy(action),info:copy(result.info),terminated:result.terminated,truncated:result.truncated,decisionEnd:after.decision==='world'&&!helper(after),time:Date.now()};
+        record.displayView=displayView;
         this.records.push(record);this.view=after;
         await this.store.append(this.meta.id,record);await this.policy?.advance?.(record);
         if(rejection){this.state='help';this.reason=rejection+' — run preserved. Take control or try the agent again.';await this.event('action-rejected');}

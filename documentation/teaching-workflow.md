@@ -30,10 +30,13 @@ below the board. There is no automatic food use during human control.
 - **Normal first-floor run:** play normally and use upgrades. Records are retained,
   but this first importer requires manual review of normal-run equipment coverage.
 
-The board deliberately draws the restricted observation as labeled tiles rather
-than the full game's artwork. Click a tile to inspect visible contents. This keeps
-unseen information out of the demonstration. It is an initial teaching interface,
-not a complete replacement for the normal game's inventory and menus.
+The default Game view shows the real game's artwork. Switch to Agent grid to
+inspect the restricted observations used by the policy. Switching views preserves
+the live run. Humans can see more context in Game view; each human action records
+which view was used, while policy observations stay restricted in both views.
+Movement keys and number keys 1–9 go through the recorder. Use the controls below
+for inventory, targeting and menus; native mouse/drag interactions are not yet
+enabled. In Agent grid, click a tile to inspect its visible contents.
 
 **Super fast** under Agent pace removes the between-action delay and the ordinary
 input cooldown and the enemy-turn presentation delay. Enemy turns still execute;

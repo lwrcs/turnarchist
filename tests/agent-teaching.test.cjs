@@ -1,5 +1,12 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');
 const {Session,stuck,helper}=require('../agent-teaching.js');
+test('human display choice is recorded without replacing restricted observations',async()=>{
+  const {session:s,written}=setup();await s.start('demonstration');await s.take();
+  s.displayView='game';await s.human({type:'Move',direction:'up'});
+  s.displayView='grid';await s.human({type:'Move',direction:'down'});
+  assert.equal(written[0].displayView,'game');assert.equal(written[1].displayView,'grid');
+  assert.equal(written[0].before.observationMode,'player-perception');
+});
 test('super fast applies only during agent control and restores timing on handoff',async()=>{
   const {session:s,agent}=setup();const modes=[];agent.setFastMode=fast=>modes.push(fast);
   await s.start('watch');s.speed=0;await s.resume(true);
