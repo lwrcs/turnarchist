@@ -24,6 +24,35 @@
       return occupied||weapon?.attackPattern!=='adjacent-cardinal'||!tile?.solid||tile.isDoor||!['Wall','WallTorch'].includes(tile.kind);
     });
   }
+  function availableActions(v){
+    if(!v)return [];
+    const actions=allowedDirections(v).map(direction=>({type:'Move',direction}));
+    if(v.decision==='ladder')actions.push({type:'LadderConfirm'},{type:'LadderCancel'});
+    else if(v.decision==='dismissable-interaction')actions.push({type:'DismissInteraction'});
+    else if(v.decision==='vending')actions.push({type:'VendingMachineBuy'},{type:'DismissInteraction'});
+    else if(v.decision==='selection')for(const choice of v.selectionChoices||[])if(choice.enabled)actions.push({type:'SelectOption',index:choice.index,label:choice.label});
+    return actions;
+  }
+  function inspectSession(session,options={}){
+    if(!session)return null;
+    const records=session.records||[],view=session.view||null;
+    return copy({
+      id:session.meta?.id??null,
+      name:session.meta?.name??null,
+      seed:session.meta?.seed??null,
+      mode:session.meta?.mode??null,
+      state:session.state,
+      reason:session.reason,
+      busy:!!session.busy,
+      inputOwner:!!options.inputOwner,
+      displayView:options.displayView??null,
+      recording:{actions:records.length,worldTurns:records.reduce((total,record)=>total+(Number(record.info?.turnDelta)||0),0),exported:!!options.exported},
+      policy:{name:session.meta?.policy||session.policy?.name||'Unknown',type:session.meta?.policyType||session.policy?.kind||'unknown'},
+      availableActions:availableActions(view),
+      suggestion:session.suggested||null,
+      observation:view
+    });
+  }
   function helper(v){
     if(v.decision==='ladder')return {type:'LadderConfirm'};
     if(v.decision==='dismissable-interaction')return {type:'DismissInteraction'};
@@ -131,5 +160,5 @@
     async choose(){const r=await this.request('/predict',{id:this.id,seq:this.seq});if(r.seq!==this.seq)throw new Error('Stale prediction');return r;}
     propose(){return this.choose();}
   }
-  return {Session,Store,Baseline,Remote,helper,stuck,allowedDirections};
+  return {Session,Store,Baseline,Remote,helper,stuck,allowedDirections,availableActions,inspectSession};
 });

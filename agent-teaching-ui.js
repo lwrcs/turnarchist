@@ -7,6 +7,12 @@
   const directoryExportSupported=typeof window.showDirectoryPicker==='function';
   const localSaveSupported=['localhost','127.0.0.1'].includes(window.location.hostname);
   const exported=s=>{const e=exports.get(s.meta.id);return e&&e.actions===s.records.length&&e.events===s.meta.events.length;};
+  const inspectorSnapshot=()=>({
+    interfaceVersion:1,
+    selected:T.inspectSession(selected,{inputOwner:inputOwner===selected,displayView:$('view-mode').value,exported:selected?!!exported(selected):false}),
+    runs:sessions.map(s=>({id:s.meta.id,name:s.meta.name,seed:s.meta.seed,state:s.state,reason:s.reason,actions:s.records.length,selected:s===selected,inputOwner:s===inputOwner}))
+  });
+  const syncInspector=()=>{$('teaching-inspector-state').textContent=JSON.stringify(inspectorSnapshot());};
   const registry=fetch('./teaching-seeds.json').then(async r=>{if(!r.ok)throw new Error('Seed registry unavailable');return r.json();});
   fetch('./.teaching-local.json').then(r=>r.ok?r.json():null).then(c=>{if(c){$('service').value=c.url;$('token').value=c.token;}}).catch(()=>{});
   const board=$('board'),ctx=board.getContext('2d');let tiles=[],pointerStart=null;
@@ -34,7 +40,7 @@
   board.onpointerup=e=>guard(()=>gamePointerEnd(e));
   board.onpointercancel=()=>{pointerStart=null;};
   board.onclick=e=>{board.focus();if($('view-mode').value==='game')return;const s=selected;if(!s)return;const r=board.getBoundingClientRect(),x=(e.clientX-r.left)*650/r.width,y=(e.clientY-r.top)*650/r.height,t=[...tiles].reverse().find(t=>x>=t.sx&&x<t.sx+t.size&&y>=t.sy&&y<t.sy+t.size);if(t){const room=t.room;const entries=[...room.entities,...(room.items||[]),...(room.hazards||[])].filter(e=>t.x>=e.x&&t.x<e.x+(e.width||1)&&t.y>=e.y&&t.y<e.y+(e.height||1));$('objects').textContent=`Room ${room.id} · depth ${room.context?.depth??'?'} · ${room.context?.roomType??''} · `+(entries.map(e=>`${e.id||''} ${e.appearance==='unidentified'?'Unidentified contact':e.name||e.kind||'Object'}${e.knowledge==='remembered'?' · remembered (current health/facing unknown)':''}${e.pushable?' · pushable':''}${e.chainPushable?' · chain-pushable':''}${e.destroyable?' · breakable':''}${e.forwardOnlyAttack?' · forward-only (turn before attacking)':''}${e.isBoss?' · boss':''}${e.categories?.length?' · '+e.categories.join(', '):''}${e.health!=null?' · health '+e.health:''}${e.spawner?' · spawns '+e.spawner.enemyType:''}${e.damage!=null?' · damage '+e.damage:''}${e.facing?' · facing '+e.facing.dx+','+e.facing.dy:''}`).join(' · ')||(()=>{const tile=room.tiles.find(v=>v.x===t.x&&v.y===t.y);return (tile?.kind||'Unknown tile')+(tile?.knowledge==='remembered'?' · remembered terrain':'');})());}render();};
-  function render(){syncView();const s=selected;$('cards').replaceChildren();for(const run of sessions){const b=button(`${run.meta.name} · ${names[run.state]} · seed ${run.meta.seed}${run.view?' · HP '+run.view.player.health:''}${run.state==='help'?' · '+run.reason:''}`,()=>select(run));b.className='card'+(run===s?' selected':'')+(run.state==='help'?' help':'');$('cards').append(b);}const waiting=sessions.filter(s=>s.state==='help');$('queue').textContent=waiting.length?`· ${waiting.length} waiting`:'';
+  function render(){syncView();syncInspector();const s=selected;$('cards').replaceChildren();for(const run of sessions){const b=button(`${run.meta.name} · ${names[run.state]} · seed ${run.meta.seed}${run.view?' · HP '+run.view.player.health:''}${run.state==='help'?' · '+run.reason:''}`,()=>select(run));b.className='card'+(run===s?' selected':'')+(run.state==='help'?' help':'');$('cards').append(b);}const waiting=sessions.filter(s=>s.state==='help');$('queue').textContent=waiting.length?`· ${waiting.length} waiting`:'';
     $('start').disabled=starting||sessions.filter(s=>!['finished','error'].includes(s.state)).length>=2;
     if(!s||!s.view){draw(null);const loading=starting||s?.state==='loading';$('owner').textContent=s?names[s.state]:loading?'Loading game…':'Ready to start';$('owner-badge').textContent=s?names[s.state]:loading?'Loading game…':'No active run';$('human').hidden=true;for(const id of ['take','return','pause','single'])$(id).disabled=true;text(s?.reason||(loading?'Loading game…':'Open “Start a run” below, choose your settings, then click “Start run”.'));return;}
     const human=s.state==='human'&&inputOwner===s;const focused=document.activeElement===board;
@@ -92,8 +98,10 @@
   $('download-saved').onclick=()=>{const id=$('saved').value;return exportRecording(()=>store.export(id),'download');};
   window.addEventListener('blur',()=>{for(const s of sessions)s.pause('Window lost focus; resume explicitly');inputOwner=null;render();});document.addEventListener('visibilitychange',()=>{if(document.hidden){for(const s of sessions)s.pause('Page hidden');inputOwner=null;render();}});
   setInterval(()=>{const s=selected;if(s?.state==='human'&&s.autoDeadline&&Date.now()>=s.autoDeadline&&!s.busy&&document.hasFocus()){s.autoDeadline=null;inputOwner=null;s.tailIgnore=s.records.length+5;guard(()=>s.resume());}},200);
-  // Expose read-only snapshots for UI verification; action ownership stays internal.
+  // Read-only controller/observation snapshots. These return detached data and do
+  // not expose the live Session, game facade, records, replay, or action methods.
   window.teachingStatus=()=>sessions.map(s=>({id:s.meta.id,state:s.state,actions:s.records.length,reason:s.reason}));
+  window.teachingInspector=inspectorSnapshot;
   if(localSaveSupported){$('export-folder').textContent='Saves directly to training/data/teaching';}
   else if(!directoryExportSupported){$('export').disabled=true;$('export-saved').disabled=true;$('export-folder').textContent='Direct folder saving unavailable · use Download backup';}
   guard(refreshSaved);render();

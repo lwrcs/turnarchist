@@ -34,6 +34,13 @@ The default Game view shows the real game's artwork. Switch to Agent grid to
 inspect the restricted observations used by the policy. Switching views preserves
 the live run. Humans can see more context in Game view; each human action records
 which view was used, while policy observations stay restricted in both views.
+Automation can read `window.teachingInspector()` while the page stays in Game
+view. It returns a detached copy of the selected run's exact restricted observation,
+available movement or menu actions, controller state, model identity and recording
+counts. It cannot mutate the run and does not expose the live game facade, replay,
+action history or hidden world state. The same JSON snapshot is mirrored in the
+hidden `#teaching-inspector-state` output for read-only browser controllers whose
+page bridge cannot call page-defined functions.
 Movement keys, number keys 1–9, item clicks, item-on-item use, slot drags, drops,
 visible menu choices, cardinal world clicks, ranged shots and spell targets go
 through the recorder. Opening inventory is presentation state. In Agent grid,
