@@ -15,6 +15,7 @@
 <p id="protocol-help">Use the starting dagger and loadout; food is allowed. Explore and retreat as needed—there is no exploration quota.</p>
 <div class="row"><label>Policy <select id="policy"><option value="baseline">Programmed baseline</option><option value="learned">Learned checkpoint (local service)</option></select></label><label>Seed <input id="seed" type="number" min="0" max="4294967295" value="123"></label><button id="new-seed">New seed</button><button id="start" class="primary">Start run</button></div>
 <p>Two concurrent runs initially. Waiting agents freeze until you respond. Selecting a card changes the viewed run; only Take control enables your input.</p>
+<p class="notice">This build adds spike-trap inputs (dungeon encoder v7). Use the programmed baseline or record your play for now; the earlier learned checkpoint needs updated training and evaluation.</p>
 <details><summary>Learned policy connection</summary><p>Run the local teaching inference service and enter its session token. An unavailable service pauses the run; the baseline is never substituted.</p><label>Service <input id="service" value="http://127.0.0.1:8766"></label><label>Token <input id="token" type="password" autocomplete="off"></label></details></details>
 <section id="human" hidden><h2>Human controls</h2><div class="row"><div class="pad"><span></span><button data-move="up">↑</button><span></span><button data-move="left">←</button><button data-move="down">↓</button><button data-move="right">→</button></div><div id="choices"></div></div><div id="inventory"></div>
 <div class="row"><label>Source slot <select id="source-slot"></select></label><label>Target slot <select id="target-slot"></select></label><button id="use-target">Apply to item</button><button id="move-item">Move item</button><button id="drop-item">Drop source</button></div></section>
@@ -24,4 +25,4 @@
 <label>Saved sessions <select id="saved"></select></label><button id="refresh-saved">Refresh</button><button id="export-saved">Export saved session</button>
 </details>
 <p><a href="./agent.html">Agent diagnostics</a> · <a href="./play.html" target="_blank" rel="noopener">Ordinary play</a> (not recorded by this teaching page)</p>
-</main><div id="worlds" aria-hidden="true"></div><script src="./agent-baseline.js?v=23"></script><script src="./agent-teaching.js?v=1"></script><script src="./agent-teaching-ui.js?v=2"></script></body></html>
+</main><div id="worlds" aria-hidden="true"></div><script src="./agent-baseline.js?v=23"></script><script src="./agent-teaching.js?v=2"></script><script src="./agent-teaching-ui.js?v=4"></script></body></html>

@@ -81,15 +81,16 @@ export function observeItem(item: ItemTraitsSource) {
 
 interface WarningSource {
   x: number; y: number; dead: boolean;
+  isActive?: () => boolean;
   parent?: { globalId?: string; z?: number } | null;
   getSaveFields(): {eX?: number; eY?: number; isEnemy: boolean; dirOnly: boolean};
 }
 
 export function observeWarnings(warnings: readonly WarningSource[]) {
-  return warnings.filter(warning => !warning.dead).map(warning => {
+  return warnings.filter(warning => !warning.dead && (warning.isActive?.() ?? true)).map(warning => {
     const fields = warning.getSaveFields();
     return {
-      x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z),
+      x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z) ?? 0,
       sourceId: stringOrNull(warning.parent?.globalId),
       sourceX: numberOrNull(fields.eX), sourceY: numberOrNull(fields.eY),
       hostile: fields.isEnemy, directionOnly: fields.dirOnly,

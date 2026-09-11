@@ -3286,8 +3286,8 @@ export class Populator {
   ) {
     const pos = room.getRandomEmptyPosition(room.getEmptyTiles());
     if (pos === null) return;
-    let x = placeX ? placeX : pos.x;
-    let y = placeY ? placeY : pos.y;
+    let x = placeX ?? pos.x;
+    let y = placeY ?? pos.y;
 
     let table =
       room.depth > 0

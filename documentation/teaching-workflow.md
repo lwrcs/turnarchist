@@ -1,5 +1,18 @@
 # Teaching the agent
 
+Current regression build: dungeon encoder v7 adds visible spike-trap presence,
+active spikes, and warning state. Earlier v6 checkpoints/datasets are deliberately
+incompatible. Use the programmed baseline or demonstrations until a v7 checkpoint
+is trained and evaluated. The existing checkpoint and inference process have not
+been overwritten or silently relabeled.
+
+Known solid walls are excluded from teaching movement choices for adjacent-cardinal
+weapons. Unknown terrain, doors, attackable occupants and longer-range weapons remain
+eligible. A learned prediction into a masked wall uses its highest-probability eligible
+direction; this is an execution filter, not evidence that the policy learned the rule.
+Recoverable API rejections are saved with `source: rejected`, synchronize observation
+history, and request help instead of destroying the session. They are not human labels.
+
 Open `http://localhost:8000/teach.html` while the local game server is running.
 The existing agent lab links to this page. Ordinary play remains separate.
 

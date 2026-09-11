@@ -10917,6 +10917,9 @@ class HitWarning extends drawable_1.Drawable {
                 this.dead = true;
             this.tickedForDeath = true;
         };
+        /** A resolved warning can linger for visual fade-out without remaining a threat. */
+        this.isActive = () => !this.dead && !this.tickedForDeath &&
+            !this.parent?.dead && !this.parent?.unconscious;
         this.removeOverlapping = () => {
             for (const entity of this.game.room.entities) {
                 if (entity.x === this.x &&
@@ -10948,6 +10951,8 @@ class HitWarning extends drawable_1.Drawable {
             }
         };
         this.draw = (delta) => {
+            if (this.dead)
+                return;
             this.fadeHitwarnings(delta);
             if (Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
                 Math.abs(this.y - this.game.players[this.game.localPlayerID].y) <= 1) {
@@ -10964,6 +10969,8 @@ class HitWarning extends drawable_1.Drawable {
             }
         };
         this.drawTopLayer = (delta) => {
+            if (this.dead)
+                return;
             this.fadeHitwarnings(delta);
             const observer = this.game.players[this.game.localPlayerID];
             if (!(0, warningVisibility_1.isWarningVisibleAboveShade)({ x: this.x, y: this.y, hostile: !!this.isEnemy, directionOnly: !!this.dirOnly }, observer.x - observer.drawX, observer.y - observer.drawY))
@@ -26012,8 +26019,8 @@ class Entity extends drawable_1.Drawable {
             console.warn(`Cannot add entity: tile at (${x}, ${y}) does not exist`);
             return null;
         }
-        if (room.roomArray[x][y].isSolid()) {
-            console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid`);
+        if (room.roomArray[x][y].isSolid() || room.roomArray[x][y].isDoor) {
+            console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid or a doorway`);
             return null;
         }
         const entity = new this(room, game, x, y, ...rest);
@@ -36543,6 +36550,10 @@ const directions = {
     left: [game_1.Direction.LEFT, -1, 0], right: [game_1.Direction.RIGHT, 1, 0],
 };
 class AgentActionError extends Error {
+    constructor() {
+        super(...arguments);
+        this.code = "AGENT_ACTION_REJECTED";
+    }
 }
 /** Browser-backed v1. Uses real gameplay; it is not yet a deterministic Node simulator. */
 class AgentEnvironment {
@@ -36702,6 +36713,7 @@ class AgentEnvironment {
                 solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
                 isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
                 traversal: room.getGameplayLightTile(tile.x, tile.y)?.getTraversalTraits?.(),
+                hazard: room.getGameplayLightTile(tile.x, tile.y)?.getAgentHazardTraits?.(),
                 exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder ||
                     room.getGameplayLightTile(tile.x, tile.y) instanceof upLadder_1.UpLadder,
             })),
@@ -36842,7 +36854,7 @@ class AgentEnvironment {
                 (before.decision === "ladder") !== ladderAction ||
                 (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
                 (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
-                throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
+                throw new AgentActionError(`Cannot use ${actionInput.type} for current decision: ${before.decision}; choose the current interaction`);
             }
             const player = this.player();
             const items = player.inventory.items;
@@ -37090,10 +37102,10 @@ function observeItem(item) {
 }
 exports.observeItem = observeItem;
 function observeWarnings(warnings) {
-    return warnings.filter(warning => !warning.dead).map(warning => {
+    return warnings.filter(warning => !warning.dead && (warning.isActive?.() ?? true)).map(warning => {
         const fields = warning.getSaveFields();
         return {
-            x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z),
+            x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z) ?? 0,
             sourceId: stringOrNull(warning.parent?.globalId),
             sourceX: numberOrNull(fields.eX), sourceY: numberOrNull(fields.eY),
             hostile: fields.isEnemy, directionOnly: fields.dirOnly,
@@ -90089,8 +90101,10 @@ class Room {
         if (this.height <= 2 || this.width <= 2)
             return;
         const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
-        let x = placeX ? placeX : pos.x;
-        let y = placeY ? placeY : pos.y;
+        if (!pos && (placeX == null || placeY == null))
+            return;
+        let x = placeX ?? pos.x;
+        let y = placeY ?? pos.y;
         let table = this.depth > 0
             ? [
                 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
@@ -95073,8 +95087,8 @@ class Populator {
         const pos = room.getRandomEmptyPosition(room.getEmptyTiles());
         if (pos === null)
             return;
-        let x = placeX ? placeX : pos.x;
-        let y = placeY ? placeY : pos.y;
+        let x = placeX ?? pos.x;
+        let y = placeY ?? pos.y;
         let table = room.depth > 0
             ? [
                 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 3,
@@ -98386,6 +98400,8 @@ class SpikeTrap extends tile_1.Tile {
                 }
             }
         };
+        // Visible spike state only; phase counts remain internal simulation state.
+        this.getAgentHazardTraits = () => ({ kind: "spikes", active: this.on, warning: this.tickCount === 3 });
         this.onCollideEnemy = (enemy) => {
             if (this.on && !(enemy instanceof crate_1.Crate || enemy instanceof barrel_1.Barrel))
                 enemy.hurt(null, 1);
@@ -100111,7 +100127,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("9ca58666bdc53cc8f81c")
+/******/ 		__webpack_require__.h = () => ("0d1e58251b06aaa2367c")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -20,6 +20,15 @@ def view(x=0,y=0,room='a',health=2):
 
 
 class DungeonTests(unittest.TestCase):
+    def test_visible_spikes_are_distinct_from_plain_floor_and_rotate(self):
+        v=view();v['room']['tiles']=[{'x':1,'y':0,'kind':'SpikeTrap','hazard':{'active':False,'warning':True}}]
+        grid=navigation_features(v,0).reshape(13,13,9)
+        np.testing.assert_array_equal(grid[6,7,6:],[1,0,1])
+        rotated=navigation_features(v,1).reshape(13,13,9)
+        np.testing.assert_array_equal(rotated[5,6,6:],[1,0,1])
+        v['room']['tiles'][0]={'x':1,'y':0,'kind':None}
+        self.assertFalse(navigation_features(v,0).any())
+
     def test_seed_pools_do_not_overlap_after_game_seed_conversion(self):
         train=seed_plan('training',64); test=seed_plan('held-out',32)
         self.assertEqual(train,seed_plan('training',64))
@@ -60,9 +69,9 @@ class DungeonTests(unittest.TestCase):
         a['room']['tiles']=[{'x':1,'y':0,'isDoor':True,'traversal':{'unlocked':False}},
                             {'x':0,'y':1,'exit':True,'traversal':{'direction':'down'}},
                             {'x':-1,'y':0,'kind':None,'isDoor':None,'exit':None}]
-        grid=navigation_features(a,1).reshape(13,13,6)
-        np.testing.assert_array_equal(grid[5,6],[1,0,0,1,0,0])
-        np.testing.assert_array_equal(grid[6,7],[0,1,0,0,0,0])
+        grid=navigation_features(a,1).reshape(13,13,9)
+        np.testing.assert_array_equal(grid[5,6],[1,0,0,1,0,0,0,0,0])
+        np.testing.assert_array_equal(grid[6,7],[0,1,0,0,0,0,0,0,0])
         self.assertEqual(grid[7,6].sum(),0)
 
     def test_passage_memory_requires_actual_observed_crossing(self):
@@ -71,7 +80,7 @@ class DungeonTests(unittest.TestCase):
         memory.observe(a,a,0,False,{'type':'Move','direction':'right'})
         self.assertFalse(memory.used_passages)
         memory.observe(a,b,0,False,{'type':'Move','direction':'right'})
-        grid=navigation_features(a,0,memory.used_passages).reshape(13,13,6)
+        grid=navigation_features(a,0,memory.used_passages).reshape(13,13,9)
         self.assertEqual(grid[6,7,4],1)
         self.assertEqual(grid[6,7,5],1)
         self.assertNotIn(('b',1,0),memory.used_passages)

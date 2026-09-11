@@ -25,7 +25,9 @@ const directions = {
   left: [Direction.LEFT, -1, 0], right: [Direction.RIGHT, 1, 0],
 };
 
-class AgentActionError extends Error {}
+class AgentActionError extends Error {
+  readonly code = "AGENT_ACTION_REJECTED";
+}
 
 interface TacticalFrame {
   roomId: string;
@@ -188,6 +190,7 @@ export class AgentEnvironment {
         solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
         isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
         traversal: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getTraversalTraits?:()=>object})?.getTraversalTraits?.(),
+        hazard: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getAgentHazardTraits?:()=>object})?.getAgentHazardTraits?.(),
         exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder ||
           room.getGameplayLightTile(tile.x, tile.y) instanceof UpLadder,
       })),
@@ -323,7 +326,7 @@ export class AgentEnvironment {
         (before.decision === "ladder") !== ladderAction ||
         (before.decision === "selection") !== (actionInput.type === "SelectOption") ||
         (before.decision === "dismissable-interaction") !== (actionInput.type === "DismissInteraction")) {
-        throw new AgentActionError("Action does not match the current decision; choose a supported action or reset");
+        throw new AgentActionError(`Cannot use ${actionInput.type} for current decision: ${before.decision}; choose the current interaction`);
       }
       const player = this.player();
       const items = player.inventory.items;

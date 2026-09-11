@@ -17,15 +17,15 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 6, 'task': 'procedural-dungeon',
+ENCODER = {**ROTATED_ENCODER, 'version': 7, 'task': 'procedural-dungeon',
            'memory': '169 player-relative arrival-count cells, clipped at 8, rotated with view',
-           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage']}
+           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning']}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,
           'newRoom': .5, 'newMaximumDepth': 5, 'healthLost': -3,
           'death': -10, 'attemptedGameAction': -.01}
 HELPER = {'version': 1, 'actions': ['confirm-ladder', 'dismiss-interaction', 'cancel-selection', 'zero-turn-healing'],
           'limitation': 'No learned inventory, crafting, spell use, or equipment selection'}
-OBS_SIZE = SIZE*2 + 169*7
+OBS_SIZE = SIZE*2 + 169*10
 
 
 def rejected_without_visible_effect(before,after,transition,terminal):
@@ -60,7 +60,7 @@ def helper_action(view):
 
 
 def navigation_features(view,rotation,used=()):
-    grid=np.zeros((13,13,6),dtype=np.float32)
+    grid=np.zeros((13,13,9),dtype=np.float32)
     px,py=view['player']['x'],view['player']['y']
     for tile in view['room']['tiles']:
         x,y=int(tile['x']-px+6),int(tile['y']-py+6)
@@ -68,11 +68,14 @@ def navigation_features(view,rotation,used=()):
         traversal=tile.get('traversal') or {}
         door=tile.get('isDoor') is True
         stairs=tile.get('exit') is True
+        hazard=tile.get('hazard') or {}
+        spikes=tile.get('kind')=='SpikeTrap'
         grid[y,x]=[door,stairs and traversal.get('direction')=='down',
                    stairs and traversal.get('direction')=='up',
                    (door or stairs) and traversal.get('unlocked') is False,
                    (door or stairs) and traversal.get('unlockFromHere') is True,
-                   (view['room']['id'],tile['x'],tile['y']) in used]
+                   (view['room']['id'],tile['x'],tile['y']) in used,
+                   spikes,spikes and hazard.get('active') is True,spikes and hazard.get('warning') is True]
     return np.rot90(grid,rotation,axes=(0,1)).ravel().copy()
 
 

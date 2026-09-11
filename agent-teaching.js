@@ -3,6 +3,18 @@
   const copy=x=>JSON.parse(JSON.stringify(x));
   const position=v=>JSON.stringify([v.room.id,v.player.x,v.player.y]);
   const effect=v=>JSON.stringify([v.player,v.inventory,v.room.entities,v.room.items,v.room.hitWarnings,v.decision,v.selectionChoices]);
+  function allowedDirections(v){
+    if(v.decision!=='world')return [];
+    const weapon=v.inventory.find(i=>i?.activeWeapon)?.traits;
+    return ['up','right','down','left'].filter((direction,index)=>{
+      const [dx,dy]=[[0,-1],[1,0],[0,1],[-1,0]][index],x=v.player.x+dx,y=v.player.y+dy;
+      const tile=v.room.tiles.find(t=>t.x===x&&t.y===y);
+      // Directional actions can also attack. Do not mask unknown terrain, doors,
+      // breakable objects, or weapons whose reach extends beyond this tile.
+      const occupied=v.room.entities.some(e=>x>=e.x&&x<e.x+(e.width||1)&&y>=e.y&&y<e.y+(e.height||1));
+      return occupied||weapon?.attackPattern!=='adjacent-cardinal'||!tile?.solid||tile.isDoor||!['Wall','WallTorch'].includes(tile.kind);
+    });
+  }
   function helper(v){
     if(v.decision==='ladder')return {type:'LadderConfirm'};
     if(v.decision==='dismissable-interaction')return {type:'DismissInteraction'};
@@ -37,9 +49,46 @@
     pause(reason='Paused'){if(['finished','error'].includes(this.state))return;this.generation++;this.state='paused';this.reason=reason;this.autoDeadline=null;this.changed();}
     async take(){if(['error','finished','handoff','human'].includes(this.state)||!this.view)return;const generation=++this.generation;this.state='handoff';this.changed();if(this.pending)try{await this.pending;}catch{return;}if(this.state!=='handoff'||generation!==this.generation)return;this.segment++;if(!await this.event('human-control')||generation!==this.generation)return;this.state='human';this.reason='Your controls are active';this.interventionOrigin=position(this.view);this.suggested=null;this.changed();}
     async resume(single=false){if(this.busy||['error','finished','agent','handoff'].includes(this.state))return;const g=++this.generation;this.state='handoff';this.suggested=null;this.autoDeadline=null;this.changed();if(!await this.event('agent-control')||g!==this.generation)return;this.state='agent';this.reason='Agent controls the game';this.changed();while(this.state==='agent'&&g===this.generation){await this.agentStep(g);if(single&&this.state==='agent'){this.pause('Single agent step completed');break;}if(this.state==='agent'&&g===this.generation)await new Promise(r=>setTimeout(r,this.speed));}}
-    async agentStep(g){if(this.busy||g!==this.generation)return;this.busy=true;this.changed();try{const prediction=await this.policy.choose(this.view);if(g!==this.generation||this.state!=='agent')return;if(!prediction?.action){this.state='help';this.reason='Agent cannot handle this choice';return;}if(this.uncertain&&prediction.probabilities&&Math.max(...prediction.probabilities)<.4&&this.records.length>this.tailIgnore){this.state='help';this.reason='Agent choices are close (not a safety score)';return;}this.busy=false;await this.execute(prediction.action,helper(this.view)?'helper':'agent');if(this.state==='agent'&&this.records.length>this.tailIgnore){const reason=stuck(this.records);if(reason){this.state='help';this.reason=reason;this.meta.events.push({type:'help-request',reason,atSeq:this.records.length});await this.store.save(this.meta);}}}catch(e){this.fail(e);}finally{this.busy=false;this.changed();}}
-    async human(action){if(this.state!=='human'||this.busy)return false;this.autoDeadline=null;await this.execute(action,'human');if(this.state==='human')await this.propose();return true;}
-    async execute(action,source){if(this.busy)throw new Error('Action already in flight');this.busy=true;this.changed();this.pending=(async()=>{const before=copy(this.view);let result;try{result=await this.agent.step(action);}catch(e){throw new Error('Game action failed; export this session before starting a new one: '+e.message);}const after=copy(this.agent.perceive());const record={seq:this.records.length+1,source,segment:this.segment,before,after,action:copy(action),info:copy(result.info),terminated:result.terminated,truncated:result.truncated,decisionEnd:after.decision==='world'&&!helper(after),time:Date.now()};this.records.push(record);this.view=after;await this.store.append(this.meta.id,record);await this.policy?.advance?.(record);if(result.terminated||result.truncated){this.state='finished';this.reason=result.terminated?'Run ended':'Decision budget reached';this.meta.endedAt=new Date().toISOString();await this.event('finished');}})();try{await this.pending;}catch(e){this.fail(e);}finally{this.busy=false;this.pending=null;this.changed();}}
+    async agentStep(g){
+      if(this.busy||g!==this.generation)return;
+      this.busy=true;this.changed();
+      try{
+        const prediction=await this.policy.choose(this.view);
+        if(g!==this.generation||this.state!=='agent')return;
+        if(!prediction?.action){this.state='help';this.reason='Agent cannot handle this choice';return;}
+        if(prediction.action.type==='Move'){
+          const allowed=allowedDirections(this.view);
+          if(!allowed.includes(prediction.action.direction)){
+            const probs=prediction.probabilities;
+            if(!allowed.length||!probs){this.state='help';this.reason='Agent proposed a known blocked direction; choose an interaction or take control';return;}
+            const directions=['up','right','down','left'];
+            prediction.action={type:'Move',direction:allowed.reduce((best,d)=>probs[directions.indexOf(d)]>probs[directions.indexOf(best)]?d:best)};
+          }
+        }
+        if(this.uncertain&&prediction.probabilities&&Math.max(...prediction.probabilities)<.4&&this.records.length>this.tailIgnore){this.state='help';this.reason='Agent choices are close (not a safety score)';return;}
+        this.busy=false;await this.execute(prediction.action,helper(this.view)?'helper':'agent');
+        if(this.state==='agent'&&this.records.length>this.tailIgnore){const reason=stuck(this.records);if(reason){this.state='help';this.reason=reason;this.meta.events.push({type:'help-request',reason,atSeq:this.records.length});await this.store.save(this.meta);}}
+      }catch(e){this.fail(e);}finally{this.busy=false;this.changed();}
+    }
+    async human(action){if(this.state!=='human'||this.busy)return false;if(action.type==='Move'&&!allowedDirections(this.view).includes(action.direction)){this.reason='That direction is a known solid wall or this menu needs a choice.';this.changed();return false;}this.autoDeadline=null;await this.execute(action,'human');if(this.state==='human')await this.propose();return true;}
+    async execute(action,source){
+      if(this.busy)throw new Error('Action already in flight');
+      this.busy=true;this.changed();
+      this.pending=(async()=>{
+        const before=copy(this.view);let result,rejection=null;
+        try{result=await this.agent.step(action);}catch(e){
+          if(e.code!=='AGENT_ACTION_REJECTED')throw new Error('Game action failed; export this session before starting a new one: '+e.message);
+          rejection=e.message;result={info:{recorded:false,turnDelta:0,rejection,requestedSource:source},terminated:false,truncated:false};
+        }
+        const after=copy(this.agent.perceive());
+        const record={seq:this.records.length+1,source:rejection?'rejected':source,segment:this.segment,before,after,action:copy(action),info:copy(result.info),terminated:result.terminated,truncated:result.truncated,decisionEnd:after.decision==='world'&&!helper(after),time:Date.now()};
+        this.records.push(record);this.view=after;
+        await this.store.append(this.meta.id,record);await this.policy?.advance?.(record);
+        if(rejection){this.state='help';this.reason=rejection+' — run preserved. Take control or try the agent again.';await this.event('action-rejected');}
+        else if(result.terminated||result.truncated){this.state='finished';this.reason=result.terminated?'Run ended':'Decision budget reached';this.meta.endedAt=new Date().toISOString();await this.event('finished');}
+      })();
+      try{await this.pending;}catch(e){this.fail(e);}finally{this.busy=false;this.pending=null;this.changed();}
+    }
     async propose(){if(this.busy||this.state!=='human'||this.meta.mode==='demonstration')return;const seq=this.records.length,g=this.generation;try{const p=await this.policy.propose?.(this.view);if(this.state!=='human'||seq!==this.records.length||g!==this.generation)return;const last=this.records.at(-1);const clear=!stuck(this.records)&&!this.view.room.hitWarnings.some(w=>w.hostile&&w.x===this.view.player.x&&w.y===this.view.player.y);const useful=last&&(position(last.before)!==position(last.after)||effect(last.before)!==effect(last.after));const repeatsFailure=last&&!last.info.recorded&&JSON.stringify(last.action)===JSON.stringify(p?.action);this.suggested=p?.action&&clear&&useful&&!repeatsFailure?p:null;if(this.suggested&&this.autoReturn)this.autoDeadline=Date.now()+2000;this.changed();}catch(e){this.reason='Agent suggestion unavailable: '+e.message;this.changed();}}
     async finish(){this.pause('Finishing');if(this.pending)await this.pending;if(this.state==='error')return;this.state='finished';this.meta.endedAt=new Date().toISOString();await this.event('finished-by-human');this.changed();}
     async export(){return {schemaVersion:1,meta:copy(this.meta),records:copy(this.records),replay:this.cachedReplay??(!this.busy?this.agent.exportReplay():null)};}
@@ -60,5 +109,5 @@
     async choose(){const r=await this.request('/predict',{id:this.id,seq:this.seq});if(r.seq!==this.seq)throw new Error('Stale prediction');return r;}
     propose(){return this.choose();}
   }
-  return {Session,Store,Baseline,Remote,helper,stuck};
+  return {Session,Store,Baseline,Remote,helper,stuck,allowedDirections};
 });

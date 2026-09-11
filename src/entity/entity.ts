@@ -398,8 +398,8 @@ export class Entity extends Drawable {
       return null;
     }
 
-    if (room.roomArray[x][y].isSolid()) {
-      console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid`);
+    if (room.roomArray[x][y].isSolid() || room.roomArray[x][y].isDoor) {
+      console.warn(`Cannot add entity: tile at (${x}, ${y}) is solid or a doorway`);
       return null;
     }
 

@@ -70,6 +70,28 @@ test('warning changes and removal are reflected without inventing timing', () =>
   assert.equal(traits.observeWarnings([warning]).length, 0);
 });
 
+test('resolved fading warnings are omitted and parentless ground warnings retain their layer',()=>{
+  let active=true;
+  const warning={x:1,y:2,dead:false,parent:null,isActive:()=>active,getSaveFields:()=>({isEnemy:false,dirOnly:false})};
+  assert.equal(traits.observeWarnings([warning])[0].z,0);
+  active=false;
+  assert.equal(traits.observeWarnings([warning]).length,0);
+});
+
+test('real warning lifecycle stops threatening on its first tick, before cleanup',()=>{
+  const {HitWarning}=load('src/drawable/hitWarning.ts',{'./warningVisibility':{isWarningVisibleAboveShade:()=>true},'../game':{Game:{}},'./drawable':{Drawable:class{}},'../utility/utils':{Utils:{}}});
+  const game={room:{entities:[],doors:[]}};
+  const warning=new HitWarning(game,1,0,0,0,true);
+  assert.equal(warning.isActive(),true);
+  warning.tick();
+  assert.equal(warning.dead,false);
+  assert.equal(warning.isActive(),false);
+  assert.equal(traits.observeWarnings([warning]).length,0);
+  warning.tick();assert.equal(warning.dead,true);
+  // Dead warnings must not touch rendering state even before array cleanup.
+  warning.draw(1);warning.drawTopLayer(1);
+});
+
 test('checkpoint metadata distinguishes interface mismatch, changed build and changed settings', () => {
   const settings = {STARTING_HEALTH: 2};
   const contract = load('src/game/agentContract.ts', {

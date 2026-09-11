@@ -1349,8 +1349,9 @@ export class Room {
     if (this.height <= 2 || this.width <= 2) return;
     const pos = this.getRandomEmptyPosition(this.getEmptyTiles());
 
-    let x = placeX ? placeX : pos.x;
-    let y = placeY ? placeY : pos.y;
+    if (!pos && (placeX == null || placeY == null)) return;
+    let x = placeX ?? pos.x;
+    let y = placeY ?? pos.y;
 
     let table =
       this.depth > 0

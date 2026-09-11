@@ -78,6 +78,10 @@ export class HitWarning extends Drawable {
     this.tickedForDeath = true;
   };
 
+  /** A resolved warning can linger for visual fade-out without remaining a threat. */
+  isActive = () => !this.dead && !this.tickedForDeath &&
+    !this.parent?.dead && !(this.parent as Entity & {unconscious?: boolean})?.unconscious;
+
   static updateFrame = (delta: number) => {
     HitWarning.frame += 0.125 * delta;
     if (HitWarning.frame >= 2) HitWarning.frame = 0;
@@ -280,6 +284,7 @@ export class HitWarning extends Drawable {
   };
 
   draw = (delta: number) => {
+    if (this.dead) return;
     this.fadeHitwarnings(delta);
     if (
       Math.abs(this.x - this.game.players[this.game.localPlayerID].x) <= 1 &&
@@ -328,6 +333,7 @@ export class HitWarning extends Drawable {
   };
 
   drawTopLayer = (delta: number) => {
+    if (this.dead) return;
     this.fadeHitwarnings(delta);
     const observer = this.game.players[this.game.localPlayerID];
     if (!isWarningVisibleAboveShade({x: this.x, y: this.y, hostile: !!this.isEnemy, directionOnly: !!this.dirOnly},
