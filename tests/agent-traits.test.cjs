@@ -55,6 +55,12 @@ test('missing, non-finite and wrong-typed features remain unknown', () => {
   }
 });
 
+test('facing follows the gameplay direction enum and spawner type comes from an explicit trait',()=>{
+  const e={direction:2,getAgentSpawnTraits:()=>({enemyType:'skull'})};
+  const t=traits.observeEntity(e);assert.equal(t.facing.dx,1);assert.equal(t.facing.dy,0);assert.equal(t.spawner.enemyType,'skull');
+  assert.equal(traits.observeEntity({direction:99}).facing,null);
+});
+
 test('warning changes and removal are reflected without inventing timing', () => {
   const warning = {x: 1, y: 2, dead: false, parent: {globalId: 'enemy-1', z: 3},
     getSaveFields: () => ({eX: 0, eY: 2, isEnemy: true, dirOnly: false})};

@@ -4,12 +4,12 @@ import unittest
 from unittest.mock import Mock
 import numpy as np
 import torch
-from combat_pilot import CombatEnv, encode, SIZE, evaluate, rotate_features, world_action, BROWSER_RECYCLE_EPISODES
+from combat_pilot import CombatEnv, encode, SIZE, GRID, CENTER, CHANNELS, evaluate, rotate_features, world_action, BROWSER_RECYCLE_EPISODES
 
 
 class EncodingTests(unittest.TestCase):
     def view(self):
-        return {'observationMode':'player-perception','schemaVersion':6,
+        return {'observationMode':'player-perception','schemaVersion':7,
                 'player':{'x':12,'y':12,'health':2},'inventory':[],
                 'room':{'tiles':[], 'entities':[], 'hitWarnings':[]}}
 
@@ -22,7 +22,7 @@ class EncodingTests(unittest.TestCase):
         v['room']['entities']=[{'x':13,'y':12,'appearance':'identified','width':2,'height':2,'isEnemy':True,'health':3,'kind':'BigSkull'}]
         encoded=encode(v)
         self.assertEqual(encoded.shape,(SIZE,))
-        self.assertEqual(encoded[:-5].reshape(13,13,12)[:,:,5].sum(),4)
+        self.assertEqual(encoded[:-5].reshape(GRID,GRID,CHANNELS)[:,:,5].sum(),4)
         v['room']['entities'][0]['kind']='EntirelyNewEnemy'
         np.testing.assert_array_equal(encoded,encode(v))
 
@@ -31,6 +31,19 @@ class EncodingTests(unittest.TestCase):
         unknown=encode(v)
         v['room']['entities'][0]['health']=0
         self.assertFalse(np.array_equal(unknown,encode(v)))
+
+    def test_facing_and_contact_displacement_rotate_with_the_board(self):
+        v=self.view();v['room']['entities']=[{'x':12,'y':12,'appearance':'identified','facing':{'dx':1,'dy':0},'tracking':{'dx':1,'dy':0,'stepsSinceSeen':1}}]
+        grid=rotate_features(encode(v),1)[:-5].reshape(GRID,GRID,CHANNELS)
+        np.testing.assert_allclose(grid[CENTER,CENTER,16:19],[1,.5,0])
+        np.testing.assert_allclose(grid[CENTER,CENTER,19:23],[1,.5,.5-1/GRID/2,1/8])
+
+    def test_spawner_variants_spawn_hazards_and_neighboring_entities_are_encoded(self):
+        v=self.view();v['room']['entities']=[{'x':12,'y':12,'appearance':'identified','spawner':{'enemyType':'skull'}}]
+        skull=encode(v);v['room']['entities'][0]['spawner']['enemyType']='zombie';self.assertFalse(np.array_equal(skull,encode(v)))
+        v['visibleRooms']=[{'id':'neighbor','tiles':[],'entities':[],'hitWarnings':[], 'hazards':[{'x':20,'y':12,'kind':'enemy-spawn','damage':.5}]}]
+        grid=encode(v)[:-5].reshape(GRID,GRID,CHANNELS)
+        np.testing.assert_allclose(grid[CENTER,CENTER+8,23:25],[1,.05])
 
     def test_anonymous_does_not_gain_hidden_body_or_health(self):
         v=self.view(); v['room']['entities']=[{'x':13,'y':12,'appearance':'unidentified'}]
@@ -44,11 +57,11 @@ class RotationTests(unittest.TestCase):
         for turns in range(4):
             for world, (dx,dy) in enumerate(offsets):
                 features=np.zeros(SIZE,dtype=np.float32)
-                features[:-5].reshape(13,13,12)[6+dy,6+dx,5]=1
-                transformed=rotate_features(features,turns)[:-5].reshape(13,13,12)
+                features[:-5].reshape(GRID,GRID,CHANNELS)[CENTER+dy,CENTER+dx,5]=1
+                transformed=rotate_features(features,turns)[:-5].reshape(GRID,GRID,CHANNELS)
                 local=(world-turns)%4
                 lx,ly=offsets[local]
-                self.assertEqual(transformed[6+ly,6+lx,5],1)
+                self.assertEqual(transformed[CENTER+ly,CENTER+lx,5],1)
                 self.assertEqual(world_action(local,turns),world)
             with self.assertRaises(ValueError): world_action(4,turns)
     def test_roundtrip_preserves_features(self):

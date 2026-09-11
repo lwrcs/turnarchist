@@ -22462,6 +22462,7 @@ class Spawner extends enemy_1.Enemy {
         1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 15, 16, 17, 18, 20, 22, 23,
     ]) {
         super(room, game, x, y);
+        this.getAgentSpawnTraits = () => ({ enemyType: Object.entries(Spawner.spawnTypeByName).find(([, id]) => id === this.enemySpawnType)?.[0] ?? "unknown" });
         this.hit = () => {
             return 1;
         };
@@ -36492,7 +36493,7 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 6,
+        observationSchemaVersion: 7,
         actionSchemaVersion: 4,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
@@ -36568,6 +36569,9 @@ class AgentEnvironment {
         this.maxSteps = 1000;
         this.failure = null;
         this.recentTransitions = [];
+        this.contacts = new Map();
+        this.contactKeys = new WeakMap();
+        this.nextContactKey = 0;
     }
     player() { return this.game.players[this.game.localPlayerID]; }
     contract() { return (0, agentContract_1.getAgentContract)(); }
@@ -36648,6 +36652,9 @@ class AgentEnvironment {
             this.game.startMenu?.close();
             this.seed = seed;
             this.steps = 0;
+            this.contacts.clear();
+            this.contactKeys = new WeakMap();
+            this.nextContactKey = 0;
             this.recentTransitions = [];
             this.maxSteps = maxSteps;
             this.vision = vision;
@@ -36707,33 +36714,89 @@ class AgentEnvironment {
             throw new Error("Wait for the current operation before perceiving");
         const observation = this.observe();
         const room = this.player().getRoom();
-        const perceived = (0, agentPerception_1.perceiveRoom)({
-            player: observation.player, tiles: observation.room.tiles.map(tile => ({
-                ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
-                solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
-                isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
-                traversal: room.getGameplayLightTile(tile.x, tile.y)?.getTraversalTraits?.(),
-                hazard: room.getGameplayLightTile(tile.x, tile.y)?.getAgentHazardTraits?.(),
-                exit: room.getGameplayLightTile(tile.x, tile.y) instanceof downLadder_1.DownLadder ||
-                    room.getGameplayLightTile(tile.x, tile.y) instanceof upLadder_1.UpLadder,
-            })),
-            entities: observation.room.entities,
-            items: room.items.map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
-            warnings: observation.room.hitWarnings,
-            brightness: (x, y) => {
-                const darkness = room.vis[x]?.[y];
-                return typeof darkness === "number" && Number.isFinite(darkness)
-                    ? Math.max(0, Math.min(1, 1 - darkness)) : 0;
-            },
-            blocked: (x, y) => room.isGameplaySightBlocked(x, y),
-        }, vision);
+        const project = (visibleRoom) => {
+            const room = visibleRoom;
+            const tiles = [];
+            for (let x = room.roomX; x < room.roomX + room.width; x++)
+                for (let y = room.roomY; y < room.roomY + room.height; y++) {
+                    const tile = room.getGameplayLightTile(x, y);
+                    if (tile)
+                        tiles.push({ x, y, kind: tile.constructor.name, solid: tile.isSolid(), isDoor: tile.isDoor,
+                            traversal: tile.getTraversalTraits?.(),
+                            hazard: tile.getAgentHazardTraits?.(),
+                            exit: tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder });
+                }
+            const perceived = (0, agentPerception_1.perceiveRoom)({
+                player: observation.player, tiles,
+                entities: room.entities.filter(e => !e.dead).map(e => {
+                    const traits = (0, agentTraits_1.observeEntity)(e);
+                    if (!traits.id) {
+                        let key = this.contactKeys.get(e);
+                        if (!key) {
+                            key = `unregistered-${++this.nextContactKey}`;
+                            this.contactKeys.set(e, key);
+                        }
+                        traits.id = key;
+                    }
+                    return traits;
+                }),
+                items: room.items.map(item => ({ ...(0, agentTraits_1.observeItem)(item), z: item.z })),
+                warnings: (0, agentTraits_1.observeWarnings)(room.hitwarnings),
+                hazards: (room.projectiles ?? []).filter(p => !p.dead).flatMap(p => {
+                    const traits = p.getAgentHazardTraits?.();
+                    return traits ? [{ x: p.x, y: p.y, z: p.z ?? 0, ...traits }] : [];
+                }),
+                brightness: (x, y) => {
+                    const darkness = room.vis[x]?.[y];
+                    return typeof darkness === "number" && Number.isFinite(darkness)
+                        ? Math.max(0, Math.min(1, 1 - darkness)) : 0;
+                },
+                blocked: (x, y) => room.isGameplaySightBlocked(x, y),
+            }, vision);
+            const localIds = new Map();
+            const entities = perceived.entities.map(e => {
+                const key = e.id;
+                if (!key)
+                    return e;
+                let contact = this.contacts.get(key);
+                if (!contact) {
+                    contact = { id: `c${this.contacts.size + 1}`, step: this.steps, x: e.x, y: e.y };
+                    this.contacts.set(key, contact);
+                }
+                else if (contact.step !== this.steps) {
+                    contact.previous = { step: contact.step, x: contact.x, y: contact.y };
+                    contact.step = this.steps;
+                    contact.x = e.x;
+                    contact.y = e.y;
+                }
+                localIds.set(key, contact.id);
+                return { ...e, id: contact.id, tracking: contact.previous ? {
+                        dx: e.x - contact.previous.x, dy: e.y - contact.previous.y, stepsSinceSeen: this.steps - contact.previous.step
+                    } : null };
+            });
+            const connections = (room.doors ?? []).filter(d => d.linkedDoor?.room?.entered &&
+                perceived.tiles.some(t => t.x === d.x && t.y === d.y && t.isDoor)).map(d => ({
+                from: { roomId: room.globalId, x: d.x, y: d.y },
+                to: { roomId: d.linkedDoor.room.globalId, ...d.linkedDoor.getArrivalPosition(d.linkedDoor.room.roomX - room.roomX > 0 ? 1 : -1) },
+                linkedDoor: { x: d.linkedDoor.x, y: d.linkedDoor.y },
+            }));
+            return { id: room.globalId, ...perceived, entities, connections, hitWarnings: [...perceived.hitWarnings.map(w => {
+                        const { sourceId, ...rest } = w;
+                        return sourceId && localIds.has(sourceId) ? { ...rest, sourceId: localIds.get(sourceId) } : rest;
+                    }), ...perceived.hazards.filter(h => h.damage > 0).map(h => ({ x: h.x, y: h.y, z: h.z, hostile: true, directionOnly: false }))] };
+        };
+        const perceived = project(room);
+        const visibleRooms = (this.game.rooms ?? []).filter(r => r !== room && r.entered &&
+            r.pathId === room.pathId && r.roomX <= observation.player.x + vision.range && r.roomX + r.width > observation.player.x - vision.range &&
+            r.roomY <= observation.player.y + Math.ceil(vision.range * .75) && r.roomY + r.height > observation.player.y - Math.ceil(vision.range * .75))
+            .map(project);
         return {
-            schemaVersion: 6, observationMode: "player-perception", vision: { ...vision },
-            contract: { ...this.contract(), observationSchemaVersion: 6, observationMode: "player-perception" },
+            schemaVersion: 7, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
+            contract: { ...this.contract(), observationSchemaVersion: 7, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             decision: observation.decision, selectionChoices: observation.selectionChoices,
-            room: { id: room.globalId, ...perceived },
+            room: perceived, visibleRooms,
         };
     }
     /** Explicit lab measurement, not a policy observation or step. */
@@ -36794,7 +36857,7 @@ class AgentEnvironment {
         const ladderChoice = player.screenMessage.open &&
             room.roomArray[player.x]?.[player.y] instanceof downLadder_1.DownLadder;
         return {
-            schemaVersion: 6, contract: this.contract(),
+            schemaVersion: 7, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario,
             encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -36965,7 +37028,7 @@ if (exports.AGENT_MODE) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.perceiveRoom = exports.hasTileSight = exports.validateAgentVision = exports.DEFAULT_AGENT_VISION = void 0;
 const warningVisibility_1 = __webpack_require__(/*! ../drawable/warningVisibility */ "./src/drawable/warningVisibility.ts");
-exports.DEFAULT_AGENT_VISION = Object.freeze({ range: 12, identificationBrightness: 0.08 });
+exports.DEFAULT_AGENT_VISION = Object.freeze({ range: 12, identificationBrightness: 0.04 });
 function validateAgentVision(vision) {
     if (!Number.isFinite(vision.range) || vision.range < 1 || vision.range > 100 ||
         !Number.isFinite(vision.identificationBrightness) || vision.identificationBrightness < 0 ||
@@ -37008,22 +37071,30 @@ exports.hasTileSight = hasTileSight;
 function perceiveRoom(input, vision) {
     const { player } = input;
     const inSight = (x, y) => x !== null && y !== null && Number.isFinite(x) && Number.isFinite(y) &&
-        Math.hypot(x - player.x, y - player.y) <= vision.range &&
-        hasTileSight(player.x, player.y, x, y, input.blocked);
-    const bright = (x, y) => input.brightness(x, y) >= vision.identificationBrightness;
+        Math.abs(x - player.x) <= vision.range && Math.abs(y - player.y) <= Math.ceil(vision.range * 0.75);
+    // Rendering shades surfaces rather than applying player-origin ray occlusion.
+    // A small local blend approximates blurred shade edges without changing gameplay light.
+    const brightness = (x, y) => Math.max(input.brightness(x, y), 0.25 * Math.max(input.brightness(x - 1, y), input.brightness(x + 1, y), input.brightness(x, y - 1), input.brightness(x, y + 1)));
+    const bright = (x, y) => brightness(x, y) >= vision.identificationBrightness;
     const entities = input.entities.filter(e => e.z === player.z && inSight(e.x, e.y)).flatMap(e => {
         if (bright(e.x, e.y))
             return [{ appearance: "identified", ...e }];
-        // No ID, species, stats, dimensions, or hidden phase survives an anonymous contact.
-        return e.isEnemy ? [{ appearance: "unidentified", x: e.x, y: e.y, z: e.z }] : [];
+        // Identity is remapped to a session-local contact token by the environment.
+        // An unknown contact does not reveal whether it is an enemy or an object.
+        return [{ appearance: "unidentified", id: e.id, x: e.x, y: e.y, z: e.z }];
     });
     const identifiedIds = new Set(entities.filter(e => e.appearance === "identified").map(e => e.id));
     return {
         tiles: input.tiles.filter(t => inSight(t.x, t.y)).map(t => bright(t.x, t.y)
-            ? { ...t, brightness: input.brightness(t.x, t.y) }
-            : { x: t.x, y: t.y, kind: null, solid: null, isDoor: null, traversal: null, exit: null, brightness: input.brightness(t.x, t.y) }),
+            ? { ...t, appearance: "identified", brightness: brightness(t.x, t.y) }
+            : { x: t.x, y: t.y, kind: null, appearance: "unidentified",
+                solid: brightness(t.x, t.y) >= 0.01 ? t.solid : null,
+                isDoor: t.isDoor === true ? true : null, traversal: null, exit: null, brightness: brightness(t.x, t.y) }),
         entities,
-        items: input.items.filter(i => (i.z ?? 0) === player.z && inSight(i.x, i.y) && bright(i.x, i.y)),
+        items: input.items.filter(i => (i.z ?? 0) === player.z && inSight(i.x, i.y)).map(i => bright(i.x, i.y)
+            ? { ...i, appearance: "identified" } : { x: i.x, y: i.y, z: i.z ?? 0, appearance: "unidentified" }),
+        // Spawn particles render above shade and advertise a dangerous, nonsolid tile.
+        hazards: (input.hazards ?? []).filter(h => h.z === player.z && inSight(h.x, h.y)),
         // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
         hitWarnings: input.warnings.filter(w => w.z === player.z && inSight(w.x, w.y) &&
             (0, warningVisibility_1.isWarningVisibleAboveShade)(w, player.x, player.y))
@@ -37064,6 +37135,9 @@ function observeEntity(source) {
         isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
         pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
         interactable: booleanOrNull(entity.interactable),
+        facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
+            ? { dx: [0, 0, 1, -1, 1, -1, 1, -1][entity.direction], dy: [1, -1, 0, 0, 1, -1, -1, 1][entity.direction] } : null,
+        spawner: entity.getAgentSpawnTraits?.() ?? null,
         combat: {
             baseDamage: numberOrNull(entity.baseDamage),
             killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),
@@ -84699,6 +84773,7 @@ class EnemySpawnAnimation extends projectile_1.Projectile {
     constructor(room, enemy, x, y) {
         super(enemy, x, y);
         this.ANIM_COUNT = 3;
+        this.getAgentHazardTraits = () => ({ kind: "enemy-spawn", damage: 0.5, solid: false });
         this.tick = () => {
             if (this.room === this.room.game.room)
                 sound_1.Sound.enemySpawn();
@@ -100127,7 +100202,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("0d1e58251b06aaa2367c")
+/******/ 		__webpack_require__.h = () => ("84b5707d9e22dc002c64")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

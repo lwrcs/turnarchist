@@ -16,6 +16,7 @@ export class EnemySpawnAnimation extends Projectile {
   room: Room;
   enemy: Entity;
   frame: number;
+  getAgentHazardTraits = () => ({kind: "enemy-spawn", damage: 0.5, solid: false});
   constructor(room: Room, enemy: Entity, x: number, y: number) {
     super(enemy, x, y);
     this.room = room;

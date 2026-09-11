@@ -1,8 +1,9 @@
 # Teaching the agent
 
-Current regression build: dungeon encoder v7 adds visible spike-trap presence,
-active spikes, and warning state. Earlier v6 checkpoints/datasets are deliberately
-incompatible. Use the programmed baseline or demonstrations until a v7 checkpoint
+Current regression build: perception schema v7 and dungeon encoder v8 add wider
+visibility, contact tracking, facing, neighboring rooms and spawn hazards.
+Earlier checkpoints/datasets are deliberately
+incompatible. Use the programmed baseline or demonstrations until a v8 checkpoint
 is trained and evaluated. The existing checkpoint and inference process have not
 been overwritten or silently relabeled.
 
@@ -33,6 +34,24 @@ The board deliberately draws the restricted observation as labeled tiles rather
 than the full game's artwork. Click a tile to inspect visible contents. This keeps
 unseen information out of the demonstration. It is an initial teaching interface,
 not a complete replacement for the normal game's inventory and menus.
+
+The observation covers a fixed 25×19 tile window. Dim entities and items remain
+unidentified contacts; doors remain recognizable without revealing their type or
+lock state. Identification uses a lower brightness threshold (0.04) with a small
+neighbor-light contribution to approximate the renderer's blurred shade edges.
+This changes perception only, not gameplay lighting or light-sensitive enemies.
+Previously entered rooms on the same path are included where they intersect the
+window; unexplored rooms are not disclosed.
+
+Contacts receive stable session IDs. Identified enemies show facing, and recorded
+movement tracks displacement since their previous observation. Spawners expose
+their enemy type when identified. Spawn markers are visible nonsolid hazards with
+0.5 damage and also contribute danger warnings. Click a tile for these details.
+
+Room identity is retained even when linked doors share world coordinates. Each
+known connection records its source room/tile, the linked door tile, and the actual
+arrival tile in the destination room. Training features include that arrival
+offset and rotate it along with facing and observed movement.
 
 ## Watch, correct, return
 
@@ -107,7 +126,11 @@ Automated checks cover input ownership, delayed predictions, save failure,
 takeover during an action, session isolation, baseline shadow state, zero-turn
 helpers, rotation and Python feature-history parity. Browser checks cover a narrow
 390px layout, two games, recording export and learned agent → human → agent
-handoff. A real browser export was imported successfully against the checkpoint.
+handoff in the earlier compatible build. Current v7/v8 checks cover recording,
+exports, ordinary play, vector rotation, contact identity, neighboring rooms and
+spawn damage. A controlled main-floor ladder fixture confirms the menu transition
+from depth 0 to depth 1 and a subsequent movement action; this is not an autonomous
+floor-clear result. Learned handoff requires a newly trained compatible checkpoint.
 
 The next step is a short human pilot: inspect a few corrections and normal-run
 records before collecting dozens of games. Two-game throughput under long browser

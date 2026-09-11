@@ -49,6 +49,27 @@ function setup(timeoutMs = 500) {
   return {env: new AgentEnvironment(game, timeoutMs), game, player, room, actions, DownLadder, UpLadder};
 }
 
+test('contact IDs survive dimming and track observed motion without exposing global IDs',async()=>{
+  const {env,room}=setup();await env.reset(123);
+  room.vis=Array.from({length:3},()=>[0,0,0]);room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];room.isGameplaySightBlocked=()=>false;
+  room.entities=[{globalId:'hidden-global-a',x:0,y:1,z:0,isEnemy:true,health:4},{globalId:'hidden-global-b',x:2,y:1,z:0,isEnemy:true,health:4}];
+  const first=env.perceive().room.entities;assert.equal(first[0].id,'c1');assert.equal(first[1].id,'c2');
+  room.vis=Array.from({length:3},()=>[1,1,1]);
+  const dark=env.perceive().room.entities;assert.equal(dark[0].id,'c1');assert.equal(dark[0].health,undefined);assert.equal(dark[0].isEnemy,undefined);
+  assert.equal(JSON.stringify(dark),JSON.stringify(env.perceive().room.entities));
+  room.entities[0].x=1;await env.step({type:'Move',direction:'up'});
+  const moved=env.perceive().room.entities[0];assert.equal(moved.id,'c1');assert.equal(moved.tracking.dx,1);assert.equal(moved.tracking.stepsSinceSeen,1);
+});
+
+test('neighboring room data requires discovery and the same path',async()=>{
+  const {env,game,room}=setup();await env.reset(123);room.pathId='main';
+  const neighbor={...room,globalId:'neighbor',entities:[{globalId:'secret-neighbor',x:2,y:1,z:0,isEnemy:true}],pathId:'main',entered:false};
+  for(const r of [room,neighbor]){r.vis=Array.from({length:3},()=>[0,0,0]);r.getGameplayLightTile=()=>null;r.isGameplaySightBlocked=()=>false;}
+  game.rooms=[room,neighbor];assert.equal(env.perceive().visibleRooms.length,0);
+  neighbor.entered=true;assert.equal(env.perceive().visibleRooms[0].entities[0].id,'c1');
+  neighbor.pathId='sewer';assert.equal(env.perceive().visibleRooms.length,0);
+});
+
 test('step returns the settled enemy response and maps movement to adjacent replay actions', async () => {
   const {env, actions} = setup();
   await env.reset(123);
@@ -430,8 +451,8 @@ test('identified upward ladders expose return traits without revealing dark exit
     getTraversalTraits:()=>({kind:'ladder',direction:'up',unlocked:true})});
   room.roomArray[2][1]=ladder;room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];
   room.isGameplaySightBlocked=()=>false;room.vis=[[],[],[]];room.vis[2][1]=0;
-  const identified=env.perceive();assert.equal(identified.schemaVersion,6);
-  assert.equal(identified.contract.observationSchemaVersion,6);
+  const identified=env.perceive();assert.equal(identified.schemaVersion,7);
+  assert.equal(identified.contract.observationSchemaVersion,7);
   assert.equal(identified.room.tiles[0].exit,true);
   assert.equal(identified.room.tiles[0].traversal.direction,'up');
   room.vis[2][1]=1;

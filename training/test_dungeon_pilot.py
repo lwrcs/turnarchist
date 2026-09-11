@@ -8,24 +8,33 @@ import numpy as np
 from stable_baselines3 import PPO
 import torch
 
-from combat_pilot import SIZE, encode
+from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
                            OBS_SIZE, transfer_actor, navigation_features)
 
 
 def view(x=0,y=0,room='a',health=2):
-    return {'observationMode':'player-perception','schemaVersion':6,
+    return {'observationMode':'player-perception','schemaVersion':7,
             'decision':'world','player':{'x':x,'y':y,'z':0,'health':health,'maxHealth':2},
             'inventory':[], 'room':{'id':room,'tiles':[],'entities':[],'hitWarnings':[]}}
 
 
 class DungeonTests(unittest.TestCase):
+    def test_shared_door_uses_explicit_arrival_in_destination_room(self):
+        v=view();v['room']['tiles']=[{'x':1,'y':0,'isDoor':True}]
+        v['room']['connections']=[{'from':{'roomId':'a','x':1,'y':0},'to':{'roomId':'b','x':2,'y':0},'linkedDoor':{'x':1,'y':0}}]
+        v['visibleRooms']=[{'id':'b','tiles':[{'x':1,'y':0,'isDoor':True}], 'entities':[], 'hitWarnings':[]}]
+        grid=navigation_features(v,0).reshape(GRID,GRID,12)
+        np.testing.assert_allclose(grid[CENTER,CENTER+1,9:],[1,.5+1/GRID/2,.5])
+        rotated=navigation_features(v,1).reshape(GRID,GRID,12)
+        np.testing.assert_allclose(rotated[CENTER-1,CENTER,9:],[1,.5,.5-1/GRID/2])
+
     def test_visible_spikes_are_distinct_from_plain_floor_and_rotate(self):
         v=view();v['room']['tiles']=[{'x':1,'y':0,'kind':'SpikeTrap','hazard':{'active':False,'warning':True}}]
-        grid=navigation_features(v,0).reshape(13,13,9)
-        np.testing.assert_array_equal(grid[6,7,6:],[1,0,1])
-        rotated=navigation_features(v,1).reshape(13,13,9)
-        np.testing.assert_array_equal(rotated[5,6,6:],[1,0,1])
+        grid=navigation_features(v,0).reshape(GRID,GRID,12)
+        np.testing.assert_array_equal(grid[CENTER,CENTER+1,6:9],[1,0,1])
+        rotated=navigation_features(v,1).reshape(GRID,GRID,12)
+        np.testing.assert_array_equal(rotated[CENTER-1,CENTER,6:9],[1,0,1])
         v['room']['tiles'][0]={'x':1,'y':0,'kind':None}
         self.assertFalse(navigation_features(v,0).any())
 
@@ -60,8 +69,8 @@ class DungeonTests(unittest.TestCase):
         a=view(); b=view(1)
         memory=ExplorationMemory(a,0)
         memory.observe(a,b,0,False)
-        grid=memory.features(a,1).reshape(13,13)
-        self.assertEqual(grid[5,6],1/8)
+        grid=memory.features(a,1).reshape(GRID,GRID)
+        self.assertEqual(grid[CENTER-1,CENTER],1/8)
         self.assertEqual(memory.features(view(room='unknown'),0).sum(),0)
 
     def test_navigation_marks_only_exposed_passages_and_rotates(self):
@@ -69,10 +78,10 @@ class DungeonTests(unittest.TestCase):
         a['room']['tiles']=[{'x':1,'y':0,'isDoor':True,'traversal':{'unlocked':False}},
                             {'x':0,'y':1,'exit':True,'traversal':{'direction':'down'}},
                             {'x':-1,'y':0,'kind':None,'isDoor':None,'exit':None}]
-        grid=navigation_features(a,1).reshape(13,13,9)
-        np.testing.assert_array_equal(grid[5,6],[1,0,0,1,0,0,0,0,0])
-        np.testing.assert_array_equal(grid[6,7],[0,1,0,0,0,0,0,0,0])
-        self.assertEqual(grid[7,6].sum(),0)
+        grid=navigation_features(a,1).reshape(GRID,GRID,12)
+        np.testing.assert_array_equal(grid[CENTER-1,CENTER],[1,0,0,1,0,0,0,0,0,0,0,0])
+        np.testing.assert_array_equal(grid[CENTER,CENTER+1],[0,1,0,0,0,0,0,0,0,0,0,0])
+        self.assertEqual(grid[CENTER+1,CENTER].sum(),0)
 
     def test_passage_memory_requires_actual_observed_crossing(self):
         a=view(); a['room']['tiles']=[{'x':1,'y':0,'isDoor':True,'traversal':{'unlockFromHere':True}}]
@@ -80,9 +89,9 @@ class DungeonTests(unittest.TestCase):
         memory.observe(a,a,0,False,{'type':'Move','direction':'right'})
         self.assertFalse(memory.used_passages)
         memory.observe(a,b,0,False,{'type':'Move','direction':'right'})
-        grid=navigation_features(a,0,memory.used_passages).reshape(13,13,9)
-        self.assertEqual(grid[6,7,4],1)
-        self.assertEqual(grid[6,7,5],1)
+        grid=navigation_features(a,0,memory.used_passages).reshape(GRID,GRID,12)
+        self.assertEqual(grid[CENTER,CENTER+1,4],1)
+        self.assertEqual(grid[CENTER,CENTER+1,5],1)
         self.assertNotIn(('b',1,0),memory.used_passages)
 
     def test_helper_only_uses_supported_metadata_and_never_waits(self):

@@ -9,7 +9,7 @@ from test_dungeon_pilot import view
 
 class TeachingTests(unittest.TestCase):
     def state(self):
-        v=view();v.update(schemaVersion=6,observationMode='player-perception',contract={})
+        v=view();v.update(schemaVersion=7,observationMode='player-perception',contract={})
         v['player']['maxHealth']=v['player']['health'];v.setdefault('inventory',[])
         return v
 

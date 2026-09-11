@@ -15,17 +15,17 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
-from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, encode, rotate_features, world_action
+from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, GRID, CENTER, visible_rooms, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 7, 'task': 'procedural-dungeon',
-           'memory': '169 player-relative arrival-count cells, clipped at 8, rotated with view',
-           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning']}
+ENCODER = {**ROTATED_ENCODER, 'version': 8, 'task': 'procedural-dungeon',
+           'memory': '625 player-relative arrival-count cells, clipped at 8, rotated with view',
+           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning','known-door-link','arrival-dx','arrival-dy']}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,
           'newRoom': .5, 'newMaximumDepth': 5, 'healthLost': -3,
           'death': -10, 'attemptedGameAction': -.01}
 HELPER = {'version': 1, 'actions': ['confirm-ladder', 'dismiss-interaction', 'cancel-selection', 'zero-turn-healing'],
           'limitation': 'No learned inventory, crafting, spell use, or equipment selection'}
-OBS_SIZE = SIZE*2 + 169*10
+OBS_SIZE = SIZE*2 + GRID*GRID*13
 
 
 def rejected_without_visible_effect(before,after,transition,terminal):
@@ -60,23 +60,29 @@ def helper_action(view):
 
 
 def navigation_features(view,rotation,used=()):
-    grid=np.zeros((13,13,9),dtype=np.float32)
+    grid=np.zeros((GRID,GRID,12),dtype=np.float32)
     px,py=view['player']['x'],view['player']['y']
-    for tile in view['room']['tiles']:
-        x,y=int(tile['x']-px+6),int(tile['y']-py+6)
-        if not (0<=x<13 and 0<=y<13): continue
+    for room,tile in [(room,tile) for room in visible_rooms(view) for tile in room['tiles']]:
+        x,y=int(tile['x']-px+CENTER),int(tile['y']-py+CENTER)
+        if not (0<=x<GRID and 0<=y<GRID): continue
         traversal=tile.get('traversal') or {}
         door=tile.get('isDoor') is True
         stairs=tile.get('exit') is True
         hazard=tile.get('hazard') or {}
         spikes=tile.get('kind')=='SpikeTrap'
+        link=next((c for c in room.get('connections',[]) if c['from']['x']==tile['x'] and c['from']['y']==tile['y']),None)
         grid[y,x]=[door,stairs and traversal.get('direction')=='down',
                    stairs and traversal.get('direction')=='up',
                    (door or stairs) and traversal.get('unlocked') is False,
                    (door or stairs) and traversal.get('unlockFromHere') is True,
-                   (view['room']['id'],tile['x'],tile['y']) in used,
-                   spikes,spikes and hazard.get('active') is True,spikes and hazard.get('warning') is True]
-    return np.rot90(grid,rotation,axes=(0,1)).ravel().copy()
+                   (room['id'],tile['x'],tile['y']) in used,
+                   spikes,spikes and hazard.get('active') is True,spikes and hazard.get('warning') is True,
+                   bool(link),np.clip((link['to']['x']-tile['x'])/GRID/2+.5,0,1) if link else 0,
+                   np.clip((link['to']['y']-tile['y'])/GRID/2+.5,0,1) if link else 0]
+    grid=np.rot90(grid,rotation,axes=(0,1)).copy();mask=grid[:,:,9]>0
+    for _ in range(rotation%4):
+        old_x=grid[:,:,10].copy();grid[:,:,10][mask]=grid[:,:,11][mask];grid[:,:,11][mask]=1-old_x[mask]
+    return grid.ravel()
 
 
 class ExplorationMemory:
@@ -114,11 +120,11 @@ class ExplorationMemory:
                 + REWARD['healthLost']*loss + REWARD['death']*dead)
 
     def features(self, view, rotation):
-        grid=np.zeros((13,13),dtype=np.float32)
+        grid=np.zeros((GRID,GRID),dtype=np.float32)
         room,px,py=self.position(view)
         for (scope,x,y),count in self.visits.items():
-            if scope==room and abs(x-px)<=6 and abs(y-py)<=6:
-                grid[y-py+6,x-px+6]=min(count/8,1)
+            if scope in {r['id'] for r in visible_rooms(view)} and abs(x-px)<=CENTER and abs(y-py)<=CENTER:
+                grid[y-py+CENTER,x-px+CENTER]=min(count/8,1)
         return np.rot90(grid,rotation).ravel().copy()
 
 

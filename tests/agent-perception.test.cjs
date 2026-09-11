@@ -16,25 +16,25 @@ function source() {
     entities:[{id:'secret-id',kind:'SecretEnemy',x:2,y:0,z:0,isEnemy:true,health:9,combat:{baseDamage:99}}],
     items:[],warnings:[],brightness:()=>0,blocked:()=>false};
 }
-test('dark contacts expose only position; identification responds to current tile brightness',()=>{
+test('dark contacts preserve an internal identity key but no hidden stats',()=>{
   const input=source();
   const dark=perceiveRoom(input,DEFAULT_AGENT_VISION);
-  assert.deepEqual(clean(dark.entities),[{appearance:'unidentified',x:2,y:0,z:0}]);
+  assert.deepEqual(clean(dark.entities),[{appearance:'unidentified',id:'secret-id',x:2,y:0,z:0}]);
   assert.equal(dark.tiles[0].kind,null);
   input.brightness=()=>.08;
   const bright=perceiveRoom(input,DEFAULT_AGENT_VISION);
   assert.equal(bright.entities[0].kind,'SecretEnemy');
   assert.equal(bright.entities[0].health,9);
-  input.brightness=()=>.079;
-  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities[0].id,undefined);
+  input.brightness=()=>.039;
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities[0].health,undefined);
 });
-test('range, walls and layer exclude enemies even when lighting is bright',()=>{
+test('view bounds and height layers restrict perception without an extra hard ray cutoff',()=>{
   const input=source();input.brightness=()=>1;
   input.entities.push({...input.entities[0],x:13},{...input.entities[0],z:1});
   assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities.length,1);
   input.blocked=(x,y)=>x===1&&y===0;
-  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities.length,0);
-  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).tiles.length,1);
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities.length,1);
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).tiles.length,2);
 });
 test('sight is symmetric and cannot peek between touching blocked corners',()=>{
   const blocked=(x,y)=>x===1&&y===0;
@@ -52,7 +52,7 @@ test('hidden objects and warning source details do not escape restricted percept
   input.items=[{x:2,y:0,z:0,name:'treasure'}, {x:2,y:0,z:1,name:'other layer'}];
   input.warnings=[{x:2,y:0,z:0,sourceId:'hidden-boss',sourceX:50,sourceY:50,hostile:true,directionOnly:false}];
   const dark=perceiveRoom(input,DEFAULT_AGENT_VISION);
-  assert.equal(dark.entities.length,0);assert.equal(dark.items.length,0);assert.equal(dark.hitWarnings.length,1);
+  assert.equal(dark.entities.length,1);assert.equal(dark.entities[0].kind,undefined);assert.equal(dark.items.length,1);assert.equal(dark.items[0].name,undefined);assert.equal(dark.hitWarnings.length,1);
   input.brightness=()=>1;
   const bright=perceiveRoom(input,DEFAULT_AGENT_VISION);
   assert.equal(bright.items.length,1);
@@ -65,6 +65,18 @@ test('vision settings are validated and copied',()=>{
   }
   const vision={range:20,identificationBrightness:.2};
   const copied=validateAgentVision(vision);vision.range=1;assert.equal(copied.range,20);
+});
+
+test('dim doors retain presence but not lock details; blurred edges can identify objects',()=>{
+  const input=source();input.tiles=[{x:2,y:0,kind:'Door',isDoor:true,solid:true,traversal:{unlocked:false}}];
+  const dark=perceiveRoom(input,DEFAULT_AGENT_VISION).tiles[0];assert.equal(dark.isDoor,true);assert.equal(dark.traversal,null);
+  input.brightness=(x,y)=>x===1&&y===0?.2:0;
+  assert.equal(perceiveRoom(input,DEFAULT_AGENT_VISION).entities[0].appearance,'identified');
+});
+
+test('spawn markers are visible above shade within the view and correct height only',()=>{
+  const input=source();input.hazards=[{x:2,y:0,z:0,kind:'enemy-spawn',damage:.5,solid:false},{x:2,y:0,z:1,kind:'enemy-spawn',damage:.5,solid:false}];
+  const hazards=perceiveRoom(input,DEFAULT_AGENT_VISION).hazards;assert.equal(hazards.length,1);assert.equal(hazards[0].damage,.5);assert.equal(hazards[0].solid,false);
 });
 
 test('above-shade warning visibility preserves hostile arrows and nearby friendly X marks in darkness',()=>{

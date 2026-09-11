@@ -33,10 +33,16 @@ CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
-ENCODER = {'version': 3, 'radius': 6, 'channels': 12, 'frames': 2, 'actions': ACTIONS}
-ROTATED_ENCODER = {**ENCODER,'version':4,'coordinateRotation':'random-quarter-turn-per-episode'}
+GRID=25
+CENTER=12
+SPAWN_TYPES=('pawn','crab','frog','zombie','skull','energywizard','charge','rook','bishop','armoredzombie','bigskull','queen','knight','bigknight','firewizard','armoredskull','mummy','spider','bigfrog','beetle','king','boltcaster','earthwizard','chessknight','giantfrog','worm')
+CHANNELS=29+len(SPAWN_TYPES)+1
+ENCODER = {'version': 5, 'radius': CENTER, 'channels': CHANNELS, 'frames': 2, 'actions': ACTIONS,
+           'perceptionSchema':7,'spawnerTypes':list(SPAWN_TYPES), 'contacts':'observed displacement and elapsed decisions',
+           'view':'25x19 rectangle padded to 25x25 for rotation'}
+ROTATED_ENCODER = {**ENCODER,'version':6,'coordinateRotation':'random-quarter-turn-per-episode'}
 REWARD = {'version': 1, 'clear': 10, 'death': -10, 'health_lost': -3, 'decision': -0.01}
-SIZE = 13 * 13 * 12 + 5
+SIZE = GRID * GRID * CHANNELS + 5
 BROWSER_RECYCLE_EPISODES = 64
 
 
@@ -48,21 +54,29 @@ def optimization_overrides(learning_rate=None, entropy_coefficient=None, target_
     return {name:value for name,value in values.items() if value is not None}
 
 
+def visible_rooms(view):
+    return [*view.get('visibleRooms',[]),view['room']]
+
+
 def encode(view):
-    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 6:
-        raise ValueError('Restricted perception v6 required')
-    grid = np.zeros((13, 13, 12), dtype=np.float32)
+    if view.get('observationMode') != 'player-perception' or view.get('schemaVersion') != 7:
+        raise ValueError('Restricted perception v7 required')
+    grid = np.zeros((GRID, GRID, CHANNELS), dtype=np.float32)
     px, py = view['player']['x'], view['player']['y']
     def cell(x, y):
-        x, y = int(x-px+6), int(y-py+6)
-        return grid[y, x] if 0 <= x < 13 and 0 <= y < 13 else None
-    for tile in view['room']['tiles']:
+        x, y = int(x-px+CENTER), int(y-py+CENTER)
+        return grid[y, x] if 0 <= x < GRID and 0 <= y < GRID else None
+    rooms=visible_rooms(view)
+    for tile in [t for room in rooms for t in room['tiles']]:
         c = cell(tile['x'], tile['y'])
         if c is not None:
             c[0] = 1
             c[1] = float(tile.get('solid') is not None)
             c[2] = float(tile.get('solid') is True)
-    for ent in view['room']['entities']:
+    for tile in view['room']['tiles']:
+        c=cell(tile['x'],tile['y'])
+        if c is not None:c[28]=1
+    for ent in [e for room in rooms for e in room['entities']]:
         identified = ent.get('appearance') == 'identified'
         width = int(ent.get('width') or 1) if identified else 1
         height = int(ent.get('height') or 1) if identified else 1
@@ -71,10 +85,12 @@ def encode(view):
                 c = cell(ent['x']+dx, ent['y']+dy)
                 if c is None:
                     continue
+                # Current-room contacts take precedence at shared boundary coordinates.
+                c[3:11]=0;c[12:23]=0;c[27]=0;c[29:]=0
                 c[3] = 1  # A visible entity/contact occupies this cell.
                 c[4] = float(identified)
-                c[5] = float(ent.get('isEnemy') is True or not identified)
-                c[6] = float(ent.get('collidable') is True)
+                c[5] = float(identified and ent.get('isEnemy') is True)
+                c[6] = float(identified and ent.get('collidable') is True)
                 if identified and ent.get('health') is not None:
                     c[7] = 1
                     c[8] = np.clip(ent['health']/10, 0, 1)
@@ -82,7 +98,25 @@ def encode(view):
                 if identified and threshold is not None:
                     c[9] = 1
                     c[10] = np.clip(threshold/10, 0, 1)
-    for warning in view['room']['hitWarnings']:
+                if identified:
+                    c[12:16]=[ent.get(k) is True for k in ('pushable','chainPushable','destroyable','interactable')]
+                    facing=ent.get('facing')
+                    if facing:c[16:19]=[1,(facing['dx']+1)/2,(facing['dy']+1)/2]
+                    spawner=ent.get('spawner')
+                    if spawner:
+                        c[27]=1
+                        kind=spawner.get('enemyType');index=SPAWN_TYPES.index(kind) if kind in SPAWN_TYPES else len(SPAWN_TYPES)
+                        c[29+index]=1
+                tracking=ent.get('tracking')
+                if tracking:c[19:23]=[1,np.clip(tracking['dx']/GRID/2+.5,0,1),np.clip(tracking['dy']/GRID/2+.5,0,1),min(tracking['stepsSinceSeen']/8,1)]
+    for room in rooms:
+        for hazard in room.get('hazards',[]):
+            c=cell(hazard['x'],hazard['y'])
+            if c is not None and hazard.get('kind')=='enemy-spawn':c[23:25]=[1,np.clip(hazard['damage']/10,0,1)]
+        for item in room.get('items',[]):
+            c=cell(item['x'],item['y'])
+            if c is not None:c[25:27]=[1,item.get('appearance')=='identified']
+    for warning in [w for room in rooms for w in room['hitWarnings']]:
         c = cell(warning['x'], warning['y'])
         if c is not None and warning.get('hostile'):
             c[11] = 1
@@ -95,8 +129,12 @@ def encode(view):
 
 
 def rotate_features(features, turns):
-    grid = features[:-5].reshape(13, 13, 12)
-    return np.concatenate((np.rot90(grid, turns, axes=(0, 1)).ravel(), features[-5:]))
+    grid = np.rot90(features[:-5].reshape(GRID, GRID, CHANNELS), turns, axes=(0,1)).copy()
+    for known,x,y in [(16,17,18),(19,20,21)]:
+        mask=grid[:,:,known]>0
+        for _ in range(turns%4):
+            old_x=grid[:,:,x].copy();grid[:,:,x][mask]=grid[:,:,y][mask];grid[:,:,y][mask]=1-old_x[mask]
+    return np.concatenate((grid.ravel(), features[-5:]))
 
 
 def world_action(action, turns):

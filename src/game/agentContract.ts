@@ -6,7 +6,7 @@ declare const __webpack_hash__: string;
 
 export function getAgentContract() {
   return {
-    observationSchemaVersion: 6,
+    observationSchemaVersion: 7,
     actionSchemaVersion: 4,
     observationMode: "diagnostic-current-room",
     gameVersion: GameConstants.VERSION,

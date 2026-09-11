@@ -54,6 +54,9 @@ export class AgentEnvironment {
   private maxSteps = 1000;
   private failure: string | null = null;
   private recentTransitions: AgentTransition[] = [];
+  private contacts = new Map<string, {id:string; step:number; x:number; y:number; previous?:{step:number;x:number;y:number}}>();
+  private contactKeys = new WeakMap<object,string>();
+  private nextContactKey = 0;
 
   constructor(private game: Game, private timeoutMs = 15000) {}
 
@@ -130,6 +133,8 @@ export class AgentEnvironment {
       this.game.startMenu?.close();
       this.seed = seed;
       this.steps = 0;
+      this.contacts.clear();
+      this.contactKeys = new WeakMap();this.nextContactKey=0;
       this.recentTransitions = [];
       this.maxSteps = maxSteps;
       this.vision = vision;
@@ -184,19 +189,29 @@ export class AgentEnvironment {
     if (this.busy) throw new Error("Wait for the current operation before perceiving");
     const observation = this.observe();
     const room = this.player().getRoom();
-    const perceived = perceiveRoom({
-      player: observation.player, tiles: observation.room.tiles.map(tile => ({
-        ...tile, kind: room.getGameplayLightTile(tile.x, tile.y)?.constructor.name ?? "Unknown",
-        solid: room.getGameplayLightTile(tile.x, tile.y)?.isSolid(),
-        isDoor: room.getGameplayLightTile(tile.x, tile.y)?.isDoor,
-        traversal: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getTraversalTraits?:()=>object})?.getTraversalTraits?.(),
-        hazard: (room.getGameplayLightTile(tile.x,tile.y) as unknown as {getAgentHazardTraits?:()=>object})?.getAgentHazardTraits?.(),
-        exit: room.getGameplayLightTile(tile.x, tile.y) instanceof DownLadder ||
-          room.getGameplayLightTile(tile.x, tile.y) instanceof UpLadder,
-      })),
-      entities: observation.room.entities,
+    const project = (visibleRoom: typeof room) => {
+      const room=visibleRoom;
+      const tiles=[];
+      for(let x=room.roomX;x<room.roomX+room.width;x++)for(let y=room.roomY;y<room.roomY+room.height;y++){
+        const tile=room.getGameplayLightTile(x,y);
+        if(tile)tiles.push({x,y,kind:tile.constructor.name,solid:tile.isSolid(),isDoor:tile.isDoor,
+          traversal:(tile as unknown as {getTraversalTraits?:()=>object}).getTraversalTraits?.(),
+          hazard:(tile as unknown as {getAgentHazardTraits?:()=>object}).getAgentHazardTraits?.(),
+          exit:tile instanceof DownLadder||tile instanceof UpLadder});
+      }
+      const perceived = perceiveRoom({
+      player: observation.player, tiles,
+      entities: room.entities.filter(e=>!e.dead).map(e=>{
+        const traits=observeEntity(e);
+        if(!traits.id){let key=this.contactKeys.get(e);if(!key){key=`unregistered-${++this.nextContactKey}`;this.contactKeys.set(e,key);}traits.id=key;}
+        return traits;
+      }),
       items: room.items.map(item => ({...observeItem(item), z: item.z})),
-      warnings: observation.room.hitWarnings,
+      warnings: observeWarnings(room.hitwarnings),
+      hazards: (room.projectiles??[]).filter(p=>!p.dead).flatMap(p=>{
+        const traits=(p as unknown as {getAgentHazardTraits?:()=>{kind:string;damage:number;solid:boolean}}).getAgentHazardTraits?.();
+        return traits?[{x:p.x,y:p.y,z:p.z??0,...traits}]:[];
+      }),
       brightness: (x, y) => {
         const darkness = room.vis[x]?.[y];
         return typeof darkness === "number" && Number.isFinite(darkness)
@@ -204,13 +219,40 @@ export class AgentEnvironment {
       },
       blocked: (x, y) => room.isGameplaySightBlocked(x, y),
     }, vision);
+      const localIds=new Map<string,string>();
+      const entities=perceived.entities.map(e=>{
+        const key=e.id;
+        if(!key)return e;
+        let contact=this.contacts.get(key);
+        if(!contact){contact={id:`c${this.contacts.size+1}`,step:this.steps,x:e.x,y:e.y};this.contacts.set(key,contact);}
+        else if(contact.step!==this.steps){contact.previous={step:contact.step,x:contact.x,y:contact.y};contact.step=this.steps;contact.x=e.x;contact.y=e.y;}
+        localIds.set(key,contact.id);
+        return {...e,id:contact.id,tracking:contact.previous?{
+          dx:e.x-contact.previous.x,dy:e.y-contact.previous.y,stepsSinceSeen:this.steps-contact.previous.step}:null};
+      });
+      const connections=(room.doors??[]).filter(d=>d.linkedDoor?.room?.entered &&
+        perceived.tiles.some(t=>t.x===d.x&&t.y===d.y&&t.isDoor)).map(d=>({
+          from:{roomId:room.globalId,x:d.x,y:d.y},
+          to:{roomId:d.linkedDoor.room.globalId,...d.linkedDoor.getArrivalPosition(d.linkedDoor.room.roomX-room.roomX>0?1:-1)},
+          linkedDoor:{x:d.linkedDoor.x,y:d.linkedDoor.y},
+        }));
+      return {id:room.globalId,...perceived,entities,connections,hitWarnings:[...perceived.hitWarnings.map(w=>{
+        const {sourceId,...rest}=w;
+        return sourceId&&localIds.has(sourceId)?{...rest,sourceId:localIds.get(sourceId)}:rest;
+      }),...perceived.hazards.filter(h=>h.damage>0).map(h=>({x:h.x,y:h.y,z:h.z,hostile:true,directionOnly:false}))]};
+    };
+    const perceived=project(room);
+    const visibleRooms=(this.game.rooms??[]).filter(r=>r!==room && r.entered &&
+      r.pathId===room.pathId && r.roomX<=observation.player.x+vision.range && r.roomX+r.width>observation.player.x-vision.range &&
+      r.roomY<=observation.player.y+Math.ceil(vision.range*.75) && r.roomY+r.height>observation.player.y-Math.ceil(vision.range*.75))
+      .map(project);
     return {
-      schemaVersion: 6, observationMode: "player-perception", vision: {...vision},
-      contract: {...this.contract(), observationSchemaVersion: 6, observationMode: "player-perception"},
+      schemaVersion: 7, observationMode: "player-perception", vision: {...vision,halfWidth:vision.range,halfHeight:Math.ceil(vision.range*.75)},
+      contract: {...this.contract(), observationSchemaVersion: 7, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       decision: observation.decision, selectionChoices: observation.selectionChoices,
-      room: {id: room.globalId, ...perceived},
+      room: perceived, visibleRooms,
     };
   }
 
@@ -268,7 +310,7 @@ export class AgentEnvironment {
     const ladderChoice = player.screenMessage.open &&
       room.roomArray[player.x]?.[player.y] instanceof DownLadder;
     return {
-      schemaVersion: 6, contract: this.contract(),
+      schemaVersion: 7, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
       seed: this.seed, scenario: this.scenario,
       encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,

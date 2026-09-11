@@ -13,6 +13,8 @@ interface EntityTraitsSource {
   isEnemy?: boolean; collidable?: boolean; pushable?: boolean; chainPushable?: boolean;
   destroyable?: boolean; interactable?: boolean; baseDamage?: number;
   orthogonalAttack?: boolean; diagonalAttack?: boolean;
+  direction?: number;
+  getAgentSpawnTraits?: () => {enemyType: string};
 }
 
 export function observeEntity(source: object) {
@@ -29,6 +31,9 @@ export function observeEntity(source: object) {
     isEnemy: booleanOrNull(entity.isEnemy), collidable: booleanOrNull(entity.collidable),
     pushable: booleanOrNull(entity.pushable), chainPushable: booleanOrNull(entity.chainPushable), destroyable: booleanOrNull(entity.destroyable),
     interactable: booleanOrNull(entity.interactable),
+    facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
+      ? {dx: [0,0,1,-1,1,-1,1,-1][entity.direction], dy: [1,-1,0,0,1,-1,-1,1][entity.direction]} : null,
+    spawner: entity.getAgentSpawnTraits?.() ?? null,
     combat: {
       baseDamage: numberOrNull(entity.baseDamage),
       killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),

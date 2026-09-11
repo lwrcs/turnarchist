@@ -81,6 +81,9 @@ export class Spawner extends Enemy {
     worm: 29,
   };
 
+  getAgentSpawnTraits = () => ({enemyType:
+    Object.entries(Spawner.spawnTypeByName).find(([,id])=>id===this.enemySpawnType)?.[0] ?? "unknown"});
+
   constructor(
     room: Room,
     game: Game,

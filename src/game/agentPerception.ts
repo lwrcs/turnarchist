@@ -1,7 +1,7 @@
 import { isWarningVisibleAboveShade } from "../drawable/warningVisibility";
 import type { observeEntity, observeItem, observeWarnings } from "./agentTraits";
 
-export const DEFAULT_AGENT_VISION = Object.freeze({range: 12, identificationBrightness: 0.08});
+export const DEFAULT_AGENT_VISION = Object.freeze({range: 12, identificationBrightness: 0.04});
 export interface AgentVision {range: number; identificationBrightness: number;}
 
 export function validateAgentVision(vision: AgentVision): AgentVision {
@@ -31,31 +31,41 @@ export function hasTileSight(x: number, y: number, tx: number, ty: number,
 
 export function perceiveRoom(input: {
   player: {x: number; y: number; z: number};
-  tiles: {x: number; y: number; kind: string; solid?: boolean; traversal?: object; isDoor?: boolean; exit?: boolean}[];
+  tiles: {x: number; y: number; kind: string; solid?: boolean; traversal?: object; hazard?: object; isDoor?: boolean; exit?: boolean}[];
   entities: ReturnType<typeof observeEntity>[];
   items: (ReturnType<typeof observeItem> & {z?: number})[];
   warnings: ReturnType<typeof observeWarnings>;
+  hazards?: {x: number; y: number; z: number; kind: string; damage: number; solid: boolean}[];
   brightness(x: number, y: number): number;
   blocked(x: number, y: number): boolean;
 }, vision: AgentVision) {
   const {player}=input;
   const inSight=(x: number|null, y: number|null): boolean =>
     x!==null && y!==null && Number.isFinite(x) && Number.isFinite(y) &&
-    Math.hypot(x-player.x,y-player.y)<=vision.range &&
-    hasTileSight(player.x,player.y,x,y,input.blocked);
-  const bright=(x: number,y: number)=>input.brightness(x,y)>=vision.identificationBrightness;
+    Math.abs(x-player.x)<=vision.range && Math.abs(y-player.y)<=Math.ceil(vision.range*0.75);
+  // Rendering shades surfaces rather than applying player-origin ray occlusion.
+  // A small local blend approximates blurred shade edges without changing gameplay light.
+  const brightness=(x:number,y:number)=>Math.max(input.brightness(x,y),
+    0.25*Math.max(input.brightness(x-1,y),input.brightness(x+1,y),input.brightness(x,y-1),input.brightness(x,y+1)));
+  const bright=(x: number,y: number)=>brightness(x,y)>=vision.identificationBrightness;
   const entities = input.entities.filter(e=>e.z===player.z && inSight(e.x,e.y)).flatMap(e=> {
     if (bright(e.x!,e.y!)) return [{appearance:"identified", ...e}];
-    // No ID, species, stats, dimensions, or hidden phase survives an anonymous contact.
-    return e.isEnemy ? [{appearance:"unidentified", x:e.x, y:e.y, z:e.z}] : [];
+    // Identity is remapped to a session-local contact token by the environment.
+    // An unknown contact does not reveal whether it is an enemy or an object.
+    return [{appearance:"unidentified", id:e.id, x:e.x, y:e.y, z:e.z}];
   });
   const identifiedIds = new Set(entities.filter(e=>e.appearance === "identified").map(e=>(e as {id?: string}).id));
   return {
     tiles: input.tiles.filter(t=>inSight(t.x,t.y)).map(t=>bright(t.x,t.y)
-      ? {...t, brightness:input.brightness(t.x,t.y)}
-      : {x:t.x,y:t.y,kind:null,solid:null,isDoor:null,traversal:null,exit:null,brightness:input.brightness(t.x,t.y)}),
+      ? {...t, appearance:"identified", brightness:brightness(t.x,t.y)}
+      : {x:t.x,y:t.y,kind:null,appearance:"unidentified",
+        solid:brightness(t.x,t.y)>=0.01?t.solid:null,
+        isDoor:t.isDoor===true?true:null,traversal:null,exit:null,brightness:brightness(t.x,t.y)}),
     entities,
-    items: input.items.filter(i=>(i.z??0)===player.z && inSight(i.x,i.y) && bright(i.x!,i.y!)),
+    items: input.items.filter(i=>(i.z??0)===player.z && inSight(i.x,i.y)).map(i=>bright(i.x!,i.y!)
+      ? {...i,appearance:"identified"} : {x:i.x,y:i.y,z:i.z??0,appearance:"unidentified"}),
+    // Spawn particles render above shade and advertise a dangerous, nonsolid tile.
+    hazards: (input.hazards??[]).filter(h=>h.z===player.z&&inSight(h.x,h.y)),
     // Arrows and nearby X marks render above shade. Preserve range/LOS and omit source details.
     hitWarnings: input.warnings.filter(w=>w.z===player.z && inSight(w.x,w.y) &&
       isWarningVisibleAboveShade(w,player.x,player.y))
