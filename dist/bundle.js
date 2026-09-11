@@ -36577,6 +36577,46 @@ class AgentEnvironment {
         this.memory = new agentMemory_1.AgentMemory();
     }
     setFastMode(enabled) { (0, agentMode_1.setAgentFastMode)(enabled === true); }
+    getUiLayout() {
+        const player = this.player();
+        return { ...player.inventory.getAgentUiLayout(),
+            screenMessage: player.screenMessage.getAgentUiLayout(),
+            selectionButtons: player.menu?.getAgentSelectionButtonRects?.() ?? [] };
+    }
+    getWorldClickAction(nx, ny) {
+        if (!Number.isFinite(nx) || !Number.isFinite(ny) || nx < 0 || nx > 1 || ny < 0 || ny > 1)
+            return null;
+        const player = this.player(), inventory = player.inventory;
+        if (inventory.isOpen || this.observe().decision !== "world")
+            return null;
+        const width = gameConstants_1.GameConstants.WIDTH, height = gameConstants_1.GameConstants.HEIGHT, tileSize = gameConstants_1.GameConstants.TILESIZE;
+        const dx = Math.floor((nx * width - width / 2 + tileSize / 2) / tileSize);
+        const dy = Math.floor((ny * height - height / 2 + tileSize / 2) / tileSize);
+        const targetX = player.x + dx, targetY = player.y + dy;
+        const targeting = player.rangedTargeting;
+        if (targeting?.active) {
+            const weapon = targeting.getWeapon?.(), spell = weapon?.pendingSpell ?? weapon?.activeSpell;
+            if (spell?.id)
+                return { type: "CastSpell", spellId: spell.id,
+                    sourceSlot: inventory.items.indexOf(weapon), targetX, targetY };
+            return { type: "FireRanged", targetX, targetY };
+        }
+        if (dx === 0 && dy < 0)
+            return { type: "Move", direction: "up" };
+        if (dx === 0 && dy > 0)
+            return { type: "Move", direction: "down" };
+        if (dy === 0 && dx < 0)
+            return { type: "Move", direction: "left" };
+        if (dy === 0 && dx > 0)
+            return { type: "Move", direction: "right" };
+        return null;
+    }
+    setInventoryOpen(open) {
+        const inventory = this.player().inventory;
+        if (open === inventory.isOpen)
+            return;
+        open ? inventory.open() : inventory.close();
+    }
     player() { return this.game.players[this.game.localPlayerID]; }
     contract() { return (0, agentContract_1.getAgentContract)(); }
     checkCompatibility(trainedOn) {
@@ -36800,6 +36840,7 @@ class AgentEnvironment {
             contract: { ...this.contract(), observationSchemaVersion: 8, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
+            ui: { inventoryOpen: this.player().inventory.isOpen },
             decision: observation.decision, selectionChoices: observation.selectionChoices,
             room: perceived, visibleRooms,
         };
@@ -36897,12 +36938,16 @@ class AgentEnvironment {
     async step(input) {
         // Validate the external action before taking ownership of the episode.
         if (!input || typeof input !== "object" ||
-            !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+            !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
             ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
             ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
             ((input.type === "UseItemOn" || input.type === "MoveItem") &&
                 (!Number.isInteger(input.fromSlot) || !Number.isInteger(input.toSlot) || input.fromSlot < 0 || input.toSlot < 0)) ||
             (input.type === "SelectOption" && (!Number.isInteger(input.index) || input.index < 0)) ||
+            ((input.type === "FireRanged" || input.type === "CastSpell") &&
+                (!Number.isInteger(input.targetX) || !Number.isInteger(input.targetY) || Math.abs(input.targetX) > 1000000 || Math.abs(input.targetY) > 1000000)) ||
+            (input.type === "CastSpell" && (typeof input.spellId !== "string" || !input.spellId ||
+                (input.sourceSlot !== undefined && (!Number.isInteger(input.sourceSlot) || input.sourceSlot < 0)))) ||
             (input.type === "Move" && !Object.prototype.hasOwnProperty.call(directions, input.direction))) {
             throw new Error("Unsupported agent action");
         }
@@ -36926,6 +36971,8 @@ class AgentEnvironment {
             }
             const player = this.player();
             const items = player.inventory.items;
+            if (actionInput.type === "CastSpell" && actionInput.sourceSlot !== undefined && !items[actionInput.sourceSlot])
+                throw new AgentActionError("Spell source slot is empty or out of bounds");
             if ("slotIndex" in actionInput && !items[actionInput.slotIndex]) {
                 throw new AgentActionError("Inventory slot is empty or out of bounds");
             }
@@ -56943,6 +56990,14 @@ class Menu {
         return this.open && this.selectionChoices
             ? this.selectionChoices.map(({ label, enabled, turnCost }, index) => ({ index, label, enabled, turnCost })) : null;
     }
+    getAgentSelectionButtonRects() {
+        if (!this.open || !this.selectionChoices)
+            return [];
+        return this.buttons.slice(1, 1 + this.selectionChoices.length).map((button, index) => ({
+            index, x: button.x, y: button.y, w: button.width, h: button.height,
+            enabled: this.selectionChoices[index].enabled,
+        }));
+    }
     selectChoice(index) {
         if (!this.open || !Number.isInteger(index))
             return false;
@@ -58306,6 +58361,13 @@ class ScreenMessage {
                     bx += b.width + this.buttonGap;
                 }
             }
+        };
+        /** Read-only button geometry for the recorded teaching shell. */
+        this.getAgentUiLayout = () => {
+            this.layout();
+            return { open: this.open, box: { x: this.boxX, y: this.boxY, w: this.boxW, h: this.boxH },
+                buttons: this.buttons.map((button, index) => ({ index, text: button.text,
+                    x: button.x, y: button.y, w: button.width, h: button.height })) };
         };
         this.draw = (delta) => {
             if (!this.open)
@@ -62150,6 +62212,31 @@ class Inventory {
             const w = Math.floor(s);
             const h = Math.floor(s);
             return { x, y, w, h };
+        };
+        /** Read-only hit regions used by the recorded teaching shell. */
+        this.getAgentUiLayout = () => {
+            const slots = [];
+            if (this.isOpen) {
+                const bounds = this.isPointInInventoryBounds(0, 0);
+                const s = 18, b = 2, g = -2, stride = s + 2 * b + g;
+                for (let slotIndex = 0; slotIndex < this.items.length; slotIndex++) {
+                    if (!this.isValidSlot(slotIndex))
+                        continue;
+                    const col = slotIndex % this.cols, row = Math.floor(slotIndex / this.cols);
+                    slots.push({ slotIndex, x: bounds.startX + col * stride,
+                        y: bounds.startY + row * stride, w: s + 2 * b, h: s + 2 * b,
+                        occupied: this.items[slotIndex] !== null });
+                }
+            }
+            else {
+                for (let slotIndex = 0; slotIndex < this.quickbarCols; slotIndex++) {
+                    const r = this.getQuickbarSlotRect(slotIndex);
+                    if (r)
+                        slots.push({ slotIndex, ...r, occupied: this.items[slotIndex] !== null });
+                }
+            }
+            return { width: gameConstants_1.GameConstants.WIDTH, height: gameConstants_1.GameConstants.HEIGHT,
+                inventoryOpen: this.isOpen, inventoryButton: this.getInventoryButtonRect(), slots };
         };
         this.handleMouseDown = (x, y, button) => {
             // Inventory receives raw pointer events independently of PlayerInputHandler.
@@ -100279,7 +100366,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("6d25e4d038648841482e")
+/******/ 		__webpack_require__.h = () => ("862f70d226f12f40e888")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

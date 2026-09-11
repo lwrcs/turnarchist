@@ -2085,6 +2085,29 @@ export class Inventory {
     return { x, y, w, h };
   };
 
+  /** Read-only hit regions used by the recorded teaching shell. */
+  getAgentUiLayout = () => {
+    const slots: {slotIndex:number;x:number;y:number;w:number;h:number;occupied:boolean}[] = [];
+    if (this.isOpen) {
+      const bounds = this.isPointInInventoryBounds(0, 0);
+      const s = 18, b = 2, g = -2, stride = s + 2 * b + g;
+      for (let slotIndex = 0; slotIndex < this.items.length; slotIndex++) {
+        if (!this.isValidSlot(slotIndex)) continue;
+        const col = slotIndex % this.cols, row = Math.floor(slotIndex / this.cols);
+        slots.push({slotIndex, x:bounds.startX + col * stride,
+          y:bounds.startY + row * stride, w:s + 2*b, h:s + 2*b,
+          occupied:this.items[slotIndex] !== null});
+      }
+    } else {
+      for (let slotIndex = 0; slotIndex < this.quickbarCols; slotIndex++) {
+        const r = this.getQuickbarSlotRect(slotIndex);
+        if (r) slots.push({slotIndex,...r,occupied:this.items[slotIndex] !== null});
+      }
+    }
+    return {width:GameConstants.WIDTH,height:GameConstants.HEIGHT,
+      inventoryOpen:this.isOpen,inventoryButton:this.getInventoryButtonRect(),slots};
+  };
+
   handleMouseDown = (x: number, y: number, button: number) => {
     // Inventory receives raw pointer events independently of PlayerInputHandler.
     // Block human input here; recorded item actions still use the action processor.

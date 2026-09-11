@@ -177,6 +177,14 @@ export class ScreenMessage {
     }
   };
 
+  /** Read-only button geometry for the recorded teaching shell. */
+  getAgentUiLayout = () => {
+    this.layout();
+    return {open:this.open, box:{x:this.boxX,y:this.boxY,w:this.boxW,h:this.boxH},
+      buttons:this.buttons.map((button,index)=>({index,text:button.text,
+        x:button.x,y:button.y,w:button.width,h:button.height}))};
+  };
+
   draw = (delta: number) => {
     if (!this.open) return;
 

@@ -25,7 +25,7 @@ function setup(timeoutMs = 500) {
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
     '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
     './actionReadiness': {isActionReady: game => game.levelReady},
-    './gameConstants': {GameConstants: {VERSION: 'test', DEVELOPER_MODE: false}},
+    './gameConstants': {GameConstants: {VERSION: 'test', DEVELOPER_MODE: false, WIDTH:160, HEIGHT:160, TILESIZE:16}},
     './gameplaySettings': {GameplaySettings: {STARTING_HEALTH: 10}},
     './agentPerception': load('src/game/agentPerception.ts', {'../drawable/warningVisibility': load('src/drawable/warningVisibility.ts', {})}),
     './agentTraits': load('src/game/agentTraits.ts', {}),
@@ -93,11 +93,22 @@ test('step returns the settled enemy response and maps movement to adjacent repl
   assert.equal(actions[0].targetY, 1);
 });
 
+test('game-surface points become cardinal, ranged, or spell actions without mutating state',async()=>{
+  const {env,player}=setup();await env.reset(123);
+  assert.equal(JSON.stringify(env.getWorldClickAction(.5,.25)),JSON.stringify({type:'Move',direction:'up'}));
+  assert.equal(env.getWorldClickAction(.25,.25),null);
+  const ranged={};player.rangedTargeting={active:true,getWeapon:()=>ranged};
+  assert.equal(env.getWorldClickAction(.75,.25).type,'FireRanged');
+  const spell={activeSpell:{id:'spark'}};player.inventory.items=[spell];player.rangedTargeting={active:true,getWeapon:()=>spell};
+  const action=env.getWorldClickAction(.25,.25);assert.equal(action.type,'CastSpell');assert.equal(action.sourceSlot,0);assert.equal(action.spellId,'spark');
+});
+
 test('malformed actions, internal events and developer commands never execute', async () => {
   const {env, actions} = setup();
   await env.reset(123);
   for (const action of [null, {type: 'Command', command: 'spawn zombie'},
-    {type: 'AutoPickup'}, {type: 'Wait'}, {type: 'Restart'}, {type: 'Move', direction: '__proto__'}]) {
+    {type: 'AutoPickup'}, {type: 'Wait'}, {type: 'Restart'}, {type:'FireRanged',targetX:Infinity,targetY:0},
+    {type:'CastSpell',spellId:'',sourceSlot:-1,targetX:0,targetY:0}, {type: 'Move', direction: '__proto__'}]) {
     await assert.rejects(env.step(action), /Unsupported agent action/);
   }
   assert.equal(actions.length, 0);

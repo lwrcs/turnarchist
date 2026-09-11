@@ -34,9 +34,10 @@ The default Game view shows the real game's artwork. Switch to Agent grid to
 inspect the restricted observations used by the policy. Switching views preserves
 the live run. Humans can see more context in Game view; each human action records
 which view was used, while policy observations stay restricted in both views.
-Movement keys and number keys 1–9 go through the recorder. Use the controls below
-for inventory, targeting and menus; native mouse/drag interactions are not yet
-enabled. In Agent grid, click a tile to inspect its visible contents.
+Movement keys, number keys 1–9, item clicks, item-on-item use, slot drags, drops,
+visible menu choices, cardinal world clicks, ranged shots and spell targets go
+through the recorder. Opening inventory is presentation state. In Agent grid,
+click a tile to inspect its visible contents.
 
 **Super fast** under Agent pace removes the between-action delay and the ordinary
 input cooldown and the enemy-turn presentation delay. Enemy turns still execute;

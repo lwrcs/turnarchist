@@ -20,7 +20,8 @@ export type AgentAction =
   | { type: "SelectOption"; index: number }
   | { type: "DismissInteraction" }
   | { type: "LadderConfirm" }
-  | { type: "LadderCancel" };
+  | { type: "LadderCancel" }
+  | Extract<GameAction, {type:"FireRanged" | "CastSpell"}>;
 
 const directions = {
   up: [Direction.UP, 0, -1], down: [Direction.DOWN, 0, 1],
@@ -63,6 +64,39 @@ export class AgentEnvironment {
 
   constructor(private game: Game, private timeoutMs = 15000) {}
   setFastMode(enabled: boolean) { setAgentFastMode(enabled === true); }
+  getUiLayout() {
+    const player=this.player();
+    return {...player.inventory.getAgentUiLayout(),
+      screenMessage:player.screenMessage.getAgentUiLayout(),
+      selectionButtons:player.menu?.getAgentSelectionButtonRects?.()??[]};
+  }
+  getWorldClickAction(nx: number, ny: number): AgentAction | null {
+    if(!Number.isFinite(nx)||!Number.isFinite(ny)||nx<0||nx>1||ny<0||ny>1)return null;
+    const player=this.player(), inventory=player.inventory;
+    if(inventory.isOpen||this.observe().decision!=="world")return null;
+    const width=GameConstants.WIDTH,height=GameConstants.HEIGHT,tileSize=GameConstants.TILESIZE;
+    const dx=Math.floor((nx*width-width/2+tileSize/2)/tileSize);
+    const dy=Math.floor((ny*height-height/2+tileSize/2)/tileSize);
+    const targetX=player.x+dx,targetY=player.y+dy;
+    const targeting=player.rangedTargeting;
+    if(targeting?.active){
+      const weapon=targeting.getWeapon?.() as unknown as {pendingSpell?:{id?:string};activeSpell?:{id?:string}},
+        spell=weapon?.pendingSpell??weapon?.activeSpell;
+      if(spell?.id)return {type:"CastSpell",spellId:spell.id,
+        sourceSlot:inventory.items.indexOf(weapon as any),targetX,targetY};
+      return {type:"FireRanged",targetX,targetY};
+    }
+    if(dx===0&&dy<0)return {type:"Move",direction:"up"};
+    if(dx===0&&dy>0)return {type:"Move",direction:"down"};
+    if(dy===0&&dx<0)return {type:"Move",direction:"left"};
+    if(dy===0&&dx>0)return {type:"Move",direction:"right"};
+    return null;
+  }
+  setInventoryOpen(open: boolean) {
+    const inventory=this.player().inventory;
+    if(open===inventory.isOpen)return;
+    open?inventory.open():inventory.close();
+  }
 
   private player() { return this.game.players[this.game.localPlayerID]; }
 
@@ -256,6 +290,7 @@ export class AgentEnvironment {
       contract: {...this.contract(), observationSchemaVersion: 8, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
+      ui: {inventoryOpen:this.player().inventory.isOpen},
       decision: observation.decision, selectionChoices: observation.selectionChoices,
       room: perceived, visibleRooms,
     };
@@ -351,12 +386,16 @@ export class AgentEnvironment {
   async step(input: AgentAction) {
     // Validate the external action before taking ownership of the episode.
     if (!input || typeof input !== "object" ||
-      !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption"].includes(input.type) ||
+      !["Move", "DismissInteraction", "LadderConfirm", "LadderCancel", "UseItem", "UseItemOn", "MoveItem", "DropItem", "SelectOption", "FireRanged", "CastSpell"].includes(input.type) ||
       ("slotIndex" in input && (!Number.isInteger(input.slotIndex) || input.slotIndex < 0)) ||
       ((input.type === "UseItem" || input.type === "DropItem") && !("slotIndex" in input)) ||
       ((input.type === "UseItemOn" || input.type === "MoveItem") &&
         (!Number.isInteger(input.fromSlot) || !Number.isInteger(input.toSlot) || input.fromSlot < 0 || input.toSlot < 0)) ||
       (input.type === "SelectOption" && (!Number.isInteger(input.index) || input.index < 0)) ||
+      ((input.type === "FireRanged" || input.type === "CastSpell") &&
+        (!Number.isInteger(input.targetX)||!Number.isInteger(input.targetY)||Math.abs(input.targetX)>1000000||Math.abs(input.targetY)>1000000)) ||
+      (input.type === "CastSpell" && (typeof input.spellId!=="string"||!input.spellId||
+        (input.sourceSlot!==undefined&&(!Number.isInteger(input.sourceSlot)||input.sourceSlot<0)))) ||
       (input.type === "Move" && !Object.prototype.hasOwnProperty.call(directions, input.direction))) {
       throw new Error("Unsupported agent action");
     }
@@ -377,6 +416,8 @@ export class AgentEnvironment {
       }
       const player = this.player();
       const items = player.inventory.items;
+      if(actionInput.type==="CastSpell"&&actionInput.sourceSlot!==undefined&&!items[actionInput.sourceSlot])
+        throw new AgentActionError("Spell source slot is empty or out of bounds");
       if ("slotIndex" in actionInput && !items[actionInput.slotIndex]) {
         throw new AgentActionError("Inventory slot is empty or out of bounds");
       }

@@ -13,6 +13,14 @@ export class Menu {
       ? this.selectionChoices.map(({label, enabled, turnCost}, index) => ({index, label, enabled, turnCost})) : null;
   }
 
+  getAgentSelectionButtonRects() {
+    if (!this.open || !this.selectionChoices) return [];
+    return this.buttons.slice(1, 1 + this.selectionChoices.length).map((button, index) => ({
+      index, x:button.x, y:button.y, w:button.width, h:button.height,
+      enabled:this.selectionChoices![index].enabled,
+    }));
+  }
+
   selectChoice(index: number): boolean {
     if (!this.open || !Number.isInteger(index)) return false;
     const choice = this.selectionChoices?.[index];

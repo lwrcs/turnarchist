@@ -8,15 +8,16 @@ same run, restricted policy observations, input owner and saved action history.
 The human may see more than the policy; record the display choice on human actions.
 
 Keep an input surface above the game so native handlers cannot bypass recording.
-Route movement keys and inventory shortcuts through Session.human. Retain explicit
-inventory, targeting and menu controls below the game. Pause, takeover, single-step,
-save failures and agent help requests keep their existing ownership rules.
+Route movement keys, inventory shortcuts, quickbar/inventory clicks, slot drags,
+item-on-item use, drops and visible choice menus through Session.human. Inventory
+open/close is local presentation state and does not create a training action. Retain
+explicit targeting controls below the game. Pause, takeover, single-step, save
+failures and agent help requests keep their existing ownership rules.
 
 ## Follow-up
 
-Bridge native inventory clicks, drag/drop, targeting and menus to the same action
-interface before enabling those native handlers. Local presentation actions (zoom,
-inventory visibility) need separation from game mutations. Test each interaction
+Diagonal world clicks and richer native context menus remain follow-up work. Local
+presentation actions such as zoom remain separate from game mutations. Test each interaction
 against recorded before/after observations and zero-turn action costs.
 
 An optional perception overlay can follow: remembered contacts, identification
