@@ -254,16 +254,17 @@
       for(const [direction,dx,dy] of directions) {
         const x=p.x+dx,y=p.y+dy,k=key(x,y),edge=`${here}>${k}`;
         const tile=tiles.get(k);
-        if(tile?.solid===true && !tile.isDoor) continue;
+        const occupant=view.room.entities.find(e=>occupies(e,x,y));
+        // Wall-mounted objects can be gathered/attacked without entering the wall.
+        if(tile?.solid===true && !tile.isDoor && !occupant) continue;
         if(tile?.traversal?.tunnel && !tile.traversal.unlocked && tile.traversal.unlockFromHere===false)continue;
         if((this.blocked.get(edge)??0)>this.tick) continue;
-        const occupant=view.room.entities.find(e=>occupies(e,x,y));
         if(occupant?.collidable && !occupant.destroyable && !occupant.pushable && !occupant.interactable) continue;
         const enemy=enemies.some(e=>occupies(e,x,y));
         const visits=this.visits.get(`${scope}:${k}`)??0;
         let score=10-3*visits-12*(this.crossings.get(edge)??0);
         const pushConfirmed=occupant?.pushable&&this.canPushIntoSpace(view,x,y,dx,dy);
-        const stays=enemy||((occupant?.collidable||occupant?.destroyable)&&!pushConfirmed);
+        const stays=(tile?.solid===true&&!tile.isDoor)||enemy||((occupant?.collidable||occupant?.destroyable)&&!pushConfirmed);
         const destination=stays?key(p.x,p.y):k;
         const weapon=view.inventory.find(i=>i?.activeWeapon)?.traits;
         const threshold=occupant?.combat?.killDamageThreshold;

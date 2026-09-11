@@ -7,6 +7,18 @@ test('an enclosed programmed agent never invents an unrestricted Wait', () => {
   for(const tile of v.room.tiles)tile.solid=true;
   assert.equal(p.choose(v),null);
 });
+test('wall-mounted torches are valid interactions, and the empty wall is blocked afterward',()=>{
+  const v=view();for(const t of v.room.tiles){t.solid=true;t.kind='Wall';}
+  v.room.entities=[{x:1,y:0,width:1,height:1,kind:'PlacedTorch',collidable:true,destroyable:true,pushable:false,isEnemy:false,health:1}];
+  assert.deepEqual(new Policy().choose(v),{type:'Move',direction:'right'});
+  v.room.entities=[];assert.equal(new Policy().choose(v),null);
+});
+test('gathering an object on a wall is not counted as escaping the player tile',()=>{
+  const v=view();v.room.tiles.find(t=>t.x===1).solid=true;
+  v.room.entities=[{x:1,y:0,kind:'PlacedTorch',collidable:false,destroyable:false,interactable:true}];
+  v.room.hitWarnings=[{x:0,y:0,hostile:true}];
+  assert.notEqual(new Policy().choose(v).direction,'right');
+});
 const {Runner}=require('../agent-batch.js');
 function view(){return {observationMode:'player-perception',contract:{observationSchemaVersion:3},vision:{range:12,identificationBrightness:.08},
   decision:'world',terminated:false,player:{x:0,y:0,z:0,health:2,maxHealth:2},inventory:[],

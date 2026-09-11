@@ -10,7 +10,8 @@
       const [dx,dy]=[[0,-1],[1,0],[0,1],[-1,0]][index],x=v.player.x+dx,y=v.player.y+dy;
       const tile=v.room.tiles.find(t=>t.x===x&&t.y===y);
       // Directional actions can also attack. Do not mask unknown terrain, doors,
-      // breakable objects, or weapons whose reach extends beyond this tile.
+      // wall-mounted torches/candles, breakable objects, or weapons whose reach
+      // extends beyond this tile. Occupancy takes precedence over wall solidity.
       const occupied=v.room.entities.some(e=>x>=e.x&&x<e.x+(e.width||1)&&y>=e.y&&y<e.y+(e.height||1));
       return occupied||weapon?.attackPattern!=='adjacent-cardinal'||!tile?.solid||tile.isDoor||!['Wall','WallTorch'].includes(tile.kind);
     });
