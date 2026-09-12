@@ -70,6 +70,30 @@ editing the game's code.
   confirmation leaked into the quickbar and consumed food; treat this as a possible
   teaching-input defect until the recorded action sequence proves the cause.
 
+### Seed 2732920491 — Sol medium keyboard demonstration
+
+- The visible teaching game can be driven entirely from a focused board with
+  arrow keys; this keeps the game view on screen while the restricted inspector
+  supplies the state between turns.
+- Equipping the emerald ring from inventory slot 3 used zero world turns. At one
+  health it was the correct preparation before crossing a crowded room, and the
+  ring was later consumed by its emergency recovery effect.
+- A cluster of one-health forward-only zombies can be untangled by retreating up
+  the room, then killing an adjacent zombie while its forward warning covers the
+  player's current tile. Killing the warning source before the enemy phase made
+  the otherwise dangerous attack survivable.
+- Door traversal is directional and may require a second keypress after stepping
+  onto the door tile. The room id and player coordinates are the reliable signal
+  that the transition has completed.
+- A procedurally generated route reached a boss room at one health. The room held
+  a three-health BigZombieEnemy alongside ordinary zombies, skulls, and a crab;
+  treating the giant as a distinct multi-hit threat is necessary even when the
+  smaller enemies can be removed with one strike.
+- After the ring's recovery, the demonstration returned to the start room while
+  preserving the recorded action history. A run that appears to continue after a
+  lethal mistake may therefore be a post-death reset rather than uninterrupted
+  progress.
+
 ## Unintended behavior to fix or verify
 
 - Rat flee pathfinding can damage the player on a tile its warning state says is safe.
