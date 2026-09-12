@@ -212,9 +212,9 @@ test('finished replay cannot resume or append actions; explicit new game unlocks
   assert.equal(s.manager.isRecording(), true);
 });
 
-test('ladder blackout gates live readiness and replay until all transition flags clear', () => {
+test('room transitions and ladder blackout gate live readiness and replay until all transition flags clear', () => {
   const {isActionReady} = loadReadiness();
-  for (const field of ['preLevelGenFadeActive', 'preLevelGenHoldBlack', 'preLevelGenActionStarted', 'transitioningLadder']) {
+  for (const field of ['transition', 'preLevelGenFadeActive', 'preLevelGenHoldBlack', 'preLevelGenActionStarted', 'transitioningLadder']) {
     const s = setup(); s.addPlayer(); s.manager.replay(s.game);
     s.game[field] = true;
     assert.equal(isActionReady(s.game), false);

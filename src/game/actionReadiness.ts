@@ -5,6 +5,7 @@ import type { Game } from "../game";
 export function isActionReady(game: Game): boolean {
   const state = game as any;
   return !game.replayManager?.isFinished() && game.levelState === LevelState.IN_LEVEL &&
+    !game.transition &&
     !state.preLevelGenFadeActive && !state.preLevelGenHoldBlack &&
     !state.preLevelGenActionStarted && !game.transitioningLadder;
 }

@@ -36504,6 +36504,7 @@ const game_1 = __webpack_require__(/*! ../game */ "./src/game.ts");
 function isActionReady(game) {
     const state = game;
     return !game.replayManager?.isFinished() && game.levelState === game_1.LevelState.IN_LEVEL &&
+        !game.transition &&
         !state.preLevelGenFadeActive && !state.preLevelGenHoldBlack &&
         !state.preLevelGenActionStarted && !game.transitioningLadder;
 }
@@ -100426,7 +100427,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("5a69466efd613c6a1528")
+/******/ 		__webpack_require__.h = () => ("6ef5c55aae53e784c571")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

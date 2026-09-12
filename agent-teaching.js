@@ -117,7 +117,7 @@
       if(this.state!=='human')return false;
       if(this.humanActive){if(this.humanQueue)return false;this.humanQueue=copy(action);this.reason='Next input buffered';this.changed();return true;}
       this.humanActive=true;let next=action,accepted=false;
-      try{while(next&&this.state==='human'){const current=next;next=null;if(current.type==='Move'&&!allowedDirections(this.view).includes(current.direction)){this.reason='That direction is a known solid wall or this menu needs a choice.';this.changed();}else{accepted=true;const modelSuggestion=this.suggested?copy(this.suggested):null;this.autoDeadline=null;await this.execute(current,'human',{modelSuggestion});if(this.state==='human')await this.propose();}if(this.state==='human'&&this.humanQueue){next=this.humanQueue;this.humanQueue=null;}}return accepted;
+      try{while(next&&this.state==='human'){const current=next;next=null;if(current.type==='Move'&&!allowedDirections(this.view).includes(current.direction)){this.reason='That direction is a known solid wall or this menu needs a choice.';this.changed();}else{accepted=true;const modelSuggestion=this.suggested?copy(this.suggested):null;this.autoDeadline=null;await this.execute(current,'human',{modelSuggestion});if(this.state==='human')await this.propose();}if(this.state==='human'&&this.humanQueue){next=this.humanQueue;this.humanQueue=null;}}if(this.state==='human'&&this.reason==='Next input buffered')this.reason='Your controls are active';return accepted;
       }finally{this.humanActive=false;if(this.state!=='human')this.humanQueue=null;this.changed();}}
     async execute(action,source,decision={}){
       if(this.busy)throw new Error('Action already in flight');
