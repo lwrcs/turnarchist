@@ -70,6 +70,7 @@ export function perceiveRoom(input: {
     hitWarnings: input.warnings.filter(w=>w.z===player.z && inSight(w.x,w.y) &&
       isWarningVisibleAboveShade(w,player.x,player.y))
       .map(w=>({x:w.x,y:w.y,z:w.z,hostile:w.hostile,directionOnly:w.directionOnly,
+        phase:w.phase,dangerous:w.dangerous,
         ...(w.sourceId && identifiedIds.has(w.sourceId) ? {sourceId:w.sourceId} : {})})),
   };
 }

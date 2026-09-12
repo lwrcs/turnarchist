@@ -10920,6 +10920,11 @@ class HitWarning extends drawable_1.Drawable {
         /** A resolved warning can linger for visual fade-out without remaining a threat. */
         this.isActive = () => !this.dead && !this.tickedForDeath &&
             !this.parent?.dead && !this.parent?.unconscious;
+        /** Mirrors the visual contract: fade-in is dangerous and fade-out is resolved. */
+        this.getAgentLifecycle = () => ({
+            phase: this.tickedForDeath ? "fading-out" : "fading-in",
+            dangerous: this.isActive(),
+        });
         this.removeOverlapping = () => {
             for (const entity of this.game.room.entities) {
                 if (entity.x === this.x &&
@@ -21490,6 +21495,16 @@ class RatEnemy extends enemy_1.Enemy {
                             let oldY = this.y;
                             let disablePositions = Array();
                             disablePositions.push(...this.getEntityDisablePositions());
+                            // Fleeing is movement away from light, never an alternate attack path.
+                            // Treat every player tile as blocked so A* cannot route through one.
+                            if (fleeing) {
+                                for (const i in this.game.players) {
+                                    const p = this.game.players[i];
+                                    if (this.game.rooms[p.levelID] === this.room) {
+                                        disablePositions.push({ x: p.x, y: p.y });
+                                    }
+                                }
+                            }
                             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
                                 for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                                     if (this.room.roomArray[xx][yy] instanceof spiketrap_1.SpikeTrap &&
@@ -21506,6 +21521,10 @@ class RatEnemy extends enemy_1.Enemy {
                                     if (this.game.rooms[this.game.players[i].levelID] === this.room &&
                                         this.game.players[i].x === moves[0].pos.x &&
                                         this.game.players[i].y === moves[0].pos.y) {
+                                        if (fleeing) {
+                                            hitPlayer = true;
+                                            continue;
+                                        }
                                         if (!this.shouldSkipAttack()) {
                                             this.game.players[i].hurt(this.hit(), this.name, {
                                                 source: { x: this.x, y: this.y },
@@ -36507,7 +36526,7 @@ const gameConstants_1 = __webpack_require__(/*! ./gameConstants */ "./src/game/g
 const gameplaySettings_1 = __webpack_require__(/*! ./gameplaySettings */ "./src/game/gameplaySettings.ts");
 function getAgentContract() {
     return {
-        observationSchemaVersion: 9,
+        observationSchemaVersion: 10,
         actionSchemaVersion: 5,
         observationMode: "diagnostic-current-room",
         gameVersion: gameConstants_1.GameConstants.VERSION,
@@ -36851,8 +36870,8 @@ class AgentEnvironment {
             r.roomY <= observation.player.y + Math.ceil(vision.range * .75) && r.roomY + r.height > observation.player.y - Math.ceil(vision.range * .75))
             .map(project);
         return {
-            schemaVersion: 9, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
-            contract: { ...this.contract(), observationSchemaVersion: 9, observationMode: "player-perception" },
+            schemaVersion: 10, observationMode: "player-perception", vision: { ...vision, halfWidth: vision.range, halfHeight: Math.ceil(vision.range * .75) },
+            contract: { ...this.contract(), observationSchemaVersion: 10, observationMode: "player-perception" },
             ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
             player: observation.player, inventory: observation.inventory,
             ui: { inventoryOpen: this.player().inventory.isOpen },
@@ -36927,7 +36946,7 @@ class AgentEnvironment {
             purchaseTurnCost: 0,
         } : null;
         return {
-            schemaVersion: 9, contract: this.contract(),
+            schemaVersion: 10, contract: this.contract(),
             backend: "browser", observationMode: "diagnostic-current-room",
             seed: this.seed, scenario: this.scenario,
             encounter: (0, combatTestbed_1.isCombatScenario)(this.scenario) ? (0, combatTestbed_1.combatEncounter)(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -36939,7 +36958,10 @@ class AgentEnvironment {
             failure: this.failure, developerMode: gameConstants_1.GameConstants.DEVELOPER_MODE,
             player: { x: player.x, y: player.y, z: player.z, health: player.health,
                 maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
-                turnCount: player.turnCount },
+                turnCount: player.turnCount,
+                coins: typeof player.inventory.coinCount === "function"
+                    ? player.inventory.coinCount() : Number.isFinite(player.inventory.coins)
+                    ? player.inventory.coins : null },
             room: { id: room.globalId, depth: room.depth, x: room.roomX, y: room.roomY,
                 width: room.width, height: room.height, tiles,
                 entities: room.entities.filter(entity => !entity.dead).map(agentTraits_1.observeEntity),
@@ -37236,6 +37258,7 @@ function perceiveRoom(input, vision) {
         hitWarnings: input.warnings.filter(w => w.z === player.z && inSight(w.x, w.y) &&
             (0, warningVisibility_1.isWarningVisibleAboveShade)(w, player.x, player.y))
             .map(w => ({ x: w.x, y: w.y, z: w.z, hostile: w.hostile, directionOnly: w.directionOnly,
+            phase: w.phase, dangerous: w.dangerous,
             ...(w.sourceId && identifiedIds.has(w.sourceId) ? { sourceId: w.sourceId } : {}) })),
     };
 }
@@ -37316,13 +37339,18 @@ function observeItem(item) {
 }
 exports.observeItem = observeItem;
 function observeWarnings(warnings) {
-    return warnings.filter(warning => !warning.dead && (warning.isActive?.() ?? true)).map(warning => {
+    return warnings.filter(warning => !warning.dead).map(warning => {
         const fields = warning.getSaveFields();
+        const lifecycle = warning.getAgentLifecycle?.() ?? (() => {
+            const dangerous = warning.isActive?.() ?? true;
+            return { phase: dangerous ? "fading-in" : "fading-out", dangerous };
+        })();
         return {
             x: warning.x, y: warning.y, z: numberOrNull(warning.parent?.z) ?? 0,
             sourceId: stringOrNull(warning.parent?.globalId),
             sourceX: numberOrNull(fields.eX), sourceY: numberOrNull(fields.eY),
             hostile: fields.isEnemy, directionOnly: fields.dirOnly,
+            phase: lifecycle.phase, dangerous: lifecycle.dangerous && fields.isEnemy,
             // Warning lifetime is not a reliable universal attack countdown.
             resolvesInTurns: null,
         };
@@ -66173,9 +66201,10 @@ class Fish extends usable_1.Usable {
     constructor(level, x, y) {
         super(level, x, y);
         this.getUseTurnCost = () => 0;
+        this.getHealingAmount = () => 1;
         this.onUse = (player) => {
             if (player.health < player.maxHealth) {
-                player.health = Math.min(player.maxHealth, player.health + 1);
+                player.health = Math.min(player.maxHealth, player.health + this.getHealingAmount());
                 sound_1.Sound.playEat();
                 if (this.stackCount > 1) {
                     this.stackCount--;
@@ -100397,7 +100426,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("dcc4efff52ea33f9cbf9")
+/******/ 		__webpack_require__.h = () => ("5a69466efd613c6a1528")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -9,7 +9,7 @@ from combat_pilot import CombatEnv, encode, SIZE, GRID, CENTER, CHANNELS, TRAIT_
 
 class EncodingTests(unittest.TestCase):
     def view(self):
-        return {'observationMode':'player-perception','schemaVersion':9,
+        return {'observationMode':'player-perception','schemaVersion':10,
                 'player':{'x':12,'y':12,'health':2},'inventory':[],
                 'room':{'tiles':[], 'entities':[], 'hitWarnings':[]}}
 

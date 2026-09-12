@@ -14,7 +14,7 @@ from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_pl
 
 
 def view(x=0,y=0,room='a',health=2):
-    return {'observationMode':'player-perception','schemaVersion':9,
+    return {'observationMode':'player-perception','schemaVersion':10,
             'decision':'world','player':{'x':x,'y':y,'z':0,'health':health,'maxHealth':2},
             'inventory':[], 'room':{'id':room,'tiles':[],'entities':[],'hitWarnings':[]}}
 

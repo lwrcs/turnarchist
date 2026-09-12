@@ -164,6 +164,14 @@ test('ladder prompts require an explicit ladder choice', async () => {
   assert.equal(result.info.recorded, true);
 });
 
+test('player observations expose the live spendable coin count', async () => {
+  const {env,player,room}=setup();await env.reset(1);
+  room.getGameplayLightTile=()=>null;room.isGameplaySightBlocked=()=>false;room.vis=[];
+  Object.assign(player.inventory,{coins:17,coinCount(){return this.coins;}});
+  assert.equal(env.observe().player.coins,17);
+  assert.equal(env.perceive().player.coins,17);
+});
+
 test('death terminates independently of the step budget', async () => {
   const {env, player} = setup(); await env.reset(1);
   player.actionProcessor.process = () => { player.dead = true; };
@@ -493,8 +501,8 @@ test('identified upward ladders expose return traits without revealing dark exit
     getTraversalTraits:()=>({kind:'ladder',direction:'up',unlocked:true})});
   room.roomArray[2][1]=ladder;room.getGameplayLightTile=(x,y)=>room.roomArray[x]?.[y];
   room.isGameplaySightBlocked=()=>false;room.vis=[[],[],[]];room.vis[2][1]=0;
-  const identified=env.perceive();assert.equal(identified.schemaVersion,9);
-  assert.equal(identified.contract.observationSchemaVersion,9);
+  const identified=env.perceive();assert.equal(identified.schemaVersion,10);
+  assert.equal(identified.contract.observationSchemaVersion,10);
   assert.equal(identified.room.tiles[0].exit,true);
   assert.equal(identified.room.tiles[0].traversal.direction,'up');
   room.vis[2][1]=1;

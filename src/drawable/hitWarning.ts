@@ -82,6 +82,12 @@ export class HitWarning extends Drawable {
   isActive = () => !this.dead && !this.tickedForDeath &&
     !this.parent?.dead && !(this.parent as Entity & {unconscious?: boolean})?.unconscious;
 
+  /** Mirrors the visual contract: fade-in is dangerous and fade-out is resolved. */
+  getAgentLifecycle = () => ({
+    phase: this.tickedForDeath ? "fading-out" as const : "fading-in" as const,
+    dangerous: this.isActive(),
+  });
+
   static updateFrame = (delta: number) => {
     HitWarning.frame += 0.125 * delta;
     if (HitWarning.frame >= 2) HitWarning.frame = 0;

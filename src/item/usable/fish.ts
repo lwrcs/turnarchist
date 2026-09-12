@@ -22,9 +22,11 @@ export class Fish extends Usable {
 
   getUseTurnCost = (): number => 0;
 
+  getHealingAmount = (): number => 1;
+
   onUse = (player: Player) => {
     if (player.health < player.maxHealth) {
-      player.health = Math.min(player.maxHealth, player.health + 1);
+      player.health = Math.min(player.maxHealth, player.health + this.getHealingAmount());
       Sound.playEat();
       if (this.stackCount > 1) {
         this.stackCount--;

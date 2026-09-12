@@ -7,8 +7,9 @@
   const directions=[['up',0,-1],['right',1,0],['down',0,1],['left',-1,0]];
   const key=(x,y)=>`${x},${y}`;
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
+  const threatens=w=>w.hostile&&w.dangerous!==false;
   class Policy {
-    static version='explore-combat-v23';
+    static version='explore-combat-v24';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -52,7 +53,7 @@
     }
     leavesThreatLane(view,x,y) {
       const p=view.player;
-      const sources=new Set(view.room.hitWarnings.filter(w=>w.hostile&&w.x===p.x&&w.y===p.y&&w.sourceId).map(w=>w.sourceId));
+      const sources=new Set(view.room.hitWarnings.filter(w=>threatens(w)&&w.x===p.x&&w.y===p.y&&w.sourceId).map(w=>w.sourceId));
       let count=0;
       for(const e of view.room.entities) {
         if(!sources.has(e.id)||!e.isEnemy)continue;
@@ -75,7 +76,7 @@
         Number.isFinite(e.combat?.killDamageThreshold)&&e.combat.killDamageThreshold>0&&
         damage>=e.combat.killDamageThreshold&&directions.some(([,dx,dy])=>occupies(e,p.x+dx,p.y+dy))))return null;
       for(const enemy of view.room.entities) {
-        if(!enemy.isEnemy||!enemy.id||!view.room.hitWarnings.some(w=>w.hostile&&w.sourceId===enemy.id))continue;
+        if(!enemy.isEnemy||!enemy.id||!view.room.hitWarnings.some(w=>threatens(w)&&w.sourceId===enemy.id))continue;
         if(!directions.some(([,dx,dy])=>occupies(enemy,p.x+dx,p.y+dy)))continue;
         const threshold=enemy.combat?.killDamageThreshold;
         if(Number.isFinite(threshold)&&threshold>0&&damage>=threshold)continue;
@@ -237,7 +238,7 @@
         if(food) {this.reason='heal';return {type:'UseItem',slotIndex:food.slot};}
       }
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
-      const threats=new Set(view.room.hitWarnings.filter(w=>w.hostile).map(w=>key(w.x,w.y)));
+      const threats=new Set(view.room.hitWarnings.filter(threatens).map(w=>key(w.x,w.y)));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
       const preparation=this.prepareCombatEscape(view,threats);
       if(preparation){this.reason='clear-combat-escape';return preparation;}
@@ -272,7 +273,7 @@
         const killsSource=!!(enemy&&occupant?.id&&occupant.destroyable&&!occupant.pushable&&
           weapon?.attackPattern==='adjacent-cardinal'&&Number.isFinite(threshold)&&threshold>0&&
           Number.isFinite(weapon.minimumAttackDamage)&&weapon.minimumAttackDamage>=threshold);
-        const remainingThreat=view.room.hitWarnings.some(w=>w.hostile&&(key(w.x,w.y)===destination||(occupant?.pushable&&key(w.x,w.y)===k))&&
+        const remainingThreat=view.room.hitWarnings.some(w=>threatens(w)&&(key(w.x,w.y)===destination||(occupant?.pushable&&key(w.x,w.y)===k))&&
           !(killsSource&&w.sourceId===occupant.id));
         const risk=remainingThreat?2:(!stays&&tile?.solid!==false&&!tile?.isDoor?1:0);
         if(enemy) score+=25;

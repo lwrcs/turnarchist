@@ -21,7 +21,8 @@ def navigation_example(before,after,transition):
     return (transition['controller']=='teacher' and transition['action']['type']=='Move'
             and transition['recorded'] and before['decision']=='world'
             and not any(e.get('isEnemy') or e.get('appearance')=='unidentified' for e in before['room']['entities'])
-            and not any(w.get('hostile') for w in before['room']['hitWarnings'])
+            and not any(w.get('hostile') and w.get('dangerous', True)
+                        for w in before['room']['hitWarnings'])
             and after['player']['health']>=before['player']['health']
             and (before['room']['id'],before['player']['x'],before['player']['y']) !=
                 (after['room']['id'],after['player']['x'],after['player']['y']))

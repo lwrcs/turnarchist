@@ -288,8 +288,8 @@ export class AgentEnvironment {
       r.roomY<=observation.player.y+Math.ceil(vision.range*.75) && r.roomY+r.height>observation.player.y-Math.ceil(vision.range*.75))
       .map(project);
     return {
-      schemaVersion: 9, observationMode: "player-perception", vision: {...vision,halfWidth:vision.range,halfHeight:Math.ceil(vision.range*.75)},
-      contract: {...this.contract(), observationSchemaVersion: 9, observationMode: "player-perception"},
+      schemaVersion: 10, observationMode: "player-perception", vision: {...vision,halfWidth:vision.range,halfHeight:Math.ceil(vision.range*.75)},
+      contract: {...this.contract(), observationSchemaVersion: 10, observationMode: "player-perception"},
       ready: observation.ready, terminated: observation.terminated, truncated: observation.truncated,
       player: observation.player, inventory: observation.inventory,
       ui: {inventoryOpen:this.player().inventory.isOpen},
@@ -361,7 +361,7 @@ export class AgentEnvironment {
       purchaseTurnCost:0,
     }:null;
     return {
-      schemaVersion: 9, contract: this.contract(),
+      schemaVersion: 10, contract: this.contract(),
       backend: "browser", observationMode: "diagnostic-current-room",
       seed: this.seed, scenario: this.scenario,
       encounter: isCombatScenario(this.scenario) ? combatEncounter(this.scenario) : null, steps: this.steps, maxSteps: this.maxSteps,
@@ -373,7 +373,10 @@ export class AgentEnvironment {
       failure: this.failure, developerMode: GameConstants.DEVELOPER_MODE,
       player: { x: player.x, y: player.y, z: player.z, health: player.health,
         maxHealth: player.maxHealth, mana: player.mana, maxMana: player.maxMana,
-        turnCount: player.turnCount },
+        turnCount: player.turnCount,
+        coins: typeof player.inventory.coinCount === "function"
+          ? player.inventory.coinCount() : Number.isFinite(player.inventory.coins)
+            ? player.inventory.coins : null },
       room: { id: room.globalId, depth: room.depth, x: room.roomX, y: room.roomY,
         width: room.width, height: room.height, tiles,
         entities: room.entities.filter(entity => !entity.dead).map(observeEntity),

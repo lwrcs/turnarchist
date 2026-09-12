@@ -17,10 +17,9 @@ editing the game's code.
 - A room that looked like the route forward required destroying a mushroom patch
   behind a pushed crate. The patch dropped food onto the newly opened path, so
   clearing route obstructions can also provide recovery resources.
-- A non-hostile/fading crab warning was still tactically unsafe to step onto: the
-  crab had just moved adjacent, and taking that step cost 0.5 health. Until warning
-  phase semantics are made clearer, recently marked tiles should be treated as
-  suspect even when the current observation labels the marker non-hostile.
+- A fading crab warning appeared ambiguous in structured state even though its
+  visual fade direction is clear to a player. The intended rule is: a warning is
+  dangerous as soon as it fades in and safe as soon as it begins fading out.
 - Equipping a candle at zero turn cost was useful immediately after entering a dark
   room: contacts became identifiable without advancing nearby enemies. The room
   turned out to be a true dead end, but clearing it yielded a second wall candle.
@@ -46,9 +45,9 @@ editing the game's code.
 - Rats flee from an equipped light source and can be herded against cave walls.
   Once cornered, two rats briefly occupied adjacent escape tiles; killing the
   nearer one let the other move into its square for a safe follow-up strike.
-- A cornered rat can stop fleeing and deal 0.5 damage without a hostile warning
-  appearing in the restricted observation. Light makes pursuit safer, but it does
-  not make stepping beside a rat safe when the rat has no escape tile.
+- A cornered rat dealt 0.5 damage on a tile that its warnings represented as safe.
+  This is unintended rat behavior rather than a strategy to learn; its flee path
+  must never route through the player as an attack.
 - Fishing requires carrying a fishing rod and clicking a visible FishingSpot; the
   rod does not have to be selected or equipped. Each accepted cast advances the
   world, nearby enemies continue moving, and rapid clicks can be ignored while a
@@ -62,10 +61,21 @@ editing the game's code.
   fragments, a mana potion, and a torch in this run.
 - The restricted observation did not expose the visible coin count, so automatic
   coin rewards could not be verified from structured state even though the normal
-  game HUD changed during the room traversal.
+  game HUD changed during the room traversal. This is an observation omission.
 - Entering the floor ladder produced a `decision: "ladder"` state while
   `selectionChoices` remained null. Space still confirmed the visible Descend
   prompt and reached depth 1 successfully.
-- Descending from depth 0 to depth 1 restored health from 1.5 to the full 2 without
-  consuming the remaining fish. Floor-transition recovery should be represented
-  explicitly if it is a stable rule rather than inferred from health deltas.
+- Health changed from 1.5 to 2 while confirming the depth transition, but floor
+  transitions are not intended to heal. The leading explanation is that the Space
+  confirmation leaked into the quickbar and consumed food; treat this as a possible
+  teaching-input defect until the recorded action sequence proves the cause.
+
+## Unintended behavior to fix or verify
+
+- Rat flee pathfinding can damage the player on a tile its warning state says is safe.
+- Warning observations need the same fade-in-dangerous/fade-out-safe distinction a
+  visual player receives.
+- Coin count is absent from the player observation.
+- Fish heals one health, but its exported `healingAmount` is null.
+- Ladder confirmation may leak a Space input into the selected quickbar item; audit
+  the recorded transition before treating the health change as a game rule.

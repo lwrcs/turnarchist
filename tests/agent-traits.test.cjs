@@ -55,6 +55,18 @@ test('missing, non-finite and wrong-typed features remain unknown', () => {
   }
 });
 
+test('fish exposes the same one-health recovery used by gameplay', () => {
+  class Item { constructor(level,x,y){Object.assign(this,{level,x,y,stackCount:1});} getAgentCategories(){return [];} }
+  class Usable extends Item { getAgentCategories(){return ['usable'];} }
+  const {Fish}=load('src/item/usable/fish.ts', {
+    '../item':{Item}, '../../player/player':{Player:class{}}, '../../game':{Game:{}},
+    '../../room/room':{Room:class{}}, '../../particle/textParticle':{TextParticle:class{}},
+    '../../game/gameConstants':{GameConstants:{}}, './usable':{Usable},
+    '../../sound/sound':{Sound:{playEat(){}}},
+  });
+  assert.equal(traits.observeItem(new Fish({},0,0)).healingAmount,1);
+});
+
 test('facing follows the gameplay direction enum and spawner type comes from an explicit trait',()=>{
   const e={direction:2,getAgentSpawnTraits:()=>({enemyType:'skull'})};
   const t=traits.observeEntity(e);assert.equal(t.facing.dx,1);assert.equal(t.facing.dy,0);assert.equal(t.spawner.enemyType,'skull');
@@ -72,16 +84,19 @@ test('warning changes and removal are reflected without inventing timing', () =>
   assert.equal(after[0].z, 3);
   assert.equal(after[0].sourceId, 'enemy-1');
   assert.equal(after[0].resolvesInTurns, null);
+  assert.equal(after[0].phase, 'fading-in');
+  assert.equal(after[0].dangerous, true);
   warning.dead = true;
   assert.equal(traits.observeWarnings([warning]).length, 0);
 });
 
-test('resolved fading warnings are omitted and parentless ground warnings retain their layer',()=>{
+test('resolved fading warnings are labeled safe and parentless warnings retain their layer',()=>{
   let active=true;
   const warning={x:1,y:2,dead:false,parent:null,isActive:()=>active,getSaveFields:()=>({isEnemy:false,dirOnly:false})};
   assert.equal(traits.observeWarnings([warning])[0].z,0);
   active=false;
-  assert.equal(traits.observeWarnings([warning]).length,0);
+  const resolved=traits.observeWarnings([warning])[0];
+  assert.equal(resolved.phase,'fading-out');assert.equal(resolved.dangerous,false);
 });
 
 test('real warning lifecycle stops threatening on its first tick, before cleanup',()=>{
@@ -92,7 +107,8 @@ test('real warning lifecycle stops threatening on its first tick, before cleanup
   warning.tick();
   assert.equal(warning.dead,false);
   assert.equal(warning.isActive(),false);
-  assert.equal(traits.observeWarnings([warning]).length,0);
+  const resolved=traits.observeWarnings([warning])[0];
+  assert.equal(resolved.phase,'fading-out');assert.equal(resolved.dangerous,false);
   warning.tick();assert.equal(warning.dead,true);
   // Dead warnings must not touch rendering state even before array cleanup.
   warning.draw(1);warning.drawTopLayer(1);

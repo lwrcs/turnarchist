@@ -34,7 +34,7 @@
       for(const h of room.hazards||[])box(h.x,h.y,'#236b9b','S');
     }
     box(px,py,'#355ead','@');
-    for(const w of rooms.flatMap(r=>r.hitWarnings)){const x=w.x-px+12,y=w.y-py+9;if(x<0||y<0||x>24||y>18)continue;ctx.strokeStyle=w.hostile?'#ff8c8c':'#c6b7ff';ctx.lineWidth=2;ctx.strokeRect(ox+x*size+2,oy+y*size+2,size-4,size-4);}
+    for(const w of rooms.flatMap(r=>r.hitWarnings)){const x=w.x-px+12,y=w.y-py+9;if(x<0||y<0||x>24||y>18)continue;ctx.strokeStyle=w.dangerous===false?'#746c91':w.hostile?'#ff8c8c':'#c6b7ff';ctx.lineWidth=2;ctx.strokeRect(ox+x*size+2,oy+y*size+2,size-4,size-4);}
   }
   board.onpointerdown=e=>{board.focus();if($('view-mode').value==='game'){e.preventDefault();pointerStart={point:gamePoint(e),clientX:e.clientX,clientY:e.clientY};board.setPointerCapture?.(e.pointerId);}};
   board.onpointerup=e=>guard(()=>gamePointerEnd(e));

@@ -3,6 +3,7 @@
   const copy=x=>JSON.parse(JSON.stringify(x));
   const position=v=>JSON.stringify([v.room.id,v.player.x,v.player.y]);
   const effect=v=>JSON.stringify([v.player,v.inventory,v.room.entities,v.room.items,v.room.hitWarnings,v.decision,v.selectionChoices,v.vendingMachine]);
+  const threatens=w=>w.hostile&&w.dangerous!==false;
   const actorFor=source=>source==='agent'?'model':source;
   function exportEnvelope(meta,records,replay){
     const resultMeta=copy(meta),policy=resultMeta.policy||'Unknown';
@@ -140,7 +141,7 @@
       })();
       try{await this.pending;}catch(e){this.fail(e);}finally{this.busy=false;this.pending=null;this.changed();}
     }
-    async propose(){if(this.busy||this.state!=='human'||this.meta.mode==='demonstration')return;const seq=this.records.length,g=this.generation;try{const p=await this.policy.propose?.(this.view);if(this.state!=='human'||seq!==this.records.length||g!==this.generation)return;const last=this.records.at(-1);const clear=!stuck(this.records)&&!this.view.room.hitWarnings.some(w=>w.hostile&&w.x===this.view.player.x&&w.y===this.view.player.y);const useful=last&&(position(last.before)!==position(last.after)||effect(last.before)!==effect(last.after));const repeatsFailure=last&&!last.info.recorded&&JSON.stringify(last.action)===JSON.stringify(p?.action);this.suggested=p?.action&&clear&&useful&&!repeatsFailure?p:null;if(this.suggested&&this.autoReturn)this.autoDeadline=Date.now()+2000;this.changed();}catch(e){this.reason='Agent suggestion unavailable: '+e.message;this.changed();}}
+    async propose(){if(this.busy||this.state!=='human'||this.meta.mode==='demonstration')return;const seq=this.records.length,g=this.generation;try{const p=await this.policy.propose?.(this.view);if(this.state!=='human'||seq!==this.records.length||g!==this.generation)return;const last=this.records.at(-1);const clear=!stuck(this.records)&&!this.view.room.hitWarnings.some(w=>threatens(w)&&w.x===this.view.player.x&&w.y===this.view.player.y);const useful=last&&(position(last.before)!==position(last.after)||effect(last.before)!==effect(last.after));const repeatsFailure=last&&!last.info.recorded&&JSON.stringify(last.action)===JSON.stringify(p?.action);this.suggested=p?.action&&clear&&useful&&!repeatsFailure?p:null;if(this.suggested&&this.autoReturn)this.autoDeadline=Date.now()+2000;this.changed();}catch(e){this.reason='Agent suggestion unavailable: '+e.message;this.changed();}}
     async finish(){this.pause('Finishing');if(this.pending)await this.pending;if(this.state==='error')return;this.state='finished';this.meta.endedAt=new Date().toISOString();await this.event('finished-by-human');this.changed();}
     async export(){return exportEnvelope(this.meta,this.records,this.cachedReplay??(!this.busy?this.agent.exportReplay():null));}
   }

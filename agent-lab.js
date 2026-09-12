@@ -122,7 +122,7 @@
     const first = await agent.reset(seed, {maxSteps: 4});
     const contract = agent.contract();
     if (!contract.buildId) throw new Error('Bundled agent has no build identity');
-    if (contract.observationSchemaVersion !== 6) throw new Error('Unexpected observation schema');
+    if (contract.observationSchemaVersion !== 10) throw new Error('Unexpected observation schema');
     const perception = agent.perceive();
     if (perception.observationMode !== 'player-perception' || 'recentTransitions' in perception || 'seed' in perception) {
       throw new Error('Restricted perception leaked diagnostic envelope');

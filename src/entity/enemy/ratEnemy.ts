@@ -83,6 +83,17 @@ export class RatEnemy extends Enemy {
 
             disablePositions.push(...this.getEntityDisablePositions());
 
+            // Fleeing is movement away from light, never an alternate attack path.
+            // Treat every player tile as blocked so A* cannot route through one.
+            if (fleeing) {
+              for (const i in this.game.players) {
+                const p = this.game.players[i];
+                if (this.game.rooms[p.levelID] === this.room) {
+                  disablePositions.push({x: p.x, y: p.y} as astar.Position);
+                }
+              }
+            }
+
             for (let xx = this.x - 1; xx <= this.x + 1; xx++) {
               for (let yy = this.y - 1; yy <= this.y + 1; yy++) {
                 if (
@@ -108,6 +119,10 @@ export class RatEnemy extends Enemy {
                   this.game.players[i].x === moves[0].pos.x &&
                   this.game.players[i].y === moves[0].pos.y
                 ) {
+                  if (fleeing) {
+                    hitPlayer = true;
+                    continue;
+                  }
                   if (!this.shouldSkipAttack()) {
                     this.game.players[i].hurt(this.hit(), this.name, {
                       source: { x: this.x, y: this.y },
