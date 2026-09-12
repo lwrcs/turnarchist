@@ -23,7 +23,7 @@ function setup(timeoutMs = 500) {
     './agentMode': {setAgentFastMode() {}},
     './combatTestbed': load('src/game/combatTestbed.ts'),
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
-    '../room/room': {TurnState: {playerTurn: 0}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
+    '../room/room': {TurnState: {playerTurn: 0},RoomType:{BOSS:'BOSS'}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
     './actionReadiness': {isActionReady: game => game.levelReady},
     './gameConstants': {GameConstants: {VERSION: 'test', DEVELOPER_MODE: false, WIDTH:160, HEIGHT:160, TILESIZE:16}},
     './gameplaySettings': {GameplaySettings: {STARTING_HEALTH: 10}},
@@ -36,7 +36,7 @@ function setup(timeoutMs = 500) {
   });
   const actions = [];
   const room = {globalId: 'room', roomX: 0, roomY: 0, width: 3, height: 3,
-    turn: 0, depth: 0, roomArray: [[], [], []], entities: [], items: [], hitwarnings: []};
+    turn: 0, depth: 0, pathId:'main', roomArray: [[], [], []], entities: [], items: [], hitwarnings: [],projectiles:[]};
   const player = {x: 1, y: 1, z: 0, health: 10, maxHealth: 10, turnCount: 0,
     dead: false, busyAnimating: false, getRoom: () => room,
     movement: {canMove: () => true}, screenMessage: {open: false},
@@ -529,4 +529,38 @@ test('clear outcome is combat-only and waits for live enemies and pending projec
   room.entities[0].dead=true;room.projectiles=[{dead:false}];assert.equal(env.exportReplay().encounterCleared,false);
   room.projectiles[0].dead=true;assert.equal(env.exportReplay().encounterCleared,true);
   player.dead=true;assert.equal(env.exportReplay().encounterCleared,false);
+});
+
+test('privileged operator view explains current-room danger and provides read-only A star routes',async()=>{
+  const {env,room,player}=setup();await env.reset(123);
+  const tile=(solid=false)=>({isSolid:()=>solid,isDoor:false});
+  room.roomArray=Array.from({length:3},()=>Array.from({length:3},()=>tile()));
+  room.type='BOSS';room.pathId='sewer';room.level={environment:{type:'DUNGEON'}};
+  player.x=0;player.y=1;
+  const enemy={globalId:'enemy-1',x:1,y:1,z:0,w:1,h:1,dead:false,isEnemy:true,collidable:true,
+    destroyable:true,pushable:false,chainPushable:false,health:1,maxHealth:1,baseDamage:.5,
+    getAgentKillDamageThreshold:()=>1,examineText:()=>"A test enemy."};
+  room.entities=[enemy];
+  room.hitwarnings=[{x:0,y:1,dead:false,parent:enemy,isActive:()=>true,
+    getSaveFields:()=>({eX:1,eY:1,isEnemy:true,dirOnly:true})}];
+  player.inventory.items=[{globalId:'dagger',name:'Dagger',damage:1,getAgentCategories:()=>['weapon'],
+    getAgentAttackTraits:()=>({pattern:'adjacent-cardinal',minimumDamage:1})}];
+  player.inventory.weapon=player.inventory.items[0];
+  const operator=env.inspectOperator();
+  assert.equal(operator.trainingPolicyObservation,false);assert.equal(operator.room.enemyCount,1);
+  assert.equal(operator.room.progressBlockedByEnemies,true);assert.equal(operator.room.sidePath,true);
+  assert.equal(operator.room.entities[0].description,'A test enemy.');
+  const right=operator.tactical.moves.find(m=>m.direction==='right');
+  assert.equal(right.attack.killsBeforeEnemyResponse,true);assert.equal(right.attack.neutralizesThreatSource,true);
+  assert.equal(right.consequence.knownIncomingDamageBeforeDefense,0);
+  const route=env.operatorPathTo(2,2);
+  assert.equal(route.algorithm,'A*');assert.equal(route.reachable,true);
+  assert.ok(route.steps.every(step=>!(step.x===1&&step.y===1)));
+  assert.equal(env.inspectOperatorObject('enemy-1').combat.baseDamage,.5);
+  room.hitwarnings=[];room.entities=[{...enemy,globalId:'crate',isEnemy:false,pushable:true,chainPushable:true}];
+  const push=env.inspectOperator().tactical.moves.find(m=>m.direction==='right');
+  assert.equal(push.pushOutcome,'player-moves');assert.equal(push.staysInPlace,false);
+  room.roomArray[2][1].canCrushEnemy=()=>true;
+  const crush=env.inspectOperator().tactical.moves.find(m=>m.direction==='right');
+  assert.equal(crush.pushOutcome,'head-object-destroyed');assert.equal(crush.staysInPlace,true);
 });

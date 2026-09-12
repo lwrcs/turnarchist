@@ -36586,6 +36586,36 @@ const directions = {
     up: [game_1.Direction.UP, 0, -1], down: [game_1.Direction.DOWN, 0, 1],
     left: [game_1.Direction.LEFT, -1, 0], right: [game_1.Direction.RIGHT, 1, 0],
 };
+function operatorAStar(room, start, target, blocked) {
+    const key = (x, y) => `${x},${y}`, heuristic = (x, y) => Math.abs(x - target.x) + Math.abs(y - target.y);
+    const open = [{ ...start, g: 0, f: heuristic(start.x, start.y) }], best = new Map([[key(start.x, start.y), 0]]), parents = new Map();
+    while (open.length) {
+        open.sort((a, b) => a.f - b.f || a.g - b.g);
+        const current = open.shift(), currentKey = key(current.x, current.y);
+        if (current.x === target.x && current.y === target.y) {
+            const path = [];
+            let cursor = currentKey;
+            while (cursor !== key(start.x, start.y)) {
+                const [x, y] = cursor.split(",").map(Number);
+                path.push({ x, y });
+                cursor = parents.get(cursor);
+            }
+            return path.reverse();
+        }
+        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+            const x = current.x + dx, y = current.y + dy, nextKey = key(x, y);
+            if (!room.roomArray[x]?.[y] || blocked.has(nextKey))
+                continue;
+            const g = current.g + 1;
+            if (g >= (best.get(nextKey) ?? Infinity))
+                continue;
+            best.set(nextKey, g);
+            parents.set(nextKey, currentKey);
+            open.push({ x, y, g, f: g + heuristic(x, y) });
+        }
+    }
+    return [];
+}
 class AgentActionError extends Error {
     constructor() {
         super(...arguments);
@@ -36786,6 +36816,189 @@ class AgentEnvironment {
         if (action.type === "SelectOption")
             turnCost = this.player().menu?.getSelectionChoices()?.[action.index]?.turnCost ?? null;
         return { turnCost, basis: turnCost === null ? "depends-on-resolution" : "gameplay-rule" };
+    }
+    operatorDescription(value) {
+        try {
+            const text = value?.examineText?.();
+            return typeof text === "string" && text.trim() ? text.trim() : null;
+        }
+        catch {
+            return null;
+        }
+    }
+    /**
+     * Privileged, read-only current-room view for collecting demonstrations from a
+     * reasoning model. This is deliberately separate from perceive(), which is the
+     * observation stored with every training action.
+     */
+    inspectOperator() {
+        const observation = this.observe(), player = this.player(), room = player.getRoom();
+        const entities = room.entities.filter(e => !e.dead).map(e => ({
+            ...(0, agentTraits_1.observeEntity)(e), description: this.operatorDescription(e),
+            footprint: { x: e.x, y: e.y, width: e.w || 1, height: e.h || 1 },
+        }));
+        const items = room.items.filter(i => !i.pickedUp).map(i => ({
+            ...(0, agentTraits_1.observeItem)(i), description: this.operatorDescription(i), z: i.z,
+        }));
+        const hazards = (room.projectiles ?? []).filter(p => !p.dead).flatMap(p => {
+            const traits = p.getAgentHazardTraits?.();
+            return traits ? [{ id: p.globalId ?? null, x: p.x, y: p.y, z: p.z ?? 0, ...traits }] : [];
+        });
+        const warnings = (0, agentTraits_1.observeWarnings)(room.hitwarnings);
+        const enemyCount = entities.filter(e => e.isEnemy).length;
+        const warningDamage = (x, y) => {
+            const active = warnings.filter(w => w.hostile && w.dangerous && w.x === x && w.y === y);
+            const unique = active.filter((warning, index) => !warning.sourceId ||
+                active.findIndex(candidate => candidate.sourceId === warning.sourceId) === index);
+            const values = unique.map(w => { const source = entities.find(e => e.id === w.sourceId); return source?.combat.currentDamage ?? source?.combat.baseDamage ?? null; });
+            const known = values.filter((v) => v !== null);
+            return { knownDamage: known.reduce((n, v) => n + v, 0), unknownDamageSources: values.length - known.length,
+                sources: unique.map(w => w.sourceId) };
+        };
+        const projectileDamage = (x, y) => hazards.filter(h => h.x === x && h.y === y && h.damage > 0)
+            .reduce((n, h) => n + h.damage, 0);
+        const weapon = observation.inventory.find(i => i?.activeWeapon) ?? null;
+        const moves = Object.entries(directions).map(([direction, value]) => {
+            const [, dx, dy] = value, x = player.x + dx, y = player.y + dy;
+            const tile = room.roomArray[x]?.[y];
+            const occupant = entities.find(e => x >= e.footprint.x && x < e.footprint.x + e.footprint.width &&
+                y >= e.footprint.y && y < e.footprint.y + e.footprint.height);
+            const attack = occupant?.isEnemy === true || occupant?.destroyable === true && occupant?.pushable !== true;
+            const threshold = occupant?.combat.killDamageThreshold ?? null;
+            const damage = weapon?.traits.minimumAttackDamage ?? null;
+            const kills = attack && threshold !== null && damage !== null ? damage >= threshold : null;
+            let pushOutcome = null;
+            if (occupant?.pushable) {
+                if (occupant.footprint.width !== 1 || occupant.footprint.height !== 1)
+                    pushOutcome = "unknown";
+                else {
+                    const behindX = x + dx, behindY = y + dy, behindTile = room.roomArray[behindX]?.[behindY];
+                    const behindEntity = entities.find(e => e.id !== occupant.id && e.z === player.z && behindX >= e.footprint.x &&
+                        behindX < e.footprint.x + e.footprint.width && behindY >= e.footprint.y && behindY < e.footprint.y + e.footprint.height);
+                    pushOutcome = !behindTile ? "unknown" : behindEntity?.chainPushable === false || behindTile.canCrushEnemy?.() === true ?
+                        "head-object-destroyed" : "player-moves";
+                }
+            }
+            const staysInPlace = pushOutcome ? pushOutcome !== "player-moves" : attack || occupant?.collidable === true || tile?.isSolid() === true;
+            const landing = staysInPlace ? { x: player.x, y: player.y } : { x, y };
+            const threats = warningDamage(landing.x, landing.y), projectiles = projectileDamage(landing.x, landing.y);
+            const neutralized = kills && occupant?.id ? warnings.filter(w => w.sourceId === occupant.id && w.dangerous).length : 0;
+            const sourceDamage = occupant?.combat.currentDamage ?? occupant?.combat.baseDamage ?? 0;
+            const knownDamage = Math.max(0, threats.knownDamage - (neutralized ? sourceDamage : 0)) + projectiles;
+            return { direction, target: { x, y }, resolution: occupant?.pushable ? "push-or-attack" : attack ? "attack" :
+                    tile?.isDoor ? "door-transition-or-door-interaction" : tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder ? "ladder" :
+                        tile?.isSolid() ? "blocked-or-interact" : "move", staysInPlace, pushOutcome, occupantId: occupant?.id ?? null,
+                attack: { attempted: attack, minimumDamage: damage, killThreshold: threshold, killsBeforeEnemyResponse: kills,
+                    neutralizesThreatSource: kills && neutralized > 0 },
+                consequence: { landing, knownIncomingDamageBeforeDefense: knownDamage, unknownDamageSources: threats.unknownDamageSources,
+                    currentStateBasis: true, defenseAdjusted: false, projectileDamage: projectiles, warningSources: threats.sources },
+                hint: knownDamage > 0 || threats.unknownDamageSources > 0 ?
+                    `This action currently leaves the player on a threatened tile: ${knownDamage} known incoming damage before equipped defenses${threats.unknownDamageSources ? ` plus ${threats.unknownDamageSources} unknown source(s)` : ""}.` :
+                    kills && neutralized ? "This hit is known to kill its target before the enemy response and neutralize that source's active warning." : null };
+        });
+        const currentThreat = warningDamage(player.x, player.y), currentProjectile = projectileDamage(player.x, player.y);
+        const tiles = observation.room.tiles.map(t => {
+            const tile = room.roomArray[t.x]?.[t.y];
+            return { ...t,
+                solid: tile?.isSolid?.() ?? null, isDoor: tile?.isDoor ?? false,
+                exit: tile instanceof downLadder_1.DownLadder || tile instanceof upLadder_1.UpLadder,
+                traversal: tile?.getTraversalTraits?.() ?? null,
+                hazard: tile?.getAgentHazardTraits?.() ?? null,
+                description: this.operatorDescription(tile) };
+        });
+        const pointsOfInterest = [
+            ...tiles.filter(t => t.isDoor || t.exit).map(t => ({ id: `tile:${t.x},${t.y}`, kind: t.isDoor ? "door" : "ladder", x: t.x, y: t.y,
+                route: this.operatorPathTo(t.x, t.y, { allowOccupiedTarget: true }) })),
+            ...items.map(item => ({ id: item.id, kind: "item", x: item.x, y: item.y,
+                route: item.x !== null && item.y !== null ? this.operatorPathTo(item.x, item.y) : null })),
+        ];
+        return {
+            schemaVersion: 1, observationMode: "privileged-demonstration-operator", privileged: true,
+            purpose: "chat-model-demonstration-collection", trainingPolicyObservation: false,
+            limitations: ["current room only", "no future rooms", "no RNG or seed outcomes", "read-only; actions still use recorded teaching controls"],
+            player: observation.player, inventory: observation.inventory, decision: observation.decision,
+            selectionChoices: observation.selectionChoices, vendingMachine: observation.vendingMachine,
+            room: { id: room.globalId, depth: room.depth, pathId: room.pathId, roomType: room.type,
+                environment: room.level?.environment?.type ?? null, x: room.roomX, y: room.roomY, width: room.width, height: room.height,
+                bossRoom: room.type === room_1.RoomType.BOSS, enemyCount, enemyFree: enemyCount === 0,
+                progressBlockedByEnemies: room.type === room_1.RoomType.BOSS && enemyCount > 0,
+                progressRule: room.type === room_1.RoomType.BOSS ? "Kill every enemy in this boss room before progression unlocks." : null,
+                sidePath: room.pathId !== "main", sidePathHint: room.pathId !== "main" ?
+                    "This is an optional side path. Search it for food and other resources, then return to the main path." : null,
+                tiles, entities, items, warnings, hazards },
+            tactical: { currentTile: { ...currentThreat, knownIncomingDamageBeforeDefense: currentThreat.knownDamage + currentProjectile,
+                    defenseAdjusted: false, projectileDamage: currentProjectile }, moves,
+                instruction: currentThreat.sources.length ?
+                    "If an active warning is under the player, either leave it or kill its source before the enemy response. A verified lethal hit neutralizes only that source." : null },
+            pathfinding: { algorithm: "A*", query: "teachingOperatorPath(targetX,targetY,options)",
+                pointsOfInterest,
+                batching: enemyCount === 0 && !warnings.some(w => w.dangerous) && hazards.every(h => h.damage <= 0) ?
+                    "Room is enemy-free with no active damage markers. A returned path may be queued, stopping before any door, ladder, interaction, failed action, health change, or room change." :
+                    "Do not batch while enemies or active damage markers are present." },
+            inspection: { query: "teachingInspectObject(id)", ids: [...entities, ...items, ...observation.inventory.filter(Boolean)]
+                    .map(v => v.id).filter(Boolean) },
+        };
+    }
+    /** Read-only A* over the complete current room. The target remains explicit. */
+    operatorPathTo(targetX, targetY, options = {}) {
+        if (!Number.isInteger(targetX) || !Number.isInteger(targetY))
+            throw new Error("Path target must use integer tile coordinates");
+        const player = this.player(), room = player.getRoom();
+        if (!room.roomArray[targetX]?.[targetY])
+            throw new Error("Path target is outside the current room");
+        const blocked = new Set();
+        for (let x = room.roomX; x < room.roomX + room.width; x++)
+            for (let y = room.roomY; y < room.roomY + room.height; y++)
+                if (room.roomArray[x]?.[y]?.isSolid?.())
+                    blocked.add(`${x},${y}`);
+        for (const entity of room.entities.filter(e => !e.dead && e.collidable))
+            for (let x = entity.x; x < entity.x + (entity.w || 1); x++)
+                for (let y = entity.y; y < entity.y + (entity.h || 1); y++)
+                    blocked.add(`${x},${y}`);
+        if (options.avoidThreats !== false) {
+            for (const warning of (0, agentTraits_1.observeWarnings)(room.hitwarnings))
+                if (warning.hostile && warning.dangerous)
+                    blocked.add(`${warning.x},${warning.y}`);
+            for (const hazard of room.projectiles ?? []) {
+                const t = hazard.getAgentHazardTraits?.();
+                if (!hazard.dead && t?.damage > 0)
+                    blocked.add(`${hazard.x},${hazard.y}`);
+            }
+        }
+        blocked.delete(`${player.x},${player.y}`);
+        if (options.allowOccupiedTarget)
+            blocked.delete(`${targetX},${targetY}`);
+        const nodes = operatorAStar(room, { x: player.x, y: player.y }, { x: targetX, y: targetY }, blocked);
+        let previous = { x: player.x, y: player.y };
+        const steps = nodes.map(node => {
+            const step = { ...node, direction: node.x > previous.x ? "right" : node.x < previous.x ? "left" : node.y > previous.y ? "down" : "up" };
+            previous = node;
+            return step;
+        });
+        return { algorithm: "A*", from: { x: player.x, y: player.y }, target: { x: targetX, y: targetY },
+            avoidThreats: options.avoidThreats !== false, reachable: targetX === player.x && targetY === player.y || steps.length > 0,
+            steps, actions: steps.map(s => ({ type: "Move", direction: s.direction })) };
+    }
+    inspectOperatorObject(id) {
+        if (typeof id !== "string" || !id)
+            throw new Error("Object id is required");
+        const room = this.player().getRoom();
+        const entity = room.entities.find(e => !e.dead && e.globalId === id);
+        if (entity)
+            return { objectType: "entity", ...(0, agentTraits_1.observeEntity)(entity), description: this.operatorDescription(entity),
+                mechanics: { footprint: { x: entity.x, y: entity.y, width: entity.w || 1, height: entity.h || 1 },
+                    pushable: entity.pushable, chainPushable: entity.chainPushable, collidable: entity.collidable } };
+        const item = room.items.find(i => !i.pickedUp && i.globalId === id);
+        if (item)
+            return { objectType: "item", ...(0, agentTraits_1.observeItem)(item), description: this.operatorDescription(item) };
+        const slot = this.player().inventory.items.findIndex(i => i?.globalId === id);
+        if (slot >= 0) {
+            const inventoryItem = this.player().inventory.items[slot];
+            return { objectType: "inventory-item", slot,
+                ...(0, agentTraits_1.observeItem)(inventoryItem), description: this.operatorDescription(inventoryItem),
+                equipped: inventoryItem.equipped === true, activeWeapon: inventoryItem === this.player().inventory.weapon };
+        }
+        throw new Error("Object is not present in the current room");
     }
     /** Restricted current perception. Never includes diagnostic history or unseen room contents. */
     perceive(vision = this.vision) {
@@ -37303,6 +37516,7 @@ function observeEntity(source) {
         spawner: entity.getAgentSpawnTraits?.() ?? null,
         combat: {
             baseDamage: numberOrNull(entity.baseDamage),
+            currentDamage: numberOrNull(entity.damage),
             killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),
             orthogonalAttack: booleanOrNull(entity.orthogonalAttack),
             diagonalAttack: booleanOrNull(entity.diagonalAttack),
@@ -100427,7 +100641,7 @@ Utils.randomNormalInt = (min, max, options = {}) => {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("6ef5c55aae53e784c571")
+/******/ 		__webpack_require__.h = () => ("435f901ccb33ed16a120")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */

@@ -11,7 +11,7 @@ interface EntityTraitsSource {
   globalId?: string; x?: number; y?: number; z?: number;
   health?: number; maxHealth?: number; w?: number; h?: number;
   isEnemy?: boolean; collidable?: boolean; pushable?: boolean; chainPushable?: boolean;
-  destroyable?: boolean; interactable?: boolean; baseDamage?: number;
+  destroyable?: boolean; interactable?: boolean; baseDamage?: number; damage?: number;
   orthogonalAttack?: boolean; diagonalAttack?: boolean;
   direction?: number;
   forwardOnlyAttack?: boolean; isBossEnemy?: boolean;
@@ -39,6 +39,7 @@ export function observeEntity(source: object) {
     spawner: entity.getAgentSpawnTraits?.() ?? null,
     combat: {
       baseDamage: numberOrNull(entity.baseDamage),
+      currentDamage: numberOrNull(entity.damage),
       killDamageThreshold: numberOrNull(entity.getAgentKillDamageThreshold?.()),
       orthogonalAttack: booleanOrNull(entity.orthogonalAttack),
       diagonalAttack: booleanOrNull(entity.diagonalAttack),

@@ -1,8 +1,9 @@
 # Turnarchist AI player: short operating prompt
 
 Play and record one run in the teaching interface. First read
-[agent-player-manual.md](agent-player-manual.md), version 2, then use this checklist.
-Keep Game view visible. Decide from the restricted inspector. Route every game
+[agent-player-manual.md](agent-player-manual.md), version 3, then use this checklist.
+Keep Game view visible. Decide from the privileged current-room operator view while
+preserving the restricted observation stored with each action. Route every game
 action through recorded teaching controls. After activating human controls, focus
 the game board and require **Keyboard active · arrows / WASD**. Use keyboard input
 for every supported gameplay action; do not scroll to or click the teaching page's
@@ -14,6 +15,8 @@ equipment play.
 
 1. Read `teachingInspector()` or `#teaching-inspector-state` with a supported browser
    read method. Check selected run ID, human input ownership, readiness and `busy`.
+   Use `selected.operator` for current-room decisions and `selected.observation` to
+   understand what the eventual policy record contains.
 2. Read menu, room/depth, `(x,y,z)`, health/food, active weapon, full enemy footprints,
    facing, dangerous warnings and spawn/trap hazards. Null means unknown.
 3. Use needed permitted zero-turn healing/preparation before advancing danger.
@@ -21,10 +24,12 @@ equipment play.
    dodge to a safe tile with an escape route. Attacking does not move you.
 5. Side hit will not kill? Plan your NEXT dodge before hitting. Forward-only enemies
    spend a turn turning; giants occupy four tiles and may cover a dodge lane.
-6. Safe to explore? Commit to a reachable unexplored exit. Defer the locked
+6. Safe to explore? Commit to a reachable unexplored exit. Boss rooms require every
+   enemy killed. Side paths are optional food/resource branches. Defer the locked
    starting shortcut. Backtrack from dead ends; do not cycle through used doors.
-7. Send one keyboard input and read the settled result. Verify acknowledgment and
-   effects. Batch only known safe travel with a check after each step. Stop a
+7. Use `teachingOperatorPath(x,y)` for safe current-room routing. Send one keyboard
+   input and read the settled result. If `enemyFree` and no damage markers are true,
+   queue the safe path until the first door, ladder, interaction, or state change. Stop a
    repeated failed input after two attempts and diagnose instead of spamming it.
 
 ## Remember
@@ -46,6 +51,8 @@ equipment play.
   binding, such as ranged targets or item-on-item operations. Page buttons remain
   a last-resort input fallback; setup, pause, and export controls are still allowed.
 - No good continuation? State the exact threat and ask for a small correction.
+- `teachingInspectObject(id)` may be used for any current-room entity or item whose
+  mechanics are unclear. Never inspect future rooms, RNG outcomes, or mutable state.
 - A chat model using manual controls is exported as “human” by today's recorder.
   Preserve a companion operator record and keep the run out of automatic human-data
   ingestion pending review. Mark coaching and screenshot-assisted decisions.

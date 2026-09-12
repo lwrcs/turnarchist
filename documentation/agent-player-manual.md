@@ -1,6 +1,7 @@
 # Turnarchist: operating manual for an AI player
 
-Manual version 2 · verified against commit `be95ea66`, perception schema 10.
+Manual version 3 · verified against commit `4bb93be2`, perception schema 10 and
+privileged demonstration-operator schema 1.
 Read once before playing. Keep [the turn checklist](agent-player-quickstart.md)
 in working context. Live observations and explicit user corrections override this
 manual when mechanics change. These instructions guide a chat model operating the
@@ -13,14 +14,14 @@ preparation and retreat are part of play. Do not optimize for recording length o
 invent an exploration quota. Preserve deaths, mistakes, interruptions, and coaching
 honestly. A successful-looking run is not automatically good training data.
 
-Use only the restricted teaching observation to decide world actions. Keep Game
-view visible for the spectator. Screenshots may help locate controls or diagnose
-a discrepancy, but if you use additional visual world information to choose a move,
-mark that action range as visually assisted. Never inspect hidden entities, future
-rooms, seed generation, or live diagnostic game objects during a demonstration.
-Do not spawn enemies, change health, reset a bad fight, or call the game action
-processor directly. Report suspected defects; ask before fixing newly discovered
-ones unless the user has already authorized that particular fix.
+This protocol collects competent demonstrations from a reasoning model; it is not
+an evaluation of the model's ability to reconstruct a grid from darkness. Use the
+privileged current-room operator view described below. Keep Game view visible for
+the spectator. The privilege ends at the current room: never inspect future rooms,
+RNG results, seed generation, saves, or mutable live objects. Do not spawn enemies,
+change health, reset a bad fight, or call the game action processor directly. Every
+game action still goes through recorded teaching controls. Report suspected defects;
+ask before fixing newly discovered ones unless the user already authorized that fix.
 
 ## Start and recording setup
 
@@ -53,10 +54,30 @@ human-only ingestion until provenance is reconciled and the run is reviewed.
 
 The read-only interface is `window.teachingInspector()`. Its JSON is also mirrored
 in `#teaching-inspector-state`. Use a browser tool's documented, permitted method
-to read it; do not invent tool APIs. If your tools cannot read this interface, stop
-for interface help rather than silently switching to hidden state or screenshot-only
-play. The inspector exposes `selected.observation`, `availableActions`, controller
-flags, and acknowledged recording counts. It does not execute actions.
+to read it; do not invent tool APIs. The inspector exposes two deliberately separate
+views:
+
+- `selected.observation` is the restricted policy observation saved in every action.
+- `selected.operator` is the privileged, complete current-room view used by the
+  chat-model operator. It exposes all current tiles, doors, entities, items, active
+  warnings, hazards, damage traits, room rules, and four directional consequence
+  forecasts without lighting or occlusion.
+
+`teachingOperatorPath(targetX, targetY, options)` runs read-only A* in the current
+room and returns both tile steps and recorded Move actions. By default it avoids
+solid tiles, collidable entities, active warnings, and damaging spawn/projectile
+markers. Set `allowOccupiedTarget: true` only when deliberately routing adjacent to
+or into an interactable target. `teachingInspectObject(id)` returns the object's
+explicit traits, footprint, description, and known mechanics. These functions do
+not act, reveal future rooms, or predict RNG.
+
+Common door, ladder, and ground-item routes are precomputed in
+`selected.operator.pathfinding.pointsOfInterest`, so an isolated browser reader
+does not need access to page globals for ordinary exploration.
+
+If these interfaces cannot be read, stop for interface help rather than silently
+switching to screenshot-only play. The operator view is assistance metadata, never
+a replacement for the restricted `before` and `after` observations in the export.
 
 Use keyboard input for every action that has a keyboard binding. Keep the game board
 focused and send keys to it without scrolling to or clicking the teaching page's
@@ -92,6 +113,14 @@ count, turn count, room, position, health, inventory and threats. An acknowledge
 action can consume zero world turns; an attack can change state without moving.
 Do not repeat inputs just because position did not change. During transitions,
 wait for readiness and updated room/depth before moving again.
+
+Use `operator.tactical.moves` before a dangerous decision. Its damage figures are
+calculated from currently active warnings and hazards. They describe the present
+state rather than hidden future movement. When a warning is under the player, kill
+its source only when `killsBeforeEnemyResponse` is true, or leave the warned tile.
+Killing one source neutralizes only that source. Enemy `combat.currentDamage`
+(falling back to `baseDamage`) makes different threats directly comparable; the
+forecast is explicitly before equipped defenses, and null remains unknown.
 
 ## Coordinates, information and memory
 
@@ -160,6 +189,15 @@ known traversable space (A* if available), treating solids, full enemy footprint
 hazards and occupied doorways appropriately. A path through a breakable requires
 an explicit attack and re-observation, not a movement shortcut.
 
+Boss rooms require every enemy in that room to die before progression unlocks.
+`operator.room.progressBlockedByEnemies` states this explicitly. Side paths are
+optional resource branches and contain food; search them when healing or supplies
+justify the detour, then return to the main path. A room with `enemyFree: true` and
+no active damage markers permits the complete safe portion of an A* route to be
+queued. Stop the batch before a door, ladder, push, attack, or other interaction,
+and abort it on any room change, menu, failed input, health change, new enemy, or
+new hazard. There is no arbitrary step limit for empty-room travel.
+
 The locked starting-room tunnel is an end-to-start shortcut unlocked from the far
 side. Mark it deferred and pursue another exit. Backtrack from explored dead ends
 to the nearest known unfinished branch. Do not oscillate through a used door just
@@ -188,11 +226,11 @@ evidence rather than assuming the entire class is now guaranteed safe.
 
 ## Efficient execution and help
 
-Use compact structured observations for routine decisions. Take screenshots at
-milestones or discrepancies. In known, empty safe corridors, group a few inputs
-in one tool call only if you can await settlement and inspect after each one,
-aborting on a new contact, hazard, room, menu, health change or failed progress.
-Otherwise move one step at a time. Never batch combat inputs blindly.
+Use the compact operator view for routine decisions. Take screenshots at milestones
+or discrepancies. In an explicitly enemy-free room, queue the safe A* route as one
+tool operation only if each key is still serialized by the page and the sequence
+halts at the conditions above. Otherwise move one step at a time. Never batch combat
+inputs blindly.
 
 Keep reasoning to a brief action justification plus expected result. At a difficult
 fight, enumerate at most the few legal options and the next response; ask for help
@@ -221,7 +259,8 @@ Create `<recording-stem>.operator.json` beside the verified export:
   "actualController": "chat-model",
   "model": "unknown",
   "effort": "unknown",
-  "manualVersion": 2,
+  "manualVersion": 3,
+  "operatorObservationSchema": 1,
   "observationSchema": 10,
   "protocol": "starter",
   "trainingEligible": false,

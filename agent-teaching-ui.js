@@ -8,7 +8,7 @@
   const localSaveSupported=['localhost','127.0.0.1'].includes(window.location.hostname);
   const exported=s=>{const e=exports.get(s.meta.id);return e&&e.actions===s.records.length&&e.events===s.meta.events.length;};
   const inspectorSnapshot=()=>({
-    interfaceVersion:1,
+    interfaceVersion:2,
     selected:T.inspectSession(selected,{inputOwner:inputOwner===selected,displayView:$('view-mode').value,exported:selected?!!exported(selected):false}),
     runs:sessions.map(s=>({id:s.meta.id,name:s.meta.name,seed:s.meta.seed,state:s.state,reason:s.reason,actions:s.records.length,selected:s===selected,inputOwner:s===inputOwner}))
   });
@@ -82,7 +82,7 @@
   $('protocol').onchange=()=>{$('protocol-help').textContent=$('protocol').value==='starter'?'Starting dagger and loadout; food allowed. Explore and retreat as needed.':'Play normally, including upgrades and preparation. Full records are kept; advanced equipment needs training review.';};
   $('new-seed').onclick=()=>{$('seed').value=crypto.getRandomValues(new Uint32Array(1))[0];};
   $('start').onclick=()=>guard(async()=>{if(starting||sessions.filter(s=>!['finished','error'].includes(s.state)).length>=2)return;starting=true;render();try{const seed=Number($('seed').value);if(!Number.isInteger(seed)||seed<0||seed>4294967295)throw new Error('Enter a seed between 0 and 4294967295');if((await registry).reservedSeeds.includes(seed))throw new Error('This seed is reserved for evaluation. Choose another seed.');for(const old of sessions){if(['finished','error'].includes(old.state)&&!old.busy&&old.frame){old.cachedReplay=old.agent.exportReplay();old.frame.remove();old.frame=null;}}const frame=document.createElement('iframe');frame.title='Independent teaching game';frame.tabIndex=-1;frame.src='./play.html?agent=1';$('worlds').append(frame);const start=Date.now();while(!frame.contentWindow?.agent){if(Date.now()-start>60000){frame.remove();throw new Error('Game loading timed out');}await new Promise(r=>setTimeout(r,200));}
-      const policy=$('policy').value==='learned'?new T.Remote($('service').value,$('token').value):new T.Baseline(AgentBaseline.Policy);const meta={id:crypto.randomUUID(),name:'Run '+(sessions.length+1),seed,rotation:0,protocol:$('protocol').value,policy:policy.name,perceptionView:'restricted-grid',humanDisplay:'switchable-game-grid',label:'General',trainingDesignation:'human-training-pending-validation'};const s=new T.Session({agent:frame.contentWindow.agent,policy,store,meta,onChange:render});s.frame=frame;sessions.push(s);select(s);await s.start($('mode').value);$('setup').open=false;}finally{starting=false;render();}});
+      const policy=$('policy').value==='learned'?new T.Remote($('service').value,$('token').value):new T.Baseline(AgentBaseline.Policy);const meta={id:crypto.randomUUID(),name:'Run '+(sessions.length+1),seed,rotation:0,protocol:$('protocol').value,policy:policy.name,perceptionView:'restricted-grid',operatorView:'privileged-current-room-v1',humanDisplay:'switchable-game-grid',label:'General',trainingDesignation:'human-training-pending-validation'};const s=new T.Session({agent:frame.contentWindow.agent,policy,store,meta,onChange:render});s.frame=frame;sessions.push(s);select(s);await s.start($('mode').value);$('setup').open=false;}finally{starting=false;render();}});
   $('speed').onchange=()=>{if(selected){selected.speed=Number($('speed').value);selected.changed();}};$('uncertain').onchange=()=>{if(selected)selected.uncertain=$('uncertain').checked;};$('auto-return').onchange=()=>{if(selected){selected.autoReturn=$('auto-return').checked;selected.autoDeadline=null;}};
   $('label').onchange=()=>guard(async()=>{selected.meta.label=$('label').value;await selected.event('label:'+selected.meta.label);});$('exclude').onclick=()=>guard(async()=>{if(!selected?.segment)throw new Error('No human segment selected');selected.meta.excludedSegments.push(selected.segment);await selected.event('exclude-segment');text('Current human segment excluded from training. Original records retained.');});
   function exportName(data){const date=(data.meta.startedAt||new Date().toISOString()).replace(/[:.]/g,'-'),seed=Number.isInteger(data.meta.seed)?`_seed-${data.meta.seed}`:'';return `${date}${seed}_${data.meta.id}.json`;}
@@ -102,6 +102,16 @@
   // not expose the live Session, game facade, records, replay, or action methods.
   window.teachingStatus=()=>sessions.map(s=>({id:s.meta.id,state:s.state,actions:s.records.length,reason:s.reason}));
   window.teachingInspector=inspectorSnapshot;
+  window.teachingOperatorPath=(targetX,targetY,options={})=>{
+    if(!selected||selected.busy)throw new Error('Wait for the selected run to settle');
+    if(typeof selected.agent.operatorPathTo!=='function')throw new Error('Operator pathfinding is unavailable');
+    return structuredClone(selected.agent.operatorPathTo(targetX,targetY,options));
+  };
+  window.teachingInspectObject=id=>{
+    if(!selected||selected.busy)throw new Error('Wait for the selected run to settle');
+    if(typeof selected.agent.inspectOperatorObject!=='function')throw new Error('Operator object inspection is unavailable');
+    return structuredClone(selected.agent.inspectOperatorObject(id));
+  };
   if(localSaveSupported){$('export-folder').textContent='Saves directly to training/data/teaching';}
   else if(!directoryExportSupported){$('export').disabled=true;$('export-saved').disabled=true;$('export-folder').textContent='Direct folder saving unavailable · use Download backup';}
   guard(refreshSaved);render();

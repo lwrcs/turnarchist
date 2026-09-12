@@ -51,7 +51,8 @@
       policy:{name:session.meta?.policy||session.policy?.name||'Unknown',type:session.meta?.policyType||session.policy?.kind||'unknown'},
       availableActions:availableActions(view),
       suggestion:session.suggested||null,
-      observation:view
+      observation:view,
+      operator:session.operatorView||null
     });
   }
   function helper(v){
@@ -81,11 +82,12 @@
     async export(id){const db=await this.ready;const all=await this.list();const meta=all.find(s=>s.id===id);if(!meta)throw new Error('Session not found');return new Promise((resolve,reject)=>{const r=db.transaction('records').objectStore('records').getAll(IDBKeyRange.bound([id,0],[id,Number.MAX_SAFE_INTEGER]));r.onsuccess=()=>resolve(exportEnvelope(meta,r.result));r.onerror=()=>reject(r.error);});}
   }
   class Session {
-    constructor({agent,policy,store,meta,onChange=()=>{}}){Object.assign(this,{agent,policy,store,onChange});this.meta={...meta,schemaVersion:1,events:[],excludedSegments:[]};this.records=[];this.state='ready';this.busy=false;this.humanActive=false;this.humanQueue=null;this.generation=0;this.segment=0;this.pending=null;this.reason='';this.suggested=null;this.autoReturn=false;this.speed=500;this.uncertain=false;this.view=null;this.tailIgnore=0;}
+    constructor({agent,policy,store,meta,onChange=()=>{}}){Object.assign(this,{agent,policy,store,onChange});this.meta={...meta,schemaVersion:1,events:[],excludedSegments:[]};this.records=[];this.state='ready';this.busy=false;this.humanActive=false;this.humanQueue=null;this.generation=0;this.segment=0;this.pending=null;this.reason='';this.suggested=null;this.autoReturn=false;this.speed=500;this.uncertain=false;this.view=null;this.operatorView=null;this.tailIgnore=0;}
+    refreshViews(){this.view=copy(this.agent.perceive());this.operatorView=this.agent.inspectOperator?copy(this.agent.inspectOperator()):null;}
     changed(){this.agent.setFastMode?.(this.state==='agent'&&this.speed===0);this.onChange(this);}
     uiLayout(){return this.agent.getUiLayout?.()||null;}
-    async setInventoryOpen(open){if(this.state!=='human'||this.busy)return false;this.agent.setInventoryOpen?.(open);this.view=copy(this.agent.perceive());this.changed();return true;}
-    async start(mode){this.state='loading';this.changed();try{await this.agent.reset(this.meta.seed,{scenario:'standard',maxSteps:10000});this.view=copy(this.agent.perceive());this.meta.initial=this.view;this.meta.contract=this.view.contract;this.meta.mode=mode;this.meta.startedAt=new Date().toISOString();await this.policy?.reset?.(this.view,this.meta);this.meta.policy=this.policy?.name||this.meta.policy||'None';this.meta.policyType=this.policy?.kind||'unknown';this.meta.provenance={actionActorField:'records[].actor',actionSourceField:'records[].source',sources:{human:'direct human input',agent:'policy/model output',helper:'policy output during a deterministic helper decision',rejected:'attempt rejected by the game; see requestedSource'},policy:this.meta.policy,policyType:this.meta.policyType};await this.store.save(this.meta);this.state='paused';this.reason=mode==='demonstration'?'Ready: activate human controls':'Ready: start agent';this.changed();}catch(e){this.fail(e);}}
+    async setInventoryOpen(open){if(this.state!=='human'||this.busy)return false;this.agent.setInventoryOpen?.(open);this.refreshViews();this.changed();return true;}
+    async start(mode){this.state='loading';this.changed();try{await this.agent.reset(this.meta.seed,{scenario:'standard',maxSteps:10000});this.refreshViews();this.meta.initial=this.view;this.meta.contract=this.view.contract;this.meta.mode=mode;this.meta.startedAt=new Date().toISOString();this.meta.operatorAssistance={enabled:!!this.operatorView,view:'privileged-current-room-v1',storedActionObservation:'player-perception-schema-10',manualVersion:3};await this.policy?.reset?.(this.view,this.meta);this.meta.policy=this.policy?.name||this.meta.policy||'None';this.meta.policyType=this.policy?.kind||'unknown';this.meta.provenance={actionActorField:'records[].actor',actionSourceField:'records[].source',sources:{human:'direct human input',agent:'policy/model output',helper:'policy output during a deterministic helper decision',rejected:'attempt rejected by the game; see requestedSource'},policy:this.meta.policy,policyType:this.meta.policyType};await this.store.save(this.meta);this.state='paused';this.reason=mode==='demonstration'?'Ready: activate human controls':'Ready: start agent';this.changed();}catch(e){this.fail(e);}}
     fail(e){this.generation++;this.state='error';this.reason=String(e.message||e);this.changed();}
     async event(type){this.meta.events.push({type,atSeq:this.records.length,time:Date.now(),segment:this.segment});try{await this.store.save(this.meta);}catch(e){this.fail(e);return false;}return true;}
     pause(reason='Paused'){if(['finished','error'].includes(this.state))return;this.generation++;this.state='paused';this.reason=reason;this.autoDeadline=null;this.humanQueue=null;this.changed();}
@@ -134,7 +136,7 @@
         if(decision.modelDecision)record.modelDecision=copy(decision.modelDecision);
         if(decision.modelSuggestion)record.modelSuggestion=copy(decision.modelSuggestion);
         record.displayView=displayView;
-        this.records.push(record);this.view=after;
+        this.records.push(record);this.view=after;this.operatorView=this.agent.inspectOperator?copy(this.agent.inspectOperator()):null;
         await this.store.append(this.meta.id,record);await this.policy?.advance?.(record);
         if(rejection){this.state='help';this.reason=rejection+' — run preserved. Take control or try the agent again.';await this.event('action-rejected');}
         else if(result.terminated||result.truncated){this.state='finished';this.reason=result.terminated?'Run ended':'Decision budget reached';this.meta.endedAt=new Date().toISOString();await this.event('finished');}
