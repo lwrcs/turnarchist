@@ -103,6 +103,19 @@ editing the game's code.
 - Fish heals one health, but its exported `healingAmount` is null.
 - Ladder confirmation may leak a Space input into the selected quickbar item; audit
   the recorded transition before treating the health change as a game rule.
+- `enemyFree` does not imply that a room is safe for batched travel. Spike traps
+  remained live after the boss room was cleared, while the move forecast predicted
+  zero damage for routes across them.
+- A locked side ladder was offered as a reachable point of interest and accepted
+  repeated movement attempts without changing the world. Locked transitions must
+  be excluded from route planning, and rejected attempts should not become useful
+  imitation labels.
+- Keyboard movement into a solid vending-machine tile was rejected by the teaching
+  control layer even though the equivalent on-page direction control opened it.
+  Solid interactables need the same conditional exception on both input paths.
+- Push previews and settled observations can disagree for one update while a barrel
+  crush resolves. Do not label an intermediate-looking state until the interaction
+  and enemy response have fully settled.
 
 ## Current-run observations, grouped by model and effort
 
@@ -150,3 +163,58 @@ editing the game's code.
   remaining on one costs 0.5 health on each turn. The restricted observation did
   not surface an explicit particle list in this run, so the live visual state and
   subsequent health change were needed to notice the hazard.
+
+### Luna xhigh
+
+#### Seed 2675231162 — completed recorded run
+
+- The run reached depth 1, cleared several rooms there, and eventually died while
+  fighting an armored zombie. The attempt showed that lower-cost model play can
+  make meaningful progress with the privileged inspector and written rules, but
+  navigation mistakes and ambiguous forecasts still consume many decisions.
+- In a cleared boss room, an A* route crossed two visible spike-trap tiles and each
+  crossing removed 0.5 health. The room being enemy-free was not enough to make
+  batched movement safe, and the pre-move consequence display did not account for
+  the traps' activation phase. Clear-room batching must also require a hazard-free
+  route.
+- A locked rope ladder described itself as locked, yet route planning still treated
+  it as reachable. Repeated attempts neither changed position nor advanced world
+  turns, but they increased the recorded decision count. Traversal state must be a
+  hard pathfinding constraint, and invalid repetitions should be filtered from
+  demonstration training.
+- One hit opened a reward chest and exposed its contents; the next interaction
+  collected the available drop together rather than requiring one strike per item.
+  Opening every post-boss chest was highly valuable: the room supplied tools,
+  spellbook pages, health potions, and large coin rewards. Continuing to attack an
+  emptied chest shell had no strategic value.
+- Directly using a health-potion quickbar slot restored one full health without a
+  world turn. This made potion use immediately before a dangerous move strictly
+  better than postponing it when inventory space and health allowed.
+- A vending machine can charge a resource other than coins. One machine offered a
+  torch for four zircon gems and remained unaffordable despite a large coin count,
+  so affordability decisions must inspect the stated currency and cost rather than
+  infer them from the HUD total.
+- Room traversal sometimes returned to an already-cleared room or the floor start,
+  and the route was easy to mistake for new progression. Remembering only room
+  coordinates is insufficient: the player needs stable connection identities plus
+  visited, backtrack, and tunnel-shortcut labels for each doorway.
+- A warning forecast sometimes predicted damage on a move or attack that resolved
+  safely, while spike damage was omitted elsewhere. The live distinction between
+  fading-in and fading-out warnings remains essential; tactical forecasts must use
+  that phase and include non-enemy tile hazards.
+- The forward-only dodge-and-side-hit tactic worked against skulls and an armored
+  zombie. Its priority changes when several threats overlap: removing a one-hit
+  enemy can be safer than continuing a multi-hit target, while a one-health skull
+  still needs to be finished before it regenerates.
+- Repeatedly pushing a barrel toward a skull eventually crushed it against the room
+  boundary and awarded its coin. The result was harder to read than an ordinary
+  attack because the visible state appeared to lag the input, reinforcing the need
+  to wait for a settled post-action observation during push sequences.
+- Against a four-health spawner, progress required alternating pressure on the
+  spawner with immediate removal of spawned crabs that became direct threats.
+  Destroying the spawner first stopped the flow and made cleanup manageable; pure
+  enemy clearing would have allowed the room to refill.
+- The run accumulated far more recorded decisions than world turns, largely from
+  invalid traversal attempts and deliberate zero-turn inventory actions. Training
+  data should retain true zero-turn choices such as healing while separately
+  marking or excluding rejected no-op inputs.
