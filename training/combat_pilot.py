@@ -23,6 +23,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ACTIONS = [{'type': 'Move', 'direction': d} for d in ('up', 'right', 'down', 'left')]
+ACTION_SCHEMA = 5
 SCENARIOS = ['combat-skull', 'combat-zombie', 'combat-armoredzombie-alert']
 TRANSFER = ['combat-bigskull-alert', 'combat-bigzombie-alert']
 CURRICULA = {'starter': SCENARIOS,
@@ -240,8 +241,10 @@ class CombatEnv(gym.Env):
             await window.agent.reset(seed, {scenario, maxSteps:budget});
             return window.agent.perceive();
         }''', [game_seed, scenario, self.budget])
-        if view['contract'].get('actionSchemaVersion') != 4:
-            raise RuntimeError('Player-legal action schema 4 required; rebuild the game without unrestricted Wait')
+        if view['contract'].get('actionSchemaVersion') != ACTION_SCHEMA:
+            raise RuntimeError(
+                f'Agent action schema {ACTION_SCHEMA} required; rebuild the game and trainer from the same revision'
+            )
         if self.contract is not None and view['contract'] != self.contract:
             raise RuntimeError('Game contract changed during run')
         self.contract = view['contract']

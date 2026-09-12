@@ -93,7 +93,7 @@ class EvaluationTests(unittest.TestCase):
         env.contract=None
         env.budget=64
         view=EncodingTests().view()
-        view['contract']={'actionSchemaVersion':4}
+        view['contract']={'actionSchemaVersion':5}
         env.page=Mock()
         env.page.evaluate.return_value=view
         env._open_game_page=Mock()

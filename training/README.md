@@ -89,14 +89,16 @@ python training/combat_pilot.py --rotate-frames --steps 8192 --out ~/turnarchist
 Use the flag for evaluation/resumption of that checkpoint too. Its encoder v4
 manifest prevents silently loading it into the unrotated v3 input contract.
 
-Action schema 4 removes unrestricted Wait. Player stalling requires productive
-gameplay, such as breaking an object, or actual hourglass use through `UseItem`,
-which consumes its limited durability. The four-action pilot does not yet use
-inventory, including the hourglass. Old five-action checkpoints/datasets are
-retained for historical analysis and rejected by the new encoder contract;
-collect fresh demonstrations and train a compatible four-action model. Earlier
-random controls included an invalid Wait option and must be rerun. Historical
-Wait replay events remain playback-only, never live actions.
+The current game contract is action schema 5. It retains schema 4's removal of
+unrestricted Wait and adds explicit vending-machine decisions to the wider agent
+interface. The learned pilot still controls only four directional actions; its
+versioned helper dismisses vending interactions rather than adding purchases to
+the policy. Player stalling requires productive gameplay, such as breaking an
+object, or actual hourglass use through `UseItem`, which consumes its limited
+durability. The four-action pilot does not yet use inventory, including the
+hourglass. Earlier checkpoints and datasets remain historical artifacts and are
+rejected when their full game contract differs. Historical Wait replay events
+remain playback-only, never live actions.
 
 After an evaluation completes, summarize it with:
 
