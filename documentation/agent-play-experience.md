@@ -103,3 +103,50 @@ editing the game's code.
 - Fish heals one health, but its exported `healingAmount` is null.
 - Ladder confirmation may leak a Space input into the selected quickbar item; audit
   the recorded transition before treating the health change as a game rule.
+
+## Current-run observations, grouped by model and effort
+
+### Sol medium
+
+#### Seed 123
+
+- The observations in the first session-log entry were captured while playing with
+  Sol at medium effort. That run reached depth 1 and established the baseline
+  notes above about warning phases, fishing, room transitions, and item effects.
+
+#### Seed 2732920491
+
+- The keyboard demonstration observations above were captured with Sol at medium
+  effort. In particular, the emergency-ring return should be read as a recovery
+  mechanic, not as evidence that the uninterrupted run survived the lethal
+  position.
+
+### Terra medium
+
+#### Seed 1139981005 — active recorded run
+
+- Normal two-health skeletons were handled reliably by moving out of their
+  projected tile, taking the exposed side after their advance, striking once to
+  make them headless, then striking again while they produced no dangerous
+  warning. This sequence preserved full health in two separate encounters.
+- A boss room containing a four-health spawner continuously added one-health
+  zombies and crabs. The initial attempt prioritized reaching the spawner but
+  allowed two zombies to threaten the same player tile. Their simultaneous hits
+  removed one full health, confirming that stacked warning sources must be
+  counted as separate damage events rather than as a single binary threat.
+- The emerald ring prevented that otherwise lethal boss-room collapse. It was
+  consumed and returned the player to the start room with one health, six coins,
+  and the recorded run still active. The return did not erase previously cleared
+  rooms or the action history.
+- Mushroom patches require two distinct steps: strike the patch to clear it, then
+  step onto the cleared tile to collect the dropped mushrooms. The latter adds a
+  zero-turn, 0.5-health food item to the next inventory slot.
+- At two health, a better response to a two-enemy overlap near the spawner is to
+  kill one adjacent one-health zombie first, then deliberately accept the single
+  remaining point of damage while continuing the spawner assault. This was a
+  player-provided tactical correction and remains to be validated in a fresh
+  replay.
+- Spawn particles must be handled as tile hazards distinct from spawned enemies:
+  remaining on one costs 0.5 health on each turn. The restricted observation did
+  not surface an explicit particle list in this run, so the live visual state and
+  subsequent health change were needed to notice the hazard.
