@@ -17,8 +17,15 @@ from imitate import load_demonstrations
 
 
 def navigation_example(before,after,transition):
-    """Keep successful, threat-free directional navigation, including crossings."""
-    return (transition['controller']=='teacher' and transition['action']['type']=='Move'
+    """Keep only successful actions explicitly following the frontier hint.
+
+    The baseline remains useful to survive combat while gathering a run, but its
+    local fallback can walk harmless squares forever when it cannot see a door.
+    Treating those steps as navigation demonstrations taught the policy that
+    looping was the desired response.  The planner is the actual navigation
+    teacher, so keep its safe route steps and discard the fallback's rows.
+    """
+    return (transition['controller']=='planner' and transition['action']['type']=='Move'
             and transition['recorded'] and before['decision']=='world'
             and not any(e.get('isEnemy') or e.get('appearance')=='unidentified' for e in before['room']['entities'])
             and not any(w.get('hostile') and w.get('dangerous', True)
@@ -77,9 +84,9 @@ def collect(args):
                 # In a calm room, demonstrate following the same bounded A*
                 # frontier hint supplied to the learner.  Combat and all cases
                 # without a safe route retain the conservative baseline policy.
+                planner=env.plan.get('active')
                 action=({'type':'Move','direction':env.plan['direction']}
-                        if env.plan.get('active') else
-                        env.page.evaluate('(view) => navigationTeacher.choose(view)',before))
+                        if planner else env.page.evaluate('(view) => navigationTeacher.choose(view)',before))
                 if learner is not None and not recovery_left and doorway_cycle(env.trace):
                     recovery_left=16
                     recovery={'episodeSeed':episode_seed,'triggerAction':env.game_actions,
@@ -87,7 +94,7 @@ def collect(args):
                               'escaped':False,'samples':0,'teacherSteps':0}
                     recoveries.append(recovery)
                 teaching=learner is None or recovery_left>0
-                env.controller='teacher' if teaching else 'learner'
+                env.controller=('planner' if teaching and planner else 'teacher') if teaching else 'learner'
                 if not teaching:
                     local,_=learner.predict(obs,deterministic=True)
                     action={'type':'Move','direction':['up','right','down','left'][(int(local)+env.rotation)%4]}
@@ -126,7 +133,7 @@ def collect(args):
         manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':env.contract,
                   'trainingSeeds':collection_seeds,'samples':len(xs),
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
-                  'selection':'Recorded, changed-position directional actions without perceived threats or damage. Not whole successful runs.'}
+                  'selection':'Recorded, changed-position, threat-free directional steps that followed the safe A* frontier hint; baseline fallback steps are excluded.'}
         if recovery_model:
             manifest['recovery']={'version':1,'source':str(recovery_model),
                 'sourceSha256':hashlib.sha256(recovery_model.read_bytes()).hexdigest(),

@@ -9,10 +9,13 @@ from test_dungeon_pilot import view
 
 
 class NavigationTests(unittest.TestCase):
-    def test_keeps_crossings_but_not_wall_bumps_or_combat(self):
+    def test_keeps_frontier_steps_but_not_fallback_wall_bumps_or_combat(self):
         before=view(); after=view(1)
-        transition={'controller':'teacher','action':{'type':'Move','direction':'right'},'recorded':True}
+        transition={'controller':'planner','action':{'type':'Move','direction':'right'},'recorded':True}
         self.assertTrue(navigation_example(before,after,transition))
+        transition['controller']='teacher'
+        self.assertFalse(navigation_example(before,after,transition))
+        transition['controller']='planner'
         self.assertFalse(navigation_example(before,before,transition))
         before['room']['entities']=[{'appearance':'unidentified'}]
         self.assertFalse(navigation_example(before,after,transition))
