@@ -193,6 +193,11 @@ class DungeonEnv(CombatEnv):
 
     def reset(self,*,seed=None,options=None):
         # Training cycles a declared pool, independent of episode duration.
+        # Procedural rooms retain substantial browser-side state.  Recycling
+        # between small batches keeps collection from accumulating enough state
+        # to push WSL into swap or hang during the final browser shutdown.
+        if self.episode and self.episode % 8 == 0:
+            self._open_game_page()
         chosen=(options or {}).get('episodeSeed',self.seeds[(self.episode+self.offset)%len(self.seeds)])
         super().reset(seed=int(chosen),options={'scenario':'standard'})
         self.episode_seed=int(chosen)
