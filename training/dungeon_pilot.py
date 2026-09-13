@@ -181,13 +181,14 @@ class DungeonEnv(CombatEnv):
 
     def plan_features(self):
         values=np.zeros(PLANNER_SIZE,dtype=np.float32)
-        if not self.plan.get('active'): return values
+        plan=getattr(self,'plan',{})
+        if not plan.get('active'): return values
         directions=['up','right','down','left']
-        world=directions.index(self.plan['direction'])
+        world=directions.index(plan['direction'])
         local=(world-self.rotation)%4
         values[local]=1
-        values[4]=min(float(self.plan['distance'])/100,1)
-        values[5]=float(self.plan.get('kind')=='ladder')
+        values[4]=min(float(plan['distance'])/100,1)
+        values[5]=float(plan.get('kind')=='ladder')
         return values
 
     def reset(self,*,seed=None,options=None):
