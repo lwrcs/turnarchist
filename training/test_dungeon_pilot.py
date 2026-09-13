@@ -94,6 +94,21 @@ class DungeonTests(unittest.TestCase):
         self.assertEqual(grid[CENTER,CENTER+1,5],1)
         self.assertNotIn(('b',1,0),memory.used_passages)
 
+    def test_crossing_marks_the_known_arrival_passage(self):
+        a=view(); a['room']['tiles']=[{'x':1,'y':0,'isDoor':True}]
+        a['room']['connections']=[{'from':{'roomId':'a','x':1,'y':0},'to':{'roomId':'b','x':2,'y':3}}]
+        b=view(2,3,room='b'); memory=ExplorationMemory(a,0)
+        memory.observe(a,b,0,False,{'type':'Move','direction':'right'})
+        self.assertIn(('a',1,0),memory.used_passages)
+        self.assertIn(('b',2,3),memory.used_passages)
+
+    def test_frontier_hint_rotates_into_the_policy_action_frame(self):
+        env=object.__new__(DungeonEnv)
+        env.rotation=1; env.plan={'active':True,'direction':'right','distance':20,'kind':'ladder'}
+        features=env.plan_features()
+        np.testing.assert_array_equal(features[:4],[1,0,0,0])
+        self.assertEqual(features[4],.2); self.assertEqual(features[5],1)
+
     def test_helper_only_uses_supported_metadata_and_never_waits(self):
         a=view(health=1)
         a['inventory']=[{'slot':2,'healingAmount':1,'useTurnCost':1},
@@ -119,6 +134,7 @@ class DungeonTests(unittest.TestCase):
             calls=[]
             class Page:
                 def evaluate(self,script,action=None):
+                    if isinstance(action,list): return {'active':False}
                     if action is None: return {'actions':calls}
                     calls.append(action)
                     after=view(health=1)
