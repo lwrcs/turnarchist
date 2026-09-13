@@ -74,7 +74,12 @@ def collect(args):
                 before=env.view
                 # Always observe/choose once, even when the learner controls this step.
                 # Feedback below follows the executed action, never the proposed one.
-                action=env.page.evaluate('(view) => navigationTeacher.choose(view)',before)
+                # In a calm room, demonstrate following the same bounded A*
+                # frontier hint supplied to the learner.  Combat and all cases
+                # without a safe route retain the conservative baseline policy.
+                action=({'type':'Move','direction':env.plan['direction']}
+                        if env.plan.get('active') else
+                        env.page.evaluate('(view) => navigationTeacher.choose(view)',before))
                 if learner is not None and not recovery_left and doorway_cycle(env.trace):
                     recovery_left=16
                     recovery={'episodeSeed':episode_seed,'triggerAction':env.game_actions,

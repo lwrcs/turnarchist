@@ -17,15 +17,17 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, GRID, CENTER, visible_rooms, encode, rotate_features, world_action
 
-ENCODER = {**ROTATED_ENCODER, 'version': 10, 'task': 'procedural-dungeon',
+ENCODER = {**ROTATED_ENCODER, 'version': 11, 'task': 'procedural-dungeon',
            'memory': '625 player-relative arrival-count cells, clipped at 8, rotated with view',
-           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning','known-door-link','arrival-dx','arrival-dy']}
+           'navigation': ['visible-door','visible-down-stairs','visible-up-stairs','known-locked-passage','unlock-from-here','previously-crossed-passage','visible-spike-trap','spikes-active','spikes-warning','known-door-link','arrival-dx','arrival-dy'],
+           'planner': 'six rotated A* frontier-hint features; only a safe current-room route to an untraversed, unlocked passage'}
 REWARD = {'version': 1, 'task': 'procedural-dungeon', 'newTile': .02,
           'newRoom': .5, 'newMaximumDepth': 5, 'healthLost': -3,
           'death': -10, 'attemptedGameAction': -.01}
 HELPER = {'version': 2, 'actions': ['confirm-ladder', 'dismiss-interaction', 'dismiss-vending', 'cancel-selection', 'zero-turn-healing'],
           'limitation': 'Vending purchases and other inventory, crafting, spell, or equipment choices require human data and a wider learned action schema'}
-OBS_SIZE = SIZE*2 + GRID*GRID*13
+PLANNER_SIZE = 6
+OBS_SIZE = SIZE*2 + GRID*GRID*13 + PLANNER_SIZE
 
 
 def rejected_without_visible_effect(before,after,transition,terminal):
@@ -108,6 +110,13 @@ class ExplorationMemory:
                     t['x']==x and t['y']==y and (t.get('isDoor') is True or t.get('exit') is True)
                     for t in before['room']['tiles']):
                 self.used_passages.add((before['room']['id'],x,y))
+                # `connections` is present only after a real crossing.  Mark the
+                # paired arrival too: otherwise a new room treats its return door
+                # as unexplored and a shortest-path policy bounces straight back.
+                link=next((c for c in before['room'].get('connections',[])
+                           if c.get('from',{}).get('x')==x and c.get('from',{}).get('y')==y),None)
+                if link and link.get('to',{}).get('roomId')==after['room']['id']:
+                    self.used_passages.add((after['room']['id'],link['to']['x'],link['to']['y']))
         position=self.position(after)
         new_tile=position not in self.visits
         new_room=after['room']['id'] not in self.rooms
@@ -137,7 +146,49 @@ class DungeonEnv(CombatEnv):
         self.offset=offset
 
     def observation(self):
-        return np.concatenate((*self.frames,self.memory.features(self.view,self.rotation),navigation_features(self.view,self.rotation,self.memory.used_passages)))
+        return np.concatenate((*self.frames,self.memory.features(self.view,self.rotation),
+                               navigation_features(self.view,self.rotation,self.memory.used_passages),
+                               self.plan_features()))
+
+    def refresh_plan(self):
+        """Ask the game's read-only A* helper for one safe frontier direction.
+
+        This is deliberately narrow: it reveals no future rooms or RNG, and it
+        switches off whenever the current room has enemies or active hazards.
+        The learned policy still chooses combat and every world action; the hint
+        prevents a tiny local field of view from turning empty-room navigation
+        into an unlearnable, repeated square walk.
+        """
+        used=[list(v) for v in self.memory.used_passages]
+        self.plan=self.page.evaluate('''used => {
+          const operator=window.agent.inspectOperator();
+          const danger=operator.room.enemyCount>0 || operator.room.warnings.some(w=>w.hostile&&w.dangerous) ||
+            operator.room.hazards.some(h=>h.damage>0);
+          if(operator.decision!=="world" || danger)return {active:false};
+          const usedSet=new Set(used.map(v=>`${v[0]}:${v[1]},${v[2]}`));
+          const tileAt=new Map(operator.room.tiles.map(t=>[`${t.x},${t.y}`,t]));
+          const candidates=operator.pathfinding.pointsOfInterest.filter(point=>{
+            const tile=tileAt.get(`${point.x},${point.y}`), traversal=tile?.traversal??{};
+            return point.route?.reachable && point.route.actions.length && traversal.unlocked!==false &&
+              !usedSet.has(`${operator.room.id}:${point.x},${point.y}`);
+          }).sort((a,b)=>a.route.actions.length-b.route.actions.length ||
+            (a.kind==="door"?-1:1)-(b.kind==="door"?-1:1));
+          const goal=candidates[0];
+          if(!goal)return {active:false};
+          return {active:true,direction:goal.route.actions[0].direction,
+            distance:Math.min(goal.route.actions.length,100),kind:goal.kind};
+        }''',used)
+
+    def plan_features(self):
+        values=np.zeros(PLANNER_SIZE,dtype=np.float32)
+        if not self.plan.get('active'): return values
+        directions=['up','right','down','left']
+        world=directions.index(self.plan['direction'])
+        local=(world-self.rotation)%4
+        values[local]=1
+        values[4]=min(float(self.plan['distance'])/100,1)
+        values[5]=float(self.plan.get('kind')=='ladder')
+        return values
 
     def reset(self,*,seed=None,options=None):
         # Training cycles a declared pool, independent of episode duration.
@@ -147,6 +198,7 @@ class DungeonEnv(CombatEnv):
         # Depth is outcome/reward supervision only, never a policy feature.
         depth=self.page.evaluate('() => window.agent.observe().room.depth')
         self.memory=ExplorationMemory(self.view,depth)
+        self.refresh_plan()
         self.game_actions=0
         self.assisted_actions=0
         self.world_turns=0
@@ -166,6 +218,7 @@ class DungeonEnv(CombatEnv):
         }''',action)
         self.view=result['view']
         reward=self.memory.observe(before,self.view,result['depth'],result['terminated'],action)
+        self.refresh_plan()
         self.game_actions+=1
         self.assisted_actions+=int(controller=='helper')
         self.world_turns+=result['turnDelta']
