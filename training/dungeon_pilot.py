@@ -401,6 +401,8 @@ def main():
     parser.add_argument('--budget',type=int,default=512)
     parser.add_argument('--envs',type=int,choices=[1,2,4,8],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
+    parser.add_argument('--evaluation-set',choices=['standard','planner','all'],default='standard',
+                        help='Policy families to evaluate; planner results are always labeled as assisted')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
@@ -493,13 +495,13 @@ def main():
                 evaluation=DungeonEnv(args.out/'evaluation',budget=args.budget)
                 try:
                     before=model.num_timesteps
-                    policies=[('random',None,True,False),('deterministic',model,True,False),
-                              ('sampled',model,False,False),
-                              ('filtered-deterministic',model,True,True),
-                              ('filtered-sampled',model,False,True),
-                              ('planner-filtered-deterministic',model,True,True,True),
-                              ('planner-filtered-sampled',model,False,True,True)]
-                    policies=[p if len(p)==5 else (*p,False) for p in policies]
+                    standard=[('random',None,True,False,False),('deterministic',model,True,False,False),
+                              ('sampled',model,False,False,False),
+                              ('filtered-deterministic',model,True,True,False),
+                              ('filtered-sampled',model,False,True,False)]
+                    planner=[('planner-filtered-deterministic',model,True,True,True),
+                             ('planner-filtered-sampled',model,False,True,True)]
+                    policies={'standard':standard,'planner':planner,'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
