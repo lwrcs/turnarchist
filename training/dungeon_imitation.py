@@ -250,8 +250,8 @@ def fit(args):
         # Balanced sampling keeps numerous navigation rows from swamping combat.
         for update in range(1,args.updates+1):
             inputs=[]; labels=[]
-            for a,b in groups:
-                indices=rng.integers(len(a),size=32)
+            for (a,b),batch_size in zip(groups,[32,args.combat_batch]):
+                indices=rng.integers(len(a),size=batch_size)
                 inputs.append(a[indices]); labels.append(b[indices])
             _,logp,_=model.policy.evaluate_actions(torch.cat(inputs),torch.cat(labels))
             loss=-logp.mean()
@@ -274,6 +274,13 @@ def fit(args):
         updates_completed=len(losses)
         model.save(args.out/'last')
         if best_state is None:
+            (args.out/'losses.json').write_text(json.dumps(losses))
+            (args.out/'validation.json').write_text(json.dumps({'initialNavigation':initial_navigation,
+                'initialCombat':initial_combat,'checks':validation_history},indent=2))
+            (args.out/'failure.json').write_text(json.dumps({
+                'reason':'No checkpoint reached required combat agreement',
+                'combatFloor':combat_floor,'updatesCompleted':updates_completed,
+                'last':validation_history[-1]},indent=2))
             raise RuntimeError('No checkpoint reached the required combat agreement; last checkpoint preserved')
         model.policy.load_state_dict(best_state)
         model.save(args.out/'final')
@@ -289,7 +296,7 @@ def fit(args):
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
                   'navigationActionCounts':np.bincount(y,minlength=4).tolist(),
                   'navigationUniqueObservations':int(len(np.unique(x,axis=0))),
-                  'batchComposition':'32 navigation + 32 combat samples, sampled with replacement',
+                  'batchComposition':f'32 navigation + {args.combat_batch} combat samples, sampled with replacement',
                   'checkpointSelection':'Best seed-held-out navigation accuracy, then combat agreement, retaining the earliest tie; combat agreement may fall at most one percentage point. Checked every 25 updates with patience 10.',
                   'limitation':'Imitation only; no PPO experience. Offline validation selects a checkpoint but does not replace held-out dungeon evaluation.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
@@ -322,6 +329,7 @@ if __name__=='__main__':
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
     parser.add_argument('--architecture',choices=['inherited-mlp','spatial'],default='inherited-mlp')
+    parser.add_argument('--combat-batch',type=int,choices=[32,64,96,128],default=32)
     args=parser.parse_args()
     if not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000: parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
