@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import subprocess
 
@@ -234,6 +235,8 @@ def fit(args):
         model=(initialize_spatial(env,args.envs,args.architecture=='spatial-local')
                if args.architecture.startswith('spatial')
                else initialize_from_combat(args.from_combat,checkpoint,env,args.envs))
+        for group in model.policy.optimizer.param_groups:
+            group['lr']=args.imitation_learning_rate
         groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long))
                 for a,b in [(train_x,train_y),(combat_x,combat_y)]]
         rng=np.random.default_rng(123)
@@ -308,6 +311,7 @@ def fit(args):
                   'updatesRequested':args.updates,'updatesCompleted':updates_completed,'bestUpdate':best_update,
                   'architecture':args.architecture,
                   'combatPretrainUpdates':args.combat_pretrain_updates,
+                  'imitationLearningRate':args.imitation_learning_rate,
                   'navigationSamples':len(x),'navigationTrainingSamples':len(train_x),
                   'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
@@ -349,9 +353,12 @@ if __name__=='__main__':
     parser.add_argument('--architecture',choices=['inherited-mlp','spatial','spatial-local'],default='inherited-mlp')
     parser.add_argument('--combat-batch',type=int,choices=[32,64,96,128],default=32)
     parser.add_argument('--combat-pretrain-updates',type=int,default=0)
+    parser.add_argument('--imitation-learning-rate',type=float,default=3e-5)
     args=parser.parse_args()
     if (not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000
-            or not 0<=args.combat_pretrain_updates<=10000): parser.error('Invalid experiment bounds')
+            or not 0<=args.combat_pretrain_updates<=10000
+            or not math.isfinite(args.imitation_learning_rate)
+            or not 0<args.imitation_learning_rate<=1e-2): parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
     if args.recovery_model and args.mode!='collect': parser.error('Recovery model is collection only')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
