@@ -452,7 +452,8 @@ def main():
     parser.add_argument('--budget',type=int,default=512)
     parser.add_argument('--envs',type=int,choices=[1,2,4,8],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
-    parser.add_argument('--evaluation-set',choices=['standard','planner','all'],default='standard',
+    parser.add_argument('--eval-seed-start',type=int,default=0)
+    parser.add_argument('--evaluation-set',choices=['standard','sampled','planner','all'],default='standard',
                         help='Policy families to evaluate; planner results are always labeled as assisted')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
@@ -471,10 +472,12 @@ def main():
         parser.error('Learning rate must be in (0, .001] and used only for training')
     if not 1<=args.steps<=1000000 or not 1<=args.budget<=10000 or not 1<=args.eval_seeds<=32:
         parser.error('Use 1..1000000 steps, 1..10000 budget, 1..32 evaluation seeds')
+    if args.eval_seed_start<0 or args.eval_seed_start+args.eval_seeds>32:
+        parser.error('Held-out evaluation slice must stay within 32 seeds')
     args.out.mkdir(parents=True,exist_ok=False)
     torch.set_num_threads(4)
     train_seeds=seed_plan('training',64)
-    test_seeds=seed_plan('held-out',args.eval_seeds)
+    test_seeds=seed_plan('held-out',32)[args.eval_seed_start:args.eval_seed_start+args.eval_seeds]
     assert not set(map(actual_seed,train_seeds)) & set(map(actual_seed,test_seeds))
     factories=[functools.partial(make_env,args.out/f'worker-{i}',args.budget,train_seeds,i*17) for i in range(args.envs)]
     env=None
@@ -552,7 +555,9 @@ def main():
                               ('filtered-sampled',model,False,True,False)]
                     planner=[('planner-filtered-deterministic',model,True,True,True),
                              ('planner-filtered-sampled',model,False,True,True)]
-                    policies={'standard':standard,'planner':planner,'all':standard+planner}[args.evaluation_set]
+                    sampled=[standard[0],standard[2],standard[4]]
+                    policies={'standard':standard,'sampled':sampled,'planner':planner,
+                              'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
