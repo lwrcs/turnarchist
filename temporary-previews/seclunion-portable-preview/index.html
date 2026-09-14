@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#111714" />
+    <title>Seclunion Preview</title>
+    <style id="gate-style">
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #111714; color: #ecf6ef; }
+      body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 0%, #284338, #111714 62%); }
+      main { width: min(100% - 2rem, 25rem); box-sizing: border-box; padding: 2rem; border: 1px solid #4a6959; border-radius: 1rem; background: rgba(13, 24, 18, .94); box-shadow: 0 1.5rem 5rem rgba(0,0,0,.35); }
+      h1 { margin: 0; font-size: clamp(1.75rem, 8vw, 2.5rem); letter-spacing: -.04em; }
+      p { color: #bdd5c5; line-height: 1.5; }
+      label { display: grid; gap: .5rem; font-weight: 650; }
+      input, button { box-sizing: border-box; min-height: 3rem; border-radius: .65rem; font: inherit; }
+      input { width: 100%; padding: 0 .85rem; border: 1px solid #6d8d79; color: inherit; background: #16251c; }
+      button { width: 100%; margin-top: 1rem; border: 0; color: #102016; background: #b9e48d; font-weight: 750; cursor: pointer; }
+      button:disabled { opacity: .65; cursor: wait; }
+      #status { min-height: 1.4rem; color: #ffb4a5; }
+    </style>
+  </head>
+  <body>
+    <main id="gate" aria-labelledby="title">
+      <h1 id="title">Seclunion</h1>
+      <p>Private preview access.</p>
+      <form id="unlock-form">
+        <label for="pin">Access PIN<input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]*" required autofocus /></label>
+        <button id="unlock" type="submit">Open preview</button>
+        <p id="status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script>
+      (() => {
+        const storageKey = 'turnarchist.seclunion.preview.unlocked.v1';
+        const salt = '883447ae24238862822af0d3ddc651d2';
+        const expected = 'fd168952ca34ee2c8911c6d05514837bf1a0d02ec41a023e366f9c44016eaf3e';
+        const gate = document.getElementById('gate');
+        const form = document.getElementById('unlock-form');
+        const input = document.getElementById('pin');
+        const button = document.getElementById('unlock');
+        const status = document.getElementById('status');
+        let started = false;
+
+        const loadPreview = () => {
+          if (started) return;
+          started = true;
+          document.getElementById('gate-style')?.remove();
+          gate?.remove();
+          if (!document.getElementById('root')) {
+            const root = document.createElement('div');
+            root.id = 'root';
+            document.body.append(root);
+          }
+          const stylesheet = document.createElement('link');
+          stylesheet.rel = 'stylesheet';
+          stylesheet.href = './assets/index-BCFB9rU7.css';
+          document.head.append(stylesheet);
+          const app = document.createElement('script');
+          app.type = 'module';
+          app.src = './assets/index-D9XG00AH.js';
+          document.head.append(app);
+        };
+
+        const digest = async (value) => {
+          const bytes = new TextEncoder().encode(`${salt}:${value}`);
+          const hash = await crypto.subtle.digest('SHA-256', bytes);
+          return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+        };
+
+        if (sessionStorage.getItem(storageKey) === '1') {
+          loadPreview();
+          return;
+        }
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          button.disabled = true;
+          status.textContent = '';
+          try {
+            if (await digest(input.value) === expected) {
+              sessionStorage.setItem(storageKey, '1');
+              loadPreview();
+              return;
+            }
+            status.textContent = 'That PIN is not recognized.';
+            input.select();
+          } catch {
+            status.textContent = 'This browser cannot verify the PIN.';
+          } finally {
+            button.disabled = false;
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
