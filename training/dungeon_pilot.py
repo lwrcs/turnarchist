@@ -462,6 +462,8 @@ def main():
     parser.add_argument('--rehearsal-rate',type=float,default=.001)
     parser.add_argument('--rejection-feedback',action='store_true')
     parser.add_argument('--reconfigure-workers',action='store_true',help='Explicitly resume with a new worker count and fresh rollouts')
+    parser.add_argument('--archive-interval',type=int,choices=[0,256,512,1024],default=0,
+                        help='Preserve milestone checkpoints during bounded training')
     args=parser.parse_args()
     if args.rehearsal_recovery and not args.rehearsal_navigation: parser.error('Recovery requires original navigation and combat rehearsal')
     if args.rejection_feedback and not args.rehearsal_navigation: parser.error('Rejection feedback requires rehearsal datasets')
@@ -532,7 +534,8 @@ def main():
                 manifest['optimization']={'learningRateAtStart':float(model.lr_schedule(1.0)),
                                           'gamma':model.gamma,'entropyCoefficient':float(model.ent_coef),
                                           'targetKL':model.target_kl,'epochs':model.n_epochs}
-                callbacks=[Checkpoints(args.out)]
+                callbacks=[Checkpoints(args.out,args.archive_interval or None)]
+                manifest['archiveInterval']=args.archive_interval or None
                 if args.rehearsal_navigation:
                     from rehearsal import configure
                     practice,manifest['rehearsal']=configure(

@@ -305,13 +305,16 @@ class CombatEnv(gym.Env):
 
 
 class Checkpoints(BaseCallback):
-    def __init__(self, out):
+    def __init__(self, out, archive_interval=None):
         super().__init__()
         self.out = out
+        self.archive_interval = archive_interval
     def _on_step(self):
         if self.num_timesteps % 256 == 0:
             self.model.save(self.out/'checkpoint-tmp')
             (self.out/'checkpoint-tmp.zip').replace(self.out/'checkpoint.zip')
+            if self.archive_interval and self.num_timesteps % self.archive_interval == 0:
+                self.model.save(self.out/f'checkpoint-{self.num_timesteps:08d}')
             (self.out/'progress.json').write_text(json.dumps({'steps': self.num_timesteps, 'time': time.time()}))
         return True
 
