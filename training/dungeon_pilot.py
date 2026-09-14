@@ -35,6 +35,26 @@ def rejected_without_visible_effect(before,after,transition,terminal):
             and np.array_equal(before,after))
 
 
+def policy_action(model,observation,deterministic,rejected=()):
+    """Choose from the policy while excluding moves rejected in this exact state."""
+    rejected={int(action) for action in rejected}
+    if not rejected:
+        return int(model.predict(observation,deterministic=deterministic)[0])
+    available=[action for action in range(len(ACTIONS)) if action not in rejected]
+    if not available:
+        return None
+    with torch.no_grad():
+        tensor,_=model.policy.obs_to_tensor(observation)
+        probabilities=model.policy.get_distribution(tensor).distribution.probs[0].detach().cpu()
+    allowed=probabilities[available]
+    if deterministic:
+        return available[int(torch.argmax(allowed))]
+    total=float(allowed.sum())
+    if not np.isfinite(total) or total<=0:
+        allowed=torch.ones(len(available),dtype=torch.float32)
+    return available[int(torch.multinomial(allowed,1))]
+
+
 def seed_plan(namespace, count):
     return [int.from_bytes(hashlib.sha256(f'turnarchist-dungeon-v1:{namespace}:{i}'.encode()).digest()[:4], 'big')
             for i in range(count)]
@@ -209,6 +229,9 @@ class DungeonEnv(CombatEnv):
         self.assisted_actions=0
         self.world_turns=0
         self.health_lost=0
+        self.rejected_actions=0
+        self.consecutive_rejected=0
+        self.max_consecutive_rejected=0
         self.stop_reason=None
         self.started=time.perf_counter()
         if self.view['decision']!='world': raise RuntimeError('Dungeon reset did not yield a world decision')
@@ -258,6 +281,15 @@ class DungeonEnv(CombatEnv):
         self.frames.append(rotate_features(encode(self.view),self.rotation))
         self.total_reward+=reward
         info={}
+        observation=self.observation()
+        last=self.trace[-1]
+        rejected=rejected_without_visible_effect(before_observation,observation,last,done or truncated)
+        if rejected:
+            self.rejected_actions+=1
+            self.consecutive_rejected+=1
+            self.max_consecutive_rejected=max(self.max_consecutive_rejected,self.consecutive_rejected)
+        else:
+            self.consecutive_rejected=0
         if done or truncated:
             self.stop_reason='dead' if done else self.stop_reason or 'budget-incomplete'
             info={'phase':self.phase,'seed':self.game_seed,'episodeSeed':self.episode_seed,
@@ -267,13 +299,13 @@ class DungeonEnv(CombatEnv):
                   'positionsVisited':len(self.memory.visits),'maxDepth':self.memory.max_depth,
                   'initialDepth':self.memory.initial_depth,'health':self.view['player']['health'],
                   'healthLost':self.health_lost,'reward':self.total_reward,
+                  'rejectedActions':self.rejected_actions,
+                  'maxConsecutiveRejected':self.max_consecutive_rejected,
                   'seconds':time.perf_counter()-self.started}
             with (self.out/'episodes.jsonl').open('a') as f: f.write(json.dumps(info)+'\n')
             replay=self.page.evaluate('() => window.agent.exportReplay()')
             (self.out/'latest-replay.json').write_text(json.dumps(replay))
-        observation=self.observation()
-        last=self.trace[-1]
-        if rejected_without_visible_effect(before_observation,observation,last,done or truncated):
+        if rejected:
             info['rejectedAction']=int(action)
         return observation,reward,done,truncated,info
 
@@ -301,18 +333,36 @@ def make_env(out,budget,seeds,offset):
     return Monitor(env)
 
 
-def evaluate_dungeons(env,model,seeds,deterministic=True):
+def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
         rng=np.random.default_rng(987)
-        env.phase='dungeon-random-evaluation' if model is None else 'dungeon-deterministic-evaluation' if deterministic else 'dungeon-sampled-evaluation'
+        label='random' if model is None else ('deterministic' if deterministic else 'sampled')
+        if filter_rejected: label='filtered-'+label
+        env.phase='dungeon-'+label+'-evaluation'
         for seed in seeds:
             obs,_=env.reset(options={'episodeSeed':seed})
+            rejected={}
             while True:
-                action=int(rng.integers(4)) if model is None else int(model.predict(obs,deterministic=deterministic)[0])
-                obs,_,done,truncated,info=env.step(action)
+                key=obs.tobytes()
+                if model is None:
+                    action=int(rng.integers(4))
+                elif filter_rejected:
+                    action=policy_action(model,obs,deterministic,rejected.get(key,()))
+                else:
+                    action=int(model.predict(obs,deterministic=deterministic)[0])
+                if action is None:
+                    # All four directions were rejected without changing anything.
+                    # Re-open the raw choice so the environment budget still owns
+                    # episode termination and the failure stays visible in metrics.
+                    action=int(model.predict(obs,deterministic=deterministic)[0])
+                next_obs,_,done,truncated,info=env.step(action)
+                if filter_rejected and info.get('rejectedAction') is not None:
+                    rejected.setdefault(key,set()).add(int(info['rejectedAction']))
+                obs=next_obs
                 if done or truncated:
+                    if filter_rejected: info['actionFilter']='identical-observation rejection cache'
                     rows.append({**info,'trace':list(env.trace)})
                     print(json.dumps({'evaluationEpisode':len(rows),**info}),flush=True)
                     break
@@ -423,11 +473,15 @@ def main():
                 evaluation=DungeonEnv(args.out/'evaluation',budget=args.budget)
                 try:
                     before=model.num_timesteps
-                    for name,policy,deterministic in [('random',None,True),('deterministic',model,True),('sampled',model,False)]:
-                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic)
+                    policies=[('random',None,True,False),('deterministic',model,True,False),
+                              ('sampled',model,False,False),
+                              ('filtered-deterministic',model,True,True),
+                              ('filtered-sampled',model,False,True)]
+                    for name,policy,deterministic,filtered in policies:
+                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
-                    report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':3*len(test_seeds)}
+                    report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}
                 finally: evaluation.close()
         report['totalSeconds']=time.perf_counter()-start
         (args.out/'complete.json').write_text(json.dumps(report,indent=2))

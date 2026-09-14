@@ -12,8 +12,9 @@ def summary(rows):
             'unsupported':sum(r['status']=='unsupported-decision' for r in rows),
             'reachedDeeperFloor':sum(r['maxDepth']>r['initialDepth'] for r in rows),
             'maximumDepth':max(r['maxDepth'] for r in rows),
-            **{'mean'+key[0].upper()+key[1:]:sum(r[key] for r in rows)/n
-               for key in ['roomsVisited','positionsVisited','healthLost','gameActions','helperActions']}}
+            **{'mean'+key[0].upper()+key[1:]:sum(r.get(key,0) for r in rows)/n
+               for key in ['roomsVisited','positionsVisited','healthLost','gameActions','helperActions',
+                           'rejectedActions','maxConsecutiveRejected']}}
 
 
 def report(directory,against=None):
@@ -25,11 +26,12 @@ def report(directory,against=None):
         for key in ('encoder','reward','helper','gameContract','budget','heldOutSeeds'):
             if manifest[key]!=old[key]: raise ValueError('Evaluation mismatch: '+key)
     result={'limitation':'Finite held-out random seed sample. Budget survivors are incomplete runs, not wins.', 'policies':{}}
-    for policy in ['random','deterministic','sampled']:
+    policies=['random','deterministic','sampled','filtered-deterministic','filtered-sampled']
+    for policy in [p for p in policies if (directory/f'{p}-evaluation.json').exists()]:
         filename=f'{policy}-evaluation.json'
         rows=json.loads((directory/filename).read_text())
         result['policies'][policy]=summary(rows)
-        if against:
+        if against and (against/filename).exists():
             before=json.loads((against/filename).read_text())
             key=lambda r:(r['seed'],r['rotation'])
             lookup={key(r):r for r in before}

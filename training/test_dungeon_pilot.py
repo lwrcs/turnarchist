@@ -10,7 +10,7 @@ import torch
 
 from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
-                           OBS_SIZE, transfer_actor, navigation_features)
+                           OBS_SIZE, transfer_actor, navigation_features, policy_action)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -20,6 +20,22 @@ def view(x=0,y=0,room='a',health=2):
 
 
 class DungeonTests(unittest.TestCase):
+    def test_policy_filter_uses_next_best_action_and_exhausts_cleanly(self):
+        class Distribution:
+            def __init__(self):
+                self.distribution=type('Categorical',(),{'probs':torch.tensor([[.1,.6,.2,.1]])})()
+        class Policy:
+            def obs_to_tensor(self,observation): return torch.as_tensor(observation)[None],False
+            def get_distribution(self,tensor): return Distribution()
+        class Model:
+            policy=Policy()
+            def predict(self,observation,deterministic): return np.array(1),None
+        observation=np.zeros(4,dtype=np.float32)
+        self.assertEqual(policy_action(Model(),observation,True),1)
+        self.assertEqual(policy_action(Model(),observation,True,{1}),2)
+        self.assertEqual(policy_action(Model(),observation,True,{1,2}),0)
+        self.assertIsNone(policy_action(Model(),observation,True,{0,1,2,3}))
+
     def test_shared_door_uses_explicit_arrival_in_destination_room(self):
         v=view();v['room']['tiles']=[{'x':1,'y':0,'isDoor':True}]
         v['room']['connections']=[{'from':{'roomId':'a','x':1,'y':0},'to':{'roomId':'b','x':2,'y':0},'linkedDoor':{'x':1,'y':0}}]
@@ -130,6 +146,7 @@ class DungeonTests(unittest.TestCase):
             env.out=Path(directory); env.view=view(); env.frames=deque([encode(env.view)]*2,maxlen=2)
             env.memory=ExplorationMemory(env.view,0); env.rotation=0; env.trace=[]
             env.steps=env.total_reward=env.game_actions=env.assisted_actions=env.world_turns=env.health_lost=0
+            env.rejected_actions=env.consecutive_rejected=env.max_consecutive_rejected=0
             env.stop_reason=None; env.started=0; env.phase='test'; env.game_seed=1; env.episode_seed=2
             calls=[]
             class Page:
