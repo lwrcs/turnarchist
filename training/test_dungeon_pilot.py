@@ -10,7 +10,8 @@ import torch
 
 from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
-                           OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action)
+                           OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action,
+                           SpatialDungeonExtractor)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -20,6 +21,13 @@ def view(x=0,y=0,room='a',health=2):
 
 
 class DungeonTests(unittest.TestCase):
+    def test_spatial_extractor_preserves_batch_shape_with_bounded_parameters(self):
+        space=type('Space',(),{'shape':(OBS_SIZE,)})()
+        extractor=SpatialDungeonExtractor(space)
+        result=extractor(torch.zeros((2,OBS_SIZE)))
+        self.assertEqual(tuple(result.shape),(2,128))
+        self.assertLess(sum(p.numel() for p in extractor.parameters()),500_000)
+
     def test_planner_action_uses_policy_rotation_frame(self):
         env=type('Env',(),{'plan':{'active':True,'direction':'right'},'rotation':0})()
         self.assertEqual(planner_action(env),1)

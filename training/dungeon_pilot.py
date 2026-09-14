@@ -13,9 +13,11 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
-from combat_pilot import ACTIONS, CombatEnv, Checkpoints, ROOT, ROTATED_ENCODER, SIZE, GRID, CENTER, visible_rooms, encode, rotate_features, world_action
+from combat_pilot import (ACTIONS,CombatEnv,Checkpoints,ROOT,ROTATED_ENCODER,SIZE,GRID,CENTER,
+                          CHANNELS,visible_rooms,encode,rotate_features,world_action)
 
 ENCODER = {**ROTATED_ENCODER, 'version': 11, 'task': 'procedural-dungeon',
            'memory': '625 player-relative arrival-count cells, clipped at 8, rotated with view',
@@ -28,6 +30,32 @@ HELPER = {'version': 2, 'actions': ['confirm-ladder', 'dismiss-interaction', 'di
           'limitation': 'Vending purchases and other inventory, crafting, spell, or equipment choices require human data and a wider learned action schema'}
 PLANNER_SIZE = 6
 OBS_SIZE = SIZE*2 + GRID*GRID*13 + PLANNER_SIZE
+
+
+class SpatialDungeonExtractor(BaseFeaturesExtractor):
+    """Preserve the grid structure instead of connecting 159k cells densely."""
+    def __init__(self,observation_space,features_dim=128):
+        super().__init__(observation_space,features_dim)
+        spatial_channels=CHANNELS*2+13
+        self.convolution=torch.nn.Sequential(
+            torch.nn.Conv2d(spatial_channels,32,3,stride=2,padding=1),torch.nn.ReLU(),
+            torch.nn.Conv2d(32,64,3,stride=2,padding=1),torch.nn.ReLU(),
+            torch.nn.Conv2d(64,64,3,stride=2,padding=1),torch.nn.ReLU(),torch.nn.Flatten())
+        self.projection=torch.nn.Sequential(torch.nn.Linear(64*4*4+10+PLANNER_SIZE,features_dim),torch.nn.ReLU())
+
+    def forward(self,observations):
+        batch=len(observations); grids=[]; scalars=[]; offset=0
+        grid_values=GRID*GRID*CHANNELS
+        for _ in range(2):
+            frame=observations[:,offset:offset+SIZE]; offset+=SIZE
+            grids.append(frame[:,:grid_values].reshape(batch,GRID,GRID,CHANNELS).permute(0,3,1,2))
+            scalars.append(frame[:,grid_values:])
+        memory=observations[:,offset:offset+GRID*GRID].reshape(batch,1,GRID,GRID); offset+=GRID*GRID
+        navigation=observations[:,offset:offset+GRID*GRID*12].reshape(batch,GRID,GRID,12).permute(0,3,1,2)
+        offset+=GRID*GRID*12
+        planner=observations[:,offset:offset+PLANNER_SIZE]
+        spatial=torch.cat([*grids,memory,navigation],dim=1)
+        return self.projection(torch.cat([self.convolution(spatial),*scalars,planner],dim=1))
 
 
 def rejected_without_visible_effect(before,after,transition,terminal):
@@ -531,6 +559,14 @@ def initialize_from_combat(source_path,source_manifest,env,workers):
     source=PPO.load(source_path,device='cpu')
     transfer_actor(model,source)
     return model
+
+
+def initialize_spatial(env,workers):
+    return PPO('MlpPolicy',env,n_steps=256//workers,batch_size=64,n_epochs=4,
+               learning_rate=3e-5,ent_coef=.01,target_kl=.01,seed=123,device='cpu',
+               policy_kwargs={'features_extractor_class':SpatialDungeonExtractor,
+                              'features_extractor_kwargs':{'features_dim':128},
+                              'net_arch':{'pi':[128],'vf':[128]}},verbose=1)
 
 
 if __name__=='__main__': main()

@@ -12,7 +12,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from combat_pilot import ROOT,SIZE,ROTATED_ENCODER
-from dungeon_pilot import DungeonEnv,ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan,initialize_from_combat
+from dungeon_pilot import (DungeonEnv,ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan,
+                           initialize_from_combat,initialize_spatial)
 from imitate import load_demonstrations
 
 
@@ -230,7 +231,8 @@ def fit(args):
     torch.set_num_threads(4)
     env=DummyVecEnv([Spaces]*args.envs)
     try:
-        model=initialize_from_combat(args.from_combat,checkpoint,env,args.envs)
+        model=(initialize_spatial(env,args.envs) if args.architecture=='spatial'
+               else initialize_from_combat(args.from_combat,checkpoint,env,args.envs))
         model.save(args.out/'initial')
         groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long))
                 for a,b in [(train_x,train_y),(combat_x,combat_y)]]
@@ -239,9 +241,11 @@ def fit(args):
         validation_history=[]
         initial_navigation=policy_metrics(model,validation_x,validation_y)
         initial_combat=policy_metrics(model,combat_x,combat_y)
-        best_state={key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
-        best_score=(initial_navigation['accuracy'],initial_combat['accuracy'])
-        combat_floor=max(0,initial_combat['accuracy']-.01)
+        best_state=None if args.architecture=='spatial' else {
+            key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
+        best_score=(-1,-1) if args.architecture=='spatial' else (
+            initial_navigation['accuracy'],initial_combat['accuracy'])
+        combat_floor=.99 if args.architecture=='spatial' else max(0,initial_combat['accuracy']-.01)
         best_update=0; stale_checks=0; check_interval=25; patience=10
         # Balanced sampling keeps numerous navigation rows from swamping combat.
         for update in range(1,args.updates+1):
@@ -264,11 +268,13 @@ def fit(args):
                 if combat_metric['accuracy']>=combat_floor and score>best_score:
                     best_score=score; best_update=update; stale_checks=0
                     best_state={key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
-                else:
+                elif best_state is not None:
                     stale_checks+=1
-                if stale_checks>=patience: break
+                if best_state is not None and stale_checks>=patience: break
         updates_completed=len(losses)
         model.save(args.out/'last')
+        if best_state is None:
+            raise RuntimeError('No checkpoint reached the required combat agreement; last checkpoint preserved')
         model.policy.load_state_dict(best_state)
         model.save(args.out/'final')
         manifest={**source,'task':'procedural-dungeon','trainingMode':'navigation-imitation-with-combat-rehearsal',
@@ -277,6 +283,7 @@ def fit(args):
                   'sourceCheckpoint':{'path':str(args.from_combat),'sha256':hashlib.sha256(args.from_combat.read_bytes()).hexdigest()},
                   'datasets':{str(p):hashlib.sha256((p/'demonstrations.npz').read_bytes()).hexdigest() for p in [args.data,args.combat_data]},
                   'updatesRequested':args.updates,'updatesCompleted':updates_completed,'bestUpdate':best_update,
+                  'architecture':args.architecture,
                   'navigationSamples':len(x),'navigationTrainingSamples':len(train_x),
                   'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
@@ -314,6 +321,7 @@ if __name__=='__main__':
     parser.add_argument('--recovery-model',type=Path,help='Collect teacher recoveries after deterministic learner doorway cycles')
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
+    parser.add_argument('--architecture',choices=['inherited-mlp','spatial'],default='inherited-mlp')
     args=parser.parse_args()
     if not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000: parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
