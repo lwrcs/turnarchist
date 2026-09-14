@@ -79,7 +79,7 @@ class Rehearsal(BaseCallback):
         return True
 
 
-def configure(navigation,combat,contract,rejection_feedback=False,recovery=None):
+def configure(navigation,combat,contract,rejection_feedback=False,recovery=None,rate=.001):
     from dungeon_imitation import load_navigation
     from imitate import load_demonstrations
     from dungeon_pilot import OBS_SIZE
@@ -90,7 +90,7 @@ def configure(navigation,combat,contract,rejection_feedback=False,recovery=None)
         raise ValueError('Rehearsal game contract mismatch')
     cx=np.pad(cx,((0,0),(0,OBS_SIZE-SIZE*2)))
     metadata={'version':1,'method':'one SGD demonstration update between PPO rollouts',
-              'rate':.001,'batch':'32 navigation + 32 combat','rngSeed':123,
+              'rate':rate,'batch':'32 navigation + 32 combat','rngSeed':123,
               'resume':'sampling RNG restarts; SGD has no momentum',
               'rejectionFeedback':{'enabled':rejection_feedback,'version':2,'coefficient':.5,'capacity':256,
                                    'selection':'unrecorded zero-turn action with identical policy observations; nonterminal only',
@@ -107,4 +107,4 @@ def configure(navigation,combat,contract,rejection_feedback=False,recovery=None)
         metadata['recovery']={'version':1,'samples':len(rx),'batch':8,'coefficient':.25,
                               'selection':'completed teacher recovery collection on training seeds'}
         metadata['datasets'][str(recovery)]=hashlib.sha256((recovery/'demonstrations.npz').read_bytes()).hexdigest()
-    return Rehearsal([(x,y),(cx,cy)],rejection_feedback=rejection_feedback,recovery=recovery_group),metadata
+    return Rehearsal([(x,y),(cx,cy)],rate=rate,rejection_feedback=rejection_feedback,recovery=recovery_group),metadata

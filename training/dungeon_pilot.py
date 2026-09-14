@@ -459,6 +459,7 @@ def main():
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
     parser.add_argument('--rehearsal-recovery',type=Path)
+    parser.add_argument('--rehearsal-rate',type=float,default=.001)
     parser.add_argument('--rejection-feedback',action='store_true')
     parser.add_argument('--reconfigure-workers',action='store_true',help='Explicitly resume with a new worker count and fresh rollouts')
     args=parser.parse_args()
@@ -468,6 +469,8 @@ def main():
         parser.error('Worker reconfiguration requires --resume')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
+    if (not 0<args.rehearsal_rate<=.001) or (args.rehearsal_rate!=.001 and not args.rehearsal_navigation):
+        parser.error('Rehearsal rate must be in (0, .001] and requires rehearsal datasets when overridden')
     if args.learning_rate is not None and (not 0<args.learning_rate<=.001 or not (args.resume or args.from_combat)):
         parser.error('Learning rate must be in (0, .001] and used only for training')
     if not 1<=args.steps<=1000000 or not 1<=args.budget<=10000 or not 1<=args.eval_seeds<=32:
@@ -532,7 +535,9 @@ def main():
                 callbacks=[Checkpoints(args.out)]
                 if args.rehearsal_navigation:
                     from rehearsal import configure
-                    practice,manifest['rehearsal']=configure(args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'],args.rejection_feedback,args.rehearsal_recovery)
+                    practice,manifest['rehearsal']=configure(
+                        args.rehearsal_navigation,args.rehearsal_combat,manifest['gameContract'],
+                        args.rejection_feedback,args.rehearsal_recovery,args.rehearsal_rate)
                     callbacks.append(practice)
                 model.save(args.out/'initial')
                 (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
