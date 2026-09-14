@@ -233,19 +233,33 @@ def fit(args):
     try:
         model=(initialize_spatial(env,args.envs) if args.architecture=='spatial'
                else initialize_from_combat(args.from_combat,checkpoint,env,args.envs))
-        model.save(args.out/'initial')
         groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long))
                 for a,b in [(train_x,train_y),(combat_x,combat_y)]]
         rng=np.random.default_rng(123)
+        pretrain_history=[]
+        if args.combat_pretrain_updates:
+            model.save(args.out/'untrained')
+            combat_inputs,combat_labels=groups[1]
+            for update in range(1,args.combat_pretrain_updates+1):
+                indices=rng.integers(len(combat_inputs),size=args.combat_batch)
+                _,logp,_=model.policy.evaluate_actions(combat_inputs[indices],combat_labels[indices])
+                loss=-logp.mean()
+                model.policy.optimizer.zero_grad(); loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.policy.parameters(),.5)
+                model.policy.optimizer.step()
+                if update%25==0 or update==args.combat_pretrain_updates:
+                    pretrain_history.append({'update':update,'combat':policy_metrics(model,combat_x,combat_y)})
+        model.save(args.out/'initial')
         losses=[]
         validation_history=[]
         initial_navigation=policy_metrics(model,validation_x,validation_y)
         initial_combat=policy_metrics(model,combat_x,combat_y)
-        best_state=None if args.architecture=='spatial' else {
-            key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
-        best_score=(-1,-1) if args.architecture=='spatial' else (
-            initial_navigation['accuracy'],initial_combat['accuracy'])
         combat_floor=.99 if args.architecture=='spatial' else max(0,initial_combat['accuracy']-.01)
+        initial_eligible=initial_combat['accuracy']>=combat_floor
+        best_state=({key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
+                    if initial_eligible else None)
+        best_score=((initial_navigation['accuracy'],initial_combat['accuracy'])
+                    if initial_eligible else (-1,-1))
         best_update=0; stale_checks=0; check_interval=25; patience=10
         # Balanced sampling keeps numerous navigation rows from swamping combat.
         for update in range(1,args.updates+1):
@@ -276,7 +290,8 @@ def fit(args):
         if best_state is None:
             (args.out/'losses.json').write_text(json.dumps(losses))
             (args.out/'validation.json').write_text(json.dumps({'initialNavigation':initial_navigation,
-                'initialCombat':initial_combat,'checks':validation_history},indent=2))
+                'initialCombat':initial_combat,'combatPretraining':pretrain_history,
+                'checks':validation_history},indent=2))
             (args.out/'failure.json').write_text(json.dumps({
                 'reason':'No checkpoint reached required combat agreement',
                 'combatFloor':combat_floor,'updatesCompleted':updates_completed,
@@ -291,6 +306,7 @@ def fit(args):
                   'datasets':{str(p):hashlib.sha256((p/'demonstrations.npz').read_bytes()).hexdigest() for p in [args.data,args.combat_data]},
                   'updatesRequested':args.updates,'updatesCompleted':updates_completed,'bestUpdate':best_update,
                   'architecture':args.architecture,
+                  'combatPretrainUpdates':args.combat_pretrain_updates,
                   'navigationSamples':len(x),'navigationTrainingSamples':len(train_x),
                   'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
@@ -302,7 +318,8 @@ def fit(args):
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         (args.out/'losses.json').write_text(json.dumps(losses))
         (args.out/'validation.json').write_text(json.dumps({'initialNavigation':initial_navigation,
-            'initialCombat':initial_combat,'checks':validation_history},indent=2))
+            'initialCombat':initial_combat,'combatPretraining':pretrain_history,
+            'checks':validation_history},indent=2))
         final_navigation=policy_metrics(model,validation_x,validation_y)
         final_combat=policy_metrics(model,combat_x,combat_y)
         result={'trainingSteps':model.num_timesteps,'updatesRequested':args.updates,
@@ -330,8 +347,10 @@ if __name__=='__main__':
     parser.add_argument('--updates',type=int,default=2000)
     parser.add_argument('--architecture',choices=['inherited-mlp','spatial'],default='inherited-mlp')
     parser.add_argument('--combat-batch',type=int,choices=[32,64,96,128],default=32)
+    parser.add_argument('--combat-pretrain-updates',type=int,default=0)
     args=parser.parse_args()
-    if not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000: parser.error('Invalid experiment bounds')
+    if (not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000
+            or not 0<=args.combat_pretrain_updates<=10000): parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
     if args.recovery_model and args.mode!='collect': parser.error('Recovery model is collection only')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
