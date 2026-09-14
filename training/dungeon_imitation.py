@@ -231,7 +231,8 @@ def fit(args):
     torch.set_num_threads(4)
     env=DummyVecEnv([Spaces]*args.envs)
     try:
-        model=(initialize_spatial(env,args.envs) if args.architecture=='spatial'
+        model=(initialize_spatial(env,args.envs,args.architecture=='spatial-local')
+               if args.architecture.startswith('spatial')
                else initialize_from_combat(args.from_combat,checkpoint,env,args.envs))
         groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long))
                 for a,b in [(train_x,train_y),(combat_x,combat_y)]]
@@ -254,7 +255,7 @@ def fit(args):
         validation_history=[]
         initial_navigation=policy_metrics(model,validation_x,validation_y)
         initial_combat=policy_metrics(model,combat_x,combat_y)
-        combat_floor=.99 if args.architecture=='spatial' else max(0,initial_combat['accuracy']-.01)
+        combat_floor=.99 if args.architecture.startswith('spatial') else max(0,initial_combat['accuracy']-.01)
         initial_eligible=initial_combat['accuracy']>=combat_floor
         best_state=({key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
                     if initial_eligible else None)
@@ -345,7 +346,7 @@ if __name__=='__main__':
     parser.add_argument('--recovery-model',type=Path,help='Collect teacher recoveries after deterministic learner doorway cycles')
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
-    parser.add_argument('--architecture',choices=['inherited-mlp','spatial'],default='inherited-mlp')
+    parser.add_argument('--architecture',choices=['inherited-mlp','spatial','spatial-local'],default='inherited-mlp')
     parser.add_argument('--combat-batch',type=int,choices=[32,64,96,128],default=32)
     parser.add_argument('--combat-pretrain-updates',type=int,default=0)
     args=parser.parse_args()

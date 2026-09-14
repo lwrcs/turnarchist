@@ -32,6 +32,20 @@ PLANNER_SIZE = 6
 OBS_SIZE = SIZE*2 + GRID*GRID*13 + PLANNER_SIZE
 
 
+def spatial_observation_parts(observations):
+    batch=len(observations); grids=[]; scalars=[]; offset=0
+    grid_values=GRID*GRID*CHANNELS
+    for _ in range(2):
+        frame=observations[:,offset:offset+SIZE]; offset+=SIZE
+        grids.append(frame[:,:grid_values].reshape(batch,GRID,GRID,CHANNELS).permute(0,3,1,2))
+        scalars.append(frame[:,grid_values:])
+    memory=observations[:,offset:offset+GRID*GRID].reshape(batch,1,GRID,GRID); offset+=GRID*GRID
+    navigation=observations[:,offset:offset+GRID*GRID*12].reshape(batch,GRID,GRID,12).permute(0,3,1,2)
+    offset+=GRID*GRID*12
+    planner=observations[:,offset:offset+PLANNER_SIZE]
+    return torch.cat([*grids,memory,navigation],dim=1),torch.cat([*scalars,planner],dim=1)
+
+
 class SpatialDungeonExtractor(BaseFeaturesExtractor):
     """Preserve the grid structure instead of connecting 159k cells densely."""
     def __init__(self,observation_space,features_dim=128):
@@ -44,18 +58,27 @@ class SpatialDungeonExtractor(BaseFeaturesExtractor):
         self.projection=torch.nn.Sequential(torch.nn.Linear(64*4*4+10+PLANNER_SIZE,features_dim),torch.nn.ReLU())
 
     def forward(self,observations):
-        batch=len(observations); grids=[]; scalars=[]; offset=0
-        grid_values=GRID*GRID*CHANNELS
-        for _ in range(2):
-            frame=observations[:,offset:offset+SIZE]; offset+=SIZE
-            grids.append(frame[:,:grid_values].reshape(batch,GRID,GRID,CHANNELS).permute(0,3,1,2))
-            scalars.append(frame[:,grid_values:])
-        memory=observations[:,offset:offset+GRID*GRID].reshape(batch,1,GRID,GRID); offset+=GRID*GRID
-        navigation=observations[:,offset:offset+GRID*GRID*12].reshape(batch,GRID,GRID,12).permute(0,3,1,2)
-        offset+=GRID*GRID*12
-        planner=observations[:,offset:offset+PLANNER_SIZE]
-        spatial=torch.cat([*grids,memory,navigation],dim=1)
-        return self.projection(torch.cat([self.convolution(spatial),*scalars,planner],dim=1))
+        spatial,scalars=spatial_observation_parts(observations)
+        return self.projection(torch.cat([self.convolution(spatial),scalars],dim=1))
+
+
+class SpatialDungeonExtractorV2(BaseFeaturesExtractor):
+    """Combine global context with an exact high-resolution 9x9 player crop."""
+    def __init__(self,observation_space,features_dim=128):
+        super().__init__(observation_space,features_dim)
+        spatial_channels=CHANNELS*2+13
+        self.global_convolution=torch.nn.Sequential(
+            torch.nn.Conv2d(spatial_channels,32,3,stride=2,padding=1),torch.nn.ReLU(),
+            torch.nn.Conv2d(32,64,3,stride=2,padding=1),torch.nn.ReLU(),
+            torch.nn.Conv2d(64,64,3,stride=2,padding=1),torch.nn.ReLU(),torch.nn.Flatten())
+        self.local_channels=torch.nn.Sequential(torch.nn.Conv2d(spatial_channels,24,1),torch.nn.ReLU())
+        self.projection=torch.nn.Sequential(
+            torch.nn.Linear(64*4*4+24*9*9+10+PLANNER_SIZE,features_dim),torch.nn.ReLU())
+
+    def forward(self,observations):
+        spatial,scalars=spatial_observation_parts(observations)
+        local=self.local_channels(spatial)[:,:,CENTER-4:CENTER+5,CENTER-4:CENTER+5].flatten(1)
+        return self.projection(torch.cat([self.global_convolution(spatial),local,scalars],dim=1))
 
 
 def rejected_without_visible_effect(before,after,transition,terminal):
@@ -561,10 +584,11 @@ def initialize_from_combat(source_path,source_manifest,env,workers):
     return model
 
 
-def initialize_spatial(env,workers):
+def initialize_spatial(env,workers,local_detail=False):
+    extractor=SpatialDungeonExtractorV2 if local_detail else SpatialDungeonExtractor
     return PPO('MlpPolicy',env,n_steps=256//workers,batch_size=64,n_epochs=4,
                learning_rate=3e-5,ent_coef=.01,target_kl=.01,seed=123,device='cpu',
-               policy_kwargs={'features_extractor_class':SpatialDungeonExtractor,
+               policy_kwargs={'features_extractor_class':extractor,
                               'features_extractor_kwargs':{'features_dim':128},
                               'net_arch':{'pi':[128],'vf':[128]}},verbose=1)
 
