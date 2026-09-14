@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
-from dungeon_imitation import navigation_example,load_navigation
+from dungeon_imitation import navigation_example,load_navigation,load_navigation_provenance,split_navigation_seeds
 from dungeon_pilot import ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan
 from test_dungeon_pilot import view
 
@@ -70,3 +70,27 @@ class CollectionSeedTests(unittest.TestCase):
         self.assertFalse(set(new)&set(seed_plan('held-out',32)))
         for start,count in [(-1,16),(16,49),(0,0)]:
             with self.assertRaises(ValueError): training_seed_slice(start,count)
+
+
+class ProvenanceTests(unittest.TestCase):
+    def test_seed_split_is_reproducible_and_has_no_episode_leakage(self):
+        episode_seeds=np.asarray([11,11,22,22,33,44,44],dtype=np.uint32)
+        a=split_navigation_seeds(episode_seeds)
+        b=split_navigation_seeds(episode_seeds)
+        self.assertTrue(np.array_equal(a[0],b[0]))
+        self.assertTrue(np.array_equal(a[1],b[1]))
+        self.assertFalse(set(a[2])&set(a[3]))
+        for seed in set(episode_seeds):
+            rows=episode_seeds==seed
+            self.assertTrue(a[0][rows].all() or a[1][rows].all())
+
+    def test_provenance_is_required_for_fitting_loader(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)
+            manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,
+                      'trainingSeeds':seed_plan('training',2)}
+            (path/'manifest.json').write_text(json.dumps(manifest))
+            (path/'complete.json').write_text('{}')
+            np.savez(path/'demonstrations.npz',observations=np.zeros((2,OBS_SIZE)),actions=np.array([0,1]))
+            with self.assertRaisesRegex(ValueError,'lacks sample provenance'):
+                load_navigation_provenance(path)

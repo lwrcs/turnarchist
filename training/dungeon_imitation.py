@@ -55,7 +55,7 @@ def collect(args):
     env=DungeonEnv(args.out,budget=args.budget)
     env.controller='teacher'
     env.phase='dungeon-navigation-demonstration'
-    xs,ys,outcomes=[],[],[]
+    xs,ys,example_seeds,example_rotations,outcomes=[],[],[],[],[]
     collection_seeds=training_seed_slice(getattr(args,'seed_start',0),args.seeds)
     recovery_model=getattr(args,'recovery_model',None)
     recoveries=[]
@@ -114,6 +114,7 @@ def collect(args):
                 next_obs,_,done,truncated,info=env.step(local)
                 if transitions and navigation_example(*transitions[0]):
                     xs.append(obs.copy()); ys.append(local)
+                    example_seeds.append(episode_seed); example_rotations.append(env.rotation)
                     if recovery_left: recovery['samples']+=1
                 if recovery_left:
                     recovery_left-=1; recovery['teacherSteps']+=1
@@ -129,7 +130,10 @@ def collect(args):
         (args.out/'recoveries.json').write_text(json.dumps(recoveries,indent=2))
         (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
         if not xs: raise RuntimeError('No navigation examples collected; diagnostic outcomes preserved')
-        np.savez_compressed(args.out/'demonstrations.npz',observations=np.asarray(xs,dtype=np.float32),actions=np.asarray(ys,dtype=np.int64))
+        np.savez_compressed(args.out/'demonstrations.npz',observations=np.asarray(xs,dtype=np.float32),
+                           actions=np.asarray(ys,dtype=np.int64),
+                           episodeSeeds=np.asarray(example_seeds,dtype=np.uint32),
+                           rotations=np.asarray(example_rotations,dtype=np.uint8))
         manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':env.contract,
                   'trainingSeeds':collection_seeds,'samples':len(xs),
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
@@ -167,6 +171,45 @@ def load_navigation(path):
     return x.astype(np.float32),y,manifest
 
 
+def load_navigation_provenance(path):
+    """Load sample-level seed provenance required for leakage-free validation."""
+    x,y,manifest=load_navigation(path)
+    with np.load(path/'demonstrations.npz',allow_pickle=False) as data:
+        if 'episodeSeeds' not in data or 'rotations' not in data:
+            raise ValueError('Navigation dataset lacks sample provenance; recollect it before fitting')
+        episode_seeds=data['episodeSeeds']; rotations=data['rotations']
+    if episode_seeds.shape!=(len(x),) or rotations.shape!=(len(x),):
+        raise ValueError('Invalid navigation provenance shapes')
+    if not set(map(int,episode_seeds))<=set(manifest['trainingSeeds']):
+        raise ValueError('Navigation sample seed is absent from its manifest')
+    if np.any(rotations>3): raise ValueError('Invalid navigation rotation')
+    return x,y,episode_seeds.astype(np.uint32),rotations.astype(np.uint8),manifest
+
+
+def split_navigation_seeds(episode_seeds,validation_fraction=.2):
+    """Split whole procedural episodes, never individual rows, reproducibly."""
+    unique=sorted(set(map(int,episode_seeds)),
+                  key=lambda seed:hashlib.sha256(f'turnarchist-navigation-validation:{seed}'.encode()).digest())
+    if len(unique)<2: raise ValueError('Navigation fitting requires examples from at least two episode seeds')
+    validation_count=max(1,min(len(unique)-1,round(len(unique)*validation_fraction)))
+    validation=set(unique[:validation_count])
+    validation_mask=np.asarray([int(seed) in validation for seed in episode_seeds],dtype=bool)
+    return ~validation_mask,validation_mask,sorted(set(unique)-validation),sorted(validation)
+
+
+def policy_metrics(model,x,y,batch_size=512):
+    losses=[]; correct=0
+    with torch.no_grad():
+        for start in range(0,len(x),batch_size):
+            inputs=torch.as_tensor(x[start:start+batch_size],dtype=torch.float32)
+            labels=torch.as_tensor(y[start:start+batch_size],dtype=torch.long)
+            distribution=model.policy.get_distribution(inputs)
+            logp=distribution.log_prob(labels)
+            losses.append(float(-logp.sum()))
+            correct+=int((distribution.distribution.probs.argmax(dim=1)==labels).sum())
+    return {'loss':sum(losses)/len(x),'accuracy':correct/len(x)}
+
+
 class Spaces(gym.Env):
     def __init__(self):
         self.action_space=gym.spaces.Discrete(4)
@@ -174,7 +217,10 @@ class Spaces(gym.Env):
 
 
 def fit(args):
-    x,y,source=load_navigation(args.data)
+    x,y,episode_seeds,rotations,source=load_navigation_provenance(args.data)
+    train_mask,validation_mask,training_seeds,validation_seeds=split_navigation_seeds(episode_seeds)
+    train_x,train_y=x[train_mask],y[train_mask]
+    validation_x,validation_y=x[validation_mask],y[validation_mask]
     combat_x,combat_y,combat=load_demonstrations(args.combat_data)
     checkpoint=json.loads((args.from_combat.parent/'manifest.json').read_text())
     if source['gameContract']!=combat['gameContract'] or source['gameContract']!=checkpoint['gameContract']:
@@ -186,11 +232,19 @@ def fit(args):
     try:
         model=initialize_from_combat(args.from_combat,checkpoint,env,args.envs)
         model.save(args.out/'initial')
-        groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long)) for a,b in [(x,y),(combat_x,combat_y)]]
+        groups=[(torch.as_tensor(a),torch.as_tensor(b,dtype=torch.long))
+                for a,b in [(train_x,train_y),(combat_x,combat_y)]]
         rng=np.random.default_rng(123)
         losses=[]
+        validation_history=[]
+        initial_navigation=policy_metrics(model,validation_x,validation_y)
+        initial_combat=policy_metrics(model,combat_x,combat_y)
+        best_state={key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
+        best_score=(initial_navigation['accuracy'],initial_combat['accuracy'])
+        combat_floor=max(0,initial_combat['accuracy']-.01)
+        best_update=0; stale_checks=0; check_interval=25; patience=10
         # Balanced sampling keeps numerous navigation rows from swamping combat.
-        for _ in range(args.updates):
+        for update in range(1,args.updates+1):
             inputs=[]; labels=[]
             for a,b in groups:
                 indices=rng.integers(len(a),size=32)
@@ -201,18 +255,47 @@ def fit(args):
             torch.nn.utils.clip_grad_norm_(model.policy.parameters(),.5)
             model.policy.optimizer.step()
             losses.append(float(loss.detach()))
+            if update%check_interval==0 or update==args.updates:
+                navigation=policy_metrics(model,validation_x,validation_y)
+                combat_metric=policy_metrics(model,combat_x,combat_y)
+                row={'update':update,'navigation':navigation,'combat':combat_metric}
+                validation_history.append(row)
+                score=(navigation['accuracy'],combat_metric['accuracy'])
+                if combat_metric['accuracy']>=combat_floor and score>best_score:
+                    best_score=score; best_update=update; stale_checks=0
+                    best_state={key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
+                else:
+                    stale_checks+=1
+                if stale_checks>=patience: break
+        updates_completed=len(losses)
+        model.save(args.out/'last')
+        model.policy.load_state_dict(best_state)
         model.save(args.out/'final')
         manifest={**source,'task':'procedural-dungeon','trainingMode':'navigation-imitation-with-combat-rehearsal',
                   'git':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
                   'execution':{'environments':args.envs,'rolloutStepsPerEnvironment':256//args.envs},
                   'sourceCheckpoint':{'path':str(args.from_combat),'sha256':hashlib.sha256(args.from_combat.read_bytes()).hexdigest()},
                   'datasets':{str(p):hashlib.sha256((p/'demonstrations.npz').read_bytes()).hexdigest() for p in [args.data,args.combat_data]},
-                  'updates':args.updates,'navigationSamples':len(x),'combatSamples':len(combat_x),
+                  'updatesRequested':args.updates,'updatesCompleted':updates_completed,'bestUpdate':best_update,
+                  'navigationSamples':len(x),'navigationTrainingSamples':len(train_x),
+                  'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
+                  'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
+                  'navigationActionCounts':np.bincount(y,minlength=4).tolist(),
+                  'navigationUniqueObservations':int(len(np.unique(x,axis=0))),
                   'batchComposition':'32 navigation + 32 combat samples, sampled with replacement',
-                  'limitation':'Imitation only; no PPO experience. Evaluate initial/final on held-out seeds before reinforcement learning.'}
+                  'checkpointSelection':'Best seed-held-out navigation accuracy, then combat agreement, retaining the earliest tie; combat agreement may fall at most one percentage point. Checked every 25 updates with patience 10.',
+                  'limitation':'Imitation only; no PPO experience. Offline validation selects a checkpoint but does not replace held-out dungeon evaluation.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         (args.out/'losses.json').write_text(json.dumps(losses))
-        result={'trainingSteps':model.num_timesteps,'updates':args.updates,'initialLoss':losses[0],'finalLoss':losses[-1]}
+        (args.out/'validation.json').write_text(json.dumps({'initialNavigation':initial_navigation,
+            'initialCombat':initial_combat,'checks':validation_history},indent=2))
+        final_navigation=policy_metrics(model,validation_x,validation_y)
+        final_combat=policy_metrics(model,combat_x,combat_y)
+        result={'trainingSteps':model.num_timesteps,'updatesRequested':args.updates,
+                'updatesCompleted':updates_completed,'bestUpdate':best_update,
+                'initialLoss':losses[0],'lastLoss':losses[-1],
+                'initialValidation':initial_navigation,'selectedValidation':final_navigation,
+                'initialCombat':initial_combat,'selectedCombat':final_combat}
         (args.out/'complete.json').write_text(json.dumps(result))
         print(json.dumps(result),flush=True)
     finally: env.close()
