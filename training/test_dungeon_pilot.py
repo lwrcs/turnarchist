@@ -10,7 +10,7 @@ import torch
 
 from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
-                           OBS_SIZE, transfer_actor, navigation_features, policy_action)
+                           OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -20,6 +20,14 @@ def view(x=0,y=0,room='a',health=2):
 
 
 class DungeonTests(unittest.TestCase):
+    def test_planner_action_uses_policy_rotation_frame(self):
+        env=type('Env',(),{'plan':{'active':True,'direction':'right'},'rotation':0})()
+        self.assertEqual(planner_action(env),1)
+        env.rotation=1
+        self.assertEqual(planner_action(env),0)
+        env.plan={'active':False}
+        self.assertIsNone(planner_action(env))
+
     def test_policy_filter_uses_next_best_action_and_exhausts_cleanly(self):
         class Distribution:
             def __init__(self):
@@ -147,6 +155,7 @@ class DungeonTests(unittest.TestCase):
             env.memory=ExplorationMemory(env.view,0); env.rotation=0; env.trace=[]
             env.steps=env.total_reward=env.game_actions=env.assisted_actions=env.world_turns=env.health_lost=0
             env.rejected_actions=env.consecutive_rejected=env.max_consecutive_rejected=0
+            env.navigator_actions=0
             env.stop_reason=None; env.started=0; env.phase='test'; env.game_seed=1; env.episode_seed=2
             calls=[]
             class Page:

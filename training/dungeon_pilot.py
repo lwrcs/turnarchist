@@ -55,6 +55,14 @@ def policy_action(model,observation,deterministic,rejected=()):
     return available[int(torch.multinomial(allowed,1))]
 
 
+def planner_action(env):
+    """Return the safe A* hint in the policy's rotated action frame."""
+    plan=getattr(env,'plan',{})
+    if not plan.get('active'): return None
+    directions=[action['direction'] for action in ACTIONS]
+    return (directions.index(plan['direction'])-env.rotation)%len(ACTIONS)
+
+
 def seed_plan(namespace, count):
     return [int.from_bytes(hashlib.sha256(f'turnarchist-dungeon-v1:{namespace}:{i}'.encode()).digest()[:4], 'big')
             for i in range(count)]
@@ -227,6 +235,7 @@ class DungeonEnv(CombatEnv):
         self.refresh_plan()
         self.game_actions=0
         self.assisted_actions=0
+        self.navigator_actions=0
         self.world_turns=0
         self.health_lost=0
         self.rejected_actions=0
@@ -250,6 +259,7 @@ class DungeonEnv(CombatEnv):
         self.refresh_plan()
         self.game_actions+=1
         self.assisted_actions+=int(controller=='helper')
+        self.navigator_actions+=int(controller=='navigator')
         self.world_turns+=result['turnDelta']
         self.health_lost+=max(0,before['player']['health']-self.view['player']['health'])
         self.trace.append({'controller':controller,'action':action,'recorded':result['recorded'],
@@ -295,6 +305,7 @@ class DungeonEnv(CombatEnv):
             info={'phase':self.phase,'seed':self.game_seed,'episodeSeed':self.episode_seed,
                   'rotation':self.rotation,'status':self.stop_reason,'steps':self.steps,
                   'gameActions':self.game_actions,'helperActions':self.assisted_actions,
+                  'navigatorActions':self.navigator_actions,
                   'worldTurns':self.world_turns,'roomsVisited':len(self.memory.rooms),
                   'positionsVisited':len(self.memory.visits),'maxDepth':self.memory.max_depth,
                   'initialDepth':self.memory.initial_depth,'health':self.view['player']['health'],
@@ -333,25 +344,33 @@ def make_env(out,budget,seeds,offset):
     return Monitor(env)
 
 
-def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False):
+def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
         rng=np.random.default_rng(987)
         label='random' if model is None else ('deterministic' if deterministic else 'sampled')
         if filter_rejected: label='filtered-'+label
+        if planner_assist: label='planner-'+label
         env.phase='dungeon-'+label+'-evaluation'
         for seed in seeds:
             obs,_=env.reset(options={'episodeSeed':seed})
             rejected={}
             while True:
                 key=obs.tobytes()
-                if model is None:
+                planned=planner_action(env) if planner_assist else None
+                if planned is not None and planned not in rejected.get(key,()):
+                    action=planned
+                    env.controller='navigator'
+                elif model is None:
                     action=int(rng.integers(4))
+                    env.controller='learner'
                 elif filter_rejected:
                     action=policy_action(model,obs,deterministic,rejected.get(key,()))
+                    env.controller='learner'
                 else:
                     action=int(model.predict(obs,deterministic=deterministic)[0])
+                    env.controller='learner'
                 if action is None:
                     # All four directions were rejected without changing anything.
                     # Re-open the raw choice so the environment budget still owns
@@ -363,6 +382,7 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False):
                 obs=next_obs
                 if done or truncated:
                     if filter_rejected: info['actionFilter']='identical-observation rejection cache'
+                    if planner_assist: info['navigationAssist']='safe current-room A* frontier route'
                     rows.append({**info,'trace':list(env.trace)})
                     print(json.dumps({'evaluationEpisode':len(rows),**info}),flush=True)
                     break
@@ -476,9 +496,12 @@ def main():
                     policies=[('random',None,True,False),('deterministic',model,True,False),
                               ('sampled',model,False,False),
                               ('filtered-deterministic',model,True,True),
-                              ('filtered-sampled',model,False,True)]
-                    for name,policy,deterministic,filtered in policies:
-                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered)
+                              ('filtered-sampled',model,False,True),
+                              ('planner-filtered-deterministic',model,True,True,True),
+                              ('planner-filtered-sampled',model,False,True,True)]
+                    policies=[p if len(p)==5 else (*p,False) for p in policies]
+                    for name,policy,deterministic,filtered,planner in policies:
+                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
                     report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}

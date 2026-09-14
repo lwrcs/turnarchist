@@ -1,5 +1,6 @@
 """Paired procedural-dungeon results; surviving a budget is never labeled a win."""
 import argparse
+import argparse
 import json
 from pathlib import Path
 
@@ -14,7 +15,7 @@ def summary(rows):
             'maximumDepth':max(r['maxDepth'] for r in rows),
             **{'mean'+key[0].upper()+key[1:]:sum(r.get(key,0) for r in rows)/n
                for key in ['roomsVisited','positionsVisited','healthLost','gameActions','helperActions',
-                           'rejectedActions','maxConsecutiveRejected']}}
+                           'navigatorActions','rejectedActions','maxConsecutiveRejected']}}
 
 
 def report(directory,against=None):
@@ -26,7 +27,8 @@ def report(directory,against=None):
         for key in ('encoder','reward','helper','gameContract','budget','heldOutSeeds'):
             if manifest[key]!=old[key]: raise ValueError('Evaluation mismatch: '+key)
     result={'limitation':'Finite held-out random seed sample. Budget survivors are incomplete runs, not wins.', 'policies':{}}
-    policies=['random','deterministic','sampled','filtered-deterministic','filtered-sampled']
+    policies=['random','deterministic','sampled','filtered-deterministic','filtered-sampled',
+              'planner-filtered-deterministic','planner-filtered-sampled']
     for policy in [p for p in policies if (directory/f'{p}-evaluation.json').exists()]:
         filename=f'{policy}-evaluation.json'
         rows=json.loads((directory/filename).read_text())
