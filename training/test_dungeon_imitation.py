@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
-from dungeon_imitation import navigation_example,load_navigation,load_navigation_provenance,split_navigation_seeds
+from dungeon_imitation import navigation_example,planner_state_example,load_navigation,load_navigation_provenance,split_navigation_seeds
 from dungeon_pilot import ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan
 from test_dungeon_pilot import view
 
@@ -21,6 +21,12 @@ class NavigationTests(unittest.TestCase):
         self.assertFalse(navigation_example(before,after,transition))
         before['room']['entities']=[]; before['room']['hitWarnings']=[{'hostile':True}]
         self.assertFalse(navigation_example(before,after,transition))
+
+    def test_dagger_keeps_calm_teacher_labeled_state_before_a_learner_detour(self):
+        before={'decision':'world','room':{'entities':[],'hitWarnings':[]}}
+        self.assertTrue(planner_state_example(before))
+        before['room']['hitWarnings']=[{'hostile':True,'dangerous':True}]
+        self.assertFalse(planner_state_example(before))
 
     def test_dataset_requires_training_seeds_and_four_legal_actions(self):
         with tempfile.TemporaryDirectory() as tmp:

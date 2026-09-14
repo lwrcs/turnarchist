@@ -14,7 +14,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 from combat_pilot import ROOT,SIZE,ROTATED_ENCODER
 from dungeon_pilot import (DungeonEnv,ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan,
-                           initialize_from_combat,initialize_spatial)
+                           initialize_from_combat,initialize_spatial,planner_action)
 from imitate import load_demonstrations
 
 
@@ -35,6 +35,20 @@ def navigation_example(before,after,transition):
             and after['player']['health']>=before['player']['health']
             and (before['room']['id'],before['player']['x'],before['player']['y']) !=
                 (after['room']['id'],after['player']['x'],after['player']['y']))
+
+
+def planner_state_example(before):
+    """A calm state for which the bounded A* teacher supplied a direction.
+
+    DAgger labels the state before the learner acts, including a harmless wall
+    bump or detour. Requiring a successful learner move would recreate the
+    original covariate-shift failure: only tidy teacher-route states remain.
+    """
+    return (before['decision']=='world'
+            and not any(e.get('isEnemy') or e.get('appearance')=='unidentified'
+                        for e in before['room']['entities'])
+            and not any(w.get('hostile') and w.get('dangerous', True)
+                        for w in before['room']['hitWarnings']))
 
 
 def doorway_cycle(trace):
@@ -60,11 +74,13 @@ def collect(args):
     xs,ys,example_seeds,example_rotations,outcomes=[],[],[],[],[]
     collection_seeds=training_seed_slice(getattr(args,'seed_start',0),args.seeds)
     recovery_model=getattr(args,'recovery_model',None)
+    dagger_model=getattr(args,'dagger_model',None)
     recoveries=[]
     try:
         torch.set_num_threads(4)
-        learner=PPO.load(recovery_model,device='cpu') if recovery_model else None
-        source=json.loads((recovery_model.parent/'manifest.json').read_text()) if recovery_model else None
+        learner_path=dagger_model or recovery_model
+        learner=PPO.load(learner_path,device='cpu') if learner_path else None
+        source=json.loads((learner_path.parent/'manifest.json').read_text()) if learner_path else None
         for episode_seed in collection_seeds:
             obs,_=env.reset(options={'episodeSeed':episode_seed})
             if source:
@@ -95,9 +111,16 @@ def collect(args):
                               'loopPositions':[[t['room'],t['x'],t['y']] for t in env.trace[-2:]],
                               'escaped':False,'samples':0,'teacherSteps':0}
                     recoveries.append(recovery)
-                teaching=learner is None or recovery_left>0
+                # DAgger only exposes the learner to calm, planner-covered
+                # navigation. The established teacher keeps combat and all
+                # unsupported situations out of this navigation dataset.
+                teaching=(not planner) if dagger_model else (learner is None or recovery_left>0)
                 env.controller=('planner' if teaching and planner else 'teacher') if teaching else 'learner'
-                if not teaching:
+                label=planner_action(env) if dagger_model and planner else None
+                if dagger_model and planner:
+                    local,_=learner.predict(obs,deterministic=True)
+                    action={'type':'Move','direction':['up','right','down','left'][(int(local)+env.rotation)%4]}
+                elif not teaching:
                     local,_=learner.predict(obs,deterministic=True)
                     action={'type':'Move','direction':['up','right','down','left'][(int(local)+env.rotation)%4]}
                 if action is None:
@@ -114,7 +137,11 @@ def collect(args):
                     feedback(b,a,n,r)
                 env.transition_callback=observed_feedback
                 next_obs,_,done,truncated,info=env.step(local)
-                if transitions and navigation_example(*transitions[0]):
+                if dagger_model and label is not None and planner_state_example(before):
+                    xs.append(obs.copy()); ys.append(label)
+                    example_seeds.append(episode_seed); example_rotations.append(env.rotation)
+                    if recovery_left: recovery['samples']+=1
+                elif transitions and navigation_example(*transitions[0]):
                     xs.append(obs.copy()); ys.append(local)
                     example_seeds.append(episode_seed); example_rotations.append(env.rotation)
                     if recovery_left: recovery['samples']+=1
@@ -146,6 +173,12 @@ def collect(args):
                 'trigger':'six recorded zero-turn learner moves alternating two rooms',
                 'teacherStepsPerIntervention':16,'teacherHistory':'choose each learner decision; feedback on all executed actions',
                 'limitation':'Assisted collection, not unassisted evaluation; escaped means left the two loop positions'}
+        if dagger_model:
+            manifest['dagger']={'version':1,'source':str(dagger_model),
+                'sourceSha256':hashlib.sha256(dagger_model.read_bytes()).hexdigest(),
+                'learnerControl':'Deterministic learner actions only while bounded A* is active in a calm room.',
+                'label':'Teacher A* action at the learner-visited pre-action state, including harmless rejected moves and detours.',
+                'purpose':'Collect recovery labels for states absent from teacher-only trajectories.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
         (args.out/'complete.json').write_text(json.dumps({'episodes':len(outcomes),'samples':len(xs)}))
@@ -348,6 +381,7 @@ if __name__=='__main__':
     parser.add_argument('--combat-data',type=Path)
     parser.add_argument('--from-combat',type=Path)
     parser.add_argument('--recovery-model',type=Path,help='Collect teacher recoveries after deterministic learner doorway cycles')
+    parser.add_argument('--dagger-model',type=Path,help='Collect bounded-A* labels at calm states visited by this learner')
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
     parser.add_argument('--architecture',choices=['inherited-mlp','spatial','spatial-local'],default='inherited-mlp')
@@ -360,7 +394,8 @@ if __name__=='__main__':
             or not math.isfinite(args.imitation_learning_rate)
             or not 0<args.imitation_learning_rate<=1e-2): parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
-    if args.recovery_model and args.mode!='collect': parser.error('Recovery model is collection only')
+    if (args.recovery_model or args.dagger_model) and args.mode!='collect': parser.error('Recovery and DAgger models are collection only')
+    if args.recovery_model and args.dagger_model: parser.error('Choose either recovery collection or DAgger collection')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
     args.out.mkdir(parents=True,exist_ok=False)
     (collect if args.mode=='collect' else fit)(args)
