@@ -21,6 +21,14 @@ def useful(outcome):
     return outcome['maxDepth'] > outcome['initialDepth'] or outcome['roomsVisited'] >= 6
 
 
+def evenly_spaced_rows(observations, actions, cap):
+    """Bound RAM without concentrating every label at the start of a run."""
+    if len(actions) <= cap:
+        return observations, actions
+    indices = np.linspace(0, len(actions) - 1, num=cap, dtype=np.int64)
+    return observations[indices], actions[indices]
+
+
 def source_rows(paths):
     for path in paths:
         manifest = json.loads((path / 'manifest.json').read_text())
@@ -54,10 +62,17 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--contract-manifest', type=Path, required=True,
                         help='Current compatible dungeon checkpoint manifest')
+    parser.add_argument('--per-episode-cap', type=int, default=192)
     args = parser.parse_args()
     if args.out.exists():
         parser.error('Output already exists')
-    chosen = [row for row in source_rows(args.sources) if useful(row[2])]
+    if not 16 <= args.per_episode_cap <= 2048:
+        parser.error('per-episode-cap must be in 16..2048')
+    chosen = []
+    for path, manifest, outcome, observations, actions, seed in source_rows(args.sources):
+        if useful(outcome):
+            observations, actions = evenly_spaced_rows(observations, actions, args.per_episode_cap)
+            chosen.append((path, manifest, outcome, observations, actions, seed))
     if len(chosen) < 2:
         raise ValueError('Need meaningful trajectories from at least two training seeds')
     seeds = [row[5] for row in chosen]
@@ -80,7 +95,7 @@ def main():
     manifest = {
         'encoder': ENCODER, 'reward': REWARD, 'helper': HELPER,
         'gameContract': reference['gameContract'],
-        'trainingSeeds': seeds, 'samples': len(actions),
+        'trainingSeeds': seeds, 'samples': len(actions), 'perEpisodeCap': args.per_episode_cap,
         'selection': 'Kept only training-pool baseline episodes that reached deeper than their starting floor or visited at least six rooms. Excluded bounded safe loops even when their raw action count was large.',
         'teacher': 'programmed-baseline',
         'sourceArtifacts': [{'path': str(row[0]), 'sha256': hashlib.sha256((row[0] / 'demonstrations.npz').read_bytes()).hexdigest()} for row in chosen],
@@ -92,7 +107,7 @@ def main():
     (args.out / 'complete.json').write_text(json.dumps({
         'episodes': len(chosen), 'samples': len(actions),
         'actionCounts': np.bincount(actions, minlength=4).tolist(),
-        'uniqueObservations': int(len(np.unique(observations, axis=0))),
+        'uniqueObservations': 'not computed; rows are bounded evenly across productive trajectories',
     }, indent=2))
     print(json.dumps(json.loads((args.out / 'complete.json').read_text())), flush=True)
 

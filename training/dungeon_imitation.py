@@ -245,6 +245,12 @@ def policy_metrics(model,x,y,batch_size=512):
     return {'loss':sum(losses)/len(x),'accuracy':correct/len(x)}
 
 
+def bounded_unique_observations(observations):
+    """Exact row cardinality without materializing a giant sorted copy of x."""
+    return len({hashlib.blake2b(np.ascontiguousarray(row).tobytes(), digest_size=16).digest()
+                for row in observations})
+
+
 class Spaces(gym.Env):
     def __init__(self):
         self.action_space=gym.spaces.Discrete(4)
@@ -349,7 +355,7 @@ def fit(args):
                   'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
                   'navigationActionCounts':np.bincount(y,minlength=4).tolist(),
-                  'navigationUniqueObservations':int(len(np.unique(x,axis=0))),
+                  'navigationUniqueObservations':bounded_unique_observations(x),
                   'batchComposition':f'32 navigation + {args.combat_batch} combat samples, sampled with replacement',
                   'checkpointSelection':'Best seed-held-out navigation accuracy, then combat agreement, retaining the earliest tie; combat agreement may fall at most one percentage point. Checked every 25 updates with patience 10.',
                   'limitation':'Imitation only; no PPO experience. Offline validation selects a checkpoint but does not replace held-out dungeon evaluation.'}
