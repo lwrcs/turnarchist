@@ -132,6 +132,29 @@ def tactical_view(view):
                    for tile in view['room']['tiles']))
 
 
+def world_direction(action,rotation):
+    """Translate a rotated policy action into the direction the game receives."""
+    return ACTIONS[world_action(int(action),rotation)]['direction']
+
+
+def shield_assessment(operator,direction,baseline):
+    """Fail closed unless a learned move is immediately safe and teacher-approved.
+
+    The operator preview is authoritative only for the current enemy response.  It
+    cannot prove that a different safe-looking position remains strategically
+    sound on later turns, so initial deployment also requires baseline consensus.
+    """
+    move=next((row for row in operator.get('tactical',{}).get('moves',[])
+               if row.get('direction')==direction),None)
+    if move is None: return False,'missing-preview'
+    consequence=move.get('consequence') or {}
+    if consequence.get('unknownDamageSources',0): return False,'unknown-damage'
+    if (consequence.get('knownIncomingDamageBeforeDefense') or 0)>0: return False,'known-damage'
+    if not baseline or baseline.get('type')!='Move': return False,'missing-baseline'
+    if baseline.get('direction')!=direction: return False,'baseline-disagreement'
+    return True,'safe-baseline-consensus'
+
+
 def seed_plan(namespace, count):
     return [int.from_bytes(hashlib.sha256(f'turnarchist-dungeon-v1:{namespace}:{i}'.encode()).digest()[:4], 'big')
             for i in range(count)]
@@ -414,7 +437,7 @@ def make_env(out,budget,seeds,offset):
 
 
 def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False,
-                      baseline_fallback=False,model_confidence=0):
+                      baseline_fallback=False,model_confidence=0,safety_shield=False):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
@@ -423,6 +446,7 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
         if filter_rejected: label='filtered-'+label
         if planner_assist: label='planner-'+label
         if baseline_fallback: label='hybrid-'+label
+        if safety_shield: label='shielded-'+label
         env.phase='dungeon-'+label+'-evaluation'
         if baseline_fallback:
             env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
@@ -435,12 +459,33 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                 env.page.evaluate('() => { window.navigationFallback = new AgentBaseline.Policy(); }')
             rejected={}
             learner_decisions=0; fallback_decisions=0
+            shield_accepted=0; shield_rejected=Counter()
             while True:
                 key=obs.tobytes()
                 planned=planner_action(env) if planner_assist else None
                 if planned is not None and planned not in rejected.get(key,()):
                     action=planned
                     env.controller='navigator'
+                elif baseline_fallback and safety_shield and tactical_view(env.view) and model is not None:
+                    if filter_rejected:
+                        candidate=policy_action(model,obs,deterministic,rejected.get(key,()))
+                    else:
+                        candidate=int(model.predict(obs,deterministic=deterministic)[0])
+                    fallback=env.page.evaluate('(view) => navigationFallback.choose(view)',env.view)
+                    direction=world_direction(candidate,env.rotation) if candidate is not None else None
+                    operator=env.page.evaluate('() => window.agent.inspectOperator()')
+                    accepted,reason=shield_assessment(operator,direction,fallback)
+                    if accepted:
+                        action=candidate; env.controller='shielded-learner'
+                        learner_decisions+=1; shield_accepted+=1
+                    elif fallback and fallback.get('type')=='Move':
+                        world=[row['direction'] for row in ACTIONS].index(fallback['direction'])
+                        action=(world-env.rotation)%len(ACTIONS)
+                        env.controller='baseline-fallback'
+                        fallback_decisions+=1; shield_rejected[reason]+=1
+                    else:
+                        action=candidate; env.controller='learner-unshielded-no-fallback'
+                        learner_decisions+=1; shield_rejected[reason]+=1
                 elif baseline_fallback and (not tactical_view(env.view) or
                         (model is not None and policy_confidence(model,obs)<model_confidence)):
                     fallback=env.page.evaluate('(view) => navigationFallback.choose(view)',env.view)
@@ -490,6 +535,10 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                         info['modelConfidenceThreshold']=model_confidence
                         info['learnerDecisions']=learner_decisions
                         info['fallbackDecisions']=fallback_decisions
+                    if safety_shield:
+                        info['safetyShield']='zero-known-damage, zero-unknown-damage, and restricted-perception baseline consensus'
+                        info['shieldAcceptedDecisions']=shield_accepted
+                        info['shieldRejectedDecisions']=dict(shield_rejected)
                     rows.append({**info,'trace':list(env.trace)})
                     print(json.dumps({'evaluationEpisode':len(rows),**info}),flush=True)
                     break
@@ -515,6 +564,8 @@ def main():
                         help='During evaluation, use the restricted-perception baseline when no tactical state or A* route is active')
     parser.add_argument('--model-confidence',type=float,default=0,
                         help='With baseline fallback, defer tactical states below this maximum action probability')
+    parser.add_argument('--safety-shield',action='store_true',
+                        help='Require damage-safe baseline consensus before a learned tactical move executes')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
@@ -531,6 +582,8 @@ def main():
         parser.error('Worker reconfiguration requires --resume')
     if not 0<=args.model_confidence<=1 or (args.model_confidence and not args.baseline_fallback):
         parser.error('Model confidence must be in [0,1] and requires baseline fallback')
+    if args.safety_shield and not args.baseline_fallback:
+        parser.error('Safety shield requires baseline fallback')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
     if (not 0<args.rehearsal_rate<=.001) or (args.rehearsal_rate!=.001 and not args.rehearsal_navigation):
@@ -562,7 +615,8 @@ def main():
         if args.evaluate:
             manifest['evaluationScaffolding']={'baselineFallback':args.baseline_fallback,
                 'modelConfidenceThreshold':args.model_confidence,
-                'boundary':'Restricted-perception programmed baseline controls calm states where bounded A* has no route and tactical states below the confidence threshold.'}
+                'safetyShield':args.safety_shield,
+                'boundary':'Restricted-perception programmed baseline controls calm states where bounded A* has no route. The optional shield requires immediate damage safety and baseline consensus for learned tactical moves.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         ready=time.perf_counter()
         if args.benchmark:
@@ -634,7 +688,7 @@ def main():
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
-                                               args.baseline_fallback,args.model_confidence)
+                                               args.baseline_fallback,args.model_confidence,args.safety_shield)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
                     report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}

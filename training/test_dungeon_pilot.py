@@ -11,7 +11,8 @@ import torch
 from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
                            OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action,
-                           SpatialDungeonExtractor,SpatialDungeonExtractorV2,tactical_view)
+                           SpatialDungeonExtractor,SpatialDungeonExtractorV2,tactical_view,
+                           world_direction,shield_assessment)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -30,6 +31,25 @@ class DungeonTests(unittest.TestCase):
         self.assertTrue(tactical_view(warning))
         hazard=view(); hazard['room']['tiles']=[{'hazard':{'warning':True}}]
         self.assertTrue(tactical_view(hazard))
+
+    def test_safety_shield_requires_damage_safe_baseline_consensus(self):
+        operator={'tactical':{'moves':[
+            {'direction':'up','consequence':{'knownIncomingDamageBeforeDefense':0,'unknownDamageSources':0}},
+            {'direction':'right','consequence':{'knownIncomingDamageBeforeDefense':1,'unknownDamageSources':0}},
+            {'direction':'down','consequence':{'knownIncomingDamageBeforeDefense':0,'unknownDamageSources':1}},
+        ]}}
+        self.assertEqual(shield_assessment(operator,'up',{'type':'Move','direction':'up'}),
+                         (True,'safe-baseline-consensus'))
+        self.assertEqual(shield_assessment(operator,'up',{'type':'Move','direction':'left'}),
+                         (False,'baseline-disagreement'))
+        self.assertEqual(shield_assessment(operator,'right',{'type':'Move','direction':'right'}),
+                         (False,'known-damage'))
+        self.assertEqual(shield_assessment(operator,'down',{'type':'Move','direction':'down'}),
+                         (False,'unknown-damage'))
+        self.assertEqual(shield_assessment(operator,'left',{'type':'Move','direction':'left'}),
+                         (False,'missing-preview'))
+        self.assertEqual(world_direction(0,0),'up')
+        self.assertEqual(world_direction(0,1),'right')
 
     def test_spatial_extractor_preserves_batch_shape_with_bounded_parameters(self):
         space=type('Space',(),{'shape':(OBS_SIZE,)})()
