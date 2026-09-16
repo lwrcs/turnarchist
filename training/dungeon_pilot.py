@@ -106,6 +106,14 @@ def policy_action(model,observation,deterministic,rejected=()):
     return available[int(torch.multinomial(allowed,1))]
 
 
+def policy_confidence(model,observation):
+    """Maximum action probability for confidence-gated intervention."""
+    with torch.no_grad():
+        tensor,_=model.policy.obs_to_tensor(observation)
+        probabilities=model.policy.get_distribution(tensor).distribution.probs[0]
+    return float(probabilities.max().detach().cpu())
+
+
 def planner_action(env):
     """Return the safe A* hint in the policy's rotated action frame."""
     plan=getattr(env,'plan',{})
@@ -406,7 +414,7 @@ def make_env(out,budget,seeds,offset):
 
 
 def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False,
-                      baseline_fallback=False):
+                      baseline_fallback=False,model_confidence=0):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
@@ -426,36 +434,45 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
             if baseline_fallback:
                 env.page.evaluate('() => { window.navigationFallback = new AgentBaseline.Policy(); }')
             rejected={}
+            learner_decisions=0; fallback_decisions=0
             while True:
                 key=obs.tobytes()
                 planned=planner_action(env) if planner_assist else None
                 if planned is not None and planned not in rejected.get(key,()):
                     action=planned
                     env.controller='navigator'
-                elif baseline_fallback and not tactical_view(env.view):
+                elif baseline_fallback and (not tactical_view(env.view) or
+                        (model is not None and policy_confidence(model,obs)<model_confidence)):
                     fallback=env.page.evaluate('(view) => navigationFallback.choose(view)',env.view)
                     if fallback and fallback.get('type')=='Move':
                         world=[row['direction'] for row in ACTIONS].index(fallback['direction'])
                         action=(world-env.rotation)%len(ACTIONS)
                         env.controller='baseline-fallback'
+                        fallback_decisions+=1
                     elif model is None:
                         action=int(rng.integers(4))
                         env.controller='learner'
+                        learner_decisions+=1
                     elif filter_rejected:
                         action=policy_action(model,obs,deterministic,rejected.get(key,()))
                         env.controller='learner'
+                        learner_decisions+=1
                     else:
                         action=int(model.predict(obs,deterministic=deterministic)[0])
                         env.controller='learner'
+                        learner_decisions+=1
                 elif model is None:
                     action=int(rng.integers(4))
                     env.controller='learner'
+                    learner_decisions+=1
                 elif filter_rejected:
                     action=policy_action(model,obs,deterministic,rejected.get(key,()))
                     env.controller='learner'
+                    learner_decisions+=1
                 else:
                     action=int(model.predict(obs,deterministic=deterministic)[0])
                     env.controller='learner'
+                    learner_decisions+=1
                 if action is None:
                     # All four directions were rejected without changing anything.
                     # Re-open the raw choice so the environment budget still owns
@@ -468,7 +485,11 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                 if done or truncated:
                     if filter_rejected: info['actionFilter']='identical-observation rejection cache'
                     if planner_assist: info['navigationAssist']='safe current-room A* frontier route'
-                    if baseline_fallback: info['navigationFallback']='restricted-perception programmed baseline outside tactical states'
+                    if baseline_fallback:
+                        info['navigationFallback']='restricted-perception programmed baseline outside tactical states and below the confidence threshold'
+                        info['modelConfidenceThreshold']=model_confidence
+                        info['learnerDecisions']=learner_decisions
+                        info['fallbackDecisions']=fallback_decisions
                     rows.append({**info,'trace':list(env.trace)})
                     print(json.dumps({'evaluationEpisode':len(rows),**info}),flush=True)
                     break
@@ -492,6 +513,8 @@ def main():
                         help='Policy families to evaluate; planner results are always labeled as assisted')
     parser.add_argument('--baseline-fallback',action='store_true',
                         help='During evaluation, use the restricted-perception baseline when no tactical state or A* route is active')
+    parser.add_argument('--model-confidence',type=float,default=0,
+                        help='With baseline fallback, defer tactical states below this maximum action probability')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
@@ -506,6 +529,8 @@ def main():
     if args.rejection_feedback and not args.rehearsal_navigation: parser.error('Rejection feedback requires rehearsal datasets')
     if args.reconfigure_workers and not args.resume:
         parser.error('Worker reconfiguration requires --resume')
+    if not 0<=args.model_confidence<=1 or (args.model_confidence and not args.baseline_fallback):
+        parser.error('Model confidence must be in [0,1] and requires baseline fallback')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
     if (not 0<args.rehearsal_rate<=.001) or (args.rehearsal_rate!=.001 and not args.rehearsal_navigation):
@@ -536,7 +561,8 @@ def main():
                   'limitation':'Directional learner with explicit helper. A budget survivor is not a dungeon win. Rewards and actor transfer differ from combat training.'}
         if args.evaluate:
             manifest['evaluationScaffolding']={'baselineFallback':args.baseline_fallback,
-                'boundary':'Restricted-perception programmed baseline controls only calm states where bounded A* has no route; learned policy retains tactical states.'}
+                'modelConfidenceThreshold':args.model_confidence,
+                'boundary':'Restricted-perception programmed baseline controls calm states where bounded A* has no route and tactical states below the confidence threshold.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         ready=time.perf_counter()
         if args.benchmark:
@@ -608,7 +634,7 @@ def main():
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
-                                               args.baseline_fallback)
+                                               args.baseline_fallback,args.model_confidence)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
                     report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}
