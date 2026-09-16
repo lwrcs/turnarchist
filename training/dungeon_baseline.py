@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from combat_pilot import ACTIONS, ROOT, encode, rotate_features
-from dungeon_pilot import DungeonEnv, actual_seed, seed_plan
+from dungeon_pilot import DungeonEnv, ENCODER, HELPER, REWARD, seed_plan
 
 
 def local_action(action, rotation):
@@ -102,7 +102,8 @@ def main():
             'controller': 'programmed-baseline',
             'teacherVersion': env.page.evaluate('() => AgentBaseline.Policy.version'),
             'teacherSha256': hashlib.sha256((ROOT / 'agent-baseline.js').read_bytes()).hexdigest(),
-            'seedPool': args.pool, 'episodeSeeds': [actual_seed(seed) for seed in seeds], 'budget': args.budget,
+            'seedPool': args.pool, 'trainingSeeds': seeds, 'episodeSeeds': seeds, 'budget': args.budget,
+            'encoder': ENCODER, 'reward': REWARD, 'helper': HELPER, 'gameContract': env.contract,
             'samples': len(collect['actions']), 'episodes': len(rows),
             'labelBoundary': 'Directional actions selected through restricted player perception; outcomes retained separately.',
         }
