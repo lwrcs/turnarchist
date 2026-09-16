@@ -51,7 +51,8 @@ def convert(envelope):
     if envelope.get('schemaVersion')!=1: raise ValueError('Unknown teaching recording schema')
     meta=envelope['meta']; validate_seed(meta['seed'])
     if meta.get('perceptionView')!='restricted-grid': raise ValueError('Privileged-view recording requires separate review')
-    if meta.get('protocol')!='starter': raise ValueError('Normal equipment runs require manual compatibility review')
+    protocol=meta.get('protocol')
+    if protocol not in {'starter','normal'}: raise ValueError('Unknown teaching protocol')
     h=History(meta['initial'],meta.get('rotation',0)); baseline=equipped(meta['initial'])
     xs=[]; ys=[]; segments=[]; reasons={}; human=0
     for r in envelope['records']:
@@ -65,7 +66,7 @@ def convert(envelope):
             if r['segment'] in meta.get('excludedSegments',[]): reason='excluded segment'
             elif r['action']['type']!='Move': reason='non-directional action retained as history'
             elif r['before']['decision']!='world' or helper_action(r['before']) is not None: reason='helper decision context'
-            elif equipped(r['before'])!=baseline: reason='changed equipment'
+            elif protocol=='starter' and equipped(r['before'])!=baseline: reason='changed equipment'
             elif not r['info']['recorded']: reason='unrecorded action'
             elif r.get('terminated'): reason='terminal action requires review'
             else:
@@ -87,7 +88,10 @@ def main():
     np.savez_compressed(a.out/'demonstrations.npz',observations=np.asarray(xs,dtype=np.float32),actions=np.asarray(ys,dtype=np.int64))
     manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':contract,'trainingSeeds':[envelope['meta']['seed']],
               'humanDemonstrations':{'version':1,'session':envelope['meta']['id'],'sourceSha256':hashlib.sha256(raw).hexdigest(),
-                 'splitUnit':'entire session and seed','perceptionView':'restricted-grid','protocol':'starter'},'samples':len(xs)}
+              'splitUnit':'entire session and seed','perceptionView':'restricted-grid','protocol':meta['protocol'],
+              'equipmentStates':sorted({json.dumps(equipped(r['before']),sort_keys=True) for r in envelope['records']}),
+              'normalRunNote':('Directional labels retain their observed equipment state in the encoder.'
+                               if protocol=='normal' else None)},'samples':len(xs)}
     (a.out/'manifest.json').write_text(json.dumps(manifest,indent=2));(a.out/'import-report.json').write_text(json.dumps(report,indent=2));(a.out/'complete.json').write_text(json.dumps({'samples':len(xs)}));print(json.dumps(report))
 
 

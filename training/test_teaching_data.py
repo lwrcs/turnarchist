@@ -44,3 +44,13 @@ class TeachingTests(unittest.TestCase):
         record={'seq':1,'before':before,'after':after,'action':{'type':'Move','direction':'right'},'decisionEnd':True,'source':'human','actor':'model','segment':1,'info':{'recorded':True}}
         data={'schemaVersion':1,'meta':{'seed':123,'initial':before,'contract':{},'rotation':0,'protocol':'starter','perceptionView':'restricted-grid'},'records':[record]}
         with self.assertRaisesRegex(ValueError,'actor/source'):convert(data)
+
+    def test_normal_protocol_keeps_directional_labels_after_equipment_change(self):
+        before=self.state();after=copy.deepcopy(before);after['player']['x']+=1
+        after['inventory']=[{'kind':'emerald-ring','traits':['equippable'],'equipped':True}]
+        record={'seq':1,'before':before,'after':after,'action':{'type':'Move','direction':'right'},
+                'decisionEnd':True,'source':'human','segment':1,'info':{'recorded':True}}
+        data={'schemaVersion':1,'meta':{'seed':123,'initial':before,'contract':{},'rotation':0,
+             'protocol':'normal','perceptionView':'restricted-grid'},'records':[record]}
+        x,y,report=convert(data)
+        self.assertEqual(len(x),1);self.assertEqual(y,[1]);self.assertEqual(report['accepted'],1)
