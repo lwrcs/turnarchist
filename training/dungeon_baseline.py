@@ -12,24 +12,13 @@ from pathlib import Path
 import numpy as np
 
 from combat_pilot import ACTIONS, ROOT, encode, rotate_features
-from dungeon_pilot import DungeonEnv, ENCODER, HELPER, REWARD, seed_plan
+from dungeon_pilot import DungeonEnv, ENCODER, HELPER, REWARD, seed_plan, tactical_view
 
 
 def local_action(action, rotation):
     if action.get('type') != 'Move' or action.get('direction') not in [row['direction'] for row in ACTIONS]:
         return None
     return ([row['direction'] for row in ACTIONS].index(action['direction']) - rotation) % len(ACTIONS)
-
-
-def tactical_state(view):
-    """A state the learned policy must solve instead of the calm-room planner."""
-    enemies = any(entity.get('isEnemy') or entity.get('appearance') == 'unidentified'
-                  for entity in view['room']['entities'])
-    warnings = any(warning.get('hostile') and warning.get('dangerous', True)
-                   for warning in view['room']['hitWarnings'])
-    hazards = any((tile.get('hazard') or {}).get('active') or (tile.get('hazard') or {}).get('warning')
-                  for tile in view['room']['tiles'])
-    return enemies or warnings or hazards
 
 
 def outcome(env, status, decisions):
@@ -68,7 +57,7 @@ def run_episode(env, seed, episode_id, collect):
             collect['actions'].append(local)
             collect['episode_ids'].append(episode_id)
             collect['planner_active'].append(bool(env.plan.get('active')))
-            collect['tactical_state'].append(tactical_state(before))
+            collect['tactical_state'].append(tactical_view(before))
         reward, dead, truncated = env.execute(action, 'baseline')
         env.total_reward += reward
         env.frames.append(rotate_features(encode(env.view), env.rotation))

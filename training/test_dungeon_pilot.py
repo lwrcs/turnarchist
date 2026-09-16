@@ -11,7 +11,7 @@ import torch
 from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
                            OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action,
-                           SpatialDungeonExtractor,SpatialDungeonExtractorV2)
+                           SpatialDungeonExtractor,SpatialDungeonExtractorV2,tactical_view)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -21,6 +21,16 @@ def view(x=0,y=0,room='a',health=2):
 
 
 class DungeonTests(unittest.TestCase):
+    def test_tactical_boundary_includes_enemies_warnings_and_active_hazards(self):
+        calm=view()
+        self.assertFalse(tactical_view(calm))
+        enemy=view(); enemy['room']['entities']=[{'isEnemy':True}]
+        self.assertTrue(tactical_view(enemy))
+        warning=view(); warning['room']['hitWarnings']=[{'hostile':True,'dangerous':True}]
+        self.assertTrue(tactical_view(warning))
+        hazard=view(); hazard['room']['tiles']=[{'hazard':{'warning':True}}]
+        self.assertTrue(tactical_view(hazard))
+
     def test_spatial_extractor_preserves_batch_shape_with_bounded_parameters(self):
         space=type('Space',(),{'shape':(OBS_SIZE,)})()
         for extractor_type,limit in [(SpatialDungeonExtractor,500_000),(SpatialDungeonExtractorV2,750_000)]:

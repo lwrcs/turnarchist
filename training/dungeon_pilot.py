@@ -114,6 +114,16 @@ def planner_action(env):
     return (directions.index(plan['direction'])-env.rotation)%len(ACTIONS)
 
 
+def tactical_view(view):
+    """Whether learned control is required instead of navigation scaffolding."""
+    return (any(entity.get('isEnemy') or entity.get('appearance') == 'unidentified'
+                for entity in view['room']['entities'])
+            or any(warning.get('hostile') and warning.get('dangerous', True)
+                   for warning in view['room']['hitWarnings'])
+            or any((tile.get('hazard') or {}).get('active') or (tile.get('hazard') or {}).get('warning')
+                   for tile in view['room']['tiles']))
+
+
 def seed_plan(namespace, count):
     return [int.from_bytes(hashlib.sha256(f'turnarchist-dungeon-v1:{namespace}:{i}'.encode()).digest()[:4], 'big')
             for i in range(count)]
@@ -395,7 +405,8 @@ def make_env(out,budget,seeds,offset):
     return Monitor(env)
 
 
-def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False):
+def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False,
+                      baseline_fallback=False):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
@@ -403,9 +414,17 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
         label='random' if model is None else ('deterministic' if deterministic else 'sampled')
         if filter_rejected: label='filtered-'+label
         if planner_assist: label='planner-'+label
+        if baseline_fallback: label='hybrid-'+label
         env.phase='dungeon-'+label+'-evaluation'
+        if baseline_fallback:
+            env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
+            env.transition_callback=lambda before,action,after,result: env.page.evaluate(
+                '''([before,action,after,info]) => navigationFallback.feedback(before,action,after,info)''',
+                [before,action,after,{'recorded':result['recorded'],'turnDelta':result['turnDelta']}])
         for seed in seeds:
             obs,_=env.reset(options={'episodeSeed':seed})
+            if baseline_fallback:
+                env.page.evaluate('() => { window.navigationFallback = new AgentBaseline.Policy(); }')
             rejected={}
             while True:
                 key=obs.tobytes()
@@ -413,6 +432,21 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                 if planned is not None and planned not in rejected.get(key,()):
                     action=planned
                     env.controller='navigator'
+                elif baseline_fallback and not tactical_view(env.view):
+                    fallback=env.page.evaluate('(view) => navigationFallback.choose(view)',env.view)
+                    if fallback and fallback.get('type')=='Move':
+                        world=[row['direction'] for row in ACTIONS].index(fallback['direction'])
+                        action=(world-env.rotation)%len(ACTIONS)
+                        env.controller='baseline-fallback'
+                    elif model is None:
+                        action=int(rng.integers(4))
+                        env.controller='learner'
+                    elif filter_rejected:
+                        action=policy_action(model,obs,deterministic,rejected.get(key,()))
+                        env.controller='learner'
+                    else:
+                        action=int(model.predict(obs,deterministic=deterministic)[0])
+                        env.controller='learner'
                 elif model is None:
                     action=int(rng.integers(4))
                     env.controller='learner'
@@ -434,6 +468,7 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                 if done or truncated:
                     if filter_rejected: info['actionFilter']='identical-observation rejection cache'
                     if planner_assist: info['navigationAssist']='safe current-room A* frontier route'
+                    if baseline_fallback: info['navigationFallback']='restricted-perception programmed baseline outside tactical states'
                     rows.append({**info,'trace':list(env.trace)})
                     print(json.dumps({'evaluationEpisode':len(rows),**info}),flush=True)
                     break
@@ -455,6 +490,8 @@ def main():
     parser.add_argument('--eval-seed-start',type=int,default=0)
     parser.add_argument('--evaluation-set',choices=['standard','sampled','planner','all'],default='standard',
                         help='Policy families to evaluate; planner results are always labeled as assisted')
+    parser.add_argument('--baseline-fallback',action='store_true',
+                        help='During evaluation, use the restricted-perception baseline when no tactical state or A* route is active')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
@@ -497,6 +534,9 @@ def main():
                   'task':'procedural-dungeon','budget':args.budget,'trainingSeeds':train_seeds,
                   'heldOutSeeds':test_seeds,'execution':{'environments':args.envs,'rolloutStepsPerEnvironment':256//args.envs},
                   'limitation':'Directional learner with explicit helper. A budget survivor is not a dungeon win. Rewards and actor transfer differ from combat training.'}
+        if args.evaluate:
+            manifest['evaluationScaffolding']={'baselineFallback':args.baseline_fallback,
+                'boundary':'Restricted-perception programmed baseline controls only calm states where bounded A* has no route; learned policy retains tactical states.'}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         ready=time.perf_counter()
         if args.benchmark:
@@ -567,7 +607,8 @@ def main():
                     policies={'standard':standard,'sampled':sampled,'planner':planner,
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
-                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner)
+                        rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
+                                               args.baseline_fallback)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
                     report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}
