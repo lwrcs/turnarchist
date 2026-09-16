@@ -21,6 +21,17 @@ def local_action(action, rotation):
     return ([row['direction'] for row in ACTIONS].index(action['direction']) - rotation) % len(ACTIONS)
 
 
+def tactical_state(view):
+    """A state the learned policy must solve instead of the calm-room planner."""
+    enemies = any(entity.get('isEnemy') or entity.get('appearance') == 'unidentified'
+                  for entity in view['room']['entities'])
+    warnings = any(warning.get('hostile') and warning.get('dangerous', True)
+                   for warning in view['room']['hitWarnings'])
+    hazards = any((tile.get('hazard') or {}).get('active') or (tile.get('hazard') or {}).get('warning')
+                  for tile in view['room']['tiles'])
+    return enemies or warnings or hazards
+
+
 def outcome(env, status, decisions):
     return {
         'phase': env.phase, 'seed': env.game_seed, 'episodeSeed': env.episode_seed,
@@ -56,6 +67,8 @@ def run_episode(env, seed, episode_id, collect):
             collect['observations'].append(observation)
             collect['actions'].append(local)
             collect['episode_ids'].append(episode_id)
+            collect['planner_active'].append(bool(env.plan.get('active')))
+            collect['tactical_state'].append(tactical_state(before))
         reward, dead, truncated = env.execute(action, 'baseline')
         env.total_reward += reward
         env.frames.append(rotate_features(encode(env.view), env.rotation))
@@ -89,14 +102,17 @@ def main():
     seeds = seed_plan(args.pool, pool_size)[args.seed_start:args.seed_start + args.seeds]
     env = DungeonEnv(args.out / 'evaluation', budget=args.budget)
     env.phase = 'dungeon-baseline-evaluation'
-    collect = {'observations': [], 'actions': [], 'episode_ids': []}
+    collect = {'observations': [], 'actions': [], 'episode_ids': [],
+               'planner_active': [], 'tactical_state': []}
     try:
         env.page.add_script_tag(path=str(ROOT / 'agent-baseline.js'))
         rows = [run_episode(env, seed, index, collect) for index, seed in enumerate(seeds)]
         np.savez_compressed(args.out / 'demonstrations.npz',
                             observations=np.asarray(collect['observations'], dtype=np.float32),
                             actions=np.asarray(collect['actions'], dtype=np.int64),
-                            episode_ids=np.asarray(collect['episode_ids'], dtype=np.int64))
+                            episode_ids=np.asarray(collect['episode_ids'], dtype=np.int64),
+                            planner_active=np.asarray(collect['planner_active'], dtype=np.bool_),
+                            tactical_state=np.asarray(collect['tactical_state'], dtype=np.bool_))
         (args.out / 'outcomes.json').write_text(json.dumps(rows, indent=2))
         manifest = {
             'controller': 'programmed-baseline',
@@ -105,7 +121,7 @@ def main():
             'seedPool': args.pool, 'trainingSeeds': seeds, 'episodeSeeds': seeds, 'budget': args.budget,
             'encoder': ENCODER, 'reward': REWARD, 'helper': HELPER, 'gameContract': env.contract,
             'samples': len(collect['actions']), 'episodes': len(rows),
-            'labelBoundary': 'Directional actions selected through restricted player perception; outcomes retained separately.',
+            'labelBoundary': 'Directional actions selected through restricted player perception; sample-level planner and tactical-state flags distinguish runtime responsibility.',
         }
         (args.out / 'manifest.json').write_text(json.dumps(manifest, indent=2))
         (args.out / 'complete.json').write_text(json.dumps({

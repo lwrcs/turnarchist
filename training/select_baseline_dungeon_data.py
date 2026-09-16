@@ -39,8 +39,13 @@ def source_rows(paths):
             observations = data['observations']
             actions = data['actions']
             episode_ids = data['episode_ids']
+            planner_active = data['planner_active'] if 'planner_active' in data else None
+            tactical = data['tactical_state'] if 'tactical_state' in data else None
         if observations.ndim != 2 or actions.shape != (len(observations),) or episode_ids.shape != actions.shape:
             raise ValueError(f'{path} has malformed demonstrations')
+        if (planner_active is None) != (tactical is None) or (planner_active is not None and
+                (planner_active.shape != actions.shape or tactical.shape != actions.shape)):
+            raise ValueError(f'{path} has malformed tactical provenance')
         if not np.isfinite(observations).all() or np.any((observations < 0) | (observations > 1)):
             raise ValueError(f'{path} has invalid observations')
         if np.any((actions < 0) | (actions >= 4)) or np.any((episode_ids < 0) | (episode_ids >= len(outcomes))):
@@ -53,7 +58,9 @@ def source_rows(paths):
             if episode_seed not in set(seed_plan('training', 64)):
                 raise ValueError(f'{path} episode is outside the training pool')
             mask = episode_ids == episode_id
-            yield path, manifest, outcome, observations[mask], actions[mask], episode_seed
+            yield path, manifest, outcome, observations[mask], actions[mask], episode_seed, \
+                planner_active[mask] if planner_active is not None else None, \
+                tactical[mask] if tactical is not None else None
 
 
 def main():
@@ -63,16 +70,23 @@ def main():
     parser.add_argument('--contract-manifest', type=Path, required=True,
                         help='Current compatible dungeon checkpoint manifest')
     parser.add_argument('--per-episode-cap', type=int, default=192)
+    parser.add_argument('--tactical-only', action='store_true',
+                        help='Keep sample-level enemy, warning, or active-hazard decisions from every episode')
     args = parser.parse_args()
     if args.out.exists():
         parser.error('Output already exists')
     if not 16 <= args.per_episode_cap <= 2048:
         parser.error('per-episode-cap must be in 16..2048')
     chosen = []
-    for path, manifest, outcome, observations, actions, seed in source_rows(args.sources):
-        if useful(outcome):
+    for path, manifest, outcome, observations, actions, seed, planner_active, tactical in source_rows(args.sources):
+        if args.tactical_only:
+            if planner_active is None or tactical is None:
+                raise ValueError(f'{path} lacks sample-level tactical provenance')
+            mask = tactical & ~planner_active
+            observations, actions = observations[mask], actions[mask]
+        if (args.tactical_only and len(actions)) or (not args.tactical_only and useful(outcome)):
             observations, actions = evenly_spaced_rows(observations, actions, args.per_episode_cap)
-            chosen.append((path, manifest, outcome, observations, actions, seed))
+            chosen.append((path, manifest, outcome, observations, actions, seed, planner_active, tactical))
     if len(chosen) < 2:
         raise ValueError('Need meaningful trajectories from at least two training seeds')
     seeds = [row[5] for row in chosen]
@@ -96,7 +110,10 @@ def main():
         'encoder': ENCODER, 'reward': REWARD, 'helper': HELPER,
         'gameContract': reference['gameContract'],
         'trainingSeeds': seeds, 'samples': len(actions), 'perEpisodeCap': args.per_episode_cap,
-        'selection': 'Kept only training-pool baseline episodes that reached deeper than their starting floor or visited at least six rooms. Excluded bounded safe loops even when their raw action count was large.',
+        'selection': ('Kept sample-level tactical decisions with enemies, dangerous warnings, or active hazards while the calm-room planner was inactive.'
+                      if args.tactical_only else
+                      'Kept only training-pool baseline episodes that reached deeper than their starting floor or visited at least six rooms. Excluded bounded safe loops even when their raw action count was large.'),
+        'tacticalOnly': args.tactical_only,
         'teacher': 'programmed-baseline',
         'sourceArtifacts': [{'path': str(row[0]), 'sha256': hashlib.sha256((row[0] / 'demonstrations.npz').read_bytes()).hexdigest()} for row in chosen],
         'episodeOutcomes': [{key: row[2][key] for key in ('episodeSeed', 'status', 'roomsVisited', 'positionsVisited', 'maxDepth', 'initialDepth', 'health', 'healthLost', 'steps')} for row in chosen],
