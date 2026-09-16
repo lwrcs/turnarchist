@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from subset_navigation_data import reservoir_indices
+from subset_navigation_data import reservoir_indices, uniform_reservoir_indices
 
 
 class SubsetNavigationDataTests(unittest.TestCase):
@@ -19,6 +19,12 @@ class SubsetNavigationDataTests(unittest.TestCase):
         indices = reservoir_indices(seeds, actions, quota=4, rng=np.random.default_rng(3))
         self.assertEqual(len(indices), 4)
         self.assertEqual(len(set(indices.tolist())), 4)
+
+    def test_uniform_reservoir_has_requested_size(self):
+        indices = uniform_reservoir_indices(100, quota=7, rng=np.random.default_rng(3))
+        self.assertEqual(len(indices), 7)
+        self.assertEqual(len(set(indices.tolist())), 7)
+        self.assertTrue(np.all((0 <= indices) & (indices < 100)))
 
 
 if __name__ == '__main__':

@@ -44,7 +44,19 @@ def reservoir_indices(seeds, actions, quota, rng):
     return np.asarray([index for rows in reservoirs.values() for index in rows], dtype=np.int64)
 
 
-def collect(paths, quota, seed):
+def uniform_reservoir_indices(length, quota, rng):
+    """Choose a reproducible uniform sample without a second full-size copy."""
+    if quota >= length:
+        return np.arange(length, dtype=np.int64)
+    rows = np.arange(quota, dtype=np.int64)
+    for index in range(quota, length):
+        replacement = int(rng.integers(index + 1))
+        if replacement < quota:
+            rows[replacement] = index
+    return rows
+
+
+def collect(paths, quota, seed, source_samples=None):
     rng = np.random.default_rng(seed)
     selected = []
     report = []
@@ -54,7 +66,9 @@ def collect(paths, quota, seed):
             actions = data['actions']
             episode_seeds = data['episodeSeeds']
             rotations = data['rotations']
-            indices = reservoir_indices(episode_seeds, actions, quota, rng)
+            indices = (uniform_reservoir_indices(len(actions), source_samples[len(report)], rng)
+                       if source_samples is not None
+                       else reservoir_indices(episode_seeds, actions, quota, rng))
             selected.append((
                 observations[indices].copy(), actions[indices].copy(),
                 episode_seeds[indices].copy(), rotations[indices].copy(),
@@ -72,6 +86,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--samples-per-seed-action', type=int, default=8)
+    parser.add_argument('--source-samples', type=int, nargs='+',
+                        help='A conservative uniform sample count for each source, preserving source mix.')
     parser.add_argument('--seed', type=int, default=123)
     parser.add_argument('data', type=Path, nargs='+')
     args = parser.parse_args()
@@ -79,11 +95,13 @@ def main():
         parser.error('Provide at least two navigation datasets')
     if args.samples_per_seed_action < 1:
         parser.error('--samples-per-seed-action must be positive')
+    if args.source_samples and (len(args.source_samples) != len(args.data) or min(args.source_samples) < 1):
+        parser.error('--source-samples needs one positive count for every source')
     if args.out.exists():
         parser.error('Output directory already exists')
     manifest = validate_manifests(args.data)
     (observations, actions, episode_seeds, rotations), report = collect(
-        args.data, args.samples_per_seed_action, args.seed,
+        args.data, args.samples_per_seed_action, args.seed, args.source_samples,
     )
     args.out.mkdir(parents=True)
     np.savez_compressed(args.out / 'demonstrations.npz', observations=observations,
@@ -97,8 +115,11 @@ def main():
     output.update({
         'trainingSeeds': sorted(set(map(int, episode_seeds))),
         'samples': int(len(actions)),
-        'selection': 'Per-source reservoir sampling balanced by episode seed and local action.',
+        'selection': ('Uniform per-source reservoir sampling preserving source mix.'
+                      if args.source_samples else
+                      'Per-source reservoir sampling balanced by episode seed and local action.'),
         'samplesPerSeedAction': args.samples_per_seed_action,
+        'sourceSamplesRequested': args.source_samples,
         'selectionSeed': args.seed,
         'sourceNavigationDatasets': source_hashes,
         'sources': report,
