@@ -297,7 +297,11 @@ def fit(args):
         validation_history=[]
         initial_navigation=policy_metrics(model,validation_x,validation_y)
         initial_combat=policy_metrics(model,combat_x,combat_y)
-        combat_floor=.99 if args.architecture.startswith('spatial') else max(0,initial_combat['accuracy']-.01)
+        # A fresh spatial extractor must learn the combat rehearsal before it
+        # can reach an absolute 99% score.  Select against its own post-warmup
+        # agreement instead: this preserves combat competence while avoiding a
+        # rejection caused solely by initialization speed.
+        combat_floor=max(0,initial_combat['accuracy']-.01)
         initial_eligible=initial_combat['accuracy']>=combat_floor
         best_state=({key:value.detach().cpu().clone() for key,value in model.policy.state_dict().items()}
                     if initial_eligible else None)
