@@ -78,13 +78,15 @@ def main():
     parser.add_argument('--seeds', type=int, default=8)
     parser.add_argument('--seed-start', type=int, default=0)
     parser.add_argument('--budget', type=int, default=2048)
+    parser.add_argument('--pool', choices=['training', 'held-out'], default='held-out')
     args = parser.parse_args()
-    if not 1 <= args.seeds <= 32 or not 0 <= args.seed_start <= 32 - args.seeds:
-        parser.error('Held-out seed slice must stay within 32 seeds')
+    pool_size = 64 if args.pool == 'training' else 32
+    if not 1 <= args.seeds <= pool_size or not 0 <= args.seed_start <= pool_size - args.seeds:
+        parser.error('Seed slice exceeds the declared pool')
     if not 1 <= args.budget <= 10000:
         parser.error('Budget must be in 1..10000')
     args.out.mkdir(parents=True, exist_ok=False)
-    seeds = seed_plan('held-out', 32)[args.seed_start:args.seed_start + args.seeds]
+    seeds = seed_plan(args.pool, pool_size)[args.seed_start:args.seed_start + args.seeds]
     env = DungeonEnv(args.out / 'evaluation', budget=args.budget)
     env.phase = 'dungeon-baseline-evaluation'
     collect = {'observations': [], 'actions': [], 'episode_ids': []}
@@ -100,7 +102,7 @@ def main():
             'controller': 'programmed-baseline',
             'teacherVersion': env.page.evaluate('() => AgentBaseline.Policy.version'),
             'teacherSha256': hashlib.sha256((ROOT / 'agent-baseline.js').read_bytes()).hexdigest(),
-            'heldOutSeeds': [actual_seed(seed) for seed in seeds], 'budget': args.budget,
+            'seedPool': args.pool, 'episodeSeeds': [actual_seed(seed) for seed in seeds], 'budget': args.budget,
             'samples': len(collect['actions']), 'episodes': len(rows),
             'labelBoundary': 'Directional actions selected through restricted player perception; outcomes retained separately.',
         }
