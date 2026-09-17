@@ -449,13 +449,15 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
         if safety_shield: label='shielded-'+label
         env.phase='dungeon-'+label+'-evaluation'
         if baseline_fallback:
-            env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
             env.transition_callback=lambda before,action,after,result: env.page.evaluate(
                 '''([before,action,after,info]) => navigationFallback.feedback(before,action,after,info)''',
                 [before,action,after,{'recorded':result['recorded'],'turnDelta':result['turnDelta']}])
         for seed in seeds:
             obs,_=env.reset(options={'episodeSeed':seed})
             if baseline_fallback:
+                # DungeonEnv deliberately recycles the browser page periodically.
+                # Install the fallback on the current page after every reset.
+                env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
                 env.page.evaluate('() => { window.navigationFallback = new AgentBaseline.Policy(); }')
             rejected={}
             learner_decisions=0; fallback_decisions=0
@@ -558,7 +560,7 @@ def main():
     parser.add_argument('--envs',type=int,choices=[1,2,4,8],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
     parser.add_argument('--eval-seed-start',type=int,default=0)
-    parser.add_argument('--evaluation-set',choices=['standard','sampled','planner','all'],default='standard',
+    parser.add_argument('--evaluation-set',choices=['standard','deterministic','sampled','planner','all'],default='standard',
                         help='Policy families to evaluate; planner results are always labeled as assisted')
     parser.add_argument('--baseline-fallback',action='store_true',
                         help='During evaluation, use the restricted-perception baseline when no tactical state or A* route is active')
@@ -684,7 +686,7 @@ def main():
                     planner=[('planner-filtered-deterministic',model,True,True,True),
                              ('planner-filtered-sampled',model,False,True,True)]
                     sampled=[standard[0],standard[2],standard[4]]
-                    policies={'standard':standard,'sampled':sampled,'planner':planner,
+                    policies={'standard':standard,'deterministic':[standard[1]],'sampled':sampled,'planner':planner,
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
