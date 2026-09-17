@@ -42,6 +42,8 @@ class DungeonTests(unittest.TestCase):
                          (True,'safe-baseline-consensus'))
         self.assertEqual(shield_assessment(operator,'up',{'type':'Move','direction':'left'}),
                          (False,'baseline-disagreement'))
+        self.assertEqual(shield_assessment(operator,'up',{'type':'Move','direction':'left'},False),
+                         (True,'safe-preview'))
         self.assertEqual(shield_assessment(operator,'right',{'type':'Move','direction':'right'}),
                          (False,'known-damage'))
         self.assertEqual(shield_assessment(operator,'down',{'type':'Move','direction':'down'}),

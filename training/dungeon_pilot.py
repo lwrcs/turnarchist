@@ -137,12 +137,12 @@ def world_direction(action,rotation):
     return ACTIONS[world_action(int(action),rotation)]['direction']
 
 
-def shield_assessment(operator,direction,baseline):
-    """Fail closed unless a learned move is immediately safe and teacher-approved.
+def shield_assessment(operator,direction,baseline,require_consensus=True):
+    """Fail closed unless a learned move is immediately safe.
 
     The operator preview is authoritative only for the current enemy response.  It
     cannot prove that a different safe-looking position remains strategically
-    sound on later turns, so initial deployment also requires baseline consensus.
+    sound on later turns, so protected deployment defaults to baseline consensus.
     """
     move=next((row for row in operator.get('tactical',{}).get('moves',[])
                if row.get('direction')==direction),None)
@@ -150,6 +150,7 @@ def shield_assessment(operator,direction,baseline):
     consequence=move.get('consequence') or {}
     if consequence.get('unknownDamageSources',0): return False,'unknown-damage'
     if (consequence.get('knownIncomingDamageBeforeDefense') or 0)>0: return False,'known-damage'
+    if not require_consensus: return True,'safe-preview'
     if not baseline or baseline.get('type')!='Move': return False,'missing-baseline'
     if baseline.get('direction')!=direction: return False,'baseline-disagreement'
     return True,'safe-baseline-consensus'
@@ -437,7 +438,8 @@ def make_env(out,budget,seeds,offset):
 
 
 def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,planner_assist=False,
-                      baseline_fallback=False,model_confidence=0,safety_shield=False):
+                      baseline_fallback=False,model_confidence=0,safety_shield=False,
+                      safety_shield_mode='consensus'):
     rows=[]
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(987)
@@ -476,7 +478,8 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                     fallback=env.page.evaluate('(view) => navigationFallback.choose(view)',env.view)
                     direction=world_direction(candidate,env.rotation) if candidate is not None else None
                     operator=env.page.evaluate('() => window.agent.inspectOperator()')
-                    accepted,reason=shield_assessment(operator,direction,fallback)
+                    accepted,reason=shield_assessment(
+                        operator,direction,fallback,safety_shield_mode=='consensus')
                     if accepted:
                         action=candidate; env.controller='shielded-learner'
                         learner_decisions+=1; shield_accepted+=1
@@ -538,7 +541,10 @@ def evaluate_dungeons(env,model,seeds,deterministic=True,filter_rejected=False,p
                         info['learnerDecisions']=learner_decisions
                         info['fallbackDecisions']=fallback_decisions
                     if safety_shield:
-                        info['safetyShield']='zero-known-damage, zero-unknown-damage, and restricted-perception baseline consensus'
+                        info['safetyShieldMode']=safety_shield_mode
+                        info['safetyShield']=('zero-known-damage, zero-unknown-damage, and restricted-perception baseline consensus'
+                            if safety_shield_mode=='consensus' else
+                            'zero-known-damage and zero-unknown-damage; safe alternatives may disagree with the baseline')
                         info['shieldAcceptedDecisions']=shield_accepted
                         info['shieldRejectedDecisions']=dict(shield_rejected)
                     rows.append({**info,'trace':list(env.trace)})
@@ -567,7 +573,9 @@ def main():
     parser.add_argument('--model-confidence',type=float,default=0,
                         help='With baseline fallback, defer tactical states below this maximum action probability')
     parser.add_argument('--safety-shield',action='store_true',
-                        help='Require damage-safe baseline consensus before a learned tactical move executes')
+                        help='Gate learned tactical moves using the selected game-safety shield mode')
+    parser.add_argument('--safety-shield-mode',choices=['consensus','preview'],default='consensus',
+                        help='Consensus requires teacher agreement; preview permits any move with zero predicted damage')
     parser.add_argument('--learning-rate',type=float,help='Explicit training override; recorded in manifest')
     parser.add_argument('--rehearsal-navigation',type=Path)
     parser.add_argument('--rehearsal-combat',type=Path)
@@ -586,6 +594,8 @@ def main():
         parser.error('Model confidence must be in [0,1] and requires baseline fallback')
     if args.safety_shield and not args.baseline_fallback:
         parser.error('Safety shield requires baseline fallback')
+    if args.safety_shield_mode!='consensus' and not args.safety_shield:
+        parser.error('Nondefault safety-shield mode requires safety shield')
     if bool(args.rehearsal_navigation)!=bool(args.rehearsal_combat) or (args.rehearsal_navigation and not (args.resume or args.from_combat)):
         parser.error('Both rehearsal datasets are required and only supported for training')
     if (not 0<args.rehearsal_rate<=.001) or (args.rehearsal_rate!=.001 and not args.rehearsal_navigation):
@@ -618,7 +628,9 @@ def main():
             manifest['evaluationScaffolding']={'baselineFallback':args.baseline_fallback,
                 'modelConfidenceThreshold':args.model_confidence,
                 'safetyShield':args.safety_shield,
-                'boundary':'Restricted-perception programmed baseline controls calm states where bounded A* has no route. The optional shield requires immediate damage safety and baseline consensus for learned tactical moves.'}
+                'safetyShieldMode':args.safety_shield_mode,
+                'boundary':('Restricted-perception programmed baseline controls calm states where bounded A* has no route. '
+                    'The optional shield always requires immediate damage safety and, in consensus mode, baseline agreement.')}
         (args.out/'manifest.json').write_text(json.dumps(manifest,indent=2))
         ready=time.perf_counter()
         if args.benchmark:
@@ -690,7 +702,8 @@ def main():
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
-                                               args.baseline_fallback,args.model_confidence,args.safety_shield)
+                                               args.baseline_fallback,args.model_confidence,args.safety_shield,
+                                               args.safety_shield_mode)
                         (args.out/f'{name}-evaluation.json').write_text(json.dumps(rows,indent=2))
                     assert model.num_timesteps==before
                     report={'mode':'dungeon-evaluation','trainingSteps':before,'episodes':len(policies)*len(test_seeds)}
