@@ -22,7 +22,7 @@
   <body>
     <main id="gate" aria-labelledby="title">
       <h1 id="title">Seclunion</h1>
-      <p>Private preview access.</p>
+      <p>Seclunion playtest access.</p>
       <form id="unlock-form">
         <label for="pin">Access PIN<input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]*" required autofocus /></label>
         <button id="unlock" type="submit">Open preview</button>
@@ -31,9 +31,9 @@
     </main>
     <script>
       (() => {
-        const storageKey = 'turnarchist.seclunion.preview.unlocked.v1';
+        const storageKey = 'turnarchist.seclunion.preview.unlocked.20260917';
         const salt = '883447ae24238862822af0d3ddc651d2';
-        const expected = 'fd168952ca34ee2c8911c6d05514837bf1a0d02ec41a023e366f9c44016eaf3e';
+        const expected = '7a5e466d75d02d37856cd51b105c29722d8864605a9d560b5313db49d6d0a3c4';
         const gate = document.getElementById('gate');
         const form = document.getElementById('unlock-form');
         const input = document.getElementById('pin');
@@ -53,11 +53,11 @@
           }
           const stylesheet = document.createElement('link');
           stylesheet.rel = 'stylesheet';
-          stylesheet.href = './assets/index-BCFB9rU7.css';
+          stylesheet.href = './assets/index-FDKi9hl3.css';
           document.head.append(stylesheet);
           const app = document.createElement('script');
           app.type = 'module';
-          app.src = './assets/index-D9XG00AH.js';
+          app.src = './assets/index--FBLvUn7.js';
           document.head.append(app);
         };
 

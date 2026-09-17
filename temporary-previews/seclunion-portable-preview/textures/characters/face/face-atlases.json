@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "format": "straight-alpha RGBA PNG; sRGB colour; transparent pixels contain no matte/checkerboard",
+  "cellSize": [
+    256,
+    256
+  ],
+  "characters": {
+    "female": {
+      "eyes": {
+        "file": "female-eyes-atlas.png",
+        "states": {
+          "open": [
+            0,
+            0,
+            256,
+            256
+          ],
+          "half": [
+            256,
+            0,
+            256,
+            256
+          ],
+          "closed": [
+            512,
+            0,
+            256,
+            256
+          ]
+        },
+        "audit": {
+          "mode": "RGBA",
+          "width": 768,
+          "height": 256,
+          "transparentPixels": 171710,
+          "partialAlphaPixels": 9380,
+          "opaquePixels": 15518,
+          "sha256": "a2acb50b9fc10ac7be4f16ed721800c1a99d34a06d76cbeb8a082c71be8e2bf5"
+        }
+      },
+      "mouth": {
+        "file": "female-mouth-atlas.png",
+        "states": {
+          "neutral": [
+            0,
+            0,
+            256,
+            256
+          ],
+          "happy": [
+            256,
+            0,
+            256,
+            256
+          ],
+          "sad": [
+            512,
+            0,
+            256,
+            256
+          ],
+          "surprised": [
+            768,
+            0,
+            256,
+            256
+          ]
+        },
+        "audit": {
+          "mode": "RGBA",
+          "width": 1024,
+          "height": 256,
+          "transparentPixels": 257065,
+          "partialAlphaPixels": 2346,
+          "opaquePixels": 2733,
+          "sha256": "d96f99490d38613884bc87917f4381f650bf3e09a71bc36b68d18867b397ea41"
+        }
+      }
+    },
+    "male": {
+      "eyes": {
+        "file": "male-eyes-atlas.png",
+        "states": {
+          "open": [
+            0,
+            0,
+            256,
+            256
+          ],
+          "half": [
+            256,
+            0,
+            256,
+            256
+          ],
+          "closed": [
+            512,
+            0,
+            256,
+            256
+          ]
+        },
+        "audit": {
+          "mode": "RGBA",
+          "width": 768,
+          "height": 256,
+          "transparentPixels": 171376,
+          "partialAlphaPixels": 8722,
+          "opaquePixels": 16510,
+          "sha256": "14f1580046d7a232c54ea989ebe3542dc4e96fd2787eb4333120402c6f35425c"
+        }
+      },
+      "mouth": {
+        "file": "male-mouth-atlas.png",
+        "states": {
+          "neutral": [
+            0,
+            0,
+            256,
+            256
+          ],
+          "happy": [
+            256,
+            0,
+            256,
+            256
+          ],
+          "sad": [
+            512,
+            0,
+            256,
+            256
+          ],
+          "surprised": [
+            768,
+            0,
+            256,
+            256
+          ]
+        },
+        "audit": {
+          "mode": "RGBA",
+          "width": 1024,
+          "height": 256,
+          "transparentPixels": 256816,
+          "partialAlphaPixels": 2346,
+          "opaquePixels": 2982,
+          "sha256": "f31b1d877d50e882fdd07094cd40aa56ad11b246b26af886957be65692a01db9"
+        }
+      }
+    }
+  }
+}
