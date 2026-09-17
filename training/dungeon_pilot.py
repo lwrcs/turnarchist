@@ -566,7 +566,7 @@ def main():
     parser.add_argument('--envs',type=int,choices=[1,2,4,8],default=2)
     parser.add_argument('--eval-seeds',type=int,default=8)
     parser.add_argument('--eval-seed-start',type=int,default=0)
-    parser.add_argument('--evaluation-set',choices=['standard','deterministic','sampled','planner','all'],default='standard',
+    parser.add_argument('--evaluation-set',choices=['standard','deterministic','filtered-deterministic','sampled','planner','all'],default='standard',
                         help='Policy families to evaluate; planner results are always labeled as assisted')
     parser.add_argument('--baseline-fallback',action='store_true',
                         help='During evaluation, use the restricted-perception baseline when no tactical state or A* route is active')
@@ -698,7 +698,8 @@ def main():
                     planner=[('planner-filtered-deterministic',model,True,True,True),
                              ('planner-filtered-sampled',model,False,True,True)]
                     sampled=[standard[0],standard[2],standard[4]]
-                    policies={'standard':standard,'deterministic':[standard[1]],'sampled':sampled,'planner':planner,
+                    policies={'standard':standard,'deterministic':[standard[1]],
+                              'filtered-deterministic':[standard[3]],'sampled':sampled,'planner':planner,
                               'all':standard+planner}[args.evaluation_set]
                     for name,policy,deterministic,filtered,planner in policies:
                         rows=evaluate_dungeons(evaluation,policy,test_seeds,deterministic,filtered,planner,
