@@ -17,13 +17,17 @@ from select_baseline_dungeon_data import evenly_spaced_rows
 
 def validate_model(path,contract):
     manifest=json.loads((path.parent/'manifest.json').read_text())
-    for key,expected in [('encoder',ENCODER),('reward',REWARD),('helper',HELPER),('gameContract',contract)]:
+    expected_values=[('encoder',ENCODER),('reward',REWARD),('helper',HELPER)]
+    if contract is not None: expected_values.append(('gameContract',contract))
+    for key,expected in expected_values:
         if manifest.get(key)!=expected: raise ValueError('Tactical learner contract mismatch: '+key)
     return manifest
 
 
-def collect_episode(env,model,episode_seed,cap):
+def collect_episode(env,model,episode_seed,cap,expected_contract):
     observation,_=env.reset(options={'episodeSeed':episode_seed})
+    if env.contract!=expected_contract:
+        raise ValueError('Tactical learner contract mismatch: gameContract')
     if not env.page.evaluate('() => typeof AgentBaseline !== "undefined"'):
         env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
     env.page.evaluate('() => { window.tacticalTeacher = new AgentBaseline.Policy(); }')
@@ -101,12 +105,14 @@ def main():
     env=DungeonEnv(args.out/'evaluation',budget=args.budget)
     env.phase='dungeon-tactical-dagger-collection'
     try:
-        source=validate_model(args.model,env.contract)
+        # The live browser contract is populated by reset, so validate its
+        # static parts now and compare gameContract at each episode boundary.
+        source=validate_model(args.model,None)
         model=PPO.load(args.model,device='cpu')
         seeds=seed_plan('training',64)[args.seed_start:args.seed_start+args.seeds]
         xs=[];ys=[];example_seeds=[];rotations=[];outcomes=[]
         for seed in seeds:
-            x,y,result=collect_episode(env,model,seed,args.per_episode_cap)
+            x,y,result=collect_episode(env,model,seed,args.per_episode_cap,source['gameContract'])
             xs.append(x);ys.append(y)
             example_seeds.append(np.full(len(y),seed,dtype=np.uint32))
             rotations.append(np.full(len(y),result['rotation'],dtype=np.uint8))
