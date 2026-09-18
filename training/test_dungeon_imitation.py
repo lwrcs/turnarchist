@@ -3,7 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 import numpy as np
-from dungeon_imitation import navigation_example,planner_state_example,load_navigation,load_navigation_provenance,split_navigation_seeds
+from dungeon_imitation import (navigation_example,exploration_example,planner_state_example,
+                               load_navigation,load_navigation_provenance,split_navigation_seeds)
 from dungeon_pilot import ENCODER,REWARD,HELPER,OBS_SIZE,seed_plan
 from test_dungeon_pilot import view
 
@@ -27,6 +28,14 @@ class NavigationTests(unittest.TestCase):
         self.assertTrue(planner_state_example(before))
         before['room']['hitWarnings']=[{'hostile':True,'dangerous':True}]
         self.assertFalse(planner_state_example(before))
+
+    def test_exploration_keeps_safe_first_visits_but_not_baseline_loops(self):
+        before=view(); after=view(1)
+        transition={'controller':'teacher','action':{'type':'Move','direction':'right'},'recorded':True}
+        self.assertTrue(exploration_example(before,after,transition,{('a',0,0)}))
+        self.assertFalse(exploration_example(before,after,transition,{('a',0,0),('a',1,0)}))
+        after['room']['entities']=[{'isEnemy':True}]
+        self.assertFalse(exploration_example(before,after,transition,{('a',0,0)}))
 
     def test_dataset_requires_training_seeds_and_four_legal_actions(self):
         with tempfile.TemporaryDirectory() as tmp:
