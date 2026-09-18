@@ -734,10 +734,10 @@ def initialize_from_combat(source_path,source_manifest,env,workers):
     return model
 
 
-def initialize_spatial(env,workers,local_detail=False):
+def initialize_spatial(env,workers,local_detail=False,seed=123):
     extractor=SpatialDungeonExtractorV2 if local_detail else SpatialDungeonExtractor
     return PPO('MlpPolicy',env,n_steps=256//workers,batch_size=64,n_epochs=4,
-               learning_rate=3e-5,ent_coef=.01,target_kl=.01,seed=123,device='cpu',
+               learning_rate=3e-5,ent_coef=.01,target_kl=.01,seed=seed,device='cpu',
                policy_kwargs={'features_extractor_class':extractor,
                               'features_extractor_kwargs':{'features_dim':128},
                               'net_arch':{'pi':[128],'vf':[128]}},verbose=1)
