@@ -12,7 +12,7 @@ from combat_pilot import SIZE, GRID, CENTER, encode
 from dungeon_pilot import (DungeonEnv, ExplorationMemory, helper_action, seed_plan, actual_seed,
                            OBS_SIZE, transfer_actor, navigation_features, policy_action, planner_action,
                            SpatialDungeonExtractor,SpatialDungeonExtractorV2,tactical_view,
-                           world_direction,shield_assessment)
+                           world_direction,shield_assessment,baseline_consensus)
 
 
 def view(x=0,y=0,room='a',health=2):
@@ -52,6 +52,12 @@ class DungeonTests(unittest.TestCase):
                          (False,'missing-preview'))
         self.assertEqual(world_direction(0,0),'up')
         self.assertEqual(world_direction(0,1),'right')
+
+    def test_calm_navigation_requires_exact_baseline_action(self):
+        baseline={'type':'Move','direction':'left'}
+        self.assertEqual(baseline_consensus('left',baseline),(True,'baseline-consensus'))
+        self.assertEqual(baseline_consensus('up',baseline),(False,'baseline-disagreement'))
+        self.assertEqual(baseline_consensus('left',None),(False,'baseline-disagreement'))
 
     def test_spatial_extractor_preserves_batch_shape_with_bounded_parameters(self):
         space=type('Space',(),{'shape':(OBS_SIZE,)})()
