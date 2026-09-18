@@ -269,6 +269,10 @@ def fit(args):
     if checkpoint['encoder']!=ROTATED_ENCODER: raise ValueError('Legal rotated combat checkpoint required')
     combat_x=np.pad(combat_x,((0,0),(0,OBS_SIZE-SIZE*2)))
     torch.set_num_threads(4)
+    # The spatial policy is created from scratch.  Its initialization must be
+    # part of the experiment contract, otherwise a candidate comparison also
+    # compares accidental PyTorch RNG state from earlier processes.
+    torch.manual_seed(args.seed)
     env=DummyVecEnv([Spaces]*args.envs)
     try:
         model=(initialize_spatial(env,args.envs,args.architecture=='spatial-local')
@@ -355,6 +359,7 @@ def fit(args):
                   'architecture':args.architecture,
                   'combatPretrainUpdates':args.combat_pretrain_updates,
                   'imitationLearningRate':args.imitation_learning_rate,
+                  'randomSeed':args.seed,
                   'navigationSamples':len(x),'navigationTrainingSamples':len(train_x),
                   'navigationValidationSamples':len(validation_x),'combatSamples':len(combat_x),
                   'navigationTrainingSeeds':training_seeds,'navigationValidationSeeds':validation_seeds,
@@ -398,9 +403,12 @@ if __name__=='__main__':
     parser.add_argument('--combat-batch',type=int,choices=[32,64,96,128],default=32)
     parser.add_argument('--combat-pretrain-updates',type=int,default=0)
     parser.add_argument('--imitation-learning-rate',type=float,default=3e-5)
+    parser.add_argument('--seed',type=int,default=123,
+                        help='PyTorch initialization seed for reproducible fit candidates')
     args=parser.parse_args()
     if (not 1<=args.seeds<=64 or not 1<=args.budget<=10000 or not 1<=args.updates<=10000
             or not 0<=args.combat_pretrain_updates<=10000
+            or not 0<=args.seed<2**31
             or not math.isfinite(args.imitation_learning_rate)
             or not 0<args.imitation_learning_rate<=1e-2): parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
