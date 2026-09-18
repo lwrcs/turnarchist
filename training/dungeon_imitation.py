@@ -183,6 +183,14 @@ def collect(args):
             print(json.dumps(outcomes[-1]),flush=True)
             (args.out/'recoveries.json').write_text(json.dumps(recoveries,indent=2))
             (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
+            # A browser world retains room and render data across resets.  Recycle
+            # it between episodes so long collections stay within the desktop's
+            # WSL memory limit instead of accumulating one full world per seed.
+            if episode_seed!=collection_seeds[-1]:
+                env.close()
+                env=DungeonEnv(args.out,budget=args.budget)
+                env.controller='teacher'
+                env.phase='dungeon-navigation-demonstration'
         (args.out/'recoveries.json').write_text(json.dumps(recoveries,indent=2))
         (args.out/'outcomes.json').write_text(json.dumps(outcomes,indent=2))
         if not xs: raise RuntimeError('No navigation examples collected; diagnostic outcomes preserved')
