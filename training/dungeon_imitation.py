@@ -275,7 +275,7 @@ def fit(args):
     torch.manual_seed(args.seed)
     env=DummyVecEnv([Spaces]*args.envs)
     try:
-        model=(initialize_spatial(env,args.envs,args.architecture=='spatial-local')
+        model=(initialize_spatial(env,args.envs,args.architecture=='spatial-local',seed=args.seed)
                if args.architecture.startswith('spatial')
                else initialize_from_combat(args.from_combat,checkpoint,env,args.envs))
         for group in model.policy.optimizer.param_groups:
