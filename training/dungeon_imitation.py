@@ -37,6 +37,25 @@ def navigation_example(before,after,transition):
                 (after['room']['id'],after['player']['x'],after['player']['y']))
 
 
+def exploration_example(before,after,transition,seen_positions):
+    """Keep a teacher exploration move only when it safely reaches new ground.
+
+    The baseline is deliberately excluded from ordinary navigation data because
+    it can harmlessly cycle when no frontier hint is visible.  Its first visits
+    are different: they add demonstrable exploration coverage without encoding
+    a back-and-forth loop as the desired policy.
+    """
+    destination=(after['room']['id'],after['player']['x'],after['player']['y'])
+    return (transition['controller']=='teacher' and transition['action']['type']=='Move'
+            and transition['recorded'] and before['decision']=='world'
+            and not any(e.get('isEnemy') or e.get('appearance')=='unidentified' for e in before['room']['entities'])
+            and not any(w.get('hostile') and w.get('dangerous', True)
+                        for w in before['room']['hitWarnings'])
+            and not any(e.get('isEnemy') or e.get('appearance')=='unidentified' for e in after['room']['entities'])
+            and after['player']['health']>=before['player']['health']
+            and destination not in seen_positions)
+
+
 def planner_state_example(before):
     """A calm state for which the bounded A* teacher supplied a direction.
 
@@ -75,6 +94,7 @@ def collect(args):
     collection_seeds=training_seed_slice(getattr(args,'seed_start',0),args.seeds)
     recovery_model=getattr(args,'recovery_model',None)
     dagger_model=getattr(args,'dagger_model',None)
+    include_teacher_exploration=getattr(args,'include_teacher_exploration',False)
     recoveries=[]
     try:
         torch.set_num_threads(4)
@@ -87,6 +107,7 @@ def collect(args):
                 for key,expected in [('encoder',ENCODER),('reward',REWARD),('helper',HELPER),('gameContract',env.contract)]:
                     if source[key]!=expected: raise ValueError('Recovery checkpoint mismatch: '+key)
             recovery_left=0; recovery=None
+            seen_positions={(env.view['room']['id'],env.view['player']['x'],env.view['player']['y'])}
             if not env.page.evaluate('() => typeof AgentBaseline !== "undefined"'):
                 env.page.add_script_tag(path=str(ROOT/'agent-baseline.js'))
             env.page.evaluate('() => {window.navigationTeacher=new AgentBaseline.Policy()}')
@@ -141,10 +162,16 @@ def collect(args):
                     xs.append(obs.copy()); ys.append(label)
                     example_seeds.append(episode_seed); example_rotations.append(env.rotation)
                     if recovery_left: recovery['samples']+=1
-                elif transitions and navigation_example(*transitions[0]):
-                    xs.append(obs.copy()); ys.append(local)
-                    example_seeds.append(episode_seed); example_rotations.append(env.rotation)
-                    if recovery_left: recovery['samples']+=1
+                elif transitions:
+                    transition=transitions[0]
+                    keep=(include_teacher_exploration and
+                          exploration_example(*transition,seen_positions))
+                    keep |= navigation_example(*transition)
+                    if keep:
+                        xs.append(obs.copy()); ys.append(local)
+                        example_seeds.append(episode_seed); example_rotations.append(env.rotation)
+                        if recovery_left: recovery['samples']+=1
+                    seen_positions.add((transition[1]['room']['id'],transition[1]['player']['x'],transition[1]['player']['y']))
                 if recovery_left:
                     recovery_left-=1; recovery['teacherSteps']+=1
                     position=[env.view['room']['id'],env.view['player']['x'],env.view['player']['y']]
@@ -166,7 +193,10 @@ def collect(args):
         manifest={'encoder':ENCODER,'reward':REWARD,'helper':HELPER,'gameContract':env.contract,
                   'trainingSeeds':collection_seeds,'samples':len(xs),
                   'teacherSha256':hashlib.sha256((ROOT/'agent-baseline.js').read_bytes()).hexdigest(),
-                  'selection':'Recorded, changed-position, threat-free directional steps that followed the safe A* frontier hint; baseline fallback steps are excluded.'}
+                  'selection':('Recorded, changed-position, threat-free directional steps that followed the safe A* frontier hint; '
+                               'baseline fallback steps are excluded.' if not include_teacher_exploration else
+                               'Safe A* frontier steps plus threat-free baseline moves that reached a first-visited tile; '
+                               'baseline revisits are excluded to avoid teaching cycles.')}
         if recovery_model:
             manifest['recovery']={'version':1,'source':str(recovery_model),
                 'sourceSha256':hashlib.sha256(recovery_model.read_bytes()).hexdigest(),
@@ -397,6 +427,8 @@ if __name__=='__main__':
     parser.add_argument('--from-combat',type=Path)
     parser.add_argument('--recovery-model',type=Path,help='Collect teacher recoveries after deterministic learner doorway cycles')
     parser.add_argument('--dagger-model',type=Path,help='Collect bounded-A* labels at calm states visited by this learner')
+    parser.add_argument('--include-teacher-exploration',action='store_true',
+                        help='Also record safe baseline moves that reach a first-visited tile')
     parser.add_argument('--envs',type=int,choices=[1,2,4],default=2)
     parser.add_argument('--updates',type=int,default=2000)
     parser.add_argument('--architecture',choices=['inherited-mlp','spatial','spatial-local'],default='inherited-mlp')
@@ -413,6 +445,7 @@ if __name__=='__main__':
             or not 0<args.imitation_learning_rate<=1e-2): parser.error('Invalid experiment bounds')
     if args.mode=='collect' and (args.seed_start<0 or args.seed_start+args.seeds>64): parser.error('Collection seed range exceeds training pool')
     if (args.recovery_model or args.dagger_model) and args.mode!='collect': parser.error('Recovery and DAgger models are collection only')
+    if args.include_teacher_exploration and args.mode!='collect': parser.error('Teacher exploration is collection only')
     if args.recovery_model and args.dagger_model: parser.error('Choose either recovery collection or DAgger collection')
     if args.mode=='fit' and not all([args.data,args.combat_data,args.from_combat]): parser.error('Fit requires both datasets and a combat checkpoint')
     args.out.mkdir(parents=True,exist_ok=False)
