@@ -1,9 +1,5 @@
-# Autumn preview — 2026-09-17
+# Autumn preview — 2026-09-18
 
-Built from the current local Seclunion client. Includes the current character assets, two individual deciduous birch types, four flower patches, four pumpkins, ground 4x model upscale, normal/depth maps, day-dependent atmosphere and shared foliage gusts.
+Complete production build from the current Seclunion client, including the updated jack-o'-lantern emission, corrected pumpkin normals, depth-driven skin transmission, local bloom, and the saved developer light-source editor.
 
-Production build and 17 environment/contact/grass tests passed. Local browser checked. The generated foundation is not pixel-identical to the original; visual tuning is still needed. Existing prop placement data is preserved. Broader maple/oak variants remain draft assets and are not included.
-
-Entry PIN is a casual client-side playtest gate, not secure authentication. This static deployment has no authoritative editor write API; edits use existing browser-local fallback. Local development retains the write API.
-
-Ground upscale: 4x-ClearRealityV1_Soft, no diffusion. Normal maps: DSINE OpenGL +Y, preserved sprite alpha. Ground maps regenerated at 1254 square after correcting a no-alpha mask fallback. Ground diffuse is 5016 square.
+This static deployment retains the existing casual PIN gate (PIN: `637`). Editor changes use the browser-local fallback; the local development server retains project-layout saves.
