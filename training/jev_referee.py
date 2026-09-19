@@ -281,7 +281,10 @@ def combat_pressure(packet: dict[str, Any]) -> tuple[bool, str | None]:
     threat = packet.get("currentThreat") if isinstance(packet.get("currentThreat"), dict) else {}
     known = _number(threat.get("knownIncomingDamageBeforeDefense")) or 0
     unknown = int(threat.get("unknownDamageSources") or 0)
-    if known > 0 or unknown > 0:
+    # Unidentified but distant enemies are routine baseline territory. Escalate
+    # only for measured damage on the current tile; unknown damage is handled
+    # by the no-safe-action branch below.
+    if known > 0:
         return True, "current tile has immediate incoming damage"
     actions = packet.get("actions") if isinstance(packet.get("actions"), dict) else {}
     safe_actions = [action for action in actions.values()

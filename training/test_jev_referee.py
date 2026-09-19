@@ -81,6 +81,9 @@ class JevRefereeTests(unittest.TestCase):
                                                  'unknownDamageSources': 0})
         packet = build_packet(self.view(), state)
         self.assertEqual(combat_pressure(packet), (False, None))
+        state['tactical']['currentTile']['unknownDamageSources'] = 1
+        self.assertEqual(combat_pressure(build_packet(self.view(), state)), (False, None))
+        state['tactical']['currentTile']['unknownDamageSources'] = 0
         state['tactical']['currentTile']['knownIncomingDamageBeforeDefense'] = 1
         self.assertTrue(combat_pressure(build_packet(self.view(), state))[0])
 
