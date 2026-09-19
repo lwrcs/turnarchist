@@ -171,6 +171,37 @@ collection. Old checkpoints without this metadata are treated as single-worker.
 
 ## Baseline demonstrations and an imitation warm start
 
+## Jev tactical-referee pilot (offline, advisory only)
+
+`jev_referee.py` is a separate, bounded experiment for TypeSafe Jev. It does
+not replace the learned policy, the programmed baseline, A*, damage previews,
+or the action processor. It builds compact decision packets from
+`inspectOperator()`'s existing privileged demonstration view, asks Jev several
+typed questions in one request, and saves advice for later human/baseline
+comparison. It never executes Jev output directly.
+
+Collect real browser states using the programmed baseline first:
+
+```sh
+python training/jev_referee.py collect --out ~/turnarchist-training/jev-packets-001 \
+  --seeds 4 --budget 256 --max-packets 200
+```
+
+Then, with `TYPESAFE_API_KEY` configured only on the desktop training host,
+evaluate the saved packets:
+
+```sh
+python training/jev_referee.py evaluate \
+  --packets ~/turnarchist-training/jev-packets-001/packets.jsonl \
+  --out ~/turnarchist-training/jev-advice-001 --max-packets 200
+```
+
+The output records the full probability/confidence result, model usage, packet
+hash, proposed advisory action, and confidence gate. It intentionally does not
+store the API key. Any later live controller must reconstruct the current
+operator view, re-run safety/legality checks, and validate through
+`window.agent.step` immediately before acting.
+
 ```sh
 python training/collect_teacher.py --repeats 2 --out ~/turnarchist-training/teacher-001
 python training/imitate.py --data ~/turnarchist-training/teacher-001 --envs 2 --epochs 200 --out ~/turnarchist-training/imitation-001
