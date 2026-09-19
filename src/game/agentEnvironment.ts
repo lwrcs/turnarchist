@@ -310,6 +310,7 @@ export class AgentEnvironment {
       return {direction,target:{x,y},resolution:occupant?.pushable?"push-or-attack":attack?"attack":
         tile?.isDoor?"door-transition-or-door-interaction":tile instanceof DownLadder||tile instanceof UpLadder?"ladder":
         tile?.isSolid()?"blocked-or-interact":"move",staysInPlace,pushOutcome,occupantId:occupant?.id??null,
+        traversal:(tile as any)?.getTraversalTraits?.()??null,
         attack:{attempted:attack,minimumDamage:damage,killThreshold:threshold,killsBeforeEnemyResponse:kills,
           neutralizesThreatSource:kills&&neutralized>0},
         consequence:{landing,knownIncomingDamageBeforeDefense:knownDamage,unknownDamageSources:threats.unknownDamageSources,
@@ -327,6 +328,7 @@ export class AgentEnvironment {
       description:this.operatorDescription(tile)};});
     const pointsOfInterest=[
       ...tiles.filter(t=>t.isDoor||t.exit).map(t=>({id:`tile:${t.x},${t.y}`,kind:t.isDoor?"door":"ladder",x:t.x,y:t.y,
+        traversal:t.traversal,
         route:this.operatorPathTo(t.x,t.y,{allowOccupiedTarget:true})})),
       ...items.map(item=>({id:item.id,kind:"item",x:item.x,y:item.y,
         route:item.x!==null&&item.y!==null?this.operatorPathTo(item.x,item.y):null})),

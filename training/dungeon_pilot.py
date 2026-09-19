@@ -297,7 +297,8 @@ class DungeonEnv(CombatEnv):
           const tileAt=new Map(operator.room.tiles.map(t=>[`${t.x},${t.y}`,t]));
           const candidates=operator.pathfinding.pointsOfInterest.filter(point=>{
             const tile=tileAt.get(`${point.x},${point.y}`), traversal=tile?.traversal??{};
-            return point.route?.reachable && point.route.actions.length && traversal.unlocked!==false &&
+            return point.route?.reachable && point.route.actions.length &&
+              (traversal.unlocked!==false || traversal.unlockableFromHere===true) &&
               !usedSet.has(`${operator.room.id}:${point.x},${point.y}`);
           }).sort((a,b)=>a.route.actions.length-b.route.actions.length ||
             (a.kind==="door"?-1:1)-(b.kind==="door"?-1:1));

@@ -78,6 +78,23 @@ class JevRefereeTests(unittest.TestCase):
         invalid = operator(); invalid['privileged'] = False
         with self.assertRaisesRegex(ValueError, 'privileged'):
             build_packet(self.view(), invalid)
+
+    def test_locked_ladder_without_matching_key_is_not_a_candidate(self):
+        state = operator()
+        state['tactical']['moves'][1].update({
+            'resolution': 'ladder',
+            'traversal': {'kind': 'ladder', 'direction': 'down', 'unlocked': False,
+                          'unlockableFromHere': False},
+        })
+        state['pathfinding']['pointsOfInterest'].append({
+            'id': 'tile:9,11', 'kind': 'ladder', 'x': 9, 'y': 11,
+            'traversal': {'kind': 'ladder', 'direction': 'down', 'unlocked': False,
+                          'unlockableFromHere': False},
+            'route': {'reachable': True, 'actions': [{'type': 'Move', 'direction': 'right'}]},
+        })
+        packet = build_packet(self.view(), state)
+        self.assertNotIn('move_right', packet['actions'])
+        self.assertNotIn('target_tile:9-11', packet['objectives'])
         invalid = operator(); invalid['decision'] = 'vending'
         with self.assertRaisesRegex(ValueError, 'directional tactical'):
             build_packet(self.view(), invalid)

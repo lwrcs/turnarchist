@@ -105,6 +105,10 @@ def candidate_actions(operator: dict[str, Any]) -> dict[str, dict[str, Any]]:
         move = by_direction.get(direction)
         if not move:
             continue
+        traversal = move.get("traversal") if isinstance(move.get("traversal"), dict) else {}
+        if (move.get("resolution") == "ladder" and traversal.get("unlocked") is False and
+                traversal.get("unlockableFromHere") is not True):
+            continue
         # A bare solid wall is never a meaningful input choice.  Keep a solid
         # direction only when an occupant gives the normal action processor an
         # interaction to resolve (for example, a wall torch or destroyable).
@@ -155,6 +159,10 @@ def _objective_candidates(operator: dict[str, Any], limit: int = 12) -> dict[str
             return candidates
     for point in ((operator.get("pathfinding") or {}).get("pointsOfInterest") or []):
         if not isinstance(point, dict) or point.get("kind") not in {"door", "ladder"}:
+            continue
+        traversal = point.get("traversal") if isinstance(point.get("traversal"), dict) else {}
+        if (point.get("kind") == "ladder" and traversal.get("unlocked") is False and
+                traversal.get("unlockableFromHere") is not True):
             continue
         key = "target_" + _id(point.get("id"), "poi", len(candidates))
         route = point.get("route") if isinstance(point.get("route"), dict) else {}

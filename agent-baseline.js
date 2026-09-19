@@ -27,7 +27,7 @@
         for(const [door,room] of this.connections.get(node.room)??[]) {
           if(seen.has(room))continue;
           const tile=this.maps.get(node.room)?.get(door);
-          if(tile?.exit&&tile.traversal?.direction==='up'&&tile.traversal.unlocked===false)continue;
+          if(tile?.exit&&tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true)continue;
           if(tile?.traversal?.tunnel&&!tile.traversal.unlocked&&tile.traversal.unlockFromHere===false)continue;
           const [x,y]=door.split(',').map(Number);
           if([...this.obstacles.get(node.room)?.values()??[]].some(e=>occupies(e,x,y)&&e.collidable&&!e.destroyable))continue;
@@ -188,7 +188,7 @@
           const x=node.x+dx,y=node.y+dy,next=key(x,y),t=map.get(next);
           if(seen.has(next)||!t||(t.solid&&!t.isDoor)||threats.has(next))continue;
           if(t.traversal?.tunnel && !t.traversal.unlocked && t.traversal.unlockFromHere===false)continue;
-          if(t.exit&&t.traversal?.direction==='up'&&t.traversal.unlocked===false)continue;
+          if(t.exit&&t.traversal?.unlocked===false&&t.traversal?.unlockableFromHere!==true)continue;
           const occupied=occupants.get(next)??[];
           if(occupied.some(e=>e.appearance==='unidentified'||e.isEnemy||
             (e.collidable&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
@@ -260,6 +260,7 @@
         // Wall-mounted objects can be gathered/attacked without entering the wall.
         if(tile?.solid===true && !tile.isDoor && !occupant) continue;
         if(tile?.traversal?.tunnel && !tile.traversal.unlocked && tile.traversal.unlockFromHere===false)continue;
+        if(tile?.exit&&tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true)continue;
         if((this.blocked.get(edge)??0)>this.tick) continue;
         if(occupant?.collidable && !occupant.destroyable && !occupant.pushable && !occupant.interactable) continue;
         const enemy=enemies.some(e=>occupies(e,x,y));
