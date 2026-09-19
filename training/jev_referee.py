@@ -13,6 +13,7 @@ never accepted through a browser, written to an artifact, or echoed in logs.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -521,26 +522,49 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                                decisions - last_novelty >= 12 and len(set(recent_positions)) <= 5 and
                                decisions - last_intervention >= 8)
                     if stalled:
-                        packet["stuckEvidence"] = {
+                        intervention_packet = copy.deepcopy(packet)
+                        repeated = set(recent_positions)
+                        moves = {
+                            move.get("direction"): move for move in
+                            ((operator.get("tactical") or {}).get("moves") or []) if isinstance(move, dict)
+                        }
+                        escape_actions = {}
+                        for key, candidate in intervention_packet["actions"].items():
+                            move = moves.get(candidate.get("direction"), {})
+                            target = move.get("target") if isinstance(move.get("target"), dict) else {}
+                            target_position = (str(room.get("id")), target.get("x"), target.get("y"))
+                            if (candidate.get("staysInPlace") is False and
+                                    candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
+                                    candidate.get("unknownDamageSources", 0) == 0 and
+                                    target_position not in repeated):
+                                escape_actions[key] = candidate
+                        if escape_actions:
+                            intervention_packet["actions"] = escape_actions
+                        intervention_packet["stuckEvidence"] = {
                             "decisionsWithoutNewPosition": decisions - last_novelty,
                             "recentUniquePositions": len(set(recent_positions)),
-                            "instruction": "Break the navigation cycle while avoiding known damage. Prefer an action that serves Explore, Progress, or Prepare.",
+                            "repeatedPositions": [list(value) for value in sorted(repeated)],
+                            "restrictedToNovelSafeMoves": bool(escape_actions),
+                            "instruction": "Break the navigation cycle now. Choose one of the supplied safe actions; when restrictedToNovelSafeMoves is true, every supplied action leaves the repeated positions.",
                         }
-                        response = client.evaluate(packet)
-                        advice = advice_from_response(packet, response, 0.65)
-                        proposed = advice["action"].get("proposedGameAction")
-                        if proposed:
-                            candidate = packet["actions"].get("move_" + proposed["direction"], {})
+                        response = client.evaluate(intervention_packet)
+                        advice = advice_from_response(intervention_packet, response, 0.65)
+                        action_choice = advice["action"].get("choice")
+                        candidate = intervention_packet["actions"].get(action_choice, {})
+                        if candidate:
+                            proposed = {"type": "Move", "direction": candidate["direction"]}
                             if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
                                     candidate.get("unknownDamageSources", 0) == 0):
                                 teacher = proposed
                                 last_intervention = decisions
+                                packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
+                                packet["jevIntervention"] = advice
                                 env.tactical_status = {
                                     "motivation": advice["motivation"]["choice"],
                                     "engagement": advice["engagement"]["choice"],
                                     "roomIntent": advice["roomIntent"]["choice"],
-                                    "action": advice["action"]["choice"], "source": "jev-unstick",
-                                    "confidence": round(advice["combinedConfidence"], 3),
+                                    "action": action_choice, "source": "jev-unstick",
+                                    "confidence": advice["action"]["confidence"],
                                     "trigger": f"{decisions-last_novelty} decisions without a new position",
                                 }
                     rows.append({"packet": packet, "teacherAction": teacher,
