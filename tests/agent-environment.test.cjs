@@ -15,12 +15,12 @@ function load(file, dependencies) {
   return context.exports;
 }
 
-function setup(timeoutMs = 500) {
+function setup(timeoutMs = 500, {simulation = false} = {}) {
   class DownLadder {}
   class UpLadder {}
   const {AgentEnvironment} = load('src/game/agentEnvironment.ts', {
     './agentMemory': load('src/game/agentMemory.ts', {}),
-    './agentMode': {setAgentFastMode() {}},
+    './agentMode': {AGENT_SIMULATION_MODE: simulation, setAgentFastMode() {}},
     './combatTestbed': load('src/game/combatTestbed.ts'),
     '../game': {Direction: {UP: 0, DOWN: 1, LEFT: 2, RIGHT: 3}},
     '../room/room': {TurnState: {playerTurn: 0},RoomType:{BOSS:'BOSS'}}, '../tile/downLadder': {DownLadder}, '../tile/upLadder': {UpLadder},
@@ -33,6 +33,9 @@ function setup(timeoutMs = 500) {
       './gameConstants': {GameConstants: {VERSION: 'test', DEVELOPER_MODE: false}},
       './gameplaySettings': {GameplaySettings: {STARTING_HEALTH: 10}},
     }),
+    './save/simulationSnapshot': {createSimulationSnapshot(game) { return {ok:true, value:{serialized: JSON.stringify({worldSpec:{seed: game.seed, rngState: 1}})}};}},
+    './save/loadV2': {loadSaveV2: async (game, save) => { game.loadedSimulationSnapshot = save; return {ok:true, value:undefined}; }},
+    './save/validate': {parseSaveV2Json(raw) { return {ok:true, value:JSON.parse(raw)};}},
   });
   const actions = [];
   const room = {globalId: 'room', roomX: 0, roomY: 0, width: 3, height: 3,
@@ -170,6 +173,24 @@ test('player observations expose the live spendable coin count', async () => {
   Object.assign(player.inventory,{coins:17,coinCount(){return this.coins;}});
   assert.equal(env.observe().player.coins,17);
   assert.equal(env.perceive().player.coins,17);
+});
+
+test('simulation snapshot capture stays privileged and outside ordinary observations', async () => {
+  const {env, game} = setup(); await env.reset(7331);
+  const snapshot = env.captureSimulationSnapshot();
+  assert.equal(snapshot.source, 'privileged-agent-snapshot');
+  assert.equal(JSON.parse(snapshot.serialized).worldSpec.seed, 7331);
+  assert.equal('serialized' in env.observe(), false);
+  await assert.rejects(env.restoreSimulationSnapshot(snapshot.serialized), /isolated simulator/);
+  assert.equal(game.seed, 7331);
+});
+
+test('only an isolated simulator can restore a validated branch snapshot', async () => {
+  const {env, game} = setup(500, {simulation: true}); await env.reset(1);
+  const restored = await env.restoreSimulationSnapshot(JSON.stringify({worldSpec:{seed: 44, rngState: 12}}));
+  assert.equal(game.loadedSimulationSnapshot.worldSpec.rngState, 12);
+  assert.equal(restored.seed, 44);
+  assert.equal(restored.steps, 0);
 });
 
 test('death terminates independently of the step budget', async () => {

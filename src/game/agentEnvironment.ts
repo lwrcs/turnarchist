@@ -3,7 +3,7 @@ import { DEFAULT_AGENT_VISION, validateAgentVision, perceiveRoom, AgentVision } 
 import type { Game } from "../game";
 import { Direction } from "../game";
 import { AgentMemory } from "./agentMemory";
-import { setAgentFastMode } from "./agentMode";
+import { AGENT_SIMULATION_MODE, setAgentFastMode } from "./agentMode";
 import { RoomType, TurnState } from "../room/room";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
@@ -13,6 +13,9 @@ import { GameplaySettings } from "./gameplaySettings";
 import { getAgentContract, checkAgentCompatibility, AgentContract } from "./agentContract";
 import { observeEntity, observeItem, observeWarnings } from "./agentTraits";
 import type { GameAction } from "../player/playerAction";
+import { createSimulationSnapshot } from "./save/simulationSnapshot";
+import { loadSaveV2 } from "./save/loadV2";
+import { parseSaveV2Json } from "./save/validate";
 
 export type AgentAction =
   | { type: "Move"; direction: "up" | "down" | "left" | "right" }
@@ -125,6 +128,50 @@ export class AgentEnvironment {
   contract() { return getAgentContract(); }
   checkCompatibility(trainedOn: Partial<AgentContract> | null) {
     return checkAgentCompatibility(trainedOn);
+  }
+
+  /**
+   * Privileged branch root for an isolated simulator. This is deliberately not
+   * included in `observe`, `perceive`, replay exports, or policy inputs.
+   */
+  captureSimulationSnapshot() {
+    if (this.busy) throw new Error("Wait for the current operation before capturing a simulation snapshot");
+    if (this.seed === null || !this.ready()) throw new Error("Simulation snapshots require a ready initialized run");
+    const snapshot = createSimulationSnapshot(this.game);
+    if (snapshot.ok === false) throw new Error(snapshot.error);
+    return {
+      schemaVersion: 1,
+      source: "privileged-agent-snapshot",
+      createdAtStep: this.steps,
+      serialized: snapshot.value.serialized,
+    };
+  }
+
+  /**
+   * Available only inside an agent iframe opened with `simulator=1`. The
+   * visible game never restores hypothetical branches into itself.
+   */
+  async restoreSimulationSnapshot(serialized: string) {
+    if (!AGENT_SIMULATION_MODE) throw new Error("Simulation snapshots can only be restored in an isolated simulator");
+    if (typeof serialized !== "string" || serialized.length === 0 || serialized.length > 20_000_000) {
+      throw new Error("Invalid simulation snapshot payload");
+    }
+    return this.exclusive(async () => {
+      const parsed = parseSaveV2Json(serialized);
+      if (parsed.ok === false) throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
+      const loaded = await loadSaveV2(this.game, parsed.value);
+      if (loaded.ok === false) throw new Error(`Simulation snapshot load failed: ${String(loaded.error)}`);
+      this.seed = parsed.value.worldSpec.seed;
+      this.steps = 0;
+      this.failure = null;
+      this.contacts.clear();
+      this.contactKeys = new WeakMap();
+      this.nextContactKey = 0;
+      this.memory.clear();
+      this.recentTransitions = [];
+      await this.settle();
+      return this.observe();
+    });
   }
 
   private tacticalFrame(): TacticalFrame {
