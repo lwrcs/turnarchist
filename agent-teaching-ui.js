@@ -13,7 +13,11 @@
     runs:sessions.map(s=>({id:s.meta.id,name:s.meta.name,seed:s.meta.seed,state:s.state,reason:s.reason,actions:s.records.length,selected:s===selected,inputOwner:s===inputOwner}))
   });
   const syncInspector=()=>{$('teaching-inspector-state').textContent=JSON.stringify(inspectorSnapshot());};
-  const registry=fetch('./teaching-seeds.json').then(async r=>{if(!r.ok)throw new Error('Seed registry unavailable');return r.json();});
+  // The registry protects held-out evaluation seeds when the teaching page is
+  // served normally. Local `file://` play cannot fetch sibling JSON in many
+  // browsers, so it must remain a convenience check rather than a startup gate.
+  const registry=fetch('./teaching-seeds.json').then(async r=>{if(!r.ok)throw new Error('Seed registry unavailable');return r.json();})
+    .catch(()=>({reservedSeeds:[]}));
   fetch('./.teaching-local.json').then(r=>r.ok?r.json():null).then(c=>{if(c){$('service').value=c.url;$('token').value=c.token;}}).catch(()=>{});
   const board=$('board'),ctx=board.getContext('2d');let tiles=[],pointerStart=null;
   const gamePoint=e=>{const r=board.getBoundingClientRect();return {nx:(e.clientX-r.left)/r.width,ny:(e.clientY-r.top)/r.height};};
