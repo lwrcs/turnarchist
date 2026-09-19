@@ -109,6 +109,14 @@ own module globals, RNG state, event handlers, and game instance. Do not create
 a fresh browser realm for every candidate; reset the reusable realm from the
 base snapshot before every branch.
 
+The simulator belongs behind a narrow browser-facing diagnostic API from the
+start. `window.agent` can expose a read-only `simulate(...)` operation in the
+teaching/developer surface, while ordinary play keeps it hidden. That preserves
+the option to turn it into a player-facing "what happens if I do this?" teaching
+tool later: the player UI can request candidate outcomes, render its own advice,
+and still execute only through the regular action processor. The simulator must
+never become a second input path or silently alter the player run.
+
 Suggested modules:
 
 - `src/game/agentSimulation.ts`: privileged realm lifecycle, snapshot loading,
