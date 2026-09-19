@@ -33,6 +33,7 @@ HELD_OUT = {'starter': TRANSFER,
 CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
+LIVE_VIEWER_HTML = '''<!doctype html><title>Turnarchist training viewer</title><style>body{background:#111;color:#ddd;font:14px monospace;margin:16px}img{image-rendering:pixelated;max-width:min(92vw,900px);border:1px solid #555}pre{white-space:pre-wrap}</style><h1>Turnarchist live training frame</h1><img id="frame"><pre id="state">Waiting for the trainer…</pre><script>const refresh=async()=>{document.querySelector('#frame').src='live-frame.png?t='+Date.now();try{document.querySelector('#state').textContent=JSON.stringify(await (await fetch('live-state.json?t='+Date.now())).json(),null,2)}catch(e){}};refresh();setInterval(refresh,1000)</script>'''
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 GRID=25
 CENTER=12
@@ -184,9 +185,13 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class CombatEnv(gym.Env):
-    def __init__(self, out, budget=64, rotate_frames=False, scenarios=None):
+    def __init__(self, out, budget=64, rotate_frames=False, scenarios=None, viewer_dir=None):
         self.out = pathlib.Path(out)
         self.out.mkdir(parents=True, exist_ok=True)
+        self.viewer_dir = pathlib.Path(viewer_dir) if viewer_dir else None
+        if self.viewer_dir:
+            self.viewer_dir.mkdir(parents=True, exist_ok=True)
+            (self.viewer_dir/'index.html').write_text(LIVE_VIEWER_HTML)
         self.action_space = gym.spaces.Discrete(len(ACTIONS))
         self.observation_space = gym.spaces.Box(0, 1, shape=(SIZE*2,), dtype=np.float32)
         self.budget = budget
@@ -202,6 +207,14 @@ class CombatEnv(gym.Env):
         self.pw = sync_playwright().start()
         self.browser = self.pw.chromium.launch(headless=True, args=['--disable-background-timer-throttling'])
         self._open_game_page()
+
+    def publish_viewer(self):
+        """Publish a passive, key-free frame for a separately hosted spectator page."""
+        if not self.viewer_dir: return
+        self.page.screenshot(path=str(self.viewer_dir/'live-frame.png'))
+        state={'updatedAt':time.time(),'phase':self.phase,'scenario':getattr(self,'scenario',None),
+               'steps':self.steps,'view':self.view}
+        (self.viewer_dir/'live-state.json').write_text(json.dumps(state))
 
     def _open_game_page(self):
         """Discard accumulated game/browser state only between complete episodes."""
@@ -257,6 +270,7 @@ class CombatEnv(gym.Env):
         self.steps = 0
         self.scenario, self.game_seed = scenario, game_seed
         self.episode += 1
+        self.publish_viewer()
         return np.concatenate(self.frames), {}
 
     def step(self, action):
@@ -279,6 +293,7 @@ class CombatEnv(gym.Env):
                            'worldAction':world_action(action,self.rotation), 'health': next_view['player']['health'], 'reward': reward,
                            'recorded':result['recorded'], 'turnDelta':result['turnDelta']})
         self.view = next_view
+        self.publish_viewer()
         self.steps += 1
         self.total_reward += reward
         done = bool(dead or clear)

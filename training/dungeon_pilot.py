@@ -267,8 +267,8 @@ class ExplorationMemory:
 
 
 class DungeonEnv(CombatEnv):
-    def __init__(self,out,budget=512,seeds=None,offset=0):
-        super().__init__(out,budget=budget,rotate_frames=True,scenarios=['standard'])
+    def __init__(self,out,budget=512,seeds=None,offset=0,viewer_dir=None):
+        super().__init__(out,budget=budget,rotate_frames=True,scenarios=['standard'],viewer_dir=viewer_dir)
         self.observation_space=gym.spaces.Box(0,1,shape=(OBS_SIZE,),dtype=np.float32)
         self.seeds=seeds or seed_plan('training',64)
         self.offset=offset

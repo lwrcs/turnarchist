@@ -418,14 +418,15 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows), encoding="utf-8")
 
 
-def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int) -> dict[str, Any]:
+def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int,
+                             viewer_dir: Path | None = None) -> dict[str, Any]:
     """Collect unlabelled/referee-ready state packets from real browser gameplay."""
     from dungeon_pilot import DungeonEnv, ROOT, seed_plan  # Browser dependencies stay out of unit tests.
 
     if out.exists():
         raise ValueError("Output directory already exists")
     out.mkdir(parents=True)
-    env = DungeonEnv(out / "browser", budget=budget)
+    env = DungeonEnv(out / "browser", budget=budget, viewer_dir=viewer_dir)
     rows: list[dict[str, Any]] = []
     outcomes: list[dict[str, Any]] = []
     try:
@@ -501,6 +502,8 @@ def main() -> None:
     collect.add_argument("--seeds", type=int, default=4)
     collect.add_argument("--budget", type=int, default=256)
     collect.add_argument("--max-packets", type=int, default=200)
+    collect.add_argument("--viewer-dir", type=Path,
+                         help="Write a passive live-frame.png and live-state.json after each action")
     evaluate = commands.add_parser("evaluate", help="Evaluate saved packets using Jev")
     evaluate.add_argument("--packets", type=Path, required=True)
     evaluate.add_argument("--out", type=Path, required=True)
@@ -512,7 +515,7 @@ def main() -> None:
         if not 1 <= args.seeds <= 64 or not 1 <= args.budget <= 10000 or not 1 <= args.max_packets <= 10000:
             parser.error("Invalid collection bounds")
         print(json.dumps(collect_baseline_packets(args.out, seeds=args.seeds, budget=args.budget,
-                                                   max_packets=args.max_packets)), flush=True)
+                                                   max_packets=args.max_packets, viewer_dir=args.viewer_dir)), flush=True)
     else:
         if not args.packets.is_file() or not 1 <= args.max_packets <= 10000 or not 0 <= args.confidence_floor <= 1:
             parser.error("Invalid evaluation input or bounds")
