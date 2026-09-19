@@ -329,11 +329,14 @@ class DungeonEnv(CombatEnv):
             self._open_game_page()
         chosen=(options or {}).get('episodeSeed',self.seeds[(self.episode+self.offset)%len(self.seeds)])
         super().reset(seed=int(chosen),options={'scenario':'standard'})
+        print('DUNGEON RESET: browser game reset complete', flush=True)
         self.episode_seed=int(chosen)
         # Depth is outcome/reward supervision only, never a policy feature.
         depth=self.page.evaluate('() => window.agent.observe().room.depth')
+        print('DUNGEON RESET: depth observed; refreshing navigation plan', flush=True)
         self.memory=ExplorationMemory(self.view,depth)
         self.refresh_plan()
+        print('DUNGEON RESET: navigation plan ready', flush=True)
         self.game_actions=0
         self.viewer_actions=[]
         self.assisted_actions=0
