@@ -496,6 +496,7 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
             if not env.page.evaluate("() => typeof AgentBaseline !== 'undefined'"):
                 env.page.add_script_tag(path=str(ROOT / "agent-baseline.js"))
             env.page.evaluate("() => { window.jevRefereeTeacher = new AgentBaseline.Policy(); }")
+            print("COLLECT: baseline teacher ready", flush=True)
             decisions = 0
             recent_positions: deque[tuple[str, int, int]] = deque(maxlen=16)
             seen_positions: set[tuple[str, int, int]] = set()
@@ -506,7 +507,11 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
             last_combat_commitment = -100
             while decisions < env.budget and len(rows) < max_packets:
                 before = env.view
+                if decisions == 0:
+                    print("COLLECT: requesting first baseline action", flush=True)
                 teacher = env.page.evaluate("(view) => window.jevRefereeTeacher.choose(view)", before)
+                if decisions == 0:
+                    print("COLLECT: first baseline action ready", flush=True)
                 if not teacher:
                     break
                 operator = env.page.evaluate("() => window.agent.inspectOperator()")
