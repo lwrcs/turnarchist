@@ -176,16 +176,36 @@ def _inventory_summary(inventory: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         traits = item.get("traits") if isinstance(item.get("traits"), dict) else {}
+        categories = item.get("categories") if isinstance(item.get("categories"), list) else []
         result.append({
             "slot": item.get("slot", index), "id": item.get("id"), "kind": item.get("kind"),
+            "categories": [category for category in categories if isinstance(category, str)],
             "activeWeapon": item.get("activeWeapon") is True,
             "healingAmount": _number(item.get("healingAmount")),
             "useTurnCost": _number(item.get("useTurnCost")),
             "damage": _number(traits.get("minimumAttackDamage")),
             "range": traits.get("range"), "attackPattern": traits.get("attackPattern"),
+            "successfulAttackTurnCost": _number(traits.get("successfulAttackTurnCost")),
             "equippable": traits.get("equippable") is True,
         })
     return result
+
+
+def _weapon_candidates(inventory: list[dict[str, Any]]) -> dict[str, str]:
+    """Offer only known weapon inventory entries plus a safe no-change choice."""
+    current = next((item for item in inventory if item["activeWeapon"]), None)
+    current_id = current.get("id") if current else "no active weapon"
+    candidates = {"keep_current": f"Keep the currently active weapon ({current_id})."}
+    for item in inventory:
+        if "weapon" not in item["categories"]:
+            continue
+        key = f"weapon_slot_{item['slot']}"
+        candidates[key] = (
+            f"Equip slot {item['slot']} ({item.get('id') or item.get('kind')}); "
+            f"minimum damage {item.get('damage')}, range {item.get('range')}, "
+            f"pattern {item.get('attackPattern')}, successful attack turn cost {item.get('successfulAttackTurnCost')}"
+        )
+    return candidates
 
 
 def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -200,6 +220,7 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
     room = operator.get("room") if isinstance(operator.get("room"), dict) else {}
     tactical = operator.get("tactical") if isinstance(operator.get("tactical"), dict) else {}
     current = tactical.get("currentTile") if isinstance(tactical.get("currentTile"), dict) else {}
+    inventory = _inventory_summary(operator.get("inventory"))
     packet = {
         "schemaVersion": PACKET_SCHEMA_VERSION,
         "source": {
@@ -212,7 +233,7 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
             "health": _number(player.get("health")), "maxHealth": _number(player.get("maxHealth")),
             "mana": _number(player.get("mana")), "maxMana": _number(player.get("maxMana")),
             "coins": _number(player.get("coins")), "position": {"x": player.get("x"), "y": player.get("y")},
-            "inventory": _inventory_summary(operator.get("inventory")),
+            "inventory": inventory,
         },
         "room": {
             "id": room.get("id"), "depth": room.get("depth"), "roomType": room.get("roomType"),
@@ -230,6 +251,7 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
         },
         "objectives": _objective_candidates(operator),
         "actions": candidate_actions(operator),
+        "weaponChoices": _weapon_candidates(inventory),
         "baselineAction": baseline_action,
         "executionBoundary": "Jev returns advice only. The action processor re-validates every proposed action.",
     }
@@ -273,6 +295,11 @@ def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "type": "choice",
             "instructions": "Which supplied directional input best realizes the selected immediate purpose? Choose only from the listed actions. This is advisory; game code will validate it before execution.",
             "criteria": {key: value["description"] for key, value in packet["actions"].items()},
+        },
+        "weapon": {
+            "type": "choice",
+            "instructions": "Which listed weapon should remain or become active for this immediate state? Choose keep_current unless an alternative has a stated immediate tactical advantage. This is an advisory zero-turn equipment label; it does not execute an inventory action.",
+            "criteria": packet["weaponChoices"],
         },
         "baseline_adequate": {
             "type": "noul",
@@ -358,6 +385,7 @@ def advice_from_response(packet: dict[str, Any], response: dict[str, Any], confi
     objective, objective_confidence = _choice(response, "objective", set(packet["objectives"]))
     tactic, tactic_confidence = _choice(response, "tactic", {"eliminate_threat", "dodge", "advance_safely", "create_space", "collect", "heal", "uncertain"})
     action, action_confidence = _choice(response, "action", set(packet["actions"]))
+    weapon, weapon_confidence = _choice(response, "weapon", set(packet["weaponChoices"]))
     review = ((response.get("answers") or {}).get("human_teaching_value") or {})
     review_score = _number(review.get("score")) if review.get("type") == "score" else None
     baseline = ((response.get("answers") or {}).get("baseline_adequate") or {})
@@ -376,6 +404,8 @@ def advice_from_response(packet: dict[str, Any], response: dict[str, Any], confi
         "tactic": {"choice": tactic, "confidence": tactic_confidence},
         "action": {"choice": action, "confidence": action_confidence,
                    "proposedGameAction": {"type": "Move", "direction": packet["actions"][action]["direction"]} if approved else None},
+        "weapon": {"choice": weapon, "confidence": weapon_confidence,
+                   "execution": "advisory label only; no inventory action is proposed"},
         "confidenceFloor": confidence_floor, "combinedConfidence": confidence,
         "autoActionEligible": approved,
         "humanTeachingValue": review_score,
