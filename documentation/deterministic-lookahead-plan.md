@@ -81,6 +81,22 @@ cosmetic, captured-and-settled, or unsupported. Any gameplay-affecting random
 choice must use the seeded RNG. Any consequential timer must be included in the
 same readiness/settling contract used by `AgentEnvironment`.
 
+### Initial audit inventory
+
+The first pass found the following high-signal sites:
+
+| Site | Current assessment | Required follow-up |
+| --- | --- | --- |
+| Torch/candle wall placement in `playerInputHandler.ts` | Gameplay-relevant when no facing wall is available; currently selects a wall with `Math.random`. | Replace with `Random` before trusting branch parity for this interaction. |
+| Sewer layout size in `levelProgressionConfig.ts` | Safe only when generation always supplies its seeded `rand` callback. | Add a generator-level regression test; do not rely on the fallback `Math.random` during a simulation branch. |
+| Key-path and sidepath logging | Cosmetic logging sample only. | No simulation impact. |
+| Particles, beam jitter, damage numbers, sound selection | Cosmetic. | Exclude from fingerprints and branch scoring. |
+| Fishing completion | Gameplay-relevant timer, but it holds `player.busyAnimating` until its callback resolves. | Verify a branch waits through the same readiness boundary before capture. |
+| Bomb, warhammer, giant-enemy shake timers | The observed callbacks are camera/visual effects after gameplay resolution. | Confirm during live-parity tests; they must not be used as a branch-settle signal. |
+
+This is a triage list, not a claim that every timer has been certified. The
+full Phase 0 suite is still required before enabling automated lookahead.
+
 ### Exit criterion
 
 All curated fork tests pass repeatedly. Unsupported states return a typed
@@ -317,4 +333,3 @@ Display:
 Do not combine these into one large change. Each phase should be independently
 reviewable and should preserve the ordinary player game, replay behavior, and
 existing training data formats unless a versioned migration is included.
-
