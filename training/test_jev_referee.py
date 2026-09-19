@@ -3,7 +3,7 @@ import json
 import unittest
 
 from jev_referee import (JevClient, JevRequestError, advice_from_response,
-                          build_packet, candidate_actions, questions_for)
+                          build_packet, candidate_actions, combat_pressure, questions_for)
 
 
 def operator():
@@ -73,6 +73,16 @@ class JevRefereeTests(unittest.TestCase):
         self.assertEqual(set(questions['action']['criteria']), set(packet['actions']))
         self.assertEqual(set(questions['target_priority']['criteria']),
                          {'target_zombie-a', 'target_spawner-a', 'no_combat_target'})
+
+    def test_combat_pressure_requires_an_immediate_or_unavoidable_hazard(self):
+        state = operator()
+        state['room'].update({'enemyCount': 6, 'bossRoom': True})
+        state['tactical']['currentTile'].update({'knownIncomingDamageBeforeDefense': 0,
+                                                 'unknownDamageSources': 0})
+        packet = build_packet(self.view(), state)
+        self.assertEqual(combat_pressure(packet), (False, None))
+        state['tactical']['currentTile']['knownIncomingDamageBeforeDefense'] = 1
+        self.assertTrue(combat_pressure(build_packet(self.view(), state))[0])
 
     def test_packet_requires_privileged_operator_boundary(self):
         invalid = operator(); invalid['privileged'] = False

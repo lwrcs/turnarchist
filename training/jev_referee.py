@@ -268,6 +268,31 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
     return packet
 
 
+def combat_pressure(packet: dict[str, Any]) -> tuple[bool, str | None]:
+    """Return whether this turn needs deeper combat planning.
+
+    Enemy population is deliberately not a pressure signal.  A distant group in
+    an open sewer is routine baseline work; Jev is reserved for a present or
+    unavoidable next-turn hazard.
+    """
+    room = packet.get("room") if isinstance(packet.get("room"), dict) else {}
+    if room.get("enemyFree") is True or not int(room.get("enemyCount") or 0):
+        return False, None
+    threat = packet.get("currentThreat") if isinstance(packet.get("currentThreat"), dict) else {}
+    known = _number(threat.get("knownIncomingDamageBeforeDefense")) or 0
+    unknown = int(threat.get("unknownDamageSources") or 0)
+    if known > 0 or unknown > 0:
+        return True, "current tile has immediate incoming damage"
+    actions = packet.get("actions") if isinstance(packet.get("actions"), dict) else {}
+    safe_actions = [action for action in actions.values()
+                    if isinstance(action, dict)
+                    and action.get("unknownDamageSources", 0) == 0
+                    and (_number(action.get("knownIncomingDamageBeforeDefense")) or 0) == 0]
+    if not safe_actions:
+        return True, "no legal action has a known-safe next turn"
+    return False, None
+
+
 def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Atomic questions sent together against one packet."""
     combat_targets = {
@@ -539,15 +564,11 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 }
                 if before.get("decision") == "world" and operator.get("decision") == "world":
                     packet = build_packet(before, operator, teacher)
-                    known_threat = packet["currentThreat"].get("knownIncomingDamageBeforeDefense") or 0
-                    high_pressure = (room.get("enemyFree") is False and
-                                     (int(room.get("enemyCount") or 0) >= 3 or
-                                      (room.get("bossRoom") and int(room.get("enemyCount") or 0) >= 2) or
-                                      known_threat >= (packet["player"].get("health") or 0)))
+                    high_pressure, pressure_trigger = combat_pressure(packet)
                     if (jev_unstick and client is not None and high_pressure and combat_commitment is None and
                             decisions - last_combat_commitment >= 8):
                         combat_commitment = {"remaining": 4, "total": 4, "motivation": None,
-                                             "trigger": "high-pressure combat planning"}
+                                             "trigger": "high-pressure combat planning: " + str(pressure_trigger)}
                     if combat_commitment is not None:
                         try:
                             combat_response = client.evaluate(packet)
