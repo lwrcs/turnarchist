@@ -33,7 +33,50 @@ HELD_OUT = {'starter': TRANSFER,
 CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
-LIVE_VIEWER_HTML = '''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title><style>body{background:#111;color:#ddd;font:14px monospace;margin:0}iframe{display:block;width:min(100vw,1024px);height:min(77vw,768px);border:0}#status{margin:12px;padding:12px;border:1px solid #333;background:#181818;line-height:1.55}.label{color:#888}.value{color:#fff}.jev{color:#75e6ff}.warning{color:#ffcc66}</style></head><body><iframe id="game" src="play.html?agent=1" title="Mirrored training game"></iframe><div id="status">Waiting for training to start...</div><script>const frame=document.querySelector('#game'),status=document.querySelector('#status');let episode='',applied=0,busy=false;const ready=()=>frame.contentWindow&&frame.contentWindow.agent;const esc=v=>String(v??'unknown').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const refresh=async()=>{if(busy)return;busy=true;try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');const data=await response.json(),agent=ready(),t=data.tacticalStatus||{};status.innerHTML='<span class="label">run</span> <span class="value">seed '+esc(data.gameSeed)+' · step '+esc(data.steps)+' · turn '+esc(data.view.player.turnCount)+' · hp '+esc(data.view.player.health)+' · '+esc(data.view.room.context.roomType)+'</span><br><span class="label">motivation</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.motivation)+'</span> · <span class="label">engagement</span> <span class="value">'+esc(t.engagement)+'</span> · <span class="label">room</span> <span class="value">'+esc(t.roomIntent)+'</span><br><span class="label">decision</span> <span class="value">'+esc(t.action)+'</span> · <span class="label">source</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.source)+'</span> · <span class="label">confidence</span> <span class="value">'+esc(t.confidence)+'</span>'+(t.trigger?'<br><span class="warning">intervention: '+esc(t.trigger)+'</span>':'');if(!agent){busy=false;return}const key=data.gameSeed+':'+data.scenario;if(key!==episode||data.actions.length<applied){await agent.reset(data.gameSeed,{scenario:data.scenario,maxSteps:10000});agent.setFastMode(true);episode=key;applied=0}while(applied<data.actions.length){await agent.step(data.actions[applied]);applied++}}catch(error){status.textContent='Waiting for training: '+error.message}finally{busy=false}};setInterval(refresh,100);refresh()</script></body></html>'''
+LIVE_VIEWER_HTML = '''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title>
+<style>
+body{background:#111;color:#ddd;font:14px monospace;margin:0}
+iframe{display:block;width:min(100vw,1024px);height:min(77vw,768px);border:0}
+#controls,#status{margin:12px;padding:10px 12px;border:1px solid #333;background:#181818;line-height:1.55}
+#controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+button{background:#292929;color:#ddd;border:1px solid #555;padding:6px 11px;font:inherit;cursor:pointer}
+button.active{color:#111;background:#75e6ff;border-color:#75e6ff}
+.label{color:#888}.value{color:#fff}.jev{color:#75e6ff}.warning{color:#ffcc66}
+</style></head><body>
+<iframe id="game" src="play.html?agent=1" title="Mirrored training game"></iframe>
+<div id="controls"><span class="label">viewer speed</span>
+  <button data-delay="pause">Pause</button><button data-delay="600">Slow</button>
+  <button data-delay="180">Normal</button><button data-delay="35">Fast</button>
+  <button class="active" data-delay="0">Maximum</button>
+  <span id="lag" class="value">waiting</span>
+</div>
+<div id="status">Waiting for training to start...</div>
+<script>
+const frame=document.querySelector('#game'),status=document.querySelector('#status'),lag=document.querySelector('#lag');
+let latest=null,episode='',applied=0,playing=false,delay=0;
+const ready=()=>frame.contentWindow&&frame.contentWindow.agent;
+const esc=v=>String(v??'unknown').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.querySelectorAll('button[data-delay]').forEach(button=>button.onclick=()=>{
+  document.querySelectorAll('button[data-delay]').forEach(b=>b.classList.remove('active'));
+  button.classList.add('active');delay=button.dataset.delay==='pause'?null:Number(button.dataset.delay);
+  if(delay!==null)play();
+});
+const render=()=>{if(!latest)return;const data=latest,t=data.tacticalStatus||{},behind=Math.max(0,data.actions.length-applied);
+  lag.textContent=`displayed ${applied} / recorded ${data.actions.length}${behind?' · '+behind+' behind':' · live'}`;
+  status.innerHTML='<span class="label">run</span> <span class="value">seed '+esc(data.gameSeed)+' · step '+esc(data.steps)+' · turn '+esc(data.view.player.turnCount)+' · hp '+esc(data.view.player.health)+' · '+esc(data.view.room.context.roomType)+'</span><br><span class="label">motivation</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.motivation)+'</span> · <span class="label">engagement</span> <span class="value">'+esc(t.engagement)+'</span> · <span class="label">room</span> <span class="value">'+esc(t.roomIntent)+'</span><br><span class="label">decision</span> <span class="value">'+esc(t.action)+'</span> · <span class="label">source</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.source)+'</span> · <span class="label">confidence</span> <span class="value">'+esc(t.confidence)+'</span>'+(t.trigger?'<br><span class="warning">intervention: '+esc(t.trigger)+'</span>':'');
+};
+const play=async()=>{if(playing||delay===null||!latest||!ready())return;playing=true;
+  try{const key=latest.gameSeed+':'+latest.scenario;
+    if(key!==episode||latest.actions.length<applied){await ready().reset(latest.gameSeed,{scenario:latest.scenario,maxSteps:10000});ready().setFastMode(true);episode=key;applied=0;}
+    if(applied<latest.actions.length){await ready().step(latest.actions[applied]);applied++;render();}
+  }catch(error){status.textContent='Viewer playback error: '+error.message}
+  finally{playing=false;if(delay!==null)setTimeout(play,delay);}
+};
+const poll=async()=>{try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');latest=await response.json();render();play();}catch(error){status.textContent='Waiting for training: '+error.message;}};
+setInterval(poll,100);poll();
+</script></body></html>
+'''
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 GRID=25
 CENTER=12
