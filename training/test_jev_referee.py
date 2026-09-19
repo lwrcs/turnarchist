@@ -67,8 +67,12 @@ class JevRefereeTests(unittest.TestCase):
         self.assertIn('target_spawner-a', packet['objectives'])
         self.assertEqual(set(packet['weaponChoices']), {'keep_current', 'weapon_slot_0'})
         questions = questions_for(packet)
-        self.assertEqual(set(questions), {'mode', 'objective', 'tactic', 'action', 'weapon', 'baseline_adequate', 'human_teaching_value'})
+        self.assertEqual(set(questions), {'motivation', 'engagement', 'objective', 'tactic',
+                         'target_priority', 'room_intent', 'action', 'weapon', 'reasoning',
+                         'baseline_adequate', 'human_teaching_value'})
         self.assertEqual(set(questions['action']['criteria']), set(packet['actions']))
+        self.assertEqual(set(questions['target_priority']['criteria']),
+                         {'target_zombie-a', 'target_spawner-a', 'no_combat_target'})
 
     def test_packet_requires_privileged_operator_boundary(self):
         invalid = operator(); invalid['privileged'] = False
@@ -81,11 +85,15 @@ class JevRefereeTests(unittest.TestCase):
     def test_advice_rejects_unknown_choice_and_gates_low_confidence(self):
         packet = build_packet(self.view(), operator())
         response = {'model': 'jev-latest', 'usage': {'input_tokens': 12, 'output_tokens': 2}, 'answers': {
-            'mode': {'type': 'choice', 'choice': 'fight', 'confidence': .9},
+            'motivation': {'type': 'choice', 'choice': 'progress', 'confidence': .9},
+            'engagement': {'type': 'choice', 'choice': 'fight', 'confidence': .9},
             'objective': {'type': 'choice', 'choice': 'target_zombie-a', 'confidence': .9},
             'tactic': {'type': 'choice', 'choice': 'dodge', 'confidence': .9},
+            'target_priority': {'type': 'choice', 'choice': 'target_zombie-a', 'confidence': .9},
+            'room_intent': {'type': 'choice', 'choice': 'stay', 'confidence': .9},
             'action': {'type': 'choice', 'choice': 'move_right', 'confidence': .79},
             'weapon': {'type': 'choice', 'choice': 'keep_current', 'confidence': .9},
+            'reasoning': {'type': 'choice', 'choice': 'act_now', 'confidence': .9},
             'baseline_adequate': {'type': 'noul', 'noul': .8},
             'human_teaching_value': {'type': 'score', 'score': 1.7, 'confidence': .8},
         }}
@@ -97,6 +105,23 @@ class JevRefereeTests(unittest.TestCase):
         response = copy.deepcopy(response); response['answers']['action']['choice'] = 'not-a-candidate'; response['answers']['action']['confidence'] = 1
         self.assertFalse(advice_from_response(packet, response, .8)['autoActionEligible'])
 
+    def test_think_branch_prevents_automatic_action(self):
+        packet = build_packet(self.view(), operator())
+        response = {'answers': {
+            'motivation': {'type': 'choice', 'choice': 'progress', 'confidence': .95},
+            'engagement': {'type': 'choice', 'choice': 'fight', 'confidence': .95},
+            'objective': {'type': 'choice', 'choice': 'target_spawner-a', 'confidence': .95},
+            'tactic': {'type': 'choice', 'choice': 'create_space', 'confidence': .95},
+            'target_priority': {'type': 'choice', 'choice': 'target_spawner-a', 'confidence': .95},
+            'room_intent': {'type': 'choice', 'choice': 'stay', 'confidence': .95},
+            'action': {'type': 'choice', 'choice': 'move_right', 'confidence': .95},
+            'weapon': {'type': 'choice', 'choice': 'keep_current', 'confidence': .95},
+            'reasoning': {'type': 'choice', 'choice': 'think_jev_chain', 'confidence': .95},
+        }}
+        advice = advice_from_response(packet, response, .8)
+        self.assertFalse(advice['autoActionEligible'])
+        self.assertTrue(advice['reasoning']['requiresThink'])
+
     def test_client_requires_key_without_sending_request(self):
         called = []
         client = JevClient(api_key='', request=lambda request, timeout: called.append((request, timeout)))
@@ -106,7 +131,7 @@ class JevRefereeTests(unittest.TestCase):
 
     def test_client_sends_closed_questions_to_fixed_endpoint(self):
         received = []
-        response = {'model': 'jev-latest', 'answers': {'mode': {'type': 'choice'}}}
+        response = {'model': 'jev-latest', 'answers': {'motivation': {'type': 'choice'}}}
 
         def request(request, timeout):
             received.append((request.full_url, request.get_header('Authorization'), timeout,

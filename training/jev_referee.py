@@ -23,8 +23,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-PACKET_SCHEMA_VERSION = 1
-REFEREE_SCHEMA_VERSION = 1
+PACKET_SCHEMA_VERSION = 2
+REFEREE_SCHEMA_VERSION = 2
 DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 DEFAULT_MODEL = "jev-latest"
 DIRECTIONS = ("up", "right", "down", "left")
@@ -260,17 +260,31 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
 
 def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Atomic questions sent together against one packet."""
+    combat_targets = {
+        key: value["description"] for key, value in packet["objectives"].items()
+        if value.get("kind") in {"enemy", "spawner"}
+    }
+    combat_targets["no_combat_target"] = "No enemy or spawner should be prioritized in the current state."
     return {
-        "mode": {
+        "motivation": {
             "type": "choice",
-            "instructions": "What is the primary mode for this single Turnarchist decision? Choose the immediate priority, not a multi-turn plan.",
+            "instructions": "Choose the broad motivation governing this decision. This is the root of the tactical tree.",
             "criteria": {
-                "fight": "Take an action intended to neutralize or reduce a visible hostile threat now.",
-                "retreat": "Avoid an immediate dangerous position or create distance because attacking now is not the priority.",
-                "explore": "Reveal or inspect an accessible unvisited area when no known progression route is the priority.",
-                "progress": "Move toward or traverse a known progression route, door, ladder, or required objective.",
-                "prepare": "Use a zero-turn inventory/equipment opportunity before an imminent challenge.",
+                "explore": "Cover accessible areas not visited before and investigate new doors or branches.",
+                "progress": "Pursue required objectives, beat the boss, or advance to the next floor.",
+                "prepare": "Gather food, items, weapons, healing, or positioning for later progression.",
                 "uncertain": "The packet does not establish one primary mode with enough certainty.",
+            },
+        },
+        "engagement": {
+            "type": "choice",
+            "instructions": "Choose the combat posture under the selected motivation. Evade means avoiding engagement locally without abandoning the broader objective.",
+            "criteria": {
+                "fight": "Engage to kill, disable, or control enemies.",
+                "retreat": "Disengage and create meaningful distance because continued combat is too dangerous or unnecessary.",
+                "evade": "Avoid engaging an enemy while continuing the current room-level objective.",
+                "not_in_combat": "No combat posture is presently needed.",
+                "uncertain": "The safe engagement posture is not established by the supplied facts.",
             },
         },
         "objective": {
@@ -291,6 +305,21 @@ def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 "uncertain": "No supplied tactic is clearly supported by the packet.",
             },
         },
+        "target_priority": {
+            "type": "choice",
+            "instructions": "If fighting, which supplied enemy or spawner should be prioritized first? Choose no_combat_target outside a fight posture.",
+            "criteria": combat_targets,
+        },
+        "room_intent": {
+            "type": "choice",
+            "instructions": "Should the agent stay in or leave the current room? Do not leave without a concrete Explore, Progress, Prepare, Retreat, or Evade reason supported by the packet.",
+            "criteria": {
+                "stay": "Remain because the current room still contains a relevant objective, threat, resource, or unresolved route.",
+                "leave": "Leave because a supplied route directly serves the selected motivation or combat posture.",
+                "indifferent": "Staying and leaving are tactically equivalent for this immediate decision.",
+                "uncertain": "The packet does not justify a room-level choice.",
+            },
+        },
         "action": {
             "type": "choice",
             "instructions": "Which supplied directional input best realizes the selected immediate purpose? Choose only from the listed actions. This is advisory; game code will validate it before execution.",
@@ -300,6 +329,16 @@ def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "type": "choice",
             "instructions": "Which listed weapon should remain or become active for this immediate state? Choose keep_current unless an alternative has a stated immediate tactical advantage. This is an advisory zero-turn equipment label; it does not execute an inventory action.",
             "criteria": packet["weaponChoices"],
+        },
+        "reasoning": {
+            "type": "choice",
+            "instructions": "Decide whether this state can be acted on directly or should enter Think. Use deeper reasoning when danger, uncertainty, or interacting tactical consequences make the atomic answers insufficient.",
+            "criteria": {
+                "act_now": "The supplied facts support a sufficiently confident immediate action.",
+                "think_jev_chain": "Ask a short chain of additional Jev questions about competing threats, objectives, or action consequences.",
+                "escalate_reasoner": "Use a more capable reasoning model because the situation requires multi-step assessment beyond this packet.",
+                "uncertain": "The appropriate reasoning depth cannot be determined.",
+            },
         },
         "baseline_adequate": {
             "type": "noul",
@@ -381,31 +420,42 @@ def advice_from_response(packet: dict[str, Any], response: dict[str, Any], confi
     """Validate Jev's closed-set answer without treating it as an executable action."""
     if not 0 <= confidence_floor <= 1:
         raise ValueError("confidence floor must be 0..1")
-    mode, mode_confidence = _choice(response, "mode", {"fight", "retreat", "explore", "progress", "prepare", "uncertain"})
+    motivation, motivation_confidence = _choice(response, "motivation", {"explore", "progress", "prepare", "uncertain"})
+    engagement, engagement_confidence = _choice(response, "engagement", {"fight", "retreat", "evade", "not_in_combat", "uncertain"})
     objective, objective_confidence = _choice(response, "objective", set(packet["objectives"]))
     tactic, tactic_confidence = _choice(response, "tactic", {"eliminate_threat", "dodge", "advance_safely", "create_space", "collect", "heal", "uncertain"})
+    combat_targets = {key for key, value in packet["objectives"].items() if value.get("kind") in {"enemy", "spawner"}}
+    target, target_confidence = _choice(response, "target_priority", combat_targets | {"no_combat_target"})
+    room_intent, room_confidence = _choice(response, "room_intent", {"stay", "leave", "indifferent", "uncertain"})
     action, action_confidence = _choice(response, "action", set(packet["actions"]))
     weapon, weapon_confidence = _choice(response, "weapon", set(packet["weaponChoices"]))
+    reasoning, reasoning_confidence = _choice(response, "reasoning", {"act_now", "think_jev_chain", "escalate_reasoner", "uncertain"})
     review = ((response.get("answers") or {}).get("human_teaching_value") or {})
     review_score = _number(review.get("score")) if review.get("type") == "score" else None
     baseline = ((response.get("answers") or {}).get("baseline_adequate") or {})
     baseline_noul = _number(baseline.get("noul")) if baseline.get("type") == "noul" else None
-    confidence = min(value for value in (mode_confidence, objective_confidence, tactic_confidence, action_confidence)
-                     if value is not None) if all(value is not None for value in (mode_confidence, objective_confidence, tactic_confidence, action_confidence)) else None
-    approved = action is not None and confidence is not None and confidence >= confidence_floor
+    core_confidences = (motivation_confidence, engagement_confidence, objective_confidence,
+                        tactic_confidence, room_confidence, action_confidence, reasoning_confidence)
+    confidence = min(core_confidences) if all(value is not None for value in core_confidences) else None
+    approved = action is not None and reasoning == "act_now" and confidence is not None and confidence >= confidence_floor
     return {
         "schemaVersion": REFEREE_SCHEMA_VERSION,
         "model": response.get("model"), "usage": response.get("usage"),
         # Preserve the provider's probability distributions for offline audit;
         # they remain advice and are never accepted as an action protocol.
         "answers": response.get("answers"),
-        "mode": {"choice": mode, "confidence": mode_confidence},
+        "motivation": {"choice": motivation, "confidence": motivation_confidence},
+        "engagement": {"choice": engagement, "confidence": engagement_confidence},
         "objective": {"choice": objective, "confidence": objective_confidence},
         "tactic": {"choice": tactic, "confidence": tactic_confidence},
+        "targetPriority": {"choice": target, "confidence": target_confidence},
+        "roomIntent": {"choice": room_intent, "confidence": room_confidence},
         "action": {"choice": action, "confidence": action_confidence,
                    "proposedGameAction": {"type": "Move", "direction": packet["actions"][action]["direction"]} if approved else None},
         "weapon": {"choice": weapon, "confidence": weapon_confidence,
                    "execution": "advisory label only; no inventory action is proposed"},
+        "reasoning": {"choice": reasoning, "confidence": reasoning_confidence,
+                      "requiresThink": reasoning in {"think_jev_chain", "escalate_reasoner", "uncertain"}},
         "confidenceFloor": confidence_floor, "combinedConfidence": confidence,
         "autoActionEligible": approved,
         "humanTeachingValue": review_score,

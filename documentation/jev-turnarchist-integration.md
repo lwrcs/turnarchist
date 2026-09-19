@@ -75,10 +75,14 @@ same compact packet:
 
 | Layer | Jev question | Code owns | What is recorded |
 | --- | --- | --- | --- |
-| Mode | What is the primary mode now: `fight`, `retreat`, `explore`, `progress`, `prepare`, or `resolve-interaction`? | Whether the listed modes are available and whether an action is legal | Mode probabilities and confidence |
+| Motivation | Is the broad purpose `explore`, `progress`, or `prepare`? | Known frontiers, progression routes, room rules, and useful resources | Motivation probabilities and confidence |
+| Engagement | Under that motivation, should the agent `fight`, `retreat`, `evade`, or remain out of combat? | Immediate threat and consequence facts | Engagement probabilities and confidence |
 | Objective | What should be prioritized: a named enemy, spawner, door, resource, escape tile, or equipment change? | Candidate targets, distances, reachability, and threat facts | Target ID/type and confidence |
 | Tactic | What one-turn purpose is best: eliminate threat, dodge, advance safely, create space, collect, heal, or reposition? | Immediate consequences and turn costs | Tactic label and confidence |
+| Target priority | If fighting, which named enemy or spawner should be handled first? | Visible actionable target IDs and code-derived combat facts | Target ID and confidence |
+| Room intent | Should the agent stay or leave, and what selected motivation justifies leaving? | Room completion, resources, threats, and route availability | Stay/leave choice and confidence |
 | Action | Which supplied legal action best realizes that tactic? | Action enumeration, pathfinding, simulation preview, and final validation | Proposed action, executor action, and override reason |
+| Think | Is the packet sufficient, should Jev ask a short question chain, or should a stronger reasoner assess the state? | Danger and uncertainty thresholds plus final execution gating | Reasoning depth, confidence, and escalation reason |
 
 This lets Jev say “we are retreating from the giant skeleton; the immediate
 objective is the safe south tile; the one-turn tactic is dodge” without needing
@@ -149,16 +153,22 @@ For each candidate, code supplies its known immediate consequence:
 
 Ask several independent questions in one Jev request:
 
-1. **Mode and objective** — choose the present mode and the named target or
-   destination that best fits it.
-2. **Immediate tactic** — choose `eliminate threat`, `dodge`, `advance safely`,
-   `create space`, `collect`, `heal`, or `reposition`.
-3. **Action choice** — choose the best supplied candidate for that one turn.
-4. **Weapon choice** — choose an explicitly supplied weapon or `keep-current`;
+1. **Motivation and engagement** — choose `explore`, `progress`, or `prepare`,
+   then choose `fight`, `retreat`, `evade`, or `not-in-combat` beneath it.
+2. **Objective and room intent** — choose the named target or destination, then
+   decide whether staying or leaving serves the selected motivation. Leaving a
+   room requires an explicit supported reason.
+3. **Immediate tactic and target priority** — choose the one-turn purpose and,
+   during combat, the named enemy or spawner to handle first.
+4. **Action choice** — choose the best supplied candidate for that one turn.
+5. **Weapon choice** — choose an explicitly supplied weapon or `keep-current`;
    record this as a zero-turn equipment label without executing it.
-5. **Baseline adequacy** — whether the programmed-baseline action is acceptable
+6. **Think** — act directly, ask a short Jev question chain, or escalate to a
+   stronger reasoner when danger or uncertainty makes the atomic packet
+   insufficient. Any Think outcome blocks automatic execution.
+7. **Baseline adequacy** — whether the programmed-baseline action is acceptable
    for the stated immediate priority.
-6. **Human teaching value** — score whether this state should request or retain
+8. **Human teaching value** — score whether this state should request or retain
    a human demonstration because automated choices are unclear.
 
 Use action choice only when its confidence clears a deliberately high threshold

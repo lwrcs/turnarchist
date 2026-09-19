@@ -33,7 +33,7 @@ HELD_OUT = {'starter': TRANSFER,
 CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
-LIVE_VIEWER_HTML = '''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title><style>body{background:#111;color:#ddd;font:14px monospace;margin:16px}img{display:none;image-rendering:pixelated;max-width:min(92vw,900px);border:1px solid #555}pre{white-space:pre-wrap}</style></head><body><h1>Turnarchist live training</h1><img id="frame" alt="Current training game"><pre id="state">Waiting for training to start...</pre><script>const frame=document.querySelector('#frame'),state=document.querySelector('#state');const refresh=async()=>{try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');state.textContent=JSON.stringify(await response.json(),null,2);frame.src='live-frame.png?t='+Date.now();frame.style.display='block'}catch(e){frame.removeAttribute('src');frame.style.display='none';state.textContent='Waiting for training to start...'}};refresh();setInterval(refresh,1000)</script></body></html>'''
+LIVE_VIEWER_HTML = '''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title><style>body{background:#111;color:#ddd;font:14px monospace;margin:0}iframe{display:block;width:min(100vw,1024px);height:min(77vw,768px);border:0}pre{white-space:pre-wrap;margin:12px}</style></head><body><iframe id="game" src="play.html?agent=1" title="Mirrored training game"></iframe><pre id="state">Waiting for training to start...</pre><script>const frame=document.querySelector('#game'),state=document.querySelector('#state');let episode='',applied=0,busy=false;const ready=()=>frame.contentWindow&&frame.contentWindow.agent;const refresh=async()=>{if(busy)return;busy=true;try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');const data=await response.json(),agent=ready();state.textContent='seed '+data.gameSeed+' | step '+data.steps+' | turn '+data.view.player.turnCount+' | hp '+data.view.player.health+' | '+data.view.room.context.roomType;if(!agent){busy=false;return}const key=data.gameSeed+':'+data.scenario;if(key!==episode||data.actions.length<applied){await agent.reset(data.gameSeed,{scenario:data.scenario,maxSteps:10000});agent.setFastMode(true);episode=key;applied=0}while(applied<data.actions.length){await agent.step(data.actions[applied]);applied++}}catch(error){state.textContent='Waiting for training: '+error.message}finally{busy=false}};setInterval(refresh,100);refresh()</script></body></html>'''
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 GRID=25
 CENTER=12
@@ -205,16 +205,24 @@ class CombatEnv(gym.Env):
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.pw = sync_playwright().start()
-        self.browser = self.pw.chromium.launch(headless=True, args=['--disable-background-timer-throttling'])
+        self.browser = self.pw.chromium.launch(headless=True, args=[
+            '--disable-background-timer-throttling',
+            '--disable-renderer-backgrounding',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-features=CalculateNativeWinOcclusion',
+        ])
         self._open_game_page()
 
     def publish_viewer(self):
         """Publish a passive, key-free frame for a separately hosted spectator page."""
         if not self.viewer_dir: return
-        self.page.screenshot(path=str(self.viewer_dir/'live-frame.png'))
         state={'updatedAt':time.time(),'phase':self.phase,'scenario':getattr(self,'scenario',None),
-               'steps':self.steps,'view':self.view}
-        (self.viewer_dir/'live-state.json').write_text(json.dumps(state))
+               'steps':getattr(self,'game_actions',self.steps),'gameSeed':getattr(self,'game_seed',None),
+               'actions':getattr(self,'viewer_actions',[]),'view':self.view}
+        state_path=self.viewer_dir/'live-state.json'
+        pending_path=self.viewer_dir/'live-state.json.tmp'
+        pending_path.write_text(json.dumps(state))
+        pending_path.replace(state_path)
 
     def _open_game_page(self):
         """Discard accumulated game/browser state only between complete episodes."""
@@ -230,16 +238,21 @@ class CombatEnv(gym.Env):
         self.page.on('pageerror', lambda error: print('GAME ERROR:', str(error), flush=True))
         self.page.on('response', lambda response: print('HTTP ERROR:', response.status, response.url, flush=True) if response.status >= 400 else None)
         self.page.goto(f'http://127.0.0.1:{port}/play.html?agent=1', wait_until='domcontentloaded')
+        print('GAME PAGE: DOM ready; waiting for agent API', flush=True)
         try:
             # Playwright's built-in wait uses browser-side polling that can
             # stall in a hidden Chromium page.  A direct evaluation loop is
             # slower only by 250 ms and has proven reliable in the headless
             # environment where the agent API appears after level generation.
             ready = False
-            for _ in range(480):
-                if self.page.evaluate('() => !!window.agent'):
+            for attempt in range(480):
+                present = self.page.evaluate('() => !!window.agent')
+                if present:
                     ready = True
+                    print(f'GAME PAGE: agent API ready after {attempt * .25:.2f}s', flush=True)
                     break
+                if attempt in (0, 20, 80, 240):
+                    print(f'GAME PAGE: agent API not ready after {attempt * .25:.2f}s', flush=True)
                 time.sleep(.25)
             if not ready:
                 raise TimeoutError('Game did not expose window.agent within 120 seconds')
@@ -263,6 +276,7 @@ class CombatEnv(gym.Env):
             self.rotation = int(rotation)
         view = self.page.evaluate('''async ([seed, scenario, budget]) => {
             await window.agent.reset(seed, {scenario, maxSteps:budget});
+            window.agent.setFastMode(true);
             return window.agent.perceive();
         }''', [game_seed, scenario, self.budget])
         if view['contract'].get('actionSchemaVersion') != ACTION_SCHEMA:
