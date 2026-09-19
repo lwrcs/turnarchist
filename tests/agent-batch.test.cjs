@@ -299,6 +299,14 @@ test('an exhausted room backtracks through a used door to remembered unfinished 
   assert.equal(p.goal.targetRoom,'earlier');
   p.roomWork.set('earlier',false);assert.equal(p.route(v,new Set()),null);
 });
+test('a completed side path is not immediately re-entered from the main path',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,exit:true,
+    traversal:{direction:'down',sidePath:true,unlocked:true}}];
+  p.doorUses.set('room:1,0',1);p.connect('room','1,0','sewer');p.roomWork.set('sewer',false);
+  assert.equal(p.route(v,new Set()),null);
+  p.roomWork.set('sewer',true);assert.equal(p.route(v,new Set()).direction,'right');
+});
 test('backtracking finds work through exhausted rooms without cycling or inventing links',()=>{
   const p=new Policy();p.connect('a','1,0','b');p.connect('b','2,0','a');p.connect('b','3,0','c');
   p.roomWork.set('c',true);

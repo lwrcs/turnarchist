@@ -9,7 +9,7 @@
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   const threatens=w=>w.hostile&&w.dangerous!==false;
   class Policy {
-    static version='explore-combat-v24';
+    static version='explore-combat-v25';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -182,7 +182,14 @@
           if(tile?.exit) {
             const unavailable=tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true;
             const unpreparedMainDescent=tile.traversal?.direction==='down'&&tile.traversal?.sidePath===false&&!preparedForDepth;
-            reward=unavailable||unpreparedMainDescent?-100:returnExit?0:70-40*uses;
+            const destination=this.connections.get(scope)?.get(k);
+            // Once a side path has returned us to the main path with no
+            // remembered work left, it is complete. Do not immediately enter
+            // it again merely because its ladder still has a generic passage
+            // reward; that creates a prepare/explore ladder ping-pong loop.
+            const exhaustedSidePath=tile.traversal?.direction==='down'&&tile.traversal?.sidePath===true&&
+              uses>0&&destination&&this.roomWork.get(destination)===false;
+            reward=unavailable||unpreparedMainDescent||exhaustedSidePath?-100:returnExit?0:70-40*uses;
           }
           const utility=reward-visits;
           const score=utility-node.distance*2;
