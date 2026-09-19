@@ -505,7 +505,7 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int,
                              viewer_dir: Path | None = None, jev_unstick: bool = False,
-                             client: JevClient | None = None) -> dict[str, Any]:
+                             client: JevClient | None = None, seed_offset: int = 0) -> dict[str, Any]:
     """Collect unlabelled/referee-ready state packets from real browser gameplay."""
     from dungeon_pilot import DungeonEnv, ROOT, seed_plan  # Browser dependencies stay out of unit tests.
 
@@ -516,7 +516,10 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
     rows: list[dict[str, Any]] = []
     outcomes: list[dict[str, Any]] = []
     try:
-        for episode_seed in seed_plan("training", 64)[:seeds]:
+        plan = seed_plan("training", 64)
+        offset = seed_offset % len(plan)
+        ordered_plan = plan[offset:] + plan[:offset]
+        for episode_seed in ordered_plan[:seeds]:
             env.reset(options={"episodeSeed": episode_seed})
             if not env.page.evaluate("() => typeof AgentBaseline !== 'undefined'"):
                 env.page.add_script_tag(path=str(ROOT / "agent-baseline.js"))
@@ -709,6 +712,7 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
         _write_jsonl(out / "packets.jsonl", rows)
         report = {"schemaVersion": REFEREE_SCHEMA_VERSION, "mode": "baseline-packet-collection",
                   "jevUnstick": jev_unstick,
+                  "seedOffset": offset,
                   "packets": len(rows), "episodes": len(outcomes), "outcomes": outcomes}
         (out / "complete.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         return report
@@ -751,6 +755,8 @@ def main() -> None:
     collect.add_argument("--seeds", type=int, default=4)
     collect.add_argument("--budget", type=int, default=256)
     collect.add_argument("--max-packets", type=int, default=200)
+    collect.add_argument("--seed-offset", type=int, default=0,
+                         help="Rotate the deterministic 64-seed plan before collection")
     collect.add_argument("--viewer-dir", type=Path,
                          help="Write a passive live-frame.png and live-state.json after each action")
     collect.add_argument("--jev-unstick", action="store_true",
@@ -768,7 +774,8 @@ def main() -> None:
         client = JevClient() if args.jev_unstick else None
         print(json.dumps(collect_baseline_packets(args.out, seeds=args.seeds, budget=args.budget,
                                                    max_packets=args.max_packets, viewer_dir=args.viewer_dir,
-                                                   jev_unstick=args.jev_unstick, client=client)), flush=True)
+                                                   jev_unstick=args.jev_unstick, client=client,
+                                                   seed_offset=args.seed_offset)), flush=True)
     else:
         if not args.packets.is_file() or not 1 <= args.max_packets <= 10000 or not 0 <= args.confidence_floor <= 1:
             parser.error("Invalid evaluation input or bounds")
