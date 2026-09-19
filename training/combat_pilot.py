@@ -231,10 +231,18 @@ class CombatEnv(gym.Env):
         self.page.on('response', lambda response: print('HTTP ERROR:', response.status, response.url, flush=True) if response.status >= 400 else None)
         self.page.goto(f'http://127.0.0.1:{port}/play.html?agent=1', wait_until='domcontentloaded')
         try:
-            # The default rAF polling can stop in a hidden Chromium page even
-            # after the game has assigned its agent API.  Timed polling keeps
-            # headless collection independent of render-frame scheduling.
-            self.page.wait_for_function('() => !!window.agent', timeout=120000, polling=250)
+            # Playwright's built-in wait uses browser-side polling that can
+            # stall in a hidden Chromium page.  A direct evaluation loop is
+            # slower only by 250 ms and has proven reliable in the headless
+            # environment where the agent API appears after level generation.
+            ready = False
+            for _ in range(480):
+                if self.page.evaluate('() => !!window.agent'):
+                    ready = True
+                    break
+                time.sleep(.25)
+            if not ready:
+                raise TimeoutError('Game did not expose window.agent within 120 seconds')
         except Exception:
             self.page.screenshot(path=str(self.out/'startup-failure.png'))
             print('RESOURCE STATUS:', self.page.evaluate('() => performance.getEntriesByType("resource").map(r => [r.name,r.responseStatus])'), flush=True)
