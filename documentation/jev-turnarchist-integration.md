@@ -154,9 +154,11 @@ Ask several independent questions in one Jev request:
 2. **Immediate tactic** — choose `eliminate threat`, `dodge`, `advance safely`,
    `create space`, `collect`, `heal`, or `reposition`.
 3. **Action choice** — choose the best supplied candidate for that one turn.
-4. **Baseline adequacy** — whether the programmed-baseline action is acceptable
+4. **Weapon choice** — choose an explicitly supplied weapon or `keep-current`;
+   record this as a zero-turn equipment label without executing it.
+5. **Baseline adequacy** — whether the programmed-baseline action is acceptable
    for the stated immediate priority.
-5. **Human teaching value** — score whether this state should request or retain
+6. **Human teaching value** — score whether this state should request or retain
    a human demonstration because automated choices are unclear.
 
 Use action choice only when its confidence clears a deliberately high threshold
@@ -312,7 +314,7 @@ play, training, or checkpoints.
    ambiguous/failed states.  Split by seed before sampling.
 2. Have a human label a smaller held-out set with the primary mode, objective,
    one-turn tactic, and preferred action among the supplied legal candidates.
-3. Run Jev on the training split using a versioned packet schema and five
+3. Run Jev on the training split using a versioned packet schema and six
    atomic questions in a single request.
 4. Measure agreement with held-out human labels at each layer, legal-action rate after
    validation, immediate known-damage avoided, confidence calibration, and cost

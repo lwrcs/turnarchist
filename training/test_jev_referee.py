@@ -12,6 +12,7 @@ def operator():
         'observationMode': 'privileged-demonstration-operator', 'decision': 'world',
         'player': {'x': 8, 'y': 11, 'health': 1.0, 'maxHealth': 2.0, 'mana': 0, 'maxMana': 1, 'coins': 3},
         'inventory': [{'slot': 0, 'id': 'dagger', 'kind': 'dagger', 'activeWeapon': True,
+                       'categories': ['weapon'],
                        'traits': {'minimumAttackDamage': 1, 'range': 1, 'attackPattern': 'adjacent-cardinal'}}],
         'room': {
             'id': 'room-a', 'depth': 0, 'roomType': 'BOSS', 'environment': 'sewer',
@@ -64,8 +65,9 @@ class JevRefereeTests(unittest.TestCase):
         self.assertEqual(packet['actions']['move_right']['knownIncomingDamageBeforeDefense'], 0)
         self.assertIn('target_zombie-a', packet['objectives'])
         self.assertIn('target_spawner-a', packet['objectives'])
+        self.assertEqual(set(packet['weaponChoices']), {'keep_current', 'weapon_slot_0'})
         questions = questions_for(packet)
-        self.assertEqual(set(questions), {'mode', 'objective', 'tactic', 'action', 'baseline_adequate', 'human_teaching_value'})
+        self.assertEqual(set(questions), {'mode', 'objective', 'tactic', 'action', 'weapon', 'baseline_adequate', 'human_teaching_value'})
         self.assertEqual(set(questions['action']['criteria']), set(packet['actions']))
 
     def test_packet_requires_privileged_operator_boundary(self):
@@ -83,6 +85,7 @@ class JevRefereeTests(unittest.TestCase):
             'objective': {'type': 'choice', 'choice': 'target_zombie-a', 'confidence': .9},
             'tactic': {'type': 'choice', 'choice': 'dodge', 'confidence': .9},
             'action': {'type': 'choice', 'choice': 'move_right', 'confidence': .79},
+            'weapon': {'type': 'choice', 'choice': 'keep_current', 'confidence': .9},
             'baseline_adequate': {'type': 'noul', 'noul': .8},
             'human_teaching_value': {'type': 'score', 'score': 1.7, 'confidence': .8},
         }}
@@ -90,6 +93,7 @@ class JevRefereeTests(unittest.TestCase):
         self.assertFalse(advice['autoActionEligible'])
         self.assertIsNone(advice['action']['proposedGameAction'])
         self.assertEqual(advice['answers']['action']['choice'], 'move_right')
+        self.assertEqual(advice['weapon']['choice'], 'keep_current')
         response = copy.deepcopy(response); response['answers']['action']['choice'] = 'not-a-candidate'; response['answers']['action']['confidence'] = 1
         self.assertFalse(advice_from_response(packet, response, .8)['autoActionEligible'])
 
