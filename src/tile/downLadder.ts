@@ -75,6 +75,7 @@ export class DownLadder extends Passageway {
     return {
       kind: "ladder", direction: "down", unlocked,
       unlockableFromHere: unlocked || hasMatchingKey || GameConstants.DEVELOPER_MODE,
+      sidePath: this.isSidePath,
     };
   };
 

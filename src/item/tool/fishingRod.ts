@@ -16,6 +16,8 @@ export class FishingRod extends Item {
     this.name = FishingRod.itemName;
   }
 
+  getAgentCategories = (): string[] => ["tool", "fishing-tool"];
+
   disassemble = () => {
     this.level.game.pushMessage(
       `You dissassemble your ${this.name} into fragments.`,

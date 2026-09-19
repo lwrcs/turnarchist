@@ -304,9 +304,11 @@ export class AgentEnvironment {
       const staysInPlace=pushOutcome?pushOutcome!=="player-moves":attack||occupant?.collidable===true||tile?.isSolid()===true;
       const landing=staysInPlace?{x:player.x,y:player.y}:{x,y};
       const threats=warningDamage(landing.x,landing.y),projectiles=projectileDamage(landing.x,landing.y);
+      const tileHazard=(tile as any)?.getAgentHazardTraits?.()??null;
+      const tileDamage=tileHazard?.kind==="spikes"&&(tileHazard.active||tileHazard.warning)?tileHazard.damage??0:0;
       const neutralized=kills&&occupant?.id?warnings.filter(w=>w.sourceId===occupant.id&&w.dangerous).length:0;
       const sourceDamage=occupant?.combat.currentDamage??occupant?.combat.baseDamage??0;
-      const knownDamage=Math.max(0,threats.knownDamage-(neutralized?sourceDamage:0))+projectiles;
+      const knownDamage=Math.max(0,threats.knownDamage-(neutralized?sourceDamage:0))+projectiles+tileDamage;
       return {direction,target:{x,y},resolution:occupant?.pushable?"push-or-attack":attack?"attack":
         tile?.isDoor?"door-transition-or-door-interaction":tile instanceof DownLadder||tile instanceof UpLadder?"ladder":
         tile?.isSolid()?"blocked-or-interact":"move",staysInPlace,pushOutcome,occupantId:occupant?.id??null,

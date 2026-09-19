@@ -502,6 +502,8 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
             last_novelty = 0
             last_intervention = -100
             escape_commitment: dict[str, Any] | None = None
+            combat_commitment: dict[str, Any] | None = None
+            last_combat_commitment = -100
             while decisions < env.budget and len(rows) < max_packets:
                 before = env.view
                 teacher = env.page.evaluate("(view) => window.jevRefereeTeacher.choose(view)", before)
@@ -521,6 +523,8 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 if escape_commitment and (str(room.get("id")) != escape_commitment["room"] or
                                           room.get("enemyFree") is not True):
                     escape_commitment = None
+                if combat_commitment and room.get("enemyFree") is True:
+                    combat_commitment = None
                 env.tactical_status = {
                     "motivation": motivation, "engagement": engagement,
                     "roomIntent": "stay" if room.get("enemyCount") else "indifferent",
@@ -530,6 +534,61 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 }
                 if before.get("decision") == "world" and operator.get("decision") == "world":
                     packet = build_packet(before, operator, teacher)
+                    known_threat = packet["currentThreat"].get("knownIncomingDamageBeforeDefense") or 0
+                    high_pressure = (room.get("enemyFree") is False and
+                                     (int(room.get("enemyCount") or 0) >= 3 or
+                                      (room.get("bossRoom") and int(room.get("enemyCount") or 0) >= 2) or
+                                      known_threat >= (packet["player"].get("health") or 0)))
+                    if (jev_unstick and client is not None and high_pressure and combat_commitment is None and
+                            decisions - last_combat_commitment >= 8):
+                        combat_commitment = {"remaining": 4, "total": 4, "motivation": None,
+                                             "trigger": "high-pressure combat planning"}
+                    if combat_commitment is not None:
+                        try:
+                            combat_response = client.evaluate(packet)
+                            combat_advice = advice_from_response(packet, combat_response, 0.65)
+                        except JevRequestError as error:
+                            env.tactical_status.update({"source": "jev-combat-error", "trigger": str(error)})
+                            combat_commitment = None
+                            combat_advice = None
+                        if combat_advice is not None:
+                            combat_choice = combat_advice["action"].get("choice")
+                            combat_candidate = packet["actions"].get(combat_choice, {})
+                            damages = [value.get("knownIncomingDamageBeforeDefense") for value in packet["actions"].values()
+                                       if value.get("unknownDamageSources", 0) == 0 and
+                                       value.get("knownIncomingDamageBeforeDefense") is not None]
+                            minimum_damage = min(damages) if damages else None
+                            acceptable = (combat_candidate and combat_candidate.get("unknownDamageSources", 0) == 0 and
+                                          (combat_candidate.get("neutralizesThreatSource") is True or
+                                           minimum_damage is None or
+                                           combat_candidate.get("knownIncomingDamageBeforeDefense") == minimum_damage))
+                            if acceptable:
+                                teacher = {"type": "Move", "direction": combat_candidate["direction"]}
+                                if combat_commitment["motivation"] is None:
+                                    selected = combat_advice["motivation"]["choice"]
+                                    combat_commitment["motivation"] = selected if selected not in {None, "uncertain"} else "progress"
+                                combat_commitment["remaining"] -= 1
+                                last_combat_commitment = decisions
+                                packet["jevCombatIntervention"] = combat_advice
+                                env.tactical_status = {
+                                    "motivation": combat_commitment["motivation"],
+                                    "engagement": combat_advice["engagement"]["choice"],
+                                    "roomIntent": combat_advice["roomIntent"]["choice"],
+                                    "action": combat_choice, "source": "jev-combat",
+                                    "confidence": combat_advice["action"]["confidence"],
+                                    "trigger": (combat_commitment["trigger"] +
+                                                f"; commitment {combat_commitment['total']-combat_commitment['remaining']}/{combat_commitment['total']}"),
+                                }
+                                if combat_commitment["remaining"] <= 0:
+                                    combat_commitment = None
+                            else:
+                                combat_commitment["remaining"] -= 1
+                                env.tactical_status.update({
+                                    "source": "jev-combat-rejected",
+                                    "trigger": "Jev combat action did not pass the minimum-damage safety gate",
+                                })
+                                if combat_commitment["remaining"] <= 0:
+                                    combat_commitment = None
                     stalled = (jev_unstick and client is not None and room.get("enemyFree") is True and
                                decisions - last_novelty >= 12 and len(set(recent_positions)) <= 5 and
                                decisions - last_intervention >= 8)

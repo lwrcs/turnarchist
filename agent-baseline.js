@@ -153,6 +153,12 @@
       for(const e of knownEntities)for(let x=e.x;x<e.x+Math.max(1,e.width??1);x++)
         for(let y=e.y;y<e.y+Math.max(1,e.height??1);y++)occupants.set(key(x,y),[...(occupants.get(key(x,y))??[]),e]);
       const items=new Set(view.room.items?.map(i=>key(i.x,i.y))??[]);
+      const canFish=view.inventory.some(i=>i?.categories?.includes('fishing-tool'));
+      const resources=new Set(canFish?view.room.entities.filter(e=>e.resource?.kind==='fishing'&&e.resource.available)
+        .map(e=>key(e.x,e.y)):[]);
+      for(const resource of resources)items.add(resource);
+      const healing=view.inventory.reduce((total,item)=>total+(item?.healingAmount??0)*(item?.stackCount??1),0);
+      const preparedForDepth=p.health>=p.maxHealth||healing>0;
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
       let best=null,committed=null;
@@ -173,7 +179,11 @@
           // Passage use must replace the unvisited/frontier reward, not compete with it.
           if(tile?.isDoor)reward=35-40*uses;
           const returnExit=tile?.exit&&tile.traversal?.direction==='up';
-          if(tile?.exit)reward=returnExit?0:70-40*uses;
+          if(tile?.exit) {
+            const unavailable=tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true;
+            const unpreparedMainDescent=tile.traversal?.direction==='down'&&tile.traversal?.sidePath===false&&!preparedForDepth;
+            reward=unavailable||unpreparedMainDescent?-100:returnExit?0:70-40*uses;
+          }
           const utility=reward-visits;
           const score=utility-node.distance*2;
           const candidate={score,key:k,action:{type:'Move',direction:node.first}};
@@ -182,7 +192,7 @@
           if(this.goal?.key===k&&!this.goal.backtrack)committed=candidate;
           if(utility>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
-          if(tile?.isDoor||tile?.exit)continue;
+          if((tile?.isDoor||tile?.exit)&&!resources.has(k))continue;
         }
         for(const [direction,dx,dy] of directions) {
           const x=node.x+dx,y=node.y+dy,next=key(x,y),t=map.get(next);
@@ -191,7 +201,7 @@
           if(t.exit&&t.traversal?.unlocked===false&&t.traversal?.unlockableFromHere!==true)continue;
           const occupied=occupants.get(next)??[];
           if(occupied.some(e=>e.appearance==='unidentified'||e.isEnemy||
-            (e.collidable&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
+            (e.collidable&&!resources.has(next)&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
           // Estimate effort, then replan from the actual outcome of each attack.
           const clearance=occupied.reduce((cost,e)=>cost+(e.collidable?Math.ceil(e.health/damage):0),0);
           const edge=`${scope}:${k}>${next}`;
@@ -239,6 +249,8 @@
       }
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const threats=new Set(view.room.hitWarnings.filter(threatens).map(w=>key(w.x,w.y)));
+      for(const tile of view.room.tiles)if(tile.hazard?.kind==='spikes'&&
+        (tile.hazard.active===true||tile.hazard.warning===true))threats.add(key(tile.x,tile.y));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
       const preparation=this.prepareCombatEscape(view,threats);
       if(preparation){this.reason='clear-combat-escape';return preparation;}

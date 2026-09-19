@@ -65,7 +65,7 @@ export class SpikeTrap extends Tile {
   };
 
   // Visible spike state only; phase counts remain internal simulation state.
-  getAgentHazardTraits = () => ({kind: "spikes", active: this.on, warning: this.tickCount === 3});
+  getAgentHazardTraits = () => ({kind: "spikes", damage: 0.5, active: this.on, warning: this.tickCount === 3});
 
   onCollideEnemy = (enemy: Entity) => {
     if (this.on && !(enemy instanceof Crate || enemy instanceof Barrel))

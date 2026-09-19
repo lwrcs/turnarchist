@@ -16,6 +16,7 @@ interface EntityTraitsSource {
   direction?: number;
   forwardOnlyAttack?: boolean; isBossEnemy?: boolean;
   getAgentSpawnTraits?: () => {enemyType: string};
+  getAgentResourceTraits?: () => {kind: string; available: boolean; remaining?: number};
 }
 
 export function observeEntity(source: object) {
@@ -37,6 +38,7 @@ export function observeEntity(source: object) {
     facing: Number.isInteger(entity.direction) && entity.direction >= 0 && entity.direction < 8
       ? {dx: [0,0,1,-1,1,-1,1,-1][entity.direction], dy: [1,-1,0,0,1,-1,-1,1][entity.direction]} : null,
     spawner: entity.getAgentSpawnTraits?.() ?? null,
+    resource: entity.getAgentResourceTraits?.() ?? null,
     combat: {
       baseDamage: numberOrNull(entity.baseDamage),
       currentDamage: numberOrNull(entity.damage),
