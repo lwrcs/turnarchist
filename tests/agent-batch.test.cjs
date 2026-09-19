@@ -38,6 +38,13 @@ test('baseline uses traits for healing and combat, and handles ladder choices',(
   v.decision='vending';assert.deepEqual(p.choose(v),{type:'DismissInteraction'});
   v.decision='unsupported-modal';assert.equal(p.choose(v),null);
 });
+test('a fishing rod casts at an adjacent active fishing spot on a solid pool tile',()=>{
+  const p=new Policy(),v=view();v.room.tiles.find(t=>t.x===1&&t.y===0).solid=true;
+  v.inventory=[{categories:['tool','fishing-tool']}];
+  v.room.entities=[{x:1,y:0,width:1,height:1,isEnemy:false,interactable:true,
+    resource:{kind:'fishing',available:true,remaining:2}}];
+  assert.deepEqual(p.choose(v),{type:'Move',direction:'right'});assert.equal(p.inspect().reason,'fish');
+});
 test('free successful attacks do not blacklist their direction; unchanged bumps do',()=>{
   const p=new Policy(),v=view();v.room.entities=[{x:1,y:0,isEnemy:true,health:2}];
   const action=p.choose(v),next=structuredClone(v);next.room.entities[0].health=1;

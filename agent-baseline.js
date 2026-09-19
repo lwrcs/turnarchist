@@ -157,6 +157,14 @@
       const resources=new Set(canFish?view.room.entities.filter(e=>e.resource?.kind==='fishing'&&e.resource.available)
         .map(e=>key(e.x,e.y)):[]);
       for(const resource of resources)items.add(resource);
+      // Fishing spots sit on solid pool tiles. Route to a walkable neighbor;
+      // the normal adjacent interaction will cast the line from there.
+      for(const spot of canFish?view.room.entities.filter(e=>e.resource?.kind==='fishing'&&e.resource.available):[]) {
+        for(const [,dx,dy] of directions) {
+          const adjacent=key(spot.x+dx,spot.y+dy);
+          if(map.get(adjacent)?.solid===false)items.add(adjacent);
+        }
+      }
       const healing=view.inventory.reduce((total,item)=>total+(item?.healingAmount??0)*(item?.stackCount??1),0);
       const preparedForDepth=p.health>=p.maxHealth||healing>0;
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
@@ -259,6 +267,12 @@
       for(const tile of view.room.tiles)if(tile.hazard?.kind==='spikes'&&
         (tile.hazard.active===true||tile.hazard.warning===true))threats.add(key(tile.x,tile.y));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
+      const fishDirection=enemies.length===0&&!threats.has(key(p.x,p.y))&&
+        view.inventory.some(i=>i?.categories?.includes('fishing-tool'))&&
+        directions.find(([direction,dx,dy])=>view.room.entities.some(e=>
+          e.interactable===true&&e.resource?.kind==='fishing'&&e.resource.available===true&&
+          occupies(e,p.x+dx,p.y+dy)));
+      if(fishDirection){this.reason='fish';return {type:'Move',direction:fishDirection[0]};}
       const preparation=this.prepareCombatEscape(view,threats);
       if(preparation){this.reason='clear-combat-escape';return preparation;}
       const route=this.route(view,threats);
