@@ -18,6 +18,7 @@ import json
 import os
 from pathlib import Path
 import time
+from collections import deque
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -469,7 +470,8 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int,
-                             viewer_dir: Path | None = None) -> dict[str, Any]:
+                             viewer_dir: Path | None = None, jev_unstick: bool = False,
+                             client: JevClient | None = None) -> dict[str, Any]:
     """Collect unlabelled/referee-ready state packets from real browser gameplay."""
     from dungeon_pilot import DungeonEnv, ROOT, seed_plan  # Browser dependencies stay out of unit tests.
 
@@ -486,14 +488,61 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 env.page.add_script_tag(path=str(ROOT / "agent-baseline.js"))
             env.page.evaluate("() => { window.jevRefereeTeacher = new AgentBaseline.Policy(); }")
             decisions = 0
+            recent_positions: deque[tuple[str, int, int]] = deque(maxlen=16)
+            seen_positions: set[tuple[str, int, int]] = set()
+            last_novelty = 0
+            last_intervention = -100
             while decisions < env.budget and len(rows) < max_packets:
                 before = env.view
                 teacher = env.page.evaluate("(view) => window.jevRefereeTeacher.choose(view)", before)
                 if not teacher:
                     break
                 operator = env.page.evaluate("() => window.agent.inspectOperator()")
+                room = operator.get("room") if isinstance(operator.get("room"), dict) else {}
+                position = (str(room.get("id")), int(before["player"]["x"]), int(before["player"]["y"]))
+                recent_positions.append(position)
+                if position not in seen_positions:
+                    seen_positions.add(position)
+                    last_novelty = decisions
+                baseline_state = env.page.evaluate("() => window.jevRefereeTeacher.inspect()")
+                motivation = ("progress" if room.get("bossRoom") or room.get("progressBlockedByEnemies")
+                              else "prepare" if room.get("sidePath") else "explore")
+                engagement = "fight" if int(room.get("enemyCount") or 0) else "not_in_combat"
+                env.tactical_status = {
+                    "motivation": motivation, "engagement": engagement,
+                    "roomIntent": "stay" if room.get("enemyCount") else "indifferent",
+                    "action": teacher.get("direction") or teacher.get("type"),
+                    "source": "programmed-baseline", "confidence": None,
+                    "reason": baseline_state.get("reason"),
+                }
                 if before.get("decision") == "world" and operator.get("decision") == "world":
                     packet = build_packet(before, operator, teacher)
+                    stalled = (jev_unstick and client is not None and room.get("enemyFree") is True and
+                               decisions - last_novelty >= 12 and len(set(recent_positions)) <= 5 and
+                               decisions - last_intervention >= 8)
+                    if stalled:
+                        packet["stuckEvidence"] = {
+                            "decisionsWithoutNewPosition": decisions - last_novelty,
+                            "recentUniquePositions": len(set(recent_positions)),
+                            "instruction": "Break the navigation cycle while avoiding known damage. Prefer an action that serves Explore, Progress, or Prepare.",
+                        }
+                        response = client.evaluate(packet)
+                        advice = advice_from_response(packet, response, 0.65)
+                        proposed = advice["action"].get("proposedGameAction")
+                        if proposed:
+                            candidate = packet["actions"].get("move_" + proposed["direction"], {})
+                            if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
+                                    candidate.get("unknownDamageSources", 0) == 0):
+                                teacher = proposed
+                                last_intervention = decisions
+                                env.tactical_status = {
+                                    "motivation": advice["motivation"]["choice"],
+                                    "engagement": advice["engagement"]["choice"],
+                                    "roomIntent": advice["roomIntent"]["choice"],
+                                    "action": advice["action"]["choice"], "source": "jev-unstick",
+                                    "confidence": round(advice["combinedConfidence"], 3),
+                                    "trigger": f"{decisions-last_novelty} decisions without a new position",
+                                }
                     rows.append({"packet": packet, "teacherAction": teacher,
                                  "episodeSeed": episode_seed, "step": decisions})
                 _reward, dead, truncated = env.execute(teacher, "jev-referee-collection")
@@ -510,6 +559,7 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 break
         _write_jsonl(out / "packets.jsonl", rows)
         report = {"schemaVersion": REFEREE_SCHEMA_VERSION, "mode": "baseline-packet-collection",
+                  "jevUnstick": jev_unstick,
                   "packets": len(rows), "episodes": len(outcomes), "outcomes": outcomes}
         (out / "complete.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         return report
@@ -554,6 +604,8 @@ def main() -> None:
     collect.add_argument("--max-packets", type=int, default=200)
     collect.add_argument("--viewer-dir", type=Path,
                          help="Write a passive live-frame.png and live-state.json after each action")
+    collect.add_argument("--jev-unstick", action="store_true",
+                         help="Ask Jev for one safe action after an enemy-free navigation loop is detected")
     evaluate = commands.add_parser("evaluate", help="Evaluate saved packets using Jev")
     evaluate.add_argument("--packets", type=Path, required=True)
     evaluate.add_argument("--out", type=Path, required=True)
@@ -564,8 +616,10 @@ def main() -> None:
     if args.command == "collect":
         if not 1 <= args.seeds <= 64 or not 1 <= args.budget <= 10000 or not 1 <= args.max_packets <= 10000:
             parser.error("Invalid collection bounds")
+        client = JevClient() if args.jev_unstick else None
         print(json.dumps(collect_baseline_packets(args.out, seeds=args.seeds, budget=args.budget,
-                                                   max_packets=args.max_packets, viewer_dir=args.viewer_dir)), flush=True)
+                                                   max_packets=args.max_packets, viewer_dir=args.viewer_dir,
+                                                   jev_unstick=args.jev_unstick, client=client)), flush=True)
     else:
         if not args.packets.is_file() or not 1 <= args.max_packets <= 10000 or not 0 <= args.confidence_floor <= 1:
             parser.error("Invalid evaluation input or bounds")
