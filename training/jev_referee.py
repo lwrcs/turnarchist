@@ -493,6 +493,7 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
             seen_positions: set[tuple[str, int, int]] = set()
             last_novelty = 0
             last_intervention = -100
+            escape_commitment: dict[str, Any] | None = None
             while decisions < env.budget and len(rows) < max_packets:
                 before = env.view
                 teacher = env.page.evaluate("(view) => window.jevRefereeTeacher.choose(view)", before)
@@ -509,6 +510,9 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 motivation = ("progress" if room.get("bossRoom") or room.get("progressBlockedByEnemies")
                               else "prepare" if room.get("sidePath") else "explore")
                 engagement = "fight" if int(room.get("enemyCount") or 0) else "not_in_combat"
+                if escape_commitment and (str(room.get("id")) != escape_commitment["room"] or
+                                          room.get("enemyFree") is not True):
+                    escape_commitment = None
                 env.tactical_status = {
                     "motivation": motivation, "engagement": engagement,
                     "roomIntent": "stay" if room.get("enemyCount") else "indifferent",
@@ -521,9 +525,16 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                     stalled = (jev_unstick and client is not None and room.get("enemyFree") is True and
                                decisions - last_novelty >= 12 and len(set(recent_positions)) <= 5 and
                                decisions - last_intervention >= 8)
-                    if stalled:
+                    if stalled and escape_commitment is None:
+                        escape_commitment = {
+                            "room": str(room.get("id")), "avoid": set(recent_positions),
+                            "remaining": 8, "total": 8, "motivation": None,
+                            "trigger": f"{decisions-last_novelty} decisions without a new position",
+                        }
+                    if escape_commitment is not None:
                         intervention_packet = copy.deepcopy(packet)
-                        repeated = set(recent_positions)
+                        repeated = escape_commitment["avoid"]
+                        immediate_previous = recent_positions[-2] if len(recent_positions) > 1 else None
                         moves = {
                             move.get("direction"): move for move in
                             ((operator.get("tactical") or {}).get("moves") or []) if isinstance(move, dict)
@@ -536,7 +547,7 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                             if (candidate.get("staysInPlace") is False and
                                     candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
                                     candidate.get("unknownDamageSources", 0) == 0 and
-                                    target_position not in repeated):
+                                    target_position not in repeated and target_position != immediate_previous):
                                 escape_actions[key] = candidate
                         if escape_actions:
                             intervention_packet["actions"] = escape_actions
@@ -545,28 +556,49 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                             "recentUniquePositions": len(set(recent_positions)),
                             "repeatedPositions": [list(value) for value in sorted(repeated)],
                             "restrictedToNovelSafeMoves": bool(escape_actions),
-                            "instruction": "Break the navigation cycle now. Choose one of the supplied safe actions; when restrictedToNovelSafeMoves is true, every supplied action leaves the repeated positions.",
+                            "commitmentStepsRemaining": escape_commitment["remaining"],
+                            "instruction": "Continue breaking the navigation cycle. Preserve the active motivation and choose one supplied safe action. When restrictedToNovelSafeMoves is true, every supplied action avoids the original loop and immediate reversal.",
                         }
-                        response = client.evaluate(intervention_packet)
-                        advice = advice_from_response(intervention_packet, response, 0.65)
-                        action_choice = advice["action"].get("choice")
-                        candidate = intervention_packet["actions"].get(action_choice, {})
+                        try:
+                            response = client.evaluate(intervention_packet)
+                            advice = advice_from_response(intervention_packet, response, 0.65)
+                        except JevRequestError as error:
+                            env.tactical_status.update({
+                                "source": "jev-unstick-error", "trigger": str(error),
+                            })
+                            escape_commitment = None
+                            advice = None
+                        if advice is None:
+                            action_choice = None
+                            candidate = {}
+                        else:
+                            action_choice = advice["action"].get("choice")
+                            candidate = intervention_packet["actions"].get(action_choice, {})
                         if candidate:
                             proposed = {"type": "Move", "direction": candidate["direction"]}
                             if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
                                     candidate.get("unknownDamageSources", 0) == 0):
                                 teacher = proposed
                                 last_intervention = decisions
+                                if escape_commitment["motivation"] is None:
+                                    selected_motivation = advice["motivation"]["choice"]
+                                    escape_commitment["motivation"] = (selected_motivation
+                                                                        if selected_motivation not in {None, "uncertain"}
+                                                                        else "progress")
+                                escape_commitment["remaining"] -= 1
                                 packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
                                 packet["jevIntervention"] = advice
                                 env.tactical_status = {
-                                    "motivation": advice["motivation"]["choice"],
+                                    "motivation": escape_commitment["motivation"],
                                     "engagement": advice["engagement"]["choice"],
                                     "roomIntent": advice["roomIntent"]["choice"],
                                     "action": action_choice, "source": "jev-unstick",
                                     "confidence": advice["action"]["confidence"],
-                                    "trigger": f"{decisions-last_novelty} decisions without a new position",
+                                    "trigger": (escape_commitment["trigger"] +
+                                                f"; commitment {escape_commitment['total']-escape_commitment['remaining']}/{escape_commitment['total']}"),
                                 }
+                                if escape_commitment["remaining"] <= 0:
+                                    escape_commitment = None
                     rows.append({"packet": packet, "teacherAction": teacher,
                                  "episodeSeed": episode_seed, "step": decisions})
                 _reward, dead, truncated = env.execute(teacher, "jev-referee-collection")
