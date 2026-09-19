@@ -231,7 +231,10 @@ class CombatEnv(gym.Env):
         self.page.on('response', lambda response: print('HTTP ERROR:', response.status, response.url, flush=True) if response.status >= 400 else None)
         self.page.goto(f'http://127.0.0.1:{port}/play.html?agent=1', wait_until='domcontentloaded')
         try:
-            self.page.wait_for_function('() => !!window.agent', timeout=120000)
+            # The default rAF polling can stop in a hidden Chromium page even
+            # after the game has assigned its agent API.  Timed polling keeps
+            # headless collection independent of render-frame scheduling.
+            self.page.wait_for_function('() => !!window.agent', timeout=120000, polling=250)
         except Exception:
             self.page.screenshot(path=str(self.out/'startup-failure.png'))
             print('RESOURCE STATUS:', self.page.evaluate('() => performance.getEntriesByType("resource").map(r => [r.name,r.responseStatus])'), flush=True)
