@@ -62,16 +62,25 @@
   }
 
   function summary(action, before, after, result) {
-    const enemies = view => new Map((view.room?.entities ?? [])
-      .filter(entity => entity.isEnemy && entity.id)
+    const entities = view => new Map((view.room?.entities ?? [])
+      .filter(entity => entity.id)
       .map(entity => [entity.id, entity]));
-    const beforeEnemies = enemies(before), afterEnemies = enemies(after);
-    const enemiesKilled = [...beforeEnemies.keys()].filter(id => !afterEnemies.has(id));
-    const enemiesDamaged = [...afterEnemies.entries()]
+    const sameRoom = before.room.id === after.room.id;
+    const beforeEntities = entities(before), afterEntities = entities(after);
+    const beforeEnemies = new Map([...beforeEntities].filter(([, entity]) => entity.isEnemy));
+    const afterEnemies = new Map([...afterEntities].filter(([, entity]) => entity.isEnemy));
+    // Disappearing from the observation only means "killed" when both frames
+    // describe the same room. Door traversal replaces the entire entity list.
+    const enemiesKilled = sameRoom
+      ? [...beforeEnemies.keys()].filter(id => !afterEnemies.has(id)) : [];
+    const enemiesDamaged = sameRoom ? [...afterEnemies.entries()]
       .filter(([id, entity]) => {
         const prior = beforeEnemies.get(id);
         return prior && typeof entity.health === 'number' && typeof prior.health === 'number' && entity.health < prior.health;
-      }).map(([id]) => id);
+      }).map(([id]) => id) : [];
+    const objectsDestroyed = sameRoom ? [...beforeEntities.entries()]
+      .filter(([id, entity]) => entity.isEnemy !== true && !afterEntities.has(id))
+      .map(([id, entity]) => ({id, kind: entity.kind ?? 'object'})) : [];
     return {
       status: result.terminated ? 'terminated' : result.truncated ? 'truncated' : 'settled',
       action: copy(action),
@@ -88,6 +97,7 @@
         health: after.player.health, mana: after.player.mana, coins: after.player.coins},
       enemiesKilled,
       enemiesDamaged,
+      objectsDestroyed,
       threatsBefore: (before.room.hitWarnings ?? []).filter(warning => warning.dangerous).length,
       threatsAfter: (after.room.hitWarnings ?? []).filter(warning => warning.dangerous).length,
       transition: result.terminated ? 'death' : before.room.depth !== after.room.depth ? 'floor' :
@@ -95,6 +105,31 @@
       recorded: result.info?.recorded === true,
       turnDelta: result.info?.turnDelta ?? null,
     };
+  }
+
+  function describeOutcome(candidate) {
+    const outcome = candidate?.outcome ?? {};
+    const delta = outcome.playerDelta ?? {};
+    if (outcome.status === 'unsupported') return `unavailable (${String(outcome.error ?? 'unsupported').split('\n')[0]})`;
+    const parts = [];
+    if (outcome.transition === 'death') parts.push('dies');
+    else if (outcome.transition === 'floor') parts.push('changes floor');
+    else if (outcome.transition === 'room') parts.push('enters another room');
+    else if (outcome.enemiesKilled?.length) parts.push(`kills ${outcome.enemiesKilled.length} ${outcome.enemiesKilled.length === 1 ? 'enemy' : 'enemies'}`);
+    else if (outcome.objectsDestroyed?.length) {
+      const kinds = [...new Set(outcome.objectsDestroyed.map(entity => String(entity.kind ?? 'object')
+        .replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()))];
+      parts.push(`destroys ${kinds.join(', ')} and stays in place`);
+    } else if (outcome.enemiesDamaged?.length) parts.push(`hits ${outcome.enemiesDamaged.length} ${outcome.enemiesDamaged.length === 1 ? 'enemy' : 'enemies'} and stays in place`);
+    else if (delta.positionChanged) parts.push(`moves to (${outcome.playerAfter?.x}, ${outcome.playerAfter?.y})`);
+    else if (outcome.recorded && candidate?.preview?.resolution === 'attack') parts.push('attacks and stays in place');
+    else if (outcome.recorded) parts.push('acts and stays in place');
+    else parts.push('has no effect');
+    if (typeof delta.health === 'number' && delta.health < 0) parts.push(`takes ${Math.abs(delta.health)} health`);
+    if (typeof outcome.threatsAfter === 'number' && outcome.threatsAfter > 0) {
+      parts.push(`${outcome.threatsAfter} dangerous ${outcome.threatsAfter === 1 ? 'warning remains' : 'warnings remain'}`);
+    }
+    return parts.join('; ');
   }
 
   class IsolatedSimulator {
@@ -204,5 +239,5 @@
     }
   }
 
-  return {IsolatedSimulator, candidateActions, compareOutcomes, rankOutcome, summary};
+  return {IsolatedSimulator, candidateActions, compareOutcomes, rankOutcome, summary, describeOutcome};
 });

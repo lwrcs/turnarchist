@@ -18,6 +18,8 @@
   #action-feedback { display:none; margin:8px 0; padding:10px 12px; border:1px solid #6956a5; border-radius:6px; background:#211b31; color:#f1edff; }
   #action-feedback[data-kind="error"] { border-color:#b54a57; background:#331b21; }
   #action-feedback strong { color:#d8c9ff; }
+  #action-feedback ul { margin:8px 0; padding-left:22px; }
+  #action-feedback li { margin:4px 0; }
 </style>
 <main>
   <h1>Turnarchist agent lab</h1>
@@ -36,7 +38,7 @@
   <button id="extend">Allow 1,000 more decisions</button>
   <button id="smoke">Run smoke check</button>
   <button id="inventory-smoke">Run inventory check</button>
-  <div><label>Action JSON <input id="action-json" size="55" value='{"type":"UseItem","slotIndex":0}'></label><button id="submit-action">Run action</button><button id="preview-action">Preview isolated</button><button id="preview-legal-actions">Preview legal actions</button></div>
+  <div><label>Action JSON <input id="action-json" size="55" value='{"type":"UseItem","slotIndex":0}'></label><button id="submit-action">Run action</button><button id="preview-action">Preview isolated</button><button id="preview-legal-actions">Preview all legal actions</button></div>
   <div id="action-feedback" role="status" aria-live="polite"></div>
   <div><label>Batch seeds <input id="batch-seeds" value="123,456,789"></label>
   <label>Decisions per seed <input id="batch-decisions" type="number" value="40" min="1" max="10000"></label>
@@ -49,6 +51,6 @@
 </main>
 <script src="./agent-baseline.js?v=26"></script>
 <script src="./agent-batch.js?v=8"></script>
-<script src="./agent-simulation-host.js?v=4"></script>
-<script src="./agent-lab.js?v=18"></script>
+<script src="./agent-simulation-host.js?v=5"></script>
+<script src="./agent-lab.js?v=19"></script>
 </html>
