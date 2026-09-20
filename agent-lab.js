@@ -16,14 +16,21 @@
     try {
       const output = await operation();
       result.textContent = JSON.stringify(output, null, 2);
-      if (output?.selected?.action) {
-        const choice = output.selected;
-        const direction = choice.action.direction || choice.action.type;
-        const outcome = choice.outcome || {};
-        const damage = outcome.playerDelta?.health < 0 ? `, takes ${Math.abs(outcome.playerDelta.health)} health` : '';
-        const hit = outcome.enemiesKilled?.length ? `kills ${outcome.enemiesKilled.length} enemy` : outcome.enemiesDamaged?.length ? `hits ${outcome.enemiesDamaged.length} enemy` : 'changes position';
+      if (output?.candidates?.length) {
+        const selectedId = output.selected?.id ?? null;
         actionFeedback.dataset.kind = 'success';
-        actionFeedback.innerHTML = `<strong>Preview selected: ${direction}</strong> — ${hit}${damage}. Four legal actions were evaluated from the same snapshot; the live game did not change.`;
+        const heading = document.createElement('strong');
+        heading.textContent = `Evaluated ${output.candidates.length} legal ${output.candidates.length === 1 ? 'action' : 'actions'} from the same snapshot`;
+        const list = document.createElement('ul');
+        output.candidates.forEach(candidate => {
+          const item = document.createElement('li');
+          const direction = candidate.action?.direction ?? candidate.action?.type ?? candidate.id;
+          item.textContent = `${candidate.id === selectedId ? 'Recommended — ' : ''}${direction}: ${AgentSimulationHost.describeOutcome(candidate)}`;
+          list.appendChild(item);
+        });
+        const note = document.createElement('div');
+        note.textContent = 'The live game did not change.';
+        actionFeedback.replaceChildren(heading, list, note);
         actionFeedback.style.display = 'block';
       } else if (output?.candidates) {
         actionFeedback.dataset.kind = 'error';

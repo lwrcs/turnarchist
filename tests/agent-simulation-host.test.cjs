@@ -75,3 +75,34 @@ test('candidate builder excludes locked ladders and empty solid walls', () => {
   ]}});
   assert.deepEqual(candidates.map(candidate => candidate.id), ['move_down','move_left']);
 });
+
+test('changing rooms does not report the previous room enemies as killed', async () => {
+  const before = {player:{x:4,y:4,z:0,health:2,mana:1,coins:0,turnCount:5},room:{id:'room-a',depth:0,
+    entities:[{id:'z1',kind:'Zombie',isEnemy:true,health:1},{id:'s1',kind:'Skull',isEnemy:true,health:1}],hitWarnings:[]}};
+  const after = {player:{x:1,y:4,z:0,health:2,mana:1,coins:0,turnCount:6},room:{id:'room-b',depth:0,
+    entities:[],hitWarnings:[]}};
+  const live = {observe:()=>before,captureSimulationSnapshot:()=>({serialized:'{}'})};
+  const child = {restoreSimulationSnapshot:async()=>{},observe:()=>before,step:async()=>({terminated:false,truncated:false,
+    info:{recorded:true,turnDelta:1}})};
+  child.step = async () => { child.observe = () => after; return {terminated:false,truncated:false,info:{recorded:true,turnDelta:1}}; };
+  const outcome = await new host.IsolatedSimulator({source:()=>live,createFrame:()=>({contentWindow:{agent:child}})})
+    .simulate({type:'Move',direction:'right'});
+  assert.equal(outcome.transition, 'room');
+  assert.deepEqual(outcome.enemiesKilled, []);
+  assert.match(host.describeOutcome({outcome}), /enters another room/);
+});
+
+test('destroying a block is reported as destruction without player movement', async () => {
+  const before = {player:{x:4,y:4,z:0,health:2,mana:1,coins:0,turnCount:5},room:{id:'room-a',depth:0,
+    entities:[{id:'b1',kind:'Block',isEnemy:false,health:1}],hitWarnings:[]}};
+  const after = {player:{x:4,y:4,z:0,health:2,mana:1,coins:0,turnCount:6},room:{id:'room-a',depth:0,
+    entities:[],hitWarnings:[]}};
+  const live = {observe:()=>before,captureSimulationSnapshot:()=>({serialized:'{}'})};
+  const child = {restoreSimulationSnapshot:async()=>{},observe:()=>before};
+  child.step = async () => { child.observe = () => after; return {terminated:false,truncated:false,info:{recorded:true,turnDelta:1}}; };
+  const outcome = await new host.IsolatedSimulator({source:()=>live,createFrame:()=>({contentWindow:{agent:child}})})
+    .simulate({type:'Move',direction:'up'});
+  assert.equal(outcome.playerDelta.positionChanged, false);
+  assert.deepEqual(outcome.objectsDestroyed, [{id:'b1',kind:'Block'}]);
+  assert.equal(host.describeOutcome({outcome}), 'destroys block and stays in place');
+});
