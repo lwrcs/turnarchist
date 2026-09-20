@@ -5,6 +5,57 @@
   else root.AgentSimulationHost = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const copy = value => JSON.parse(JSON.stringify(value));
+  const DIRECTIONS = ["up", "right", "down", "left"];
+
+  // This is intentionally mechanical.  It converts the game's current
+  // operator preview into candidate inputs without deciding which one is best.
+  // The normal action processor remains the authority on every candidate.
+  function candidateActions(operator) {
+    const moves = new Map(((operator?.tactical?.moves) ?? [])
+      .filter(move => move && typeof move.direction === "string")
+      .map(move => [move.direction, move]));
+    return DIRECTIONS.flatMap(direction => {
+      const preview = moves.get(direction);
+      if (!preview) return [];
+      const traversal = preview.traversal ?? {};
+      if (preview.resolution === "ladder" && traversal.unlocked === false &&
+          traversal.unlockableFromHere !== true) return [];
+      // Empty solid walls are not actions.  A wall torch or any other
+      // occupant still receives the real interaction attempt.
+      if (preview.resolution === "blocked-or-interact" && !preview.occupantId) return [];
+      return [{id: `move_${direction}`, action: {type: "Move", direction}, preview: copy(preview)}];
+    });
+  }
+
+  function rankOutcome(outcome) {
+    const delta = outcome.playerDelta ?? {};
+    const lostHealth = Math.max(0, -(delta.health ?? 0));
+    const noEffect = !outcome.recorded && !delta.positionChanged &&
+      !delta.roomChanged && !delta.depthChanged && !(outcome.enemiesKilled ?? []).length &&
+      !(outcome.enemiesDamaged ?? []).length;
+    // Lexicographic, not weighted: survival is never exchanged for a small
+    // navigation gain.  Damage is a cost, not a ban; a forced half-heart line
+    // remains eligible when every candidate has a worse outcome.
+    return [
+      outcome.transition === "death" ? 1 : 0,
+      lostHealth,
+      outcome.threatsAfter ?? Number.MAX_SAFE_INTEGER,
+      noEffect ? 1 : 0,
+      -((outcome.enemiesKilled ?? []).length),
+      -((outcome.enemiesDamaged ?? []).length),
+      delta.depthChanged ? -1 : 0,
+      delta.roomChanged ? -1 : 0,
+      delta.positionChanged ? -1 : 0,
+    ];
+  }
+
+  function compareOutcomes(left, right) {
+    const a = rankOutcome(left), b = rankOutcome(right);
+    for (let index = 0; index < Math.max(a.length, b.length); index++) {
+      if ((a[index] ?? 0) !== (b[index] ?? 0)) return (a[index] ?? 0) - (b[index] ?? 0);
+    }
+    return String(left.id ?? left.action?.direction).localeCompare(String(right.id ?? right.action?.direction));
+  }
 
   function summary(action, before, after, result) {
     const enemies = view => new Map((view.room?.entities ?? [])
@@ -29,6 +80,8 @@
         roomChanged: before.room.id !== after.room.id,
         depthChanged: before.room.depth !== after.room.depth,
       },
+      playerAfter: {x: after.player.x, y: after.player.y, z: after.player.z,
+        health: after.player.health, mana: after.player.mana, coins: after.player.coins},
       enemiesKilled,
       enemiesDamaged,
       threatsBefore: (before.room.hitWarnings ?? []).filter(warning => warning.dangerous).length,
@@ -68,22 +121,54 @@
       return this.frame.contentWindow.agent;
     }
 
+    async simulateFromSnapshot(snapshot, action, liveBefore) {
+      const live = this.source();
+      const simulator = await this.agent();
+      await simulator.restoreSimulationSnapshot(snapshot.serialized);
+      const before = copy(simulator.observe());
+      const result = await simulator.step(copy(action));
+      const after = copy(simulator.observe());
+      const liveAfter = copy(live.observe());
+      if (JSON.stringify(liveBefore) !== JSON.stringify(liveAfter)) {
+        throw new Error('Simulation preview changed the live game; preview discarded');
+      }
+      return summary(action, before, after, result);
+    }
+
     async simulate(action) {
       if (this.pending) throw new Error('Another simulation preview is in progress');
       this.pending = (async () => {
         const live = this.source();
         const liveBefore = copy(live.observe());
         const snapshot = live.captureSimulationSnapshot();
-        const simulator = await this.agent();
-        await simulator.restoreSimulationSnapshot(snapshot.serialized);
-        const before = copy(simulator.observe());
-        const result = await simulator.step(copy(action));
-        const after = copy(simulator.observe());
-        const liveAfter = copy(live.observe());
-        if (JSON.stringify(liveBefore) !== JSON.stringify(liveAfter)) {
-          throw new Error('Simulation preview changed the live game; preview discarded');
+        return this.simulateFromSnapshot(snapshot, action, liveBefore);
+      })();
+      try { return await this.pending; }
+      finally { this.pending = null; }
+    }
+
+    async evaluateCandidates(candidates) {
+      if (this.pending) throw new Error('Another simulation preview is in progress');
+      this.pending = (async () => {
+        const live = this.source();
+        const liveBefore = copy(live.observe());
+        const snapshot = live.captureSimulationSnapshot();
+        const results = [];
+        for (const candidate of candidates) {
+          try {
+            results.push({...candidate, outcome: await this.simulateFromSnapshot(snapshot, candidate.action, liveBefore)});
+          } catch (error) {
+            results.push({...candidate, outcome: {status: 'unsupported', action: copy(candidate.action),
+              transition: null, playerDelta: {}, recorded: false, error: String(error)}});
+          }
         }
-        return summary(action, before, after, result);
+        const settled = results.filter(result => result.outcome.status === 'settled');
+        const ranked = settled.sort((left, right) => compareOutcomes(left.outcome, right.outcome));
+        return {schemaVersion: 1, candidates: results, ranked: ranked.map(result => ({
+          id: result.id, action: result.action, preview: result.preview, outcome: result.outcome,
+          rank: rankOutcome(result.outcome),
+        })), selected: ranked[0] ? {id: ranked[0].id, action: ranked[0].action,
+          preview: ranked[0].preview, outcome: ranked[0].outcome, rank: rankOutcome(ranked[0].outcome)} : null};
       })();
       try { return await this.pending; }
       finally { this.pending = null; }
@@ -95,5 +180,5 @@
     }
   }
 
-  return {IsolatedSimulator, summary};
+  return {IsolatedSimulator, candidateActions, compareOutcomes, rankOutcome, summary};
 });

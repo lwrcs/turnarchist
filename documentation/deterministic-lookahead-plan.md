@@ -180,6 +180,28 @@ return exact, repeatable one-action consequences without changing the live run.
 
 ## Phase 2: deterministic candidate builder and tactical planner
 
+### Current implementation boundary
+
+The browser host now implements the Phase 2 foundation for one-action
+branches: it builds legal directional candidates from the privileged operator
+view, restores the same captured snapshot before every candidate, records each
+settled outcome, and ranks them lexicographically by survival, health loss,
+remaining threats, no-effect inputs, threat reduction, and movement progress.
+It excludes locked ladders and empty solid-wall bumps while retaining normal
+interactions with entities embedded in solid tiles.
+
+The Jev collection loop uses this evaluator first when it detects an
+enemy-free navigation loop. It selects only a branch that actually changes
+position, causes no health loss, and exits both the repeated positions and an
+immediate reversal. Jev remains the fallback when no such exact branch exists.
+The public Agent Lab exposes the same primitive through **Preview legal
+actions**, so the result is inspectable and can later serve a player teaching
+view.
+
+This is intentionally not yet a general multi-turn planner. Combat, forced
+damage tradeoffs, persistent intents, and strategic target choice still need
+the later phases below before they control the trainer.
+
 The candidate builder owns mechanics that do not require judgment:
 
 - enumerate legal actions and interactions;

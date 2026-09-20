@@ -87,6 +87,12 @@
     isolatedSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: api});
     return isolatedSimulator.simulate(JSON.parse(document.getElementById('action-json').value));
   });
+  document.getElementById('preview-legal-actions').onclick = () => run(() => {
+    isolatedSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: api});
+    const candidates = AgentSimulationHost.candidateActions(api().inspectOperator());
+    if (!candidates.length) throw new Error('No legal directional actions are available for branch evaluation');
+    return isolatedSimulator.evaluateCandidates(candidates);
+  });
   document.getElementById('inventory-smoke').onclick = () => run(async () => {
     const agent = api();
     const first = await agent.reset(Number(document.getElementById('seed').value), {maxSteps: 1});

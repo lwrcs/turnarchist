@@ -506,6 +506,42 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows), encoding="utf-8")
 
 
+def simulated_candidates(env: Any) -> dict[str, Any]:
+    """Evaluate legal current-room inputs in an isolated browser realm.
+
+    This is deliberately used only as a branch evaluator.  It never performs
+    the selected action in the visible training game; the normal environment
+    still executes and records the final choice.
+    """
+    if not env.page.evaluate("() => typeof AgentSimulationHost !== 'undefined'"):
+        env.page.add_script_tag(path=str(ROOT / "agent-simulation-host.js"))
+    return env.page.evaluate("""async () => {
+      window.jevBranchSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: () => window.agent});
+      const candidates = AgentSimulationHost.candidateActions(window.agent.inspectOperator());
+      return candidates.length ? window.jevBranchSimulator.evaluateCandidates(candidates) :
+        {schemaVersion: 1, candidates: [], ranked: [], selected: null};
+    }""")
+
+
+def safe_novel_simulated_candidate(report: dict[str, Any], room_id: str,
+                                   repeated: set[tuple[str, int, int]],
+                                   immediate_previous: tuple[str, int, int] | None) -> dict[str, Any] | None:
+    """Select the first exact, nonlethal branch that exits a navigation loop."""
+    for candidate in report.get("ranked", []):
+        if not isinstance(candidate, dict):
+            continue
+        outcome = candidate.get("outcome") if isinstance(candidate.get("outcome"), dict) else {}
+        after = outcome.get("playerAfter") if isinstance(outcome.get("playerAfter"), dict) else {}
+        delta = outcome.get("playerDelta") if isinstance(outcome.get("playerDelta"), dict) else {}
+        target = (room_id, after.get("x"), after.get("y"))
+        if (outcome.get("status") == "settled" and outcome.get("transition") != "death" and
+                outcome.get("recorded") is True and delta.get("positionChanged") is True and
+                float(delta.get("health") or 0) >= 0 and target not in repeated and
+                target != immediate_previous):
+            return candidate
+    return None
+
+
 def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int,
                              viewer_dir: Path | None = None, jev_unstick: bool = False,
                              client: JevClient | None = None, seed_offset: int = 0) -> dict[str, Any]:
@@ -658,46 +694,70 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                             "commitmentStepsRemaining": escape_commitment["remaining"],
                             "instruction": "Continue breaking the navigation cycle. Preserve the active motivation and choose one supplied safe action. When restrictedToNovelSafeMoves is true, every supplied action avoids the original loop and immediate reversal.",
                         }
-                        try:
-                            response = client.evaluate(intervention_packet)
-                            advice = advice_from_response(intervention_packet, response, 0.65)
-                        except JevRequestError as error:
-                            env.tactical_status.update({
-                                "source": "jev-unstick-error", "trigger": str(error),
-                            })
-                            escape_commitment = None
-                            advice = None
-                        if advice is None:
-                            action_choice = None
-                            candidate = {}
+                        # A loop is a mechanics problem before it is a language-model
+                        # problem.  Prefer an exact branch that leaves the repeated
+                        # state safely; Jev is only consulted when the simulator has
+                        # no such outcome to choose.
+                        simulated = simulated_candidates(env)
+                        deterministic = safe_novel_simulated_candidate(
+                            simulated, str(room.get("id")), repeated, immediate_previous)
+                        if deterministic is not None:
+                            teacher = deterministic["action"]
+                            last_intervention = decisions
+                            if escape_commitment["motivation"] is None:
+                                escape_commitment["motivation"] = "explore"
+                            escape_commitment["remaining"] -= 1
+                            packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
+                            packet["simulatedCandidates"] = simulated
+                            env.tactical_status = {
+                                "motivation": escape_commitment["motivation"], "engagement": "not_in_combat",
+                                "roomIntent": "stay", "action": deterministic["id"],
+                                "source": "deterministic-unstick", "confidence": 1,
+                                "trigger": (escape_commitment["trigger"] + "; exact branch selected"),
+                            }
+                            if escape_commitment["remaining"] <= 0:
+                                escape_commitment = None
                         else:
-                            action_choice = advice["action"].get("choice")
-                            candidate = intervention_packet["actions"].get(action_choice, {})
-                        if candidate:
-                            proposed = {"type": "Move", "direction": candidate["direction"]}
-                            if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
-                                    candidate.get("unknownDamageSources", 0) == 0):
-                                teacher = proposed
-                                last_intervention = decisions
-                                if escape_commitment["motivation"] is None:
-                                    selected_motivation = advice["motivation"]["choice"]
-                                    escape_commitment["motivation"] = (selected_motivation
-                                                                        if selected_motivation not in {None, "uncertain"}
-                                                                        else "progress")
-                                escape_commitment["remaining"] -= 1
-                                packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
-                                packet["jevIntervention"] = advice
-                                env.tactical_status = {
-                                    "motivation": escape_commitment["motivation"],
-                                    "engagement": advice["engagement"]["choice"],
-                                    "roomIntent": advice["roomIntent"]["choice"],
-                                    "action": action_choice, "source": "jev-unstick",
-                                    "confidence": advice["action"]["confidence"],
-                                    "trigger": (escape_commitment["trigger"] +
-                                                f"; commitment {escape_commitment['total']-escape_commitment['remaining']}/{escape_commitment['total']}"),
-                                }
-                                if escape_commitment["remaining"] <= 0:
-                                    escape_commitment = None
+                            try:
+                                response = client.evaluate(intervention_packet)
+                                advice = advice_from_response(intervention_packet, response, 0.65)
+                            except JevRequestError as error:
+                                env.tactical_status.update({
+                                    "source": "jev-unstick-error", "trigger": str(error),
+                                })
+                                escape_commitment = None
+                                advice = None
+                            if advice is None:
+                                action_choice = None
+                                candidate = {}
+                            else:
+                                action_choice = advice["action"].get("choice")
+                                candidate = intervention_packet["actions"].get(action_choice, {})
+                            if candidate:
+                                proposed = {"type": "Move", "direction": candidate["direction"]}
+                                if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
+                                        candidate.get("unknownDamageSources", 0) == 0):
+                                    teacher = proposed
+                                    last_intervention = decisions
+                                    if escape_commitment["motivation"] is None:
+                                        selected_motivation = advice["motivation"]["choice"]
+                                        escape_commitment["motivation"] = (selected_motivation
+                                                                            if selected_motivation not in {None, "uncertain"}
+                                                                            else "progress")
+                                    escape_commitment["remaining"] -= 1
+                                    packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
+                                    packet["jevIntervention"] = advice
+                                    env.tactical_status = {
+                                        "motivation": escape_commitment["motivation"],
+                                        "engagement": advice["engagement"]["choice"],
+                                        "roomIntent": advice["roomIntent"]["choice"],
+                                        "action": action_choice, "source": "jev-unstick",
+                                        "confidence": advice["action"]["confidence"],
+                                        "trigger": (escape_commitment["trigger"] +
+                                                    f"; commitment {escape_commitment['total']-escape_commitment['remaining']}/{escape_commitment['total']}"),
+                                    }
+                                    if escape_commitment["remaining"] <= 0:
+                                        escape_commitment = None
                     rows.append({"packet": packet, "teacherAction": teacher,
                                  "episodeSeed": episode_seed, "step": decisions})
                 _reward, dead, truncated = env.execute(teacher, "jev-referee-collection")

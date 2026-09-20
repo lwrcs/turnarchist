@@ -3,7 +3,8 @@ import json
 import unittest
 
 from jev_referee import (JevClient, JevRequestError, advice_from_response,
-                          build_packet, candidate_actions, combat_pressure, questions_for)
+                          build_packet, candidate_actions, combat_pressure, questions_for,
+                          safe_novel_simulated_candidate)
 
 
 def operator():
@@ -111,6 +112,21 @@ class JevRefereeTests(unittest.TestCase):
         invalid = operator(); invalid['decision'] = 'vending'
         with self.assertRaisesRegex(ValueError, 'directional tactical'):
             build_packet(self.view(), invalid)
+
+    def test_deterministic_branch_selection_leaves_the_loop_without_damage(self):
+        report = {'ranked': [
+            {'id': 'move_up', 'action': {'type': 'Move', 'direction': 'up'},
+             'outcome': {'status': 'settled', 'transition': None, 'recorded': True,
+                         'playerDelta': {'positionChanged': True, 'health': 0},
+                         'playerAfter': {'x': 8, 'y': 10}}},
+            {'id': 'move_right', 'action': {'type': 'Move', 'direction': 'right'},
+             'outcome': {'status': 'settled', 'transition': None, 'recorded': True,
+                         'playerDelta': {'positionChanged': True, 'health': 0},
+                         'playerAfter': {'x': 9, 'y': 11}}},
+        ]}
+        selected = safe_novel_simulated_candidate(
+            report, 'room-a', {('room-a', 8, 10)}, ('room-a', 7, 11))
+        self.assertEqual(selected['id'], 'move_right')
 
     def test_advice_rejects_unknown_choice_and_gates_low_confidence(self):
         packet = build_packet(self.view(), operator())
