@@ -3,7 +3,8 @@ import json
 import unittest
 
 from jev_referee import (JevClient, JevRequestError, advice_from_response,
-                          build_packet, candidate_actions, questions_for)
+                          build_packet, candidate_actions, combat_pressure, questions_for,
+                          safe_novel_simulated_candidate)
 
 
 def operator():
@@ -67,25 +68,78 @@ class JevRefereeTests(unittest.TestCase):
         self.assertIn('target_spawner-a', packet['objectives'])
         self.assertEqual(set(packet['weaponChoices']), {'keep_current', 'weapon_slot_0'})
         questions = questions_for(packet)
-        self.assertEqual(set(questions), {'mode', 'objective', 'tactic', 'action', 'weapon', 'baseline_adequate', 'human_teaching_value'})
+        self.assertEqual(set(questions), {'motivation', 'engagement', 'objective', 'tactic',
+                         'target_priority', 'room_intent', 'action', 'weapon', 'reasoning',
+                         'baseline_adequate', 'human_teaching_value'})
         self.assertEqual(set(questions['action']['criteria']), set(packet['actions']))
+        self.assertEqual(set(questions['target_priority']['criteria']),
+                         {'target_zombie-a', 'target_spawner-a', 'no_combat_target'})
+
+    def test_combat_pressure_requires_an_immediate_or_unavoidable_hazard(self):
+        state = operator()
+        state['room'].update({'enemyCount': 6, 'bossRoom': True})
+        state['tactical']['currentTile'].update({'knownIncomingDamageBeforeDefense': 0,
+                                                 'unknownDamageSources': 0})
+        packet = build_packet(self.view(), state)
+        self.assertEqual(combat_pressure(packet), (False, None))
+        state['tactical']['currentTile']['unknownDamageSources'] = 1
+        self.assertEqual(combat_pressure(build_packet(self.view(), state)), (False, None))
+        state['tactical']['currentTile']['unknownDamageSources'] = 0
+        state['tactical']['currentTile']['knownIncomingDamageBeforeDefense'] = 1
+        self.assertTrue(combat_pressure(build_packet(self.view(), state))[0])
 
     def test_packet_requires_privileged_operator_boundary(self):
         invalid = operator(); invalid['privileged'] = False
         with self.assertRaisesRegex(ValueError, 'privileged'):
             build_packet(self.view(), invalid)
+
+    def test_locked_ladder_without_matching_key_is_not_a_candidate(self):
+        state = operator()
+        state['tactical']['moves'][1].update({
+            'resolution': 'ladder',
+            'traversal': {'kind': 'ladder', 'direction': 'down', 'unlocked': False,
+                          'unlockableFromHere': False},
+        })
+        state['pathfinding']['pointsOfInterest'].append({
+            'id': 'tile:9,11', 'kind': 'ladder', 'x': 9, 'y': 11,
+            'traversal': {'kind': 'ladder', 'direction': 'down', 'unlocked': False,
+                          'unlockableFromHere': False},
+            'route': {'reachable': True, 'actions': [{'type': 'Move', 'direction': 'right'}]},
+        })
+        packet = build_packet(self.view(), state)
+        self.assertNotIn('move_right', packet['actions'])
+        self.assertNotIn('target_tile:9-11', packet['objectives'])
         invalid = operator(); invalid['decision'] = 'vending'
         with self.assertRaisesRegex(ValueError, 'directional tactical'):
             build_packet(self.view(), invalid)
 
+    def test_deterministic_branch_selection_leaves_the_loop_without_damage(self):
+        report = {'ranked': [
+            {'id': 'move_up', 'action': {'type': 'Move', 'direction': 'up'},
+             'outcome': {'status': 'settled', 'transition': None, 'recorded': True,
+                         'playerDelta': {'positionChanged': True, 'health': 0},
+                         'playerAfter': {'x': 8, 'y': 10}}},
+            {'id': 'move_right', 'action': {'type': 'Move', 'direction': 'right'},
+             'outcome': {'status': 'settled', 'transition': None, 'recorded': True,
+                         'playerDelta': {'positionChanged': True, 'health': 0},
+                         'playerAfter': {'x': 9, 'y': 11}}},
+        ]}
+        selected = safe_novel_simulated_candidate(
+            report, 'room-a', {('room-a', 8, 10)}, ('room-a', 7, 11))
+        self.assertEqual(selected['id'], 'move_right')
+
     def test_advice_rejects_unknown_choice_and_gates_low_confidence(self):
         packet = build_packet(self.view(), operator())
         response = {'model': 'jev-latest', 'usage': {'input_tokens': 12, 'output_tokens': 2}, 'answers': {
-            'mode': {'type': 'choice', 'choice': 'fight', 'confidence': .9},
+            'motivation': {'type': 'choice', 'choice': 'progress', 'confidence': .9},
+            'engagement': {'type': 'choice', 'choice': 'fight', 'confidence': .9},
             'objective': {'type': 'choice', 'choice': 'target_zombie-a', 'confidence': .9},
             'tactic': {'type': 'choice', 'choice': 'dodge', 'confidence': .9},
+            'target_priority': {'type': 'choice', 'choice': 'target_zombie-a', 'confidence': .9},
+            'room_intent': {'type': 'choice', 'choice': 'stay', 'confidence': .9},
             'action': {'type': 'choice', 'choice': 'move_right', 'confidence': .79},
             'weapon': {'type': 'choice', 'choice': 'keep_current', 'confidence': .9},
+            'reasoning': {'type': 'choice', 'choice': 'act_now', 'confidence': .9},
             'baseline_adequate': {'type': 'noul', 'noul': .8},
             'human_teaching_value': {'type': 'score', 'score': 1.7, 'confidence': .8},
         }}
@@ -97,6 +151,23 @@ class JevRefereeTests(unittest.TestCase):
         response = copy.deepcopy(response); response['answers']['action']['choice'] = 'not-a-candidate'; response['answers']['action']['confidence'] = 1
         self.assertFalse(advice_from_response(packet, response, .8)['autoActionEligible'])
 
+    def test_think_branch_prevents_automatic_action(self):
+        packet = build_packet(self.view(), operator())
+        response = {'answers': {
+            'motivation': {'type': 'choice', 'choice': 'progress', 'confidence': .95},
+            'engagement': {'type': 'choice', 'choice': 'fight', 'confidence': .95},
+            'objective': {'type': 'choice', 'choice': 'target_spawner-a', 'confidence': .95},
+            'tactic': {'type': 'choice', 'choice': 'create_space', 'confidence': .95},
+            'target_priority': {'type': 'choice', 'choice': 'target_spawner-a', 'confidence': .95},
+            'room_intent': {'type': 'choice', 'choice': 'stay', 'confidence': .95},
+            'action': {'type': 'choice', 'choice': 'move_right', 'confidence': .95},
+            'weapon': {'type': 'choice', 'choice': 'keep_current', 'confidence': .95},
+            'reasoning': {'type': 'choice', 'choice': 'think_jev_chain', 'confidence': .95},
+        }}
+        advice = advice_from_response(packet, response, .8)
+        self.assertFalse(advice['autoActionEligible'])
+        self.assertTrue(advice['reasoning']['requiresThink'])
+
     def test_client_requires_key_without_sending_request(self):
         called = []
         client = JevClient(api_key='', request=lambda request, timeout: called.append((request, timeout)))
@@ -106,7 +177,7 @@ class JevRefereeTests(unittest.TestCase):
 
     def test_client_sends_closed_questions_to_fixed_endpoint(self):
         received = []
-        response = {'model': 'jev-latest', 'answers': {'mode': {'type': 'choice'}}}
+        response = {'model': 'jev-latest', 'answers': {'motivation': {'type': 'choice'}}}
 
         def request(request, timeout):
             received.append((request.full_url, request.get_header('Authorization'), timeout,

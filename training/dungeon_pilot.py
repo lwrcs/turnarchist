@@ -297,7 +297,8 @@ class DungeonEnv(CombatEnv):
           const tileAt=new Map(operator.room.tiles.map(t=>[`${t.x},${t.y}`,t]));
           const candidates=operator.pathfinding.pointsOfInterest.filter(point=>{
             const tile=tileAt.get(`${point.x},${point.y}`), traversal=tile?.traversal??{};
-            return point.route?.reachable && point.route.actions.length && traversal.unlocked!==false &&
+            return point.route?.reachable && point.route.actions.length &&
+              (traversal.unlocked!==false || traversal.unlockableFromHere===true) &&
               !usedSet.has(`${operator.room.id}:${point.x},${point.y}`);
           }).sort((a,b)=>a.route.actions.length-b.route.actions.length ||
             (a.kind==="door"?-1:1)-(b.kind==="door"?-1:1));
@@ -328,12 +329,16 @@ class DungeonEnv(CombatEnv):
             self._open_game_page()
         chosen=(options or {}).get('episodeSeed',self.seeds[(self.episode+self.offset)%len(self.seeds)])
         super().reset(seed=int(chosen),options={'scenario':'standard'})
+        print('DUNGEON RESET: browser game reset complete', flush=True)
         self.episode_seed=int(chosen)
         # Depth is outcome/reward supervision only, never a policy feature.
         depth=self.page.evaluate('() => window.agent.observe().room.depth')
+        print('DUNGEON RESET: depth observed; refreshing navigation plan', flush=True)
         self.memory=ExplorationMemory(self.view,depth)
         self.refresh_plan()
+        print('DUNGEON RESET: navigation plan ready', flush=True)
         self.game_actions=0
+        self.viewer_actions=[]
         self.assisted_actions=0
         self.navigator_actions=0
         self.world_turns=0
@@ -344,6 +349,7 @@ class DungeonEnv(CombatEnv):
         self.stop_reason=None
         self.started=time.perf_counter()
         if self.view['decision']!='world': raise RuntimeError('Dungeon reset did not yield a world decision')
+        self.publish_viewer()
         return self.observation(),{}
 
     def execute(self,action,controller):
@@ -358,6 +364,7 @@ class DungeonEnv(CombatEnv):
         reward=self.memory.observe(before,self.view,result['depth'],result['terminated'],action)
         self.refresh_plan()
         self.game_actions+=1
+        self.viewer_actions.append(action)
         self.assisted_actions+=int(controller=='helper')
         self.navigator_actions+=int(controller=='navigator')
         self.world_turns+=result['turnDelta']
@@ -367,6 +374,7 @@ class DungeonEnv(CombatEnv):
                            'x':self.view['player']['x'],'y':self.view['player']['y'],
                            'health':self.view['player']['health'],'reward':reward})
         self.trace=self.trace[-64:]
+        self.publish_viewer()
         callback=getattr(self,'transition_callback',None)
         if callback: callback(before,action,self.view,result)
         return reward,bool(result['terminated']),bool(result['truncated'])

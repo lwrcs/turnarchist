@@ -1046,6 +1046,13 @@ export class Game {
       };
       Game.fontsheet.src = fontUrl;
 
+      // A browser-backed agent has no gameplay dependency on sprite decoding.
+      // Hidden Windows task sessions can indefinitely defer Image.onload, which
+      // otherwise prevents construction of the agent API before any simulation
+      // can begin.  Rendering assets still load in the background for the
+      // spectator frame; only the boot gate is skipped in opt-in agent mode.
+      if (AGENT_MODE) resourcesLoaded = NUM_RESOURCES;
+
       this.levelState = LevelState.LEVEL_GENERATION;
 
       // Initialize camera properties

@@ -29,6 +29,7 @@ import type { GameAction } from "./playerAction";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
 import { Door } from "../tile/door";
+import { Random } from "../utility/random";
 
 export class PlayerInputHandler {
   private player: Player;
@@ -1136,7 +1137,7 @@ export class PlayerInputHandler {
                 );
                 const target =
                   preferred ??
-                  freeWalls[Math.floor(Math.random() * freeWalls.length)];
+                  freeWalls[Math.floor(Random.rand() * freeWalls.length)];
                 const fuel = (item as Torch).fuel;
                 let placed: PlacedTorch | PlacedCandle;
                 if (item instanceof Torch) {

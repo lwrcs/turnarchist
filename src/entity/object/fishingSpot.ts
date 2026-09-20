@@ -49,6 +49,8 @@ export class FishingSpot extends Entity {
     return EntityType.PROP;
   }
 
+  getAgentResourceTraits = () => ({kind: "fishing", available: this.active, remaining: this.fishCount});
+
   fish = (player: Player): void => {
     if (!player.inventory.canFish()) {
       this.game.pushMessage("You need a fishing rod to fish.");

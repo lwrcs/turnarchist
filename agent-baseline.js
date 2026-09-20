@@ -9,7 +9,7 @@
   const occupies=(e,x,y)=>x>=e.x&&y>=e.y&&x<e.x+Math.max(1,e.width??1)&&y<e.y+Math.max(1,e.height??1);
   const threatens=w=>w.hostile&&w.dangerous!==false;
   class Policy {
-    static version='explore-combat-v24';
+    static version='explore-combat-v25';
     constructor(){this.visits=new Map();this.blocked=new Map();this.crossings=new Map();this.tick=0;this.maps=new Map();this.obstacles=new Map();this.doorUses=new Map();this.goal=null;this.reason=null;this.connections=new Map();this.roomWork=new Map();}
     connect(from,door,to) {
       if(!this.connections.has(from))this.connections.set(from,new Map());
@@ -27,7 +27,7 @@
         for(const [door,room] of this.connections.get(node.room)??[]) {
           if(seen.has(room))continue;
           const tile=this.maps.get(node.room)?.get(door);
-          if(tile?.exit&&tile.traversal?.direction==='up'&&tile.traversal.unlocked===false)continue;
+          if(tile?.exit&&tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true)continue;
           if(tile?.traversal?.tunnel&&!tile.traversal.unlocked&&tile.traversal.unlockFromHere===false)continue;
           const [x,y]=door.split(',').map(Number);
           if([...this.obstacles.get(node.room)?.values()??[]].some(e=>occupies(e,x,y)&&e.collidable&&!e.destroyable))continue;
@@ -153,6 +153,20 @@
       for(const e of knownEntities)for(let x=e.x;x<e.x+Math.max(1,e.width??1);x++)
         for(let y=e.y;y<e.y+Math.max(1,e.height??1);y++)occupants.set(key(x,y),[...(occupants.get(key(x,y))??[]),e]);
       const items=new Set(view.room.items?.map(i=>key(i.x,i.y))??[]);
+      const canFish=view.inventory.some(i=>i?.categories?.includes('fishing-tool'));
+      const resources=new Set(canFish?view.room.entities.filter(e=>e.resource?.kind==='fishing'&&e.resource.available)
+        .map(e=>key(e.x,e.y)):[]);
+      for(const resource of resources)items.add(resource);
+      // Fishing spots sit on solid pool tiles. Route to a walkable neighbor;
+      // the normal adjacent interaction will cast the line from there.
+      for(const spot of canFish?view.room.entities.filter(e=>e.resource?.kind==='fishing'&&e.resource.available):[]) {
+        for(const [,dx,dy] of directions) {
+          const adjacent=key(spot.x+dx,spot.y+dy);
+          if(map.get(adjacent)?.solid===false)items.add(adjacent);
+        }
+      }
+      const healing=view.inventory.reduce((total,item)=>total+(item?.healingAmount??0)*(item?.stackCount??1),0);
+      const preparedForDepth=p.health>=p.maxHealth||healing>0;
       const damage=view.inventory.find(i=>i?.activeWeapon)?.traits?.baseDamage??0;
       if(this.goal?.scope!==scope||this.goal?.key===origin)this.goal=null;
       let best=null,committed=null;
@@ -173,7 +187,18 @@
           // Passage use must replace the unvisited/frontier reward, not compete with it.
           if(tile?.isDoor)reward=35-40*uses;
           const returnExit=tile?.exit&&tile.traversal?.direction==='up';
-          if(tile?.exit)reward=returnExit?0:70-40*uses;
+          if(tile?.exit) {
+            const unavailable=tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true;
+            const unpreparedMainDescent=tile.traversal?.direction==='down'&&tile.traversal?.sidePath===false&&!preparedForDepth;
+            const destination=this.connections.get(scope)?.get(k);
+            // Once a side path has returned us to the main path with no
+            // remembered work left, it is complete. Do not immediately enter
+            // it again merely because its ladder still has a generic passage
+            // reward; that creates a prepare/explore ladder ping-pong loop.
+            const exhaustedSidePath=tile.traversal?.direction==='down'&&tile.traversal?.sidePath===true&&
+              uses>0&&destination&&this.roomWork.get(destination)===false;
+            reward=unavailable||unpreparedMainDescent||exhaustedSidePath?-100:returnExit?0:70-40*uses;
+          }
           const utility=reward-visits;
           const score=utility-node.distance*2;
           const candidate={score,key:k,action:{type:'Move',direction:node.first}};
@@ -182,16 +207,16 @@
           if(this.goal?.key===k&&!this.goal.backtrack)committed=candidate;
           if(utility>0&&(!best||score>best.score))best=candidate;
           // A door is a destination, not a known corridor into an unseen room.
-          if(tile?.isDoor||tile?.exit)continue;
+          if((tile?.isDoor||tile?.exit)&&!resources.has(k))continue;
         }
         for(const [direction,dx,dy] of directions) {
           const x=node.x+dx,y=node.y+dy,next=key(x,y),t=map.get(next);
           if(seen.has(next)||!t||(t.solid&&!t.isDoor)||threats.has(next))continue;
           if(t.traversal?.tunnel && !t.traversal.unlocked && t.traversal.unlockFromHere===false)continue;
-          if(t.exit&&t.traversal?.direction==='up'&&t.traversal.unlocked===false)continue;
+          if(t.exit&&t.traversal?.unlocked===false&&t.traversal?.unlockableFromHere!==true)continue;
           const occupied=occupants.get(next)??[];
           if(occupied.some(e=>e.appearance==='unidentified'||e.isEnemy||
-            (e.collidable&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
+            (e.collidable&&!resources.has(next)&&(!e.destroyable||damage<=0||!(e.health>0)))))continue;
           // Estimate effort, then replan from the actual outcome of each attack.
           const clearance=occupied.reduce((cost,e)=>cost+(e.collidable?Math.ceil(e.health/damage):0),0);
           const edge=`${scope}:${k}>${next}`;
@@ -239,7 +264,15 @@
       }
       const tiles=new Map(view.room.tiles.map(t=>[key(t.x,t.y),t]));
       const threats=new Set(view.room.hitWarnings.filter(threatens).map(w=>key(w.x,w.y)));
+      for(const tile of view.room.tiles)if(tile.hazard?.kind==='spikes'&&
+        (tile.hazard.active===true||tile.hazard.warning===true))threats.add(key(tile.x,tile.y));
       const enemies=view.room.entities.filter(e=>e.appearance==='unidentified'||e.isEnemy);
+      const fishDirection=enemies.length===0&&!threats.has(key(p.x,p.y))&&
+        view.inventory.some(i=>i?.categories?.includes('fishing-tool'))&&
+        directions.find(([direction,dx,dy])=>view.room.entities.some(e=>
+          e.interactable===true&&e.resource?.kind==='fishing'&&e.resource.available===true&&
+          occupies(e,p.x+dx,p.y+dy)));
+      if(fishDirection){this.reason='fish';return {type:'Move',direction:fishDirection[0]};}
       const preparation=this.prepareCombatEscape(view,threats);
       if(preparation){this.reason='clear-combat-escape';return preparation;}
       const route=this.route(view,threats);
@@ -260,6 +293,7 @@
         // Wall-mounted objects can be gathered/attacked without entering the wall.
         if(tile?.solid===true && !tile.isDoor && !occupant) continue;
         if(tile?.traversal?.tunnel && !tile.traversal.unlocked && tile.traversal.unlockFromHere===false)continue;
+        if(tile?.exit&&tile.traversal?.unlocked===false&&tile.traversal?.unlockableFromHere!==true)continue;
         if((this.blocked.get(edge)??0)>this.tick) continue;
         if(occupant?.collidable && !occupant.destroyable && !occupant.pushable && !occupant.interactable) continue;
         const enemy=enemies.some(e=>occupies(e,x,y));

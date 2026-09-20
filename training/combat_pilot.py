@@ -33,7 +33,50 @@ HELD_OUT = {'starter': TRANSFER,
 CURRICULA['open-combat'] = CURRICULA['forward'] + HELD_OUT['forward']
 HELD_OUT['open-combat'] = ['combat-giant-pocket','combat-skull-choke']
 CURRICULA['terrain-combat'] = CURRICULA['open-combat'] + HELD_OUT['open-combat']
-LIVE_VIEWER_HTML = '''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title><style>body{background:#111;color:#ddd;font:14px monospace;margin:16px}img{display:none;image-rendering:pixelated;max-width:min(92vw,900px);border:1px solid #555}pre{white-space:pre-wrap}</style></head><body><h1>Turnarchist live training</h1><img id="frame" alt="Current training game"><pre id="state">Waiting for training to start...</pre><script>const frame=document.querySelector('#frame'),state=document.querySelector('#state');const refresh=async()=>{try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');state.textContent=JSON.stringify(await response.json(),null,2);frame.src='live-frame.png?t='+Date.now();frame.style.display='block'}catch(e){frame.removeAttribute('src');frame.style.display='none';state.textContent='Waiting for training to start...'}};refresh();setInterval(refresh,1000)</script></body></html>'''
+LIVE_VIEWER_HTML = '''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Turnarchist training viewer</title>
+<style>
+body{background:#111;color:#ddd;font:14px monospace;margin:0}
+iframe{display:block;width:min(100vw,1024px);height:min(77vw,768px);border:0}
+#controls,#status{margin:12px;padding:10px 12px;border:1px solid #333;background:#181818;line-height:1.55}
+#controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+button{background:#292929;color:#ddd;border:1px solid #555;padding:6px 11px;font:inherit;cursor:pointer}
+button.active{color:#111;background:#75e6ff;border-color:#75e6ff}
+.label{color:#888}.value{color:#fff}.jev{color:#75e6ff}.warning{color:#ffcc66}
+</style></head><body>
+<iframe id="game" src="play.html?agent=1" title="Mirrored training game"></iframe>
+<div id="controls"><span class="label">viewer speed</span>
+  <button data-delay="pause">Pause</button><button data-delay="600">Slow</button>
+  <button data-delay="180">Normal</button><button data-delay="35">Fast</button>
+  <button class="active" data-delay="0">Maximum</button>
+  <span id="lag" class="value">waiting</span>
+</div>
+<div id="status">Waiting for training to start...</div>
+<script>
+const frame=document.querySelector('#game'),status=document.querySelector('#status'),lag=document.querySelector('#lag');
+let latest=null,episode='',applied=0,playing=false,delay=0;
+const ready=()=>frame.contentWindow&&frame.contentWindow.agent;
+const esc=v=>String(v??'unknown').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.querySelectorAll('button[data-delay]').forEach(button=>button.onclick=()=>{
+  document.querySelectorAll('button[data-delay]').forEach(b=>b.classList.remove('active'));
+  button.classList.add('active');delay=button.dataset.delay==='pause'?null:Number(button.dataset.delay);
+  if(delay!==null)play();
+});
+const render=()=>{if(!latest)return;const data=latest,t=data.tacticalStatus||{},behind=Math.max(0,data.actions.length-applied);
+  lag.textContent=`displayed ${applied} / recorded ${data.actions.length}${behind?' · '+behind+' behind':' · live'}`;
+  status.innerHTML='<span class="label">run</span> <span class="value">seed '+esc(data.gameSeed)+' · step '+esc(data.steps)+' · turn '+esc(data.view.player.turnCount)+' · hp '+esc(data.view.player.health)+' · '+esc(data.view.room.context.roomType)+'</span><br><span class="label">motivation</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.motivation)+'</span> · <span class="label">engagement</span> <span class="value">'+esc(t.engagement)+'</span> · <span class="label">room</span> <span class="value">'+esc(t.roomIntent)+'</span><br><span class="label">decision</span> <span class="value">'+esc(t.action)+'</span> · <span class="label">source</span> <span class="value '+(t.source==='jev-unstick'?'jev':'')+'">'+esc(t.source)+'</span> · <span class="label">confidence</span> <span class="value">'+esc(t.confidence)+'</span>'+(t.trigger?'<br><span class="warning">intervention: '+esc(t.trigger)+'</span>':'');
+};
+const play=async()=>{if(playing||delay===null||!latest||!ready())return;playing=true;
+  try{const key=latest.gameSeed+':'+latest.scenario;
+    if(key!==episode||latest.actions.length<applied){await ready().reset(latest.gameSeed,{scenario:latest.scenario,maxSteps:10000});ready().setFastMode(true);episode=key;applied=0;}
+    if(applied<latest.actions.length){await ready().step(latest.actions[applied]);applied++;render();}
+  }catch(error){status.textContent='Viewer playback error: '+error.message}
+  finally{playing=false;if(delay!==null)setTimeout(play,delay);}
+};
+const poll=async()=>{try{const response=await fetch('live-state.json?t='+Date.now(),{cache:'no-store'});if(!response.ok)throw new Error('no live state yet');latest=await response.json();render();play();}catch(error){status.textContent='Waiting for training: '+error.message;}};
+setInterval(poll,100);poll();
+</script></body></html>
+'''
 HELD_OUT['terrain-combat'] = ['combat-giant-clutter','combat-armored-clutter']
 GRID=25
 CENTER=12
@@ -205,16 +248,25 @@ class CombatEnv(gym.Env):
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.pw = sync_playwright().start()
-        self.browser = self.pw.chromium.launch(headless=True, args=['--disable-background-timer-throttling'])
+        self.browser = self.pw.chromium.launch(headless=True, args=[
+            '--disable-background-timer-throttling',
+            '--disable-renderer-backgrounding',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-features=CalculateNativeWinOcclusion',
+        ])
         self._open_game_page()
 
     def publish_viewer(self):
         """Publish a passive, key-free frame for a separately hosted spectator page."""
         if not self.viewer_dir: return
-        self.page.screenshot(path=str(self.viewer_dir/'live-frame.png'))
         state={'updatedAt':time.time(),'phase':self.phase,'scenario':getattr(self,'scenario',None),
-               'steps':self.steps,'view':self.view}
-        (self.viewer_dir/'live-state.json').write_text(json.dumps(state))
+               'steps':getattr(self,'game_actions',self.steps),'gameSeed':getattr(self,'game_seed',None),
+               'actions':getattr(self,'viewer_actions',[]),'view':self.view,
+               'tacticalStatus':getattr(self,'tactical_status',None)}
+        state_path=self.viewer_dir/'live-state.json'
+        pending_path=self.viewer_dir/'live-state.json.tmp'
+        pending_path.write_text(json.dumps(state))
+        pending_path.replace(state_path)
 
     def _open_game_page(self):
         """Discard accumulated game/browser state only between complete episodes."""
@@ -230,8 +282,24 @@ class CombatEnv(gym.Env):
         self.page.on('pageerror', lambda error: print('GAME ERROR:', str(error), flush=True))
         self.page.on('response', lambda response: print('HTTP ERROR:', response.status, response.url, flush=True) if response.status >= 400 else None)
         self.page.goto(f'http://127.0.0.1:{port}/play.html?agent=1', wait_until='domcontentloaded')
+        print('GAME PAGE: DOM ready; waiting for agent API', flush=True)
         try:
-            self.page.wait_for_function('() => !!window.agent', timeout=120000)
+            # Playwright's built-in wait uses browser-side polling that can
+            # stall in a hidden Chromium page.  A direct evaluation loop is
+            # slower only by 250 ms and has proven reliable in the headless
+            # environment where the agent API appears after level generation.
+            ready = False
+            for attempt in range(480):
+                present = self.page.evaluate('() => !!window.agent')
+                if present:
+                    ready = True
+                    print(f'GAME PAGE: agent API ready after {attempt * .25:.2f}s', flush=True)
+                    break
+                if attempt in (0, 20, 80, 240):
+                    print(f'GAME PAGE: agent API not ready after {attempt * .25:.2f}s', flush=True)
+                time.sleep(.25)
+            if not ready:
+                raise TimeoutError('Game did not expose window.agent within 120 seconds')
         except Exception:
             self.page.screenshot(path=str(self.out/'startup-failure.png'))
             print('RESOURCE STATUS:', self.page.evaluate('() => performance.getEntriesByType("resource").map(r => [r.name,r.responseStatus])'), flush=True)
@@ -252,6 +320,7 @@ class CombatEnv(gym.Env):
             self.rotation = int(rotation)
         view = self.page.evaluate('''async ([seed, scenario, budget]) => {
             await window.agent.reset(seed, {scenario, maxSteps:budget});
+            window.agent.setFastMode(true);
             return window.agent.perceive();
         }''', [game_seed, scenario, self.budget])
         if view['contract'].get('actionSchemaVersion') != ACTION_SCHEMA:

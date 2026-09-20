@@ -1,6 +1,9 @@
 /** Opt-in at page load; ordinary play keeps its existing behavior. */
 export const AGENT_MODE = typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("agent") === "1";
+/** A hidden agent-only iframe permitted to restore privileged simulation snapshots. */
+export const AGENT_SIMULATION_MODE = AGENT_MODE &&
+  new URLSearchParams(window.location.search).get("simulator") === "1";
 export let AGENT_FAST_MODE = false;
 export function setAgentFastMode(enabled: boolean) { AGENT_FAST_MODE = AGENT_MODE && enabled; }
 

@@ -3,7 +3,7 @@ import { DEFAULT_AGENT_VISION, validateAgentVision, perceiveRoom, AgentVision } 
 import type { Game } from "../game";
 import { Direction } from "../game";
 import { AgentMemory } from "./agentMemory";
-import { setAgentFastMode } from "./agentMode";
+import { AGENT_SIMULATION_MODE, setAgentFastMode } from "./agentMode";
 import { RoomType, TurnState } from "../room/room";
 import { DownLadder } from "../tile/downLadder";
 import { UpLadder } from "../tile/upLadder";
@@ -13,6 +13,9 @@ import { GameplaySettings } from "./gameplaySettings";
 import { getAgentContract, checkAgentCompatibility, AgentContract } from "./agentContract";
 import { observeEntity, observeItem, observeWarnings } from "./agentTraits";
 import type { GameAction } from "../player/playerAction";
+import { createSimulationSnapshot } from "./save/simulationSnapshot";
+import { loadSaveV2 } from "./save/loadV2";
+import { parseSaveV2Json } from "./save/validate";
 
 export type AgentAction =
   | { type: "Move"; direction: "up" | "down" | "left" | "right" }
@@ -125,6 +128,50 @@ export class AgentEnvironment {
   contract() { return getAgentContract(); }
   checkCompatibility(trainedOn: Partial<AgentContract> | null) {
     return checkAgentCompatibility(trainedOn);
+  }
+
+  /**
+   * Privileged branch root for an isolated simulator. This is deliberately not
+   * included in `observe`, `perceive`, replay exports, or policy inputs.
+   */
+  captureSimulationSnapshot() {
+    if (this.busy) throw new Error("Wait for the current operation before capturing a simulation snapshot");
+    if (this.seed === null || !this.ready()) throw new Error("Simulation snapshots require a ready initialized run");
+    const snapshot = createSimulationSnapshot(this.game);
+    if (snapshot.ok === false) throw new Error(snapshot.error);
+    return {
+      schemaVersion: 1,
+      source: "privileged-agent-snapshot",
+      createdAtStep: this.steps,
+      serialized: snapshot.value.serialized,
+    };
+  }
+
+  /**
+   * Available only inside an agent iframe opened with `simulator=1`. The
+   * visible game never restores hypothetical branches into itself.
+   */
+  async restoreSimulationSnapshot(serialized: string) {
+    if (!AGENT_SIMULATION_MODE) throw new Error("Simulation snapshots can only be restored in an isolated simulator");
+    if (typeof serialized !== "string" || serialized.length === 0 || serialized.length > 20_000_000) {
+      throw new Error("Invalid simulation snapshot payload");
+    }
+    return this.exclusive(async () => {
+      const parsed = parseSaveV2Json(serialized);
+      if (parsed.ok === false) throw new Error(`Simulation snapshot validation failed: ${String(parsed.error)}`);
+      const loaded = await loadSaveV2(this.game, parsed.value);
+      if (loaded.ok === false) throw new Error(`Simulation snapshot load failed: ${String(loaded.error)}`);
+      this.seed = parsed.value.worldSpec.seed;
+      this.steps = 0;
+      this.failure = null;
+      this.contacts.clear();
+      this.contactKeys = new WeakMap();
+      this.nextContactKey = 0;
+      this.memory.clear();
+      this.recentTransitions = [];
+      await this.settle();
+      return this.observe();
+    });
   }
 
   private tacticalFrame(): TacticalFrame {
@@ -304,12 +351,15 @@ export class AgentEnvironment {
       const staysInPlace=pushOutcome?pushOutcome!=="player-moves":attack||occupant?.collidable===true||tile?.isSolid()===true;
       const landing=staysInPlace?{x:player.x,y:player.y}:{x,y};
       const threats=warningDamage(landing.x,landing.y),projectiles=projectileDamage(landing.x,landing.y);
+      const tileHazard=(tile as any)?.getAgentHazardTraits?.()??null;
+      const tileDamage=tileHazard?.kind==="spikes"&&(tileHazard.active||tileHazard.warning)?tileHazard.damage??0:0;
       const neutralized=kills&&occupant?.id?warnings.filter(w=>w.sourceId===occupant.id&&w.dangerous).length:0;
       const sourceDamage=occupant?.combat.currentDamage??occupant?.combat.baseDamage??0;
-      const knownDamage=Math.max(0,threats.knownDamage-(neutralized?sourceDamage:0))+projectiles;
+      const knownDamage=Math.max(0,threats.knownDamage-(neutralized?sourceDamage:0))+projectiles+tileDamage;
       return {direction,target:{x,y},resolution:occupant?.pushable?"push-or-attack":attack?"attack":
         tile?.isDoor?"door-transition-or-door-interaction":tile instanceof DownLadder||tile instanceof UpLadder?"ladder":
         tile?.isSolid()?"blocked-or-interact":"move",staysInPlace,pushOutcome,occupantId:occupant?.id??null,
+        traversal:(tile as any)?.getTraversalTraits?.()??null,
         attack:{attempted:attack,minimumDamage:damage,killThreshold:threshold,killsBeforeEnemyResponse:kills,
           neutralizesThreatSource:kills&&neutralized>0},
         consequence:{landing,knownIncomingDamageBeforeDefense:knownDamage,unknownDamageSources:threats.unknownDamageSources,
@@ -327,6 +377,7 @@ export class AgentEnvironment {
       description:this.operatorDescription(tile)};});
     const pointsOfInterest=[
       ...tiles.filter(t=>t.isDoor||t.exit).map(t=>({id:`tile:${t.x},${t.y}`,kind:t.isDoor?"door":"ladder",x:t.x,y:t.y,
+        traversal:t.traversal,
         route:this.operatorPathTo(t.x,t.y,{allowOccupiedTarget:true})})),
       ...items.map(item=>({id:item.id,kind:"item",x:item.x,y:item.y,
         route:item.x!==null&&item.y!==null?this.operatorPathTo(item.x,item.y):null})),

@@ -22,6 +22,7 @@
     } finally { buttons.forEach(button => { button.disabled = false; }); }
   }
   let batchRunner;
+  let isolatedSimulator;
   const progress=p=>{status.textContent=`Seed ${p.seed} (${p.run}/${p.total}), decision ${p.decisions}, health ${p.health}`;};
   const summarizeBatch=report=>{
     window.lastBatchReport=report;
@@ -82,6 +83,16 @@
   });
   document.getElementById('extend').onclick = () => run(() => api().extendBudget(1000));
   document.getElementById('submit-action').onclick = () => run(() => api().step(JSON.parse(document.getElementById('action-json').value)));
+  document.getElementById('preview-action').onclick = () => run(() => {
+    isolatedSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: api});
+    return isolatedSimulator.simulate(JSON.parse(document.getElementById('action-json').value));
+  });
+  document.getElementById('preview-legal-actions').onclick = () => run(() => {
+    isolatedSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: api});
+    const candidates = AgentSimulationHost.candidateActions(api().inspectOperator());
+    if (!candidates.length) throw new Error('No legal directional actions are available for branch evaluation');
+    return isolatedSimulator.evaluateCandidates(candidates);
+  });
   document.getElementById('inventory-smoke').onclick = () => run(async () => {
     const agent = api();
     const first = await agent.reset(Number(document.getElementById('seed').value), {maxSteps: 1});

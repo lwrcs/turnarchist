@@ -67,6 +67,18 @@ export class DownLadder extends Passageway {
     return this.isSidePath ? "rope down" : "staircase down";
   };
 
+  getTraversalTraits = () => {
+    const unlocked = !this.lockable.isLocked();
+    const player = this.game.players[this.game.localPlayerID];
+    const hasMatchingKey = !!player && this.lockable.keyID > 0 &&
+      this.lockable.hasKeyWithID(this.lockable.keyID, player) !== null;
+    return {
+      kind: "ladder", direction: "down", unlocked,
+      unlockableFromHere: unlocked || hasMatchingKey || GameConstants.DEVELOPER_MODE,
+      sidePath: this.isSidePath,
+    };
+  };
+
   examineText = (): string => {
     const locked = this.lockable?.isLocked?.() === true;
     if (this.isSidePath) {

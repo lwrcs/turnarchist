@@ -38,6 +38,13 @@ test('baseline uses traits for healing and combat, and handles ladder choices',(
   v.decision='vending';assert.deepEqual(p.choose(v),{type:'DismissInteraction'});
   v.decision='unsupported-modal';assert.equal(p.choose(v),null);
 });
+test('a fishing rod casts at an adjacent active fishing spot on a solid pool tile',()=>{
+  const p=new Policy(),v=view();v.room.tiles.find(t=>t.x===1&&t.y===0).solid=true;
+  v.inventory=[{categories:['tool','fishing-tool']}];
+  v.room.entities=[{x:1,y:0,width:1,height:1,isEnemy:false,interactable:true,
+    resource:{kind:'fishing',available:true,remaining:2}}];
+  assert.deepEqual(p.choose(v),{type:'Move',direction:'right'});assert.equal(p.inspect().reason,'fish');
+});
 test('free successful attacks do not blacklist their direction; unchanged bumps do',()=>{
   const p=new Policy(),v=view();v.room.entities=[{x:1,y:0,isEnemy:true,health:2}];
   const action=p.choose(v),next=structuredClone(v);next.room.entities[0].health=1;
@@ -298,6 +305,14 @@ test('an exhausted room backtracks through a used door to remembered unfinished 
   assert.equal(p.choose(v).direction,'right');assert.equal(p.inspect().reason,'backtrack');
   assert.equal(p.goal.targetRoom,'earlier');
   p.roomWork.set('earlier',false);assert.equal(p.route(v,new Set()),null);
+});
+test('a completed side path is not immediately re-entered from the main path',()=>{
+  const p=new Policy(),v=view();
+  v.room.tiles=[{x:0,y:0,solid:false},{x:1,y:0,solid:false,exit:true,
+    traversal:{direction:'down',sidePath:true,unlocked:true}}];
+  p.doorUses.set('room:1,0',1);p.connect('room','1,0','sewer');p.roomWork.set('sewer',false);
+  assert.equal(p.route(v,new Set()),null);
+  p.roomWork.set('sewer',true);assert.equal(p.route(v,new Set()).direction,'right');
 });
 test('backtracking finds work through exhausted rooms without cycling or inventing links',()=>{
   const p=new Policy();p.connect('a','1,0','b');p.connect('b','2,0','a');p.connect('b','3,0','c');

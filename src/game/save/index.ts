@@ -20,5 +20,11 @@ export { loadSaveV2 } from "./loadV2";
 export { devSaveAndLoadV2 } from "./devSaveLoadV2";
 export { captureFingerprint } from "./fingerprint";
 export { diffFingerprints, validateRoundtrip, formatReport } from "./roundtripValidator";
-
+export {
+  createSimulationSnapshot,
+  isLiveGameUnchanged,
+  sameFingerprint,
+  type SimulationSnapshot,
+  type SimulationSnapshotResult,
+} from "./simulationSnapshot";
 

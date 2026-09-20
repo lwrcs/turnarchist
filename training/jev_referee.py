@@ -13,18 +13,20 @@ never accepted through a browser, written to an artifact, or echoed in logs.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
 from pathlib import Path
 import time
+from collections import deque
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-PACKET_SCHEMA_VERSION = 1
-REFEREE_SCHEMA_VERSION = 1
+PACKET_SCHEMA_VERSION = 2
+REFEREE_SCHEMA_VERSION = 2
 DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 DEFAULT_MODEL = "jev-latest"
 DIRECTIONS = ("up", "right", "down", "left")
@@ -103,6 +105,10 @@ def candidate_actions(operator: dict[str, Any]) -> dict[str, dict[str, Any]]:
         move = by_direction.get(direction)
         if not move:
             continue
+        traversal = move.get("traversal") if isinstance(move.get("traversal"), dict) else {}
+        if (move.get("resolution") == "ladder" and traversal.get("unlocked") is False and
+                traversal.get("unlockableFromHere") is not True):
+            continue
         # A bare solid wall is never a meaningful input choice.  Keep a solid
         # direction only when an occupant gives the normal action processor an
         # interaction to resolve (for example, a wall torch or destroyable).
@@ -153,6 +159,10 @@ def _objective_candidates(operator: dict[str, Any], limit: int = 12) -> dict[str
             return candidates
     for point in ((operator.get("pathfinding") or {}).get("pointsOfInterest") or []):
         if not isinstance(point, dict) or point.get("kind") not in {"door", "ladder"}:
+            continue
+        traversal = point.get("traversal") if isinstance(point.get("traversal"), dict) else {}
+        if (point.get("kind") == "ladder" and traversal.get("unlocked") is False and
+                traversal.get("unlockableFromHere") is not True):
             continue
         key = "target_" + _id(point.get("id"), "poi", len(candidates))
         route = point.get("route") if isinstance(point.get("route"), dict) else {}
@@ -258,19 +268,61 @@ def build_packet(view: dict[str, Any], operator: dict[str, Any], baseline_action
     return packet
 
 
+def combat_pressure(packet: dict[str, Any]) -> tuple[bool, str | None]:
+    """Return whether this turn needs deeper combat planning.
+
+    Enemy population is deliberately not a pressure signal.  A distant group in
+    an open sewer is routine baseline work; Jev is reserved for a present or
+    unavoidable next-turn hazard.
+    """
+    room = packet.get("room") if isinstance(packet.get("room"), dict) else {}
+    if room.get("enemyFree") is True or not int(room.get("enemyCount") or 0):
+        return False, None
+    threat = packet.get("currentThreat") if isinstance(packet.get("currentThreat"), dict) else {}
+    known = _number(threat.get("knownIncomingDamageBeforeDefense")) or 0
+    unknown = int(threat.get("unknownDamageSources") or 0)
+    # Unidentified but distant enemies are routine baseline territory. Escalate
+    # only for measured damage on the current tile; unknown damage is handled
+    # by the no-safe-action branch below.
+    if known > 0:
+        return True, "current tile has immediate incoming damage"
+    actions = packet.get("actions") if isinstance(packet.get("actions"), dict) else {}
+    safe_actions = [action for action in actions.values()
+                    if isinstance(action, dict)
+                    and action.get("unknownDamageSources", 0) == 0
+                    and (_number(action.get("knownIncomingDamageBeforeDefense")) or 0) == 0]
+    if not safe_actions:
+        return True, "no legal action has a known-safe next turn"
+    return False, None
+
+
 def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Atomic questions sent together against one packet."""
+    combat_targets = {
+        key: value["description"] for key, value in packet["objectives"].items()
+        if value.get("kind") in {"enemy", "spawner"}
+    }
+    combat_targets["no_combat_target"] = "No enemy or spawner should be prioritized in the current state."
     return {
-        "mode": {
+        "motivation": {
             "type": "choice",
-            "instructions": "What is the primary mode for this single Turnarchist decision? Choose the immediate priority, not a multi-turn plan.",
+            "instructions": "Choose the broad motivation governing this decision. This is the root of the tactical tree.",
             "criteria": {
-                "fight": "Take an action intended to neutralize or reduce a visible hostile threat now.",
-                "retreat": "Avoid an immediate dangerous position or create distance because attacking now is not the priority.",
-                "explore": "Reveal or inspect an accessible unvisited area when no known progression route is the priority.",
-                "progress": "Move toward or traverse a known progression route, door, ladder, or required objective.",
-                "prepare": "Use a zero-turn inventory/equipment opportunity before an imminent challenge.",
+                "explore": "Cover accessible areas not visited before and investigate new doors or branches.",
+                "progress": "Pursue required objectives, beat the boss, or advance to the next floor.",
+                "prepare": "Gather food, items, weapons, healing, or positioning for later progression.",
                 "uncertain": "The packet does not establish one primary mode with enough certainty.",
+            },
+        },
+        "engagement": {
+            "type": "choice",
+            "instructions": "Choose the combat posture under the selected motivation. Evade means avoiding engagement locally without abandoning the broader objective.",
+            "criteria": {
+                "fight": "Engage to kill, disable, or control enemies.",
+                "retreat": "Disengage and create meaningful distance because continued combat is too dangerous or unnecessary.",
+                "evade": "Avoid engaging an enemy while continuing the current room-level objective.",
+                "not_in_combat": "No combat posture is presently needed.",
+                "uncertain": "The safe engagement posture is not established by the supplied facts.",
             },
         },
         "objective": {
@@ -291,6 +343,21 @@ def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 "uncertain": "No supplied tactic is clearly supported by the packet.",
             },
         },
+        "target_priority": {
+            "type": "choice",
+            "instructions": "If fighting, which supplied enemy or spawner should be prioritized first? Choose no_combat_target outside a fight posture.",
+            "criteria": combat_targets,
+        },
+        "room_intent": {
+            "type": "choice",
+            "instructions": "Should the agent stay in or leave the current room? Do not leave without a concrete Explore, Progress, Prepare, Retreat, or Evade reason supported by the packet.",
+            "criteria": {
+                "stay": "Remain because the current room still contains a relevant objective, threat, resource, or unresolved route.",
+                "leave": "Leave because a supplied route directly serves the selected motivation or combat posture.",
+                "indifferent": "Staying and leaving are tactically equivalent for this immediate decision.",
+                "uncertain": "The packet does not justify a room-level choice.",
+            },
+        },
         "action": {
             "type": "choice",
             "instructions": "Which supplied directional input best realizes the selected immediate purpose? Choose only from the listed actions. This is advisory; game code will validate it before execution.",
@@ -300,6 +367,16 @@ def questions_for(packet: dict[str, Any]) -> dict[str, dict[str, Any]]:
             "type": "choice",
             "instructions": "Which listed weapon should remain or become active for this immediate state? Choose keep_current unless an alternative has a stated immediate tactical advantage. This is an advisory zero-turn equipment label; it does not execute an inventory action.",
             "criteria": packet["weaponChoices"],
+        },
+        "reasoning": {
+            "type": "choice",
+            "instructions": "Decide whether this state can be acted on directly or should enter Think. Use deeper reasoning when danger, uncertainty, or interacting tactical consequences make the atomic answers insufficient.",
+            "criteria": {
+                "act_now": "The supplied facts support a sufficiently confident immediate action.",
+                "think_jev_chain": "Ask a short chain of additional Jev questions about competing threats, objectives, or action consequences.",
+                "escalate_reasoner": "Use a more capable reasoning model because the situation requires multi-step assessment beyond this packet.",
+                "uncertain": "The appropriate reasoning depth cannot be determined.",
+            },
         },
         "baseline_adequate": {
             "type": "noul",
@@ -381,31 +458,42 @@ def advice_from_response(packet: dict[str, Any], response: dict[str, Any], confi
     """Validate Jev's closed-set answer without treating it as an executable action."""
     if not 0 <= confidence_floor <= 1:
         raise ValueError("confidence floor must be 0..1")
-    mode, mode_confidence = _choice(response, "mode", {"fight", "retreat", "explore", "progress", "prepare", "uncertain"})
+    motivation, motivation_confidence = _choice(response, "motivation", {"explore", "progress", "prepare", "uncertain"})
+    engagement, engagement_confidence = _choice(response, "engagement", {"fight", "retreat", "evade", "not_in_combat", "uncertain"})
     objective, objective_confidence = _choice(response, "objective", set(packet["objectives"]))
     tactic, tactic_confidence = _choice(response, "tactic", {"eliminate_threat", "dodge", "advance_safely", "create_space", "collect", "heal", "uncertain"})
+    combat_targets = {key for key, value in packet["objectives"].items() if value.get("kind") in {"enemy", "spawner"}}
+    target, target_confidence = _choice(response, "target_priority", combat_targets | {"no_combat_target"})
+    room_intent, room_confidence = _choice(response, "room_intent", {"stay", "leave", "indifferent", "uncertain"})
     action, action_confidence = _choice(response, "action", set(packet["actions"]))
     weapon, weapon_confidence = _choice(response, "weapon", set(packet["weaponChoices"]))
+    reasoning, reasoning_confidence = _choice(response, "reasoning", {"act_now", "think_jev_chain", "escalate_reasoner", "uncertain"})
     review = ((response.get("answers") or {}).get("human_teaching_value") or {})
     review_score = _number(review.get("score")) if review.get("type") == "score" else None
     baseline = ((response.get("answers") or {}).get("baseline_adequate") or {})
     baseline_noul = _number(baseline.get("noul")) if baseline.get("type") == "noul" else None
-    confidence = min(value for value in (mode_confidence, objective_confidence, tactic_confidence, action_confidence)
-                     if value is not None) if all(value is not None for value in (mode_confidence, objective_confidence, tactic_confidence, action_confidence)) else None
-    approved = action is not None and confidence is not None and confidence >= confidence_floor
+    core_confidences = (motivation_confidence, engagement_confidence, objective_confidence,
+                        tactic_confidence, room_confidence, action_confidence, reasoning_confidence)
+    confidence = min(core_confidences) if all(value is not None for value in core_confidences) else None
+    approved = action is not None and reasoning == "act_now" and confidence is not None and confidence >= confidence_floor
     return {
         "schemaVersion": REFEREE_SCHEMA_VERSION,
         "model": response.get("model"), "usage": response.get("usage"),
         # Preserve the provider's probability distributions for offline audit;
         # they remain advice and are never accepted as an action protocol.
         "answers": response.get("answers"),
-        "mode": {"choice": mode, "confidence": mode_confidence},
+        "motivation": {"choice": motivation, "confidence": motivation_confidence},
+        "engagement": {"choice": engagement, "confidence": engagement_confidence},
         "objective": {"choice": objective, "confidence": objective_confidence},
         "tactic": {"choice": tactic, "confidence": tactic_confidence},
+        "targetPriority": {"choice": target, "confidence": target_confidence},
+        "roomIntent": {"choice": room_intent, "confidence": room_confidence},
         "action": {"choice": action, "confidence": action_confidence,
                    "proposedGameAction": {"type": "Move", "direction": packet["actions"][action]["direction"]} if approved else None},
         "weapon": {"choice": weapon, "confidence": weapon_confidence,
                    "execution": "advisory label only; no inventory action is proposed"},
+        "reasoning": {"choice": reasoning, "confidence": reasoning_confidence,
+                      "requiresThink": reasoning in {"think_jev_chain", "escalate_reasoner", "uncertain"}},
         "confidenceFloor": confidence_floor, "combinedConfidence": confidence,
         "autoActionEligible": approved,
         "humanTeachingValue": review_score,
@@ -418,8 +506,45 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows), encoding="utf-8")
 
 
+def simulated_candidates(env: Any) -> dict[str, Any]:
+    """Evaluate legal current-room inputs in an isolated browser realm.
+
+    This is deliberately used only as a branch evaluator.  It never performs
+    the selected action in the visible training game; the normal environment
+    still executes and records the final choice.
+    """
+    if not env.page.evaluate("() => typeof AgentSimulationHost !== 'undefined'"):
+        env.page.add_script_tag(path=str(ROOT / "agent-simulation-host.js"))
+    return env.page.evaluate("""async () => {
+      window.jevBranchSimulator ??= new AgentSimulationHost.IsolatedSimulator({source: () => window.agent});
+      const candidates = AgentSimulationHost.candidateActions(window.agent.inspectOperator());
+      return candidates.length ? window.jevBranchSimulator.evaluateCandidates(candidates) :
+        {schemaVersion: 1, candidates: [], ranked: [], selected: null};
+    }""")
+
+
+def safe_novel_simulated_candidate(report: dict[str, Any], room_id: str,
+                                   repeated: set[tuple[str, int, int]],
+                                   immediate_previous: tuple[str, int, int] | None) -> dict[str, Any] | None:
+    """Select the first exact, nonlethal branch that exits a navigation loop."""
+    for candidate in report.get("ranked", []):
+        if not isinstance(candidate, dict):
+            continue
+        outcome = candidate.get("outcome") if isinstance(candidate.get("outcome"), dict) else {}
+        after = outcome.get("playerAfter") if isinstance(outcome.get("playerAfter"), dict) else {}
+        delta = outcome.get("playerDelta") if isinstance(outcome.get("playerDelta"), dict) else {}
+        target = (room_id, after.get("x"), after.get("y"))
+        if (outcome.get("status") == "settled" and outcome.get("transition") != "death" and
+                outcome.get("recorded") is True and delta.get("positionChanged") is True and
+                float(delta.get("health") or 0) >= 0 and target not in repeated and
+                target != immediate_previous):
+            return candidate
+    return None
+
+
 def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets: int,
-                             viewer_dir: Path | None = None) -> dict[str, Any]:
+                             viewer_dir: Path | None = None, jev_unstick: bool = False,
+                             client: JevClient | None = None, seed_offset: int = 0) -> dict[str, Any]:
     """Collect unlabelled/referee-ready state packets from real browser gameplay."""
     from dungeon_pilot import DungeonEnv, ROOT, seed_plan  # Browser dependencies stay out of unit tests.
 
@@ -430,20 +555,209 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
     rows: list[dict[str, Any]] = []
     outcomes: list[dict[str, Any]] = []
     try:
-        for episode_seed in seed_plan("training", 64)[:seeds]:
+        plan = seed_plan("training", 64)
+        offset = seed_offset % len(plan)
+        ordered_plan = plan[offset:] + plan[:offset]
+        for episode_seed in ordered_plan[:seeds]:
             env.reset(options={"episodeSeed": episode_seed})
             if not env.page.evaluate("() => typeof AgentBaseline !== 'undefined'"):
                 env.page.add_script_tag(path=str(ROOT / "agent-baseline.js"))
             env.page.evaluate("() => { window.jevRefereeTeacher = new AgentBaseline.Policy(); }")
+            print("COLLECT: baseline teacher ready", flush=True)
             decisions = 0
+            recent_positions: deque[tuple[str, int, int]] = deque(maxlen=16)
+            seen_positions: set[tuple[str, int, int]] = set()
+            last_novelty = 0
+            last_intervention = -100
+            escape_commitment: dict[str, Any] | None = None
+            combat_commitment: dict[str, Any] | None = None
+            last_combat_commitment = -100
             while decisions < env.budget and len(rows) < max_packets:
                 before = env.view
+                if decisions == 0:
+                    print("COLLECT: requesting first baseline action", flush=True)
                 teacher = env.page.evaluate("(view) => window.jevRefereeTeacher.choose(view)", before)
+                if decisions == 0:
+                    print("COLLECT: first baseline action ready", flush=True)
                 if not teacher:
                     break
                 operator = env.page.evaluate("() => window.agent.inspectOperator()")
+                room = operator.get("room") if isinstance(operator.get("room"), dict) else {}
+                position = (str(room.get("id")), int(before["player"]["x"]), int(before["player"]["y"]))
+                recent_positions.append(position)
+                if position not in seen_positions:
+                    seen_positions.add(position)
+                    last_novelty = decisions
+                baseline_state = env.page.evaluate("() => window.jevRefereeTeacher.inspect()")
+                motivation = ("progress" if room.get("bossRoom") or room.get("progressBlockedByEnemies")
+                              else "prepare" if room.get("sidePath") else "explore")
+                engagement = "fight" if int(room.get("enemyCount") or 0) else "not_in_combat"
+                if escape_commitment and (str(room.get("id")) != escape_commitment["room"] or
+                                          room.get("enemyFree") is not True):
+                    escape_commitment = None
+                if combat_commitment and room.get("enemyFree") is True:
+                    combat_commitment = None
+                env.tactical_status = {
+                    "motivation": motivation, "engagement": engagement,
+                    "roomIntent": "stay" if room.get("enemyCount") else "indifferent",
+                    "action": teacher.get("direction") or teacher.get("type"),
+                    "source": "programmed-baseline", "confidence": None,
+                    "reason": baseline_state.get("reason"),
+                }
                 if before.get("decision") == "world" and operator.get("decision") == "world":
                     packet = build_packet(before, operator, teacher)
+                    high_pressure, pressure_trigger = combat_pressure(packet)
+                    if (jev_unstick and client is not None and high_pressure and combat_commitment is None and
+                            decisions - last_combat_commitment >= 8):
+                        combat_commitment = {"remaining": 4, "total": 4, "motivation": None,
+                                             "trigger": "high-pressure combat planning: " + str(pressure_trigger)}
+                    if combat_commitment is not None:
+                        try:
+                            combat_response = client.evaluate(packet)
+                            combat_advice = advice_from_response(packet, combat_response, 0.65)
+                        except JevRequestError as error:
+                            env.tactical_status.update({"source": "jev-combat-error", "trigger": str(error)})
+                            combat_commitment = None
+                            combat_advice = None
+                        if combat_advice is not None:
+                            combat_choice = combat_advice["action"].get("choice")
+                            combat_candidate = packet["actions"].get(combat_choice, {})
+                            damages = [value.get("knownIncomingDamageBeforeDefense") for value in packet["actions"].values()
+                                       if value.get("unknownDamageSources", 0) == 0 and
+                                       value.get("knownIncomingDamageBeforeDefense") is not None]
+                            minimum_damage = min(damages) if damages else None
+                            acceptable = (combat_candidate and combat_candidate.get("unknownDamageSources", 0) == 0 and
+                                          (combat_candidate.get("neutralizesThreatSource") is True or
+                                           minimum_damage is None or
+                                           combat_candidate.get("knownIncomingDamageBeforeDefense") == minimum_damage))
+                            if acceptable:
+                                teacher = {"type": "Move", "direction": combat_candidate["direction"]}
+                                if combat_commitment["motivation"] is None:
+                                    selected = combat_advice["motivation"]["choice"]
+                                    combat_commitment["motivation"] = selected if selected not in {None, "uncertain"} else "progress"
+                                combat_commitment["remaining"] -= 1
+                                last_combat_commitment = decisions
+                                packet["jevCombatIntervention"] = combat_advice
+                                env.tactical_status = {
+                                    "motivation": combat_commitment["motivation"],
+                                    "engagement": combat_advice["engagement"]["choice"],
+                                    "roomIntent": combat_advice["roomIntent"]["choice"],
+                                    "action": combat_choice, "source": "jev-combat",
+                                    "confidence": combat_advice["action"]["confidence"],
+                                    "trigger": (combat_commitment["trigger"] +
+                                                f"; commitment {combat_commitment['total']-combat_commitment['remaining']}/{combat_commitment['total']}"),
+                                }
+                                if combat_commitment["remaining"] <= 0:
+                                    combat_commitment = None
+                            else:
+                                combat_commitment["remaining"] -= 1
+                                env.tactical_status.update({
+                                    "source": "jev-combat-rejected",
+                                    "trigger": "Jev combat action did not pass the minimum-damage safety gate",
+                                })
+                                if combat_commitment["remaining"] <= 0:
+                                    combat_commitment = None
+                    stalled = (jev_unstick and client is not None and room.get("enemyFree") is True and
+                               decisions - last_novelty >= 12 and len(set(recent_positions)) <= 5 and
+                               decisions - last_intervention >= 8)
+                    if stalled and escape_commitment is None:
+                        escape_commitment = {
+                            "room": str(room.get("id")), "avoid": set(recent_positions),
+                            "remaining": 8, "total": 8, "motivation": None,
+                            "trigger": f"{decisions-last_novelty} decisions without a new position",
+                        }
+                    if escape_commitment is not None:
+                        intervention_packet = copy.deepcopy(packet)
+                        repeated = escape_commitment["avoid"]
+                        immediate_previous = recent_positions[-2] if len(recent_positions) > 1 else None
+                        moves = {
+                            move.get("direction"): move for move in
+                            ((operator.get("tactical") or {}).get("moves") or []) if isinstance(move, dict)
+                        }
+                        escape_actions = {}
+                        for key, candidate in intervention_packet["actions"].items():
+                            move = moves.get(candidate.get("direction"), {})
+                            target = move.get("target") if isinstance(move.get("target"), dict) else {}
+                            target_position = (str(room.get("id")), target.get("x"), target.get("y"))
+                            if (candidate.get("staysInPlace") is False and
+                                    candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
+                                    candidate.get("unknownDamageSources", 0) == 0 and
+                                    target_position not in repeated and target_position != immediate_previous):
+                                escape_actions[key] = candidate
+                        if escape_actions:
+                            intervention_packet["actions"] = escape_actions
+                        intervention_packet["stuckEvidence"] = {
+                            "decisionsWithoutNewPosition": decisions - last_novelty,
+                            "recentUniquePositions": len(set(recent_positions)),
+                            "repeatedPositions": [list(value) for value in sorted(repeated)],
+                            "restrictedToNovelSafeMoves": bool(escape_actions),
+                            "commitmentStepsRemaining": escape_commitment["remaining"],
+                            "instruction": "Continue breaking the navigation cycle. Preserve the active motivation and choose one supplied safe action. When restrictedToNovelSafeMoves is true, every supplied action avoids the original loop and immediate reversal.",
+                        }
+                        # A loop is a mechanics problem before it is a language-model
+                        # problem.  Prefer an exact branch that leaves the repeated
+                        # state safely; Jev is only consulted when the simulator has
+                        # no such outcome to choose.
+                        simulated = simulated_candidates(env)
+                        deterministic = safe_novel_simulated_candidate(
+                            simulated, str(room.get("id")), repeated, immediate_previous)
+                        if deterministic is not None:
+                            teacher = deterministic["action"]
+                            last_intervention = decisions
+                            if escape_commitment["motivation"] is None:
+                                escape_commitment["motivation"] = "explore"
+                            escape_commitment["remaining"] -= 1
+                            packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
+                            packet["simulatedCandidates"] = simulated
+                            env.tactical_status = {
+                                "motivation": escape_commitment["motivation"], "engagement": "not_in_combat",
+                                "roomIntent": "stay", "action": deterministic["id"],
+                                "source": "deterministic-unstick", "confidence": 1,
+                                "trigger": (escape_commitment["trigger"] + "; exact branch selected"),
+                            }
+                            if escape_commitment["remaining"] <= 0:
+                                escape_commitment = None
+                        else:
+                            try:
+                                response = client.evaluate(intervention_packet)
+                                advice = advice_from_response(intervention_packet, response, 0.65)
+                            except JevRequestError as error:
+                                env.tactical_status.update({
+                                    "source": "jev-unstick-error", "trigger": str(error),
+                                })
+                                escape_commitment = None
+                                advice = None
+                            if advice is None:
+                                action_choice = None
+                                candidate = {}
+                            else:
+                                action_choice = advice["action"].get("choice")
+                                candidate = intervention_packet["actions"].get(action_choice, {})
+                            if candidate:
+                                proposed = {"type": "Move", "direction": candidate["direction"]}
+                                if (candidate.get("knownIncomingDamageBeforeDefense") in (None, 0) and
+                                        candidate.get("unknownDamageSources", 0) == 0):
+                                    teacher = proposed
+                                    last_intervention = decisions
+                                    if escape_commitment["motivation"] is None:
+                                        selected_motivation = advice["motivation"]["choice"]
+                                        escape_commitment["motivation"] = (selected_motivation
+                                                                            if selected_motivation not in {None, "uncertain"}
+                                                                            else "progress")
+                                    escape_commitment["remaining"] -= 1
+                                    packet["stuckEvidence"] = intervention_packet["stuckEvidence"]
+                                    packet["jevIntervention"] = advice
+                                    env.tactical_status = {
+                                        "motivation": escape_commitment["motivation"],
+                                        "engagement": advice["engagement"]["choice"],
+                                        "roomIntent": advice["roomIntent"]["choice"],
+                                        "action": action_choice, "source": "jev-unstick",
+                                        "confidence": advice["action"]["confidence"],
+                                        "trigger": (escape_commitment["trigger"] +
+                                                    f"; commitment {escape_commitment['total']-escape_commitment['remaining']}/{escape_commitment['total']}"),
+                                    }
+                                    if escape_commitment["remaining"] <= 0:
+                                        escape_commitment = None
                     rows.append({"packet": packet, "teacherAction": teacher,
                                  "episodeSeed": episode_seed, "step": decisions})
                 _reward, dead, truncated = env.execute(teacher, "jev-referee-collection")
@@ -460,6 +774,8 @@ def collect_baseline_packets(out: Path, *, seeds: int, budget: int, max_packets:
                 break
         _write_jsonl(out / "packets.jsonl", rows)
         report = {"schemaVersion": REFEREE_SCHEMA_VERSION, "mode": "baseline-packet-collection",
+                  "jevUnstick": jev_unstick,
+                  "seedOffset": offset,
                   "packets": len(rows), "episodes": len(outcomes), "outcomes": outcomes}
         (out / "complete.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         return report
@@ -502,8 +818,12 @@ def main() -> None:
     collect.add_argument("--seeds", type=int, default=4)
     collect.add_argument("--budget", type=int, default=256)
     collect.add_argument("--max-packets", type=int, default=200)
+    collect.add_argument("--seed-offset", type=int, default=0,
+                         help="Rotate the deterministic 64-seed plan before collection")
     collect.add_argument("--viewer-dir", type=Path,
                          help="Write a passive live-frame.png and live-state.json after each action")
+    collect.add_argument("--jev-unstick", action="store_true",
+                         help="Ask Jev for one safe action after an enemy-free navigation loop is detected")
     evaluate = commands.add_parser("evaluate", help="Evaluate saved packets using Jev")
     evaluate.add_argument("--packets", type=Path, required=True)
     evaluate.add_argument("--out", type=Path, required=True)
@@ -514,8 +834,11 @@ def main() -> None:
     if args.command == "collect":
         if not 1 <= args.seeds <= 64 or not 1 <= args.budget <= 10000 or not 1 <= args.max_packets <= 10000:
             parser.error("Invalid collection bounds")
+        client = JevClient() if args.jev_unstick else None
         print(json.dumps(collect_baseline_packets(args.out, seeds=args.seeds, budget=args.budget,
-                                                   max_packets=args.max_packets, viewer_dir=args.viewer_dir)), flush=True)
+                                                   max_packets=args.max_packets, viewer_dir=args.viewer_dir,
+                                                   jev_unstick=args.jev_unstick, client=client,
+                                                   seed_offset=args.seed_offset)), flush=True)
     else:
         if not args.packets.is_file() or not 1 <= args.max_packets <= 10000 or not 0 <= args.confidence_floor <= 1:
             parser.error("Invalid evaluation input or bounds")
